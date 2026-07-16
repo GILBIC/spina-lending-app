@@ -9026,7 +9026,8 @@ class App:
             rec['pw_changed_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             users[key] = rec
             db['users'] = users
-            self._save_users_db(db)
+            if not self._save_users_db(db):
+                return False
             return True
         except Exception:
             _log_exc('set_user_password')
@@ -9153,47 +9154,136 @@ class App:
         self.root.wait_window(dlg)
         return bool(result.get('ok'))
 
-    def _save_users_db(self, data: dict) -> None:
-        import os, json
+    def _save_users_db(self, data: dict) -> bool:
+        """Atomically save accounts and maintain a last-known-good backup."""
+        import json
+        import os
+        import shutil
+
         p = self._users_db_path()
+        tmp = p + '.tmp'
+        backup = p + '.bak'
         try:
             os.makedirs(os.path.dirname(p), exist_ok=True)
-        except Exception:
-            _log_exc('save_users_db:makedirs')
+        except Exception as e:
+            _log_exc('save_users_db:makedirs', e)
+            _alert_user(
+                'Save Error',
+                'Failed to prepare the account storage folder.\n'
+                'See log: data/spina_app.log',
+                kind='warning',
+            )
+            return False
+
         try:
-            tmp = p + '.tmp'
             with open(tmp, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except Exception:
+                    pass
+
             os.replace(tmp, p)
-            # Best-effort: restrict permissions on Unix-like systems
+            try:
+                shutil.copy2(p, backup)
+            except Exception as e:
+                _log_suppressed_once(
+                    'users_backup_write',
+                    'account backup could not be refreshed',
+                    e,
+                )
+
             try:
                 if os.name != 'nt':
                     os.chmod(p, 0o600)
+                    if os.path.exists(backup):
+                        os.chmod(backup, 0o600)
+            except Exception as e:
+                _log_suppressed_once(
+                    'users_chmod', 'account permission update failed', e
+                )
+            return True
+        except Exception as e:
+            try:
+                if os.path.exists(tmp):
+                    os.remove(tmp)
             except Exception:
-                _log_exc('save_users_db:chmod')
-
-        except Exception:
-            _log_exc('save_users_db:write')
-            _alert_user('Save Error', 'Failed to save user accounts (data/users.json).\n\nCheck permissions/disk space.\nSee log: data/spina_app.log', kind='warning')
+                pass
+            _log_exc('save_users_db:write', e)
+            _alert_user(
+                'Save Error',
+                'Failed to save user accounts (data/users.json).\n\n'
+                'Check permissions/disk space.\nSee log: data/spina_app.log',
+                kind='warning',
+            )
+            return False
 
     def _load_users_db(self) -> dict:
-        """Load users database from data/users.json. If missing, create defaults.
+        """Load account data without silently overwriting an unreadable file.
 
-        Default accounts (created only if missing):
-          - admin / admin123   -> Admin
-          - encoder / encoder123 -> Encoder
-          - viewer / viewer123 -> Viewer
-          - system / system123 -> System
+        Missing files create the default first-run accounts. Corrupt or unreadable
+        files are recovered from users.json.bak when possible. If both copies are
+        unreadable, login fails safely and the original files are left untouched.
         """
-        import os, json
+        import json
+        import os
+        import shutil
+
         p = self._users_db_path()
+        backup = p + '.bak'
         data = {}
+        missing_primary = False
+        recovered_from_backup = False
+
         try:
             with open(p, 'r', encoding='utf-8') as f:
                 data = json.load(f) or {}
-        except Exception:
+            if not isinstance(data, dict):
+                raise ValueError('users.json root must be an object')
+        except FileNotFoundError:
+            missing_primary = True
             data = {}
+        except Exception as primary_error:
+            _log_exc('load_users_db:primary', primary_error)
+            try:
+                with open(backup, 'r', encoding='utf-8') as f:
+                    data = json.load(f) or {}
+                if not isinstance(data, dict):
+                    raise ValueError('users.json.bak root must be an object')
+                recovered_from_backup = True
+            except Exception as backup_error:
+                _log_exc('load_users_db:backup', backup_error)
+                if not getattr(self, '_users_load_error_alerted', False):
+                    self._users_load_error_alerted = True
+                    _alert_user(
+                        'Account File Error',
+                        'SPINA could not read data/users.json or its backup.\n\n'
+                        'The files were not overwritten. Restore users.json from a '
+                        'known-good backup, then restart SPINA.\n\n'
+                        'See log: data/spina_app.log',
+                        kind='error',
+                    )
+                return {'version': 1, 'users': {}, '_load_error': True}
 
+        if recovered_from_backup:
+            try:
+                restore_tmp = p + '.recovery.tmp'
+                shutil.copy2(backup, restore_tmp)
+                os.replace(restore_tmp, p)
+            except Exception as e:
+                _log_suppressed_once(
+                    'users_backup_restore',
+                    'account file backup loaded but primary restore failed',
+                    e,
+                )
+            if not getattr(self, '_users_backup_recovery_alerted', False):
+                self._users_backup_recovery_alerted = True
+                _alert_user(
+                    'Account File Recovered',
+                    'SPINA recovered the account file from data/users.json.bak.',
+                    kind='warning',
+                )
         users = data.get('users')
         if not isinstance(users, dict):
             users = {}
@@ -9244,8 +9334,9 @@ class App:
         data['version'] = int(data.get('version') or 1)
         data['users'] = users
 
-        if changed or (not os.path.exists(p)):
-            self._save_users_db(data)
+        if changed or missing_primary:
+            if not self._save_users_db(data):
+                data['_save_error'] = True
         return data
 
     def _verify_login(self, username: str, password: str):
@@ -14739,28 +14830,30 @@ class App:
             pass
 
         def _call_work_fn():
-            """Call work_fn, optionally passing cancel_event if supported."""
-            try:
-                import inspect as _inspect
-                try:
-                    sig = _inspect.signature(work_fn)
-                except Exception:
-                    sig = None
+            """Call work_fn once, optionally passing cancel_event when supported.
 
-                if sig:
-                    params = list(sig.parameters.values())
-                    has_varkw = any(p.kind == p.VAR_KEYWORD for p in params)
-                    if has_varkw or ("cancel_event" in sig.parameters):
-                        return work_fn(cancel_event=cancel_event)
-                    # If it accepts exactly 1 positional arg, pass cancel_event
-                    pos = [p for p in params if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)]
-                    if len(pos) == 1 and not any(p.kind == p.VAR_POSITIONAL for p in params):
-                        return work_fn(cancel_event)
-                # Default: no args
-                return work_fn()
+            Signature inspection errors fall back to a no-argument call. Exceptions
+            raised by the task itself are deliberately allowed to propagate to the
+            worker so a database write or import is never executed a second time.
+            """
+            import inspect as _inspect
+            try:
+                sig = _inspect.signature(work_fn)
             except Exception:
-                # If signature detection misfires (or work_fn hides signature), fall back
-                return work_fn()
+                sig = None
+
+            if sig:
+                params = list(sig.parameters.values())
+                has_varkw = any(p.kind == p.VAR_KEYWORD for p in params)
+                if has_varkw or ("cancel_event" in sig.parameters):
+                    return work_fn(cancel_event=cancel_event)
+                pos = [
+                    p for p in params
+                    if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
+                ]
+                if len(pos) == 1 and not any(p.kind == p.VAR_POSITIONAL for p in params):
+                    return work_fn(cancel_event)
+            return work_fn()
 
         def _worker():
             try:
@@ -36507,12 +36600,18 @@ except Exception:
 #   Fix lag when the database grows large by avoiding thousands of repeated
 #   per-client/per-day queries during screen refreshes.
 #   Safe for existing data: only creates indexes and changes how rows are read.
+_SPINA_PERF_INDEXES_READY = False
+
+
 def _spina_perf_ensure_indexes(db):
-    """Create helpful indexes for large datasets. Safe/idempotent."""
+    """Create performance indexes once per application process."""
+    global _SPINA_PERF_INDEXES_READY
+    if _SPINA_PERF_INDEXES_READY:
+        return True
     try:
         conn = getattr(db, "conn", None)
         if conn is None:
-            return
+            return False
         cur = conn.cursor()
         idx_sql = [
             # Data Bank/month queries: date range + loan type, then client/name lookup
@@ -36545,11 +36644,14 @@ def _spina_perf_ensure_indexes(db):
             cur.execute("PRAGMA optimize")
         except Exception:
             pass
+        _SPINA_PERF_INDEXES_READY = True
+        return True
     except Exception as e:
         try:
             _log_suppressed_once("perf_indexes_outer", "performance index setup failed", e)
         except Exception:
             pass
+        return False
 
 
 def _spina_perf_norm_lt(v):
@@ -37117,10 +37219,8 @@ def _spina_perf_refresh_data_grid(self):
 # Bind optimized loaders after the normal app methods are installed.
 try:
     if "App" in globals():
-        try:
-            _spina_perf_ensure_indexes(LoanDB(DB_FILE))
-        except Exception:
-            pass
+        # Index setup runs on the first real refresh using App's existing DB
+        # connection, avoiding a second startup connection and schema pass.
         setattr(App, "refresh_clients", _spina_perf_refresh_clients)
         setattr(App, "refresh_data_grid", _spina_perf_refresh_data_grid)
 except Exception as e:
