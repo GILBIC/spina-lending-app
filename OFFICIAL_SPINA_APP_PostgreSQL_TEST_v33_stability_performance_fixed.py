@@ -9879,15 +9879,6 @@ class App:
             return False
 
 
-    def _get_selected_report_client(self):
-        try:
-            sel = self.reports_tree.selection()
-            if sel:
-                return self.reports_tree.item(sel[0], 'values')[0]
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0203', 'suppressed exception excpass_0203', __spina_exc)
-            pass
-        return None
 
     def _open_note_dialog(self):
         name = self._get_selected_report_client()
@@ -9917,37 +9908,6 @@ class App:
                 pass
         NoteEditorDialog(self.root, name, default_date=default_date, loan_type=self._mode_filter(), client_uid=client_uid, person_uid=person_uid)
 
-    def _auto_load_report_note(self, *_):
-        try:
-            name = self._get_selected_report_client()
-            nd = (self.note_date_var.get() or '').strip()
-
-            client_uid = None
-            person_uid = None
-            try:
-                if name and hasattr(self, "db") and getattr(self, "db", None):
-                    meta = self.db.get_client_link_meta(name, loan_type=self._mode_filter())
-                    if meta:
-                        client_uid = (meta.get("client_uid") or "").strip() or None
-                        person_uid = (meta.get("person_uid") or "").strip() or None
-            except Exception as _e:
-                try:
-                    _log_exc("notes:auto_load_link_meta", _e)
-                except Exception as __spina_exc:
-                    _log_suppressed_once('excpass_0206', 'suppressed exception excpass_0206', __spina_exc)
-                    pass
-
-            self._set_report_note_text(
-                get_client_note(
-                    name, nd,
-                        scope="effective",
-                    client_uid=client_uid,
-                    person_uid=person_uid,
-                ) if (name and nd) else ""
-            )
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0207', 'suppressed exception excpass_0207', __spina_exc)
-            pass
 
     def _clear_preview(self):
         # Preview removed; keep as no-op for backward compatibility
@@ -18619,15 +18579,6 @@ class App:
 
         self._run_long_task(f'Generating PDF for {name}...', _work, on_success=_done, on_error=_err)
 
-    def _get_selected_report_client(self):
-        try:
-            sel = self.reports_tree.selection()
-            if sel:
-                return self.reports_tree.item(sel[0], 'values')[0]
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0417', 'suppressed exception excpass_0417', __spina_exc)
-            pass
-        return None
 
     def _get_report_note_text(self):
         try:

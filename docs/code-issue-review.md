@@ -117,3 +117,16 @@ This checks:
 9. Open Backup tools.
 
 Do not merge behavior-changing PRs until this smoke test passes.
+
+
+## Phase 2 cleanup completed
+
+Removed earlier duplicate `App` class method definitions that were shadowed inside the class body.
+Python binds only the final method with a repeated name when the class is created, so this cleanup keeps the active implementations and removes inactive earlier definitions.
+
+Removed definitions:
+- `App._get_selected_report_client` earlier definition at lines 9882-9890
+- `App._get_selected_report_client` earlier definition at lines 18622-18630
+- `App._auto_load_report_note` earlier definition at lines 9920-9950
+
+No monkey-patch chains, login/database logic, reports, collectors, dashboard, balances, or call sites were changed.
