@@ -13,6 +13,8 @@ set SPINA_PERF_LOG=1
 set SPINA_PERF_THRESHOLD=0.25
 ```
 
+The timing output prints directly to the Command Prompt that launched SPINA.
+
 ## How to test locally
 
 From the repository folder:
@@ -31,6 +33,21 @@ The console will show lines like:
 
 ```text
 [SPINA][PERF] App.refresh_clients took 0.823s
+```
+
+For testing every wrapped call, use a zero threshold:
+
+```bat
+set SPINA_PERF_THRESHOLD=0
+```
+
+## Cleanup after testing
+
+The injector modifies only the local working copy. After testing, discard the local app/doc changes:
+
+```bat
+git restore "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+git restore docs/code-issue-review.md
 ```
 
 ## Safety notes
