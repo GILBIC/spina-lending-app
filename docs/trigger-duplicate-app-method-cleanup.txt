@@ -1,0 +1,2 @@
+Temporary trigger file for the guarded duplicate App method cleanup workflow.
+This file will be removed after the workflow updates the branch.
