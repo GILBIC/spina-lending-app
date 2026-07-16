@@ -1,2 +1,0 @@
-Temporary trigger file for guarded critical-path runtime logging injection.
-This file will be removed by the workflow after generated updates are committed.
