@@ -1,0 +1,989 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48951,
+  "top_level_function_count": 736,
+  "unique_top_level_function_names": 643,
+  "duplicate_top_level_definitions": {
+    "_adv_lbl": [
+      24346,
+      34601
+    ],
+    "_adv_txt": [
+      24340,
+      34595
+    ],
+    "_append_notice": [
+      24141,
+      34319
+    ],
+    "_arrange_areas_dialog": [
+      22506,
+      32426
+    ],
+    "_cancel": [
+      22484,
+      22563,
+      26384,
+      32404,
+      32483,
+      48285,
+      48764
+    ],
+    "_clear_collectors_search_filters": [
+      21695,
+      32060
+    ],
+    "_closed_paid_amt_for": [
+      23242,
+      33236
+    ],
+    "_collectors_areas_drag_motion": [
+      21634,
+      35910
+    ],
+    "_dash_fmt_money_short": [
+      23387,
+      33386
+    ],
+    "_dash_norm_lt": [
+      23380,
+      33379
+    ],
+    "_dash_norm_name": [
+      23374,
+      33373
+    ],
+    "_dash_put": [
+      23411,
+      33410
+    ],
+    "_draw_final_footer": [
+      23625,
+      33621
+    ],
+    "_draw_global_header": [
+      23641,
+      33637
+    ],
+    "_draw_page_number": [
+      23617,
+      33613
+    ],
+    "_expand_range_inclusive": [
+      2146,
+      3631
+    ],
+    "_expected_amt_for": [
+      23162,
+      33156
+    ],
+    "_f": [
+      1414,
+      40274
+    ],
+    "_fetch_clients_for": [
+      22407,
+      32327
+    ],
+    "_fetch_route_notice": [
+      24134,
+      34299
+    ],
+    "_filter_trigger": [
+      39561,
+      46688
+    ],
+    "_fits": [
+      23593,
+      33589
+    ],
+    "_fmt_pay_amount": [
+      23904,
+      33932
+    ],
+    "_fmt_total_money": [
+      23851,
+      33864
+    ],
+    "_gv": [
+      27841,
+      28190,
+      40326
+    ],
+    "_iter_rows": [
+      22645,
+      32565
+    ],
+    "_move": [
+      22539,
+      32459
+    ],
+    "_n": [
+      22733,
+      32653
+    ],
+    "_notice_norm": [
+      24128,
+      34178
+    ],
+    "_ok": [
+      22481,
+      22561,
+      26383,
+      32401,
+      32481,
+      48724
+    ],
+    "_on_collectors_multi_toggle": [
+      21038,
+      35699
+    ],
+    "_on_collectors_select": [
+      21722,
+      39196
+    ],
+    "_on_collectors_tree_click": [
+      21102,
+      35757
+    ],
+    "_on_collectors_tree_wheel": [
+      21659,
+      35520,
+      35721
+    ],
+    "_on_search": [
+      20889,
+      47346,
+      47893
+    ],
+    "_on_select": [
+      39542,
+      46663
+    ],
+    "_options_dialog": [
+      22442,
+      32362
+    ],
+    "_parse_any_adv_range": [
+      2132,
+      3612
+    ],
+    "_pay_meta_for": [
+      23933,
+      33951
+    ],
+    "_populate_collector_details": [
+      21780,
+      39099
+    ],
+    "_popup": [
+      20758,
+      47260,
+      47875
+    ],
+    "_rec_get": [
+      40835,
+      41332
+    ],
+    "_resolve_closed_paid_pair": [
+      23284,
+      33282
+    ],
+    "_resolve_expected_pair": [
+      23181,
+      33175
+    ],
+    "_route_aliases": [
+      23123,
+      33112
+    ],
+    "_route_dash_add": [
+      24056,
+      34110
+    ],
+    "_route_dash_lookup": [
+      24044,
+      34098
+    ],
+    "_route_dash_norm_lt": [
+      24037,
+      34091
+    ],
+    "_route_dash_norm_name": [
+      24031,
+      34085
+    ],
+    "_route_norm": [
+      22250,
+      32176,
+      41139
+    ],
+    "_s": [
+      22437,
+      32357
+    ],
+    "_save_collector_notes": [
+      21911,
+      35542
+    ],
+    "_save_selected_collector_notes": [
+      21881,
+      35606
+    ],
+    "_schedule_collectors_refresh": [
+      21676,
+      32040
+    ],
+    "_set_sort": [
+      20685,
+      47192,
+      47804
+    ],
+    "_sort_key": [
+      22713,
+      32633
+    ],
+    "_spina__client_due_meta": [
+      24779,
+      40081
+    ],
+    "_spina_route_adv_marker_for": [
+      8535,
+      41665
+    ],
+    "_validate_date": [
+      29856,
+      45839
+    ],
+    "_wrap_text_to_width": [
+      23588,
+      33584
+    ],
+    "_x7_daily_interest_for_balance": [
+      28324,
+      40372
+    ],
+    "cancel": [
+      25314,
+      29969,
+      45949
+    ],
+    "chart_box": [
+      44049,
+      46593
+    ],
+    "do_link": [
+      25268,
+      30949
+    ],
+    "ensure_space": [
+      23741,
+      33737
+    ],
+    "export_range_template": [
+      26340,
+      27148
+    ],
+    "load_list": [
+      31898,
+      37249,
+      37513
+    ],
+    "new_page_headers": [
+      23705,
+      33701
+    ],
+    "print_collector_route_daily_ledger": [
+      22150,
+      32089
+    ],
+    "print_full_daily_ledger": [
+      22362,
+      32290
+    ],
+    "push": [
+      26958,
+      26965
+    ],
+    "restore_selected": [
+      31918,
+      37277,
+      37543
+    ],
+    "save": [
+      29863,
+      45860
+    ],
+    "stringWidth": [
+      2176,
+      2183,
+      2187
+    ]
+  },
+  "duplicate_class_methods": {
+    "App": {
+      "_area_of": [
+        16867,
+        17048
+      ],
+      "_cancel": [
+        9110,
+        9414,
+        9508
+      ],
+      "_close_editor": [
+        17766,
+        17838
+      ],
+      "_error": [
+        15455,
+        15754,
+        15795
+      ],
+      "_fmt_amt": [
+        10019,
+        11362
+      ],
+      "_get": [
+        19040,
+        19086
+      ],
+      "_norm": [
+        11656,
+        16859,
+        18892
+      ],
+      "_norm_area": [
+        10210,
+        12201
+      ],
+      "_ok": [
+        9380,
+        9496
+      ],
+      "_on_enter": [
+        9123,
+        9425
+      ],
+      "_refresh": [
+        19394,
+        20390
+      ],
+      "_save": [
+        9080,
+        16675
+      ],
+      "_success": [
+        15437,
+        15749,
+        15790
+      ],
+      "on_cancel": [
+        11589,
+        12076,
+        12992
+      ],
+      "on_ok": [
+        11563,
+        12063,
+        12971
+      ],
+      "save": [
+        17724,
+        17798
+      ]
+    },
+    "LoanDB": {
+      "_norm_dom": [
+        5065,
+        5257
+      ],
+      "_norm_term": [
+        5021,
+        5203
+      ],
+      "_norm_weekday": [
+        5051,
+        5243
+      ],
+      "_safe_json": [
+        6581,
+        6739
+      ]
+    },
+    "RenewDialog": {
+      "__init__": [
+        26152,
+        31257
+      ],
+      "_row": [
+        26161,
+        31606
+      ],
+      "apply": [
+        26252,
+        31735
+      ],
+      "body": [
+        26157,
+        31601
+      ],
+      "validate": [
+        26220,
+        31695
+      ]
+    },
+    "_LockedConnection": {
+      "_op": [
+        3884,
+        3908,
+        3930
+      ]
+    },
+    "_LockedCursor": {
+      "_op": [
+        3799,
+        3823
+      ]
+    }
+  },
+  "repeated_patch_targets": {
+    "App.__init__": [
+      38317,
+      39063,
+      39666,
+      39900,
+      42082
+    ],
+    "App._apply_ui_theme": [
+      38304,
+      42069,
+      42408
+    ],
+    "App._build_clients_tab": [
+      36437,
+      46131
+    ],
+    "App._build_collectors_tab": [
+      47381,
+      48314
+    ],
+    "App._dashboard_visible_rows": [
+      43057,
+      43438
+    ],
+    "App._on_collectors_select": [
+      47439,
+      48347
+    ],
+    "App._on_mode_change": [
+      38339,
+      39085,
+      43073
+    ],
+    "App._populate_dashboard_tree": [
+      43056,
+      43343,
+      43439,
+      43744
+    ],
+    "App.apply_role_access": [
+      32019,
+      38328,
+      39074,
+      42097
+    ],
+    "App.refresh_clients": [
+      36449,
+      39677,
+      46145
+    ],
+    "App.refresh_collectors": [
+      35999,
+      47395,
+      48326
+    ],
+    "App.refresh_dashboard": [
+      43055,
+      43342,
+      43440,
+      43745
+    ],
+    "App.refresh_data_grid": [
+      42382,
+      42448
+    ]
+  },
+  "large_functions": [
+    {
+      "name": "print_full_daily_ledger",
+      "line": 32290,
+      "lines": 3223
+    },
+    {
+      "name": "_on_collectors_select",
+      "line": 21722,
+      "lines": 3005
+    },
+    {
+      "name": "print_full_daily_ledger",
+      "line": 22362,
+      "lines": 2365
+    },
+    {
+      "name": "_maybe_suggest_link_clients",
+      "line": 25113,
+      "lines": 2027
+    },
+    {
+      "name": "generate_client_pdf",
+      "line": 28132,
+      "lines": 1185
+    },
+    {
+      "name": "LoanDB._create_tables",
+      "line": 4038,
+      "lines": 884
+    },
+    {
+      "name": "_app__client_form",
+      "line": 29368,
+      "lines": 689
+    },
+    {
+      "name": "App.open_databank_close_dialog",
+      "line": 10589,
+      "lines": 651
+    },
+    {
+      "name": "App.refresh_collectors",
+      "line": 12121,
+      "lines": 608
+    },
+    {
+      "name": "_app_open_client_history_dialog",
+      "line": 30365,
+      "lines": 514
+    },
+    {
+      "name": "App._area_picker_dialog",
+      "line": 11612,
+      "lines": 508
+    },
+    {
+      "name": "_spina_v23_client_form",
+      "line": 45516,
+      "lines": 458
+    },
+    {
+      "name": "attach_direct_integration",
+      "line": 26465,
+      "lines": 440
+    },
+    {
+      "name": "App._import_encoder_batch",
+      "line": 19569,
+      "lines": 420
+    },
+    {
+      "name": "App._import_from_excel_entry_worker",
+      "line": 18833,
+      "lines": 397
+    },
+    {
+      "name": "_spina_v22_build_reports_tab",
+      "line": 44577,
+      "lines": 371
+    },
+    {
+      "name": "_spina_v27_collector_editor_dialog",
+      "line": 47960,
+      "lines": 350
+    },
+    {
+      "name": "_build_collectors_tab",
+      "line": 20561,
+      "lines": 347
+    },
+    {
+      "name": "_spina_v25_build_collectors_tab",
+      "line": 47031,
+      "lines": 346
+    },
+    {
+      "name": "App._build_reports_tab",
+      "line": 17850,
+      "lines": 338
+    },
+    {
+      "name": "App._show_import_log_window",
+      "line": 19231,
+      "lines": 337
+    },
+    {
+      "name": "import_clients_from_excel",
+      "line": 25480,
+      "lines": 315
+    },
+    {
+      "name": "_spina_v27_build_collectors_tab",
+      "line": 47631,
+      "lines": 293
+    },
+    {
+      "name": "App.open_settings_dialog",
+      "line": 16441,
+      "lines": 288
+    },
+    {
+      "name": "LoanDB.get_all_clients",
+      "line": 5859,
+      "lines": 287
+    },
+    {
+      "name": "App.export_daily_collection_template",
+      "line": 16802,
+      "lines": 286
+    },
+    {
+      "name": "LoanDB.update_client",
+      "line": 5128,
+      "lines": 285
+    },
+    {
+      "name": "_spina_save_closed_collector_route_copy",
+      "line": 40806,
+      "lines": 281
+    },
+    {
+      "name": "_spina_v21_cash_build_tab",
+      "line": 43865,
+      "lines": 277
+    },
+    {
+      "name": "App._run_long_task",
+      "line": 14482,
+      "lines": 273
+    },
+    {
+      "name": "App.refresh_data_grid",
+      "line": 17429,
+      "lines": 271
+    },
+    {
+      "name": "refresh_clients",
+      "line": 24845,
+      "lines": 263
+    },
+    {
+      "name": "_spina_dashboard_fetch_rows",
+      "line": 37699,
+      "lines": 262
+    },
+    {
+      "name": "RenewDialog._compute_stats",
+      "line": 31291,
+      "lines": 259
+    },
+    {
+      "name": "App.generate_pdf_selected",
+      "line": 18323,
+      "lines": 258
+    },
+    {
+      "name": "_spina_v24_build_client_info_logs_tab",
+      "line": 46477,
+      "lines": 250
+    }
+  ],
+  "broad_except_count": 3509,
+  "pass_only_except_count": 928,
+  "bare_except_count": 4,
+  "broad_except_examples": [
+    {
+      "line": 30,
+      "type": "Exception"
+    },
+    {
+      "line": 145,
+      "type": "Exception"
+    },
+    {
+      "line": 161,
+      "type": "Exception"
+    },
+    {
+      "line": 178,
+      "type": "Exception"
+    },
+    {
+      "line": 186,
+      "type": "Exception"
+    },
+    {
+      "line": 197,
+      "type": "Exception"
+    },
+    {
+      "line": 204,
+      "type": "Exception"
+    },
+    {
+      "line": 225,
+      "type": "Exception"
+    },
+    {
+      "line": 263,
+      "type": "Exception"
+    },
+    {
+      "line": 293,
+      "type": "Exception"
+    },
+    {
+      "line": 306,
+      "type": "Exception"
+    },
+    {
+      "line": 318,
+      "type": "Exception"
+    },
+    {
+      "line": 335,
+      "type": "Exception"
+    },
+    {
+      "line": 341,
+      "type": "Exception"
+    },
+    {
+      "line": 385,
+      "type": "Exception"
+    },
+    {
+      "line": 388,
+      "type": "Exception"
+    },
+    {
+      "line": 447,
+      "type": "Exception"
+    },
+    {
+      "line": 458,
+      "type": "Exception"
+    },
+    {
+      "line": 474,
+      "type": "Exception"
+    },
+    {
+      "line": 480,
+      "type": "Exception"
+    },
+    {
+      "line": 485,
+      "type": "Exception"
+    },
+    {
+      "line": 496,
+      "type": "Exception"
+    },
+    {
+      "line": 506,
+      "type": "Exception"
+    },
+    {
+      "line": 525,
+      "type": "Exception"
+    },
+    {
+      "line": 530,
+      "type": "Exception"
+    }
+  ],
+  "pass_only_except_examples": [
+    {
+      "line": 30,
+      "type": "Exception"
+    },
+    {
+      "line": 161,
+      "type": "Exception"
+    },
+    {
+      "line": 341,
+      "type": "Exception"
+    },
+    {
+      "line": 385,
+      "type": "Exception"
+    },
+    {
+      "line": 474,
+      "type": "Exception"
+    },
+    {
+      "line": 480,
+      "type": "Exception"
+    },
+    {
+      "line": 544,
+      "type": "Exception"
+    },
+    {
+      "line": 777,
+      "type": "Exception"
+    },
+    {
+      "line": 793,
+      "type": "Exception"
+    },
+    {
+      "line": 895,
+      "type": "Exception"
+    },
+    {
+      "line": 943,
+      "type": "Exception"
+    },
+    {
+      "line": 1198,
+      "type": "Exception"
+    },
+    {
+      "line": 1279,
+      "type": "Exception"
+    },
+    {
+      "line": 1304,
+      "type": "Exception"
+    },
+    {
+      "line": 1554,
+      "type": "Exception"
+    },
+    {
+      "line": 2168,
+      "type": "Exception"
+    },
+    {
+      "line": 5611,
+      "type": "Exception"
+    },
+    {
+      "line": 5615,
+      "type": "Exception"
+    },
+    {
+      "line": 5621,
+      "type": "Exception"
+    },
+    {
+      "line": 5628,
+      "type": "Exception"
+    },
+    {
+      "line": 5632,
+      "type": "Exception"
+    },
+    {
+      "line": 6242,
+      "type": "Exception"
+    },
+    {
+      "line": 6497,
+      "type": "Exception"
+    },
+    {
+      "line": 6513,
+      "type": "Exception"
+    },
+    {
+      "line": 6530,
+      "type": "Exception"
+    }
+  ],
+  "dynamic_sql_examples": [
+    {
+      "line": 219,
+      "kind": "f-string"
+    },
+    {
+      "line": 4047,
+      "kind": "f-string"
+    },
+    {
+      "line": 4597,
+      "kind": "possible unbound % placeholder"
+    },
+    {
+      "line": 6794,
+      "kind": "f-string"
+    },
+    {
+      "line": 7507,
+      "kind": "f-string"
+    },
+    {
+      "line": 32795,
+      "kind": "f-string"
+    },
+    {
+      "line": 32810,
+      "kind": "f-string"
+    },
+    {
+      "line": 33083,
+      "kind": "f-string"
+    },
+    {
+      "line": 37723,
+      "kind": "% formatting"
+    },
+    {
+      "line": 37753,
+      "kind": "% formatting"
+    },
+    {
+      "line": 37759,
+      "kind": "% formatting"
+    },
+    {
+      "line": 41395,
+      "kind": "f-string"
+    }
+  ],
+  "dynamic_sql_count": 12,
+  "psycopg_connect_calls": [
+    {
+      "line": 151,
+      "call": "psycopg.connect"
+    },
+    {
+      "line": 849,
+      "call": "psycopg.connect"
+    }
+  ],
+  "possible_blocking_ui_calls": [
+    {
+      "line": 1097,
+      "call": "time.sleep"
+    },
+    {
+      "line": 15378,
+      "call": "subprocess.run"
+    },
+    {
+      "line": 15565,
+      "call": "subprocess.run"
+    },
+    {
+      "line": 15583,
+      "call": "subprocess.run"
+    },
+    {
+      "line": 15596,
+      "call": "subprocess.run"
+    }
+  ]
+}
