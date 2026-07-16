@@ -1,0 +1,49 @@
+name: SPINA quality audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile diagnostic tools and app source
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            tools/redundancy_audit.py \
+            tools/spina_quality_audit.py \
+            tools/spina_startup_diagnostics.py
+
+      - name: Run redundancy audit
+        run: |
+          python tools/redundancy_audit.py \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            --json redundancy-report.json
+
+      - name: Run quality audit
+        run: |
+          python tools/spina_quality_audit.py \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            --json quality-report.json
+
+      - name: Upload audit reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: spina-audit-reports
+          path: |
+            redundancy-report.json
+            quality-report.json
