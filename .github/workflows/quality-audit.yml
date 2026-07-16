@@ -27,7 +27,8 @@ jobs:
             tools/redundancy_audit.py \
             tools/spina_quality_audit.py \
             tools/spina_startup_diagnostics.py \
-            tools/add_optional_performance_logs.py
+            tools/add_optional_performance_logs.py \
+            tools/inject_critical_path_logging.py
 
       - name: Run redundancy audit
         run: |
