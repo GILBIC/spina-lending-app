@@ -18,8 +18,48 @@ from typing import Any
 PATCH_CLASSES = {"App", "LoanDB", "ClientsTab", "DataBankTab", "ReportsTab", "CollectorRouteTab"}
 DEFAULT_LARGE_FUNCTION_LINES = 250
 
+RISK_AREA_KEYWORDS = {
+    "startup/database": (
+        "startup", "init", "schema", "connect", "conn", "db", "database", "postgres", "pg_", "psycopg",
+        "migrate", "ensure", "storage",
+    ),
+    "login/accounts": (
+        "login", "auth", "account", "password", "user", "role", "session", "permission",
+    ),
+    "reports/pdf": (
+        "report", "pdf", "statement", "ledger", "collector", "route", "receipt", "card", "print",
+    ),
+    "excel/import-export": (
+        "excel", "xlsx", "import", "export", "template", "openpyxl", "spreadsheet",
+    ),
+    "backup/restore": (
+        "backup", "restore", "dump", "pg_dump", "verify", "history",
+    ),
+    "payment/balance": (
+        "payment", "balance", "interest", "principal", "advance", "adv", "pass", "renew",
+    ),
+}
 
-def _name(node: ast.AST) -> str:
+VISIBLE_HANDLER_CALLS = {
+    "print",
+    "_spina_early_log",
+    "_log_suppressed_once",
+    "_spina_pg_storage_log",
+    "_spina_perf_log",
+    "logging.debug",
+    "logging.info",
+    "logging.warning",
+    "logging.error",
+    "logging.exception",
+    "messagebox.showerror",
+    "messagebox.showwarning",
+    "messagebox.showinfo",
+}
+
+
+def _name(node: ast.AST | None) -> str:
+    if node is None:
+        return ""
     if isinstance(node, ast.Name):
         return node.id
     if isinstance(node, ast.Attribute):
@@ -52,6 +92,27 @@ def _sql_literal(node: ast.AST) -> str | None:
     return None
 
 
+def _risk_area(qualified_name: str) -> str:
+    lowered = qualified_name.lower()
+    for area, keywords in RISK_AREA_KEYWORDS.items():
+        if any(keyword in lowered for keyword in keywords):
+            return area
+    return "general"
+
+
+def _handler_has_visible_action(handler: ast.ExceptHandler) -> bool:
+    for node in ast.walk(handler):
+        if isinstance(node, (ast.Raise, ast.Assert)):
+            return True
+        if isinstance(node, ast.Call):
+            call_name = _name(node.func)
+            if call_name in VISIBLE_HANDLER_CALLS:
+                return True
+            if call_name.endswith((".error", ".exception", ".warning")):
+                return True
+    return False
+
+
 def audit(path: Path, large_function_lines: int = DEFAULT_LARGE_FUNCTION_LINES) -> dict[str, Any]:
     source = path.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(path))
@@ -63,11 +124,13 @@ def audit(path: Path, large_function_lines: int = DEFAULT_LARGE_FUNCTION_LINES) 
     broad_excepts: list[dict[str, Any]] = []
     pass_only_excepts: list[dict[str, Any]] = []
     bare_excepts: list[dict[str, Any]] = []
+    silent_broad_excepts: list[dict[str, Any]] = []
     dynamic_sql: list[dict[str, Any]] = []
     psycopg_connect_calls: list[dict[str, Any]] = []
     possible_blocking_ui_calls: list[dict[str, Any]] = []
 
     class_stack: list[str] = []
+    function_stack: list[str] = []
 
     class Visitor(ast.NodeVisitor):
         def visit_ClassDef(self, node: ast.ClassDef) -> Any:  # noqa: N802
@@ -91,8 +154,12 @@ def audit(path: Path, large_function_lines: int = DEFAULT_LARGE_FUNCTION_LINES) 
                 functions[node.name].append(node)
             if span >= large_function_lines:
                 large_functions.append({"name": qualified, "line": node.lineno, "lines": span})
-            for child in node.body:
-                self.visit(child)
+            function_stack.append(qualified)
+            try:
+                for child in node.body:
+                    self.visit(child)
+            finally:
+                function_stack.pop()
 
         def visit_Assign(self, node: ast.Assign) -> Any:  # noqa: N802
             for target in node.targets:
@@ -110,11 +177,20 @@ def audit(path: Path, large_function_lines: int = DEFAULT_LARGE_FUNCTION_LINES) 
 
         def visit_ExceptHandler(self, node: ast.ExceptHandler) -> Any:  # noqa: N802
             exc_type = _name(node.type) if node.type is not None else "bare"
-            item = {"line": node.lineno, "type": exc_type}
+            function_name = function_stack[-1] if function_stack else "<module>"
+            item = {
+                "line": node.lineno,
+                "type": exc_type,
+                "function": function_name,
+                "risk_area": _risk_area(function_name),
+                "visible_action": _handler_has_visible_action(node),
+            }
             if node.type is None:
                 bare_excepts.append(item)
             if exc_type in {"Exception", "BaseException", "bare"}:
                 broad_excepts.append(item)
+                if not item["visible_action"]:
+                    silent_broad_excepts.append(item)
             if _is_pass_only(node.body):
                 pass_only_excepts.append(item)
             self.generic_visit(node)
@@ -156,6 +232,15 @@ def audit(path: Path, large_function_lines: int = DEFAULT_LARGE_FUNCTION_LINES) 
     repeated_patch_targets = {
         name: lines for name, lines in sorted(repeated_assignments.items()) if len(lines) > 1
     }
+    broad_except_by_risk_area = dict(
+        sorted(collections.Counter(item["risk_area"] for item in broad_excepts).items())
+    )
+    silent_broad_except_by_risk_area = dict(
+        sorted(collections.Counter(item["risk_area"] for item in silent_broad_excepts).items())
+    )
+    high_risk_silent_except_examples = [
+        item for item in silent_broad_excepts if item["risk_area"] != "general"
+    ][:50]
 
     return {
         "file": path.name,
@@ -169,8 +254,13 @@ def audit(path: Path, large_function_lines: int = DEFAULT_LARGE_FUNCTION_LINES) 
         "broad_except_count": len(broad_excepts),
         "pass_only_except_count": len(pass_only_excepts),
         "bare_except_count": len(bare_excepts),
+        "silent_broad_except_count": len(silent_broad_excepts),
+        "broad_except_by_risk_area": broad_except_by_risk_area,
+        "silent_broad_except_by_risk_area": silent_broad_except_by_risk_area,
         "broad_except_examples": broad_excepts[:25],
         "pass_only_except_examples": pass_only_excepts[:25],
+        "silent_broad_except_examples": silent_broad_excepts[:25],
+        "high_risk_silent_except_examples": high_risk_silent_except_examples,
         "dynamic_sql_examples": dynamic_sql[:50],
         "dynamic_sql_count": len(dynamic_sql),
         "psycopg_connect_calls": psycopg_connect_calls,
@@ -183,9 +273,18 @@ def print_report(report: dict[str, Any]) -> None:
     print(f"Lines: {report['line_count']}")
     print(f"Top-level functions: {report['top_level_function_count']} definitions / {report['unique_top_level_function_names']} unique names")
     print(f"Broad except handlers: {report['broad_except_count']}")
+    print(f"Silent broad except handlers: {report['silent_broad_except_count']}")
     print(f"Pass-only except handlers: {report['pass_only_except_count']}")
     print(f"Bare except handlers: {report['bare_except_count']}")
     print(f"Dynamic SQL examples found: {report['dynamic_sql_count']}")
+
+    print("\nSilent broad except handlers by risk area:")
+    if report["silent_broad_except_by_risk_area"]:
+        for area, count in report["silent_broad_except_by_risk_area"].items():
+            print(f"  - {area}: {count}")
+    else:
+        print("  - none")
+
     print("\nLargest functions:")
     for item in report["large_functions"][:15]:
         print(f"  - {item['name']} at line {item['line']}: {item['lines']} lines")
@@ -193,6 +292,13 @@ def print_report(report: dict[str, Any]) -> None:
     if report["repeated_patch_targets"]:
         for name, lines in list(report["repeated_patch_targets"].items())[:20]:
             print(f"  - {name}: {lines}")
+    else:
+        print("  - none")
+
+    print("\nHigh-risk silent broad except examples:")
+    if report["high_risk_silent_except_examples"]:
+        for item in report["high_risk_silent_except_examples"][:15]:
+            print(f"  - {item['risk_area']} {item['function']} at line {item['line']} ({item['type']})")
     else:
         print("  - none")
 
