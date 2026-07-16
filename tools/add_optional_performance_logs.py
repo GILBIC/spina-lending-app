@@ -42,16 +42,12 @@ def _spina_perf_threshold_seconds():
 
 
 def _spina_perf_log(message):
+    # Use direct console output instead of SPINA's suppressed logger. This makes
+    # performance diagnostics visible in the Command Prompt that launched SPINA.
     try:
-        if "_log_suppressed_once" in globals():
-            _log_suppressed_once("perf_" + str(message), str(message), None)
-        else:
-            print(str(message))
+        print(str(message), flush=True)
     except Exception:
-        try:
-            print(str(message))
-        except Exception:
-            pass
+        pass
 
 
 def _spina_perf_wrap_app_method(method_name):
@@ -114,7 +110,7 @@ set SPINA_PERF_THRESHOLD=0.25
 python "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 ```
 
-When enabled, SPINA prints slow calls for selected high-cost screens such as Clients, Collector Route, Dashboard, and Data Bank refreshes. This helps identify the next one-screen performance target before changing loading or query behavior.
+When enabled, SPINA prints slow calls directly to the launching Command Prompt for selected high-cost screens such as Clients, Collector Route, Dashboard, and Data Bank refreshes. This helps identify the next one-screen performance target before changing loading or query behavior.
 """
 
 
