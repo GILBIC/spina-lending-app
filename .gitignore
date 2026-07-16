@@ -216,3 +216,33 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# SPINA private data
+data/
+users.json
+spina_settings.json
+collectors.json
+ledger_prefs.json
+access_prefs.json
+
+# Credentials
+.env
+*.env
+
+# Databases and backups
+*.db
+*.sqlite
+*.sqlite3
+*.backup
+*.dump
+*.sql
+
+# Generated files
+Client_Statements/
+Daily Collection/
+Collector Route/
+reports/
+backups/
+*.pdf
+*.xlsx
+*.xls
+*.log
