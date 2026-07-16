@@ -1,0 +1,62 @@
+name: Add optional performance logs
+
+on:
+  push:
+    branches: [perf/optional-timing-logs]
+    paths:
+      - 'docs/trigger-optional-performance-logs.txt'
+      - '.github/workflows/add-optional-performance-logs.yml'
+      - 'tools/add_optional_performance_logs.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Add optional performance timing block
+        run: python tools/add_optional_performance_logs.py
+
+      - name: Compile and audit
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            tools/redundancy_audit.py \
+            tools/spina_quality_audit.py \
+            tools/spina_startup_diagnostics.py \
+            tools/add_optional_performance_logs.py
+          python tools/redundancy_audit.py \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            --json redundancy-report.json
+          python tools/spina_quality_audit.py \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            --json quality-report.json
+
+      - name: Remove temporary trigger and reports
+        run: |
+          rm -f docs/trigger-optional-performance-logs.txt
+          rm -f redundancy-report.json quality-report.json
+
+      - name: Commit generated cleanup
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py docs/code-issue-review.md docs/trigger-optional-performance-logs.txt redundancy-report.json quality-report.json
+          if git diff --cached --quiet; then
+            echo 'No generated changes to commit'
+          else
+            git commit -m 'Add optional performance timing logs'
+            git push
+          fi
