@@ -1,2 +1,0 @@
-Temporary trigger file for optional SPINA performance logging workflow.
-This file is removed by the workflow after the app and docs are updated.
