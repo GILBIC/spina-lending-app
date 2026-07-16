@@ -1,0 +1,60 @@
+name: Apply Phase 1 duplicate cleanup
+
+on:
+  push:
+    branches:
+      - cleanup/exact-duplicate-helpers
+    paths:
+      - tools/apply_phase1_cleanup.py
+      - .github/workflows/phase1-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out cleanup branch
+        uses: actions/checkout@v4
+        with:
+          ref: cleanup/exact-duplicate-helpers
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Apply guarded cleanup
+        run: python tools/apply_phase1_cleanup.py
+
+      - name: Compile application and audit tool
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile tools/redundancy_audit.py
+
+      - name: Verify exact duplicate helper bodies are gone
+        run: |
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python - <<'PY'
+          from pathlib import Path
+          from tools.redundancy_audit import audit
+          report = audit(Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"))
+          groups = report["exact_duplicate_top_level_bodies"]
+          if groups:
+              raise SystemExit(f"Exact duplicate helper bodies remain: {groups}")
+          print("Phase 1 redundancy verification passed")
+          PY
+
+      - name: Commit cleaned source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No cleanup changes to commit"
+            exit 0
+          fi
+          git commit -m "Consolidate exact duplicate helper functions"
+          git push origin HEAD:cleanup/exact-duplicate-helpers
