@@ -41,7 +41,7 @@ def _spina_early_log(context, exc=None):
 # Required:
 #   pip install "psycopg[binary]"
 # PostgreSQL:
-#   host=localhost port=5432 dbname=spina_db user=spina_user password=Spina123!
+#   host=localhost port=5432 dbname=spina_db user=spina_user password=
 #
 # You may override credentials with environment variables:
 #   SPINA_PG_HOST, SPINA_PG_PORT, SPINA_PG_DB, SPINA_PG_USER, SPINA_PG_PASSWORD
@@ -55,7 +55,7 @@ _SPINA_PG_CONFIG = {
     "port": int(os.environ.get("SPINA_PG_PORT", "5432")),
     "dbname": os.environ.get("SPINA_PG_DB", "spina_db"),
     "user": os.environ.get("SPINA_PG_USER", "spina_user"),
-    "password": os.environ.get("SPINA_PG_PASSWORD", "Spina123!"),
+    "password": os.environ.get("SPINA_PG_PASSWORD", ""),
     # Fail quickly when PostgreSQL is unavailable instead of freezing startup.
     "connect_timeout": int(os.environ.get("SPINA_PG_CONNECT_TIMEOUT", "5")),
     "application_name": os.environ.get("SPINA_PG_APP_NAME", "SPINA Desktop"),
