@@ -7,6 +7,8 @@ The generated app block is disabled by default. Users enable it locally with:
 
 It wraps selected high-cost App methods after all patch layers are defined and
 before main() is called, so it observes the final active implementations.
+
+This tool modifies the local working copy only when it is run manually.
 """
 
 from __future__ import annotations
@@ -103,9 +105,10 @@ DOC_NOTE = """
 
 ## Phase 3 performance diagnostics
 
-Optional timing logs can now be enabled locally without changing normal app behavior:
+Optional timing logs can be enabled locally without changing normal app behavior:
 
 ```bat
+python tools\\add_optional_performance_logs.py
 set SPINA_PERF_LOG=1
 set SPINA_PERF_THRESHOLD=0.25
 python "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
@@ -127,6 +130,9 @@ def remove_existing_block(text: str) -> str:
 
 
 def main() -> int:
+    if not APP_FILE.exists():
+        raise SystemExit(f"App file not found: {APP_FILE}")
+
     source = APP_FILE.read_text(encoding="utf-8")
     source = remove_existing_block(source)
 
@@ -145,6 +151,7 @@ def main() -> int:
         doc = DOC_FILE.read_text(encoding="utf-8")
         if "## Phase 3 performance diagnostics" not in doc:
             DOC_FILE.write_text(doc.rstrip() + DOC_NOTE, encoding="utf-8")
+    print("Optional performance timing block inserted. Set SPINA_PERF_LOG=1 to enable timing output.")
     return 0
 
 
