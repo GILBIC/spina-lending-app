@@ -26,7 +26,8 @@ jobs:
             OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
             tools/redundancy_audit.py \
             tools/spina_quality_audit.py \
-            tools/spina_startup_diagnostics.py
+            tools/spina_startup_diagnostics.py \
+            tools/add_optional_performance_logs.py
 
       - name: Run redundancy audit
         run: |
