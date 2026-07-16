@@ -91,3 +91,20 @@ The tool is read-only and can also produce JSON:
 ```bash
 python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json redundancy-report.json
 ```
+
+
+## Phase 1 cleanup completed
+
+The first behavioral-neutral cleanup consolidates six exact duplicate helper
+definitions by keeping their public/internal names as aliases:
+
+- archive/restore row conversion
+- the v18, v20, and v21 compact money formatter names
+- the v20 and v21 rounded-rectangle helper names
+- the v22 reports and v23 clients palette names
+- the v25 collector and v27 route palette names
+
+The alias targets occur earlier in the module and had identical signatures and
+AST bodies before replacement. No call sites or displayed output were changed.
+The application is compiled and the redundancy audit is run in CI before the
+cleanup commit is pushed.

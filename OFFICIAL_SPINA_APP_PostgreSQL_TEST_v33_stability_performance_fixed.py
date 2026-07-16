@@ -37399,18 +37399,8 @@ except Exception as __spina_exc:
 
 
 # --- BEGIN: ARCHIVED CLIENT RESTORE ROW-ID FIX (more reliable than UID/name) ---
-def _spina_restore_row_to_dict(_row):
-    try:
-        if _row is None:
-            return {}
-        if isinstance(_row, sqlite3.Row):
-            return dict(_row)
-        try:
-            return {k: _row[k] for k in _row.keys()}
-        except Exception:
-            return {}
-    except Exception:
-        return {}
+# Phase 1 cleanup: identical implementation shared with archive conversion.
+_spina_restore_row_to_dict = _spina_archive_row_to_dict
 
 
 def _spina_fixed_get_archived_clients_with_id(self, search=None, loan_type=None):
@@ -43547,19 +43537,8 @@ def _spina_v20_dash_palette(self=None):
     }
 
 
-def _spina_v20_money(value):
-    try:
-        v = float(value or 0)
-    except Exception:
-        v = 0.0
-    av = abs(v)
-    if av >= 1_000_000:
-        return "PHP {:.2f}M".format(v / 1_000_000)
-    if av >= 100_000:
-        return "PHP {:.0f}K".format(v / 1_000)
-    if av >= 1_000:
-        return "PHP {:.1f}K".format(v / 1_000)
-    return "PHP {:,.0f}".format(v)
+# Phase 1 cleanup: use the existing compact money formatter.
+_spina_v20_money = _spina_v18_fmt_money_compact
 
 
 def _spina_v20_round_rect(cv, x1, y1, x2, y2, r=10, **kw):
@@ -43877,31 +43856,12 @@ def _spina_v21_cash_colors(self=None):
     }
 
 
-def _spina_v21_cash_money_short(value):
-    try:
-        v = float(value or 0)
-    except Exception:
-        v = 0.0
-    av = abs(v)
-    if av >= 1_000_000:
-        return "PHP {:.2f}M".format(v / 1_000_000)
-    if av >= 100_000:
-        return "PHP {:.0f}K".format(v / 1_000)
-    if av >= 1_000:
-        return "PHP {:.1f}K".format(v / 1_000)
-    return "PHP {:,.0f}".format(v)
+# Phase 1 cleanup: use the existing compact money formatter.
+_spina_v21_cash_money_short = _spina_v18_fmt_money_compact
 
 
-def _spina_v21_cash_round_rect(cv, x1, y1, x2, y2, r=10, **kw):
-    try:
-        pts = [
-            x1+r, y1, x2-r, y1, x2, y1, x2, y1+r,
-            x2, y2-r, x2, y2, x2-r, y2, x1+r, y2,
-            x1, y2, x1, y2-r, x1, y1+r, x1, y1
-        ]
-        return cv.create_polygon(pts, smooth=True, **kw)
-    except Exception:
-        return cv.create_rectangle(x1, y1, x2, y2, **kw)
+# Phase 1 cleanup: use the existing rounded-rectangle helper.
+_spina_v21_cash_round_rect = _spina_v20_round_rect
 
 
 def _spina_v21_cash_card(parent, title, value="—", subtitle="", accent=None):
@@ -45129,46 +45089,8 @@ except Exception as __spina_exc:
 
 
 # --- BEGIN: v23 Modern Clients UI + Application Form Editor ---
-def _spina_v23_clients_colors(self=None):
-    try:
-        theme = str(getattr(self, "ui_theme", "dark") or "dark").lower()
-    except Exception:
-        theme = "dark"
-
-    if theme.startswith("l"):
-        return {
-            "bg": "#f3f6fb",
-            "panel": "#ffffff",
-            "card": "#ffffff",
-            "card2": "#f8fafc",
-            "border": "#d6dde8",
-            "fg": "#111827",
-            "muted": "#64748b",
-            "blue": "#2563eb",
-            "green": "#16a34a",
-            "orange": "#ea580c",
-            "purple": "#7c3aed",
-            "red": "#dc2626",
-            "soft": "#e8eef7",
-            "entry": "#ffffff",
-        }
-
-    return {
-        "bg": "#0f1117",
-        "panel": "#171a23",
-        "card": "#20232d",
-        "card2": "#262a36",
-        "border": "#343b4d",
-        "fg": "#f8fafc",
-        "muted": "#aab3c2",
-        "blue": "#60a5fa",
-        "green": "#22c55e",
-        "orange": "#fb923c",
-        "purple": "#a78bfa",
-        "red": "#fb7185",
-        "soft": "#252b38",
-        "entry": "#111827",
-    }
+# Phase 1 cleanup: reports and clients use the same theme palette.
+_spina_v23_clients_colors = _spina_v22_reports_colors
 
 
 def _spina_v23_money(v):
@@ -47574,48 +47496,8 @@ except Exception as __spina_exc:
 
 
 # --- BEGIN: v27 Modern Collector Route Overview + Better Route Editor ---
-def _spina_v27_route_colors(self=None):
-    try:
-        theme = str(getattr(self, "ui_theme", "dark") or "dark").lower()
-    except Exception:
-        theme = "dark"
-
-    if theme.startswith("l"):
-        return {
-            "bg": "#f3f6fb",
-            "panel": "#ffffff",
-            "card": "#ffffff",
-            "card2": "#f8fafc",
-            "border": "#d6dde8",
-            "fg": "#111827",
-            "muted": "#64748b",
-            "blue": "#2563eb",
-            "green": "#16a34a",
-            "orange": "#ea580c",
-            "purple": "#7c3aed",
-            "red": "#dc2626",
-            "yellow": "#d97706",
-            "soft": "#e8eef7",
-            "entry": "#ffffff",
-        }
-
-    return {
-        "bg": "#0f1117",
-        "panel": "#171a23",
-        "card": "#20232d",
-        "card2": "#262a36",
-        "border": "#343b4d",
-        "fg": "#f8fafc",
-        "muted": "#aab3c2",
-        "blue": "#60a5fa",
-        "green": "#22c55e",
-        "orange": "#fb923c",
-        "purple": "#a78bfa",
-        "red": "#fb7185",
-        "yellow": "#fbbf24",
-        "soft": "#252b38",
-        "entry": "#111827",
-    }
+# Phase 1 cleanup: collector overview and route editor use the same palette.
+_spina_v27_route_colors = _spina_v25_collector_colors
 
 
 def _spina_v27_route_button(parent, text, command=None, kind="normal", width=None):
