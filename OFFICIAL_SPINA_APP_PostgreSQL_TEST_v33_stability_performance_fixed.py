@@ -14968,7 +14968,8 @@ class App:
         # Apply modern top header colors/buttons too
         try:
             self._refresh_header_theme()
-        except Exception:
+        except Exception as __spina_exc:
+            _log_suppressed_once('modern_ui_pass_14971', 'modern UI header theme refresh skipped', __spina_exc)
             pass
 
         # Apply to plain tk widgets too
@@ -14979,7 +14980,8 @@ class App:
             pass
         try:
             self._refresh_modern_shell_theme()
-        except Exception:
+        except Exception as __spina_exc:
+            _log_suppressed_once('modern_ui_pass_14982', 'modern UI shell theme refresh skipped', __spina_exc)
             pass
 
     def _theme_palette(self, theme: str | None = None) -> dict:
@@ -15884,11 +15886,13 @@ class App:
         except Exception as e:
             try:
                 _log_suppressed_once('side_nav_select', 'sidebar select failed', e)
-            except Exception:
+            except Exception as __spina_exc:
+                _log_suppressed_once('modern_ui_pass_15887', 'modern UI sidebar select logging fallback skipped', __spina_exc)
                 pass
         try:
             self._refresh_side_nav_selection()
-        except Exception:
+        except Exception as __spina_exc:
+            _log_suppressed_once('modern_ui_pass_15891', 'modern UI sidebar selection refresh skipped', __spina_exc)
             pass
 
     def _rebuild_side_nav(self):
@@ -15899,7 +15903,8 @@ class App:
         try:
             for child in frame.winfo_children():
                 child.destroy()
-        except Exception:
+        except Exception as __spina_exc:
+            _log_suppressed_once('modern_ui_pass_15902', 'modern UI sidebar child cleanup skipped', __spina_exc)
             pass
 
         try:
@@ -15910,7 +15915,8 @@ class App:
         try:
             frame.configure(width=190)
             frame.pack_propagate(False)
-        except Exception:
+        except Exception as __spina_exc:
+            _log_suppressed_once('modern_ui_pass_15913', 'modern UI sidebar frame layout skipped', __spina_exc)
             pass
 
         # App label inside sidebar
@@ -15943,7 +15949,8 @@ class App:
             )
             subtitle.pack(fill='x', pady=(0, 12))
             self._side_nav_labels.append(subtitle)
-        except Exception:
+        except Exception as __spina_exc:
+            _log_suppressed_once('modern_ui_pass_15946', 'modern UI sidebar subtitle build skipped', __spina_exc)
             pass
 
         self._side_nav_buttons = {}
@@ -15967,7 +15974,8 @@ class App:
             except Exception as e:
                 try:
                     _log_suppressed_once('side_nav_btn', 'sidebar button failed', e)
-                except Exception:
+                except Exception as __spina_exc:
+                    _log_suppressed_once('modern_ui_pass_15970', 'modern UI sidebar button logging fallback skipped', __spina_exc)
                     pass
 
         try:
@@ -15987,7 +15995,8 @@ class App:
             )
             lbl.pack(fill='x')
             self._side_nav_labels.append(lbl)
-        except Exception:
+        except Exception as __spina_exc:
+            _log_suppressed_once('modern_ui_pass_15990', 'modern UI sidebar user label build skipped', __spina_exc)
             pass
 
         self._refresh_side_nav_selection()
@@ -16023,7 +16032,8 @@ class App:
                     activeforeground=fg,
                     highlightthickness=0,
                 )
-            except Exception:
+            except Exception as __spina_exc:
+                _log_suppressed_once('modern_ui_pass_16026', 'modern UI sidebar button selection style skipped', __spina_exc)
                 pass
 
     def _refresh_modern_shell_theme(self):
@@ -16036,14 +16046,16 @@ class App:
                 self.sidebar_frame.configure(style='Sidebar.TFrame')
             if getattr(self, 'content_frame', None) is not None:
                 self.content_frame.configure(style='Content.TFrame')
-        except Exception:
+        except Exception as __spina_exc:
+            _log_suppressed_once('modern_ui_pass_16039', 'modern UI shell style refresh skipped', __spina_exc)
             pass
         try:
             self._rebuild_side_nav()
         except Exception:
             try:
                 self._refresh_side_nav_selection()
-            except Exception:
+            except Exception as __spina_exc:
+                _log_suppressed_once('modern_ui_pass_16046', 'modern UI shell sidebar selection fallback skipped', __spina_exc)
                 pass
 
     # ---------------- Modern top bar + quick loan-type switch ----------------
@@ -16100,7 +16112,8 @@ class App:
                 hover_bg = normal_bg
             widget.bind('<Enter>', lambda e, w=widget, h=hover_bg: w.configure(bg=h), add='+')
             widget.bind('<Leave>', lambda e, w=widget, n=normal_bg: w.configure(bg=n), add='+')
-        except Exception:
+        except Exception as __spina_exc:
+            _log_suppressed_once('modern_ui_pass_16103', 'modern UI button hover binding skipped', __spina_exc)
             pass
 
     def _make_header_button(self, master, text, command, *, primary=False, danger=False, width=None):
@@ -16144,7 +16157,8 @@ class App:
             pass
         try:
             self._refresh_mode_toggle()
-        except Exception:
+        except Exception as __spina_exc:
+            _log_suppressed_once('modern_ui_pass_16147', 'modern UI mode toggle refresh skipped', __spina_exc)
             pass
         try:
             self._on_mode_change()
@@ -16173,7 +16187,8 @@ class App:
                     activeforeground=fg,
                     highlightbackground=hp['accent'] if active else hp['border'],
                 )
-            except Exception:
+            except Exception as __spina_exc:
+                _log_suppressed_once('modern_ui_pass_16176', 'modern UI mode button style skipped', __spina_exc)
                 pass
         try:
             if getattr(self, 'mode_status_label', None) is not None:
@@ -16182,7 +16197,8 @@ class App:
                     bg=hp['panel'],
                     fg=hp['muted'],
                 )
-        except Exception:
+        except Exception as __spina_exc:
+            _log_suppressed_once('modern_ui_pass_16185', 'modern UI mode status label refresh skipped', __spina_exc)
             pass
 
     def _refresh_header_theme(self):
@@ -16191,21 +16207,24 @@ class App:
         try:
             if getattr(self, 'modern_header', None) is not None:
                 self.modern_header.configure(bg=hp['bg'])
-        except Exception:
+        except Exception as __spina_exc:
+            _log_suppressed_once('modern_ui_pass_16194', 'modern UI header background refresh skipped', __spina_exc)
             pass
         for attr in ('header_left', 'header_center', 'header_right', 'mode_switch_frame'):
             try:
                 w = getattr(self, attr, None)
                 if w is not None:
                     w.configure(bg=hp['bg'] if attr != 'mode_switch_frame' else hp['panel'])
-            except Exception:
+            except Exception as __spina_exc:
+                _log_suppressed_once('modern_ui_pass_16201', 'modern UI header frame color refresh skipped', __spina_exc)
                 pass
         for attr in ('header_title_label', 'header_view_title'):
             try:
                 w = getattr(self, attr, None)
                 if w is not None:
                     w.configure(bg=hp['bg'] if attr == 'header_title_label' else hp['panel'], fg=hp['fg'])
-            except Exception:
+            except Exception as __spina_exc:
+                _log_suppressed_once('modern_ui_pass_16208', 'modern UI header title color refresh skipped', __spina_exc)
                 pass
         for attr in ('header_subtitle_label', 'mode_status_label'):
             try:
