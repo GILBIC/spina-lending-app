@@ -21,11 +21,12 @@ from typing import Any
 
 DEFAULT_APP_FILE = "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 
-# Business/report/storage contexts must not be part of the first logging batch.
-# The uploaded dry-run plan showed that broad words like "path", "cache",
-# "picture", and "load" can select PostgreSQL storage, report/PDF, and notes
-# helpers. Keep this list intentionally broad; it is safer to skip too much and
-# add a narrower tool later than to touch loan/report behavior accidentally.
+# Business/report/storage contexts must not be part of the general logging batch.
+# Uploaded dry-run plans showed that broad words like "path", "cache",
+# "picture", and "load" can select PostgreSQL storage, report/PDF, notes,
+# renewal, reason-color, and cash-control helpers. Keep this list intentionally
+# broad; it is safer to skip too much and add a narrower manual tool later than
+# to touch loan/report behavior accidentally.
 PROTECTED_TERMS = (
     "balance",
     "7x7",
@@ -65,6 +66,12 @@ PROTECTED_TERMS = (
     "transaction",
     "transactions",
     "loan",
+    "renew",
+    "renewal",
+    "reason",
+    "cash control",
+    "cashctl",
+    "amount",
 )
 
 # Keep focus terms strictly UI/startup chrome. Avoid broad words such as
@@ -117,6 +124,40 @@ PROTECTED_NAME_TERMS = (
     "writable_dir",
     "reports_root",
     "logger",  # do not instrument the logging fallback itself.
+    "renew",
+    "reason",
+    "cashctl",
+    "cash_control",
+    "amount",
+    "to_number",
+    "parse_float",
+    "parse_amount",
+    "valid_date",
+    "date_text",
+)
+
+# Extra guard after the first safe batch. Remaining candidates should be true UI
+# chrome helpers only. Names outside this allowlist are skipped until a manual
+# review creates a more specific tool.
+STRICT_UI_CHROME_NAME_TERMS = (
+    "startup",
+    "login",
+    "refresh",
+    "reload",
+    "build",
+    "side_nav",
+    "nav_items",
+    "databank_focus",
+    "looks_like_data_grid",
+    "tab",
+    "widget",
+    "button",
+    "dialog",
+    "frame",
+    "window",
+    "root",
+    "theme",
+    "norm",
 )
 
 SILENT_FALLBACK_PATTERNS = (
@@ -200,6 +241,8 @@ def _skip_reason(context: str, cls: str, fn: str, body: list[str]) -> str:
         return "protected_name"
     if not _has_any(joined, FOCUS_TERMS):
         return "not_ui_startup_chrome"
+    if owner and not _has_any(owner, STRICT_UI_CHROME_NAME_TERMS):
+        return "not_strict_ui_chrome_name"
     return ""
 
 
@@ -271,9 +314,9 @@ def run(path: Path, *, apply: bool, limit: int, json_path: str | None) -> dict[s
         "skipped_summary": dict(sorted(skipped.items())),
         "recommendations": [
             "Dry-run first and review selected lines.",
-            "This tightened version skips PostgreSQL storage, files, reports/PDFs, notes, collectors, transactions, and loan/payment contexts.",
-            "Use a small limit first, then compile and smoke-test SPINA.",
-            "Do not use this for balances, 7x7, interest, notes, collector route, statements, reports, PDFs, or storage helpers.",
+            "This chrome-only version skips renewal, reason/color, cash-control, amount/date parsing, storage, reports/PDFs, notes, collectors, transactions, and loan/payment contexts.",
+            "A zero-candidate dry run is acceptable; it means the general safe logging batch is complete.",
+            "Do not use this for balances, 7x7, interest, notes, collector route, statements, reports, PDFs, storage helpers, renewals, or cash-control amount helpers.",
         ],
     }
     if json_path:
