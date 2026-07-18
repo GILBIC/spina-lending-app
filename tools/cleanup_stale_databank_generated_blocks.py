@@ -121,6 +121,34 @@ def _protected_hits(text: str) -> list[str]:
     return [term for term in PROTECTED_TERMS if term.lower() in lower]
 
 
+def _split_comment_and_code_lines(lines: list[str]) -> tuple[list[str], list[str]]:
+    """Split Python source lines into comment-only lines and everything else.
+
+    Protected terms in comments are safety notes, not executable lending/report
+    logic. Protected terms in strings or executable code still count as code and
+    keep the cleanup blocked.
+    """
+    comment_lines: list[str] = []
+    code_lines: list[str] = []
+    for line in lines:
+        stripped = line.lstrip()
+        if stripped.startswith("#"):
+            comment_lines.append(line)
+        else:
+            code_lines.append(line)
+    return comment_lines, code_lines
+
+
+def _protected_hits_in_code(lines: list[str]) -> list[str]:
+    _comment_lines, code_lines = _split_comment_and_code_lines(lines)
+    return _protected_hits("".join(code_lines))
+
+
+def _protected_hits_in_comments(lines: list[str]) -> list[str]:
+    comment_lines, _code_lines = _split_comment_and_code_lines(lines)
+    return _protected_hits("".join(comment_lines))
+
+
 def _looks_like_generated_databank_cleanup_block(text: str) -> bool:
     """Return True only for generated cleanup/hide block shapes."""
     lower = text.lower()
@@ -266,10 +294,16 @@ def _remove_ranges(lines: list[str], ranges: list[tuple[int, int]]) -> list[str]
     return [line for i, line in enumerate(lines) if not remove[i]]
 
 
+def _format_terms(terms: list[str]) -> str:
+    return ", ".join(terms[:8])
+
+
 def _safety_check_range(lines: list[str], start: int, end: int) -> tuple[bool, str | None]:
-    text = "".join(lines[start:end])
+    block_lines = lines[start:end]
+    text = "".join(block_lines)
     length = end - start
-    protected = _protected_hits(text)
+    protected = _protected_hits_in_code(block_lines)
+    ignored_comment_terms = _protected_hits_in_comments(block_lines)
 
     if length > EXTENDED_GENERATED_RANGE_LIMIT:
         return False, f"range {start + 1}-{end}: too large ({length} lines; limit {EXTENDED_GENERATED_RANGE_LIMIT})"
@@ -281,7 +315,12 @@ def _safety_check_range(lines: list[str], start: int, end: int) -> tuple[bool, s
         if not _has_expected_generated_code(text):
             return False, f"range {start + 1}-{end}: large range missing expected hide/destroy generated code marker"
         if protected:
-            return False, f"range {start + 1}-{end}: protected terms found: {', '.join(protected[:8])}"
+            return False, f"range {start + 1}-{end}: protected terms found in code: {_format_terms(protected)}"
+        if ignored_comment_terms:
+            return True, (
+                f"large recognized generated cleanup range ({length} lines); "
+                f"ignored protected terms in comments: {_format_terms(ignored_comment_terms)}"
+            )
         return True, f"large recognized generated cleanup range ({length} lines)"
 
     if not _looks_like_generated_databank_cleanup_block(text):
@@ -289,7 +328,9 @@ def _safety_check_range(lines: list[str], start: int, end: int) -> tuple[bool, s
     if not _has_expected_generated_code(text):
         return False, f"range {start + 1}-{end}: missing expected hide/destroy generated code marker"
     if protected:
-        return False, f"range {start + 1}-{end}: protected terms found: {', '.join(protected[:8])}"
+        return False, f"range {start + 1}-{end}: protected terms found in code: {_format_terms(protected)}"
+    if ignored_comment_terms:
+        return True, f"ignored protected terms in comments: {_format_terms(ignored_comment_terms)}"
     return True, None
 
 
