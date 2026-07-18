@@ -16771,10 +16771,10 @@ class App:
         ttk.Button(nav, text='Next >', command=self.next_month).pack(side='left', padx=3)
 
         # Actions row
-        ttk.Button(row2, text='Export Date Range Template', command=self.export_range_template).pack(side='left', padx=(0, 6))
+        # SPINA removed Data Bank export control statement
         ttk.Button(row2, text='Import from Excel', command=self._import_from_excel_entry).pack(side='left', padx=6)
-        ttk.Button(row2, text='Export JSONL (Month)', command=self.export_jsonl_month).pack(side='left', padx=6)
-        ttk.Button(row2, text='Create Daily Collection Excel Template', command=self.export_daily_collection_template).pack(side='left', padx=6)
+        # SPINA removed legacy Data Bank export UI control
+        # SPINA removed legacy Data Bank export UI control
         ttk.Button(row2, text='Daily Close / View', command=self.open_databank_close_dialog).pack(side='left', padx=6)
         ttk.Button(row2, text='Delete Day', command=self.open_delete_day_dialog).pack(side='left', padx=6)
         ttk.Button(row2, text='Close Records List', command=self.open_databank_close_records_dialog).pack(side='left', padx=6)
@@ -20212,10 +20212,10 @@ class App:
         ttk.Button(actions, text='History', command=self.open_client_history_dialog).pack(side='left', padx=6)
         ttk.Button(actions, text='Archived', command=self.open_archived_clients_dialog).pack(side='left', padx=6)
 
-        ttk.Button(actions, text='From Transactions', command=self.import_missing).pack(side='right', padx=(6, 0))
-        ttk.Button(actions, text='Full Ledger', command=self.print_full_daily_ledger).pack(side='right', padx=6)
-        ttk.Button(actions, text='Import Excel', command=self.import_clients_from_excel).pack(side='right', padx=6)
-        ttk.Button(actions, text='Export Template', command=self.export_clients_template).pack(side='right', padx=6)
+        # SPINA removed legacy Clients-tab action button statement
+        # SPINA removed legacy Clients-tab action button statement
+        # SPINA removed legacy Clients-tab action button statement
+        # SPINA removed legacy Clients-tab action button statement
         self._del_client_btn = ttk.Button(actions, text='Delete Client', command=self.delete_client_selected)
         self._del_client_btn.pack(side='right', padx=6)
         try:
@@ -42281,15 +42281,15 @@ try:
         right_actions.pack(side='right')
 
         ttk.Label(left_actions, text='Actions', style='DataBank.Label.TLabel').pack(side='left', padx=(0, 10))
-        ttk.Button(left_actions, text='Import Excel', style='Primary.TButton', command=self._import_from_excel_entry).pack(side='left', padx=3)
+        # SPINA removed legacy Clients-tab action button statement
         ttk.Button(left_actions, text='Daily Close / View', command=self.open_databank_close_dialog).pack(side='left', padx=3)
         ttk.Button(left_actions, text='Delete Day', command=self.open_delete_day_dialog).pack(side='left', padx=3)
         ttk.Button(left_actions, text='Close Records', command=self.open_databank_close_records_dialog).pack(side='left', padx=3)
 
-        ttk.Label(right_actions, text='Exports', style='DataBank.Label.TLabel').pack(side='left', padx=(0, 8))
-        ttk.Button(right_actions, text='Date Range Template', command=self.export_range_template).pack(side='left', padx=3)
-        ttk.Button(right_actions, text='JSONL Month', command=self.export_jsonl_month).pack(side='left', padx=3)
-        ttk.Button(right_actions, text='Daily Excel Template', command=self.export_daily_collection_template).pack(side='left', padx=3)
+        # SPINA removed legacy Data Bank export UI control
+        # SPINA removed Data Bank export control statement
+        # SPINA removed Data Bank export control statement
+        # SPINA removed Data Bank export control statement
 
         # Grid card
         body_card = ttk.Frame(page, style='DataBank.Card.TFrame', padding=(10, 10, 10, 10))
@@ -45359,10 +45359,10 @@ def _spina_v23_build_clients_tab(self):
         except Exception:
             pass
 
-        _spina_v23_button(actions, "Import Excel", command=self.import_clients_from_excel, kind="soft").pack(side="right", padx=(6, 0))
-        _spina_v23_button(actions, "Export Template", command=self.export_clients_template, kind="soft").pack(side="right", padx=(6, 0))
-        _spina_v23_button(actions, "Full Ledger", command=self.print_full_daily_ledger, kind="soft").pack(side="right", padx=(6, 0))
-        _spina_v23_button(actions, "From Transactions", command=self.import_missing, kind="soft").pack(side="right", padx=(6, 0))
+        # SPINA removed legacy Clients-tab action button statement
+        # SPINA removed legacy Clients-tab action button statement
+        # SPINA removed legacy Clients-tab action button statement
+        # SPINA removed legacy Clients-tab action button statement
 
         cards = tk.Frame(outer, bg=c["bg"])
         cards.pack(fill="x", padx=18, pady=(0, 12))
@@ -48946,5 +48946,617 @@ except Exception as __spina_exc:
 
 
 # --- FINAL ENTRY POINT (after all runtime patches) ---
+
+# --- BEGIN: SPINA REMOVE LEGACY CLIENT ACTION BUTTONS ---
+# Legacy Clients-tab actions are intentionally removed from the UI/action layer:
+# From Transactions, Full Ledger, Export Template, and Import Excel.
+# Collector Route, notes, balances, 7x7, payment logic, and report math are untouched.
+def _spina_legacy_client_action_removed_message(action="Legacy client action"):
+    message = str(action) + " is removed from the Clients tab."
+    try:
+        if "messagebox" in globals():
+            messagebox.showinfo("Action Removed", message)
+        else:
+            print("[SPINA] " + message, flush=True)
+    except Exception:
+        try:
+            print("[SPINA] " + message, flush=True)
+        except Exception:
+            pass
+
+
+def _spina_make_removed_legacy_client_action(label):
+    def _spina_removed_action(*args, **kwargs):
+        _spina_legacy_client_action_removed_message(label)
+        return None
+    _spina_removed_action.__name__ = "_spina_removed_" + str(label).lower().replace(" ", "_")
+    return _spina_removed_action
+
+
+def _spina_normalize_legacy_label(value):
+    try:
+        return " ".join(str(value or "").strip().lower().split())
+    except Exception:
+        return ""
+
+
+_SPINA_LEGACY_CLIENT_LABELS = {
+    "from transactions",
+    "full ledger",
+    "full daily ledger",
+    "export template",
+    "import excel",
+}
+
+_SPINA_LEGACY_CLIENT_CALLBACKS = {
+    "from transactions": (
+        "from_transactions",
+        "load_from_transactions",
+        "refresh_from_transactions",
+        "import_from_transactions",
+        "sync_from_transactions",
+        "attach_direct_integration",
+        "_maybe_suggest_link_clients",
+    ),
+    "full ledger": (
+        "print_full_daily_ledger",
+        "generate_full_daily_ledger",
+        "open_full_daily_ledger",
+        "_print_full_daily_ledger",
+    ),
+    "export template": (
+        "export_range_template",
+        "export_daily_collection_template",
+        "export_clients_template",
+        "_export_clients_template",
+    ),
+    "import excel": (
+        "import_clients_from_excel",
+        "_app_import_clients_from_excel",
+        "_import_clients_from_excel",
+        "import_clients_excel",
+    ),
+}
+
+
+def _spina_disable_legacy_client_callbacks():
+    for _spina_label, _spina_names in _SPINA_LEGACY_CLIENT_CALLBACKS.items():
+        _spina_replacement = _spina_make_removed_legacy_client_action(_spina_label.title())
+        for _spina_name in _spina_names:
+            try:
+                if callable(globals().get(_spina_name)):
+                    globals()[_spina_name] = _spina_replacement
+            except Exception:
+                pass
+            try:
+                if "App" in globals() and hasattr(App, _spina_name):
+                    setattr(App, _spina_name, _spina_replacement)
+            except Exception:
+                pass
+
+
+def _spina_widget_text(widget):
+    for option in ("text",):
+        try:
+            normalized = _spina_normalize_legacy_label(widget.cget(option))
+            if normalized:
+                return normalized
+        except Exception:
+            pass
+    for attr in ("_text", "text", "_name"):
+        try:
+            normalized = _spina_normalize_legacy_label(getattr(widget, attr, ""))
+            if normalized:
+                return normalized
+        except Exception:
+            pass
+    return ""
+
+
+def _spina_remove_widget(widget):
+    try:
+        widget.configure(state="disabled")
+    except Exception:
+        pass
+    try:
+        widget.pack_forget()
+    except Exception:
+        pass
+    try:
+        widget.grid_remove()
+    except Exception:
+        pass
+    try:
+        widget.place_forget()
+    except Exception:
+        pass
+    try:
+        widget.destroy()
+    except Exception:
+        pass
+
+
+def _spina_hide_legacy_client_action_widgets(root):
+    removed = 0
+
+    def _spina_hide_widget(widget):
+        nonlocal removed
+        try:
+            if _spina_widget_text(widget) in _SPINA_LEGACY_CLIENT_LABELS:
+                removed += 1
+                _spina_remove_widget(widget)
+                return
+            for child in widget.winfo_children():
+                _spina_hide_widget(child)
+        except Exception:
+            pass
+
+    try:
+        _spina_hide_widget(root)
+    except Exception:
+        pass
+    return removed
+
+
+def _spina_schedule_legacy_client_button_hide(root, attempts=240, delay_ms=250):
+    try:
+        _spina_hide_legacy_client_action_widgets(root)
+    except Exception:
+        pass
+    try:
+        if attempts > 0:
+            root.after(delay_ms, lambda: _spina_schedule_legacy_client_button_hide(root, attempts - 1, delay_ms))
+    except Exception:
+        pass
+
+
+def _spina_bind_late_legacy_client_button_hide(root):
+    def _spina_rescan_later(event=None):
+        try:
+            for delay in (1, 25, 100, 300, 800, 1500):
+                root.after(delay, lambda: _spina_hide_legacy_client_action_widgets(root))
+        except Exception:
+            pass
+
+    for _spina_event in ("<ButtonRelease-1>", "<Button-1>", "<<NotebookTabChanged>>", "<Map>", "<Visibility>", "<FocusIn>"):
+        try:
+            root.bind_all(_spina_event, _spina_rescan_later, add="+")
+        except Exception:
+            pass
+
+
+def _spina_wrap_tk_geometry_for_legacy_button_hide():
+    try:
+        import tkinter as _spina_tk
+    except Exception:
+        return
+
+    def _spina_patch_method(_spina_cls, _spina_name):
+        try:
+            original = getattr(_spina_cls, _spina_name, None)
+            if not callable(original) or getattr(original, "_spina_legacy_button_geom_wrapped", False):
+                return
+
+            def _spina_wrapped(self, *args, **kwargs):
+                result = original(self, *args, **kwargs)
+                try:
+                    if _spina_widget_text(self) in _SPINA_LEGACY_CLIENT_LABELS:
+                        try:
+                            self.winfo_toplevel().after(1, lambda w=self: _spina_remove_widget(w))
+                        except Exception:
+                            _spina_remove_widget(self)
+                except Exception:
+                    pass
+                return result
+
+            _spina_wrapped.__name__ = getattr(original, "__name__", _spina_name)
+            _spina_wrapped._spina_legacy_button_geom_wrapped = True
+            setattr(_spina_cls, _spina_name, _spina_wrapped)
+        except Exception:
+            pass
+
+    for _spina_cls_name, _spina_method_names in (
+        ("Pack", ("pack", "pack_configure")),
+        ("Grid", ("grid", "grid_configure")),
+        ("Place", ("place", "place_configure")),
+        ("Misc", ("configure", "config")),
+    ):
+        try:
+            _spina_cls = getattr(_spina_tk, _spina_cls_name, None)
+            if _spina_cls is None:
+                continue
+            for _spina_method_name in _spina_method_names:
+                _spina_patch_method(_spina_cls, _spina_method_name)
+        except Exception:
+            pass
+
+
+def _spina_wrap_client_tab_builders_for_legacy_button_hide():
+    try:
+        if "App" not in globals():
+            return
+        for _spina_method_name in (
+            "_build_clients_tab",
+            "build_clients_tab",
+            "create_clients_tab",
+            "setup_clients_tab",
+            "_create_clients_tab",
+            "refresh_clients",
+            "_refresh_clients",
+            "show_clients_tab",
+            "load_clients_tab",
+        ):
+            try:
+                original = getattr(App, _spina_method_name, None)
+                if not callable(original) or getattr(original, "_spina_legacy_button_hide_wrapped", False):
+                    continue
+
+                def _spina_make_wrapped(_spina_original, _spina_name):
+                    def _spina_wrapped(self, *args, **kwargs):
+                        result = _spina_original(self, *args, **kwargs)
+                        try:
+                            for delay in (1, 25, 100, 300, 1000):
+                                self.after(delay, lambda: _spina_hide_legacy_client_action_widgets(self))
+                        except Exception:
+                            _spina_hide_legacy_client_action_widgets(self)
+                        return result
+                    _spina_wrapped.__name__ = getattr(_spina_original, "__name__", _spina_name)
+                    _spina_wrapped._spina_legacy_button_hide_wrapped = True
+                    return _spina_wrapped
+
+                setattr(App, _spina_method_name, _spina_make_wrapped(original, _spina_method_name))
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
+_spina_disable_legacy_client_callbacks()
+_spina_wrap_tk_geometry_for_legacy_button_hide()
+_spina_wrap_client_tab_builders_for_legacy_button_hide()
+
+try:
+    _spina_original_app_init_for_legacy_client_buttons = App.__init__
+    if not getattr(_spina_original_app_init_for_legacy_client_buttons, "_spina_legacy_client_buttons_removed", False):
+        def _spina_app_init_without_legacy_client_buttons(self, *args, **kwargs):
+            result = _spina_original_app_init_for_legacy_client_buttons(self, *args, **kwargs)
+            _spina_disable_legacy_client_callbacks()
+            _spina_wrap_tk_geometry_for_legacy_button_hide()
+            _spina_wrap_client_tab_builders_for_legacy_button_hide()
+            try:
+                _spina_bind_late_legacy_client_button_hide(self)
+            except Exception:
+                pass
+            try:
+                for delay in (1, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000):
+                    self.after(delay, lambda: _spina_hide_legacy_client_action_widgets(self))
+                _spina_schedule_legacy_client_button_hide(self)
+            except Exception:
+                _spina_hide_legacy_client_action_widgets(self)
+            return result
+
+        _spina_app_init_without_legacy_client_buttons.__name__ = getattr(
+            _spina_original_app_init_for_legacy_client_buttons, "__name__", "__init__"
+        )
+        _spina_app_init_without_legacy_client_buttons._spina_legacy_client_buttons_removed = True
+        App.__init__ = _spina_app_init_without_legacy_client_buttons
+except Exception:
+    pass
+# --- END: SPINA REMOVE LEGACY CLIENT ACTION BUTTONS ---
+
+# --- BEGIN: SPINA REMOVE DATA BANK EXPORT CONTROLS ---
+# Data Bank export controls are intentionally removed from the UI/action layer:
+# Exports, Date Range Template, JSONL Month, and Daily Excel Template.
+# Notes, balances, 7x7, payment logic, report math, collector routes, and DB writes are untouched.
+def _spina_normalize_databank_export_label(value):
+    try:
+        return " ".join(str(value or "").strip().lower().split())
+    except Exception:
+        return ""
+
+
+_SPINA_DATABANK_EXPORT_BUTTON_LABELS = {
+    "date range template",
+    "jsonl month",
+    "daily excel template",
+}
+
+_SPINA_DATABANK_EXPORT_ALL_LABELS = set(_SPINA_DATABANK_EXPORT_BUTTON_LABELS)
+_SPINA_DATABANK_EXPORT_ALL_LABELS.add("exports")
+
+_SPINA_DATABANK_EXPORT_CALLBACKS = {
+    "date range template": (
+        "export_range_template",
+        "export_date_range_template",
+        "export_data_bank_range_template",
+        "create_date_range_template",
+    ),
+    "jsonl month": (
+        "export_jsonl_month",
+        "export_month_jsonl",
+        "create_jsonl_month",
+        "save_jsonl_month",
+    ),
+    "daily excel template": (
+        "export_daily_excel_template",
+        "create_daily_excel_template",
+        "create_daily_collection_template",
+        "export_daily_collection_template",
+    ),
+}
+
+
+def _spina_databank_export_removed_message(action="Data Bank export control"):
+    message = str(action) + " is removed from Data Bank."
+    try:
+        if "messagebox" in globals():
+            messagebox.showinfo("Action Removed", message)
+        else:
+            print("[SPINA] " + message, flush=True)
+    except Exception:
+        try:
+            print("[SPINA] " + message, flush=True)
+        except Exception:
+            pass
+
+
+def _spina_make_removed_databank_export_action(label):
+    def _spina_removed_action(*args, **kwargs):
+        _spina_databank_export_removed_message(label)
+        return None
+    _spina_removed_action.__name__ = "_spina_removed_" + str(label).lower().replace(" ", "_")
+    return _spina_removed_action
+
+
+def _spina_disable_databank_export_callbacks():
+    for _spina_label, _spina_names in _SPINA_DATABANK_EXPORT_CALLBACKS.items():
+        _spina_replacement = _spina_make_removed_databank_export_action(_spina_label.title())
+        for _spina_name in _spina_names:
+            try:
+                if callable(globals().get(_spina_name)):
+                    globals()[_spina_name] = _spina_replacement
+            except Exception:
+                pass
+            try:
+                if "App" in globals() and hasattr(App, _spina_name):
+                    setattr(App, _spina_name, _spina_replacement)
+            except Exception:
+                pass
+
+
+def _spina_databank_widget_text(widget):
+    for option in ("text",):
+        try:
+            value = widget.cget(option)
+            normalized = _spina_normalize_databank_export_label(value)
+            if normalized:
+                return normalized
+        except Exception:
+            pass
+    for attr in ("_text", "text", "_name"):
+        try:
+            value = getattr(widget, attr, "")
+            normalized = _spina_normalize_databank_export_label(value)
+            if normalized:
+                return normalized
+        except Exception:
+            pass
+    return ""
+
+
+def _spina_remove_databank_export_widget(widget):
+    try:
+        widget.configure(state="disabled")
+    except Exception:
+        pass
+    try:
+        widget.pack_forget()
+    except Exception:
+        pass
+    try:
+        widget.grid_remove()
+    except Exception:
+        pass
+    try:
+        widget.place_forget()
+    except Exception:
+        pass
+    try:
+        widget.destroy()
+    except Exception:
+        pass
+
+
+def _spina_parent_has_databank_export_buttons(widget):
+    try:
+        parent = widget.master
+    except Exception:
+        parent = None
+    if parent is None:
+        return False
+    try:
+        for child in parent.winfo_children():
+            if _spina_databank_widget_text(child) in _SPINA_DATABANK_EXPORT_BUTTON_LABELS:
+                return True
+    except Exception:
+        return False
+    return False
+
+
+def _spina_hide_databank_export_controls(root):
+    removed = 0
+
+    def _spina_walk(widget):
+        nonlocal removed
+        try:
+            text = _spina_databank_widget_text(widget)
+            should_remove = text in _SPINA_DATABANK_EXPORT_BUTTON_LABELS
+            if text == "exports" and _spina_parent_has_databank_export_buttons(widget):
+                should_remove = True
+            if should_remove:
+                removed += 1
+                _spina_remove_databank_export_widget(widget)
+                return
+            for child in widget.winfo_children():
+                _spina_walk(child)
+        except Exception:
+            pass
+
+    try:
+        _spina_walk(root)
+    except Exception:
+        pass
+    return removed
+
+
+def _spina_wrap_tk_geometry_for_databank_export_hide():
+    try:
+        import tkinter as _spina_tk
+    except Exception:
+        return
+
+    def _spina_patch_method(_spina_cls, _spina_name):
+        try:
+            original = getattr(_spina_cls, _spina_name, None)
+            if not callable(original) or getattr(original, "_spina_databank_export_geom_wrapped", False):
+                return
+
+            def _spina_wrapped(self, *args, **kwargs):
+                result = original(self, *args, **kwargs)
+                try:
+                    text = _spina_databank_widget_text(self)
+                    if text in _SPINA_DATABANK_EXPORT_BUTTON_LABELS or (
+                        text == "exports" and _spina_parent_has_databank_export_buttons(self)
+                    ):
+                        try:
+                            root = self.winfo_toplevel()
+                            root.after(1, lambda w=self: _spina_remove_databank_export_widget(w))
+                        except Exception:
+                            _spina_remove_databank_export_widget(self)
+                except Exception:
+                    pass
+                return result
+
+            _spina_wrapped.__name__ = getattr(original, "__name__", _spina_name)
+            _spina_wrapped._spina_databank_export_geom_wrapped = True
+            setattr(_spina_cls, _spina_name, _spina_wrapped)
+        except Exception:
+            pass
+
+    for _spina_cls_name, _spina_method_names in (
+        ("Pack", ("pack", "pack_configure")),
+        ("Grid", ("grid", "grid_configure")),
+        ("Place", ("place", "place_configure")),
+        ("Misc", ("configure", "config")),
+    ):
+        try:
+            _spina_cls = getattr(_spina_tk, _spina_cls_name, None)
+            if _spina_cls is None:
+                continue
+            for _spina_method_name in _spina_method_names:
+                _spina_patch_method(_spina_cls, _spina_method_name)
+        except Exception:
+            pass
+
+
+def _spina_schedule_databank_export_hide(root, attempts=160, delay_ms=250):
+    try:
+        _spina_hide_databank_export_controls(root)
+    except Exception:
+        pass
+    try:
+        if attempts > 0:
+            root.after(delay_ms, lambda: _spina_schedule_databank_export_hide(root, attempts - 1, delay_ms))
+    except Exception:
+        pass
+
+
+def _spina_bind_late_databank_export_hide(root):
+    def _spina_rescan_later(event=None):
+        try:
+            for delay in (1, 25, 100, 300, 800, 1500):
+                root.after(delay, lambda: _spina_hide_databank_export_controls(root))
+        except Exception:
+            pass
+
+    for _spina_event in ("<ButtonRelease-1>", "<Button-1>", "<<NotebookTabChanged>>", "<Map>", "<Visibility>", "<FocusIn>"):
+        try:
+            root.bind_all(_spina_event, _spina_rescan_later, add="+")
+        except Exception:
+            pass
+
+
+def _spina_wrap_databank_builders_for_export_hide():
+    try:
+        if "App" not in globals():
+            return
+        for _spina_method_name in (
+            "_build_data_bank_tab",
+            "build_data_bank_tab",
+            "create_data_bank_tab",
+            "setup_data_bank_tab",
+            "_create_data_bank_tab",
+            "refresh_data_grid",
+            "show_data_bank_tab",
+            "load_data_bank_tab",
+        ):
+            try:
+                original = getattr(App, _spina_method_name, None)
+                if not callable(original) or getattr(original, "_spina_databank_export_hide_wrapped", False):
+                    continue
+
+                def _spina_make_wrapped(_spina_original, _spina_name):
+                    def _spina_wrapped(self, *args, **kwargs):
+                        result = _spina_original(self, *args, **kwargs)
+                        try:
+                            for delay in (1, 25, 100, 300, 1000):
+                                self.after(delay, lambda: _spina_hide_databank_export_controls(self))
+                        except Exception:
+                            _spina_hide_databank_export_controls(self)
+                        return result
+                    _spina_wrapped.__name__ = getattr(_spina_original, "__name__", _spina_name)
+                    _spina_wrapped._spina_databank_export_hide_wrapped = True
+                    return _spina_wrapped
+
+                setattr(App, _spina_method_name, _spina_make_wrapped(original, _spina_method_name))
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
+_spina_disable_databank_export_callbacks()
+_spina_wrap_tk_geometry_for_databank_export_hide()
+_spina_wrap_databank_builders_for_export_hide()
+
+try:
+    _spina_original_app_init_for_databank_exports = App.__init__
+    if not getattr(_spina_original_app_init_for_databank_exports, "_spina_databank_exports_removed", False):
+        def _spina_app_init_without_databank_exports(self, *args, **kwargs):
+            result = _spina_original_app_init_for_databank_exports(self, *args, **kwargs)
+            _spina_disable_databank_export_callbacks()
+            _spina_wrap_tk_geometry_for_databank_export_hide()
+            _spina_wrap_databank_builders_for_export_hide()
+            try:
+                _spina_bind_late_databank_export_hide(self)
+            except Exception:
+                pass
+            try:
+                for delay in (1, 25, 50, 100, 250, 500, 1000, 2500, 5000):
+                    self.after(delay, lambda: _spina_hide_databank_export_controls(self))
+                _spina_schedule_databank_export_hide(self)
+            except Exception:
+                _spina_hide_databank_export_controls(self)
+            return result
+
+        _spina_app_init_without_databank_exports.__name__ = getattr(
+            _spina_original_app_init_for_databank_exports, "__name__", "__init__"
+        )
+        _spina_app_init_without_databank_exports._spina_databank_exports_removed = True
+        App.__init__ = _spina_app_init_without_databank_exports
+except Exception:
+    pass
+# --- END: SPINA REMOVE DATA BANK EXPORT CONTROLS ---
+
 if __name__ == '__main__':
     main()
