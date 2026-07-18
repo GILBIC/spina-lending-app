@@ -23,10 +23,16 @@ One older generated fallback block can be slightly larger than the original revi
 
 - it still contains Data Bank export cleanup markers or labels
 - it still contains generated hide/destroy behavior
-- it does not contain protected lending/report logic terms
+- it does not contain protected lending/report logic terms in executable code
 - the range is still below the extended safety limit
 
 Large accepted ranges are printed with a `[SPINA][REVIEW]` note during dry run before `--apply` is used.
+
+## Comment-only protected terms
+
+The tool may see protected words such as `balance`, `7x7`, or `collector route` in comments that document what the cleanup must not touch. Those comment-only safety notes are not executable lending/report logic, so the tool can ignore them and print a `[SPINA][REVIEW]` note.
+
+Protected terms inside executable code or string values still stop the cleanup.
 
 ## Local use after merge
 
@@ -54,7 +60,7 @@ The tool refuses to remove anything unless:
 - all remaining callback-name references are inside generated Data Bank cleanup/hide blocks
 - candidate blocks contain expected generated hide/destroy code markers
 - candidate blocks are small enough to review or pass the stricter large-block checks
-- candidate blocks do not contain protected lending/report logic terms
+- candidate blocks do not contain protected lending/report logic terms in executable code
 
 ## Not changed
 
