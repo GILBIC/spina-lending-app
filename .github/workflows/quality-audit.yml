@@ -55,7 +55,8 @@ jobs:
             tools/cleanup_modern_ui_pass_only.py \
             tools/plan_remaining_pass_only_groups.py \
             tools/plan_ui_compatibility_pass_only.py \
-            tools/plan_login_dialog_pass_only.py
+            tools/plan_login_dialog_pass_only.py \
+            tools/plan_pure_login_dialog_ui_pass_only.py
 
       - name: Run redundancy audit
         run: |
