@@ -81,6 +81,18 @@ UI_TERMS = (
     ".place(",
     "menu.add_command",
     "add_command",
+    "text=",
+)
+
+# Old inventory versions treated any substring match as a label hit. That caused
+# false positives such as SQL text `FROM transactions` and Tkinter
+# `exportselection=False`. Label hits now require exact display-label literals.
+FALSE_POSITIVE_LINE_FRAGMENTS = (
+    "exportselection=",
+    "from transactions where",
+    "delete from transactions",
+    "select * from transactions",
+    "select count(*) as c from transactions",
 )
 
 DEF_RE = re.compile(r"^\s*def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")
@@ -108,13 +120,33 @@ def has_protected_keyword(text: str) -> bool:
     return any(keyword in lowered for keyword in PROTECTED_KEYWORDS)
 
 
+def looks_like_label_literal(line: str, label: str) -> bool:
+    """Return True when a line contains the exact UI label as display text.
+
+    This intentionally does not match case-insensitive SQL fragments such as
+    `FROM transactions` or option names such as `exportselection=False`.
+    """
+    escaped = re.escape(label)
+    return bool(
+        re.search(rf"(?<![A-Za-z0-9_])text\s*=\s*(['\"])\s*{escaped}\s*\1", line)
+        or re.search(rf"(?<![A-Za-z0-9_])(['\"])\s*{escaped}\s*\1", line)
+    )
+
+
+def should_ignore_label_hit(line: str) -> bool:
+    lowered = line.lower()
+    return any(fragment in lowered for fragment in FALSE_POSITIVE_LINE_FRAGMENTS)
+
+
 def collect_label_hits(lines: list[str]) -> dict[str, list[dict[str, Any]]]:
     results: dict[str, list[dict[str, Any]]] = {}
     for group, labels in UI_GROUPS.items():
         hits: list[dict[str, Any]] = []
         for index, line in enumerate(lines, start=1):
+            if should_ignore_label_hit(line):
+                continue
             for label in labels:
-                if normalize(label) in normalize(line):
+                if looks_like_label_literal(line, label):
                     context = line_context(lines, index)
                     hits.append(
                         {
@@ -178,17 +210,33 @@ def collect_command_references(lines: list[str]) -> dict[str, list[dict[str, Any
     return results
 
 
-def build_recommendations(label_hits: dict[str, list[dict[str, Any]]], callbacks: dict[str, list[dict[str, Any]]]) -> list[str]:
+def build_recommendations(
+    label_hits: dict[str, list[dict[str, Any]]],
+    callbacks: dict[str, list[dict[str, Any]]],
+    command_refs: dict[str, list[dict[str, Any]]],
+) -> list[str]:
     recommendations: list[str] = []
     for group in UI_GROUPS:
         ui_like = sum(1 for hit in label_hits[group] if hit.get("ui_like_context"))
         callback_count = len(callbacks[group])
+        command_count = len(command_refs[group])
         protected = sum(1 for hit in label_hits[group] if hit.get("protected_context"))
-        if ui_like or callback_count:
+        if command_count:
             recommendations.append(
-                f"{group}: review {ui_like} UI-like label hits and {callback_count} callback candidates. "
+                f"{group}: review {command_count} command references first; these may still create visible actions. "
                 f"Avoid deleting {protected} protected-context hits without manual review."
             )
+        elif ui_like:
+            recommendations.append(
+                f"{group}: review {ui_like} exact UI label hits. No command references were found."
+            )
+        elif callback_count:
+            recommendations.append(
+                f"{group}: no exact UI labels or command references found. "
+                f"{callback_count} callback-name matches remain; treat them as shared app functions unless a later audit proves they are unused."
+            )
+        else:
+            recommendations.append(f"{group}: no exact UI labels, callbacks, or command references found.")
     recommendations.append(
         "Delete only confirmed UI/action glue first. Do not touch balances, 7x7, interest, payment allocation, notes, or report math."
     )
@@ -209,7 +257,8 @@ def audit(path: Path) -> dict[str, Any]:
         "callback_candidates": callbacks,
         "command_references": command_refs,
         "protected_keywords": list(PROTECTED_KEYWORDS),
-        "recommendations": build_recommendations(label_hits, callbacks),
+        "matching_note": "Label hits require exact display-label literals; SQL FROM clauses and exportselection options are ignored.",
+        "recommendations": build_recommendations(label_hits, callbacks, command_refs),
     }
 
 
@@ -217,6 +266,7 @@ def print_summary(report: dict[str, Any]) -> None:
     print("SPINA UI/action inventory")
     print(f"File: {report['file']}")
     print(f"Lines scanned: {report['line_count']}")
+    print(f"Matching: {report.get('matching_note', '')}")
     print()
     for group in report["ui_groups"]:
         labels = report["label_hits"].get(group, [])
@@ -224,21 +274,26 @@ def print_summary(report: dict[str, Any]) -> None:
         commands = report["command_references"].get(group, [])
         ui_like = sum(1 for hit in labels if hit.get("ui_like_context"))
         print(f"{group}:")
-        print(f"  label hits: {len(labels)} ({ui_like} UI-like)")
-        print(f"  callback candidates: {len(callbacks)}")
+        print(f"  exact label hits: {len(labels)} ({ui_like} UI-like)")
+        print(f"  callback-name matches: {len(callbacks)}")
         print(f"  command references: {len(commands)}")
         for hit in labels[:10]:
             mark = "UI" if hit.get("ui_like_context") else "text"
             protected = " protected" if hit.get("protected_context") else ""
             print(f"    L{hit['line']} [{mark}{protected}] {hit['label']}: {hit['text'][:140]}")
         if len(labels) > 10:
-            print(f"    ... {len(labels) - 10} more label hits")
+            print(f"    ... {len(labels) - 10} more exact label hits")
+        for item in commands[:10]:
+            protected = " protected" if item.get("protected_context") else ""
+            print(f"    command L{item['line']}{protected}: {item['command']} | {item['text'][:120]}")
+        if len(commands) > 10:
+            print(f"    ... {len(commands) - 10} more command references")
         for item in callbacks[:10]:
             owner = f"{item['class']}." if item.get("class") else ""
             protected = " protected" if item.get("protected_context") else ""
             print(f"    callback L{item['line']}{protected}: {owner}{item['function']}")
         if len(callbacks) > 10:
-            print(f"    ... {len(callbacks) - 10} more callback candidates")
+            print(f"    ... {len(callbacks) - 10} more callback-name matches")
         print()
     print("Recommendations:")
     for item in report["recommendations"]:

@@ -27,6 +27,15 @@ The tool scans for old UI/action groups such as:
   - JSONL Month
   - Daily Excel Template
 
+## Matching behavior
+
+The inventory now requires exact display-label literals for label hits. This avoids false positives from unrelated code such as:
+
+- SQL text like `FROM transactions`
+- Tkinter options like `exportselection=False`
+
+A callback-name match is not enough to delete code. Some functions with old-sounding names may still be real shared app functions or protected report/import/ledger functions.
+
 ## Safety rules
 
 Do not delete code when the surrounding context includes:
@@ -47,9 +56,10 @@ Delete only confirmed UI/action glue first.
 
 1. Confirm unwanted buttons are no longer visible.
 2. Inventory matching labels, callbacks, and command references.
-3. Mark items as KEEP, REMOVE, UNKNOWN, or DANGER.
-4. Delete only the REMOVE group in small PRs.
-5. Smoke test login, Clients, Data Bank, Reports, Collector Route, and Backup.
+3. Treat command references as the strongest sign of still-active UI actions.
+4. Treat callback-only matches as KEEP or UNKNOWN until a separate usage audit proves they are unused.
+5. Delete only the REMOVE group in small PRs.
+6. Smoke test login, Clients, Data Bank, Reports, Collector Route, and Backup.
 
 ## Why this is safer
 
