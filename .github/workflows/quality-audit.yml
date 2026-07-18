@@ -51,7 +51,8 @@ jobs:
             tools/cleanup_pg_json_read_dynamic_sql.py \
             tools/audit_bare_except_context.py \
             tools/audit_pass_only_exceptions.py \
-            tools/plan_modern_ui_pass_only_cleanup.py
+            tools/plan_modern_ui_pass_only_cleanup.py \
+            tools/cleanup_modern_ui_pass_only.py
 
       - name: Run redundancy audit
         run: |
