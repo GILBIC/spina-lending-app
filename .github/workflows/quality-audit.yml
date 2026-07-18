@@ -29,7 +29,8 @@ jobs:
             tools/spina_startup_diagnostics.py \
             tools/add_optional_performance_logs.py \
             tools/inject_critical_path_logging.py \
-            tools/inject_reports_pdf_logging.py
+            tools/inject_reports_pdf_logging.py \
+            tools/disable_full_daily_ledger.py
 
       - name: Run redundancy audit
         run: |
