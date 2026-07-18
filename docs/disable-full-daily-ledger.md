@@ -13,7 +13,7 @@ These actions are legacy controls in the Clients tab. They can confuse testing b
 
 ## Safety rule
 
-This PR does not directly delete thousands of lines from the main SPINA source. It adds a manual injector that removes the visible legacy Clients-tab buttons and disables their known old callback entry points.
+This PR does not directly delete thousands of lines from the main SPINA source. It updates the manual injector so it removes the exact legacy button creation statements when they are found and also adds a runtime fallback for dynamically-created widgets.
 
 It does not change:
 
@@ -28,11 +28,14 @@ It does not change:
 - report formulas or math
 - database writes
 
-## Late-created Clients tab controls
+## Stronger removal behavior
 
-The Clients tab may create some controls after startup or after the tab is opened. The injector now keeps rescanning briefly after startup, after tab changes, after mouse clicks, and after common Clients-tab build/refresh methods run.
+The injector now uses two layers:
 
-This is why the button removal should work even when the buttons appear after the app first opens.
+1. Static source cleanup: it scans the local app file for UI statements containing the exact legacy labels and removes those button/menu creation statements.
+2. Runtime fallback: it still hides/destroys any matching widget if the UI creates the buttons dynamically after startup.
+
+This is stronger than the earlier startup-only scan.
 
 ## Local command after merge
 
@@ -44,6 +47,8 @@ python -m py_compile "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performan
 python "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 ```
 
+The first command now prints how many static button statements were removed.
+
 Then check:
 
 1. In the Clients tab, these buttons should be gone: From Transactions, Full Ledger, Export Template, Import Excel.
@@ -54,12 +59,13 @@ Then check:
 
 ## Undo local injected change
 
-The injector modifies the local app file. After testing, you can undo the local injected block:
+Use GitHub Desktop because some PCs do not recognize `git` in Command Prompt:
 
-```bat
-git restore "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
-git restore docs/code-issue-review.md
-```
+1. Close SPINA.
+2. Open GitHub Desktop.
+3. Go to Changes.
+4. Right-click the changed app file and choose Discard changes.
+5. Pull origin again before rerunning the injector.
 
 ## Why not delete the huge old functions immediately?
 

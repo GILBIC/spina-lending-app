@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
 """Remove legacy Clients-tab action buttons from the SPINA source.
 
-This inserts a small runtime block that hides the visible legacy buttons shown in
-Clients and disables their old callback entry points. It is intentionally narrow:
-it does not change collector route printing, notes, payments, balances, 7x7,
-interest, report math, or database writes.
+This tool now uses two layers:
+1. A static source cleanup that removes button-creation statements containing the
+   exact legacy labels.
+2. A runtime fallback block that continues to hide/destroy any matching widgets
+   if the UI creates them dynamically.
+
+It intentionally does not change collector route printing, notes, payments,
+balances, 7x7, interest, report math, or database writes.
 """
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 APP_FILE = Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py")
 DOC_FILE = Path("docs/code-issue-review.md")
 START = "# --- BEGIN: SPINA REMOVE LEGACY CLIENT ACTION BUTTONS ---"
 END = "# --- END: SPINA REMOVE LEGACY CLIENT ACTION BUTTONS ---"
+
+LEGACY_LABELS = (
+    "From Transactions",
+    "Full Ledger",
+    "Export Template",
+    "Import Excel",
+)
 
 BLOCK = r'''
 # --- BEGIN: SPINA REMOVE LEGACY CLIENT ACTION BUTTONS ---
@@ -33,11 +45,6 @@ def _spina_legacy_client_action_removed_message(action="Legacy client action"):
             print("[SPINA] " + message, flush=True)
         except Exception:
             pass
-
-
-def _spina_removed_legacy_client_action(*args, **kwargs):
-    _spina_legacy_client_action_removed_message()
-    return None
 
 
 def _spina_make_removed_legacy_client_action(label):
@@ -63,7 +70,6 @@ _SPINA_LEGACY_CLIENT_LABELS = {
     "import excel",
 }
 
-# These names cover known legacy entry points. Missing names are ignored.
 _SPINA_LEGACY_CLIENT_CALLBACKS = {
     "from transactions": (
         "from_transactions",
@@ -111,19 +117,51 @@ def _spina_disable_legacy_client_callbacks():
                 pass
 
 
+def _spina_widget_text(widget):
+    for option in ("text",):
+        try:
+            value = widget.cget(option)
+            normalized = _spina_normalize_legacy_label(value)
+            if normalized:
+                return normalized
+        except Exception:
+            pass
+    for attr in ("_text", "text", "_name"):
+        try:
+            value = getattr(widget, attr, "")
+            normalized = _spina_normalize_legacy_label(value)
+            if normalized:
+                return normalized
+        except Exception:
+            pass
+    return ""
+
+
+def _spina_remove_widget(widget):
+    try:
+        widget.configure(state="disabled")
+    except Exception:
+        pass
+    try:
+        widget.pack_forget()
+    except Exception:
+        pass
+    try:
+        widget.grid_remove()
+    except Exception:
+        pass
+    try:
+        widget.place_forget()
+    except Exception:
+        pass
+    try:
+        widget.destroy()
+    except Exception:
+        pass
+
+
 def _spina_hide_legacy_client_action_widgets(root):
     removed = 0
-
-    def _spina_widget_text(widget):
-        for option in ("text",):
-            try:
-                value = widget.cget(option)
-                normalized = _spina_normalize_legacy_label(value)
-                if normalized:
-                    return normalized
-            except Exception:
-                pass
-        return ""
 
     def _spina_hide_widget(widget):
         nonlocal removed
@@ -131,26 +169,7 @@ def _spina_hide_legacy_client_action_widgets(root):
             text = _spina_widget_text(widget)
             if text in _SPINA_LEGACY_CLIENT_LABELS:
                 removed += 1
-                try:
-                    widget.configure(state="disabled")
-                except Exception:
-                    pass
-                try:
-                    widget.pack_forget()
-                except Exception:
-                    pass
-                try:
-                    widget.grid_remove()
-                except Exception:
-                    pass
-                try:
-                    widget.place_forget()
-                except Exception:
-                    pass
-                try:
-                    widget.destroy()
-                except Exception:
-                    pass
+                _spina_remove_widget(widget)
                 return
             for child in widget.winfo_children():
                 _spina_hide_widget(child)
@@ -164,9 +183,9 @@ def _spina_hide_legacy_client_action_widgets(root):
     return removed
 
 
-def _spina_schedule_legacy_client_button_hide(root, attempts=90, delay_ms=500):
-    # The Clients tab can be built lazily after startup. Keep scanning for a short
-    # period and also reschedule after tab/click events so late-created buttons disappear.
+def _spina_schedule_legacy_client_button_hide(root, attempts=240, delay_ms=250):
+    # Keep scanning for about one minute. Some Clients-tab widgets are created
+    # lazily or rebuilt after focus/tab events.
     try:
         _spina_hide_legacy_client_action_widgets(root)
     except Exception:
@@ -181,15 +200,63 @@ def _spina_schedule_legacy_client_button_hide(root, attempts=90, delay_ms=500):
 def _spina_bind_late_legacy_client_button_hide(root):
     def _spina_rescan_later(event=None):
         try:
-            root.after(50, lambda: _spina_hide_legacy_client_action_widgets(root))
-            root.after(250, lambda: _spina_hide_legacy_client_action_widgets(root))
-            root.after(1000, lambda: _spina_hide_legacy_client_action_widgets(root))
+            for delay in (1, 25, 100, 300, 800, 1500):
+                root.after(delay, lambda: _spina_hide_legacy_client_action_widgets(root))
         except Exception:
             pass
 
-    for _spina_event in ("<ButtonRelease-1>", "<<NotebookTabChanged>>", "<Map>", "<Visibility>"):
+    for _spina_event in ("<ButtonRelease-1>", "<Button-1>", "<<NotebookTabChanged>>", "<Map>", "<Visibility>", "<FocusIn>"):
         try:
             root.bind_all(_spina_event, _spina_rescan_later, add="+")
+        except Exception:
+            pass
+
+
+def _spina_wrap_tk_geometry_for_legacy_button_hide():
+    # Fallback for buttons that are created after startup. When a matching widget
+    # is packed/gridded/placed, remove it immediately.
+    try:
+        import tkinter as _spina_tk
+    except Exception:
+        return
+
+    def _spina_patch_method(_spina_cls, _spina_name):
+        try:
+            original = getattr(_spina_cls, _spina_name, None)
+            if not callable(original) or getattr(original, "_spina_legacy_button_geom_wrapped", False):
+                return
+
+            def _spina_wrapped(self, *args, **kwargs):
+                result = original(self, *args, **kwargs)
+                try:
+                    if _spina_widget_text(self) in _SPINA_LEGACY_CLIENT_LABELS:
+                        try:
+                            root = self.winfo_toplevel()
+                            root.after(1, lambda w=self: _spina_remove_widget(w))
+                        except Exception:
+                            _spina_remove_widget(self)
+                except Exception:
+                    pass
+                return result
+
+            _spina_wrapped.__name__ = getattr(original, "__name__", _spina_name)
+            _spina_wrapped._spina_legacy_button_geom_wrapped = True
+            setattr(_spina_cls, _spina_name, _spina_wrapped)
+        except Exception:
+            pass
+
+    for _spina_cls_name, _spina_method_names in (
+        ("Pack", ("pack", "pack_configure")),
+        ("Grid", ("grid", "grid_configure")),
+        ("Place", ("place", "place_configure")),
+        ("Misc", ("configure", "config")),
+    ):
+        try:
+            _spina_cls = getattr(_spina_tk, _spina_cls_name, None)
+            if _spina_cls is None:
+                continue
+            for _spina_method_name in _spina_method_names:
+                _spina_patch_method(_spina_cls, _spina_method_name)
         except Exception:
             pass
 
@@ -205,6 +272,9 @@ def _spina_wrap_client_tab_builders_for_legacy_button_hide():
             "setup_clients_tab",
             "_create_clients_tab",
             "refresh_clients",
+            "_refresh_clients",
+            "show_clients_tab",
+            "load_clients_tab",
         ):
             try:
                 original = getattr(App, _spina_method_name, None)
@@ -215,8 +285,8 @@ def _spina_wrap_client_tab_builders_for_legacy_button_hide():
                     def _spina_wrapped(self, *args, **kwargs):
                         result = _spina_original(self, *args, **kwargs)
                         try:
-                            self.after(10, lambda: _spina_hide_legacy_client_action_widgets(self))
-                            self.after(250, lambda: _spina_hide_legacy_client_action_widgets(self))
+                            for delay in (1, 25, 100, 300, 1000):
+                                self.after(delay, lambda: _spina_hide_legacy_client_action_widgets(self))
                         except Exception:
                             _spina_hide_legacy_client_action_widgets(self)
                         return result
@@ -232,6 +302,7 @@ def _spina_wrap_client_tab_builders_for_legacy_button_hide():
 
 
 _spina_disable_legacy_client_callbacks()
+_spina_wrap_tk_geometry_for_legacy_button_hide()
 _spina_wrap_client_tab_builders_for_legacy_button_hide()
 
 try:
@@ -240,18 +311,15 @@ try:
         def _spina_app_init_without_legacy_client_buttons(self, *args, **kwargs):
             result = _spina_original_app_init_for_legacy_client_buttons(self, *args, **kwargs)
             _spina_disable_legacy_client_callbacks()
+            _spina_wrap_tk_geometry_for_legacy_button_hide()
             _spina_wrap_client_tab_builders_for_legacy_button_hide()
             try:
                 _spina_bind_late_legacy_client_button_hide(self)
             except Exception:
                 pass
             try:
-                self.after(50, lambda: _spina_hide_legacy_client_action_widgets(self))
-                self.after(250, lambda: _spina_hide_legacy_client_action_widgets(self))
-                self.after(1000, lambda: _spina_hide_legacy_client_action_widgets(self))
-                self.after(2500, lambda: _spina_hide_legacy_client_action_widgets(self))
-                self.after(5000, lambda: _spina_hide_legacy_client_action_widgets(self))
-                self.after(10000, lambda: _spina_hide_legacy_client_action_widgets(self))
+                for delay in (1, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000):
+                    self.after(delay, lambda: _spina_hide_legacy_client_action_widgets(self))
                 _spina_schedule_legacy_client_button_hide(self)
             except Exception:
                 _spina_hide_legacy_client_action_widgets(self)
@@ -279,13 +347,13 @@ Safety rules for this phase:
 - no notes storage or note rendering logic is changed
 - no Collector Route Daily Ledger logic is changed
 - no loan, balance, 7x7, interest, payment allocation, or report math is changed
+- exact legacy button creation statements are removed when found in the source
 - old known callback entry points show a removed-action message instead of running
-- visible legacy client action widgets are hidden/disabled after the app opens
+- visible legacy client action widgets are hidden/destroyed if they are created dynamically
 """
 
 
 def remove_existing_blocks(text: str) -> str:
-    # Remove both the older Full Daily Ledger-only block and the new broader block.
     markers = [
         ("# --- BEGIN: SPINA DISABLE FULL DAILY LEDGER ---", "# --- END: SPINA DISABLE FULL DAILY LEDGER ---"),
         (START, END),
@@ -303,11 +371,83 @@ def remove_existing_blocks(text: str) -> str:
     return text
 
 
+def _contains_legacy_label(source_segment: str) -> bool:
+    lowered = source_segment.lower()
+    return any(label.lower() in lowered for label in LEGACY_LABELS)
+
+
+def _looks_like_legacy_button_creation(source_segment: str) -> bool:
+    lowered = source_segment.lower()
+    if not _contains_legacy_label(source_segment):
+        return False
+    # Keep this narrow. We only remove source statements that look like UI action
+    # button/menu creation, not comments or documentation strings.
+    ui_terms = (
+        "button",
+        "ctkbutton",
+        "ttk.button",
+        "tk.button",
+        "command=",
+        ".pack(",
+        ".grid(",
+        "menu.add_command",
+        "add_command",
+    )
+    return any(term in lowered for term in ui_terms)
+
+
+def remove_static_legacy_button_statements(source: str) -> tuple[str, int]:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return source, 0
+
+    line_ranges: list[tuple[int, int]] = []
+    for node in ast.walk(tree):
+        if not hasattr(node, "lineno") or not hasattr(node, "end_lineno"):
+            continue
+        try:
+            segment = ast.get_source_segment(source, node) or ""
+        except Exception:
+            segment = ""
+        if not segment or not _looks_like_legacy_button_creation(segment):
+            continue
+        # Remove the smallest useful statement/expression that contains the
+        # legacy label. Avoid removing large enclosing functions/classes.
+        if isinstance(node, (ast.Expr, ast.Assign, ast.AnnAssign, ast.AugAssign)):
+            line_ranges.append((int(node.lineno), int(node.end_lineno)))
+
+    if not line_ranges:
+        return source, 0
+
+    # Deduplicate and merge overlapping ranges.
+    line_ranges = sorted(set(line_ranges))
+    merged: list[tuple[int, int]] = []
+    for start, end in line_ranges:
+        if not merged or start > merged[-1][1] + 1:
+            merged.append((start, end))
+        else:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+
+    lines = source.splitlines()
+    removed = 0
+    for start, end in reversed(merged):
+        indent = ""
+        if 1 <= start <= len(lines):
+            current = lines[start - 1]
+            indent = current[: len(current) - len(current.lstrip())]
+        replacement = indent + "# SPINA removed legacy Clients-tab action button statement"
+        lines[start - 1 : end] = [replacement]
+        removed += 1
+    return "\n".join(lines) + ("\n" if source.endswith("\n") else ""), removed
+
+
 def main() -> int:
     if not APP_FILE.exists():
         raise SystemExit(f"App file not found: {APP_FILE}")
     source = APP_FILE.read_text(encoding="utf-8")
     source = remove_existing_blocks(source)
+    source, static_removed = remove_static_legacy_button_statements(source)
 
     marker = 'if __name__ == "__main__":'
     pos = source.rfind(marker)
@@ -324,7 +464,7 @@ def main() -> int:
         doc = DOC_FILE.read_text(encoding="utf-8")
         if "## Phase 5 remove legacy Clients-tab actions" not in doc:
             DOC_FILE.write_text(doc.rstrip() + DOC_NOTE, encoding="utf-8")
-    print("Legacy Clients-tab action removal block inserted.")
+    print(f"Legacy Clients-tab action removal block inserted. Static statements removed: {static_removed}")
     return 0
 
 
