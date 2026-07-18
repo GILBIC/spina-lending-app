@@ -26447,19 +26447,6 @@ def _maybe_suggest_link_clients(self, name, loan_type=None):
             if 'main' in g and callable(g['main']) and 'App' in g and hasattr(g['App'], '__init__'):
                 orig_main = g['main']
                 AppClass = g['App']
-                orig_App_init = AppClass.__init__
-                def patched_init(self, *args, **kwargs):
-                    orig_App_init(self, *args, **kwargs)
-                    try:
-                        attach_direct_integration(self)
-                    except Exception:
-                        traceback.print_exc()
-                def wrapped_main(*args, **kwargs):
-                    AppClass.__init__ = patched_init
-                    try:
-                        return orig_main(*args, **kwargs)
-                    finally:
-                        AppClass.__init__ = orig_App_init
                 g['main'] = wrapped_main
         except Exception:
             traceback.print_exc()
