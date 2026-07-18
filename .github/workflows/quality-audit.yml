@@ -39,7 +39,8 @@ jobs:
             tools/inspect_stale_databank_protected_context.py \
             tools/audit_legacy_callback_usage.py \
             tools/audit_silent_ui_errors.py \
-            tools/inject_silent_ui_logging.py
+            tools/inject_silent_ui_logging.py \
+            tools/audit_shadowed_definitions.py
 
       - name: Run redundancy audit
         run: |
