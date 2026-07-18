@@ -11,6 +11,12 @@ This tool is intentionally two-step:
 1. It first prints the exact candidate line ranges.
 2. It removes them only when run with `--apply`.
 
+## Older generated block shapes
+
+Some older generated blocks do not contain the newer comment text used by later cleanup tools. The tool can now recognize those older shapes when they still contain Data Bank export labels or callback-name strings together with generated hide/destroy behavior.
+
+It still stops if a reference looks like a real call site instead of generated fallback cleanup code.
+
 ## Local use after merge
 
 Use GitHub Desktop to pull `main` first.
