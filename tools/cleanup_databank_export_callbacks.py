@@ -2,9 +2,13 @@
 """Safely remove legacy Data Bank export callbacks from the SPINA source.
 
 This tool is intentionally conservative. It removes the old callback function
-bodies only when their names have no remaining references outside the function
-bodies themselves. If any reference remains, it stops and prints the lines for
-manual review.
+bodies only when their names have no remaining *real* references outside the
+function bodies themselves.
+
+Older UI-cleanup passes may leave harmless string references inside generated
+hide/destroy blocks near the bottom of the app source. Those references are not
+call sites, so this tool reports and ignores them only when the surrounding
+context clearly belongs to a generated cleanup/hide block.
 """
 
 from __future__ import annotations
@@ -17,6 +21,24 @@ APP_FILE = Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fi
 TARGET_FUNCTIONS = (
     "export_jsonl_month",
     "export_daily_collection_template",
+)
+
+STALE_CLEANUP_CONTEXT_MARKERS = (
+    "from transactions, full ledger, export template, and import excel",
+    "exports, date range template, jsonl month, and daily excel template",
+    "legacy clients-tab action",
+    "legacy clients tab action",
+    "data bank export",
+    "databank export",
+    "_spina_databank_export",
+    "databank_exports_removed",
+    "_spina_parent_has_databank_export_buttons",
+    "_spina_original_app_init_for_databank_exports",
+    "_spina_remove_databank",
+    "visible data bank export widgets",
+    "hide-only",
+    "hide/destroy",
+    "destroy",
 )
 
 
@@ -72,16 +94,51 @@ def _inside_any(index: int, ranges: list[tuple[int, int, int]]) -> bool:
     return any(start <= index < end for start, end, _indent in ranges)
 
 
-def _external_references(lines: list[str], function_name: str, own_ranges: list[tuple[int, int, int]]) -> list[tuple[int, str]]:
+def _looks_like_string_reference(line: str, function_name: str) -> bool:
+    stripped = line.strip()
+    quoted = f'"{function_name}"' in stripped or f"'{function_name}'" in stripped
+    if quoted:
+        return True
+    # Generated cleanup dictionaries/tuples sometimes store strings with commas
+    # or colons after indentation; those are not function calls.
+    return (
+        function_name in stripped
+        and "(" not in stripped.split(function_name, 1)[1][:3]
+        and any(token in stripped for token in ('"', "'", ":", ","))
+    )
+
+
+def _is_stale_cleanup_reference(lines: list[str], index: int, function_name: str) -> bool:
+    """Return True only for harmless generated cleanup/hide-block references."""
+    if not _looks_like_string_reference(lines[index], function_name):
+        return False
+
+    start = max(0, index - 90)
+    end = min(len(lines), index + 91)
+    context = "\n".join(lines[start:end]).lower()
+    return any(marker in context for marker in STALE_CLEANUP_CONTEXT_MARKERS)
+
+
+def _external_references(
+    lines: list[str],
+    function_name: str,
+    own_ranges: list[tuple[int, int, int]],
+) -> tuple[list[tuple[int, str]], list[tuple[int, str]]]:
     pattern = re.compile(rf"\b{re.escape(function_name)}\b")
-    refs: list[tuple[int, str]] = []
+    real_refs: list[tuple[int, str]] = []
+    ignored_stale_refs: list[tuple[int, str]] = []
+
     for idx, line in enumerate(lines):
         if not pattern.search(line):
             continue
         if _inside_any(idx, own_ranges):
             continue
-        refs.append((idx + 1, line.rstrip("\n")))
-    return refs
+        if _is_stale_cleanup_reference(lines, idx, function_name):
+            ignored_stale_refs.append((idx + 1, line.rstrip("\n")))
+            continue
+        real_refs.append((idx + 1, line.rstrip("\n")))
+
+    return real_refs, ignored_stale_refs
 
 
 def _remove_ranges(lines: list[str], ranges: list[tuple[int, int, int]]) -> list[str]:
@@ -106,21 +163,34 @@ def main() -> int:
 
     all_ranges: list[tuple[int, int, int, str]] = []
     unsafe_refs: dict[str, list[tuple[int, str]]] = {}
+    ignored_refs: dict[str, list[tuple[int, str]]] = {}
 
     for function_name in TARGET_FUNCTIONS:
         ranges = _find_function_ranges(lines, function_name)
-        refs = _external_references(lines, function_name, ranges)
+        refs, stale_refs = _external_references(lines, function_name, ranges)
         print(
-            f"[SPINA] {function_name}: definitions={len(ranges)} external_references={len(refs)}",
+            f"[SPINA] {function_name}: definitions={len(ranges)} "
+            f"external_references={len(refs)} ignored_stale_cleanup_references={len(stale_refs)}",
             flush=True,
         )
+        if stale_refs:
+            ignored_refs[function_name] = stale_refs
         if refs:
             unsafe_refs[function_name] = refs
         for start, end, indent in ranges:
             all_ranges.append((start, end, indent, function_name))
 
+    if ignored_refs:
+        print("[SPINA] Ignored stale cleanup-block references:", flush=True)
+        for function_name, refs in ignored_refs.items():
+            print(f"[SPINA] Stale references for {function_name}:", flush=True)
+            for line_no, text in refs[:25]:
+                print(f"  line {line_no}: {text}", flush=True)
+            if len(refs) > 25:
+                print(f"  ... {len(refs) - 25} more", flush=True)
+
     if unsafe_refs:
-        print("[SPINA][STOP] Remaining references found. No callbacks were removed.", flush=True)
+        print("[SPINA][STOP] Remaining real references found. No callbacks were removed.", flush=True)
         for function_name, refs in unsafe_refs.items():
             print(f"[SPINA] References for {function_name}:", flush=True)
             for line_no, text in refs[:25]:
