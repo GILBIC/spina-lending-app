@@ -49,7 +49,8 @@ jobs:
             tools/audit_pg_backup_action_flow.py \
             tools/audit_dynamic_sql_context.py \
             tools/cleanup_pg_json_read_dynamic_sql.py \
-            tools/audit_bare_except_context.py
+            tools/audit_bare_except_context.py \
+            tools/audit_pass_only_exceptions.py
 
       - name: Run redundancy audit
         run: |
