@@ -28,14 +28,26 @@ It does not change:
 - report formulas or math
 - database writes
 
-## Stronger removal behavior
+## Faster removal behavior
 
-The injector now uses two layers:
+The injector now avoids the slow full Python AST scan that could make Command Prompt look frozen on the very large SPINA source file.
 
-1. Static source cleanup: it scans the local app file for UI statements containing the exact legacy labels and removes those button/menu creation statements.
+It prints progress immediately:
+
+```text
+Starting legacy Clients-tab action remover...
+Reading SPINA app file...
+Removing old injected blocks...
+Scanning for exact legacy button lines...
+Inserting runtime removal fallback...
+Writing updated SPINA app file...
+Done. Static legacy button lines removed: <number>
+```
+
+The tool still uses two layers:
+
+1. Static source cleanup: it scans local app-file lines for UI statements containing the exact legacy labels and removes those button/menu creation lines.
 2. Runtime fallback: it still hides/destroys any matching widget if the UI creates the buttons dynamically after startup.
-
-This is stronger than the earlier startup-only scan.
 
 ## Local command after merge
 
@@ -47,7 +59,7 @@ python -m py_compile "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performan
 python "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 ```
 
-The first command now prints how many static button statements were removed.
+The first command prints how many static button lines were removed.
 
 Then check:
 
