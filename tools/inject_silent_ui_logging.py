@@ -21,6 +21,11 @@ from typing import Any
 
 DEFAULT_APP_FILE = "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 
+# Business/report/storage contexts must not be part of the first logging batch.
+# The uploaded dry-run plan showed that broad words like "path", "cache",
+# "picture", and "load" can select PostgreSQL storage, report/PDF, and notes
+# helpers. Keep this list intentionally broad; it is safer to skip too much and
+# add a narrower tool later than to touch loan/report behavior accidentally.
 PROTECTED_TERMS = (
     "balance",
     "7x7",
@@ -28,23 +33,50 @@ PROTECTED_TERMS = (
     "interest",
     "payment allocation",
     "payment logic",
+    "payment",
     "collector route",
+    "collector",
     "daily collection ledger",
+    "ledger",
     "client statement",
     "statement pdf",
+    "statement",
     "report math",
+    "report",
+    "reports",
+    "pdf",
     "client_pdf",
     "ledger total",
     "advance pass",
+    "advance",
+    "pass",
+    "note",
+    "notes",
+    "postgresql",
+    "_spina_pg",
+    "pg_",
+    "storage",
+    "store_file",
+    "file_to_db",
+    "restore_client_picture",
+    "client_picture",
+    "reportlab",
+    "canvas",
+    "transaction",
+    "transactions",
+    "loan",
 )
 
+# Keep focus terms strictly UI/startup chrome. Avoid broad words such as
+# "load", "path", "cache", "picture", "image", and "font" because they matched
+# storage/report/notes helpers in the first uploaded dry run.
 FOCUS_TERMS = (
     "startup",
     "login",
-    "refresh",
-    "reload",
-    "load",
-    "build",
+    "refresh_",
+    "reload_",
+    "build_",
+    "_build",
     "tab",
     "ui",
     "widget",
@@ -54,14 +86,37 @@ FOCUS_TERMS = (
     "window",
     "root",
     "after(",
-    "settings",
-    "config",
     "theme",
-    "path",
-    "cache",
-    "picture",
-    "image",
-    "font",
+)
+
+# Function/name denylist for contexts that may not contain obvious protected words
+# in the small radius but still should not be touched by this general UI tool.
+PROTECTED_NAME_TERMS = (
+    "spina_pg",
+    "pg_",
+    "storage",
+    "store_file",
+    "restore_client_picture",
+    "delete_client_picture",
+    "open_path",
+    "report",
+    "pdf",
+    "note",
+    "collector",
+    "ledger",
+    "statement",
+    "transaction",
+    "client_uid",
+    "loan",
+    "advance",
+    "pass",
+    "balance",
+    "principal",
+    "interest",
+    "json",  # settings/json storage can affect persistence; review separately.
+    "writable_dir",
+    "reports_root",
+    "logger",  # do not instrument the logging fallback itself.
 )
 
 SILENT_FALLBACK_PATTERNS = (
@@ -88,7 +143,7 @@ def _line_indent_width(line: str) -> int:
     return len(line) - len(line.lstrip(" "))
 
 
-def _context(lines: list[str], line_no: int, radius: int = 8) -> str:
+def _context(lines: list[str], line_no: int, radius: int = 10) -> str:
     start = max(1, line_no - radius)
     end = min(len(lines), line_no + radius)
     return "\n".join(lines[start - 1 : end])
@@ -136,9 +191,22 @@ def _is_silent_fallback_body(body: list[str]) -> bool:
     return any(pattern.match(line) for line in meaningful for pattern in SILENT_FALLBACK_PATTERNS)
 
 
-def find_candidates(lines: list[str]) -> list[dict[str, Any]]:
+def _skip_reason(context: str, cls: str, fn: str, body: list[str]) -> str:
+    owner = f"{cls}.{fn}" if cls else fn
+    joined = "\n".join([context, owner, "\n".join(body)])
+    if _has_any(joined, PROTECTED_TERMS):
+        return "protected_context"
+    if _has_any(owner, PROTECTED_NAME_TERMS):
+        return "protected_name"
+    if not _has_any(joined, FOCUS_TERMS):
+        return "not_ui_startup_chrome"
+    return ""
+
+
+def find_candidates(lines: list[str]) -> tuple[list[dict[str, Any]], dict[str, int]]:
     funcs = _function_map(lines)
     candidates: list[dict[str, Any]] = []
+    skipped: dict[str, int] = {}
     for index, line in enumerate(lines, start=1):
         match = EXCEPT_RE.match(line)
         if not match:
@@ -148,21 +216,21 @@ def find_candidates(lines: list[str]) -> list[dict[str, Any]]:
         context = _context(lines, index)
         if not _is_silent_fallback_body(body):
             continue
-        if _has_any(context, PROTECTED_TERMS):
-            continue
-        if not _has_any(context, FOCUS_TERMS):
-            continue
         cls, fn = funcs.get(index, ("", ""))
+        reason = _skip_reason(context, cls, fn, body)
+        if reason:
+            skipped[reason] = skipped.get(reason, 0) + 1
+            continue
         candidates.append(
             {
                 "line": index,
                 "class": cls,
                 "function": fn,
                 "except_text": line.rstrip(),
-                "body_preview": "\\n".join(item.rstrip() for item in body[:4]),
+                "body_preview": "\n".join(item.rstrip() for item in body[:4]),
             }
         )
-    return candidates
+    return candidates, skipped
 
 
 def _insert_logging(lines: list[str], selected: list[dict[str, Any]]) -> list[str]:
@@ -191,7 +259,7 @@ def _insert_logging(lines: list[str], selected: list[dict[str, Any]]) -> list[st
 def run(path: Path, *, apply: bool, limit: int, json_path: str | None) -> dict[str, Any]:
     text = path.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
-    candidates = find_candidates(lines)
+    candidates, skipped = find_candidates(lines)
     selected = candidates[: max(0, int(limit))]
     report = {
         "file": str(path),
@@ -200,11 +268,12 @@ def run(path: Path, *, apply: bool, limit: int, json_path: str | None) -> dict[s
         "selected_count": len(selected),
         "apply": bool(apply),
         "selected": selected,
+        "skipped_summary": dict(sorted(skipped.items())),
         "recommendations": [
             "Dry-run first and review selected lines.",
+            "This tightened version skips PostgreSQL storage, files, reports/PDFs, notes, collectors, transactions, and loan/payment contexts.",
             "Use a small limit first, then compile and smoke-test SPINA.",
-            "This tool skips protected loan/report/math contexts.",
-            "Do not use this for balances, 7x7, interest, notes, collector route, statements, or PDFs.",
+            "Do not use this for balances, 7x7, interest, notes, collector route, statements, reports, PDFs, or storage helpers.",
         ],
     }
     if json_path:
@@ -223,6 +292,8 @@ def print_report(report: dict[str, Any]) -> None:
     print(f"[SPINA] File: {report['file']}")
     print(f"[SPINA] Candidates found: {report['candidate_count']}")
     print(f"[SPINA] Selected this run: {report['selected_count']}")
+    if report.get("skipped_summary"):
+        print(f"[SPINA] Skipped summary: {report['skipped_summary']}")
     for item in report["selected"][:50]:
         owner = ((item.get("class") or "") + "." if item.get("class") else "") + (item.get("function") or "<module>")
         print(f"  L{item['line']}: {owner} | {item['except_text']}")
