@@ -216,7 +216,12 @@ def _spina_pg_read_json(path):
         table = _spina_pg_json_table_for_path(path)
         with _spina_pg_storage_conn() as conn:
             with conn.cursor() as cur:
-                cur.execute(f'SELECT value FROM {table} WHERE key=%s', (key,))
+                if table == 'app_settings_store':
+                    cur.execute('SELECT value FROM app_settings_store WHERE key=%s', (key,))
+                elif table == 'app_json_store':
+                    cur.execute('SELECT value FROM app_json_store WHERE key=%s', (key,))
+                else:
+                    raise ValueError(f'Unexpected PostgreSQL JSON storage table: {table!r}')
                 row = cur.fetchone()
         if not row:
             return None
