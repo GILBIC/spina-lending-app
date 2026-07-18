@@ -48,6 +48,13 @@ def _spina_make_removed_legacy_client_action(label):
     return _spina_removed_action
 
 
+def _spina_normalize_legacy_label(value):
+    try:
+        return " ".join(str(value or "").strip().lower().split())
+    except Exception:
+        return ""
+
+
 _SPINA_LEGACY_CLIENT_LABELS = {
     "from transactions",
     "full ledger",
@@ -105,16 +112,25 @@ def _spina_disable_legacy_client_callbacks():
 
 
 def _spina_hide_legacy_client_action_widgets(root):
+    removed = 0
+
     def _spina_widget_text(widget):
-        try:
-            return str(widget.cget("text") or "").strip().lower()
-        except Exception:
-            return ""
+        for option in ("text",):
+            try:
+                value = widget.cget(option)
+                normalized = _spina_normalize_legacy_label(value)
+                if normalized:
+                    return normalized
+            except Exception:
+                pass
+        return ""
 
     def _spina_hide_widget(widget):
+        nonlocal removed
         try:
             text = _spina_widget_text(widget)
             if text in _SPINA_LEGACY_CLIENT_LABELS:
+                removed += 1
                 try:
                     widget.configure(state="disabled")
                 except Exception:
@@ -131,6 +147,10 @@ def _spina_hide_legacy_client_action_widgets(root):
                     widget.place_forget()
                 except Exception:
                     pass
+                try:
+                    widget.destroy()
+                except Exception:
+                    pass
                 return
             for child in widget.winfo_children():
                 _spina_hide_widget(child)
@@ -141,9 +161,78 @@ def _spina_hide_legacy_client_action_widgets(root):
         _spina_hide_widget(root)
     except Exception:
         pass
+    return removed
+
+
+def _spina_schedule_legacy_client_button_hide(root, attempts=90, delay_ms=500):
+    # The Clients tab can be built lazily after startup. Keep scanning for a short
+    # period and also reschedule after tab/click events so late-created buttons disappear.
+    try:
+        _spina_hide_legacy_client_action_widgets(root)
+    except Exception:
+        pass
+    try:
+        if attempts > 0:
+            root.after(delay_ms, lambda: _spina_schedule_legacy_client_button_hide(root, attempts - 1, delay_ms))
+    except Exception:
+        pass
+
+
+def _spina_bind_late_legacy_client_button_hide(root):
+    def _spina_rescan_later(event=None):
+        try:
+            root.after(50, lambda: _spina_hide_legacy_client_action_widgets(root))
+            root.after(250, lambda: _spina_hide_legacy_client_action_widgets(root))
+            root.after(1000, lambda: _spina_hide_legacy_client_action_widgets(root))
+        except Exception:
+            pass
+
+    for _spina_event in ("<ButtonRelease-1>", "<<NotebookTabChanged>>", "<Map>", "<Visibility>"):
+        try:
+            root.bind_all(_spina_event, _spina_rescan_later, add="+")
+        except Exception:
+            pass
+
+
+def _spina_wrap_client_tab_builders_for_legacy_button_hide():
+    try:
+        if "App" not in globals():
+            return
+        for _spina_method_name in (
+            "_build_clients_tab",
+            "build_clients_tab",
+            "create_clients_tab",
+            "setup_clients_tab",
+            "_create_clients_tab",
+            "refresh_clients",
+        ):
+            try:
+                original = getattr(App, _spina_method_name, None)
+                if not callable(original) or getattr(original, "_spina_legacy_button_hide_wrapped", False):
+                    continue
+
+                def _spina_make_wrapped(_spina_original, _spina_name):
+                    def _spina_wrapped(self, *args, **kwargs):
+                        result = _spina_original(self, *args, **kwargs)
+                        try:
+                            self.after(10, lambda: _spina_hide_legacy_client_action_widgets(self))
+                            self.after(250, lambda: _spina_hide_legacy_client_action_widgets(self))
+                        except Exception:
+                            _spina_hide_legacy_client_action_widgets(self)
+                        return result
+                    _spina_wrapped.__name__ = getattr(_spina_original, "__name__", _spina_name)
+                    _spina_wrapped._spina_legacy_button_hide_wrapped = True
+                    return _spina_wrapped
+
+                setattr(App, _spina_method_name, _spina_make_wrapped(original, _spina_method_name))
+            except Exception:
+                pass
+    except Exception:
+        pass
 
 
 _spina_disable_legacy_client_callbacks()
+_spina_wrap_client_tab_builders_for_legacy_button_hide()
 
 try:
     _spina_original_app_init_for_legacy_client_buttons = App.__init__
@@ -151,10 +240,19 @@ try:
         def _spina_app_init_without_legacy_client_buttons(self, *args, **kwargs):
             result = _spina_original_app_init_for_legacy_client_buttons(self, *args, **kwargs)
             _spina_disable_legacy_client_callbacks()
+            _spina_wrap_client_tab_builders_for_legacy_button_hide()
             try:
+                _spina_bind_late_legacy_client_button_hide(self)
+            except Exception:
+                pass
+            try:
+                self.after(50, lambda: _spina_hide_legacy_client_action_widgets(self))
                 self.after(250, lambda: _spina_hide_legacy_client_action_widgets(self))
                 self.after(1000, lambda: _spina_hide_legacy_client_action_widgets(self))
                 self.after(2500, lambda: _spina_hide_legacy_client_action_widgets(self))
+                self.after(5000, lambda: _spina_hide_legacy_client_action_widgets(self))
+                self.after(10000, lambda: _spina_hide_legacy_client_action_widgets(self))
+                _spina_schedule_legacy_client_button_hide(self)
             except Exception:
                 _spina_hide_legacy_client_action_widgets(self)
             return result
