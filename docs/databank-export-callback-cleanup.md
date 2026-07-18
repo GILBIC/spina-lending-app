@@ -13,6 +13,12 @@ The UI buttons were removed first. The callback functions are removed only after
 
 This avoids deleting code that is still wired somewhere else.
 
+## Update after first local run
+
+The first local run stopped correctly because the target names still appeared inside old generated cleanup/hide blocks near the bottom of the app source.
+
+Those stale cleanup-block references are not real call sites. The updated tool now reports them as `ignored_stale_cleanup_references` while still stopping for any real reference.
+
 ## Local use after merge
 
 Use GitHub Desktop to discard unrelated local changes and pull `main` first.
@@ -31,8 +37,9 @@ The tool is conservative:
 
 - it scans for the target function definitions
 - it scans for references to those function names outside their own definitions
-- if any outside reference remains, it stops and prints the lines
-- it only deletes the target function bodies when no outside references are found
+- it ignores only string references inside old generated cleanup/hide blocks
+- if any real outside reference remains, it stops and prints the lines
+- it only deletes the target function bodies when no real outside references are found
 
 ## Not changed
 
