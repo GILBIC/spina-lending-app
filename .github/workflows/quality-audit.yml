@@ -46,7 +46,8 @@ jobs:
             tools/audit_blocking_ui_calls.py \
             tools/inspect_blocking_ui_context.py \
             tools/audit_pg_command_callers.py \
-            tools/audit_pg_backup_action_flow.py
+            tools/audit_pg_backup_action_flow.py \
+            tools/audit_dynamic_sql_context.py
 
       - name: Run redundancy audit
         run: |
