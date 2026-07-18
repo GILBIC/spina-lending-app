@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
-"""Remove legacy Clients-tab action buttons from the SPINA source.
+"""Fast remover for legacy Clients-tab action buttons in SPINA.
 
-This tool now uses two layers:
-1. A static source cleanup that removes button-creation statements containing the
-   exact legacy labels.
-2. A runtime fallback block that continues to hide/destroy any matching widgets
-   if the UI creates them dynamically.
+Targets these exact legacy button labels:
+- From Transactions
+- Full Ledger
+- Export Template
+- Import Excel
 
-It intentionally does not change collector route printing, notes, payments,
-balances, 7x7, interest, report math, or database writes.
+The tool is intentionally narrow. It does not change collector route printing,
+notes, payments, balances, 7x7, interest, report math, or database writes.
 """
 
 from __future__ import annotations
 
-import ast
 from pathlib import Path
 
 APP_FILE = Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py")
@@ -27,6 +26,8 @@ LEGACY_LABELS = (
     "Export Template",
     "Import Excel",
 )
+
+LEGACY_LABELS_LOWER = tuple(label.lower() for label in LEGACY_LABELS)
 
 BLOCK = r'''
 # --- BEGIN: SPINA REMOVE LEGACY CLIENT ACTION BUTTONS ---
@@ -120,16 +121,14 @@ def _spina_disable_legacy_client_callbacks():
 def _spina_widget_text(widget):
     for option in ("text",):
         try:
-            value = widget.cget(option)
-            normalized = _spina_normalize_legacy_label(value)
+            normalized = _spina_normalize_legacy_label(widget.cget(option))
             if normalized:
                 return normalized
         except Exception:
             pass
     for attr in ("_text", "text", "_name"):
         try:
-            value = getattr(widget, attr, "")
-            normalized = _spina_normalize_legacy_label(value)
+            normalized = _spina_normalize_legacy_label(getattr(widget, attr, ""))
             if normalized:
                 return normalized
         except Exception:
@@ -166,8 +165,7 @@ def _spina_hide_legacy_client_action_widgets(root):
     def _spina_hide_widget(widget):
         nonlocal removed
         try:
-            text = _spina_widget_text(widget)
-            if text in _SPINA_LEGACY_CLIENT_LABELS:
+            if _spina_widget_text(widget) in _SPINA_LEGACY_CLIENT_LABELS:
                 removed += 1
                 _spina_remove_widget(widget)
                 return
@@ -184,8 +182,6 @@ def _spina_hide_legacy_client_action_widgets(root):
 
 
 def _spina_schedule_legacy_client_button_hide(root, attempts=240, delay_ms=250):
-    # Keep scanning for about one minute. Some Clients-tab widgets are created
-    # lazily or rebuilt after focus/tab events.
     try:
         _spina_hide_legacy_client_action_widgets(root)
     except Exception:
@@ -213,8 +209,6 @@ def _spina_bind_late_legacy_client_button_hide(root):
 
 
 def _spina_wrap_tk_geometry_for_legacy_button_hide():
-    # Fallback for buttons that are created after startup. When a matching widget
-    # is packed/gridded/placed, remove it immediately.
     try:
         import tkinter as _spina_tk
     except Exception:
@@ -231,8 +225,7 @@ def _spina_wrap_tk_geometry_for_legacy_button_hide():
                 try:
                     if _spina_widget_text(self) in _SPINA_LEGACY_CLIENT_LABELS:
                         try:
-                            root = self.winfo_toplevel()
-                            root.after(1, lambda w=self: _spina_remove_widget(w))
+                            self.winfo_toplevel().after(1, lambda w=self: _spina_remove_widget(w))
                         except Exception:
                             _spina_remove_widget(self)
                 except Exception:
@@ -353,6 +346,10 @@ Safety rules for this phase:
 """
 
 
+def _flush(message: str) -> None:
+    print(message, flush=True)
+
+
 def remove_existing_blocks(text: str) -> str:
     markers = [
         ("# --- BEGIN: SPINA DISABLE FULL DAILY LEDGER ---", "# --- END: SPINA DISABLE FULL DAILY LEDGER ---"),
@@ -371,83 +368,51 @@ def remove_existing_blocks(text: str) -> str:
     return text
 
 
-def _contains_legacy_label(source_segment: str) -> bool:
-    lowered = source_segment.lower()
-    return any(label.lower() in lowered for label in LEGACY_LABELS)
+def _contains_legacy_label(line: str) -> bool:
+    lowered = line.lower()
+    return any(label in lowered for label in LEGACY_LABELS_LOWER)
 
 
-def _looks_like_legacy_button_creation(source_segment: str) -> bool:
-    lowered = source_segment.lower()
-    if not _contains_legacy_label(source_segment):
+def _looks_like_legacy_button_line(line: str) -> bool:
+    lowered = line.lower()
+    if not _contains_legacy_label(line):
         return False
-    # Keep this narrow. We only remove source statements that look like UI action
-    # button/menu creation, not comments or documentation strings.
     ui_terms = (
         "button",
         "ctkbutton",
         "ttk.button",
         "tk.button",
         "command=",
-        ".pack(",
-        ".grid(",
         "menu.add_command",
         "add_command",
     )
     return any(term in lowered for term in ui_terms)
 
 
-def remove_static_legacy_button_statements(source: str) -> tuple[str, int]:
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return source, 0
-
-    line_ranges: list[tuple[int, int]] = []
-    for node in ast.walk(tree):
-        if not hasattr(node, "lineno") or not hasattr(node, "end_lineno"):
-            continue
-        try:
-            segment = ast.get_source_segment(source, node) or ""
-        except Exception:
-            segment = ""
-        if not segment or not _looks_like_legacy_button_creation(segment):
-            continue
-        # Remove the smallest useful statement/expression that contains the
-        # legacy label. Avoid removing large enclosing functions/classes.
-        if isinstance(node, (ast.Expr, ast.Assign, ast.AnnAssign, ast.AugAssign)):
-            line_ranges.append((int(node.lineno), int(node.end_lineno)))
-
-    if not line_ranges:
-        return source, 0
-
-    # Deduplicate and merge overlapping ranges.
-    line_ranges = sorted(set(line_ranges))
-    merged: list[tuple[int, int]] = []
-    for start, end in line_ranges:
-        if not merged or start > merged[-1][1] + 1:
-            merged.append((start, end))
-        else:
-            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
-
+def remove_static_legacy_button_lines(source: str) -> tuple[str, int]:
     lines = source.splitlines()
     removed = 0
-    for start, end in reversed(merged):
-        indent = ""
-        if 1 <= start <= len(lines):
-            current = lines[start - 1]
-            indent = current[: len(current) - len(current.lstrip())]
-        replacement = indent + "# SPINA removed legacy Clients-tab action button statement"
-        lines[start - 1 : end] = [replacement]
-        removed += 1
+    for idx, line in enumerate(lines):
+        if _looks_like_legacy_button_line(line):
+            indent = line[: len(line) - len(line.lstrip())]
+            lines[idx] = indent + "# SPINA removed legacy Clients-tab action button statement"
+            removed += 1
     return "\n".join(lines) + ("\n" if source.endswith("\n") else ""), removed
 
 
 def main() -> int:
+    _flush("Starting legacy Clients-tab action remover...")
     if not APP_FILE.exists():
         raise SystemExit(f"App file not found: {APP_FILE}")
+
+    _flush("Reading SPINA app file...")
     source = APP_FILE.read_text(encoding="utf-8")
+
+    _flush("Removing old injected blocks...")
     source = remove_existing_blocks(source)
-    source, static_removed = remove_static_legacy_button_statements(source)
+
+    _flush("Scanning for exact legacy button lines...")
+    source, static_removed = remove_static_legacy_button_lines(source)
 
     marker = 'if __name__ == "__main__":'
     pos = source.rfind(marker)
@@ -457,14 +422,19 @@ def main() -> int:
     if pos == -1:
         raise SystemExit("Could not find __main__ guard for insertion")
 
+    _flush("Inserting runtime removal fallback...")
     source = source[:pos].rstrip() + "\n\n" + BLOCK + "\n\n" + source[pos:].lstrip()
+
+    _flush("Writing updated SPINA app file...")
     APP_FILE.write_text(source, encoding="utf-8")
 
     if DOC_FILE.exists():
         doc = DOC_FILE.read_text(encoding="utf-8")
         if "## Phase 5 remove legacy Clients-tab actions" not in doc:
             DOC_FILE.write_text(doc.rstrip() + DOC_NOTE, encoding="utf-8")
-    print(f"Legacy Clients-tab action removal block inserted. Static statements removed: {static_removed}")
+
+    _flush(f"Done. Static legacy button lines removed: {static_removed}")
+    _flush("Now run: python -m py_compile \"OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py\"")
     return 0
 
 
