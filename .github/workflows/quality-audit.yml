@@ -37,7 +37,8 @@ jobs:
             tools/cleanup_databank_export_callbacks.py \
             tools/cleanup_stale_databank_generated_blocks.py \
             tools/inspect_stale_databank_protected_context.py \
-            tools/audit_legacy_callback_usage.py
+            tools/audit_legacy_callback_usage.py \
+            tools/audit_silent_ui_errors.py
 
       - name: Run redundancy audit
         run: |
