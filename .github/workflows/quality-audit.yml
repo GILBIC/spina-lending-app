@@ -52,7 +52,8 @@ jobs:
             tools/audit_bare_except_context.py \
             tools/audit_pass_only_exceptions.py \
             tools/plan_modern_ui_pass_only_cleanup.py \
-            tools/cleanup_modern_ui_pass_only.py
+            tools/cleanup_modern_ui_pass_only.py \
+            tools/plan_remaining_pass_only_groups.py
 
       - name: Run redundancy audit
         run: |
