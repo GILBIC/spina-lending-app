@@ -13,9 +13,20 @@ This tool is intentionally two-step:
 
 ## Older generated block shapes
 
-Some older generated blocks do not contain the newer comment text used by later cleanup tools. The tool can now recognize those older shapes when they still contain Data Bank export labels or callback-name strings together with generated hide/destroy behavior.
+Some older generated blocks do not contain the newer comment text used by later cleanup tools. The tool can recognize those older shapes when they still contain Data Bank export labels or callback-name strings together with generated hide/destroy behavior.
 
 It still stops if a reference looks like a real call site instead of generated fallback cleanup code.
+
+## Large generated fallback blocks
+
+One older generated fallback block can be slightly larger than the original review limit. The tool now allows a larger generated-block range only when these checks pass:
+
+- it still contains Data Bank export cleanup markers or labels
+- it still contains generated hide/destroy behavior
+- it does not contain protected lending/report logic terms
+- the range is still below the extended safety limit
+
+Large accepted ranges are printed with a `[SPINA][REVIEW]` note during dry run before `--apply` is used.
 
 ## Local use after merge
 
@@ -42,7 +53,7 @@ The tool refuses to remove anything unless:
 - the old Data Bank export callback definitions are already gone
 - all remaining callback-name references are inside generated Data Bank cleanup/hide blocks
 - candidate blocks contain expected generated hide/destroy code markers
-- candidate blocks are small enough to review
+- candidate blocks are small enough to review or pass the stricter large-block checks
 - candidate blocks do not contain protected lending/report logic terms
 
 ## Not changed
