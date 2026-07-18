@@ -40,7 +40,8 @@ jobs:
             tools/audit_legacy_callback_usage.py \
             tools/audit_silent_ui_errors.py \
             tools/inject_silent_ui_logging.py \
-            tools/audit_shadowed_definitions.py
+            tools/audit_shadowed_definitions.py \
+            tools/audit_patch_chains.py
 
       - name: Run redundancy audit
         run: |
