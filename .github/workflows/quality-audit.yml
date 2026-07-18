@@ -31,7 +31,8 @@ jobs:
             tools/inject_critical_path_logging.py \
             tools/inject_reports_pdf_logging.py \
             tools/disable_full_daily_ledger.py \
-            tools/remove_databank_export_controls.py
+            tools/remove_databank_export_controls.py \
+            tools/ui_action_inventory.py
 
       - name: Run redundancy audit
         run: |
