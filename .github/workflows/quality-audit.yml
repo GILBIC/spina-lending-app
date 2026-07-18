@@ -42,7 +42,8 @@ jobs:
             tools/inject_silent_ui_logging.py \
             tools/audit_shadowed_definitions.py \
             tools/audit_patch_chains.py \
-            tools/cleanup_neutral_appclass_init_patch.py
+            tools/cleanup_neutral_appclass_init_patch.py \
+            tools/audit_blocking_ui_calls.py
 
       - name: Run redundancy audit
         run: |
