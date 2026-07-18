@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import sys
 from pathlib import Path
 
 APP_FILE = Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py")
@@ -24,6 +23,11 @@ TARGET_NAMES = (
     "export_daily_collection_template",
 )
 
+# Markers that identify generated Data Bank cleanup/hide/destroy blocks.
+# Some older generated blocks only contain the removed callback names plus helper
+# labels, so the recognizable surface is intentionally broader than the first
+# version of this tool. Safety checks below still require generated hide/destroy
+# behavior and refuse protected lending/report logic.
 GENERATED_MARKERS = (
     "data bank export",
     "databank export",
@@ -35,6 +39,11 @@ GENERATED_MARKERS = (
     "_spina_original_app_init_for_databank_exports",
     "hide-only",
     "hide/destroy",
+    "date range template",
+    "jsonl month",
+    "daily excel template",
+    "export_jsonl_month",
+    "export_daily_collection_template",
 )
 
 EXPECTED_GENERATED_CODE_MARKERS = (
@@ -46,6 +55,9 @@ EXPECTED_GENERATED_CODE_MARKERS = (
     "winfo_parent",
     "App.__init__",
     "_spina_original_app_init",
+    "configure(command=",
+    "cget(\"command\")",
+    "cget('command')",
 )
 
 PROTECTED_TERMS = (
@@ -102,6 +114,47 @@ def _protected_hits(text: str) -> list[str]:
     return [term for term in PROTECTED_TERMS if term.lower() in lower]
 
 
+def _target_name_count(text: str) -> int:
+    return sum(text.count(name) for name in TARGET_NAMES)
+
+
+def _looks_like_generated_databank_cleanup_block(text: str) -> bool:
+    """Return True only for generated cleanup/hide block shapes.
+
+    A real Data Bank button call site may contain a target callback name, but it
+    should not also contain hide/destroy/winfo generated-cleanup behavior. This
+    keeps the fallback conservative while allowing older generated blocks whose
+    comments do not include the newer marker phrases.
+    """
+    lower = text.lower()
+    target_present = any(name in text for name in TARGET_NAMES)
+    old_ui_label_present = any(
+        phrase in lower
+        for phrase in (
+            "exports",
+            "date range template",
+            "jsonl month",
+            "daily excel template",
+            "daily collection excel template",
+        )
+    )
+    generated_helper_present = any(
+        phrase in lower
+        for phrase in (
+            "_spina_",
+            "winfo_children",
+            "pack_forget",
+            "grid_forget",
+            "place_forget",
+            "destroy",
+            "configure(command=",
+            "cget(\"command\")",
+            "cget('command')",
+        )
+    )
+    return target_present and generated_helper_present and (_has_marker(text) or old_ui_label_present)
+
+
 def _is_possible_block_start(line: str) -> bool:
     stripped = line.strip()
     lower = stripped.lower()
@@ -115,6 +168,8 @@ def _is_possible_block_start(line: str) -> bool:
         or stripped.startswith("try:")
         or stripped.startswith("App.__init__")
         or stripped.startswith("_spina")
+        or stripped.startswith("DATA_BANK")
+        or stripped.startswith("DATABANK")
         or "data bank export" in lower
         or "databank export" in lower
     )
@@ -135,50 +190,63 @@ def _is_possible_block_boundary(line: str) -> bool:
     return False
 
 
+def _next_boundary_after(lines: list[str], start: int, ref_index: int, limit: int = 900) -> int | None:
+    n = len(lines)
+    for i in range(ref_index + 1, min(n, ref_index + limit)):
+        if _is_possible_block_boundary(lines[i]):
+            return i
+    for i in range(ref_index + 1, min(n, ref_index + limit)):
+        if i + 1 < n and not lines[i].strip() and lines[i + 1].strip() and _line_indent(lines[i + 1]) == 0:
+            probe = "".join(lines[start:i + 1])
+            if _looks_like_generated_databank_cleanup_block(probe):
+                return i + 1
+    return None
+
+
 def _candidate_range_for_reference(lines: list[str], ref_index: int) -> tuple[int, int] | None:
     """Return 0-based [start, end) candidate range for a stale generated block."""
     n = len(lines)
 
     # Prefer an explicit nearby Data Bank export marker before the reference.
     start = None
-    for i in range(ref_index, max(-1, ref_index - 260), -1):
+    for i in range(ref_index, max(-1, ref_index - 900), -1):
         if _has_marker(lines[i]) and _is_possible_block_start(lines[i]):
             start = i
         elif start is None and _is_possible_block_start(lines[i]):
             window = "".join(lines[i:ref_index + 1])
-            if _has_marker(window):
+            if _looks_like_generated_databank_cleanup_block(window):
                 start = i
-    if start is None:
-        return None
-
-    # Include adjacent generated setup lines directly above the detected start.
-    while start > 0:
-        prev = lines[start - 1]
-        if not prev.strip():
-            start -= 1
-            continue
-        if _line_indent(prev) == 0 and (_has_marker(prev) or prev.strip().startswith("#")):
-            start -= 1
-            continue
-        break
-
-    end = None
-    for i in range(ref_index + 1, min(n, ref_index + 360)):
-        if _is_possible_block_boundary(lines[i]):
-            end = i
+    if start is not None:
+        # Include adjacent generated setup/comment lines directly above the detected start.
+        while start > 0:
+            prev = lines[start - 1]
+            if not prev.strip():
+                start -= 1
+                continue
+            if _line_indent(prev) == 0 and (_has_marker(prev) or prev.strip().startswith("#")):
+                start -= 1
+                continue
             break
-    if end is None:
-        # Fall back to the next blank-separated top-level non-generated section.
-        for i in range(ref_index + 1, min(n, ref_index + 360)):
-            if i + 1 < n and not lines[i].strip() and lines[i + 1].strip() and _line_indent(lines[i + 1]) == 0:
-                probe = "".join(lines[start:i + 1])
-                if _has_marker(probe) and _has_expected_generated_code(probe):
-                    end = i + 1
-                    break
-    if end is None:
-        return None
+        end = _next_boundary_after(lines, start, ref_index)
+        if end is not None:
+            return start, end
 
-    return start, end
+    # Fallback for older generated blocks whose first reference is inside a
+    # plain list/tuple and whose comments lack the newer marker phrases.
+    top_level_starts: list[int] = []
+    for i in range(ref_index, max(-1, ref_index - 900), -1):
+        if lines[i].strip() and _line_indent(lines[i]) == 0:
+            top_level_starts.append(i)
+
+    for candidate_start in top_level_starts:
+        end = _next_boundary_after(lines, candidate_start, ref_index)
+        if end is None:
+            continue
+        block_text = "".join(lines[candidate_start:end])
+        if _looks_like_generated_databank_cleanup_block(block_text):
+            return candidate_start, end
+
+    return None
 
 
 def _merge_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
@@ -255,8 +323,8 @@ def main(argv: list[str] | None = None) -> int:
         if length > 520:
             unsafe_messages.append(f"range {start + 1}-{end}: too large ({length} lines)")
             continue
-        if not _has_marker(text):
-            unsafe_messages.append(f"range {start + 1}-{end}: missing generated Data Bank marker")
+        if not _looks_like_generated_databank_cleanup_block(text):
+            unsafe_messages.append(f"range {start + 1}-{end}: missing generated Data Bank cleanup markers")
             continue
         if not _has_expected_generated_code(text):
             unsafe_messages.append(f"range {start + 1}-{end}: missing expected hide/destroy generated code marker")
