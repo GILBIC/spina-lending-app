@@ -1587,7 +1587,10 @@ def _parse_ymd(_s: str):
     except Exception:
         try:
             return date.today()
-        except Exception:
+        except Exception as __spina_exc:
+            __spina_logger = globals().get('_log_suppressed_once')
+            if callable(__spina_logger):
+                __spina_logger('silent_ui_1590__parse_ymd', 'suppressed UI/startup exception at line 1590', __spina_exc)
             return datetime.now().date()
 
 class _CalendarPopup(tk.Toplevel):
@@ -9961,7 +9964,10 @@ class App:
         except Exception:
             try:
                 return _date.today().strftime('%Y-%m-%d')
-            except Exception:
+            except Exception as __spina_exc:
+                __spina_logger = globals().get('_log_suppressed_once')
+                if callable(__spina_logger):
+                    __spina_logger('silent_ui_9964__get_databank_focus_date', 'suppressed UI/startup exception at line 9964', __spina_exc)
                 return ''
 
     def _show_system_data_tab(self):
@@ -11656,7 +11662,10 @@ class App:
         def _norm(s: str) -> str:
             try:
                 return " ".join(str(s or "").split()).strip().lower()
-            except Exception:
+            except Exception as __spina_exc:
+                __spina_logger = globals().get('_log_suppressed_once')
+                if callable(__spina_logger):
+                    __spina_logger('silent_ui_11659__norm', 'suppressed UI/startup exception at line 11659', __spina_exc)
                 return str(s or "").strip().lower()
 
         # Build main -> subs mapping (include any initial unknowns so the tree can show them too)
@@ -13173,7 +13182,10 @@ class App:
         """Heuristic: columns contain 'client' + 'area' and many day columns (d1..d31 or numeric headings)."""
         try:
             cols = list(tv["columns"])
-        except Exception:
+        except Exception as __spina_exc:
+            __spina_logger = globals().get('_log_suppressed_once')
+            if callable(__spina_logger):
+                __spina_logger('silent_ui_13176__looks_like_data_grid', 'suppressed UI/startup exception at line 13176', __spina_exc)
             return False
         cols_l = [str(c).lower() for c in cols]
         if not cols:
@@ -15854,7 +15866,10 @@ class App:
                 if state == 'hidden':
                     continue
                 items.append((tab, title, icon))
-            except Exception:
+            except Exception as __spina_exc:
+                __spina_logger = globals().get('_log_suppressed_once')
+                if callable(__spina_logger):
+                    __spina_logger('silent_ui_15857__side_nav_items', 'suppressed UI/startup exception at line 15857', __spina_exc)
                 continue
         return items
 
