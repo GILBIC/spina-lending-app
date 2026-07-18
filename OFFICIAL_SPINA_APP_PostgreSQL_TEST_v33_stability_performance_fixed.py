@@ -48172,7 +48172,8 @@ def _spina_v32_prompt_login(self, default_user: str = "admin"):
 
     try:
         dlg.transient(self.root)
-    except Exception:
+    except Exception as __spina_exc:
+        _log_suppressed_once('pure_login_dialog_ui.transient', 'suppressed pure login dialog UI exception: login_dialog_transient', __spina_exc)
         pass
 
     # Main shell
@@ -48329,7 +48330,8 @@ def _spina_v32_prompt_login(self, default_user: str = "admin"):
 
     try:
         account_var.trace_add("write", _refresh_account_info)
-    except Exception:
+    except Exception as __spina_exc:
+        _log_suppressed_once('pure_login_dialog_ui.account_trace', 'suppressed pure login dialog UI exception: login_dialog_account_trace', __spina_exc)
         pass
     _refresh_account_info()
 
@@ -48339,12 +48341,14 @@ def _spina_v32_prompt_login(self, default_user: str = "admin"):
     try:
         pw_entry.bind("<Return>", _enter)
         account_cb.bind("<Return>", _enter)
-    except Exception:
+    except Exception as __spina_exc:
+        _log_suppressed_once('pure_login_dialog_ui.return_bind', 'suppressed pure login dialog UI exception: login_dialog_return_bind', __spina_exc)
         pass
 
     try:
         dlg.grab_set()
-    except Exception:
+    except Exception as __spina_exc:
+        _log_suppressed_once('pure_login_dialog_ui.grab_set', 'suppressed pure login dialog UI exception: login_dialog_grab_set', __spina_exc)
         pass
 
     try:
@@ -48362,7 +48366,8 @@ def _spina_v32_prompt_login(self, default_user: str = "admin"):
         x = max(10, min(x, sw - w - 10))
         y = max(10, min(y, sh - h - 60))
         dlg.geometry(f"{w}x{h}+{x}+{y}")
-    except Exception:
+    except Exception as __spina_exc:
+        _log_suppressed_once('pure_login_dialog_ui.position', 'suppressed pure login dialog UI exception: login_dialog_position', __spina_exc)
         pass
 
     try:
