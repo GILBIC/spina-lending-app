@@ -1,20 +1,26 @@
-# Disable Full Daily Ledger
+# Remove legacy Clients-tab action buttons
 
-This document describes the safe Full Daily Ledger removal path.
+This document describes the safe removal path for the legacy Clients-tab action buttons shown as:
+
+- From Transactions
+- Full Ledger
+- Export Template
+- Import Excel
 
 ## Purpose
 
-The Full Daily Ledger action is being disabled because the preferred printing path is Collector Route Daily Ledger. This keeps the app simpler and avoids confusion when notes are expected on collector-specific outputs.
+These actions are legacy controls in the Clients tab. They can confuse testing because the preferred flows are now the desktop-aligned Clients editor, Collector Route Daily Ledger, Reports/Statement Center, and controlled import tools.
 
 ## Safety rule
 
-This change does not delete old ledger code directly. It adds a manual injector that disables the Full Daily Ledger action at runtime.
+This PR does not directly delete thousands of lines from the main SPINA source. It adds a manual injector that removes the visible legacy Clients-tab buttons and disables their known old callback entry points.
 
 It does not change:
 
 - notes storage
 - note rendering logic
 - Collector Route Daily Ledger
+- Client Statement PDF
 - loan balances
 - 7x7 logic
 - interest logic
@@ -34,10 +40,11 @@ python "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 
 Then check:
 
-1. Full Daily Ledger button/action should be gone or disabled.
+1. In the Clients tab, these buttons should be gone: From Transactions, Full Ledger, Export Template, Import Excel.
 2. Collector Route Daily Ledger should still work.
 3. Notes should still appear in the collector route output.
 4. Client Statement PDF should still work.
+5. Normal client search/edit/renew should still work.
 
 ## Undo local injected change
 
@@ -48,6 +55,6 @@ git restore "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 git restore docs/code-issue-review.md
 ```
 
-## Why not delete the huge function immediately?
+## Why not delete the huge old functions immediately?
 
-`print_full_daily_ledger` is a very large legacy function and may still share helpers with other print flows. Disabling the visible action first is safer than deleting thousands of lines in one PR.
+Some old functions are very large and may still share helpers with other print/import flows. Removing the visible actions first is safer than deleting thousands of lines in one PR. After this is confirmed working, the next cleanup can remove unreachable code in smaller pieces.
