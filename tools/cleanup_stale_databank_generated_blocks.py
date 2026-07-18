@@ -23,6 +23,12 @@ TARGET_NAMES = (
     "export_daily_collection_template",
 )
 
+# The first tool version limited ranges to 520 lines. One older generated
+# fallback block has been observed at 587 lines, so allow a slightly larger
+# range only when all strict generated-block checks pass.
+STANDARD_RANGE_LIMIT = 520
+EXTENDED_GENERATED_RANGE_LIMIT = 700
+
 # Markers that identify generated Data Bank cleanup/hide/destroy blocks.
 # Some older generated blocks only contain the removed callback names plus helper
 # labels, so the recognizable surface is intentionally broader than the first
@@ -42,6 +48,7 @@ GENERATED_MARKERS = (
     "date range template",
     "jsonl month",
     "daily excel template",
+    "daily collection excel template",
     "export_jsonl_month",
     "export_daily_collection_template",
 )
@@ -114,18 +121,8 @@ def _protected_hits(text: str) -> list[str]:
     return [term for term in PROTECTED_TERMS if term.lower() in lower]
 
 
-def _target_name_count(text: str) -> int:
-    return sum(text.count(name) for name in TARGET_NAMES)
-
-
 def _looks_like_generated_databank_cleanup_block(text: str) -> bool:
-    """Return True only for generated cleanup/hide block shapes.
-
-    A real Data Bank button call site may contain a target callback name, but it
-    should not also contain hide/destroy/winfo generated-cleanup behavior. This
-    keeps the fallback conservative while allowing older generated blocks whose
-    comments do not include the newer marker phrases.
-    """
+    """Return True only for generated cleanup/hide block shapes."""
     lower = text.lower()
     target_present = any(name in text for name in TARGET_NAMES)
     old_ui_label_present = any(
@@ -197,7 +194,7 @@ def _next_boundary_after(lines: list[str], start: int, ref_index: int, limit: in
             return i
     for i in range(ref_index + 1, min(n, ref_index + limit)):
         if i + 1 < n and not lines[i].strip() and lines[i + 1].strip() and _line_indent(lines[i + 1]) == 0:
-            probe = "".join(lines[start:i + 1])
+            probe = "".join(lines[start : i + 1])
             if _looks_like_generated_databank_cleanup_block(probe):
                 return i + 1
     return None
@@ -205,15 +202,13 @@ def _next_boundary_after(lines: list[str], start: int, ref_index: int, limit: in
 
 def _candidate_range_for_reference(lines: list[str], ref_index: int) -> tuple[int, int] | None:
     """Return 0-based [start, end) candidate range for a stale generated block."""
-    n = len(lines)
-
     # Prefer an explicit nearby Data Bank export marker before the reference.
     start = None
     for i in range(ref_index, max(-1, ref_index - 900), -1):
         if _has_marker(lines[i]) and _is_possible_block_start(lines[i]):
             start = i
         elif start is None and _is_possible_block_start(lines[i]):
-            window = "".join(lines[i:ref_index + 1])
+            window = "".join(lines[i : ref_index + 1])
             if _looks_like_generated_databank_cleanup_block(window):
                 start = i
     if start is not None:
@@ -271,6 +266,33 @@ def _remove_ranges(lines: list[str], ranges: list[tuple[int, int]]) -> list[str]
     return [line for i, line in enumerate(lines) if not remove[i]]
 
 
+def _safety_check_range(lines: list[str], start: int, end: int) -> tuple[bool, str | None]:
+    text = "".join(lines[start:end])
+    length = end - start
+    protected = _protected_hits(text)
+
+    if length > EXTENDED_GENERATED_RANGE_LIMIT:
+        return False, f"range {start + 1}-{end}: too large ({length} lines; limit {EXTENDED_GENERATED_RANGE_LIMIT})"
+    if length > STANDARD_RANGE_LIMIT:
+        # Larger ranges are allowed only when all strict generated-block checks
+        # pass. The dry run prints a review note before --apply is used.
+        if not _looks_like_generated_databank_cleanup_block(text):
+            return False, f"range {start + 1}-{end}: large range missing generated Data Bank cleanup markers"
+        if not _has_expected_generated_code(text):
+            return False, f"range {start + 1}-{end}: large range missing expected hide/destroy generated code marker"
+        if protected:
+            return False, f"range {start + 1}-{end}: protected terms found: {', '.join(protected[:8])}"
+        return True, f"large recognized generated cleanup range ({length} lines)"
+
+    if not _looks_like_generated_databank_cleanup_block(text):
+        return False, f"range {start + 1}-{end}: missing generated Data Bank cleanup markers"
+    if not _has_expected_generated_code(text):
+        return False, f"range {start + 1}-{end}: missing expected hide/destroy generated code marker"
+    if protected:
+        return False, f"range {start + 1}-{end}: protected terms found: {', '.join(protected[:8])}"
+    return True, None
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true", help="Remove the printed safe candidate ranges.")
@@ -315,29 +337,24 @@ def main(argv: list[str] | None = None) -> int:
     candidate_ranges = _merge_ranges(candidate_ranges)
 
     safe_ranges: list[tuple[int, int]] = []
+    review_notes: list[str] = []
     unsafe_messages: list[str] = []
     for start, end in candidate_ranges:
-        text = "".join(lines[start:end])
-        length = end - start
-        protected = _protected_hits(text)
-        if length > 520:
-            unsafe_messages.append(f"range {start + 1}-{end}: too large ({length} lines)")
-            continue
-        if not _looks_like_generated_databank_cleanup_block(text):
-            unsafe_messages.append(f"range {start + 1}-{end}: missing generated Data Bank cleanup markers")
-            continue
-        if not _has_expected_generated_code(text):
-            unsafe_messages.append(f"range {start + 1}-{end}: missing expected hide/destroy generated code marker")
-            continue
-        if protected:
-            unsafe_messages.append(f"range {start + 1}-{end}: protected terms found: {', '.join(protected[:8])}")
-            continue
-        safe_ranges.append((start, end))
+        ok, message = _safety_check_range(lines, start, end)
+        if ok:
+            safe_ranges.append((start, end))
+            if message:
+                review_notes.append(f"range {start + 1}-{end}: {message}")
+        else:
+            unsafe_messages.append(message or f"range {start + 1}-{end}: failed safety checks")
 
     for start, end in safe_ranges:
         print(f"[SPINA] Safe candidate range: lines {start + 1}-{end} ({end - start} lines)", flush=True)
         print(f"  first: {lines[start].rstrip()}", flush=True)
         print(f"  last : {lines[end - 1].rstrip()}", flush=True)
+
+    for note in review_notes:
+        print(f"[SPINA][REVIEW] {note}", flush=True)
 
     if unresolved:
         print("[SPINA][STOP] Some references are not inside a recognized generated Data Bank cleanup block.", flush=True)
