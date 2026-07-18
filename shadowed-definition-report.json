@@ -1,0 +1,584 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48509,
+  "top_level_duplicate_count": 7,
+  "class_method_duplicate_count": 4,
+  "repeated_patch_target_count": 27,
+  "top_level_duplicates": {
+    "_spina_route_adv_marker_for": [
+      {
+        "line": 8538,
+        "protected_context": true,
+        "text": "def _spina_route_adv_marker_for(db, name: str, day_yyyy_mm_dd: str, loan_type: str = \"Regular\"):"
+      },
+      {
+        "line": 41199,
+        "protected_context": true,
+        "text": "def _spina_route_adv_marker_for(db, name: str, day_yyyy_mm_dd: str, loan_type: str = \"Regular\"):"
+      }
+    ],
+    "_on_collectors_multi_toggle": [
+      {
+        "line": 20572,
+        "protected_context": true,
+        "text": "def _on_collectors_multi_toggle(self):"
+      },
+      {
+        "line": 35233,
+        "protected_context": true,
+        "text": "def _on_collectors_multi_toggle(self):"
+      }
+    ],
+    "_on_collectors_tree_click": [
+      {
+        "line": 20636,
+        "protected_context": true,
+        "text": "def _on_collectors_tree_click(self, event):"
+      },
+      {
+        "line": 35291,
+        "protected_context": true,
+        "text": "def _on_collectors_tree_click(self, event):"
+      }
+    ],
+    "_collectors_areas_drag_motion": [
+      {
+        "line": 21168,
+        "protected_context": true,
+        "text": "def _collectors_areas_drag_motion(self, event):"
+      },
+      {
+        "line": 35444,
+        "protected_context": true,
+        "text": "def _collectors_areas_drag_motion(self, event):"
+      }
+    ],
+    "_on_collectors_select": [
+      {
+        "line": 21256,
+        "protected_context": true,
+        "text": "def _on_collectors_select(self):"
+      },
+      {
+        "line": 38730,
+        "protected_context": true,
+        "text": "def _on_collectors_select(self):"
+      }
+    ],
+    "_spina__client_due_meta": [
+      {
+        "line": 24313,
+        "protected_context": true,
+        "text": "def _spina__client_due_meta(info: dict | None, as_of=None) -> tuple[str, bool]:"
+      },
+      {
+        "line": 39615,
+        "protected_context": true,
+        "text": "def _spina__client_due_meta(info: dict | None, as_of=None) -> tuple[str, bool]:"
+      }
+    ],
+    "_on_collectors_tree_wheel": [
+      {
+        "line": 35054,
+        "protected_context": true,
+        "text": "def _on_collectors_tree_wheel(self, event):"
+      },
+      {
+        "line": 35255,
+        "protected_context": true,
+        "text": "def _on_collectors_tree_wheel(self, event):"
+      }
+    ]
+  },
+  "class_method_duplicates": {
+    "RenewDialog": {
+      "__init__": [
+        {
+          "line": 25686,
+          "protected_context": true,
+          "text": "def __init__(self, parent, title=None, initial=None, loan_type='Regular'):"
+        },
+        {
+          "line": 30791,
+          "protected_context": true,
+          "text": "def __init__(self, parent, title=None, initial=None, loan_type='Regular', db=None):"
+        }
+      ],
+      "body": [
+        {
+          "line": 25691,
+          "protected_context": true,
+          "text": "def body(self, master):"
+        },
+        {
+          "line": 31135,
+          "protected_context": true,
+          "text": "def body(self, master):"
+        }
+      ],
+      "validate": [
+        {
+          "line": 25754,
+          "protected_context": true,
+          "text": "def validate(self):"
+        },
+        {
+          "line": 31229,
+          "protected_context": true,
+          "text": "def validate(self):"
+        }
+      ],
+      "apply": [
+        {
+          "line": 25786,
+          "protected_context": true,
+          "text": "def apply(self):"
+        },
+        {
+          "line": 31269,
+          "protected_context": true,
+          "text": "def apply(self):"
+        }
+      ]
+    }
+  },
+  "repeated_patch_targets": {
+    "AppClass.__init__": [
+      {
+        "line": 26458,
+        "protected_context": false,
+        "text": "AppClass.__init__ = patched_init"
+      },
+      {
+        "line": 26462,
+        "protected_context": false,
+        "text": "AppClass.__init__ = orig_App_init"
+      }
+    ],
+    "App.refresh_clients": [
+      {
+        "line": 31507,
+        "protected_context": true,
+        "text": "setattr(App, 'refresh_clients', _app_refresh_clients)"
+      },
+      {
+        "line": 35983,
+        "protected_context": true,
+        "text": "App.refresh_clients = _refresh_clients_with_picture"
+      },
+      {
+        "line": 36609,
+        "protected_context": true,
+        "text": "setattr(App, \"refresh_clients\", _spina_perf_refresh_clients)"
+      },
+      {
+        "line": 39211,
+        "protected_context": true,
+        "text": "App.refresh_clients = _spina_refresh_clients_with_client_info_logs"
+      },
+      {
+        "line": 45679,
+        "protected_context": true,
+        "text": "App.refresh_clients = _spina_v23_refresh_clients"
+      }
+    ],
+    "App.add_client_dialog": [
+      {
+        "line": 31509,
+        "protected_context": true,
+        "text": "setattr(App, 'add_client_dialog', _app_add_client_dialog)"
+      },
+      {
+        "line": 45666,
+        "protected_context": true,
+        "text": "App.add_client_dialog = _spina_v23_add_client_dialog"
+      }
+    ],
+    "App.on_client_edit": [
+      {
+        "line": 31510,
+        "protected_context": true,
+        "text": "setattr(App, 'on_client_edit', _app_on_client_edit)"
+      },
+      {
+        "line": 45667,
+        "protected_context": true,
+        "text": "App.on_client_edit = _spina_v23_on_client_edit"
+      }
+    ],
+    "App.open_archived_clients_dialog": [
+      {
+        "line": 31513,
+        "protected_context": true,
+        "text": "setattr(App, 'open_archived_clients_dialog', _app_open_archived_clients_dialog)"
+      },
+      {
+        "line": 36877,
+        "protected_context": true,
+        "text": "setattr(App, 'open_archived_clients_dialog', _spina_fixed_open_archived_clients_dialog)"
+      },
+      {
+        "line": 37139,
+        "protected_context": true,
+        "text": "setattr(App, 'open_archived_clients_dialog', _spina_fixed_open_archived_clients_dialog_rowid)"
+      }
+    ],
+    "App.apply_role_access": [
+      {
+        "line": 31553,
+        "protected_context": true,
+        "text": "App.apply_role_access = _spina_apply_role_access_modern_sidebar"
+      },
+      {
+        "line": 37862,
+        "protected_context": true,
+        "text": "App.apply_role_access = _spina_apply_role_access_with_dashboard"
+      },
+      {
+        "line": 38608,
+        "protected_context": true,
+        "text": "App.apply_role_access = _spina_apply_role_access_with_cash_control"
+      },
+      {
+        "line": 41631,
+        "protected_context": true,
+        "text": "App.apply_role_access = _spina_v13_apply_role_access"
+      }
+    ],
+    "App.refresh_collectors": [
+      {
+        "line": 35533,
+        "protected_context": true,
+        "text": "App.refresh_collectors = _refresh_collectors_guard"
+      },
+      {
+        "line": 46929,
+        "protected_context": true,
+        "text": "App.refresh_collectors = _spina_v25_refresh_collectors"
+      },
+      {
+        "line": 47860,
+        "protected_context": true,
+        "text": "App.refresh_collectors = _spina_v27_refresh_collectors"
+      }
+    ],
+    "App._build_clients_tab": [
+      {
+        "line": 35971,
+        "protected_context": true,
+        "text": "App._build_clients_tab = _build_clients_tab_with_picture"
+      },
+      {
+        "line": 45665,
+        "protected_context": true,
+        "text": "App._build_clients_tab = _spina_v23_build_clients_tab"
+      }
+    ],
+    "App.refresh_data_grid": [
+      {
+        "line": 36610,
+        "protected_context": true,
+        "text": "setattr(App, \"refresh_data_grid\", _spina_perf_refresh_data_grid)"
+      },
+      {
+        "line": 41916,
+        "protected_context": true,
+        "text": "App.refresh_data_grid = _spina_v15_refresh_data_grid"
+      },
+      {
+        "line": 41982,
+        "protected_context": true,
+        "text": "App.refresh_data_grid = _spina_v16_refresh_data_grid"
+      }
+    ],
+    "LoanDB.restore_client": [
+      {
+        "line": 36874,
+        "protected_context": true,
+        "text": "setattr(LoanDB, 'restore_client', _spina_fixed_restore_client)"
+      },
+      {
+        "line": 37135,
+        "protected_context": true,
+        "text": "setattr(LoanDB, 'restore_client', _spina_fixed_restore_client)"
+      }
+    ],
+    "LoanDB.restore_client_by_uid": [
+      {
+        "line": 36875,
+        "protected_context": true,
+        "text": "setattr(LoanDB, 'restore_client_by_uid', _spina_fixed_restore_client_by_uid)"
+      },
+      {
+        "line": 37137,
+        "protected_context": true,
+        "text": "setattr(LoanDB, 'restore_client_by_uid', _spina_fixed_restore_client_by_uid)"
+      }
+    ],
+    "App._build_dashboard_tab": [
+      {
+        "line": 37823,
+        "protected_context": true,
+        "text": "setattr(App, '_build_dashboard_tab', _spina_build_dashboard_tab)"
+      },
+      {
+        "line": 42588,
+        "protected_context": true,
+        "text": "App._build_dashboard_tab = _spina_v17_build_dashboard_tab"
+      }
+    ],
+    "App.refresh_dashboard": [
+      {
+        "line": 37824,
+        "protected_context": true,
+        "text": "setattr(App, 'refresh_dashboard', _spina_refresh_dashboard)"
+      },
+      {
+        "line": 42589,
+        "protected_context": true,
+        "text": "App.refresh_dashboard = _spina_v17_refresh_dashboard"
+      },
+      {
+        "line": 42876,
+        "protected_context": true,
+        "text": "App.refresh_dashboard = _spina_v18_refresh_dashboard"
+      },
+      {
+        "line": 42974,
+        "protected_context": true,
+        "text": "App.refresh_dashboard = _spina_v19_refresh_dashboard"
+      },
+      {
+        "line": 43279,
+        "protected_context": true,
+        "text": "App.refresh_dashboard = _spina_v20_refresh_dashboard"
+      }
+    ],
+    "App._populate_dashboard_tree": [
+      {
+        "line": 37825,
+        "protected_context": true,
+        "text": "setattr(App, '_populate_dashboard_tree', _spina_populate_dashboard_tree)"
+      },
+      {
+        "line": 42590,
+        "protected_context": true,
+        "text": "App._populate_dashboard_tree = _spina_v17_populate_dashboard_tree"
+      },
+      {
+        "line": 42877,
+        "protected_context": true,
+        "text": "App._populate_dashboard_tree = _spina_v18_populate_dashboard_tree"
+      },
+      {
+        "line": 42973,
+        "protected_context": true,
+        "text": "App._populate_dashboard_tree = _spina_v19_populate_dashboard_tree"
+      },
+      {
+        "line": 43278,
+        "protected_context": true,
+        "text": "App._populate_dashboard_tree = _spina_v20_populate_dashboard_tree"
+      }
+    ],
+    "App._dashboard_visible_rows": [
+      {
+        "line": 37826,
+        "protected_context": true,
+        "text": "setattr(App, '_dashboard_visible_rows', _spina_dashboard_visible_rows)"
+      },
+      {
+        "line": 42591,
+        "protected_context": true,
+        "text": "App._dashboard_visible_rows = _spina_v17_visible_dashboard_rows"
+      },
+      {
+        "line": 42972,
+        "protected_context": true,
+        "text": "App._dashboard_visible_rows = _spina_v19_visible_dashboard_rows"
+      }
+    ],
+    "App._apply_ui_theme": [
+      {
+        "line": 37838,
+        "protected_context": true,
+        "text": "App._apply_ui_theme = _spina_apply_ui_theme_with_dashboard"
+      },
+      {
+        "line": 41603,
+        "protected_context": true,
+        "text": "App._apply_ui_theme = _spina_v13_apply_ui_theme"
+      },
+      {
+        "line": 41942,
+        "protected_context": true,
+        "text": "App._apply_ui_theme = _spina_v15_apply_ui_theme"
+      }
+    ],
+    "App.__init__": [
+      {
+        "line": 37851,
+        "protected_context": true,
+        "text": "App.__init__ = _spina_app_init_with_dashboard"
+      },
+      {
+        "line": 38597,
+        "protected_context": true,
+        "text": "App.__init__ = _spina_app_init_with_cash_control"
+      },
+      {
+        "line": 39200,
+        "protected_context": true,
+        "text": "App.__init__ = _spina_app_init_with_client_info_logs"
+      },
+      {
+        "line": 39434,
+        "protected_context": true,
+        "text": "App.__init__ = _spina_app_init_with_auto_close"
+      },
+      {
+        "line": 41616,
+        "protected_context": true,
+        "text": "App.__init__ = _spina_v13_app_init"
+      }
+    ],
+    "App._on_mode_change": [
+      {
+        "line": 37873,
+        "protected_context": true,
+        "text": "App._on_mode_change = _spina_on_mode_change_with_dashboard"
+      },
+      {
+        "line": 38619,
+        "protected_context": true,
+        "text": "App._on_mode_change = _spina_on_mode_change_with_cash_control"
+      },
+      {
+        "line": 42607,
+        "protected_context": true,
+        "text": "App._on_mode_change = _spina_v17_on_mode_change"
+      }
+    ],
+    "App._build_cash_control_tab": [
+      {
+        "line": 38580,
+        "protected_context": true,
+        "text": "setattr(App, '_build_cash_control_tab', _spina_cashctl_build_tab)"
+      },
+      {
+        "line": 43987,
+        "protected_context": true,
+        "text": "App._build_cash_control_tab = _spina_v21_cash_build_tab"
+      }
+    ],
+    "App.refresh_cash_control": [
+      {
+        "line": 38581,
+        "protected_context": true,
+        "text": "setattr(App, 'refresh_cash_control', _spina_cashctl_refresh)"
+      },
+      {
+        "line": 43988,
+        "protected_context": true,
+        "text": "App.refresh_cash_control = _spina_v21_cash_refresh"
+      }
+    ],
+    "App._populate_collector_details": [
+      {
+        "line": 38799,
+        "protected_context": true,
+        "text": "setattr(App, \"_populate_collector_details\", _populate_collector_details)"
+      },
+      {
+        "line": 46940,
+        "protected_context": true,
+        "text": "App._populate_collector_details = _spina_v25_populate_collector_details"
+      }
+    ],
+    "App._on_collectors_select": [
+      {
+        "line": 38803,
+        "protected_context": true,
+        "text": "setattr(App, \"_on_collectors_select\", _on_collectors_select)"
+      },
+      {
+        "line": 46973,
+        "protected_context": true,
+        "text": "App._on_collectors_select = _spina_v26_on_collectors_select"
+      },
+      {
+        "line": 47881,
+        "protected_context": true,
+        "text": "App._on_collectors_select = _spina_v27_on_collectors_select"
+      }
+    ],
+    "App.render_client_info_logs": [
+      {
+        "line": 39186,
+        "protected_context": true,
+        "text": "setattr(App, 'render_client_info_logs', _spina_render_client_info_logs)"
+      },
+      {
+        "line": 46376,
+        "protected_context": true,
+        "text": "App.render_client_info_logs = _spina_v24_render_client_info_logs"
+      }
+    ],
+    "App.refresh_client_info_logs": [
+      {
+        "line": 39187,
+        "protected_context": true,
+        "text": "setattr(App, 'refresh_client_info_logs', _spina_refresh_client_info_logs)"
+      },
+      {
+        "line": 46377,
+        "protected_context": true,
+        "text": "App.refresh_client_info_logs = _spina_v24_refresh_client_info_logs"
+      }
+    ],
+    "App._build_client_info_logs_tab": [
+      {
+        "line": 39188,
+        "protected_context": true,
+        "text": "setattr(App, '_build_client_info_logs_tab', _spina_build_client_info_logs_tab)"
+      },
+      {
+        "line": 46375,
+        "protected_context": true,
+        "text": "App._build_client_info_logs_tab = _spina_v24_build_client_info_logs_tab"
+      }
+    ],
+    "App.save_closed_collector_route_copy": [
+      {
+        "line": 40624,
+        "protected_context": true,
+        "text": "setattr(App, 'save_closed_collector_route_copy', _spina_save_closed_collector_route_copy)"
+      },
+      {
+        "line": 40897,
+        "protected_context": true,
+        "text": "App.save_closed_collector_route_copy = _spina_save_closed_collector_route_copy_same_format"
+      }
+    ],
+    "App._build_collectors_tab": [
+      {
+        "line": 46915,
+        "protected_context": true,
+        "text": "App._build_collectors_tab = _spina_v25_build_collectors_tab"
+      },
+      {
+        "line": 47848,
+        "protected_context": true,
+        "text": "App._build_collectors_tab = _spina_v27_build_collectors_tab"
+      }
+    ]
+  },
+  "review_candidates": [],
+  "recommendations": [
+    "Read-only audit only; no app source changes are made.",
+    "Review one duplicate family at a time before deleting any code.",
+    "Treat protected-context duplicates as keep/review, not automatic removal.",
+    "Repeated App monkey-patches should be consolidated only after a manual behavior check.",
+    "Do not touch balances, 7x7, interest, payment allocation, notes, collector route, statements, PDFs, renewals, or report math from this report alone."
+  ]
+}
