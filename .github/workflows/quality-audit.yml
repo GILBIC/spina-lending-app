@@ -33,7 +33,8 @@ jobs:
             tools/disable_full_daily_ledger.py \
             tools/remove_databank_export_controls.py \
             tools/ui_action_inventory.py \
-            tools/cleanup_databank_export_ui_source.py
+            tools/cleanup_databank_export_ui_source.py \
+            tools/cleanup_databank_export_callbacks.py
 
       - name: Run redundancy audit
         run: |
