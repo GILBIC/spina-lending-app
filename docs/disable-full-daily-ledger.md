@@ -28,6 +28,12 @@ It does not change:
 - report formulas or math
 - database writes
 
+## Late-created Clients tab controls
+
+The Clients tab may create some controls after startup or after the tab is opened. The injector now keeps rescanning briefly after startup, after tab changes, after mouse clicks, and after common Clients-tab build/refresh methods run.
+
+This is why the button removal should work even when the buttons appear after the app first opens.
+
 ## Local command after merge
 
 Run this from the repository folder:
