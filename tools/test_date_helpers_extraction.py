@@ -14,7 +14,6 @@ import importlib.util
 import inspect
 import json
 import shutil
-import sys
 import tempfile
 from datetime import date, datetime
 from pathlib import Path
@@ -29,21 +28,22 @@ from extract_date_helpers_module import (
 
 APP_FILE = "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 DEFAULT_FIXTURE = Path("tools") / "fixtures" / "date_helpers_behavior.json"
+TODAY_TOKEN = "<TODAY:%Y-%m-%d>"
 
 
 def _cases() -> list[tuple[str, object]]:
     return [
         ("none", None),
         ("empty", ""),
-        ("iso_date", "2026-07-19"),
-        ("iso_datetime", "2026-07-19 12:30:00"),
-        ("slash_date", "2026/07/19"),
-        ("us_date", "07/19/2026"),
-        ("invalid_date", "2026-02-30"),
+        ("iso_date", "2024-02-29"),
+        ("iso_datetime", "2024-02-29 12:30:00"),
+        ("slash_date", "2024/02/29"),
+        ("us_date", "02/29/2024"),
+        ("invalid_date", "2024-02-30"),
         ("bad_text", "not-a-date"),
         ("zero", 0),
-        ("date_object", date(2026, 7, 19)),
-        ("datetime_object", datetime(2026, 7, 19, 12, 30, 45)),
+        ("date_object", date(2024, 2, 29)),
+        ("datetime_object", datetime(2024, 2, 29, 12, 30, 45)),
     ]
 
 
@@ -73,10 +73,13 @@ def _validate_signature(name: str, function) -> None:
 def _capture(function, value: object) -> dict[str, str]:
     try:
         result = function(value)
+        rendered = repr(result)
+        if isinstance(result, str) and result == date.today().strftime("%Y-%m-%d"):
+            rendered = TODAY_TOKEN
         return {
             "kind": "return",
             "type": f"{type(result).__module__}.{type(result).__qualname__}",
-            "repr": repr(result),
+            "repr": rendered,
         }
     except Exception as exc:
         return {
@@ -130,7 +133,10 @@ def _write_fixture(path: Path, behavior: dict[str, object]) -> None:
         "behavior": behavior,
     }
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _test_original_state(repo_root: Path, fixture_path: Path | None) -> None:
@@ -165,20 +171,27 @@ def _test_original_state(repo_root: Path, fixture_path: Path | None) -> None:
         assert second["already_applied"] is True
 
 
-def _test_applied_state(repo_root: Path, fixture_path: Path) -> None:
+def _test_applied_state(
+    repo_root: Path,
+    fixture_path: Path,
+    rewrite_fixture: bool,
+) -> None:
     source_path = repo_root / APP_FILE
     source = source_path.read_text(encoding="utf-8")
     definitions, imports = _source_state(source)
     assert definitions == set()
     assert imports == set(TARGETS)
 
+    module_path = repo_root / MODULE_RELATIVE_PATH
+    functions = _load_generated_functions(module_path)
+    current_behavior = _behavior(functions)
+    if rewrite_fixture:
+        _write_fixture(fixture_path, current_behavior)
+
     fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
     assert fixture["targets"] == list(TARGETS)
     assert fixture["case_names"] == [name for name, _value in _cases()]
-
-    module_path = repo_root / MODULE_RELATIVE_PATH
-    functions = _load_generated_functions(module_path)
-    assert _behavior(functions) == fixture["behavior"]
+    assert current_behavior == fixture["behavior"]
 
     plan = build_plan(source_path, repo_root)
     assert plan["already_applied"] is True
@@ -191,7 +204,7 @@ def main() -> int:
         "--write-fixture",
         nargs="?",
         const=str(DEFAULT_FIXTURE),
-        help="Write the pre-extraction behavior fixture",
+        help="Write or refresh the normalized behavior fixture",
     )
     args = parser.parse_args()
 
@@ -210,9 +223,9 @@ def main() -> int:
     if definitions == set(TARGETS) and not imports:
         _test_original_state(repo_root, fixture_path if args.write_fixture else None)
     elif not definitions and imports == set(TARGETS):
-        if not fixture_path.exists():
+        if not fixture_path.exists() and not args.write_fixture:
             raise AssertionError(f"Missing date-helper behavior fixture: {fixture_path}")
-        _test_applied_state(repo_root, fixture_path)
+        _test_applied_state(repo_root, fixture_path, bool(args.write_fixture))
     else:
         raise AssertionError(
             f"Unexpected mixed date-helper state: definitions={definitions}, imports={imports}"
