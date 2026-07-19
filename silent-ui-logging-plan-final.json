@@ -1,0 +1,19 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48509,
+  "candidate_count": 0,
+  "selected_count": 0,
+  "apply": false,
+  "selected": [],
+  "skipped_summary": {
+    "not_ui_startup_chrome": 15,
+    "protected_context": 1112,
+    "protected_name": 4
+  },
+  "recommendations": [
+    "Dry-run first and review selected lines.",
+    "This chrome-only version skips renewal, reason/color, cash-control, amount/date parsing, storage, reports/PDFs, notes, collectors, transactions, and loan/payment contexts.",
+    "A zero-candidate dry run is acceptable; it means the general safe logging batch is complete.",
+    "Do not use this for balances, 7x7, interest, notes, collector route, statements, reports, PDFs, storage helpers, renewals, or cash-control amount helpers."
+  ]
+}

@@ -1,0 +1,597 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48520,
+  "context_radius": 8,
+  "pass_only_exception_count": 903,
+  "login_related_pass_only_count": 31,
+  "pure_login_dialog_ui_review_count": 6,
+  "selected_cleanup_candidate_count": 0,
+  "group_counts": {
+    "pure_dialog_account_trace_review": 1,
+    "pure_dialog_position_review": 2,
+    "pure_dialog_return_bind_review": 2,
+    "pure_dialog_transient_review": 1
+  },
+  "excluded_login_group_counts": {
+    "excluded_account_or_role_review": 11,
+    "excluded_login_auth_sensitive_review": 5,
+    "excluded_login_dialog_non_pure_review": 1,
+    "protected_login_review": 8
+  },
+  "safety": {
+    "read_only": true,
+    "app_source_modified": false,
+    "cleanup_approved": false,
+    "protected_words_used": [
+      "7x7",
+      "7×7",
+      "apply_role_access",
+      "backup",
+      "balance",
+      "cash control",
+      "collector",
+      "database",
+      "interest",
+      "ledger",
+      "migration",
+      "payment",
+      "payroll",
+      "pdf",
+      "pg_",
+      "postgres",
+      "principal",
+      "receipt",
+      "renew",
+      "report",
+      "restore",
+      "role_access",
+      "route",
+      "statement",
+      "transaction"
+    ],
+    "excluded_sensitive_words": [
+      "_verify_login",
+      "verify_login",
+      "_must_change_password",
+      "_force_change_password_dialog",
+      "password",
+      "pw_var",
+      "show password",
+      "role",
+      "user_role",
+      "access_profile",
+      "permission",
+      "_save_users_db",
+      "_load_users_db",
+      "users[",
+      "switch_account",
+      "_refresh_user_header",
+      "_build_header"
+    ],
+    "note": "This report narrows to pure login dialog UI only. It does not approve cleanup."
+  },
+  "pure_login_dialog_ui_sites": [
+    {
+      "line": 48175,
+      "end_line": 48176,
+      "scope": "_spina_v32_prompt_login",
+      "handler": "Exception",
+      "protected_context": false,
+      "sensitive_login_context": false,
+      "pure_login_dialog_ui": true,
+      "group": "pure_dialog_transient_review",
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "Review only. This planner does not approve cleanup.",
+      "context": [
+        {
+          "line": 48167,
+          "text": ""
+        },
+        {
+          "line": 48168,
+          "text": "    dlg = tk.Toplevel(self.root)"
+        },
+        {
+          "line": 48169,
+          "text": "    dlg.title(\"Account Sign In\")"
+        },
+        {
+          "line": 48170,
+          "text": "    dlg.configure(bg=c[\"bg\"])"
+        },
+        {
+          "line": 48171,
+          "text": "    dlg.resizable(False, False)"
+        },
+        {
+          "line": 48172,
+          "text": ""
+        },
+        {
+          "line": 48173,
+          "text": "    try:"
+        },
+        {
+          "line": 48174,
+          "text": "        dlg.transient(self.root)"
+        },
+        {
+          "line": 48175,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48176,
+          "text": "        pass"
+        },
+        {
+          "line": 48177,
+          "text": ""
+        },
+        {
+          "line": 48178,
+          "text": "    # Main shell"
+        },
+        {
+          "line": 48179,
+          "text": "    shell = tk.Frame(dlg, bg=c[\"bg\"], padx=18, pady=18)"
+        },
+        {
+          "line": 48180,
+          "text": "    shell.pack(fill=\"both\", expand=True)"
+        },
+        {
+          "line": 48181,
+          "text": ""
+        },
+        {
+          "line": 48182,
+          "text": "    card = tk.Frame(shell, bg=c[\"panel\"], highlightbackground=c[\"border\"], highlightthickness=1, bd=0)"
+        },
+        {
+          "line": 48183,
+          "text": "    card.pack(fill=\"both\", expand=True)"
+        },
+        {
+          "line": 48184,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 48332,
+      "end_line": 48333,
+      "scope": "_spina_v32_prompt_login",
+      "handler": "Exception",
+      "protected_context": false,
+      "sensitive_login_context": false,
+      "pure_login_dialog_ui": true,
+      "group": "pure_dialog_account_trace_review",
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "Review only. This planner does not approve cleanup.",
+      "context": [
+        {
+          "line": 48324,
+          "text": "        font=(family, 8),"
+        },
+        {
+          "line": 48325,
+          "text": "        anchor=\"w\","
+        },
+        {
+          "line": 48326,
+          "text": "        justify=\"left\","
+        },
+        {
+          "line": 48327,
+          "text": "        wraplength=360,"
+        },
+        {
+          "line": 48328,
+          "text": "    ).pack(fill=\"x\", padx=28, pady=(16, 0))"
+        },
+        {
+          "line": 48329,
+          "text": ""
+        },
+        {
+          "line": 48330,
+          "text": "    try:"
+        },
+        {
+          "line": 48331,
+          "text": "        account_var.trace_add(\"write\", _refresh_account_info)"
+        },
+        {
+          "line": 48332,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48333,
+          "text": "        pass"
+        },
+        {
+          "line": 48334,
+          "text": "    _refresh_account_info()"
+        },
+        {
+          "line": 48335,
+          "text": ""
+        },
+        {
+          "line": 48336,
+          "text": "    def _enter(_=None):"
+        },
+        {
+          "line": 48337,
+          "text": "        _ok()"
+        },
+        {
+          "line": 48338,
+          "text": ""
+        },
+        {
+          "line": 48339,
+          "text": "    try:"
+        },
+        {
+          "line": 48340,
+          "text": "        pw_entry.bind(\"<Return>\", _enter)"
+        },
+        {
+          "line": 48341,
+          "text": "        account_cb.bind(\"<Return>\", _enter)"
+        }
+      ]
+    },
+    {
+      "line": 48342,
+      "end_line": 48343,
+      "scope": "_spina_v32_prompt_login",
+      "handler": "Exception",
+      "protected_context": false,
+      "sensitive_login_context": false,
+      "pure_login_dialog_ui": true,
+      "group": "pure_dialog_return_bind_review",
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "Review only. This planner does not approve cleanup.",
+      "context": [
+        {
+          "line": 48334,
+          "text": "    _refresh_account_info()"
+        },
+        {
+          "line": 48335,
+          "text": ""
+        },
+        {
+          "line": 48336,
+          "text": "    def _enter(_=None):"
+        },
+        {
+          "line": 48337,
+          "text": "        _ok()"
+        },
+        {
+          "line": 48338,
+          "text": ""
+        },
+        {
+          "line": 48339,
+          "text": "    try:"
+        },
+        {
+          "line": 48340,
+          "text": "        pw_entry.bind(\"<Return>\", _enter)"
+        },
+        {
+          "line": 48341,
+          "text": "        account_cb.bind(\"<Return>\", _enter)"
+        },
+        {
+          "line": 48342,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48343,
+          "text": "        pass"
+        },
+        {
+          "line": 48344,
+          "text": ""
+        },
+        {
+          "line": 48345,
+          "text": "    try:"
+        },
+        {
+          "line": 48346,
+          "text": "        dlg.grab_set()"
+        },
+        {
+          "line": 48347,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48348,
+          "text": "        pass"
+        },
+        {
+          "line": 48349,
+          "text": ""
+        },
+        {
+          "line": 48350,
+          "text": "    try:"
+        },
+        {
+          "line": 48351,
+          "text": "        dlg.update_idletasks()"
+        }
+      ]
+    },
+    {
+      "line": 48347,
+      "end_line": 48348,
+      "scope": "_spina_v32_prompt_login",
+      "handler": "Exception",
+      "protected_context": false,
+      "sensitive_login_context": false,
+      "pure_login_dialog_ui": true,
+      "group": "pure_dialog_return_bind_review",
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "Review only. This planner does not approve cleanup.",
+      "context": [
+        {
+          "line": 48339,
+          "text": "    try:"
+        },
+        {
+          "line": 48340,
+          "text": "        pw_entry.bind(\"<Return>\", _enter)"
+        },
+        {
+          "line": 48341,
+          "text": "        account_cb.bind(\"<Return>\", _enter)"
+        },
+        {
+          "line": 48342,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48343,
+          "text": "        pass"
+        },
+        {
+          "line": 48344,
+          "text": ""
+        },
+        {
+          "line": 48345,
+          "text": "    try:"
+        },
+        {
+          "line": 48346,
+          "text": "        dlg.grab_set()"
+        },
+        {
+          "line": 48347,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48348,
+          "text": "        pass"
+        },
+        {
+          "line": 48349,
+          "text": ""
+        },
+        {
+          "line": 48350,
+          "text": "    try:"
+        },
+        {
+          "line": 48351,
+          "text": "        dlg.update_idletasks()"
+        },
+        {
+          "line": 48352,
+          "text": "        w, h = 735, 455"
+        },
+        {
+          "line": 48353,
+          "text": "        sw, sh = dlg.winfo_screenwidth(), dlg.winfo_screenheight()"
+        },
+        {
+          "line": 48354,
+          "text": "        try:"
+        },
+        {
+          "line": 48355,
+          "text": "            rx, ry = self.root.winfo_rootx(), self.root.winfo_rooty()"
+        },
+        {
+          "line": 48356,
+          "text": "            rw, rh = self.root.winfo_width(), self.root.winfo_height()"
+        }
+      ]
+    },
+    {
+      "line": 48365,
+      "end_line": 48366,
+      "scope": "_spina_v32_prompt_login",
+      "handler": "Exception",
+      "protected_context": false,
+      "sensitive_login_context": false,
+      "pure_login_dialog_ui": true,
+      "group": "pure_dialog_position_review",
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "Review only. This planner does not approve cleanup.",
+      "context": [
+        {
+          "line": 48357,
+          "text": "            x = rx + (rw - w) // 2"
+        },
+        {
+          "line": 48358,
+          "text": "            y = ry + (rh - h) // 2"
+        },
+        {
+          "line": 48359,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 48360,
+          "text": "            x = (sw - w) // 2"
+        },
+        {
+          "line": 48361,
+          "text": "            y = (sh - h) // 2"
+        },
+        {
+          "line": 48362,
+          "text": "        x = max(10, min(x, sw - w - 10))"
+        },
+        {
+          "line": 48363,
+          "text": "        y = max(10, min(y, sh - h - 60))"
+        },
+        {
+          "line": 48364,
+          "text": "        dlg.geometry(f\"{w}x{h}+{x}+{y}\")"
+        },
+        {
+          "line": 48365,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48366,
+          "text": "        pass"
+        },
+        {
+          "line": 48367,
+          "text": ""
+        },
+        {
+          "line": 48368,
+          "text": "    try:"
+        },
+        {
+          "line": 48369,
+          "text": "        pw_entry.focus_set()"
+        },
+        {
+          "line": 48370,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48371,
+          "text": "        pass"
+        },
+        {
+          "line": 48372,
+          "text": ""
+        },
+        {
+          "line": 48373,
+          "text": "    self.root.wait_window(dlg)"
+        },
+        {
+          "line": 48374,
+          "text": "    return (result.get(\"user\"), result.get(\"role\"))"
+        }
+      ]
+    },
+    {
+      "line": 48370,
+      "end_line": 48371,
+      "scope": "_spina_v32_prompt_login",
+      "handler": "Exception",
+      "protected_context": false,
+      "sensitive_login_context": true,
+      "pure_login_dialog_ui": true,
+      "group": "pure_dialog_position_review",
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "Review only. This planner does not approve cleanup.",
+      "context": [
+        {
+          "line": 48362,
+          "text": "        x = max(10, min(x, sw - w - 10))"
+        },
+        {
+          "line": 48363,
+          "text": "        y = max(10, min(y, sh - h - 60))"
+        },
+        {
+          "line": 48364,
+          "text": "        dlg.geometry(f\"{w}x{h}+{x}+{y}\")"
+        },
+        {
+          "line": 48365,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48366,
+          "text": "        pass"
+        },
+        {
+          "line": 48367,
+          "text": ""
+        },
+        {
+          "line": 48368,
+          "text": "    try:"
+        },
+        {
+          "line": 48369,
+          "text": "        pw_entry.focus_set()"
+        },
+        {
+          "line": 48370,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48371,
+          "text": "        pass"
+        },
+        {
+          "line": 48372,
+          "text": ""
+        },
+        {
+          "line": 48373,
+          "text": "    self.root.wait_window(dlg)"
+        },
+        {
+          "line": 48374,
+          "text": "    return (result.get(\"user\"), result.get(\"role\"))"
+        },
+        {
+          "line": 48375,
+          "text": ""
+        },
+        {
+          "line": 48376,
+          "text": ""
+        },
+        {
+          "line": 48377,
+          "text": "def _spina_v32_refresh_user_header(self):"
+        },
+        {
+          "line": 48378,
+          "text": "    try:"
+        },
+        {
+          "line": 48379,
+          "text": "        if getattr(self, \"user_role_label\", None) is not None:"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Do not apply cleanup from this report alone.",
+    "Leave password/auth/role/account database/header-switch handlers as review-only.",
+    "A future cleanup tool, if created, should target only exact reviewed pure dialog UI handlers.",
+    "Smoke-test staff login, account switching, password-change-required flow, Cancel, and Return-key login after any future login UI cleanup."
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48525,
+  "context_radius": 8,
+  "pass_only_exception_count": 902,
+  "logger_fallback_pass_only_count": 0,
+  "non_logger_pass_only_count": 902,
+  "selected_cleanup_candidate_count": 0,
+  "group_counts": {
+    "non_logger_reference": 902
+  },
+  "logger_scope_counts": {},
+  "safety": {
+    "read_only": true,
+    "app_source_modified": false,
+    "cleanup_approved": false,
+    "protected_words_used": [
+      "7x7",
+      "7×7",
+      "apply_role_access",
+      "backup",
+      "balance",
+      "cash control",
+      "collector",
+      "database",
+      "interest",
+      "ledger",
+      "migration",
+      "payment",
+      "payroll",
+      "pdf",
+      "pg_",
+      "postgres",
+      "principal",
+      "receipt",
+      "renew",
+      "report",
+      "restore",
+      "role_access",
+      "route",
+      "statement",
+      "transaction"
+    ],
+    "note": "This report narrows to logger fallback pass-only handlers only. It does not approve cleanup."
+  },
+  "logger_fallback_sites": [],
+  "recommendations": [
+    "Do not apply cleanup from this report alone.",
+    "Keep logger fallback behavior functionally unchanged.",
+    "Only consider a future cleanup tool for exact reviewed logger fallback handlers.",
+    "Do not touch business logic, reports, payments, balances, database, backups, or role/access handlers."
+  ]
+}

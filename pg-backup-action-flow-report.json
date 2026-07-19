@@ -1,0 +1,1672 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48496,
+  "target_names": [
+    "_create_postgres_backup_file",
+    "_restore_backup_to_test_database",
+    "_run_long_task",
+    "_run_pg_command",
+    "_verify_postgres_backup_file"
+  ],
+  "definition_count": 8,
+  "definitions": {
+    "_run_long_task": [
+      {
+        "name": "_run_long_task",
+        "qualname": "App._run_long_task",
+        "line": 14494,
+        "end_line": 14766,
+        "contains_run_long_task": false,
+        "contains_target_helper_call": false,
+        "worker_like_name": true,
+        "protected_context": false
+      }
+    ],
+    "_create_postgres_backup_file": [
+      {
+        "name": "_create_postgres_backup_file",
+        "qualname": "App._create_postgres_backup_file",
+        "line": 15340,
+        "end_line": 15423,
+        "contains_run_long_task": false,
+        "contains_target_helper_call": false,
+        "worker_like_name": false,
+        "protected_context": true
+      }
+    ],
+    "_verify_postgres_backup_file": [
+      {
+        "name": "_verify_postgres_backup_file",
+        "qualname": "App._verify_postgres_backup_file",
+        "line": 15557,
+        "end_line": 15590,
+        "contains_run_long_task": false,
+        "contains_target_helper_call": false,
+        "worker_like_name": false,
+        "protected_context": true
+      }
+    ],
+    "_run_pg_command": [
+      {
+        "name": "_run_pg_command",
+        "qualname": "App._run_pg_command",
+        "line": 15592,
+        "end_line": 15619,
+        "contains_run_long_task": false,
+        "contains_target_helper_call": false,
+        "worker_like_name": false,
+        "protected_context": true
+      }
+    ],
+    "_restore_backup_to_test_database": [
+      {
+        "name": "_restore_backup_to_test_database",
+        "qualname": "App._restore_backup_to_test_database",
+        "line": 15621,
+        "end_line": 15656,
+        "contains_run_long_task": false,
+        "contains_target_helper_call": true,
+        "worker_like_name": false,
+        "protected_context": true
+      }
+    ],
+    "open_backup_history_window": [
+      {
+        "name": "open_backup_history_window",
+        "qualname": "App.open_backup_history_window",
+        "line": 15658,
+        "end_line": 15839,
+        "contains_run_long_task": true,
+        "contains_target_helper_call": true,
+        "worker_like_name": false,
+        "protected_context": true
+      }
+    ],
+    "verify": [
+      {
+        "name": "verify",
+        "qualname": "App.open_backup_history_window.verify",
+        "line": 15757,
+        "end_line": 15785,
+        "contains_run_long_task": true,
+        "contains_target_helper_call": true,
+        "worker_like_name": false,
+        "protected_context": true
+      }
+    ],
+    "restore_test": [
+      {
+        "name": "restore_test",
+        "qualname": "App.open_backup_history_window.restore_test",
+        "line": 15787,
+        "end_line": 15826,
+        "contains_run_long_task": true,
+        "contains_target_helper_call": true,
+        "worker_like_name": false,
+        "protected_context": true
+      }
+    ]
+  },
+  "call_site_count": 10,
+  "helper_call_site_count": 5,
+  "worker_routed_helper_call_count": 2,
+  "direct_helper_call_count": 3,
+  "direct_helper_calls": [
+    {
+      "line": 15651,
+      "end_line": 15651,
+      "target": "_run_pg_command",
+      "call_text": "self._run_pg_command([dropdb, \"--if-exists\", \"--force\", \"-U\", user, \"-h\", host, \"-p\", port, test_db], allow_retry_without_force=True)",
+      "caller": {
+        "name": "_restore_backup_to_test_database",
+        "qualname": "App._restore_backup_to_test_database",
+        "line": 15621,
+        "end_line": 15656,
+        "contains_run_long_task": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "target_inside_run_long_task_call": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15639,
+          "text": "        missing = [name for name, val in ((\"dropdb\", dropdb), (\"createdb\", createdb), (\"pg_restore\", pg_restore)) if not val]"
+        },
+        {
+          "line": 15640,
+          "text": "        if missing:"
+        },
+        {
+          "line": 15641,
+          "text": "            raise FileNotFoundError(\"Missing PostgreSQL tools: \" + \", \".join(missing))"
+        },
+        {
+          "line": 15642,
+          "text": ""
+        },
+        {
+          "line": 15643,
+          "text": "        def _check_cancel():"
+        },
+        {
+          "line": 15644,
+          "text": "            try:"
+        },
+        {
+          "line": 15645,
+          "text": "                if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15646,
+          "text": "                    raise RuntimeError(\"Restore test cancelled.\")"
+        },
+        {
+          "line": 15647,
+          "text": "            except AttributeError:"
+        },
+        {
+          "line": 15648,
+          "text": "                pass"
+        },
+        {
+          "line": 15649,
+          "text": ""
+        },
+        {
+          "line": 15650,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15651,
+          "text": "        self._run_pg_command([dropdb, \"--if-exists\", \"--force\", \"-U\", user, \"-h\", host, \"-p\", port, test_db], allow_retry_without_force=True)"
+        },
+        {
+          "line": 15652,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15653,
+          "text": "        self._run_pg_command([createdb, \"-U\", user, \"-h\", host, \"-p\", port, test_db])"
+        },
+        {
+          "line": 15654,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15655,
+          "text": "        self._run_pg_command([pg_restore, \"-U\", user, \"-h\", host, \"-p\", port, \"-d\", test_db, \"--clean\", \"--if-exists\", backup_path])"
+        },
+        {
+          "line": 15656,
+          "text": "        return f\"Restore test successful.\\n\\nBackup restored into database:\\n{test_db}\\n\\nLive database was not changed:\\n{live_db}\""
+        },
+        {
+          "line": 15657,
+          "text": ""
+        },
+        {
+          "line": 15658,
+          "text": "    def open_backup_history_window(self):"
+        },
+        {
+          "line": 15659,
+          "text": "        \"\"\"Show backup files and provide verify/restore-test actions.\"\"\""
+        },
+        {
+          "line": 15660,
+          "text": "        try:"
+        },
+        {
+          "line": 15661,
+          "text": "            role = (getattr(self, \"user_role\", \"\") or \"\").strip()"
+        },
+        {
+          "line": 15662,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15663,
+          "text": "            role = \"\""
+        }
+      ]
+    },
+    {
+      "line": 15653,
+      "end_line": 15653,
+      "target": "_run_pg_command",
+      "call_text": "self._run_pg_command([createdb, \"-U\", user, \"-h\", host, \"-p\", port, test_db])",
+      "caller": {
+        "name": "_restore_backup_to_test_database",
+        "qualname": "App._restore_backup_to_test_database",
+        "line": 15621,
+        "end_line": 15656,
+        "contains_run_long_task": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "target_inside_run_long_task_call": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15641,
+          "text": "            raise FileNotFoundError(\"Missing PostgreSQL tools: \" + \", \".join(missing))"
+        },
+        {
+          "line": 15642,
+          "text": ""
+        },
+        {
+          "line": 15643,
+          "text": "        def _check_cancel():"
+        },
+        {
+          "line": 15644,
+          "text": "            try:"
+        },
+        {
+          "line": 15645,
+          "text": "                if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15646,
+          "text": "                    raise RuntimeError(\"Restore test cancelled.\")"
+        },
+        {
+          "line": 15647,
+          "text": "            except AttributeError:"
+        },
+        {
+          "line": 15648,
+          "text": "                pass"
+        },
+        {
+          "line": 15649,
+          "text": ""
+        },
+        {
+          "line": 15650,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15651,
+          "text": "        self._run_pg_command([dropdb, \"--if-exists\", \"--force\", \"-U\", user, \"-h\", host, \"-p\", port, test_db], allow_retry_without_force=True)"
+        },
+        {
+          "line": 15652,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15653,
+          "text": "        self._run_pg_command([createdb, \"-U\", user, \"-h\", host, \"-p\", port, test_db])"
+        },
+        {
+          "line": 15654,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15655,
+          "text": "        self._run_pg_command([pg_restore, \"-U\", user, \"-h\", host, \"-p\", port, \"-d\", test_db, \"--clean\", \"--if-exists\", backup_path])"
+        },
+        {
+          "line": 15656,
+          "text": "        return f\"Restore test successful.\\n\\nBackup restored into database:\\n{test_db}\\n\\nLive database was not changed:\\n{live_db}\""
+        },
+        {
+          "line": 15657,
+          "text": ""
+        },
+        {
+          "line": 15658,
+          "text": "    def open_backup_history_window(self):"
+        },
+        {
+          "line": 15659,
+          "text": "        \"\"\"Show backup files and provide verify/restore-test actions.\"\"\""
+        },
+        {
+          "line": 15660,
+          "text": "        try:"
+        },
+        {
+          "line": 15661,
+          "text": "            role = (getattr(self, \"user_role\", \"\") or \"\").strip()"
+        },
+        {
+          "line": 15662,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15663,
+          "text": "            role = \"\""
+        },
+        {
+          "line": 15664,
+          "text": "        if role not in (\"Admin\", \"System\"):"
+        },
+        {
+          "line": 15665,
+          "text": "            try:"
+        }
+      ]
+    },
+    {
+      "line": 15655,
+      "end_line": 15655,
+      "target": "_run_pg_command",
+      "call_text": "self._run_pg_command([pg_restore, \"-U\", user, \"-h\", host, \"-p\", port, \"-d\", test_db, \"--clean\", \"--if-exists\", backup_path])",
+      "caller": {
+        "name": "_restore_backup_to_test_database",
+        "qualname": "App._restore_backup_to_test_database",
+        "line": 15621,
+        "end_line": 15656,
+        "contains_run_long_task": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "target_inside_run_long_task_call": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15643,
+          "text": "        def _check_cancel():"
+        },
+        {
+          "line": 15644,
+          "text": "            try:"
+        },
+        {
+          "line": 15645,
+          "text": "                if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15646,
+          "text": "                    raise RuntimeError(\"Restore test cancelled.\")"
+        },
+        {
+          "line": 15647,
+          "text": "            except AttributeError:"
+        },
+        {
+          "line": 15648,
+          "text": "                pass"
+        },
+        {
+          "line": 15649,
+          "text": ""
+        },
+        {
+          "line": 15650,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15651,
+          "text": "        self._run_pg_command([dropdb, \"--if-exists\", \"--force\", \"-U\", user, \"-h\", host, \"-p\", port, test_db], allow_retry_without_force=True)"
+        },
+        {
+          "line": 15652,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15653,
+          "text": "        self._run_pg_command([createdb, \"-U\", user, \"-h\", host, \"-p\", port, test_db])"
+        },
+        {
+          "line": 15654,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15655,
+          "text": "        self._run_pg_command([pg_restore, \"-U\", user, \"-h\", host, \"-p\", port, \"-d\", test_db, \"--clean\", \"--if-exists\", backup_path])"
+        },
+        {
+          "line": 15656,
+          "text": "        return f\"Restore test successful.\\n\\nBackup restored into database:\\n{test_db}\\n\\nLive database was not changed:\\n{live_db}\""
+        },
+        {
+          "line": 15657,
+          "text": ""
+        },
+        {
+          "line": 15658,
+          "text": "    def open_backup_history_window(self):"
+        },
+        {
+          "line": 15659,
+          "text": "        \"\"\"Show backup files and provide verify/restore-test actions.\"\"\""
+        },
+        {
+          "line": 15660,
+          "text": "        try:"
+        },
+        {
+          "line": 15661,
+          "text": "            role = (getattr(self, \"user_role\", \"\") or \"\").strip()"
+        },
+        {
+          "line": 15662,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15663,
+          "text": "            role = \"\""
+        },
+        {
+          "line": 15664,
+          "text": "        if role not in (\"Admin\", \"System\"):"
+        },
+        {
+          "line": 15665,
+          "text": "            try:"
+        },
+        {
+          "line": 15666,
+          "text": "                messagebox.showwarning(\"Backup History\", \"Only Admin or System users can view backup tools.\")"
+        },
+        {
+          "line": 15667,
+          "text": "            except Exception:"
+        }
+      ]
+    }
+  ],
+  "call_sites": [
+    {
+      "line": 15484,
+      "end_line": 15491,
+      "target": "_run_long_task",
+      "call_text": "self._run_long_task(",
+      "caller": {
+        "name": "backup_postgres_database",
+        "qualname": "App.backup_postgres_database",
+        "line": 15425,
+        "end_line": 15493,
+        "contains_run_long_task": true,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": true,
+      "target_inside_run_long_task_call": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15472,
+          "text": "            try:"
+        },
+        {
+          "line": 15473,
+          "text": "                messagebox.showerror("
+        },
+        {
+          "line": 15474,
+          "text": "                    \"Backup Failed\","
+        },
+        {
+          "line": 15475,
+          "text": "                    \"The PostgreSQL backup failed.\\n\\n\""
+        },
+        {
+          "line": 15476,
+          "text": "                    f\"Reason:\\n{exc}\\n\\n\""
+        },
+        {
+          "line": 15477,
+          "text": "                    \"Check that PostgreSQL is running and pg_dump.exe exists under:\\n\""
+        },
+        {
+          "line": 15478,
+          "text": "                    r\"C:\\Program Files\\PostgreSQL\\18\\bin\""
+        },
+        {
+          "line": 15479,
+          "text": "                )"
+        },
+        {
+          "line": 15480,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 15481,
+          "text": "                pass"
+        },
+        {
+          "line": 15482,
+          "text": ""
+        },
+        {
+          "line": 15483,
+          "text": "        try:"
+        },
+        {
+          "line": 15484,
+          "text": "            self._run_long_task("
+        },
+        {
+          "line": 15485,
+          "text": "                \"Creating PostgreSQL backup...\","
+        },
+        {
+          "line": 15486,
+          "text": "                self._create_postgres_backup_file,"
+        },
+        {
+          "line": 15487,
+          "text": "                on_success=_success,"
+        },
+        {
+          "line": 15488,
+          "text": "                on_error=_error,"
+        },
+        {
+          "line": 15489,
+          "text": "                allow_cancel=False,"
+        },
+        {
+          "line": 15490,
+          "text": "                timeout_s=None,"
+        },
+        {
+          "line": 15491,
+          "text": "            )"
+        },
+        {
+          "line": 15492,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 15493,
+          "text": "            _error(e)"
+        },
+        {
+          "line": 15494,
+          "text": ""
+        },
+        {
+          "line": 15495,
+          "text": ""
+        },
+        {
+          "line": 15496,
+          "text": "    # ---------------- PostgreSQL Backup History / Verify / Restore Test ----------------"
+        }
+      ]
+    },
+    {
+      "line": 15651,
+      "end_line": 15651,
+      "target": "_run_pg_command",
+      "call_text": "self._run_pg_command([dropdb, \"--if-exists\", \"--force\", \"-U\", user, \"-h\", host, \"-p\", port, test_db], allow_retry_without_force=True)",
+      "caller": {
+        "name": "_restore_backup_to_test_database",
+        "qualname": "App._restore_backup_to_test_database",
+        "line": 15621,
+        "end_line": 15656,
+        "contains_run_long_task": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "target_inside_run_long_task_call": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15639,
+          "text": "        missing = [name for name, val in ((\"dropdb\", dropdb), (\"createdb\", createdb), (\"pg_restore\", pg_restore)) if not val]"
+        },
+        {
+          "line": 15640,
+          "text": "        if missing:"
+        },
+        {
+          "line": 15641,
+          "text": "            raise FileNotFoundError(\"Missing PostgreSQL tools: \" + \", \".join(missing))"
+        },
+        {
+          "line": 15642,
+          "text": ""
+        },
+        {
+          "line": 15643,
+          "text": "        def _check_cancel():"
+        },
+        {
+          "line": 15644,
+          "text": "            try:"
+        },
+        {
+          "line": 15645,
+          "text": "                if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15646,
+          "text": "                    raise RuntimeError(\"Restore test cancelled.\")"
+        },
+        {
+          "line": 15647,
+          "text": "            except AttributeError:"
+        },
+        {
+          "line": 15648,
+          "text": "                pass"
+        },
+        {
+          "line": 15649,
+          "text": ""
+        },
+        {
+          "line": 15650,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15651,
+          "text": "        self._run_pg_command([dropdb, \"--if-exists\", \"--force\", \"-U\", user, \"-h\", host, \"-p\", port, test_db], allow_retry_without_force=True)"
+        },
+        {
+          "line": 15652,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15653,
+          "text": "        self._run_pg_command([createdb, \"-U\", user, \"-h\", host, \"-p\", port, test_db])"
+        },
+        {
+          "line": 15654,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15655,
+          "text": "        self._run_pg_command([pg_restore, \"-U\", user, \"-h\", host, \"-p\", port, \"-d\", test_db, \"--clean\", \"--if-exists\", backup_path])"
+        },
+        {
+          "line": 15656,
+          "text": "        return f\"Restore test successful.\\n\\nBackup restored into database:\\n{test_db}\\n\\nLive database was not changed:\\n{live_db}\""
+        },
+        {
+          "line": 15657,
+          "text": ""
+        },
+        {
+          "line": 15658,
+          "text": "    def open_backup_history_window(self):"
+        },
+        {
+          "line": 15659,
+          "text": "        \"\"\"Show backup files and provide verify/restore-test actions.\"\"\""
+        },
+        {
+          "line": 15660,
+          "text": "        try:"
+        },
+        {
+          "line": 15661,
+          "text": "            role = (getattr(self, \"user_role\", \"\") or \"\").strip()"
+        },
+        {
+          "line": 15662,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15663,
+          "text": "            role = \"\""
+        }
+      ]
+    },
+    {
+      "line": 15653,
+      "end_line": 15653,
+      "target": "_run_pg_command",
+      "call_text": "self._run_pg_command([createdb, \"-U\", user, \"-h\", host, \"-p\", port, test_db])",
+      "caller": {
+        "name": "_restore_backup_to_test_database",
+        "qualname": "App._restore_backup_to_test_database",
+        "line": 15621,
+        "end_line": 15656,
+        "contains_run_long_task": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "target_inside_run_long_task_call": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15641,
+          "text": "            raise FileNotFoundError(\"Missing PostgreSQL tools: \" + \", \".join(missing))"
+        },
+        {
+          "line": 15642,
+          "text": ""
+        },
+        {
+          "line": 15643,
+          "text": "        def _check_cancel():"
+        },
+        {
+          "line": 15644,
+          "text": "            try:"
+        },
+        {
+          "line": 15645,
+          "text": "                if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15646,
+          "text": "                    raise RuntimeError(\"Restore test cancelled.\")"
+        },
+        {
+          "line": 15647,
+          "text": "            except AttributeError:"
+        },
+        {
+          "line": 15648,
+          "text": "                pass"
+        },
+        {
+          "line": 15649,
+          "text": ""
+        },
+        {
+          "line": 15650,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15651,
+          "text": "        self._run_pg_command([dropdb, \"--if-exists\", \"--force\", \"-U\", user, \"-h\", host, \"-p\", port, test_db], allow_retry_without_force=True)"
+        },
+        {
+          "line": 15652,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15653,
+          "text": "        self._run_pg_command([createdb, \"-U\", user, \"-h\", host, \"-p\", port, test_db])"
+        },
+        {
+          "line": 15654,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15655,
+          "text": "        self._run_pg_command([pg_restore, \"-U\", user, \"-h\", host, \"-p\", port, \"-d\", test_db, \"--clean\", \"--if-exists\", backup_path])"
+        },
+        {
+          "line": 15656,
+          "text": "        return f\"Restore test successful.\\n\\nBackup restored into database:\\n{test_db}\\n\\nLive database was not changed:\\n{live_db}\""
+        },
+        {
+          "line": 15657,
+          "text": ""
+        },
+        {
+          "line": 15658,
+          "text": "    def open_backup_history_window(self):"
+        },
+        {
+          "line": 15659,
+          "text": "        \"\"\"Show backup files and provide verify/restore-test actions.\"\"\""
+        },
+        {
+          "line": 15660,
+          "text": "        try:"
+        },
+        {
+          "line": 15661,
+          "text": "            role = (getattr(self, \"user_role\", \"\") or \"\").strip()"
+        },
+        {
+          "line": 15662,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15663,
+          "text": "            role = \"\""
+        },
+        {
+          "line": 15664,
+          "text": "        if role not in (\"Admin\", \"System\"):"
+        },
+        {
+          "line": 15665,
+          "text": "            try:"
+        }
+      ]
+    },
+    {
+      "line": 15655,
+      "end_line": 15655,
+      "target": "_run_pg_command",
+      "call_text": "self._run_pg_command([pg_restore, \"-U\", user, \"-h\", host, \"-p\", port, \"-d\", test_db, \"--clean\", \"--if-exists\", backup_path])",
+      "caller": {
+        "name": "_restore_backup_to_test_database",
+        "qualname": "App._restore_backup_to_test_database",
+        "line": 15621,
+        "end_line": 15656,
+        "contains_run_long_task": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "target_inside_run_long_task_call": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15643,
+          "text": "        def _check_cancel():"
+        },
+        {
+          "line": 15644,
+          "text": "            try:"
+        },
+        {
+          "line": 15645,
+          "text": "                if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15646,
+          "text": "                    raise RuntimeError(\"Restore test cancelled.\")"
+        },
+        {
+          "line": 15647,
+          "text": "            except AttributeError:"
+        },
+        {
+          "line": 15648,
+          "text": "                pass"
+        },
+        {
+          "line": 15649,
+          "text": ""
+        },
+        {
+          "line": 15650,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15651,
+          "text": "        self._run_pg_command([dropdb, \"--if-exists\", \"--force\", \"-U\", user, \"-h\", host, \"-p\", port, test_db], allow_retry_without_force=True)"
+        },
+        {
+          "line": 15652,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15653,
+          "text": "        self._run_pg_command([createdb, \"-U\", user, \"-h\", host, \"-p\", port, test_db])"
+        },
+        {
+          "line": 15654,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15655,
+          "text": "        self._run_pg_command([pg_restore, \"-U\", user, \"-h\", host, \"-p\", port, \"-d\", test_db, \"--clean\", \"--if-exists\", backup_path])"
+        },
+        {
+          "line": 15656,
+          "text": "        return f\"Restore test successful.\\n\\nBackup restored into database:\\n{test_db}\\n\\nLive database was not changed:\\n{live_db}\""
+        },
+        {
+          "line": 15657,
+          "text": ""
+        },
+        {
+          "line": 15658,
+          "text": "    def open_backup_history_window(self):"
+        },
+        {
+          "line": 15659,
+          "text": "        \"\"\"Show backup files and provide verify/restore-test actions.\"\"\""
+        },
+        {
+          "line": 15660,
+          "text": "        try:"
+        },
+        {
+          "line": 15661,
+          "text": "            role = (getattr(self, \"user_role\", \"\") or \"\").strip()"
+        },
+        {
+          "line": 15662,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15663,
+          "text": "            role = \"\""
+        },
+        {
+          "line": 15664,
+          "text": "        if role not in (\"Admin\", \"System\"):"
+        },
+        {
+          "line": 15665,
+          "text": "            try:"
+        },
+        {
+          "line": 15666,
+          "text": "                messagebox.showwarning(\"Backup History\", \"Only Admin or System users can view backup tools.\")"
+        },
+        {
+          "line": 15667,
+          "text": "            except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 15776,
+      "end_line": 15783,
+      "target": "_run_long_task",
+      "call_text": "self._run_long_task(",
+      "caller": {
+        "name": "verify",
+        "qualname": "App.open_backup_history_window.verify",
+        "line": 15757,
+        "end_line": 15785,
+        "contains_run_long_task": true,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": true,
+      "target_inside_run_long_task_call": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15764,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 15765,
+          "text": "                        pass"
+        },
+        {
+          "line": 15766,
+          "text": "                def _error(exc):"
+        },
+        {
+          "line": 15767,
+          "text": "                    try:"
+        },
+        {
+          "line": 15768,
+          "text": "                        _log_exc(\"backup_verify\", exc)"
+        },
+        {
+          "line": 15769,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 15770,
+          "text": "                        pass"
+        },
+        {
+          "line": 15771,
+          "text": "                    try:"
+        },
+        {
+          "line": 15772,
+          "text": "                        messagebox.showerror(\"Verify Failed\", f\"Could not verify backup.\\n\\n{exc}\")"
+        },
+        {
+          "line": 15773,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 15774,
+          "text": "                        pass"
+        },
+        {
+          "line": 15775,
+          "text": "                try:"
+        },
+        {
+          "line": 15776,
+          "text": "                    self._run_long_task("
+        },
+        {
+          "line": 15777,
+          "text": "                        \"Verifying backup...\","
+        },
+        {
+          "line": 15778,
+          "text": "                        lambda cancel_event=None, p=path: self._verify_postgres_backup_file(p, cancel_event=cancel_event),"
+        },
+        {
+          "line": 15779,
+          "text": "                        on_success=_success,"
+        },
+        {
+          "line": 15780,
+          "text": "                        on_error=_error,"
+        },
+        {
+          "line": 15781,
+          "text": "                        allow_cancel=False,"
+        },
+        {
+          "line": 15782,
+          "text": "                        timeout_s=None,"
+        },
+        {
+          "line": 15783,
+          "text": "                    )"
+        },
+        {
+          "line": 15784,
+          "text": "                except Exception as e:"
+        },
+        {
+          "line": 15785,
+          "text": "                    _error(e)"
+        },
+        {
+          "line": 15786,
+          "text": ""
+        },
+        {
+          "line": 15787,
+          "text": "            def restore_test():"
+        },
+        {
+          "line": 15788,
+          "text": "                path = selected_path()"
+        }
+      ]
+    },
+    {
+      "line": 15778,
+      "end_line": 15778,
+      "target": "_verify_postgres_backup_file",
+      "call_text": "lambda cancel_event=None, p=path: self._verify_postgres_backup_file(p, cancel_event=cancel_event),",
+      "caller": {
+        "name": "verify",
+        "qualname": "App.open_backup_history_window.verify",
+        "line": 15757,
+        "end_line": 15785,
+        "contains_run_long_task": true,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": true,
+      "target_inside_run_long_task_call": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15766,
+          "text": "                def _error(exc):"
+        },
+        {
+          "line": 15767,
+          "text": "                    try:"
+        },
+        {
+          "line": 15768,
+          "text": "                        _log_exc(\"backup_verify\", exc)"
+        },
+        {
+          "line": 15769,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 15770,
+          "text": "                        pass"
+        },
+        {
+          "line": 15771,
+          "text": "                    try:"
+        },
+        {
+          "line": 15772,
+          "text": "                        messagebox.showerror(\"Verify Failed\", f\"Could not verify backup.\\n\\n{exc}\")"
+        },
+        {
+          "line": 15773,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 15774,
+          "text": "                        pass"
+        },
+        {
+          "line": 15775,
+          "text": "                try:"
+        },
+        {
+          "line": 15776,
+          "text": "                    self._run_long_task("
+        },
+        {
+          "line": 15777,
+          "text": "                        \"Verifying backup...\","
+        },
+        {
+          "line": 15778,
+          "text": "                        lambda cancel_event=None, p=path: self._verify_postgres_backup_file(p, cancel_event=cancel_event),"
+        },
+        {
+          "line": 15779,
+          "text": "                        on_success=_success,"
+        },
+        {
+          "line": 15780,
+          "text": "                        on_error=_error,"
+        },
+        {
+          "line": 15781,
+          "text": "                        allow_cancel=False,"
+        },
+        {
+          "line": 15782,
+          "text": "                        timeout_s=None,"
+        },
+        {
+          "line": 15783,
+          "text": "                    )"
+        },
+        {
+          "line": 15784,
+          "text": "                except Exception as e:"
+        },
+        {
+          "line": 15785,
+          "text": "                    _error(e)"
+        },
+        {
+          "line": 15786,
+          "text": ""
+        },
+        {
+          "line": 15787,
+          "text": "            def restore_test():"
+        },
+        {
+          "line": 15788,
+          "text": "                path = selected_path()"
+        },
+        {
+          "line": 15789,
+          "text": "                if not path:"
+        },
+        {
+          "line": 15790,
+          "text": "                    return"
+        }
+      ]
+    },
+    {
+      "line": 15817,
+      "end_line": 15824,
+      "target": "_run_long_task",
+      "call_text": "self._run_long_task(",
+      "caller": {
+        "name": "restore_test",
+        "qualname": "App.open_backup_history_window.restore_test",
+        "line": 15787,
+        "end_line": 15826,
+        "contains_run_long_task": true,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": true,
+      "target_inside_run_long_task_call": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15805,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 15806,
+          "text": "                        pass"
+        },
+        {
+          "line": 15807,
+          "text": "                def _error(exc):"
+        },
+        {
+          "line": 15808,
+          "text": "                    try:"
+        },
+        {
+          "line": 15809,
+          "text": "                        _log_exc(\"backup_restore_test\", exc)"
+        },
+        {
+          "line": 15810,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 15811,
+          "text": "                        pass"
+        },
+        {
+          "line": 15812,
+          "text": "                    try:"
+        },
+        {
+          "line": 15813,
+          "text": "                        messagebox.showerror(\"Restore Test Failed\", f\"Could not restore backup into spina_restore_test.\\n\\n{exc}\")"
+        },
+        {
+          "line": 15814,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 15815,
+          "text": "                        pass"
+        },
+        {
+          "line": 15816,
+          "text": "                try:"
+        },
+        {
+          "line": 15817,
+          "text": "                    self._run_long_task("
+        },
+        {
+          "line": 15818,
+          "text": "                        \"Restoring backup into spina_restore_test...\","
+        },
+        {
+          "line": 15819,
+          "text": "                        lambda cancel_event=None, p=path: self._restore_backup_to_test_database(p, cancel_event=cancel_event),"
+        },
+        {
+          "line": 15820,
+          "text": "                        on_success=_success,"
+        },
+        {
+          "line": 15821,
+          "text": "                        on_error=_error,"
+        },
+        {
+          "line": 15822,
+          "text": "                        allow_cancel=False,"
+        },
+        {
+          "line": 15823,
+          "text": "                        timeout_s=None,"
+        },
+        {
+          "line": 15824,
+          "text": "                    )"
+        },
+        {
+          "line": 15825,
+          "text": "                except Exception as e:"
+        },
+        {
+          "line": 15826,
+          "text": "                    _error(e)"
+        },
+        {
+          "line": 15827,
+          "text": ""
+        },
+        {
+          "line": 15828,
+          "text": "            ttk.Button(btns, text=\"Refresh\", command=refresh).pack(side=\"left\")"
+        },
+        {
+          "line": 15829,
+          "text": "            ttk.Button(btns, text=\"Open Backup Folder\", command=open_folder).pack(side=\"left\", padx=(6, 0))"
+        }
+      ]
+    },
+    {
+      "line": 15819,
+      "end_line": 15819,
+      "target": "_restore_backup_to_test_database",
+      "call_text": "lambda cancel_event=None, p=path: self._restore_backup_to_test_database(p, cancel_event=cancel_event),",
+      "caller": {
+        "name": "restore_test",
+        "qualname": "App.open_backup_history_window.restore_test",
+        "line": 15787,
+        "end_line": 15826,
+        "contains_run_long_task": true,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": true,
+      "target_inside_run_long_task_call": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15807,
+          "text": "                def _error(exc):"
+        },
+        {
+          "line": 15808,
+          "text": "                    try:"
+        },
+        {
+          "line": 15809,
+          "text": "                        _log_exc(\"backup_restore_test\", exc)"
+        },
+        {
+          "line": 15810,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 15811,
+          "text": "                        pass"
+        },
+        {
+          "line": 15812,
+          "text": "                    try:"
+        },
+        {
+          "line": 15813,
+          "text": "                        messagebox.showerror(\"Restore Test Failed\", f\"Could not restore backup into spina_restore_test.\\n\\n{exc}\")"
+        },
+        {
+          "line": 15814,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 15815,
+          "text": "                        pass"
+        },
+        {
+          "line": 15816,
+          "text": "                try:"
+        },
+        {
+          "line": 15817,
+          "text": "                    self._run_long_task("
+        },
+        {
+          "line": 15818,
+          "text": "                        \"Restoring backup into spina_restore_test...\","
+        },
+        {
+          "line": 15819,
+          "text": "                        lambda cancel_event=None, p=path: self._restore_backup_to_test_database(p, cancel_event=cancel_event),"
+        },
+        {
+          "line": 15820,
+          "text": "                        on_success=_success,"
+        },
+        {
+          "line": 15821,
+          "text": "                        on_error=_error,"
+        },
+        {
+          "line": 15822,
+          "text": "                        allow_cancel=False,"
+        },
+        {
+          "line": 15823,
+          "text": "                        timeout_s=None,"
+        },
+        {
+          "line": 15824,
+          "text": "                    )"
+        },
+        {
+          "line": 15825,
+          "text": "                except Exception as e:"
+        },
+        {
+          "line": 15826,
+          "text": "                    _error(e)"
+        },
+        {
+          "line": 15827,
+          "text": ""
+        },
+        {
+          "line": 15828,
+          "text": "            ttk.Button(btns, text=\"Refresh\", command=refresh).pack(side=\"left\")"
+        },
+        {
+          "line": 15829,
+          "text": "            ttk.Button(btns, text=\"Open Backup Folder\", command=open_folder).pack(side=\"left\", padx=(6, 0))"
+        },
+        {
+          "line": 15830,
+          "text": "            ttk.Button(btns, text=\"Verify Selected\", command=verify).pack(side=\"left\", padx=(6, 0))"
+        },
+        {
+          "line": 15831,
+          "text": "            ttk.Button(btns, text=\"Restore Test DB\", command=restore_test).pack(side=\"left\", padx=(6, 0))"
+        }
+      ]
+    },
+    {
+      "line": 18114,
+      "end_line": 18114,
+      "target": "_run_long_task",
+      "call_text": "self._run_long_task(f'Generating PDF for {name}...', _work, on_success=_done, on_error=_err)",
+      "caller": {
+        "name": "generate_pdf_selected",
+        "qualname": "App.generate_pdf_selected",
+        "line": 17857,
+        "end_line": 18114,
+        "contains_run_long_task": true,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": true,
+      "target_inside_run_long_task_call": false,
+      "protected_context": false,
+      "context": [
+        {
+          "line": 18102,
+          "text": "                _open_path(out_path)"
+        },
+        {
+          "line": 18103,
+          "text": "            except Exception as __spina_exc:"
+        },
+        {
+          "line": 18104,
+          "text": "                _log_suppressed_once('excpass_0415', 'suppressed exception excpass_0415', __spina_exc)"
+        },
+        {
+          "line": 18105,
+          "text": "                pass"
+        },
+        {
+          "line": 18106,
+          "text": ""
+        },
+        {
+          "line": 18107,
+          "text": "        def _err(ex):"
+        },
+        {
+          "line": 18108,
+          "text": "            try:"
+        },
+        {
+          "line": 18109,
+          "text": "                messagebox.showerror('PDF Error', f'Failed to generate PDF for {name}: {ex}\\n\\nSee log: data/spina_app.log')"
+        },
+        {
+          "line": 18110,
+          "text": "            except Exception as __spina_exc:"
+        },
+        {
+          "line": 18111,
+          "text": "                _log_suppressed_once('excpass_0416', 'suppressed exception excpass_0416', __spina_exc)"
+        },
+        {
+          "line": 18112,
+          "text": "                pass"
+        },
+        {
+          "line": 18113,
+          "text": ""
+        },
+        {
+          "line": 18114,
+          "text": "        self._run_long_task(f'Generating PDF for {name}...', _work, on_success=_done, on_error=_err)"
+        },
+        {
+          "line": 18115,
+          "text": ""
+        },
+        {
+          "line": 18116,
+          "text": ""
+        },
+        {
+          "line": 18117,
+          "text": "    def _get_report_note_text(self):"
+        },
+        {
+          "line": 18118,
+          "text": "        try:"
+        },
+        {
+          "line": 18119,
+          "text": "            txt = getattr(self, 'report_note_txt', None)"
+        },
+        {
+          "line": 18120,
+          "text": "            if txt is not None:"
+        },
+        {
+          "line": 18121,
+          "text": "                return (txt.get('1.0', 'end-1c') or '').strip()"
+        },
+        {
+          "line": 18122,
+          "text": "        except Exception as __spina_exc:"
+        },
+        {
+          "line": 18123,
+          "text": "            _log_suppressed_once('excpass_reports_note_0001', 'suppressed exception excpass_reports_note_0001', __spina_exc)"
+        },
+        {
+          "line": 18124,
+          "text": "            pass"
+        },
+        {
+          "line": 18125,
+          "text": "        try:"
+        },
+        {
+          "line": 18126,
+          "text": "            return (self.report_note_var.get() or '').strip()"
+        }
+      ]
+    },
+    {
+      "line": 18363,
+      "end_line": 18364,
+      "target": "_run_long_task",
+      "call_text": "self._run_long_task('Importing...', lambda: self._import_from_excel_entry_worker(paths),",
+      "caller": {
+        "name": "_import_from_excel_entry",
+        "qualname": "App._import_from_excel_entry",
+        "line": 18324,
+        "end_line": 18365,
+        "contains_run_long_task": true,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": true,
+      "target_inside_run_long_task_call": false,
+      "protected_context": false,
+      "context": [
+        {
+          "line": 18351,
+          "text": "            title=\"Select import file(s)\","
+        },
+        {
+          "line": 18352,
+          "text": "            filetypes=["
+        },
+        {
+          "line": 18353,
+          "text": "                (\"Encoder batch / Excel\", \"*.jsonl;*.csv;*.xlsx;*.xlsm;*.xltx;*.xltm\"),"
+        },
+        {
+          "line": 18354,
+          "text": "                (\"Encoder batch\", \"*.jsonl;*.csv\"),"
+        },
+        {
+          "line": 18355,
+          "text": "                (\"Excel files\", \"*.xlsx;*.xlsm;*.xltx;*.xltm\"),"
+        },
+        {
+          "line": 18356,
+          "text": "                (\"All files\", \"*.*\"),"
+        },
+        {
+          "line": 18357,
+          "text": "            ]"
+        },
+        {
+          "line": 18358,
+          "text": "        )"
+        },
+        {
+          "line": 18359,
+          "text": "        if not paths:"
+        },
+        {
+          "line": 18360,
+          "text": "            return"
+        },
+        {
+          "line": 18361,
+          "text": ""
+        },
+        {
+          "line": 18362,
+          "text": "        # Run import in a background thread to keep the UI responsive"
+        },
+        {
+          "line": 18363,
+          "text": "        self._run_long_task('Importing...', lambda: self._import_from_excel_entry_worker(paths),"
+        },
+        {
+          "line": 18364,
+          "text": "                            on_success=lambda _r: (self._ui_async(self.refresh_data_grid), self._ui_async(self.refresh_reports)))"
+        },
+        {
+          "line": 18365,
+          "text": "        return"
+        },
+        {
+          "line": 18366,
+          "text": ""
+        },
+        {
+          "line": 18367,
+          "text": "    def _import_from_excel_entry_worker(self, paths):"
+        },
+        {
+          "line": 18368,
+          "text": "        \"\"\"Worker for _import_from_excel_entry (runs off the Tk main thread).\"\"\""
+        },
+        {
+          "line": 18369,
+          "text": "        from tkinter import messagebox"
+        },
+        {
+          "line": 18370,
+          "text": "        from datetime import datetime as _dt, date as _date"
+        },
+        {
+          "line": 18371,
+          "text": "        import os, re"
+        },
+        {
+          "line": 18372,
+          "text": "        try:"
+        },
+        {
+          "line": 18373,
+          "text": "            from openpyxl import load_workbook"
+        },
+        {
+          "line": 18374,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 18375,
+          "text": "            try:"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Read-only action-flow audit only; no app source changes are made.",
+    "Backup/verify/restore helpers are protected; do not edit them from this audit alone.",
+    "If backup or restore-test is not worker-routed, prefer routing the outer UI action through the existing _run_long_task path.",
+    "Do not touch reports, PDFs, payments, balances, 7x7, renewals, collectors, database migrations, cash-control, or report math from this audit alone.",
+    "If a UI-freeze fix is approved, change one outer action flow at a time and smoke-test Backup, Verify Backup, and Restore Test Database."
+  ]
+}

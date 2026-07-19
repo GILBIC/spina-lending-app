@@ -1,0 +1,39 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48509,
+  "apply": true,
+  "candidate": {
+    "safe": true,
+    "reason": "neutral AppClass.__init__ patch/restore pair found",
+    "start_line": 26450,
+    "end_line": 26462,
+    "line_count": 13,
+    "patched_lines": [
+      26458
+    ],
+    "restore_lines": [
+      26462
+    ],
+    "preview": [
+      "26450:                 orig_App_init = AppClass.__init__",
+      "26451:                 def patched_init(self, *args, **kwargs):",
+      "26452:                     orig_App_init(self, *args, **kwargs)",
+      "26453:                     try:",
+      "26454:                         attach_direct_integration(self)",
+      "26455:                     except Exception:",
+      "26456:                         traceback.print_exc()",
+      "26457:                 def wrapped_main(*args, **kwargs):",
+      "26458:                     AppClass.__init__ = patched_init",
+      "26459:                     try:",
+      "26460:                         return orig_main(*args, **kwargs)",
+      "26461:                     finally:",
+      "26462:                         AppClass.__init__ = orig_App_init"
+    ]
+  },
+  "recommendations": [
+    "Dry run first and review the exact candidate block.",
+    "This tool only targets the non-protected AppClass.__init__ patch/restore pair from the patch-chain report.",
+    "Do not use this for App.__init__, client refresh, collectors, dashboards, reports, PDFs, notes, payments, balances, 7x7, renewals, or cash-control patch chains.",
+    "After apply, run py_compile and smoke-test SPINA before committing only the app file."
+  ]
+}

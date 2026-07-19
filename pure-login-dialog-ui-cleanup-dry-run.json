@@ -1,0 +1,143 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "apply": false,
+  "target_count": 5,
+  "safe_candidate_count": 5,
+  "already_clean_count": 0,
+  "unsafe_count": 0,
+  "safe": true,
+  "patched": false,
+  "app_source_modified": false,
+  "selected_scope": "5 exact pure login dialog UI pass-only handlers only; excludes auth/password/role/account database/header/focus handlers",
+  "excluded_focus_handler": "line 48370 pw_entry.focus_set() is intentionally not targeted",
+  "safe_candidates": [
+    {
+      "key": "login_dialog_transient",
+      "line": 48175,
+      "end_line": 48176,
+      "scope": "_spina_v32_prompt_login",
+      "guard_text": "dlg.transient(self.root)",
+      "status": "safe_candidate",
+      "note": "Login dialog transient window relation only.",
+      "original": [
+        {
+          "line": 48175,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48176,
+          "text": "        pass"
+        }
+      ],
+      "replacement_preview": [
+        "    except Exception as __spina_exc:",
+        "        _log_suppressed_once('pure_login_dialog_ui.transient', 'suppressed pure login dialog UI exception: login_dialog_transient', __spina_exc)",
+        "        pass"
+      ]
+    },
+    {
+      "key": "login_dialog_account_trace",
+      "line": 48332,
+      "end_line": 48333,
+      "scope": "_spina_v32_prompt_login",
+      "guard_text": "account_var.trace_add(\"write\", _refresh_account_info)",
+      "status": "safe_candidate",
+      "note": "Login dialog account info trace callback only.",
+      "original": [
+        {
+          "line": 48332,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48333,
+          "text": "        pass"
+        }
+      ],
+      "replacement_preview": [
+        "    except Exception as __spina_exc:",
+        "        _log_suppressed_once('pure_login_dialog_ui.account_trace', 'suppressed pure login dialog UI exception: login_dialog_account_trace', __spina_exc)",
+        "        pass"
+      ]
+    },
+    {
+      "key": "login_dialog_return_bind",
+      "line": 48342,
+      "end_line": 48343,
+      "scope": "_spina_v32_prompt_login",
+      "guard_text": "account_cb.bind(\"<Return>\", _enter)",
+      "status": "safe_candidate",
+      "note": "Login dialog Return-key binding only.",
+      "original": [
+        {
+          "line": 48342,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48343,
+          "text": "        pass"
+        }
+      ],
+      "replacement_preview": [
+        "    except Exception as __spina_exc:",
+        "        _log_suppressed_once('pure_login_dialog_ui.return_bind', 'suppressed pure login dialog UI exception: login_dialog_return_bind', __spina_exc)",
+        "        pass"
+      ]
+    },
+    {
+      "key": "login_dialog_grab_set",
+      "line": 48347,
+      "end_line": 48348,
+      "scope": "_spina_v32_prompt_login",
+      "guard_text": "dlg.grab_set()",
+      "status": "safe_candidate",
+      "note": "Login dialog modal grab only.",
+      "original": [
+        {
+          "line": 48347,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48348,
+          "text": "        pass"
+        }
+      ],
+      "replacement_preview": [
+        "    except Exception as __spina_exc:",
+        "        _log_suppressed_once('pure_login_dialog_ui.grab_set', 'suppressed pure login dialog UI exception: login_dialog_grab_set', __spina_exc)",
+        "        pass"
+      ]
+    },
+    {
+      "key": "login_dialog_position",
+      "line": 48365,
+      "end_line": 48366,
+      "scope": "_spina_v32_prompt_login",
+      "guard_text": "dlg.geometry(f\"{w}x{h}+{x}+{y}\")",
+      "status": "safe_candidate",
+      "note": "Login dialog geometry/positioning only.",
+      "original": [
+        {
+          "line": 48365,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48366,
+          "text": "        pass"
+        }
+      ],
+      "replacement_preview": [
+        "    except Exception as __spina_exc:",
+        "        _log_suppressed_once('pure_login_dialog_ui.position', 'suppressed pure login dialog UI exception: login_dialog_position', __spina_exc)",
+        "        pass"
+      ]
+    }
+  ],
+  "already_clean": [],
+  "unsafe": [],
+  "recommendations": [
+    "Review dry-run JSON before applying.",
+    "Apply only if safe is true and unsafe_count is 0.",
+    "After apply, rerun this tool, the pure login dialog planner, and the pass-only exception audit.",
+    "Smoke-test staff login, account switching, password-change-required flow, Cancel, and Return-key login."
+  ]
+}

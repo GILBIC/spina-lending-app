@@ -1,0 +1,6597 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48501,
+  "context_radius": 8,
+  "pass_only_exception_count": 928,
+  "protected_context_count": 863,
+  "non_protected_pass_only_count": 65,
+  "shown_site_count": 80,
+  "by_severity": {
+    "protected_review": 863,
+    "handler:Exception": 922,
+    "review_candidate": 65,
+    "handler:queue.Empty": 1,
+    "handler:AttributeError": 3,
+    "handler:bare": 2
+  },
+  "sites": [
+    {
+      "line": 1284,
+      "end_line": 1285,
+      "scope": "_log_exc",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 1276,
+          "text": "                \"%s: %s\","
+        },
+        {
+          "line": 1277,
+          "text": "                context,"
+        },
+        {
+          "line": 1278,
+          "text": "                exc,"
+        },
+        {
+          "line": 1279,
+          "text": "                exc_info=(type(exc), exc, exc.__traceback__),"
+        },
+        {
+          "line": 1280,
+          "text": "            )"
+        },
+        {
+          "line": 1281,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 1282,
+          "text": "        try:"
+        },
+        {
+          "line": 1283,
+          "text": "            print(f\"[SPINA][ERROR] {context}: {exc}\", file=sys.stderr)"
+        },
+        {
+          "line": 1284,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 1285,
+          "text": "            pass"
+        },
+        {
+          "line": 1286,
+          "text": ""
+        },
+        {
+          "line": 1287,
+          "text": ""
+        },
+        {
+          "line": 1288,
+          "text": "# --- BEGIN: log suppressed exceptions (log-once) ---"
+        },
+        {
+          "line": 1289,
+          "text": "try:"
+        },
+        {
+          "line": 1290,
+          "text": "    _SUPPRESS_LOG_ONCE_KEYS"
+        },
+        {
+          "line": 1291,
+          "text": "except NameError:"
+        },
+        {
+          "line": 1292,
+          "text": "    _SUPPRESS_LOG_ONCE_KEYS = set()"
+        },
+        {
+          "line": 1293,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 14217,
+      "end_line": 14219,
+      "scope": "App.__init__",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 14209,
+          "text": "            root.geometry(f\"{w}x{h}\")"
+        },
+        {
+          "line": 14210,
+          "text": "            root.minsize(1050, 680)"
+        },
+        {
+          "line": 14211,
+          "text": ""
+        },
+        {
+          "line": 14212,
+          "text": "            # Center on screen"
+        },
+        {
+          "line": 14213,
+          "text": "            root.update_idletasks()"
+        },
+        {
+          "line": 14214,
+          "text": "            sx = max(0, (root.winfo_screenwidth() - w) // 2)"
+        },
+        {
+          "line": 14215,
+          "text": "            sy = max(0, (root.winfo_screenheight() - h) // 2)"
+        },
+        {
+          "line": 14216,
+          "text": "            root.geometry(f\"{w}x{h}+{sx}+{sy}\")"
+        },
+        {
+          "line": 14217,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 14218,
+          "text": "            # Fallback: keep whatever Tk decides"
+        },
+        {
+          "line": 14219,
+          "text": "            pass"
+        },
+        {
+          "line": 14220,
+          "text": "        self.db = LoanDB()"
+        },
+        {
+          "line": 14221,
+          "text": "        try:"
+        },
+        {
+          "line": 14222,
+          "text": "            self.db.set_default_loan_type(self._mode_filter())"
+        },
+        {
+          "line": 14223,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 14224,
+          "text": "            # Mode selector may not be initialized yet; default safely."
+        },
+        {
+          "line": 14225,
+          "text": "            try:"
+        },
+        {
+          "line": 14226,
+          "text": "                self.db.set_default_loan_type(\"Regular\")"
+        },
+        {
+          "line": 14227,
+          "text": "            except Exception as __spina_exc:"
+        }
+      ]
+    },
+    {
+      "line": 14368,
+      "end_line": 14370,
+      "scope": "App._start_ui_queue_pump._pump",
+      "handler": "queue.Empty",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 14360,
+          "text": "                    except Exception as e:"
+        },
+        {
+          "line": 14361,
+          "text": "                        out[\"exc\"] = e"
+        },
+        {
+          "line": 14362,
+          "text": "                    finally:"
+        },
+        {
+          "line": 14363,
+          "text": "                        try:"
+        },
+        {
+          "line": 14364,
+          "text": "                            ev.set()"
+        },
+        {
+          "line": 14365,
+          "text": "                        except Exception as __spina_exc:"
+        },
+        {
+          "line": 14366,
+          "text": "                            _log_suppressed_once('excpass_0275', 'suppressed exception excpass_0275', __spina_exc)"
+        },
+        {
+          "line": 14367,
+          "text": "                            pass"
+        },
+        {
+          "line": 14368,
+          "text": "            except queue.Empty:"
+        },
+        {
+          "line": 14369,
+          "text": "                # nothing pending"
+        },
+        {
+          "line": 14370,
+          "text": "                pass"
+        },
+        {
+          "line": 14371,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 14372,
+          "text": "                try:"
+        },
+        {
+          "line": 14373,
+          "text": "                    _log_exc(\"ui_queue_pump\", e)"
+        },
+        {
+          "line": 14374,
+          "text": "                except Exception as __spina_exc:"
+        },
+        {
+          "line": 14375,
+          "text": "                    _log_suppressed_once('excpass_0276', 'suppressed exception excpass_0276', __spina_exc)"
+        },
+        {
+          "line": 14376,
+          "text": "                    pass"
+        },
+        {
+          "line": 14377,
+          "text": "            try:"
+        },
+        {
+          "line": 14378,
+          "text": "                if self.root.winfo_exists():"
+        }
+      ]
+    },
+    {
+      "line": 14653,
+      "end_line": 14655,
+      "scope": "App._run_long_task._watchdog",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 14645,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 14646,
+          "text": "                try:"
+        },
+        {
+          "line": 14647,
+          "text": "                    _log_exc(\"long_task:watchdog\", e)"
+        },
+        {
+          "line": 14648,
+          "text": "                except Exception as __spina_exc:"
+        },
+        {
+          "line": 14649,
+          "text": "                    _log_suppressed_once('excpass_0300', 'suppressed exception excpass_0300', __spina_exc)"
+        },
+        {
+          "line": 14650,
+          "text": "                    pass"
+        },
+        {
+          "line": 14651,
+          "text": "            try:"
+        },
+        {
+          "line": 14652,
+          "text": "                self.root.after(250, _watchdog)"
+        },
+        {
+          "line": 14653,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 14654,
+          "text": "                # root is likely closing"
+        },
+        {
+          "line": 14655,
+          "text": "                pass"
+        },
+        {
+          "line": 14656,
+          "text": ""
+        },
+        {
+          "line": 14657,
+          "text": "        # --- build dialog (UI thread) ---"
+        },
+        {
+          "line": 14658,
+          "text": "        try:"
+        },
+        {
+          "line": 14659,
+          "text": "            dlg = tk.Toplevel(self.root)"
+        },
+        {
+          "line": 14660,
+          "text": "            dlg.title(title or \"Please wait\")"
+        },
+        {
+          "line": 14661,
+          "text": "            dlg.resizable(False, False)"
+        },
+        {
+          "line": 14662,
+          "text": "            try:"
+        },
+        {
+          "line": 14663,
+          "text": "                dlg.transient(self.root)"
+        }
+      ]
+    },
+    {
+      "line": 14971,
+      "end_line": 14972,
+      "scope": "App.set_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 14963,
+          "text": "                self.theme_btn.configure(text=self._theme_toggle_text())"
+        },
+        {
+          "line": 14964,
+          "text": "        except Exception as __spina_exc:"
+        },
+        {
+          "line": 14965,
+          "text": "            _log_suppressed_once('excpass_0323', 'suppressed exception excpass_0323', __spina_exc)"
+        },
+        {
+          "line": 14966,
+          "text": "            pass"
+        },
+        {
+          "line": 14967,
+          "text": ""
+        },
+        {
+          "line": 14968,
+          "text": "        # Apply modern top header colors/buttons too"
+        },
+        {
+          "line": 14969,
+          "text": "        try:"
+        },
+        {
+          "line": 14970,
+          "text": "            self._refresh_header_theme()"
+        },
+        {
+          "line": 14971,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 14972,
+          "text": "            pass"
+        },
+        {
+          "line": 14973,
+          "text": ""
+        },
+        {
+          "line": 14974,
+          "text": "        # Apply to plain tk widgets too"
+        },
+        {
+          "line": 14975,
+          "text": "        try:"
+        },
+        {
+          "line": 14976,
+          "text": "            self._apply_tk_theme_recursive(self.root)"
+        },
+        {
+          "line": 14977,
+          "text": "        except Exception as __spina_exc:"
+        },
+        {
+          "line": 14978,
+          "text": "            _log_suppressed_once('excpass_0324', 'suppressed exception excpass_0324', __spina_exc)"
+        },
+        {
+          "line": 14979,
+          "text": "            pass"
+        },
+        {
+          "line": 14980,
+          "text": "        try:"
+        }
+      ]
+    },
+    {
+      "line": 14982,
+      "end_line": 14983,
+      "scope": "App.set_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 14974,
+          "text": "        # Apply to plain tk widgets too"
+        },
+        {
+          "line": 14975,
+          "text": "        try:"
+        },
+        {
+          "line": 14976,
+          "text": "            self._apply_tk_theme_recursive(self.root)"
+        },
+        {
+          "line": 14977,
+          "text": "        except Exception as __spina_exc:"
+        },
+        {
+          "line": 14978,
+          "text": "            _log_suppressed_once('excpass_0324', 'suppressed exception excpass_0324', __spina_exc)"
+        },
+        {
+          "line": 14979,
+          "text": "            pass"
+        },
+        {
+          "line": 14980,
+          "text": "        try:"
+        },
+        {
+          "line": 14981,
+          "text": "            self._refresh_modern_shell_theme()"
+        },
+        {
+          "line": 14982,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 14983,
+          "text": "            pass"
+        },
+        {
+          "line": 14984,
+          "text": ""
+        },
+        {
+          "line": 14985,
+          "text": "    def _theme_palette(self, theme: str | None = None) -> dict:"
+        },
+        {
+          "line": 14986,
+          "text": "        t = (theme or getattr(self, \"ui_theme\", \"light\") or \"light\").strip().lower()"
+        },
+        {
+          "line": 14987,
+          "text": "        if t.startswith(\"d\"):"
+        },
+        {
+          "line": 14988,
+          "text": "            return {"
+        },
+        {
+          "line": 14989,
+          "text": "                \"bg\": \"#1f1f23\","
+        },
+        {
+          "line": 14990,
+          "text": "                \"panel\": \"#26262b\","
+        },
+        {
+          "line": 14991,
+          "text": "                \"header_bg\": \"#2a1b23\","
+        }
+      ]
+    },
+    {
+      "line": 15887,
+      "end_line": 15888,
+      "scope": "App._select_side_tab",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 15879,
+          "text": "        return items"
+        },
+        {
+          "line": 15880,
+          "text": ""
+        },
+        {
+          "line": 15881,
+          "text": "    def _select_side_tab(self, tab):"
+        },
+        {
+          "line": 15882,
+          "text": "        try:"
+        },
+        {
+          "line": 15883,
+          "text": "            self.nb.select(tab)"
+        },
+        {
+          "line": 15884,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 15885,
+          "text": "            try:"
+        },
+        {
+          "line": 15886,
+          "text": "                _log_suppressed_once('side_nav_select', 'sidebar select failed', e)"
+        },
+        {
+          "line": 15887,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 15888,
+          "text": "                pass"
+        },
+        {
+          "line": 15889,
+          "text": "        try:"
+        },
+        {
+          "line": 15890,
+          "text": "            self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 15891,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15892,
+          "text": "            pass"
+        },
+        {
+          "line": 15893,
+          "text": ""
+        },
+        {
+          "line": 15894,
+          "text": "    def _rebuild_side_nav(self):"
+        },
+        {
+          "line": 15895,
+          "text": "        \"\"\"Rebuild the modern left-side navigation from the currently visible notebook tabs.\"\"\""
+        },
+        {
+          "line": 15896,
+          "text": "        frame = getattr(self, 'sidebar_frame', None)"
+        }
+      ]
+    },
+    {
+      "line": 15891,
+      "end_line": 15892,
+      "scope": "App._select_side_tab",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 15883,
+          "text": "            self.nb.select(tab)"
+        },
+        {
+          "line": 15884,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 15885,
+          "text": "            try:"
+        },
+        {
+          "line": 15886,
+          "text": "                _log_suppressed_once('side_nav_select', 'sidebar select failed', e)"
+        },
+        {
+          "line": 15887,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 15888,
+          "text": "                pass"
+        },
+        {
+          "line": 15889,
+          "text": "        try:"
+        },
+        {
+          "line": 15890,
+          "text": "            self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 15891,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15892,
+          "text": "            pass"
+        },
+        {
+          "line": 15893,
+          "text": ""
+        },
+        {
+          "line": 15894,
+          "text": "    def _rebuild_side_nav(self):"
+        },
+        {
+          "line": 15895,
+          "text": "        \"\"\"Rebuild the modern left-side navigation from the currently visible notebook tabs.\"\"\""
+        },
+        {
+          "line": 15896,
+          "text": "        frame = getattr(self, 'sidebar_frame', None)"
+        },
+        {
+          "line": 15897,
+          "text": "        if frame is None:"
+        },
+        {
+          "line": 15898,
+          "text": "            return"
+        },
+        {
+          "line": 15899,
+          "text": "        try:"
+        },
+        {
+          "line": 15900,
+          "text": "            for child in frame.winfo_children():"
+        }
+      ]
+    },
+    {
+      "line": 15902,
+      "end_line": 15903,
+      "scope": "App._rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 15894,
+          "text": "    def _rebuild_side_nav(self):"
+        },
+        {
+          "line": 15895,
+          "text": "        \"\"\"Rebuild the modern left-side navigation from the currently visible notebook tabs.\"\"\""
+        },
+        {
+          "line": 15896,
+          "text": "        frame = getattr(self, 'sidebar_frame', None)"
+        },
+        {
+          "line": 15897,
+          "text": "        if frame is None:"
+        },
+        {
+          "line": 15898,
+          "text": "            return"
+        },
+        {
+          "line": 15899,
+          "text": "        try:"
+        },
+        {
+          "line": 15900,
+          "text": "            for child in frame.winfo_children():"
+        },
+        {
+          "line": 15901,
+          "text": "                child.destroy()"
+        },
+        {
+          "line": 15902,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15903,
+          "text": "            pass"
+        },
+        {
+          "line": 15904,
+          "text": ""
+        },
+        {
+          "line": 15905,
+          "text": "        try:"
+        },
+        {
+          "line": 15906,
+          "text": "            p = getattr(self, '_ui_colors', None) or self._theme_palette()"
+        },
+        {
+          "line": 15907,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15908,
+          "text": "            p = {'bg': '#f7f7fb', 'panel': '#ffffff', 'fg': '#1a1a1a', 'muted': '#666666', 'accent': '#ffd1e6', 'border': '#dddddd'}"
+        },
+        {
+          "line": 15909,
+          "text": ""
+        },
+        {
+          "line": 15910,
+          "text": "        try:"
+        },
+        {
+          "line": 15911,
+          "text": "            frame.configure(width=190)"
+        }
+      ]
+    },
+    {
+      "line": 15913,
+      "end_line": 15914,
+      "scope": "App._rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 15905,
+          "text": "        try:"
+        },
+        {
+          "line": 15906,
+          "text": "            p = getattr(self, '_ui_colors', None) or self._theme_palette()"
+        },
+        {
+          "line": 15907,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15908,
+          "text": "            p = {'bg': '#f7f7fb', 'panel': '#ffffff', 'fg': '#1a1a1a', 'muted': '#666666', 'accent': '#ffd1e6', 'border': '#dddddd'}"
+        },
+        {
+          "line": 15909,
+          "text": ""
+        },
+        {
+          "line": 15910,
+          "text": "        try:"
+        },
+        {
+          "line": 15911,
+          "text": "            frame.configure(width=190)"
+        },
+        {
+          "line": 15912,
+          "text": "            frame.pack_propagate(False)"
+        },
+        {
+          "line": 15913,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15914,
+          "text": "            pass"
+        },
+        {
+          "line": 15915,
+          "text": ""
+        },
+        {
+          "line": 15916,
+          "text": "        # App label inside sidebar"
+        },
+        {
+          "line": 15917,
+          "text": "        try:"
+        },
+        {
+          "line": 15918,
+          "text": "            title = tk.Label("
+        },
+        {
+          "line": 15919,
+          "text": "                frame,"
+        },
+        {
+          "line": 15920,
+          "text": "                text='SPINA',"
+        },
+        {
+          "line": 15921,
+          "text": "                anchor='w',"
+        },
+        {
+          "line": 15922,
+          "text": "                bg=p.get('panel', '#ffffff'),"
+        }
+      ]
+    },
+    {
+      "line": 15946,
+      "end_line": 15947,
+      "scope": "App._rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 15938,
+          "text": "                bg=p.get('panel', '#ffffff'),"
+        },
+        {
+          "line": 15939,
+          "text": "                fg=p.get('muted', '#666666'),"
+        },
+        {
+          "line": 15940,
+          "text": "                font=('Segoe UI' if os.name == 'nt' else 'TkDefaultFont', 9),"
+        },
+        {
+          "line": 15941,
+          "text": "                padx=8,"
+        },
+        {
+          "line": 15942,
+          "text": "                pady=0,"
+        },
+        {
+          "line": 15943,
+          "text": "            )"
+        },
+        {
+          "line": 15944,
+          "text": "            subtitle.pack(fill='x', pady=(0, 12))"
+        },
+        {
+          "line": 15945,
+          "text": "            self._side_nav_labels.append(subtitle)"
+        },
+        {
+          "line": 15946,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15947,
+          "text": "            pass"
+        },
+        {
+          "line": 15948,
+          "text": ""
+        },
+        {
+          "line": 15949,
+          "text": "        self._side_nav_buttons = {}"
+        },
+        {
+          "line": 15950,
+          "text": "        family = 'Segoe UI' if os.name == 'nt' else 'TkDefaultFont'"
+        },
+        {
+          "line": 15951,
+          "text": "        for tab, title, icon in self._side_nav_items():"
+        },
+        {
+          "line": 15952,
+          "text": "            try:"
+        },
+        {
+          "line": 15953,
+          "text": "                btn = tk.Button("
+        },
+        {
+          "line": 15954,
+          "text": "                    frame,"
+        },
+        {
+          "line": 15955,
+          "text": "                    text=f'  {icon}  {title}',"
+        }
+      ]
+    },
+    {
+      "line": 15970,
+      "end_line": 15971,
+      "scope": "App._rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 15962,
+          "text": "                    font=(family, 10, 'bold'),"
+        },
+        {
+          "line": 15963,
+          "text": "                    command=lambda t=tab: self._select_side_tab(t),"
+        },
+        {
+          "line": 15964,
+          "text": "                )"
+        },
+        {
+          "line": 15965,
+          "text": "                btn.pack(fill='x', pady=3)"
+        },
+        {
+          "line": 15966,
+          "text": "                self._side_nav_buttons[str(tab)] = btn"
+        },
+        {
+          "line": 15967,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 15968,
+          "text": "                try:"
+        },
+        {
+          "line": 15969,
+          "text": "                    _log_suppressed_once('side_nav_btn', 'sidebar button failed', e)"
+        },
+        {
+          "line": 15970,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 15971,
+          "text": "                    pass"
+        },
+        {
+          "line": 15972,
+          "text": ""
+        },
+        {
+          "line": 15973,
+          "text": "        try:"
+        },
+        {
+          "line": 15974,
+          "text": "            bottom = ttk.Frame(frame, style='Sidebar.TFrame')"
+        },
+        {
+          "line": 15975,
+          "text": "            bottom.pack(side='bottom', fill='x', pady=(12, 0))"
+        },
+        {
+          "line": 15976,
+          "text": "            role_text = f\"{getattr(self, 'user_name', '')} \u2022 {getattr(self, 'user_role', '')}\""
+        },
+        {
+          "line": 15977,
+          "text": "            lbl = tk.Label("
+        },
+        {
+          "line": 15978,
+          "text": "                bottom,"
+        },
+        {
+          "line": 15979,
+          "text": "                text=role_text,"
+        }
+      ]
+    },
+    {
+      "line": 15990,
+      "end_line": 15991,
+      "scope": "App._rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 15982,
+          "text": "                fg=p.get('muted', '#666666'),"
+        },
+        {
+          "line": 15983,
+          "text": "                font=(family, 8),"
+        },
+        {
+          "line": 15984,
+          "text": "                padx=8,"
+        },
+        {
+          "line": 15985,
+          "text": "                pady=4,"
+        },
+        {
+          "line": 15986,
+          "text": "                wraplength=160,"
+        },
+        {
+          "line": 15987,
+          "text": "            )"
+        },
+        {
+          "line": 15988,
+          "text": "            lbl.pack(fill='x')"
+        },
+        {
+          "line": 15989,
+          "text": "            self._side_nav_labels.append(lbl)"
+        },
+        {
+          "line": 15990,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15991,
+          "text": "            pass"
+        },
+        {
+          "line": 15992,
+          "text": ""
+        },
+        {
+          "line": 15993,
+          "text": "        self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 15994,
+          "text": ""
+        },
+        {
+          "line": 15995,
+          "text": "    def _refresh_side_nav_selection(self):"
+        },
+        {
+          "line": 15996,
+          "text": "        \"\"\"Update sidebar button colors to match the selected notebook tab.\"\"\""
+        },
+        {
+          "line": 15997,
+          "text": "        buttons = getattr(self, '_side_nav_buttons', {}) or {}"
+        },
+        {
+          "line": 15998,
+          "text": "        if not buttons:"
+        },
+        {
+          "line": 15999,
+          "text": "            return"
+        }
+      ]
+    },
+    {
+      "line": 16026,
+      "end_line": 16027,
+      "scope": "App._refresh_side_nav_selection",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 16018,
+          "text": "                fg = selected_fg if active else normal_fg"
+        },
+        {
+          "line": 16019,
+          "text": "                btn.configure("
+        },
+        {
+          "line": 16020,
+          "text": "                    bg=bg,"
+        },
+        {
+          "line": 16021,
+          "text": "                    fg=fg,"
+        },
+        {
+          "line": 16022,
+          "text": "                    activebackground=hover_bg,"
+        },
+        {
+          "line": 16023,
+          "text": "                    activeforeground=fg,"
+        },
+        {
+          "line": 16024,
+          "text": "                    highlightthickness=0,"
+        },
+        {
+          "line": 16025,
+          "text": "                )"
+        },
+        {
+          "line": 16026,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16027,
+          "text": "                pass"
+        },
+        {
+          "line": 16028,
+          "text": ""
+        },
+        {
+          "line": 16029,
+          "text": "    def _refresh_modern_shell_theme(self):"
+        },
+        {
+          "line": 16030,
+          "text": "        \"\"\"Apply theme colors to the modern sidebar shell and rebuild nav labels/buttons.\"\"\""
+        },
+        {
+          "line": 16031,
+          "text": "        try:"
+        },
+        {
+          "line": 16032,
+          "text": "            p = getattr(self, '_ui_colors', None) or self._theme_palette()"
+        },
+        {
+          "line": 16033,
+          "text": "            if getattr(self, 'main_shell', None) is not None:"
+        },
+        {
+          "line": 16034,
+          "text": "                self.main_shell.configure(style='AppShell.TFrame')"
+        },
+        {
+          "line": 16035,
+          "text": "            if getattr(self, 'sidebar_frame', None) is not None:"
+        }
+      ]
+    },
+    {
+      "line": 16039,
+      "end_line": 16040,
+      "scope": "App._refresh_modern_shell_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 16031,
+          "text": "        try:"
+        },
+        {
+          "line": 16032,
+          "text": "            p = getattr(self, '_ui_colors', None) or self._theme_palette()"
+        },
+        {
+          "line": 16033,
+          "text": "            if getattr(self, 'main_shell', None) is not None:"
+        },
+        {
+          "line": 16034,
+          "text": "                self.main_shell.configure(style='AppShell.TFrame')"
+        },
+        {
+          "line": 16035,
+          "text": "            if getattr(self, 'sidebar_frame', None) is not None:"
+        },
+        {
+          "line": 16036,
+          "text": "                self.sidebar_frame.configure(style='Sidebar.TFrame')"
+        },
+        {
+          "line": 16037,
+          "text": "            if getattr(self, 'content_frame', None) is not None:"
+        },
+        {
+          "line": 16038,
+          "text": "                self.content_frame.configure(style='Content.TFrame')"
+        },
+        {
+          "line": 16039,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16040,
+          "text": "            pass"
+        },
+        {
+          "line": 16041,
+          "text": "        try:"
+        },
+        {
+          "line": 16042,
+          "text": "            self._rebuild_side_nav()"
+        },
+        {
+          "line": 16043,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16044,
+          "text": "            try:"
+        },
+        {
+          "line": 16045,
+          "text": "                self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 16046,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16047,
+          "text": "                pass"
+        },
+        {
+          "line": 16048,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 16046,
+      "end_line": 16047,
+      "scope": "App._refresh_modern_shell_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 16038,
+          "text": "                self.content_frame.configure(style='Content.TFrame')"
+        },
+        {
+          "line": 16039,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16040,
+          "text": "            pass"
+        },
+        {
+          "line": 16041,
+          "text": "        try:"
+        },
+        {
+          "line": 16042,
+          "text": "            self._rebuild_side_nav()"
+        },
+        {
+          "line": 16043,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16044,
+          "text": "            try:"
+        },
+        {
+          "line": 16045,
+          "text": "                self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 16046,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16047,
+          "text": "                pass"
+        },
+        {
+          "line": 16048,
+          "text": ""
+        },
+        {
+          "line": 16049,
+          "text": "    # ---------------- Modern top bar + quick loan-type switch ----------------"
+        },
+        {
+          "line": 16050,
+          "text": "    def _header_palette(self):"
+        },
+        {
+          "line": 16051,
+          "text": "        \"\"\"Compact color palette for the modern top header.\"\"\""
+        },
+        {
+          "line": 16052,
+          "text": "        try:"
+        },
+        {
+          "line": 16053,
+          "text": "            base = getattr(self, '_ui_colors', None) or self._theme_palette()"
+        },
+        {
+          "line": 16054,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16055,
+          "text": "            base = {}"
+        }
+      ]
+    },
+    {
+      "line": 16103,
+      "end_line": 16104,
+      "scope": "App._tk_button_hover",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 16095,
+          "text": "        \"\"\"Small hover helper for plain tk buttons/labels.\"\"\""
+        },
+        {
+          "line": 16096,
+          "text": "        try:"
+        },
+        {
+          "line": 16097,
+          "text": "            if normal_bg is None:"
+        },
+        {
+          "line": 16098,
+          "text": "                normal_bg = widget.cget('bg')"
+        },
+        {
+          "line": 16099,
+          "text": "            if hover_bg is None:"
+        },
+        {
+          "line": 16100,
+          "text": "                hover_bg = normal_bg"
+        },
+        {
+          "line": 16101,
+          "text": "            widget.bind('<Enter>', lambda e, w=widget, h=hover_bg: w.configure(bg=h), add='+')"
+        },
+        {
+          "line": 16102,
+          "text": "            widget.bind('<Leave>', lambda e, w=widget, n=normal_bg: w.configure(bg=n), add='+')"
+        },
+        {
+          "line": 16103,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16104,
+          "text": "            pass"
+        },
+        {
+          "line": 16105,
+          "text": ""
+        },
+        {
+          "line": 16106,
+          "text": "    def _make_header_button(self, master, text, command, *, primary=False, danger=False, width=None):"
+        },
+        {
+          "line": 16107,
+          "text": "        \"\"\"Create a flatter, modern top-bar button using tk.Button for better dark-mode control.\"\"\""
+        },
+        {
+          "line": 16108,
+          "text": "        hp = self._header_palette()"
+        },
+        {
+          "line": 16109,
+          "text": "        family = 'Segoe UI' if os.name == 'nt' else 'TkDefaultFont'"
+        },
+        {
+          "line": 16110,
+          "text": "        bg = hp['accent'] if primary else (hp['danger'] if danger else hp['button'])"
+        },
+        {
+          "line": 16111,
+          "text": "        fg = hp['chip_active_fg'] if primary else hp['fg']"
+        },
+        {
+          "line": 16112,
+          "text": "        hover = '#f472b6' if primary else hp['button_hover']"
+        }
+      ]
+    },
+    {
+      "line": 16147,
+      "end_line": 16148,
+      "scope": "App._set_mode",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 16139,
+          "text": "                if (self.mode_var.get() or '') == mode:"
+        },
+        {
+          "line": 16140,
+          "text": "                    self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16141,
+          "text": "                    return"
+        },
+        {
+          "line": 16142,
+          "text": "                self.mode_var.set(mode)"
+        },
+        {
+          "line": 16143,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16144,
+          "text": "            pass"
+        },
+        {
+          "line": 16145,
+          "text": "        try:"
+        },
+        {
+          "line": 16146,
+          "text": "            self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16147,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16148,
+          "text": "            pass"
+        },
+        {
+          "line": 16149,
+          "text": "        try:"
+        },
+        {
+          "line": 16150,
+          "text": "            self._on_mode_change()"
+        },
+        {
+          "line": 16151,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 16152,
+          "text": "            try:"
+        },
+        {
+          "line": 16153,
+          "text": "                _log_suppressed_once('modern_mode_switch', 'modern mode switch failed', e)"
+        },
+        {
+          "line": 16154,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16155,
+          "text": "                pass"
+        },
+        {
+          "line": 16156,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 16176,
+      "end_line": 16177,
+      "scope": "App._refresh_mode_toggle",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 16168,
+          "text": "                fg = hp['chip_active_fg'] if active else hp['fg']"
+        },
+        {
+          "line": 16169,
+          "text": "                btn.configure("
+        },
+        {
+          "line": 16170,
+          "text": "                    bg=bg,"
+        },
+        {
+          "line": 16171,
+          "text": "                    fg=fg,"
+        },
+        {
+          "line": 16172,
+          "text": "                    activebackground=bg,"
+        },
+        {
+          "line": 16173,
+          "text": "                    activeforeground=fg,"
+        },
+        {
+          "line": 16174,
+          "text": "                    highlightbackground=hp['accent'] if active else hp['border'],"
+        },
+        {
+          "line": 16175,
+          "text": "                )"
+        },
+        {
+          "line": 16176,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16177,
+          "text": "                pass"
+        },
+        {
+          "line": 16178,
+          "text": "        try:"
+        },
+        {
+          "line": 16179,
+          "text": "            if getattr(self, 'mode_status_label', None) is not None:"
+        },
+        {
+          "line": 16180,
+          "text": "                self.mode_status_label.configure("
+        },
+        {
+          "line": 16181,
+          "text": "                    text=f\"Current view: {cur}\","
+        },
+        {
+          "line": 16182,
+          "text": "                    bg=hp['panel'],"
+        },
+        {
+          "line": 16183,
+          "text": "                    fg=hp['muted'],"
+        },
+        {
+          "line": 16184,
+          "text": "                )"
+        },
+        {
+          "line": 16185,
+          "text": "        except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 16185,
+      "end_line": 16186,
+      "scope": "App._refresh_mode_toggle",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 16177,
+          "text": "                pass"
+        },
+        {
+          "line": 16178,
+          "text": "        try:"
+        },
+        {
+          "line": 16179,
+          "text": "            if getattr(self, 'mode_status_label', None) is not None:"
+        },
+        {
+          "line": 16180,
+          "text": "                self.mode_status_label.configure("
+        },
+        {
+          "line": 16181,
+          "text": "                    text=f\"Current view: {cur}\","
+        },
+        {
+          "line": 16182,
+          "text": "                    bg=hp['panel'],"
+        },
+        {
+          "line": 16183,
+          "text": "                    fg=hp['muted'],"
+        },
+        {
+          "line": 16184,
+          "text": "                )"
+        },
+        {
+          "line": 16185,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16186,
+          "text": "            pass"
+        },
+        {
+          "line": 16187,
+          "text": ""
+        },
+        {
+          "line": 16188,
+          "text": "    def _refresh_header_theme(self):"
+        },
+        {
+          "line": 16189,
+          "text": "        \"\"\"Apply the current theme colors to the modern top header.\"\"\""
+        },
+        {
+          "line": 16190,
+          "text": "        hp = self._header_palette()"
+        },
+        {
+          "line": 16191,
+          "text": "        try:"
+        },
+        {
+          "line": 16192,
+          "text": "            if getattr(self, 'modern_header', None) is not None:"
+        },
+        {
+          "line": 16193,
+          "text": "                self.modern_header.configure(bg=hp['bg'])"
+        },
+        {
+          "line": 16194,
+          "text": "        except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 16194,
+      "end_line": 16195,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 16186,
+          "text": "            pass"
+        },
+        {
+          "line": 16187,
+          "text": ""
+        },
+        {
+          "line": 16188,
+          "text": "    def _refresh_header_theme(self):"
+        },
+        {
+          "line": 16189,
+          "text": "        \"\"\"Apply the current theme colors to the modern top header.\"\"\""
+        },
+        {
+          "line": 16190,
+          "text": "        hp = self._header_palette()"
+        },
+        {
+          "line": 16191,
+          "text": "        try:"
+        },
+        {
+          "line": 16192,
+          "text": "            if getattr(self, 'modern_header', None) is not None:"
+        },
+        {
+          "line": 16193,
+          "text": "                self.modern_header.configure(bg=hp['bg'])"
+        },
+        {
+          "line": 16194,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16195,
+          "text": "            pass"
+        },
+        {
+          "line": 16196,
+          "text": "        for attr in ('header_left', 'header_center', 'header_right', 'mode_switch_frame'):"
+        },
+        {
+          "line": 16197,
+          "text": "            try:"
+        },
+        {
+          "line": 16198,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16199,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16200,
+          "text": "                    w.configure(bg=hp['bg'] if attr != 'mode_switch_frame' else hp['panel'])"
+        },
+        {
+          "line": 16201,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16202,
+          "text": "                pass"
+        },
+        {
+          "line": 16203,
+          "text": "        for attr in ('header_title_label', 'header_view_title'):"
+        }
+      ]
+    },
+    {
+      "line": 16201,
+      "end_line": 16202,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 16193,
+          "text": "                self.modern_header.configure(bg=hp['bg'])"
+        },
+        {
+          "line": 16194,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16195,
+          "text": "            pass"
+        },
+        {
+          "line": 16196,
+          "text": "        for attr in ('header_left', 'header_center', 'header_right', 'mode_switch_frame'):"
+        },
+        {
+          "line": 16197,
+          "text": "            try:"
+        },
+        {
+          "line": 16198,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16199,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16200,
+          "text": "                    w.configure(bg=hp['bg'] if attr != 'mode_switch_frame' else hp['panel'])"
+        },
+        {
+          "line": 16201,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16202,
+          "text": "                pass"
+        },
+        {
+          "line": 16203,
+          "text": "        for attr in ('header_title_label', 'header_view_title'):"
+        },
+        {
+          "line": 16204,
+          "text": "            try:"
+        },
+        {
+          "line": 16205,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16206,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16207,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_title_label' else hp['panel'], fg=hp['fg'])"
+        },
+        {
+          "line": 16208,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16209,
+          "text": "                pass"
+        },
+        {
+          "line": 16210,
+          "text": "        for attr in ('header_subtitle_label', 'mode_status_label'):"
+        }
+      ]
+    },
+    {
+      "line": 16208,
+      "end_line": 16209,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 16200,
+          "text": "                    w.configure(bg=hp['bg'] if attr != 'mode_switch_frame' else hp['panel'])"
+        },
+        {
+          "line": 16201,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16202,
+          "text": "                pass"
+        },
+        {
+          "line": 16203,
+          "text": "        for attr in ('header_title_label', 'header_view_title'):"
+        },
+        {
+          "line": 16204,
+          "text": "            try:"
+        },
+        {
+          "line": 16205,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16206,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16207,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_title_label' else hp['panel'], fg=hp['fg'])"
+        },
+        {
+          "line": 16208,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16209,
+          "text": "                pass"
+        },
+        {
+          "line": 16210,
+          "text": "        for attr in ('header_subtitle_label', 'mode_status_label'):"
+        },
+        {
+          "line": 16211,
+          "text": "            try:"
+        },
+        {
+          "line": 16212,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16213,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16214,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_subtitle_label' else hp['panel'], fg=hp['muted'])"
+        },
+        {
+          "line": 16215,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16216,
+          "text": "                pass"
+        },
+        {
+          "line": 16217,
+          "text": "        try:"
+        }
+      ]
+    },
+    {
+      "line": 31542,
+      "end_line": 31543,
+      "scope": "_spina_apply_role_access_modern_sidebar",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 31534,
+          "text": "    if _spina_orig_apply_role_modern_sidebar is not None:"
+        },
+        {
+          "line": 31535,
+          "text": "        def _spina_apply_role_access_modern_sidebar(self, *args, **kwargs):"
+        },
+        {
+          "line": 31536,
+          "text": "            result = _spina_orig_apply_role_modern_sidebar(self, *args, **kwargs)"
+        },
+        {
+          "line": 31537,
+          "text": "            try:"
+        },
+        {
+          "line": 31538,
+          "text": "                self._rebuild_side_nav()"
+        },
+        {
+          "line": 31539,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 31540,
+          "text": "                try:"
+        },
+        {
+          "line": 31541,
+          "text": "                    self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 31542,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 31543,
+          "text": "                    pass"
+        },
+        {
+          "line": 31544,
+          "text": "            return result"
+        },
+        {
+          "line": 31545,
+          "text": "        App.apply_role_access = _spina_apply_role_access_modern_sidebar"
+        },
+        {
+          "line": 31546,
+          "text": "except Exception:"
+        },
+        {
+          "line": 31547,
+          "text": "    pass"
+        },
+        {
+          "line": 31548,
+          "text": "# --- END: Modern sidebar nav refresh after role changes ---"
+        },
+        {
+          "line": 31549,
+          "text": ""
+        },
+        {
+          "line": 31550,
+          "text": "if __name__ == '__main__':"
+        },
+        {
+          "line": 31551,
+          "text": "    # Entry point moved to end of file so runtime patches load first"
+        }
+      ]
+    },
+    {
+      "line": 31546,
+      "end_line": 31547,
+      "scope": "<module>",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 31538,
+          "text": "                self._rebuild_side_nav()"
+        },
+        {
+          "line": 31539,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 31540,
+          "text": "                try:"
+        },
+        {
+          "line": 31541,
+          "text": "                    self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 31542,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 31543,
+          "text": "                    pass"
+        },
+        {
+          "line": 31544,
+          "text": "            return result"
+        },
+        {
+          "line": 31545,
+          "text": "        App.apply_role_access = _spina_apply_role_access_modern_sidebar"
+        },
+        {
+          "line": 31546,
+          "text": "except Exception:"
+        },
+        {
+          "line": 31547,
+          "text": "    pass"
+        },
+        {
+          "line": 31548,
+          "text": "# --- END: Modern sidebar nav refresh after role changes ---"
+        },
+        {
+          "line": 31549,
+          "text": ""
+        },
+        {
+          "line": 31550,
+          "text": "if __name__ == '__main__':"
+        },
+        {
+          "line": 31551,
+          "text": "    # Entry point moved to end of file so runtime patches load first"
+        },
+        {
+          "line": 31552,
+          "text": "    pass"
+        },
+        {
+          "line": 31553,
+          "text": ""
+        },
+        {
+          "line": 31554,
+          "text": "# ====================="
+        },
+        {
+          "line": 31555,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 36019,
+      "end_line": 36020,
+      "scope": "_spina_perf_ensure_indexes",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 36011,
+          "text": "                cur.execute(sql)"
+        },
+        {
+          "line": 36012,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 36013,
+          "text": "                try:"
+        },
+        {
+          "line": 36014,
+          "text": "                    _log_suppressed_once(\"perf_index\", \"performance index creation skipped\", e)"
+        },
+        {
+          "line": 36015,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 36016,
+          "text": "                    pass"
+        },
+        {
+          "line": 36017,
+          "text": "        try:"
+        },
+        {
+          "line": 36018,
+          "text": "            conn.commit()"
+        },
+        {
+          "line": 36019,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 36020,
+          "text": "            pass"
+        },
+        {
+          "line": 36021,
+          "text": "        try:"
+        },
+        {
+          "line": 36022,
+          "text": "            cur.execute(\"PRAGMA optimize\")"
+        },
+        {
+          "line": 36023,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 36024,
+          "text": "            pass"
+        },
+        {
+          "line": 36025,
+          "text": "    except Exception as e:"
+        },
+        {
+          "line": 36026,
+          "text": "        try:"
+        },
+        {
+          "line": 36027,
+          "text": "            _log_suppressed_once(\"perf_indexes_outer\", \"performance index setup failed\", e)"
+        },
+        {
+          "line": 36028,
+          "text": "        except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 36023,
+      "end_line": 36024,
+      "scope": "_spina_perf_ensure_indexes",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 36015,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 36016,
+          "text": "                    pass"
+        },
+        {
+          "line": 36017,
+          "text": "        try:"
+        },
+        {
+          "line": 36018,
+          "text": "            conn.commit()"
+        },
+        {
+          "line": 36019,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 36020,
+          "text": "            pass"
+        },
+        {
+          "line": 36021,
+          "text": "        try:"
+        },
+        {
+          "line": 36022,
+          "text": "            cur.execute(\"PRAGMA optimize\")"
+        },
+        {
+          "line": 36023,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 36024,
+          "text": "            pass"
+        },
+        {
+          "line": 36025,
+          "text": "    except Exception as e:"
+        },
+        {
+          "line": 36026,
+          "text": "        try:"
+        },
+        {
+          "line": 36027,
+          "text": "            _log_suppressed_once(\"perf_indexes_outer\", \"performance index setup failed\", e)"
+        },
+        {
+          "line": 36028,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 36029,
+          "text": "            pass"
+        },
+        {
+          "line": 36030,
+          "text": ""
+        },
+        {
+          "line": 36031,
+          "text": ""
+        },
+        {
+          "line": 36032,
+          "text": "def _spina_perf_norm_lt(v):"
+        }
+      ]
+    },
+    {
+      "line": 37181,
+      "end_line": 37182,
+      "scope": "_spina_dash__fmt_money",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 37173,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 37174,
+          "text": "        return float(default)"
+        },
+        {
+          "line": 37175,
+          "text": ""
+        },
+        {
+          "line": 37176,
+          "text": ""
+        },
+        {
+          "line": 37177,
+          "text": "def _spina_dash__fmt_money(value):"
+        },
+        {
+          "line": 37178,
+          "text": "    try:"
+        },
+        {
+          "line": 37179,
+          "text": "        if 'fmt_currency' in globals() and callable(fmt_currency):"
+        },
+        {
+          "line": 37180,
+          "text": "            return fmt_currency(value)"
+        },
+        {
+          "line": 37181,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 37182,
+          "text": "        pass"
+        },
+        {
+          "line": 37183,
+          "text": "    try:"
+        },
+        {
+          "line": 37184,
+          "text": "        return 'PHP {:,.2f}'.format(float(value or 0))"
+        },
+        {
+          "line": 37185,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 37186,
+          "text": "        return 'PHP 0.00'"
+        },
+        {
+          "line": 37187,
+          "text": ""
+        },
+        {
+          "line": 37188,
+          "text": ""
+        },
+        {
+          "line": 37189,
+          "text": "def _spina_dash__fmt_pct(value):"
+        },
+        {
+          "line": 37190,
+          "text": "    try:"
+        }
+      ]
+    },
+    {
+      "line": 37679,
+      "end_line": 37680,
+      "scope": "_spina_build_dashboard_tab",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 37671,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 37672,
+          "text": "                pass"
+        },
+        {
+          "line": 37673,
+          "text": "        for var in (self.dashboard_loan_filter_var, self.dashboard_status_filter_var, self.dashboard_search_var):"
+        },
+        {
+          "line": 37674,
+          "text": "            try:"
+        },
+        {
+          "line": 37675,
+          "text": "                var.trace_add('write', _bind_refresh)"
+        },
+        {
+          "line": 37676,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 37677,
+          "text": "                try:"
+        },
+        {
+          "line": 37678,
+          "text": "                    var.trace('w', _bind_refresh)"
+        },
+        {
+          "line": 37679,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 37680,
+          "text": "                    pass"
+        },
+        {
+          "line": 37681,
+          "text": ""
+        },
+        {
+          "line": 37682,
+          "text": "        self.refresh_dashboard()"
+        },
+        {
+          "line": 37683,
+          "text": "    except Exception as e:"
+        },
+        {
+          "line": 37684,
+          "text": "        try:"
+        },
+        {
+          "line": 37685,
+          "text": "            _log_exc('build_dashboard_tab', e)"
+        },
+        {
+          "line": 37686,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 37687,
+          "text": "            pass"
+        },
+        {
+          "line": 37688,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 37686,
+      "end_line": 37687,
+      "scope": "_spina_build_dashboard_tab",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 37678,
+          "text": "                    var.trace('w', _bind_refresh)"
+        },
+        {
+          "line": 37679,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 37680,
+          "text": "                    pass"
+        },
+        {
+          "line": 37681,
+          "text": ""
+        },
+        {
+          "line": 37682,
+          "text": "        self.refresh_dashboard()"
+        },
+        {
+          "line": 37683,
+          "text": "    except Exception as e:"
+        },
+        {
+          "line": 37684,
+          "text": "        try:"
+        },
+        {
+          "line": 37685,
+          "text": "            _log_exc('build_dashboard_tab', e)"
+        },
+        {
+          "line": 37686,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 37687,
+          "text": "            pass"
+        },
+        {
+          "line": 37688,
+          "text": ""
+        },
+        {
+          "line": 37689,
+          "text": ""
+        },
+        {
+          "line": 37690,
+          "text": "def _spina_dashboard_visible_rows(self):"
+        },
+        {
+          "line": 37691,
+          "text": "    try:"
+        },
+        {
+          "line": 37692,
+          "text": "        rows = list(getattr(self, '_dashboard_rows', []) or [])"
+        },
+        {
+          "line": 37693,
+          "text": "        loan_filter = str(getattr(self, 'dashboard_loan_filter_var', tk.StringVar(value='All')).get() or 'All')"
+        },
+        {
+          "line": 37694,
+          "text": "        status_filter = str(getattr(self, 'dashboard_status_filter_var', tk.StringVar(value='Finishing Priority')).get() or 'Finishing Priority')"
+        },
+        {
+          "line": 37695,
+          "text": "        search = str(getattr(self, 'dashboard_search_var', tk.StringVar(value='')).get() or '').strip().lower()"
+        }
+      ]
+    },
+    {
+      "line": 37782,
+      "end_line": 37783,
+      "scope": "_spina_refresh_dashboard",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 37774,
+          "text": "            pass"
+        },
+        {
+          "line": 37775,
+          "text": "    except Exception as e:"
+        },
+        {
+          "line": 37776,
+          "text": "        try:"
+        },
+        {
+          "line": 37777,
+          "text": "            _log_exc('refresh_dashboard', e)"
+        },
+        {
+          "line": 37778,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 37779,
+          "text": "            pass"
+        },
+        {
+          "line": 37780,
+          "text": "        try:"
+        },
+        {
+          "line": 37781,
+          "text": "            self.status_var.set('Dashboard refresh failed. See data/spina_app.log.')"
+        },
+        {
+          "line": 37782,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 37783,
+          "text": "            pass"
+        },
+        {
+          "line": 37784,
+          "text": ""
+        },
+        {
+          "line": 37785,
+          "text": ""
+        },
+        {
+          "line": 37786,
+          "text": "def _spina_apply_dashboard_role(self):"
+        },
+        {
+          "line": 37787,
+          "text": "    try:"
+        },
+        {
+          "line": 37788,
+          "text": "        if not hasattr(self, 'nb') or not hasattr(self, 'tab_dashboard'):"
+        },
+        {
+          "line": 37789,
+          "text": "            return"
+        },
+        {
+          "line": 37790,
+          "text": "        role = (getattr(self, 'user_role', '') or 'Admin').strip()"
+        },
+        {
+          "line": 37791,
+          "text": "        if role == 'System':"
+        }
+      ]
+    },
+    {
+      "line": 37794,
+      "end_line": 37795,
+      "scope": "_spina_apply_dashboard_role",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 37786,
+          "text": "def _spina_apply_dashboard_role(self):"
+        },
+        {
+          "line": 37787,
+          "text": "    try:"
+        },
+        {
+          "line": 37788,
+          "text": "        if not hasattr(self, 'nb') or not hasattr(self, 'tab_dashboard'):"
+        },
+        {
+          "line": 37789,
+          "text": "            return"
+        },
+        {
+          "line": 37790,
+          "text": "        role = (getattr(self, 'user_role', '') or 'Admin').strip()"
+        },
+        {
+          "line": 37791,
+          "text": "        if role == 'System':"
+        },
+        {
+          "line": 37792,
+          "text": "            try:"
+        },
+        {
+          "line": 37793,
+          "text": "                self.nb.hide(self.tab_dashboard)"
+        },
+        {
+          "line": 37794,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 37795,
+          "text": "                pass"
+        },
+        {
+          "line": 37796,
+          "text": "            return"
+        },
+        {
+          "line": 37797,
+          "text": "        try:"
+        },
+        {
+          "line": 37798,
+          "text": "            tabs = list(self.nb.tabs())"
+        },
+        {
+          "line": 37799,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 37800,
+          "text": "            tabs = []"
+        },
+        {
+          "line": 37801,
+          "text": "        if str(self.tab_dashboard) not in tabs:"
+        },
+        {
+          "line": 37802,
+          "text": "            try:"
+        },
+        {
+          "line": 37803,
+          "text": "                self.nb.insert(1, self.tab_dashboard, text='Dashboard')"
+        }
+      ]
+    },
+    {
+      "line": 37807,
+      "end_line": 37808,
+      "scope": "_spina_apply_dashboard_role",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 37799,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 37800,
+          "text": "            tabs = []"
+        },
+        {
+          "line": 37801,
+          "text": "        if str(self.tab_dashboard) not in tabs:"
+        },
+        {
+          "line": 37802,
+          "text": "            try:"
+        },
+        {
+          "line": 37803,
+          "text": "                self.nb.insert(1, self.tab_dashboard, text='Dashboard')"
+        },
+        {
+          "line": 37804,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 37805,
+          "text": "                try:"
+        },
+        {
+          "line": 37806,
+          "text": "                    self.nb.add(self.tab_dashboard, text='Dashboard')"
+        },
+        {
+          "line": 37807,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 37808,
+          "text": "                    pass"
+        },
+        {
+          "line": 37809,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 37810,
+          "text": "        pass"
+        },
+        {
+          "line": 37811,
+          "text": ""
+        },
+        {
+          "line": 37812,
+          "text": ""
+        },
+        {
+          "line": 37813,
+          "text": "try:"
+        },
+        {
+          "line": 37814,
+          "text": "    if 'App' in globals():"
+        },
+        {
+          "line": 37815,
+          "text": "        setattr(App, '_build_dashboard_tab', _spina_build_dashboard_tab)"
+        },
+        {
+          "line": 37816,
+          "text": "        setattr(App, 'refresh_dashboard', _spina_refresh_dashboard)"
+        }
+      ]
+    },
+    {
+      "line": 37841,
+      "end_line": 37842,
+      "scope": "_spina_app_init_with_dashboard",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 37833,
+          "text": "        def _spina_app_init_with_dashboard(self, *args, **kwargs):"
+        },
+        {
+          "line": 37834,
+          "text": "            _spina_orig_app_init_dashboard(self, *args, **kwargs)"
+        },
+        {
+          "line": 37835,
+          "text": "            try:"
+        },
+        {
+          "line": 37836,
+          "text": "                self._build_dashboard_tab()"
+        },
+        {
+          "line": 37837,
+          "text": "                _spina_apply_dashboard_role(self)"
+        },
+        {
+          "line": 37838,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 37839,
+          "text": "                try:"
+        },
+        {
+          "line": 37840,
+          "text": "                    _log_exc('dashboard.init_hook', e)"
+        },
+        {
+          "line": 37841,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 37842,
+          "text": "                    pass"
+        },
+        {
+          "line": 37843,
+          "text": "        App.__init__ = _spina_app_init_with_dashboard"
+        },
+        {
+          "line": 37844,
+          "text": ""
+        },
+        {
+          "line": 37845,
+          "text": "        _spina_orig_apply_role_dashboard = getattr(App, 'apply_role_access', None)"
+        },
+        {
+          "line": 37846,
+          "text": "        if callable(_spina_orig_apply_role_dashboard):"
+        },
+        {
+          "line": 37847,
+          "text": "            def _spina_apply_role_access_with_dashboard(self, *args, **kwargs):"
+        },
+        {
+          "line": 37848,
+          "text": "                res = _spina_orig_apply_role_dashboard(self, *args, **kwargs)"
+        },
+        {
+          "line": 37849,
+          "text": "                try:"
+        },
+        {
+          "line": 37850,
+          "text": "                    _spina_apply_dashboard_role(self)"
+        }
+      ]
+    },
+    {
+      "line": 37851,
+      "end_line": 37852,
+      "scope": "_spina_apply_role_access_with_dashboard",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 37843,
+          "text": "        App.__init__ = _spina_app_init_with_dashboard"
+        },
+        {
+          "line": 37844,
+          "text": ""
+        },
+        {
+          "line": 37845,
+          "text": "        _spina_orig_apply_role_dashboard = getattr(App, 'apply_role_access', None)"
+        },
+        {
+          "line": 37846,
+          "text": "        if callable(_spina_orig_apply_role_dashboard):"
+        },
+        {
+          "line": 37847,
+          "text": "            def _spina_apply_role_access_with_dashboard(self, *args, **kwargs):"
+        },
+        {
+          "line": 37848,
+          "text": "                res = _spina_orig_apply_role_dashboard(self, *args, **kwargs)"
+        },
+        {
+          "line": 37849,
+          "text": "                try:"
+        },
+        {
+          "line": 37850,
+          "text": "                    _spina_apply_dashboard_role(self)"
+        },
+        {
+          "line": 37851,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 37852,
+          "text": "                    pass"
+        },
+        {
+          "line": 37853,
+          "text": "                return res"
+        },
+        {
+          "line": 37854,
+          "text": "            App.apply_role_access = _spina_apply_role_access_with_dashboard"
+        },
+        {
+          "line": 37855,
+          "text": ""
+        },
+        {
+          "line": 37856,
+          "text": "        _spina_orig_mode_change_dashboard = getattr(App, '_on_mode_change', None)"
+        },
+        {
+          "line": 37857,
+          "text": "        if callable(_spina_orig_mode_change_dashboard):"
+        },
+        {
+          "line": 37858,
+          "text": "            def _spina_on_mode_change_with_dashboard(self, *args, **kwargs):"
+        },
+        {
+          "line": 37859,
+          "text": "                res = _spina_orig_mode_change_dashboard(self, *args, **kwargs)"
+        },
+        {
+          "line": 37860,
+          "text": "                try:"
+        }
+      ]
+    },
+    {
+      "line": 37862,
+      "end_line": 37863,
+      "scope": "_spina_on_mode_change_with_dashboard",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 37854,
+          "text": "            App.apply_role_access = _spina_apply_role_access_with_dashboard"
+        },
+        {
+          "line": 37855,
+          "text": ""
+        },
+        {
+          "line": 37856,
+          "text": "        _spina_orig_mode_change_dashboard = getattr(App, '_on_mode_change', None)"
+        },
+        {
+          "line": 37857,
+          "text": "        if callable(_spina_orig_mode_change_dashboard):"
+        },
+        {
+          "line": 37858,
+          "text": "            def _spina_on_mode_change_with_dashboard(self, *args, **kwargs):"
+        },
+        {
+          "line": 37859,
+          "text": "                res = _spina_orig_mode_change_dashboard(self, *args, **kwargs)"
+        },
+        {
+          "line": 37860,
+          "text": "                try:"
+        },
+        {
+          "line": 37861,
+          "text": "                    self.refresh_dashboard()"
+        },
+        {
+          "line": 37862,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 37863,
+          "text": "                    pass"
+        },
+        {
+          "line": 37864,
+          "text": "                return res"
+        },
+        {
+          "line": 37865,
+          "text": "            App._on_mode_change = _spina_on_mode_change_with_dashboard"
+        },
+        {
+          "line": 37866,
+          "text": "except Exception as __spina_exc:"
+        },
+        {
+          "line": 37867,
+          "text": "    try:"
+        },
+        {
+          "line": 37868,
+          "text": "        _log_suppressed_once('dashboard_bind_failed', 'dashboard runtime patch failed', __spina_exc)"
+        },
+        {
+          "line": 37869,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 37870,
+          "text": "        pass"
+        },
+        {
+          "line": 37871,
+          "text": "# --- END: Dashboard tab - finishing loans based on latest released date ---"
+        }
+      ]
+    },
+    {
+      "line": 39977,
+      "end_line": 39978,
+      "scope": "_spina_crc_fmt_money",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 39969,
+          "text": "        n = float(_v or 0.0)"
+        },
+        {
+          "line": 39970,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 39971,
+          "text": "        n = 0.0"
+        },
+        {
+          "line": 39972,
+          "text": "    if blank_zero and abs(n) < 0.005:"
+        },
+        {
+          "line": 39973,
+          "text": "        return \"\""
+        },
+        {
+          "line": 39974,
+          "text": "    try:"
+        },
+        {
+          "line": 39975,
+          "text": "        if abs(n - int(n)) < 0.005:"
+        },
+        {
+          "line": 39976,
+          "text": "            return f\"{int(n):,}\""
+        },
+        {
+          "line": 39977,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 39978,
+          "text": "        pass"
+        },
+        {
+          "line": 39979,
+          "text": "    return f\"{n:,.2f}\""
+        },
+        {
+          "line": 39980,
+          "text": ""
+        },
+        {
+          "line": 39981,
+          "text": ""
+        },
+        {
+          "line": 39982,
+          "text": "def _spina_crc_clean_reason(_v):"
+        },
+        {
+          "line": 39983,
+          "text": "    try:"
+        },
+        {
+          "line": 39984,
+          "text": "        s = str(_v or \"\").strip()"
+        },
+        {
+          "line": 39985,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 39986,
+          "text": "        s = \"\""
+        }
+      ]
+    },
+    {
+      "line": 40047,
+      "end_line": 40048,
+      "scope": "_spina_crc_split_area",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 40039,
+          "text": "        out = []"
+        },
+        {
+          "line": 40040,
+          "text": "    return out"
+        },
+        {
+          "line": 40041,
+          "text": ""
+        },
+        {
+          "line": 40042,
+          "text": ""
+        },
+        {
+          "line": 40043,
+          "text": "def _spina_crc_split_area(_area):"
+        },
+        {
+          "line": 40044,
+          "text": "    try:"
+        },
+        {
+          "line": 40045,
+          "text": "        if 'split_area_main_sub' in globals():"
+        },
+        {
+          "line": 40046,
+          "text": "            return split_area_main_sub(_area)"
+        },
+        {
+          "line": 40047,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 40048,
+          "text": "        pass"
+        },
+        {
+          "line": 40049,
+          "text": "    a = str(_area or \"\").strip()"
+        },
+        {
+          "line": 40050,
+          "text": "    for sep in [\" | \", \" / \", \" - \", \" > \", \" : \", \" \u2014 \", \" \u2013 \", \"|\", \"/\", \">\", \":\"]:"
+        },
+        {
+          "line": 40051,
+          "text": "        if sep in a:"
+        },
+        {
+          "line": 40052,
+          "text": "            left, right = a.split(sep, 1)"
+        },
+        {
+          "line": 40053,
+          "text": "            if left.strip() and right.strip():"
+        },
+        {
+          "line": 40054,
+          "text": "                return left.strip(), right.strip()"
+        },
+        {
+          "line": 40055,
+          "text": "    return a, \"\""
+        },
+        {
+          "line": 40056,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 41386,
+      "end_line": 41387,
+      "scope": "_spina_v13_hide_main_notebook_tabs",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41378,
+          "text": "            # Create/refresh a style used only by the main app notebook."
+        },
+        {
+          "line": 41379,
+          "text": "            for sty in ('SideOnly.TNotebook', 'Sidebar.TNotebook'):"
+        },
+        {
+          "line": 41380,
+          "text": "                try:"
+        },
+        {
+          "line": 41381,
+          "text": "                    st.configure(sty, borderwidth=0, tabmargins=(0, 0, 0, 0))"
+        },
+        {
+          "line": 41382,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 41383,
+          "text": "                    pass"
+        },
+        {
+          "line": 41384,
+          "text": "                try:"
+        },
+        {
+          "line": 41385,
+          "text": "                    st.layout(sty + '.Tab', [])"
+        },
+        {
+          "line": 41386,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 41387,
+          "text": "                    pass"
+        },
+        {
+          "line": 41388,
+          "text": "            nb = getattr(self, 'nb', None)"
+        },
+        {
+          "line": 41389,
+          "text": "            if nb is not None:"
+        },
+        {
+          "line": 41390,
+          "text": "                try:"
+        },
+        {
+          "line": 41391,
+          "text": "                    nb.configure(style='SideOnly.TNotebook')"
+        },
+        {
+          "line": 41392,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 41393,
+          "text": "                    try:"
+        },
+        {
+          "line": 41394,
+          "text": "                        nb.configure(style='Sidebar.TNotebook')"
+        },
+        {
+          "line": 41395,
+          "text": "                    except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 41395,
+      "end_line": 41396,
+      "scope": "_spina_v13_hide_main_notebook_tabs",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41387,
+          "text": "                    pass"
+        },
+        {
+          "line": 41388,
+          "text": "            nb = getattr(self, 'nb', None)"
+        },
+        {
+          "line": 41389,
+          "text": "            if nb is not None:"
+        },
+        {
+          "line": 41390,
+          "text": "                try:"
+        },
+        {
+          "line": 41391,
+          "text": "                    nb.configure(style='SideOnly.TNotebook')"
+        },
+        {
+          "line": 41392,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 41393,
+          "text": "                    try:"
+        },
+        {
+          "line": 41394,
+          "text": "                        nb.configure(style='Sidebar.TNotebook')"
+        },
+        {
+          "line": 41395,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 41396,
+          "text": "                        pass"
+        },
+        {
+          "line": 41397,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 41398,
+          "text": "            try:"
+        },
+        {
+          "line": 41399,
+          "text": "                _log_suppressed_once('v13_hide_tabs', 'hide main notebook tabs failed', e)"
+        },
+        {
+          "line": 41400,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 41401,
+          "text": "                pass"
+        },
+        {
+          "line": 41402,
+          "text": ""
+        },
+        {
+          "line": 41403,
+          "text": "    def _spina_v13_side_nav_items(self):"
+        },
+        {
+          "line": 41404,
+          "text": "        \"\"\"Return every visible main notebook pane as a sidebar item.\"\"\""
+        }
+      ]
+    },
+    {
+      "line": 41440,
+      "end_line": 41441,
+      "scope": "_spina_v13_rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41432,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 41433,
+          "text": "                continue"
+        },
+        {
+          "line": 41434,
+          "text": "        return items"
+        },
+        {
+          "line": 41435,
+          "text": ""
+        },
+        {
+          "line": 41436,
+          "text": "    def _spina_v13_rebuild_side_nav(self):"
+        },
+        {
+          "line": 41437,
+          "text": "        \"\"\"Modern sidebar rebuild: all visible tabs live here, no top tab row.\"\"\""
+        },
+        {
+          "line": 41438,
+          "text": "        try:"
+        },
+        {
+          "line": 41439,
+          "text": "            _spina_v13_hide_main_notebook_tabs(self)"
+        },
+        {
+          "line": 41440,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 41441,
+          "text": "            pass"
+        },
+        {
+          "line": 41442,
+          "text": "        frame = getattr(self, 'sidebar_frame', None)"
+        },
+        {
+          "line": 41443,
+          "text": "        if frame is None:"
+        },
+        {
+          "line": 41444,
+          "text": "            return"
+        },
+        {
+          "line": 41445,
+          "text": "        try:"
+        },
+        {
+          "line": 41446,
+          "text": "            for child in frame.winfo_children():"
+        },
+        {
+          "line": 41447,
+          "text": "                child.destroy()"
+        },
+        {
+          "line": 41448,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 41449,
+          "text": "            pass"
+        }
+      ]
+    },
+    {
+      "line": 41448,
+      "end_line": 41449,
+      "scope": "_spina_v13_rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41440,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 41441,
+          "text": "            pass"
+        },
+        {
+          "line": 41442,
+          "text": "        frame = getattr(self, 'sidebar_frame', None)"
+        },
+        {
+          "line": 41443,
+          "text": "        if frame is None:"
+        },
+        {
+          "line": 41444,
+          "text": "            return"
+        },
+        {
+          "line": 41445,
+          "text": "        try:"
+        },
+        {
+          "line": 41446,
+          "text": "            for child in frame.winfo_children():"
+        },
+        {
+          "line": 41447,
+          "text": "                child.destroy()"
+        },
+        {
+          "line": 41448,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 41449,
+          "text": "            pass"
+        },
+        {
+          "line": 41450,
+          "text": ""
+        },
+        {
+          "line": 41451,
+          "text": "        try:"
+        },
+        {
+          "line": 41452,
+          "text": "            p = getattr(self, '_ui_colors', None) or self._theme_palette()"
+        },
+        {
+          "line": 41453,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 41454,
+          "text": "            p = {'bg': '#111217', 'panel': '#181a20', 'fg': '#ffffff', 'muted': '#a9a9b3', 'accent': '#ffd1e6', 'border': '#30323a', 'button_active': '#2a2d36'}"
+        },
+        {
+          "line": 41455,
+          "text": ""
+        },
+        {
+          "line": 41456,
+          "text": "        is_dark = str(getattr(self, 'ui_theme', 'dark')).lower().startswith('d')"
+        },
+        {
+          "line": 41457,
+          "text": "        panel = p.get('panel', '#181a20' if is_dark else '#ffffff')"
+        }
+      ]
+    },
+    {
+      "line": 41465,
+      "end_line": 41466,
+      "scope": "_spina_v13_rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41457,
+          "text": "        panel = p.get('panel', '#181a20' if is_dark else '#ffffff')"
+        },
+        {
+          "line": 41458,
+          "text": "        fg = p.get('fg', '#ffffff' if is_dark else '#1a1a1a')"
+        },
+        {
+          "line": 41459,
+          "text": "        muted = p.get('muted', '#a9a9b3' if is_dark else '#666666')"
+        },
+        {
+          "line": 41460,
+          "text": "        border = p.get('border', '#30323a' if is_dark else '#dddddd')"
+        },
+        {
+          "line": 41461,
+          "text": ""
+        },
+        {
+          "line": 41462,
+          "text": "        try:"
+        },
+        {
+          "line": 41463,
+          "text": "            frame.configure(width=215)"
+        },
+        {
+          "line": 41464,
+          "text": "            frame.pack_propagate(False)"
+        },
+        {
+          "line": 41465,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 41466,
+          "text": "            pass"
+        },
+        {
+          "line": 41467,
+          "text": ""
+        },
+        {
+          "line": 41468,
+          "text": "        self._side_nav_buttons = {}"
+        },
+        {
+          "line": 41469,
+          "text": "        self._side_nav_labels = []"
+        },
+        {
+          "line": 41470,
+          "text": "        family = 'Segoe UI' if os.name == 'nt' else 'TkDefaultFont'"
+        },
+        {
+          "line": 41471,
+          "text": ""
+        },
+        {
+          "line": 41472,
+          "text": "        # Logo / title block"
+        },
+        {
+          "line": 41473,
+          "text": "        try:"
+        },
+        {
+          "line": 41474,
+          "text": "            title = tk.Label(frame, text='SPINA', anchor='w', bg=panel, fg=fg,"
+        }
+      ]
+    },
+    {
+      "line": 41490,
+      "end_line": 41491,
+      "scope": "_spina_v13_rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41482,
+          "text": "                                font=(family, 9), padx=12, pady=0)"
+        },
+        {
+          "line": 41483,
+          "text": "            subtitle.pack(fill='x', pady=(0, 12))"
+        },
+        {
+          "line": 41484,
+          "text": "            self._side_nav_labels.append(subtitle)"
+        },
+        {
+          "line": 41485,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 41486,
+          "text": "            pass"
+        },
+        {
+          "line": 41487,
+          "text": "        try:"
+        },
+        {
+          "line": 41488,
+          "text": "            sep = tk.Frame(frame, bg=border, height=1)"
+        },
+        {
+          "line": 41489,
+          "text": "            sep.pack(fill='x', padx=8, pady=(0, 10))"
+        },
+        {
+          "line": 41490,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 41491,
+          "text": "            pass"
+        },
+        {
+          "line": 41492,
+          "text": ""
+        },
+        {
+          "line": 41493,
+          "text": "        for tab, title, icon in _spina_v13_side_nav_items(self):"
+        },
+        {
+          "line": 41494,
+          "text": "            try:"
+        },
+        {
+          "line": 41495,
+          "text": "                btn = tk.Button("
+        },
+        {
+          "line": 41496,
+          "text": "                    frame,"
+        },
+        {
+          "line": 41497,
+          "text": "                    text=f'  {icon}  {title}',"
+        },
+        {
+          "line": 41498,
+          "text": "                    anchor='w',"
+        },
+        {
+          "line": 41499,
+          "text": "                    relief='flat',"
+        }
+      ]
+    },
+    {
+      "line": 41512,
+      "end_line": 41513,
+      "scope": "_spina_v13_rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41504,
+          "text": "                    font=(family, 10, 'bold'),"
+        },
+        {
+          "line": 41505,
+          "text": "                    command=lambda t=tab: self._select_side_tab(t),"
+        },
+        {
+          "line": 41506,
+          "text": "                )"
+        },
+        {
+          "line": 41507,
+          "text": "                btn.pack(fill='x', pady=3, padx=4)"
+        },
+        {
+          "line": 41508,
+          "text": "                self._side_nav_buttons[str(tab)] = btn"
+        },
+        {
+          "line": 41509,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 41510,
+          "text": "                try:"
+        },
+        {
+          "line": 41511,
+          "text": "                    _log_suppressed_once('v13_side_nav_button', 'sidebar button failed', e)"
+        },
+        {
+          "line": 41512,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 41513,
+          "text": "                    pass"
+        },
+        {
+          "line": 41514,
+          "text": ""
+        },
+        {
+          "line": 41515,
+          "text": "        try:"
+        },
+        {
+          "line": 41516,
+          "text": "            bottom = tk.Frame(frame, bg=panel)"
+        },
+        {
+          "line": 41517,
+          "text": "            bottom.pack(side='bottom', fill='x', pady=(12, 0))"
+        },
+        {
+          "line": 41518,
+          "text": "            try:"
+        },
+        {
+          "line": 41519,
+          "text": "                sep2 = tk.Frame(bottom, bg=border, height=1)"
+        },
+        {
+          "line": 41520,
+          "text": "                sep2.pack(fill='x', padx=8, pady=(0, 8))"
+        },
+        {
+          "line": 41521,
+          "text": "            except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 41521,
+      "end_line": 41522,
+      "scope": "_spina_v13_rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41513,
+          "text": "                    pass"
+        },
+        {
+          "line": 41514,
+          "text": ""
+        },
+        {
+          "line": 41515,
+          "text": "        try:"
+        },
+        {
+          "line": 41516,
+          "text": "            bottom = tk.Frame(frame, bg=panel)"
+        },
+        {
+          "line": 41517,
+          "text": "            bottom.pack(side='bottom', fill='x', pady=(12, 0))"
+        },
+        {
+          "line": 41518,
+          "text": "            try:"
+        },
+        {
+          "line": 41519,
+          "text": "                sep2 = tk.Frame(bottom, bg=border, height=1)"
+        },
+        {
+          "line": 41520,
+          "text": "                sep2.pack(fill='x', padx=8, pady=(0, 8))"
+        },
+        {
+          "line": 41521,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 41522,
+          "text": "                pass"
+        },
+        {
+          "line": 41523,
+          "text": "            role_text = f\"{getattr(self, 'user_name', '')} \u2022 {getattr(self, 'user_role', '')}\".strip(' \u2022')"
+        },
+        {
+          "line": 41524,
+          "text": "            lbl = tk.Label(bottom, text=role_text, anchor='w', bg=panel, fg=muted,"
+        },
+        {
+          "line": 41525,
+          "text": "                           font=(family, 8), padx=12, pady=4, wraplength=175)"
+        },
+        {
+          "line": 41526,
+          "text": "            lbl.pack(fill='x')"
+        },
+        {
+          "line": 41527,
+          "text": "            self._side_nav_labels.append(lbl)"
+        },
+        {
+          "line": 41528,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 41529,
+          "text": "            pass"
+        },
+        {
+          "line": 41530,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 41528,
+      "end_line": 41529,
+      "scope": "_spina_v13_rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41520,
+          "text": "                sep2.pack(fill='x', padx=8, pady=(0, 8))"
+        },
+        {
+          "line": 41521,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 41522,
+          "text": "                pass"
+        },
+        {
+          "line": 41523,
+          "text": "            role_text = f\"{getattr(self, 'user_name', '')} \u2022 {getattr(self, 'user_role', '')}\".strip(' \u2022')"
+        },
+        {
+          "line": 41524,
+          "text": "            lbl = tk.Label(bottom, text=role_text, anchor='w', bg=panel, fg=muted,"
+        },
+        {
+          "line": 41525,
+          "text": "                           font=(family, 8), padx=12, pady=4, wraplength=175)"
+        },
+        {
+          "line": 41526,
+          "text": "            lbl.pack(fill='x')"
+        },
+        {
+          "line": 41527,
+          "text": "            self._side_nav_labels.append(lbl)"
+        },
+        {
+          "line": 41528,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 41529,
+          "text": "            pass"
+        },
+        {
+          "line": 41530,
+          "text": ""
+        },
+        {
+          "line": 41531,
+          "text": "        try:"
+        },
+        {
+          "line": 41532,
+          "text": "            self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 41533,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 41534,
+          "text": "            pass"
+        },
+        {
+          "line": 41535,
+          "text": ""
+        },
+        {
+          "line": 41536,
+          "text": "    def _spina_v13_refresh_side_nav_selection(self):"
+        },
+        {
+          "line": 41537,
+          "text": "        buttons = getattr(self, '_side_nav_buttons', {}) or {}"
+        }
+      ]
+    },
+    {
+      "line": 41533,
+      "end_line": 41534,
+      "scope": "_spina_v13_rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41525,
+          "text": "                           font=(family, 8), padx=12, pady=4, wraplength=175)"
+        },
+        {
+          "line": 41526,
+          "text": "            lbl.pack(fill='x')"
+        },
+        {
+          "line": 41527,
+          "text": "            self._side_nav_labels.append(lbl)"
+        },
+        {
+          "line": 41528,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 41529,
+          "text": "            pass"
+        },
+        {
+          "line": 41530,
+          "text": ""
+        },
+        {
+          "line": 41531,
+          "text": "        try:"
+        },
+        {
+          "line": 41532,
+          "text": "            self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 41533,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 41534,
+          "text": "            pass"
+        },
+        {
+          "line": 41535,
+          "text": ""
+        },
+        {
+          "line": 41536,
+          "text": "    def _spina_v13_refresh_side_nav_selection(self):"
+        },
+        {
+          "line": 41537,
+          "text": "        buttons = getattr(self, '_side_nav_buttons', {}) or {}"
+        },
+        {
+          "line": 41538,
+          "text": "        if not buttons:"
+        },
+        {
+          "line": 41539,
+          "text": "            return"
+        },
+        {
+          "line": 41540,
+          "text": "        try:"
+        },
+        {
+          "line": 41541,
+          "text": "            selected = str(self.nb.select())"
+        },
+        {
+          "line": 41542,
+          "text": "        except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 41564,
+      "end_line": 41565,
+      "scope": "_spina_v13_refresh_side_nav_selection",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41556,
+          "text": "                active = (tid == selected)"
+        },
+        {
+          "line": 41557,
+          "text": "                btn.configure("
+        },
+        {
+          "line": 41558,
+          "text": "                    bg=selected_bg if active else normal_bg,"
+        },
+        {
+          "line": 41559,
+          "text": "                    fg=selected_fg if active else normal_fg,"
+        },
+        {
+          "line": 41560,
+          "text": "                    activebackground=hover_bg,"
+        },
+        {
+          "line": 41561,
+          "text": "                    activeforeground=selected_fg if active else normal_fg,"
+        },
+        {
+          "line": 41562,
+          "text": "                    highlightthickness=0,"
+        },
+        {
+          "line": 41563,
+          "text": "                )"
+        },
+        {
+          "line": 41564,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 41565,
+          "text": "                pass"
+        },
+        {
+          "line": 41566,
+          "text": ""
+        },
+        {
+          "line": 41567,
+          "text": "    if 'App' in globals():"
+        },
+        {
+          "line": 41568,
+          "text": "        # Replace sidebar methods with dynamic all-tabs versions."
+        },
+        {
+          "line": 41569,
+          "text": "        setattr(App, '_side_nav_items', _spina_v13_side_nav_items)"
+        },
+        {
+          "line": 41570,
+          "text": "        setattr(App, '_rebuild_side_nav', _spina_v13_rebuild_side_nav)"
+        },
+        {
+          "line": 41571,
+          "text": "        setattr(App, '_refresh_side_nav_selection', _spina_v13_refresh_side_nav_selection)"
+        },
+        {
+          "line": 41572,
+          "text": "        setattr(App, '_hide_main_notebook_tabs', _spina_v13_hide_main_notebook_tabs)"
+        },
+        {
+          "line": 41573,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 41580,
+      "end_line": 41581,
+      "scope": "_spina_v13_setup_style",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41572,
+          "text": "        setattr(App, '_hide_main_notebook_tabs', _spina_v13_hide_main_notebook_tabs)"
+        },
+        {
+          "line": 41573,
+          "text": ""
+        },
+        {
+          "line": 41574,
+          "text": "        _spina_v13_orig_setup_style = getattr(App, '_setup_style', None)"
+        },
+        {
+          "line": 41575,
+          "text": "        if callable(_spina_v13_orig_setup_style):"
+        },
+        {
+          "line": 41576,
+          "text": "            def _spina_v13_setup_style(self, *args, **kwargs):"
+        },
+        {
+          "line": 41577,
+          "text": "                res = _spina_v13_orig_setup_style(self, *args, **kwargs)"
+        },
+        {
+          "line": 41578,
+          "text": "                try:"
+        },
+        {
+          "line": 41579,
+          "text": "                    _spina_v13_hide_main_notebook_tabs(self)"
+        },
+        {
+          "line": 41580,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 41581,
+          "text": "                    pass"
+        },
+        {
+          "line": 41582,
+          "text": "                return res"
+        },
+        {
+          "line": 41583,
+          "text": "            App._setup_style = _spina_v13_setup_style"
+        },
+        {
+          "line": 41584,
+          "text": ""
+        },
+        {
+          "line": 41585,
+          "text": "        _spina_v13_orig_apply_theme = getattr(App, '_apply_ui_theme', None)"
+        },
+        {
+          "line": 41586,
+          "text": "        if callable(_spina_v13_orig_apply_theme):"
+        },
+        {
+          "line": 41587,
+          "text": "            def _spina_v13_apply_ui_theme(self, *args, **kwargs):"
+        },
+        {
+          "line": 41588,
+          "text": "                res = _spina_v13_orig_apply_theme(self, *args, **kwargs)"
+        },
+        {
+          "line": 41589,
+          "text": "                try:"
+        }
+      ]
+    },
+    {
+      "line": 41592,
+      "end_line": 41593,
+      "scope": "_spina_v13_apply_ui_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41584,
+          "text": ""
+        },
+        {
+          "line": 41585,
+          "text": "        _spina_v13_orig_apply_theme = getattr(App, '_apply_ui_theme', None)"
+        },
+        {
+          "line": 41586,
+          "text": "        if callable(_spina_v13_orig_apply_theme):"
+        },
+        {
+          "line": 41587,
+          "text": "            def _spina_v13_apply_ui_theme(self, *args, **kwargs):"
+        },
+        {
+          "line": 41588,
+          "text": "                res = _spina_v13_orig_apply_theme(self, *args, **kwargs)"
+        },
+        {
+          "line": 41589,
+          "text": "                try:"
+        },
+        {
+          "line": 41590,
+          "text": "                    _spina_v13_hide_main_notebook_tabs(self)"
+        },
+        {
+          "line": 41591,
+          "text": "                    _spina_v13_rebuild_side_nav(self)"
+        },
+        {
+          "line": 41592,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 41593,
+          "text": "                    pass"
+        },
+        {
+          "line": 41594,
+          "text": "                return res"
+        },
+        {
+          "line": 41595,
+          "text": "            App._apply_ui_theme = _spina_v13_apply_ui_theme"
+        },
+        {
+          "line": 41596,
+          "text": ""
+        },
+        {
+          "line": 41597,
+          "text": "        _spina_v13_orig_init = App.__init__"
+        },
+        {
+          "line": 41598,
+          "text": "        def _spina_v13_app_init(self, *args, **kwargs):"
+        },
+        {
+          "line": 41599,
+          "text": "            _spina_v13_orig_init(self, *args, **kwargs)"
+        },
+        {
+          "line": 41600,
+          "text": "            try:"
+        },
+        {
+          "line": 41601,
+          "text": "                _spina_v13_hide_main_notebook_tabs(self)"
+        }
+      ]
+    },
+    {
+      "line": 41602,
+      "end_line": 41603,
+      "scope": "_spina_v13_app_init",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41594,
+          "text": "                return res"
+        },
+        {
+          "line": 41595,
+          "text": "            App._apply_ui_theme = _spina_v13_apply_ui_theme"
+        },
+        {
+          "line": 41596,
+          "text": ""
+        },
+        {
+          "line": 41597,
+          "text": "        _spina_v13_orig_init = App.__init__"
+        },
+        {
+          "line": 41598,
+          "text": "        def _spina_v13_app_init(self, *args, **kwargs):"
+        },
+        {
+          "line": 41599,
+          "text": "            _spina_v13_orig_init(self, *args, **kwargs)"
+        },
+        {
+          "line": 41600,
+          "text": "            try:"
+        },
+        {
+          "line": 41601,
+          "text": "                _spina_v13_hide_main_notebook_tabs(self)"
+        },
+        {
+          "line": 41602,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 41603,
+          "text": "                pass"
+        },
+        {
+          "line": 41604,
+          "text": "            try:"
+        },
+        {
+          "line": 41605,
+          "text": "                _spina_v13_rebuild_side_nav(self)"
+        },
+        {
+          "line": 41606,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 41607,
+          "text": "                pass"
+        },
+        {
+          "line": 41608,
+          "text": "        App.__init__ = _spina_v13_app_init"
+        },
+        {
+          "line": 41609,
+          "text": ""
+        },
+        {
+          "line": 41610,
+          "text": "        _spina_v13_orig_apply_role = getattr(App, 'apply_role_access', None)"
+        },
+        {
+          "line": 41611,
+          "text": "        if callable(_spina_v13_orig_apply_role):"
+        }
+      ]
+    },
+    {
+      "line": 41606,
+      "end_line": 41607,
+      "scope": "_spina_v13_app_init",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41598,
+          "text": "        def _spina_v13_app_init(self, *args, **kwargs):"
+        },
+        {
+          "line": 41599,
+          "text": "            _spina_v13_orig_init(self, *args, **kwargs)"
+        },
+        {
+          "line": 41600,
+          "text": "            try:"
+        },
+        {
+          "line": 41601,
+          "text": "                _spina_v13_hide_main_notebook_tabs(self)"
+        },
+        {
+          "line": 41602,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 41603,
+          "text": "                pass"
+        },
+        {
+          "line": 41604,
+          "text": "            try:"
+        },
+        {
+          "line": 41605,
+          "text": "                _spina_v13_rebuild_side_nav(self)"
+        },
+        {
+          "line": 41606,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 41607,
+          "text": "                pass"
+        },
+        {
+          "line": 41608,
+          "text": "        App.__init__ = _spina_v13_app_init"
+        },
+        {
+          "line": 41609,
+          "text": ""
+        },
+        {
+          "line": 41610,
+          "text": "        _spina_v13_orig_apply_role = getattr(App, 'apply_role_access', None)"
+        },
+        {
+          "line": 41611,
+          "text": "        if callable(_spina_v13_orig_apply_role):"
+        },
+        {
+          "line": 41612,
+          "text": "            def _spina_v13_apply_role_access(self, *args, **kwargs):"
+        },
+        {
+          "line": 41613,
+          "text": "                res = _spina_v13_orig_apply_role(self, *args, **kwargs)"
+        },
+        {
+          "line": 41614,
+          "text": "                try:"
+        },
+        {
+          "line": 41615,
+          "text": "                    _spina_v13_hide_main_notebook_tabs(self)"
+        }
+      ]
+    },
+    {
+      "line": 41616,
+      "end_line": 41617,
+      "scope": "_spina_v13_apply_role_access",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41608,
+          "text": "        App.__init__ = _spina_v13_app_init"
+        },
+        {
+          "line": 41609,
+          "text": ""
+        },
+        {
+          "line": 41610,
+          "text": "        _spina_v13_orig_apply_role = getattr(App, 'apply_role_access', None)"
+        },
+        {
+          "line": 41611,
+          "text": "        if callable(_spina_v13_orig_apply_role):"
+        },
+        {
+          "line": 41612,
+          "text": "            def _spina_v13_apply_role_access(self, *args, **kwargs):"
+        },
+        {
+          "line": 41613,
+          "text": "                res = _spina_v13_orig_apply_role(self, *args, **kwargs)"
+        },
+        {
+          "line": 41614,
+          "text": "                try:"
+        },
+        {
+          "line": 41615,
+          "text": "                    _spina_v13_hide_main_notebook_tabs(self)"
+        },
+        {
+          "line": 41616,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 41617,
+          "text": "                    pass"
+        },
+        {
+          "line": 41618,
+          "text": "                try:"
+        },
+        {
+          "line": 41619,
+          "text": "                    _spina_v13_rebuild_side_nav(self)"
+        },
+        {
+          "line": 41620,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 41621,
+          "text": "                    pass"
+        },
+        {
+          "line": 41622,
+          "text": "                return res"
+        },
+        {
+          "line": 41623,
+          "text": "            App.apply_role_access = _spina_v13_apply_role_access"
+        },
+        {
+          "line": 41624,
+          "text": "except Exception:"
+        },
+        {
+          "line": 41625,
+          "text": "    pass"
+        }
+      ]
+    },
+    {
+      "line": 41620,
+      "end_line": 41621,
+      "scope": "_spina_v13_apply_role_access",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 41612,
+          "text": "            def _spina_v13_apply_role_access(self, *args, **kwargs):"
+        },
+        {
+          "line": 41613,
+          "text": "                res = _spina_v13_orig_apply_role(self, *args, **kwargs)"
+        },
+        {
+          "line": 41614,
+          "text": "                try:"
+        },
+        {
+          "line": 41615,
+          "text": "                    _spina_v13_hide_main_notebook_tabs(self)"
+        },
+        {
+          "line": 41616,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 41617,
+          "text": "                    pass"
+        },
+        {
+          "line": 41618,
+          "text": "                try:"
+        },
+        {
+          "line": 41619,
+          "text": "                    _spina_v13_rebuild_side_nav(self)"
+        },
+        {
+          "line": 41620,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 41621,
+          "text": "                    pass"
+        },
+        {
+          "line": 41622,
+          "text": "                return res"
+        },
+        {
+          "line": 41623,
+          "text": "            App.apply_role_access = _spina_v13_apply_role_access"
+        },
+        {
+          "line": 41624,
+          "text": "except Exception:"
+        },
+        {
+          "line": 41625,
+          "text": "    pass"
+        },
+        {
+          "line": 41626,
+          "text": "# --- END: v13 side-tabs-only UI fix ---"
+        },
+        {
+          "line": 41627,
+          "text": ""
+        },
+        {
+          "line": 41628,
+          "text": ""
+        },
+        {
+          "line": 41629,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 42125,
+      "end_line": 42126,
+      "scope": "_spina_v17_build_dashboard_tab",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 42117,
+          "text": "            try:"
+        },
+        {
+          "line": 42118,
+          "text": "                self.nb.insert(1, self.tab_dashboard, text=\"Dashboard\")"
+        },
+        {
+          "line": 42119,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 42120,
+          "text": "                self.nb.add(self.tab_dashboard, text=\"Dashboard\")"
+        },
+        {
+          "line": 42121,
+          "text": "        else:"
+        },
+        {
+          "line": 42122,
+          "text": "            try:"
+        },
+        {
+          "line": 42123,
+          "text": "                for w in self.tab_dashboard.winfo_children():"
+        },
+        {
+          "line": 42124,
+          "text": "                    w.destroy()"
+        },
+        {
+          "line": 42125,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 42126,
+          "text": "                pass"
+        },
+        {
+          "line": 42127,
+          "text": ""
+        },
+        {
+          "line": 42128,
+          "text": "        colors = _spina_v17_dash_colors(self)"
+        },
+        {
+          "line": 42129,
+          "text": "        self._dash_cards = {}"
+        },
+        {
+          "line": 42130,
+          "text": "        self._dash_filter_buttons = {}"
+        },
+        {
+          "line": 42131,
+          "text": ""
+        },
+        {
+          "line": 42132,
+          "text": "        outer = tk.Frame(self.tab_dashboard, bg=colors[\"bg\"])"
+        },
+        {
+          "line": 42133,
+          "text": "        outer.pack(fill=\"both\", expand=True)"
+        },
+        {
+          "line": 42134,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 42337,
+      "end_line": 42338,
+      "scope": "_spina_v17_build_dashboard_tab.redraw_on_resize",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 42329,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 42330,
+          "text": "            pass"
+        },
+        {
+          "line": 42331,
+          "text": ""
+        },
+        {
+          "line": 42332,
+          "text": "        def redraw_on_resize(_event=None):"
+        },
+        {
+          "line": 42333,
+          "text": "            try:"
+        },
+        {
+          "line": 42334,
+          "text": "                if getattr(self, \"_dash_redraw_after_id\", None):"
+        },
+        {
+          "line": 42335,
+          "text": "                    try:"
+        },
+        {
+          "line": 42336,
+          "text": "                        self.root.after_cancel(self._dash_redraw_after_id)"
+        },
+        {
+          "line": 42337,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 42338,
+          "text": "                        pass"
+        },
+        {
+          "line": 42339,
+          "text": "                self._dash_redraw_after_id = self.root.after(120, lambda: _spina_v17_draw_dashboard_charts(self, _spina_v17_visible_dashboard_rows(self)))"
+        },
+        {
+          "line": 42340,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 42341,
+          "text": "                pass"
+        },
+        {
+          "line": 42342,
+          "text": ""
+        },
+        {
+          "line": 42343,
+          "text": "        for cv in (self.dashboard_gauge_canvas, self.dashboard_status_canvas, self.dashboard_type_canvas):"
+        },
+        {
+          "line": 42344,
+          "text": "            try:"
+        },
+        {
+          "line": 42345,
+          "text": "                cv.bind(\"<Configure>\", redraw_on_resize)"
+        },
+        {
+          "line": 42346,
+          "text": "            except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 42340,
+      "end_line": 42341,
+      "scope": "_spina_v17_build_dashboard_tab.redraw_on_resize",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 42332,
+          "text": "        def redraw_on_resize(_event=None):"
+        },
+        {
+          "line": 42333,
+          "text": "            try:"
+        },
+        {
+          "line": 42334,
+          "text": "                if getattr(self, \"_dash_redraw_after_id\", None):"
+        },
+        {
+          "line": 42335,
+          "text": "                    try:"
+        },
+        {
+          "line": 42336,
+          "text": "                        self.root.after_cancel(self._dash_redraw_after_id)"
+        },
+        {
+          "line": 42337,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 42338,
+          "text": "                        pass"
+        },
+        {
+          "line": 42339,
+          "text": "                self._dash_redraw_after_id = self.root.after(120, lambda: _spina_v17_draw_dashboard_charts(self, _spina_v17_visible_dashboard_rows(self)))"
+        },
+        {
+          "line": 42340,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 42341,
+          "text": "                pass"
+        },
+        {
+          "line": 42342,
+          "text": ""
+        },
+        {
+          "line": 42343,
+          "text": "        for cv in (self.dashboard_gauge_canvas, self.dashboard_status_canvas, self.dashboard_type_canvas):"
+        },
+        {
+          "line": 42344,
+          "text": "            try:"
+        },
+        {
+          "line": 42345,
+          "text": "                cv.bind(\"<Configure>\", redraw_on_resize)"
+        },
+        {
+          "line": 42346,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 42347,
+          "text": "                pass"
+        },
+        {
+          "line": 42348,
+          "text": ""
+        },
+        {
+          "line": 42349,
+          "text": "        _spina_v17_update_filter_buttons(self)"
+        }
+      ]
+    },
+    {
+      "line": 42346,
+      "end_line": 42347,
+      "scope": "_spina_v17_build_dashboard_tab",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 42338,
+          "text": "                        pass"
+        },
+        {
+          "line": 42339,
+          "text": "                self._dash_redraw_after_id = self.root.after(120, lambda: _spina_v17_draw_dashboard_charts(self, _spina_v17_visible_dashboard_rows(self)))"
+        },
+        {
+          "line": 42340,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 42341,
+          "text": "                pass"
+        },
+        {
+          "line": 42342,
+          "text": ""
+        },
+        {
+          "line": 42343,
+          "text": "        for cv in (self.dashboard_gauge_canvas, self.dashboard_status_canvas, self.dashboard_type_canvas):"
+        },
+        {
+          "line": 42344,
+          "text": "            try:"
+        },
+        {
+          "line": 42345,
+          "text": "                cv.bind(\"<Configure>\", redraw_on_resize)"
+        },
+        {
+          "line": 42346,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 42347,
+          "text": "                pass"
+        },
+        {
+          "line": 42348,
+          "text": ""
+        },
+        {
+          "line": 42349,
+          "text": "        _spina_v17_update_filter_buttons(self)"
+        },
+        {
+          "line": 42350,
+          "text": "        self.refresh_dashboard()"
+        },
+        {
+          "line": 42351,
+          "text": ""
+        },
+        {
+          "line": 42352,
+          "text": "    except Exception as e:"
+        },
+        {
+          "line": 42353,
+          "text": "        try:"
+        },
+        {
+          "line": 42354,
+          "text": "            _log_exc(\"v17.build_dashboard_tab\", e)"
+        },
+        {
+          "line": 42355,
+          "text": "        except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 42355,
+      "end_line": 42356,
+      "scope": "_spina_v17_build_dashboard_tab",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 42347,
+          "text": "                pass"
+        },
+        {
+          "line": 42348,
+          "text": ""
+        },
+        {
+          "line": 42349,
+          "text": "        _spina_v17_update_filter_buttons(self)"
+        },
+        {
+          "line": 42350,
+          "text": "        self.refresh_dashboard()"
+        },
+        {
+          "line": 42351,
+          "text": ""
+        },
+        {
+          "line": 42352,
+          "text": "    except Exception as e:"
+        },
+        {
+          "line": 42353,
+          "text": "        try:"
+        },
+        {
+          "line": 42354,
+          "text": "            _log_exc(\"v17.build_dashboard_tab\", e)"
+        },
+        {
+          "line": 42355,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 42356,
+          "text": "            pass"
+        },
+        {
+          "line": 42357,
+          "text": ""
+        },
+        {
+          "line": 42358,
+          "text": ""
+        },
+        {
+          "line": 42359,
+          "text": "def _spina_v17_update_filter_buttons(self):"
+        },
+        {
+          "line": 42360,
+          "text": "    try:"
+        },
+        {
+          "line": 42361,
+          "text": "        colors = _spina_v17_dash_colors(self)"
+        },
+        {
+          "line": 42362,
+          "text": "        cur = str(getattr(self, \"dashboard_loan_filter_var\", tk.StringVar(value=\"All\")).get() or \"All\")"
+        },
+        {
+          "line": 42363,
+          "text": "        for key, btn in (getattr(self, \"_dash_filter_buttons\", {}) or {}).items():"
+        },
+        {
+          "line": 42364,
+          "text": "            if key == cur:"
+        }
+      ]
+    },
+    {
+      "line": 42368,
+      "end_line": 42369,
+      "scope": "_spina_v17_update_filter_buttons",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 42360,
+          "text": "    try:"
+        },
+        {
+          "line": 42361,
+          "text": "        colors = _spina_v17_dash_colors(self)"
+        },
+        {
+          "line": 42362,
+          "text": "        cur = str(getattr(self, \"dashboard_loan_filter_var\", tk.StringVar(value=\"All\")).get() or \"All\")"
+        },
+        {
+          "line": 42363,
+          "text": "        for key, btn in (getattr(self, \"_dash_filter_buttons\", {}) or {}).items():"
+        },
+        {
+          "line": 42364,
+          "text": "            if key == cur:"
+        },
+        {
+          "line": 42365,
+          "text": "                btn.configure(bg=colors[\"accent\"], fg=\"#ffffff\", activebackground=colors[\"accent\"], activeforeground=\"#ffffff\")"
+        },
+        {
+          "line": 42366,
+          "text": "            else:"
+        },
+        {
+          "line": 42367,
+          "text": "                btn.configure(bg=colors[\"card2\"], fg=colors[\"fg\"], activebackground=colors[\"soft\"], activeforeground=colors[\"fg\"])"
+        },
+        {
+          "line": 42368,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 42369,
+          "text": "        pass"
+        },
+        {
+          "line": 42370,
+          "text": ""
+        },
+        {
+          "line": 42371,
+          "text": ""
+        },
+        {
+          "line": 42372,
+          "text": "def _spina_v17_set_card(self, key, value, subtitle=None):"
+        },
+        {
+          "line": 42373,
+          "text": "    try:"
+        },
+        {
+          "line": 42374,
+          "text": "        val_lbl, sub_lbl = (getattr(self, \"_dash_cards\", {}) or {}).get(key, (None, None))"
+        },
+        {
+          "line": 42375,
+          "text": "        if val_lbl is not None:"
+        },
+        {
+          "line": 42376,
+          "text": "            val_lbl.configure(text=str(value))"
+        },
+        {
+          "line": 42377,
+          "text": "        if subtitle is not None and sub_lbl is not None:"
+        }
+      ]
+    },
+    {
+      "line": 42379,
+      "end_line": 42380,
+      "scope": "_spina_v17_set_card",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 42371,
+          "text": ""
+        },
+        {
+          "line": 42372,
+          "text": "def _spina_v17_set_card(self, key, value, subtitle=None):"
+        },
+        {
+          "line": 42373,
+          "text": "    try:"
+        },
+        {
+          "line": 42374,
+          "text": "        val_lbl, sub_lbl = (getattr(self, \"_dash_cards\", {}) or {}).get(key, (None, None))"
+        },
+        {
+          "line": 42375,
+          "text": "        if val_lbl is not None:"
+        },
+        {
+          "line": 42376,
+          "text": "            val_lbl.configure(text=str(value))"
+        },
+        {
+          "line": 42377,
+          "text": "        if subtitle is not None and sub_lbl is not None:"
+        },
+        {
+          "line": 42378,
+          "text": "            sub_lbl.configure(text=str(subtitle))"
+        },
+        {
+          "line": 42379,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 42380,
+          "text": "        pass"
+        },
+        {
+          "line": 42381,
+          "text": ""
+        },
+        {
+          "line": 42382,
+          "text": ""
+        },
+        {
+          "line": 42383,
+          "text": "def _spina_v17_draw_dashboard_charts(self, rows):"
+        },
+        {
+          "line": 42384,
+          "text": "    try:"
+        },
+        {
+          "line": 42385,
+          "text": "        colors = _spina_v17_dash_colors(self)"
+        },
+        {
+          "line": 42386,
+          "text": "        rows = list(rows or [])"
+        },
+        {
+          "line": 42387,
+          "text": ""
+        },
+        {
+          "line": 42388,
+          "text": "        total = sum(float(r.get(\"total_to_pay\") or 0) for r in rows)"
+        }
+      ]
+    },
+    {
+      "line": 42692,
+      "end_line": 42693,
+      "scope": "_spina_v18_patch_dashboard_chart_cards",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 42684,
+          "text": "            if cv is not None:"
+        },
+        {
+          "line": 42685,
+          "text": "                cv.configure(bg=p[\"chart\"], highlightthickness=0, bd=0)"
+        },
+        {
+          "line": 42686,
+          "text": "                try:"
+        },
+        {
+          "line": 42687,
+          "text": "                    parent = cv.master"
+        },
+        {
+          "line": 42688,
+          "text": "                    parent.configure(bg=p[\"panel\"], highlightbackground=p[\"border\"])"
+        },
+        {
+          "line": 42689,
+          "text": "                    for child in parent.winfo_children():"
+        },
+        {
+          "line": 42690,
+          "text": "                        if isinstance(child, tk.Label):"
+        },
+        {
+          "line": 42691,
+          "text": "                            child.configure(bg=p[\"panel\"], fg=p[\"fg\"])"
+        },
+        {
+          "line": 42692,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 42693,
+          "text": "                    pass"
+        },
+        {
+          "line": 42694,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 42695,
+          "text": "        pass"
+        },
+        {
+          "line": 42696,
+          "text": ""
+        },
+        {
+          "line": 42697,
+          "text": ""
+        },
+        {
+          "line": 42698,
+          "text": "def _spina_v18_draw_round_rect(cv, x1, y1, x2, y2, r=14, **kwargs):"
+        },
+        {
+          "line": 42699,
+          "text": "    \"\"\"Canvas rounded rectangle fallback using polygon smoothing.\"\"\""
+        },
+        {
+          "line": 42700,
+          "text": "    try:"
+        },
+        {
+          "line": 42701,
+          "text": "        points = ["
+        }
+      ]
+    },
+    {
+      "line": 42694,
+      "end_line": 42695,
+      "scope": "_spina_v18_patch_dashboard_chart_cards",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 42686,
+          "text": "                try:"
+        },
+        {
+          "line": 42687,
+          "text": "                    parent = cv.master"
+        },
+        {
+          "line": 42688,
+          "text": "                    parent.configure(bg=p[\"panel\"], highlightbackground=p[\"border\"])"
+        },
+        {
+          "line": 42689,
+          "text": "                    for child in parent.winfo_children():"
+        },
+        {
+          "line": 42690,
+          "text": "                        if isinstance(child, tk.Label):"
+        },
+        {
+          "line": 42691,
+          "text": "                            child.configure(bg=p[\"panel\"], fg=p[\"fg\"])"
+        },
+        {
+          "line": 42692,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 42693,
+          "text": "                    pass"
+        },
+        {
+          "line": 42694,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 42695,
+          "text": "        pass"
+        },
+        {
+          "line": 42696,
+          "text": ""
+        },
+        {
+          "line": 42697,
+          "text": ""
+        },
+        {
+          "line": 42698,
+          "text": "def _spina_v18_draw_round_rect(cv, x1, y1, x2, y2, r=14, **kwargs):"
+        },
+        {
+          "line": 42699,
+          "text": "    \"\"\"Canvas rounded rectangle fallback using polygon smoothing.\"\"\""
+        },
+        {
+          "line": 42700,
+          "text": "    try:"
+        },
+        {
+          "line": 42701,
+          "text": "        points = ["
+        },
+        {
+          "line": 42702,
+          "text": "            x1+r, y1, x2-r, y1, x2, y1, x2, y1+r,"
+        },
+        {
+          "line": 42703,
+          "text": "            x2, y2-r, x2, y2, x2-r, y2, x1+r, y2,"
+        }
+      ]
+    },
+    {
+      "line": 45972,
+      "end_line": 45973,
+      "scope": "_spina_v24_cilog_set_card",
+      "handler": "Exception",
+      "protected_context": false,
+      "severity": "review_candidate",
+      "context": [
+        {
+          "line": 45964,
+          "text": ""
+        },
+        {
+          "line": 45965,
+          "text": "def _spina_v24_cilog_set_card(self, key, value, subtitle=None):"
+        },
+        {
+          "line": 45966,
+          "text": "    try:"
+        },
+        {
+          "line": 45967,
+          "text": "        val_lbl, sub_lbl = (getattr(self, \"_cilog_cards\", {}) or {}).get(key, (None, None))"
+        },
+        {
+          "line": 45968,
+          "text": "        if val_lbl is not None:"
+        },
+        {
+          "line": 45969,
+          "text": "            val_lbl.configure(text=str(value))"
+        },
+        {
+          "line": 45970,
+          "text": "        if subtitle is not None and sub_lbl is not None:"
+        },
+        {
+          "line": 45971,
+          "text": "            sub_lbl.configure(text=str(subtitle))"
+        },
+        {
+          "line": 45972,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 45973,
+          "text": "        pass"
+        },
+        {
+          "line": 45974,
+          "text": ""
+        },
+        {
+          "line": 45975,
+          "text": ""
+        },
+        {
+          "line": 45976,
+          "text": "def _spina_v24_cilog_update_cards(self, view_rows, all_rows=None):"
+        },
+        {
+          "line": 45977,
+          "text": "    try:"
+        },
+        {
+          "line": 45978,
+          "text": "        all_rows = list(all_rows if all_rows is not None else getattr(self, \"_spina_cilog_all_rows\", []) or [])"
+        },
+        {
+          "line": 45979,
+          "text": "        view_rows = list(view_rows or [])"
+        },
+        {
+          "line": 45980,
+          "text": "        vstats = _spina_v24_cilog_stats(view_rows)"
+        },
+        {
+          "line": 45981,
+          "text": "        astats = _spina_v24_cilog_stats(all_rows)"
+        }
+      ]
+    },
+    {
+      "line": 30,
+      "end_line": 31,
+      "scope": "_spina_early_log",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 22,
+          "text": ""
+        },
+        {
+          "line": 23,
+          "text": "import os, sqlite3"
+        },
+        {
+          "line": 24,
+          "text": ""
+        },
+        {
+          "line": 25,
+          "text": ""
+        },
+        {
+          "line": 26,
+          "text": "# Early fallback used only during module setup, before the full logger exists."
+        },
+        {
+          "line": 27,
+          "text": "def _spina_early_log(context, exc=None):"
+        },
+        {
+          "line": 28,
+          "text": "    try:"
+        },
+        {
+          "line": 29,
+          "text": "        print(f\"[SPINA][EARLY] {context}: {exc}\")"
+        },
+        {
+          "line": 30,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 31,
+          "text": "        pass"
+        },
+        {
+          "line": 32,
+          "text": ""
+        },
+        {
+          "line": 33,
+          "text": ""
+        },
+        {
+          "line": 34,
+          "text": "# ============================================================================="
+        },
+        {
+          "line": 35,
+          "text": "# POSTGRESQL TEST MODE (generated by ChatGPT)"
+        },
+        {
+          "line": 36,
+          "text": "# ============================================================================="
+        },
+        {
+          "line": 37,
+          "text": "# This copy is intentionally a TEST build. It connects to PostgreSQL instead of"
+        },
+        {
+          "line": 38,
+          "text": "# SQLite, while keeping many SQLite-style SQL statements working through a small"
+        },
+        {
+          "line": 39,
+          "text": "# compatibility layer."
+        }
+      ]
+    },
+    {
+      "line": 161,
+      "end_line": 162,
+      "scope": "_spina_pg_storage_log",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 153,
+          "text": ""
+        },
+        {
+          "line": 154,
+          "text": "def _spina_pg_storage_log(context, exc=None):"
+        },
+        {
+          "line": 155,
+          "text": "    try:"
+        },
+        {
+          "line": 156,
+          "text": "        # _log_suppressed_once is defined later in the file; use it if available."
+        },
+        {
+          "line": 157,
+          "text": "        if '_log_suppressed_once' in globals():"
+        },
+        {
+          "line": 158,
+          "text": "            _log_suppressed_once('pg_storage_' + str(context), 'pg storage: ' + str(context), exc)"
+        },
+        {
+          "line": 159,
+          "text": "        else:"
+        },
+        {
+          "line": 160,
+          "text": "            print('[SPINA][PG_STORAGE]', context, exc)"
+        },
+        {
+          "line": 161,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 162,
+          "text": "        pass"
+        },
+        {
+          "line": 163,
+          "text": ""
+        },
+        {
+          "line": 164,
+          "text": ""
+        },
+        {
+          "line": 165,
+          "text": "def _spina_pg_ensure_storage_schema():"
+        },
+        {
+          "line": 166,
+          "text": "    global _SPINA_PG_STORAGE_READY"
+        },
+        {
+          "line": 167,
+          "text": "    if _SPINA_PG_STORAGE_READY:"
+        },
+        {
+          "line": 168,
+          "text": "        return True"
+        },
+        {
+          "line": 169,
+          "text": "    if not _spina_pg_storage_enabled():"
+        },
+        {
+          "line": 170,
+          "text": "        return False"
+        }
+      ]
+    },
+    {
+      "line": 346,
+      "end_line": 347,
+      "scope": "_spina_pg_store_file_to_db",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 338,
+          "text": "            _st = os.stat(p)"
+        },
+        {
+          "line": 339,
+          "text": "            _cache_sig = (int(getattr(_st, 'st_mtime_ns', int(_st.st_mtime * 1_000_000_000))), int(_st.st_size))"
+        },
+        {
+          "line": 340,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 341,
+          "text": "            _cache_sig = None"
+        },
+        {
+          "line": 342,
+          "text": "        try:"
+        },
+        {
+          "line": 343,
+          "text": "            _cached = _SPINA_PG_FILE_STORE_CACHE.get(p)"
+        },
+        {
+          "line": 344,
+          "text": "            if _cache_sig is not None and _cached and _cached[:2] == _cache_sig:"
+        },
+        {
+          "line": 345,
+          "text": "                return _cached[2]"
+        },
+        {
+          "line": 346,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 347,
+          "text": "            pass"
+        },
+        {
+          "line": 348,
+          "text": ""
+        },
+        {
+          "line": 349,
+          "text": "        with open(p, 'rb') as f:"
+        },
+        {
+          "line": 350,
+          "text": "            data = f.read()"
+        },
+        {
+          "line": 351,
+          "text": "        if not data:"
+        },
+        {
+          "line": 352,
+          "text": "            return None"
+        },
+        {
+          "line": 353,
+          "text": "        import mimetypes"
+        },
+        {
+          "line": 354,
+          "text": "        digest = _spina_pg_sha256(data)"
+        },
+        {
+          "line": 355,
+          "text": "        rel = _spina_pg_relpath(p)"
+        }
+      ]
+    },
+    {
+      "line": 390,
+      "end_line": 391,
+      "scope": "_spina_pg_store_file_to_db",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 382,
+          "text": "                    (ft, client_uid, person_uid, loan_type, col, rd, os.path.basename(p), rel, mime, ext, len(data), digest, data)"
+        },
+        {
+          "line": 383,
+          "text": "                )"
+        },
+        {
+          "line": 384,
+          "text": "                row = cur.fetchone()"
+        },
+        {
+          "line": 385,
+          "text": "            conn.commit()"
+        },
+        {
+          "line": 386,
+          "text": "        _stored_id = row[0] if row else None"
+        },
+        {
+          "line": 387,
+          "text": "        try:"
+        },
+        {
+          "line": 388,
+          "text": "            if _stored_id is not None and _cache_sig is not None:"
+        },
+        {
+          "line": 389,
+          "text": "                _SPINA_PG_FILE_STORE_CACHE[p] = (_cache_sig[0], _cache_sig[1], _stored_id)"
+        },
+        {
+          "line": 390,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 391,
+          "text": "            pass"
+        },
+        {
+          "line": 392,
+          "text": "        return _stored_id"
+        },
+        {
+          "line": 393,
+          "text": "    except Exception as e:"
+        },
+        {
+          "line": 394,
+          "text": "        _spina_pg_storage_log('store_file', e)"
+        },
+        {
+          "line": 395,
+          "text": "        return None"
+        },
+        {
+          "line": 396,
+          "text": ""
+        },
+        {
+          "line": 397,
+          "text": ""
+        },
+        {
+          "line": 398,
+          "text": "def _spina_pg_store_client_picture_to_db(src_path, client_uid='', person_uid='', loan_type=''):"
+        },
+        {
+          "line": 399,
+          "text": "    if not _spina_pg_ensure_storage_schema():"
+        }
+      ]
+    },
+    {
+      "line": 479,
+      "end_line": 480,
+      "scope": "_spina_pg_restore_client_picture_to_cache",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 471,
+          "text": "                row = cur.fetchone()"
+        },
+        {
+          "line": 472,
+          "text": "        if not row:"
+        },
+        {
+          "line": 473,
+          "text": "            return ''"
+        },
+        {
+          "line": 474,
+          "text": "        original_filename, file_ext, image_bytes = row"
+        },
+        {
+          "line": 475,
+          "text": "        ext = str(file_ext or os.path.splitext(str(original_filename or ''))[1] or '.png')"
+        },
+        {
+          "line": 476,
+          "text": "        cache_dir = os.path.join(_spina_pg_app_dir(), 'data', 'pg_cache', 'client_pictures')"
+        },
+        {
+          "line": 477,
+          "text": "        try:"
+        },
+        {
+          "line": 478,
+          "text": "            os.makedirs(cache_dir, exist_ok=True)"
+        },
+        {
+          "line": 479,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 480,
+          "text": "            pass"
+        },
+        {
+          "line": 481,
+          "text": "        out_path = os.path.join(cache_dir, f'{pic_id}{ext}')"
+        },
+        {
+          "line": 482,
+          "text": "        try:"
+        },
+        {
+          "line": 483,
+          "text": "            if os.path.exists(out_path) and os.path.getsize(out_path) == len(image_bytes):"
+        },
+        {
+          "line": 484,
+          "text": "                return out_path"
+        },
+        {
+          "line": 485,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 486,
+          "text": "            pass"
+        },
+        {
+          "line": 487,
+          "text": "        with open(out_path, 'wb') as f:"
+        },
+        {
+          "line": 488,
+          "text": "            f.write(bytes(image_bytes))"
+        }
+      ]
+    },
+    {
+      "line": 485,
+      "end_line": 486,
+      "scope": "_spina_pg_restore_client_picture_to_cache",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 477,
+          "text": "        try:"
+        },
+        {
+          "line": 478,
+          "text": "            os.makedirs(cache_dir, exist_ok=True)"
+        },
+        {
+          "line": 479,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 480,
+          "text": "            pass"
+        },
+        {
+          "line": 481,
+          "text": "        out_path = os.path.join(cache_dir, f'{pic_id}{ext}')"
+        },
+        {
+          "line": 482,
+          "text": "        try:"
+        },
+        {
+          "line": 483,
+          "text": "            if os.path.exists(out_path) and os.path.getsize(out_path) == len(image_bytes):"
+        },
+        {
+          "line": 484,
+          "text": "                return out_path"
+        },
+        {
+          "line": 485,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 486,
+          "text": "            pass"
+        },
+        {
+          "line": 487,
+          "text": "        with open(out_path, 'wb') as f:"
+        },
+        {
+          "line": 488,
+          "text": "            f.write(bytes(image_bytes))"
+        },
+        {
+          "line": 489,
+          "text": "        return out_path"
+        },
+        {
+          "line": 490,
+          "text": "    except Exception as e:"
+        },
+        {
+          "line": 491,
+          "text": "        _spina_pg_storage_log('restore_client_picture', e)"
+        },
+        {
+          "line": 492,
+          "text": "        return ''"
+        },
+        {
+          "line": 493,
+          "text": ""
+        },
+        {
+          "line": 494,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 549,
+      "end_line": 550,
+      "scope": "_spina_pg_normalize_value",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 541,
+          "text": ""
+        },
+        {
+          "line": 542,
+          "text": ""
+        },
+        {
+          "line": 543,
+          "text": ""
+        },
+        {
+          "line": 544,
+          "text": "def _spina_pg_normalize_value(v):"
+        },
+        {
+          "line": 545,
+          "text": "    \"\"\"Convert PostgreSQL-returned values into SQLite-like values.\"\"\""
+        },
+        {
+          "line": 546,
+          "text": "    try:"
+        },
+        {
+          "line": 547,
+          "text": "        if isinstance(v, _spina_decimal.Decimal):"
+        },
+        {
+          "line": 548,
+          "text": "            return float(v)"
+        },
+        {
+          "line": 549,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 550,
+          "text": "        pass"
+        },
+        {
+          "line": 551,
+          "text": "    return v"
+        },
+        {
+          "line": 552,
+          "text": ""
+        },
+        {
+          "line": 553,
+          "text": ""
+        },
+        {
+          "line": 554,
+          "text": "class _PgCompatRow(dict):"
+        },
+        {
+          "line": 555,
+          "text": "    \"\"\"SQLite Row-like object: supports row['name'], row[0], dict(row), row.get().\"\"\""
+        },
+        {
+          "line": 556,
+          "text": "    __slots__ = (\"_columns\", \"_values\")"
+        },
+        {
+          "line": 557,
+          "text": ""
+        },
+        {
+          "line": 558,
+          "text": "    def __init__(self, columns, values):"
+        }
+      ]
+    },
+    {
+      "line": 782,
+      "end_line": 783,
+      "scope": "_PgCompatCursor.execute",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 774,
+          "text": "            self._idx = 0"
+        },
+        {
+          "line": 775,
+          "text": "            # The application never reads cursor.lastrowid. Avoid SELECT lastval()"
+        },
+        {
+          "line": 776,
+          "text": "            # after every INSERT, which previously doubled INSERT round trips."
+        },
+        {
+          "line": 777,
+          "text": "            self.lastrowid = None"
+        },
+        {
+          "line": 778,
+          "text": "            return self"
+        },
+        {
+          "line": 779,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 780,
+          "text": "            try:"
+        },
+        {
+          "line": 781,
+          "text": "                self._conn._pg.rollback()"
+        },
+        {
+          "line": 782,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 783,
+          "text": "                pass"
+        },
+        {
+          "line": 784,
+          "text": "            _spina_pg_raise_sqlite_like(e)"
+        },
+        {
+          "line": 785,
+          "text": ""
+        },
+        {
+          "line": 786,
+          "text": "    def executemany(self, sql, seq_of_params):"
+        },
+        {
+          "line": 787,
+          "text": "        translated = _spina_pg_sql(str(sql or \"\"))"
+        },
+        {
+          "line": 788,
+          "text": "        if translated is None:"
+        },
+        {
+          "line": 789,
+          "text": "            self.rowcount = 0"
+        },
+        {
+          "line": 790,
+          "text": "            return self"
+        },
+        {
+          "line": 791,
+          "text": "        try:"
+        }
+      ]
+    },
+    {
+      "line": 798,
+      "end_line": 799,
+      "scope": "_PgCompatCursor.executemany",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 790,
+          "text": "            return self"
+        },
+        {
+          "line": 791,
+          "text": "        try:"
+        },
+        {
+          "line": 792,
+          "text": "            self._cur.executemany(translated, list(seq_of_params or []))"
+        },
+        {
+          "line": 793,
+          "text": "            self.rowcount = self._cur.rowcount"
+        },
+        {
+          "line": 794,
+          "text": "            return self"
+        },
+        {
+          "line": 795,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 796,
+          "text": "            try:"
+        },
+        {
+          "line": 797,
+          "text": "                self._conn._pg.rollback()"
+        },
+        {
+          "line": 798,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 799,
+          "text": "                pass"
+        },
+        {
+          "line": 800,
+          "text": "            _spina_pg_raise_sqlite_like(e)"
+        },
+        {
+          "line": 801,
+          "text": ""
+        },
+        {
+          "line": 802,
+          "text": "    def fetchone(self):"
+        },
+        {
+          "line": 803,
+          "text": "        if self._rows is not None:"
+        },
+        {
+          "line": 804,
+          "text": "            if self._idx >= len(self._rows):"
+        },
+        {
+          "line": 805,
+          "text": "                return None"
+        },
+        {
+          "line": 806,
+          "text": "            r = self._rows[self._idx]"
+        },
+        {
+          "line": 807,
+          "text": "            self._idx += 1"
+        }
+      ]
+    },
+    {
+      "line": 900,
+      "end_line": 901,
+      "scope": "_spina_pg_raise_sqlite_like",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 892,
+          "text": "        if isinstance(e, psycopg.errors.UniqueViolation):"
+        },
+        {
+          "line": 893,
+          "text": "            raise sqlite3.IntegrityError(msg)"
+        },
+        {
+          "line": 894,
+          "text": "        if isinstance(e, psycopg.OperationalError):"
+        },
+        {
+          "line": 895,
+          "text": "            raise sqlite3.OperationalError(msg)"
+        },
+        {
+          "line": 896,
+          "text": "        if isinstance(e, psycopg.Error):"
+        },
+        {
+          "line": 897,
+          "text": "            raise sqlite3.DatabaseError(msg)"
+        },
+        {
+          "line": 898,
+          "text": "    except sqlite3.Error:"
+        },
+        {
+          "line": 899,
+          "text": "        raise"
+        },
+        {
+          "line": 900,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 901,
+          "text": "        pass"
+        },
+        {
+          "line": 902,
+          "text": "    raise e"
+        },
+        {
+          "line": 903,
+          "text": ""
+        },
+        {
+          "line": 904,
+          "text": ""
+        },
+        {
+          "line": 905,
+          "text": "def _spina_pg_connect_db(path=None):"
+        },
+        {
+          "line": 906,
+          "text": "    return _PgCompatConnection()"
+        },
+        {
+          "line": 907,
+          "text": ""
+        },
+        {
+          "line": 908,
+          "text": "# ============================================================================="
+        },
+        {
+          "line": 909,
+          "text": "# END POSTGRESQL TEST MODE"
+        }
+      ]
+    },
+    {
+      "line": 948,
+      "end_line": 949,
+      "scope": "_read_json_file",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 940,
+          "text": "}"
+        },
+        {
+          "line": 941,
+          "text": ""
+        },
+        {
+          "line": 942,
+          "text": "def _read_json_file(path: str) -> dict:"
+        },
+        {
+          "line": 943,
+          "text": "    # V9: PostgreSQL is checked first for JSON/settings; local file is fallback."
+        },
+        {
+          "line": 944,
+          "text": "    try:"
+        },
+        {
+          "line": 945,
+          "text": "        obj_db = _spina_pg_read_json(path)"
+        },
+        {
+          "line": 946,
+          "text": "        if isinstance(obj_db, dict):"
+        },
+        {
+          "line": 947,
+          "text": "            return obj_db"
+        },
+        {
+          "line": 948,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 949,
+          "text": "        pass"
+        },
+        {
+          "line": 950,
+          "text": "    try:"
+        },
+        {
+          "line": 951,
+          "text": "        import json"
+        },
+        {
+          "line": 952,
+          "text": "        with open(path, \"r\", encoding=\"utf-8\") as f:"
+        },
+        {
+          "line": 953,
+          "text": "            obj = json.load(f)"
+        },
+        {
+          "line": 954,
+          "text": "        return obj if isinstance(obj, dict) else {}"
+        },
+        {
+          "line": 955,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 956,
+          "text": "        return {}"
+        },
+        {
+          "line": 957,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 1203,
+      "end_line": 1204,
+      "scope": "_open_path",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 1195,
+          "text": "    v29 fix:"
+        },
+        {
+          "line": 1196,
+          "text": "    Python 3.14 on Windows can crash hard with os.startfile() in some Tk/PDF"
+        },
+        {
+          "line": 1197,
+          "text": "    workflows. Use subprocess instead so PDF generation does not close the app."
+        },
+        {
+          "line": 1198,
+          "text": "    \"\"\""
+        },
+        {
+          "line": 1199,
+          "text": "    try:"
+        },
+        {
+          "line": 1200,
+          "text": "        # V9: any PDF/image opened by the app is also mirrored into PostgreSQL."
+        },
+        {
+          "line": 1201,
+          "text": "        try:"
+        },
+        {
+          "line": 1202,
+          "text": "            _spina_pg_store_file_to_db(_p)"
+        },
+        {
+          "line": 1203,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 1204,
+          "text": "            pass"
+        },
+        {
+          "line": 1205,
+          "text": ""
+        },
+        {
+          "line": 1206,
+          "text": "        _p = os.path.abspath(str(_p or \"\"))"
+        },
+        {
+          "line": 1207,
+          "text": "        if not _p:"
+        },
+        {
+          "line": 1208,
+          "text": "            return False"
+        },
+        {
+          "line": 1209,
+          "text": ""
+        },
+        {
+          "line": 1210,
+          "text": "        if sys.platform.startswith(\"win\"):"
+        },
+        {
+          "line": 1211,
+          "text": "            try:"
+        },
+        {
+          "line": 1212,
+          "text": "                flags = 0"
+        }
+      ]
+    },
+    {
+      "line": 1309,
+      "end_line": 1310,
+      "scope": "_log_suppressed_once",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 1301,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 1302,
+          "text": "        # Never call this function recursively from its own failure path."
+        },
+        {
+          "line": 1303,
+          "text": "        k = str(context or \"suppressed\")"
+        },
+        {
+          "line": 1304,
+          "text": "    try:"
+        },
+        {
+          "line": 1305,
+          "text": "        _log_exc(context, exc)"
+        },
+        {
+          "line": 1306,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 1307,
+          "text": "        try:"
+        },
+        {
+          "line": 1308,
+          "text": "            print(f\"[SPINA][SUPPRESSED] {context}: {exc}\", file=sys.stderr)"
+        },
+        {
+          "line": 1309,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 1310,
+          "text": "            pass"
+        },
+        {
+          "line": 1311,
+          "text": "# --- END: log suppressed exceptions (log-once) ---"
+        },
+        {
+          "line": 1312,
+          "text": ""
+        },
+        {
+          "line": 1313,
+          "text": "def _alert_user(title: str, message: str, kind: str = \"error\"):"
+        },
+        {
+          "line": 1314,
+          "text": "    \"\"\"Best-effort UI alert. Safe even if Tk root isn't created yet.\"\"\""
+        },
+        {
+          "line": 1315,
+          "text": "    try:"
+        },
+        {
+          "line": 1316,
+          "text": "        from tkinter import messagebox as _mb"
+        },
+        {
+          "line": 1317,
+          "text": "        if kind == \"warning\":"
+        },
+        {
+          "line": 1318,
+          "text": "            _mb.showwarning(title, message)"
+        }
+      ]
+    },
+    {
+      "line": 1559,
+      "end_line": 1560,
+      "scope": "_get_reports_root",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 1551,
+          "text": ""
+        },
+        {
+          "line": 1552,
+          "text": ""
+        },
+        {
+          "line": 1553,
+          "text": "def _get_reports_root():"
+        },
+        {
+          "line": 1554,
+          "text": "    \"\"\"Return the configured reports folder, with a writable fallback.\"\"\""
+        },
+        {
+          "line": 1555,
+          "text": "    try:"
+        },
+        {
+          "line": 1556,
+          "text": "        configured = str((load_settings() or {}).get(\"reports_root\") or \"\").strip()"
+        },
+        {
+          "line": 1557,
+          "text": "        if configured and _can_use_dir(configured):"
+        },
+        {
+          "line": 1558,
+          "text": "            return configured"
+        },
+        {
+          "line": 1559,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 1560,
+          "text": "        pass"
+        },
+        {
+          "line": 1561,
+          "text": "    return PDF_DIR"
+        },
+        {
+          "line": 1562,
+          "text": ""
+        },
+        {
+          "line": 1563,
+          "text": ""
+        },
+        {
+          "line": 1564,
+          "text": "# --- BEGIN: Early ADV helpers (regex + datetime aliases) ---"
+        },
+        {
+          "line": 1565,
+          "text": "import re as _re_advpatch"
+        },
+        {
+          "line": 1566,
+          "text": "try:"
+        },
+        {
+          "line": 1567,
+          "text": "    from datetime import datetime as _dt_advpatch, date as _date_advpatch, timedelta as _td_advpatch"
+        },
+        {
+          "line": 1568,
+          "text": "except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 2176,
+      "end_line": 2177,
+      "scope": "<module>",
+      "handler": "Exception",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 2168,
+          "text": "    from reportlab.lib.pagesizes import A4"
+        },
+        {
+          "line": 2169,
+          "text": "    from reportlab.pdfgen import canvas"
+        },
+        {
+          "line": 2170,
+          "text": "    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image"
+        },
+        {
+          "line": 2171,
+          "text": "    from reportlab.lib import colors"
+        },
+        {
+          "line": 2172,
+          "text": "    from reportlab.lib.styles import getSampleStyleSheet"
+        },
+        {
+          "line": 2173,
+          "text": "    HAVE_REPORTLAB = True"
+        },
+        {
+          "line": 2174,
+          "text": "    try:"
+        },
+        {
+          "line": 2175,
+          "text": "        _spina_pg_patch_reportlab_canvas_save(canvas)"
+        },
+        {
+          "line": 2176,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 2177,
+          "text": "        pass"
+        },
+        {
+          "line": 2178,
+          "text": ""
+        },
+        {
+          "line": 2179,
+          "text": ""
+        },
+        {
+          "line": 2180,
+          "text": "    # --- BEGIN: stringWidth shim (ReportLab or fallback) ---"
+        },
+        {
+          "line": 2181,
+          "text": "    try:"
+        },
+        {
+          "line": 2182,
+          "text": "        if HAVE_REPORTLAB:"
+        },
+        {
+          "line": 2183,
+          "text": "            from reportlab.pdfbase.pdfmetrics import stringWidth as _RL_stringWidth"
+        },
+        {
+          "line": 2184,
+          "text": "            def stringWidth(text, font, size):"
+        },
+        {
+          "line": 2185,
+          "text": "                try:"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Read-only audit only; no app source changes are made.",
+    "Review non-protected candidates first; do not edit protected areas from this audit alone.",
+    "Prefer logging or narrowing only one small confirmed-safe area at a time.",
+    "Do not touch payments, balances, 7x7, renewals, collectors, reports, backups, migrations, or report math from this audit alone."
+  ]
+}

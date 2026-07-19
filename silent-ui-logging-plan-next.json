@@ -1,0 +1,62 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48509,
+  "candidate_count": 6,
+  "selected_count": 6,
+  "apply": false,
+  "selected": [
+    {
+      "line": 19567,
+      "class": "App",
+      "function": "_to_number",
+      "except_text": "                except Exception:",
+      "body_preview": "                    return None"
+    },
+    {
+      "line": 27331,
+      "class": "App",
+      "function": "_get_reason_color_for_client_date",
+      "except_text": "                except Exception:",
+      "body_preview": "                    continue\n"
+    },
+    {
+      "line": 30812,
+      "class": "RenewDialog",
+      "function": "_parse_float",
+      "except_text": "        except Exception:",
+      "body_preview": "            return None\n"
+    },
+    {
+      "line": 37172,
+      "class": "RenewDialog",
+      "function": "_spina_dash__date_text",
+      "except_text": "    except Exception:",
+      "body_preview": "        return ''\n\n"
+    },
+    {
+      "line": 37911,
+      "class": "RenewDialog",
+      "function": "_spina_cashctl__parse_amount",
+      "except_text": "    except Exception:",
+      "body_preview": "        return 0.0\n\n"
+    },
+    {
+      "line": 37939,
+      "class": "RenewDialog",
+      "function": "_spina_cashctl__valid_date",
+      "except_text": "    except Exception:",
+      "body_preview": "        return date.today().strftime('%Y-%m-%d')\n\n"
+    }
+  ],
+  "skipped_summary": {
+    "not_ui_startup_chrome": 15,
+    "protected_context": 1105,
+    "protected_name": 5
+  },
+  "recommendations": [
+    "Dry-run first and review selected lines.",
+    "This tightened version skips PostgreSQL storage, files, reports/PDFs, notes, collectors, transactions, and loan/payment contexts.",
+    "Use a small limit first, then compile and smoke-test SPINA.",
+    "Do not use this for balances, 7x7, interest, notes, collector route, statements, reports, PDFs, or storage helpers."
+  ]
+}

@@ -130,3 +130,42 @@ Removed definitions:
 - `App._auto_load_report_note` earlier definition at lines 9920-9950
 
 No monkey-patch chains, login/database logic, reports, collectors, dashboard, balances, or call sites were changed.
+
+## Phase 5 remove legacy Clients-tab actions
+
+The legacy Clients-tab action buttons are removed from the UI/action layer:
+From Transactions, Full Ledger, Export Template, and Import Excel.
+
+Safety rules for this phase:
+
+- no notes storage or note rendering logic is changed
+- no Collector Route Daily Ledger logic is changed
+- no loan, balance, 7x7, interest, payment allocation, or report math is changed
+- old known callback entry points show a removed-action message instead of running
+- visible legacy client action widgets are hidden/disabled after the app opens
+
+## Phase 6 remove Data Bank export controls
+
+The Data Bank export controls are removed from the UI/action layer:
+Exports, Date Range Template, JSONL Month, and Daily Excel Template.
+
+Safety rules for this phase:
+
+- no notes storage or note rendering logic is changed
+- no Collector Route Daily Ledger logic is changed
+- no Client Statement PDF logic is changed
+- no loan, balance, 7x7, interest, payment allocation, or report math is changed
+- visible Data Bank export widgets are hidden/destroyed if they are created dynamically
+
+## Phase 6 Data Bank export UI source cleanup
+
+The confirmed legacy Data Bank export UI creation lines were removed from the
+local source by `tools/cleanup_databank_export_ui_source.py`.
+
+This source cleanup is intentionally narrow:
+
+- removes visible Data Bank export label/button creation lines only
+- removes earlier runtime hide-only Data Bank export patch blocks if present
+- keeps `export_jsonl_month` and `export_daily_collection_template` functions for now
+- does not change notes, collector route, client statements, balances, 7x7,
+  interest, payment allocation, report math, or database writes

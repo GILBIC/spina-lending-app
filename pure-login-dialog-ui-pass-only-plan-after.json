@@ -1,0 +1,164 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48525,
+  "context_radius": 8,
+  "pass_only_exception_count": 898,
+  "login_related_pass_only_count": 26,
+  "pure_login_dialog_ui_review_count": 1,
+  "selected_cleanup_candidate_count": 0,
+  "group_counts": {
+    "pure_dialog_initial_focus_review": 1
+  },
+  "excluded_login_group_counts": {
+    "excluded_account_or_role_review": 11,
+    "excluded_login_auth_sensitive_review": 5,
+    "excluded_login_dialog_non_pure_review": 1,
+    "protected_login_review": 8
+  },
+  "safety": {
+    "read_only": true,
+    "app_source_modified": false,
+    "cleanup_approved": false,
+    "protected_words_used": [
+      "7x7",
+      "7×7",
+      "apply_role_access",
+      "backup",
+      "balance",
+      "cash control",
+      "collector",
+      "database",
+      "interest",
+      "ledger",
+      "migration",
+      "payment",
+      "payroll",
+      "pdf",
+      "pg_",
+      "postgres",
+      "principal",
+      "receipt",
+      "renew",
+      "report",
+      "restore",
+      "role_access",
+      "route",
+      "statement",
+      "transaction"
+    ],
+    "excluded_sensitive_words": [
+      "_verify_login",
+      "verify_login",
+      "_must_change_password",
+      "_force_change_password_dialog",
+      "password",
+      "pw_var",
+      "show password",
+      "role",
+      "user_role",
+      "access_profile",
+      "permission",
+      "_save_users_db",
+      "_load_users_db",
+      "users[",
+      "switch_account",
+      "_refresh_user_header",
+      "_build_header"
+    ],
+    "note": "This report narrows to pure login dialog UI only. It does not approve cleanup."
+  },
+  "pure_login_dialog_ui_sites": [
+    {
+      "line": 48375,
+      "end_line": 48376,
+      "scope": "_spina_v32_prompt_login",
+      "handler": "Exception",
+      "protected_context": false,
+      "sensitive_login_context": true,
+      "pure_login_dialog_ui": true,
+      "group": "pure_dialog_initial_focus_review",
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "Review only. This planner does not approve cleanup.",
+      "context": [
+        {
+          "line": 48367,
+          "text": "        y = max(10, min(y, sh - h - 60))"
+        },
+        {
+          "line": 48368,
+          "text": "        dlg.geometry(f\"{w}x{h}+{x}+{y}\")"
+        },
+        {
+          "line": 48369,
+          "text": "    except Exception as __spina_exc:"
+        },
+        {
+          "line": 48370,
+          "text": "        _log_suppressed_once('pure_login_dialog_ui.position', 'suppressed pure login dialog UI exception: login_dialog_position', __spina_exc)"
+        },
+        {
+          "line": 48371,
+          "text": "        pass"
+        },
+        {
+          "line": 48372,
+          "text": ""
+        },
+        {
+          "line": 48373,
+          "text": "    try:"
+        },
+        {
+          "line": 48374,
+          "text": "        pw_entry.focus_set()"
+        },
+        {
+          "line": 48375,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 48376,
+          "text": "        pass"
+        },
+        {
+          "line": 48377,
+          "text": ""
+        },
+        {
+          "line": 48378,
+          "text": "    self.root.wait_window(dlg)"
+        },
+        {
+          "line": 48379,
+          "text": "    return (result.get(\"user\"), result.get(\"role\"))"
+        },
+        {
+          "line": 48380,
+          "text": ""
+        },
+        {
+          "line": 48381,
+          "text": ""
+        },
+        {
+          "line": 48382,
+          "text": "def _spina_v32_refresh_user_header(self):"
+        },
+        {
+          "line": 48383,
+          "text": "    try:"
+        },
+        {
+          "line": 48384,
+          "text": "        if getattr(self, \"user_role_label\", None) is not None:"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Do not apply cleanup from this report alone.",
+    "Leave password/auth/role/account database/header-switch handlers as review-only.",
+    "A future cleanup tool, if created, should target only exact reviewed pure dialog UI handlers.",
+    "Smoke-test staff login, account switching, password-change-required flow, Cancel, and Return-key login after any future login UI cleanup."
+  ]
+}

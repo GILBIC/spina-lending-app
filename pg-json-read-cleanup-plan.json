@@ -1,0 +1,99 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "apply": false,
+  "line_count": 48496,
+  "candidate_count": 1,
+  "safe": true,
+  "already_clean": false,
+  "patched": false,
+  "reason": "safe fixed-table replacement candidate found",
+  "target_line": 219,
+  "helper_returns_expected_tables": true,
+  "read_helper_has_expected_flow": true,
+  "write_helper_uses_fixed_tables": true,
+  "original_context": [
+    {
+      "line": 211,
+      "text": "def _spina_pg_read_json(path):"
+    },
+    {
+      "line": 212,
+      "text": "    if not _spina_pg_ensure_storage_schema():"
+    },
+    {
+      "line": 213,
+      "text": "        return None"
+    },
+    {
+      "line": 214,
+      "text": "    try:"
+    },
+    {
+      "line": 215,
+      "text": "        key = _spina_pg_relpath(path)"
+    },
+    {
+      "line": 216,
+      "text": "        table = _spina_pg_json_table_for_path(path)"
+    },
+    {
+      "line": 217,
+      "text": "        with _spina_pg_storage_conn() as conn:"
+    },
+    {
+      "line": 218,
+      "text": "            with conn.cursor() as cur:"
+    },
+    {
+      "line": 219,
+      "text": "                cur.execute(f'SELECT value FROM {table} WHERE key=%s', (key,))"
+    },
+    {
+      "line": 220,
+      "text": "                row = cur.fetchone()"
+    },
+    {
+      "line": 221,
+      "text": "        if not row:"
+    },
+    {
+      "line": 222,
+      "text": "            return None"
+    },
+    {
+      "line": 223,
+      "text": "        obj = row[0]"
+    },
+    {
+      "line": 224,
+      "text": "        return obj"
+    },
+    {
+      "line": 225,
+      "text": "    except Exception as e:"
+    },
+    {
+      "line": 226,
+      "text": "        _spina_pg_storage_log('read_json', e)"
+    },
+    {
+      "line": 227,
+      "text": "        return None"
+    }
+  ],
+  "replacement_preview": [
+    "                if table == 'app_settings_store':",
+    "                    cur.execute('SELECT value FROM app_settings_store WHERE key=%s', (key,))",
+    "                elif table == 'app_json_store':",
+    "                    cur.execute('SELECT value FROM app_json_store WHERE key=%s', (key,))",
+    "                else:",
+    "                    raise ValueError(f'Unexpected PostgreSQL JSON storage table: {table!r}')"
+  ],
+  "recommendations": [
+    "Review this dry-run JSON before applying.",
+    "This cleanup targets only the PostgreSQL JSON read helper f-string table identifier.",
+    "Run with --apply only if safe is true and candidate_count is 1.",
+    "After apply, run tools/audit_dynamic_sql_context.py again and upload the JSON report.",
+    "Do not touch protected database/payment/report/collector/7x7/balance code from this tool."
+  ]
+}

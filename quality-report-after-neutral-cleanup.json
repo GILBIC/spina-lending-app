@@ -1,0 +1,1677 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48497,
+  "top_level_function_count": 737,
+  "unique_top_level_function_names": 644,
+  "duplicate_top_level_definitions": {
+    "_adv_lbl": [
+      23880,
+      34122
+    ],
+    "_adv_txt": [
+      23874,
+      34116
+    ],
+    "_append_notice": [
+      23675,
+      33840
+    ],
+    "_arrange_areas_dialog": [
+      22040,
+      31947
+    ],
+    "_cancel": [
+      22018,
+      22097,
+      25918,
+      31925,
+      32004,
+      47806,
+      48285
+    ],
+    "_clear_collectors_search_filters": [
+      21229,
+      31581
+    ],
+    "_closed_paid_amt_for": [
+      22776,
+      32757
+    ],
+    "_collectors_areas_drag_motion": [
+      21168,
+      35431
+    ],
+    "_dash_fmt_money_short": [
+      22921,
+      32907
+    ],
+    "_dash_norm_lt": [
+      22914,
+      32900
+    ],
+    "_dash_norm_name": [
+      22908,
+      32894
+    ],
+    "_dash_put": [
+      22945,
+      32931
+    ],
+    "_draw_final_footer": [
+      23159,
+      33142
+    ],
+    "_draw_global_header": [
+      23175,
+      33158
+    ],
+    "_draw_page_number": [
+      23151,
+      33134
+    ],
+    "_expand_range_inclusive": [
+      2149,
+      3634
+    ],
+    "_expected_amt_for": [
+      22696,
+      32677
+    ],
+    "_f": [
+      1414,
+      39795
+    ],
+    "_fetch_clients_for": [
+      21941,
+      31848
+    ],
+    "_fetch_route_notice": [
+      23668,
+      33820
+    ],
+    "_filter_trigger": [
+      39082,
+      46209
+    ],
+    "_fits": [
+      23127,
+      33110
+    ],
+    "_fmt_pay_amount": [
+      23438,
+      33453
+    ],
+    "_fmt_total_money": [
+      23385,
+      33385
+    ],
+    "_gv": [
+      27362,
+      27711,
+      39847
+    ],
+    "_iter_rows": [
+      22179,
+      32086
+    ],
+    "_move": [
+      22073,
+      31980
+    ],
+    "_n": [
+      22267,
+      32174
+    ],
+    "_notice_norm": [
+      23662,
+      33699
+    ],
+    "_ok": [
+      22015,
+      22095,
+      25917,
+      31922,
+      32002,
+      48245
+    ],
+    "_on_collectors_multi_toggle": [
+      20572,
+      35220
+    ],
+    "_on_collectors_select": [
+      21256,
+      38717
+    ],
+    "_on_collectors_tree_click": [
+      20636,
+      35278
+    ],
+    "_on_collectors_tree_wheel": [
+      21193,
+      35041,
+      35242
+    ],
+    "_on_search": [
+      20423,
+      46867,
+      47414
+    ],
+    "_on_select": [
+      39063,
+      46184
+    ],
+    "_options_dialog": [
+      21976,
+      31883
+    ],
+    "_parse_any_adv_range": [
+      2135,
+      3615
+    ],
+    "_pay_meta_for": [
+      23467,
+      33472
+    ],
+    "_populate_collector_details": [
+      21314,
+      38620
+    ],
+    "_popup": [
+      20292,
+      46781,
+      47396
+    ],
+    "_rec_get": [
+      40356,
+      40853
+    ],
+    "_resolve_closed_paid_pair": [
+      22818,
+      32803
+    ],
+    "_resolve_expected_pair": [
+      22715,
+      32696
+    ],
+    "_route_aliases": [
+      22657,
+      32633
+    ],
+    "_route_dash_add": [
+      23590,
+      33631
+    ],
+    "_route_dash_lookup": [
+      23578,
+      33619
+    ],
+    "_route_dash_norm_lt": [
+      23571,
+      33612
+    ],
+    "_route_dash_norm_name": [
+      23565,
+      33606
+    ],
+    "_route_norm": [
+      21784,
+      31697,
+      40660
+    ],
+    "_s": [
+      21971,
+      31878
+    ],
+    "_save_collector_notes": [
+      21445,
+      35063
+    ],
+    "_save_selected_collector_notes": [
+      21415,
+      35127
+    ],
+    "_schedule_collectors_refresh": [
+      21210,
+      31561
+    ],
+    "_set_sort": [
+      20219,
+      46713,
+      47325
+    ],
+    "_sort_key": [
+      22247,
+      32154
+    ],
+    "_spina__client_due_meta": [
+      24313,
+      39602
+    ],
+    "_spina_route_adv_marker_for": [
+      8538,
+      41186
+    ],
+    "_validate_date": [
+      29377,
+      45360
+    ],
+    "_wrap_text_to_width": [
+      23122,
+      33105
+    ],
+    "_x7_daily_interest_for_balance": [
+      27845,
+      39893
+    ],
+    "cancel": [
+      24848,
+      29490,
+      45470
+    ],
+    "chart_box": [
+      43570,
+      46114
+    ],
+    "do_link": [
+      24802,
+      30470
+    ],
+    "ensure_space": [
+      23275,
+      33258
+    ],
+    "export_range_template": [
+      25874,
+      26669
+    ],
+    "load_list": [
+      31419,
+      36770,
+      37034
+    ],
+    "new_page_headers": [
+      23239,
+      33222
+    ],
+    "print_collector_route_daily_ledger": [
+      21684,
+      31610
+    ],
+    "print_full_daily_ledger": [
+      21896,
+      31811
+    ],
+    "push": [
+      26479,
+      26486
+    ],
+    "restore_selected": [
+      31439,
+      36798,
+      37064
+    ],
+    "save": [
+      29384,
+      45381
+    ],
+    "stringWidth": [
+      2179,
+      2186,
+      2190
+    ]
+  },
+  "duplicate_class_methods": {
+    "App": {
+      "_cancel": [
+        9113,
+        9417,
+        9511
+      ],
+      "_close_editor": [
+        17300,
+        17372
+      ],
+      "_error": [
+        15467,
+        15766,
+        15807
+      ],
+      "_fmt_amt": [
+        10025,
+        11368
+      ],
+      "_get": [
+        18574,
+        18620
+      ],
+      "_norm": [
+        11662,
+        18426
+      ],
+      "_norm_area": [
+        10216,
+        12210
+      ],
+      "_ok": [
+        9383,
+        9499
+      ],
+      "_on_enter": [
+        9126,
+        9428
+      ],
+      "_refresh": [
+        18928,
+        19924
+      ],
+      "_save": [
+        9083,
+        16690
+      ],
+      "_success": [
+        15449,
+        15761,
+        15802
+      ],
+      "on_cancel": [
+        11595,
+        12085,
+        13001
+      ],
+      "on_ok": [
+        11569,
+        12072,
+        12980
+      ],
+      "save": [
+        17258,
+        17332
+      ]
+    },
+    "LoanDB": {
+      "_norm_dom": [
+        5068,
+        5260
+      ],
+      "_norm_term": [
+        5024,
+        5206
+      ],
+      "_norm_weekday": [
+        5054,
+        5246
+      ],
+      "_safe_json": [
+        6584,
+        6742
+      ]
+    },
+    "RenewDialog": {
+      "__init__": [
+        25686,
+        30778
+      ],
+      "_row": [
+        25695,
+        31127
+      ],
+      "apply": [
+        25786,
+        31256
+      ],
+      "body": [
+        25691,
+        31122
+      ],
+      "validate": [
+        25754,
+        31216
+      ]
+    },
+    "_LockedConnection": {
+      "_op": [
+        3887,
+        3911,
+        3933
+      ]
+    },
+    "_LockedCursor": {
+      "_op": [
+        3802,
+        3826
+      ]
+    }
+  },
+  "repeated_patch_targets": {
+    "App.__init__": [
+      37838,
+      38584,
+      39187,
+      39421,
+      41603
+    ],
+    "App._apply_ui_theme": [
+      37825,
+      41590,
+      41929
+    ],
+    "App._build_clients_tab": [
+      35958,
+      45652
+    ],
+    "App._build_collectors_tab": [
+      46902,
+      47835
+    ],
+    "App._dashboard_visible_rows": [
+      42578,
+      42959
+    ],
+    "App._on_collectors_select": [
+      46960,
+      47868
+    ],
+    "App._on_mode_change": [
+      37860,
+      38606,
+      42594
+    ],
+    "App._populate_dashboard_tree": [
+      42577,
+      42864,
+      42960,
+      43265
+    ],
+    "App.apply_role_access": [
+      31540,
+      37849,
+      38595,
+      41618
+    ],
+    "App.refresh_clients": [
+      35970,
+      39198,
+      45666
+    ],
+    "App.refresh_collectors": [
+      35520,
+      46916,
+      47847
+    ],
+    "App.refresh_dashboard": [
+      42576,
+      42863,
+      42961,
+      43266
+    ],
+    "App.refresh_data_grid": [
+      41903,
+      41969
+    ]
+  },
+  "large_functions": [
+    {
+      "name": "print_full_daily_ledger",
+      "line": 31811,
+      "lines": 3223
+    },
+    {
+      "name": "_on_collectors_select",
+      "line": 21256,
+      "lines": 3005
+    },
+    {
+      "name": "print_full_daily_ledger",
+      "line": 21896,
+      "lines": 2365
+    },
+    {
+      "name": "_maybe_suggest_link_clients",
+      "line": 24647,
+      "lines": 2014
+    },
+    {
+      "name": "generate_client_pdf",
+      "line": 27653,
+      "lines": 1185
+    },
+    {
+      "name": "LoanDB._create_tables",
+      "line": 4041,
+      "lines": 884
+    },
+    {
+      "name": "_app__client_form",
+      "line": 28889,
+      "lines": 689
+    },
+    {
+      "name": "App.open_databank_close_dialog",
+      "line": 10595,
+      "lines": 651
+    },
+    {
+      "name": "App.refresh_collectors",
+      "line": 12130,
+      "lines": 608
+    },
+    {
+      "name": "_app_open_client_history_dialog",
+      "line": 29886,
+      "lines": 514
+    },
+    {
+      "name": "App._area_picker_dialog",
+      "line": 11618,
+      "lines": 511
+    },
+    {
+      "name": "_spina_v23_client_form",
+      "line": 45037,
+      "lines": 458
+    },
+    {
+      "name": "attach_direct_integration",
+      "line": 25999,
+      "lines": 440
+    },
+    {
+      "name": "App._import_encoder_batch",
+      "line": 19103,
+      "lines": 420
+    },
+    {
+      "name": "App._import_from_excel_entry_worker",
+      "line": 18367,
+      "lines": 397
+    },
+    {
+      "name": "_spina_v22_build_reports_tab",
+      "line": 44098,
+      "lines": 371
+    },
+    {
+      "name": "_spina_v27_collector_editor_dialog",
+      "line": 47481,
+      "lines": 350
+    },
+    {
+      "name": "_build_collectors_tab",
+      "line": 20095,
+      "lines": 347
+    },
+    {
+      "name": "_spina_v25_build_collectors_tab",
+      "line": 46552,
+      "lines": 346
+    },
+    {
+      "name": "App._build_reports_tab",
+      "line": 17384,
+      "lines": 338
+    },
+    {
+      "name": "App._show_import_log_window",
+      "line": 18765,
+      "lines": 337
+    },
+    {
+      "name": "import_clients_from_excel",
+      "line": 25014,
+      "lines": 315
+    },
+    {
+      "name": "_spina_v27_build_collectors_tab",
+      "line": 47152,
+      "lines": 293
+    },
+    {
+      "name": "App.open_settings_dialog",
+      "line": 16456,
+      "lines": 288
+    },
+    {
+      "name": "LoanDB.get_all_clients",
+      "line": 5862,
+      "lines": 287
+    },
+    {
+      "name": "LoanDB.update_client",
+      "line": 5131,
+      "lines": 285
+    },
+    {
+      "name": "_spina_save_closed_collector_route_copy",
+      "line": 40327,
+      "lines": 281
+    },
+    {
+      "name": "_spina_v21_cash_build_tab",
+      "line": 43386,
+      "lines": 277
+    },
+    {
+      "name": "App._run_long_task",
+      "line": 14494,
+      "lines": 273
+    },
+    {
+      "name": "App.refresh_data_grid",
+      "line": 16963,
+      "lines": 271
+    },
+    {
+      "name": "refresh_clients",
+      "line": 24379,
+      "lines": 263
+    },
+    {
+      "name": "_spina_dashboard_fetch_rows",
+      "line": 37220,
+      "lines": 262
+    },
+    {
+      "name": "RenewDialog._compute_stats",
+      "line": 30812,
+      "lines": 259
+    },
+    {
+      "name": "App.generate_pdf_selected",
+      "line": 17857,
+      "lines": 258
+    },
+    {
+      "name": "_spina_v24_build_client_info_logs_tab",
+      "line": 45998,
+      "lines": 250
+    }
+  ],
+  "broad_except_count": 3473,
+  "pass_only_except_count": 928,
+  "bare_except_count": 4,
+  "silent_broad_except_count": 2462,
+  "broad_except_by_risk_area": {
+    "backup/restore": 46,
+    "excel/import-export": 124,
+    "general": 1660,
+    "login/accounts": 107,
+    "payment/balance": 135,
+    "reports/pdf": 933,
+    "startup/database": 468
+  },
+  "silent_broad_except_by_risk_area": {
+    "backup/restore": 34,
+    "excel/import-export": 53,
+    "general": 1180,
+    "login/accounts": 66,
+    "payment/balance": 89,
+    "reports/pdf": 741,
+    "startup/database": 299
+  },
+  "broad_except_examples": [
+    {
+      "line": 30,
+      "type": "Exception",
+      "function": "_spina_early_log",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 145,
+      "type": "Exception",
+      "function": "_spina_pg_storage_enabled",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 161,
+      "type": "Exception",
+      "function": "_spina_pg_storage_log",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 178,
+      "type": "Exception",
+      "function": "_spina_pg_ensure_storage_schema",
+      "risk_area": "startup/database",
+      "visible_action": true
+    },
+    {
+      "line": 186,
+      "type": "Exception",
+      "function": "_spina_pg_app_dir",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 197,
+      "type": "Exception",
+      "function": "_spina_pg_relpath",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 204,
+      "type": "Exception",
+      "function": "_spina_pg_json_table_for_path",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 225,
+      "type": "Exception",
+      "function": "_spina_pg_read_json",
+      "risk_area": "startup/database",
+      "visible_action": true
+    },
+    {
+      "line": 263,
+      "type": "Exception",
+      "function": "_spina_pg_write_json",
+      "risk_area": "startup/database",
+      "visible_action": true
+    },
+    {
+      "line": 293,
+      "type": "Exception",
+      "function": "_spina_pg_guess_file_type",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 306,
+      "type": "Exception",
+      "function": "_spina_pg_guess_report_date",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 318,
+      "type": "Exception",
+      "function": "_spina_pg_guess_collector",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 335,
+      "type": "Exception",
+      "function": "_spina_pg_store_file_to_db",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 341,
+      "type": "Exception",
+      "function": "_spina_pg_store_file_to_db",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 385,
+      "type": "Exception",
+      "function": "_spina_pg_store_file_to_db",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 388,
+      "type": "Exception",
+      "function": "_spina_pg_store_file_to_db",
+      "risk_area": "startup/database",
+      "visible_action": true
+    },
+    {
+      "line": 447,
+      "type": "Exception",
+      "function": "_spina_pg_store_client_picture_to_db",
+      "risk_area": "startup/database",
+      "visible_action": true
+    },
+    {
+      "line": 458,
+      "type": "Exception",
+      "function": "_spina_pg_restore_client_picture_to_cache",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 474,
+      "type": "Exception",
+      "function": "_spina_pg_restore_client_picture_to_cache",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 480,
+      "type": "Exception",
+      "function": "_spina_pg_restore_client_picture_to_cache",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 485,
+      "type": "Exception",
+      "function": "_spina_pg_restore_client_picture_to_cache",
+      "risk_area": "startup/database",
+      "visible_action": true
+    },
+    {
+      "line": 496,
+      "type": "Exception",
+      "function": "_spina_pg_delete_client_picture_token",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 506,
+      "type": "Exception",
+      "function": "_spina_pg_delete_client_picture_token",
+      "risk_area": "startup/database",
+      "visible_action": true
+    },
+    {
+      "line": 525,
+      "type": "Exception",
+      "function": "_pg_save_and_store",
+      "risk_area": "startup/database",
+      "visible_action": true
+    },
+    {
+      "line": 530,
+      "type": "Exception",
+      "function": "_spina_pg_patch_reportlab_canvas_save",
+      "risk_area": "startup/database",
+      "visible_action": true
+    }
+  ],
+  "pass_only_except_examples": [
+    {
+      "line": 30,
+      "type": "Exception",
+      "function": "_spina_early_log",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 161,
+      "type": "Exception",
+      "function": "_spina_pg_storage_log",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 341,
+      "type": "Exception",
+      "function": "_spina_pg_store_file_to_db",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 385,
+      "type": "Exception",
+      "function": "_spina_pg_store_file_to_db",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 474,
+      "type": "Exception",
+      "function": "_spina_pg_restore_client_picture_to_cache",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 480,
+      "type": "Exception",
+      "function": "_spina_pg_restore_client_picture_to_cache",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 544,
+      "type": "Exception",
+      "function": "_spina_pg_normalize_value",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 777,
+      "type": "Exception",
+      "function": "_PgCompatCursor.execute",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 793,
+      "type": "Exception",
+      "function": "_PgCompatCursor.executemany",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 895,
+      "type": "Exception",
+      "function": "_spina_pg_raise_sqlite_like",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 943,
+      "type": "Exception",
+      "function": "_read_json_file",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 1198,
+      "type": "Exception",
+      "function": "_open_path",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 1279,
+      "type": "Exception",
+      "function": "_log_exc",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 1304,
+      "type": "Exception",
+      "function": "_log_suppressed_once",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 1554,
+      "type": "Exception",
+      "function": "_get_reports_root",
+      "risk_area": "reports/pdf",
+      "visible_action": false
+    },
+    {
+      "line": 2171,
+      "type": "Exception",
+      "function": "<module>",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 5614,
+      "type": "Exception",
+      "function": "LoanDB.renew_client",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 5618,
+      "type": "Exception",
+      "function": "LoanDB.renew_client",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 5624,
+      "type": "Exception",
+      "function": "LoanDB.renew_client",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 5631,
+      "type": "Exception",
+      "function": "LoanDB.renew_client",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 5635,
+      "type": "Exception",
+      "function": "LoanDB.renew_client",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 6245,
+      "type": "Exception",
+      "function": "LoanDB.get_client_info",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 6500,
+      "type": "Exception",
+      "function": "LoanDB._sync_transactions_for_client_uid",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 6516,
+      "type": "Exception",
+      "function": "LoanDB.repair_transaction_identity_links",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 6533,
+      "type": "Exception",
+      "function": "LoanDB.repair_transaction_identity_links",
+      "risk_area": "startup/database",
+      "visible_action": false
+    }
+  ],
+  "silent_broad_except_examples": [
+    {
+      "line": 30,
+      "type": "Exception",
+      "function": "_spina_early_log",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 145,
+      "type": "Exception",
+      "function": "_spina_pg_storage_enabled",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 161,
+      "type": "Exception",
+      "function": "_spina_pg_storage_log",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 186,
+      "type": "Exception",
+      "function": "_spina_pg_app_dir",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 197,
+      "type": "Exception",
+      "function": "_spina_pg_relpath",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 204,
+      "type": "Exception",
+      "function": "_spina_pg_json_table_for_path",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 293,
+      "type": "Exception",
+      "function": "_spina_pg_guess_file_type",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 306,
+      "type": "Exception",
+      "function": "_spina_pg_guess_report_date",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 318,
+      "type": "Exception",
+      "function": "_spina_pg_guess_collector",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 335,
+      "type": "Exception",
+      "function": "_spina_pg_store_file_to_db",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 341,
+      "type": "Exception",
+      "function": "_spina_pg_store_file_to_db",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 385,
+      "type": "Exception",
+      "function": "_spina_pg_store_file_to_db",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 458,
+      "type": "Exception",
+      "function": "_spina_pg_restore_client_picture_to_cache",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 474,
+      "type": "Exception",
+      "function": "_spina_pg_restore_client_picture_to_cache",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 480,
+      "type": "Exception",
+      "function": "_spina_pg_restore_client_picture_to_cache",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 496,
+      "type": "Exception",
+      "function": "_spina_pg_delete_client_picture_token",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 544,
+      "type": "Exception",
+      "function": "_spina_pg_normalize_value",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 608,
+      "type": "Exception",
+      "function": "_spina_pg_escape_literal_percents",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 774,
+      "type": "Exception",
+      "function": "_PgCompatCursor.execute",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 777,
+      "type": "Exception",
+      "function": "_PgCompatCursor.execute",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 790,
+      "type": "Exception",
+      "function": "_PgCompatCursor.executemany",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 793,
+      "type": "Exception",
+      "function": "_PgCompatCursor.executemany",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 832,
+      "type": "Exception",
+      "function": "_PgCompatCursor.close",
+      "risk_area": "general",
+      "visible_action": false
+    },
+    {
+      "line": 895,
+      "type": "Exception",
+      "function": "_spina_pg_raise_sqlite_like",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 943,
+      "type": "Exception",
+      "function": "_read_json_file",
+      "risk_area": "general",
+      "visible_action": false
+    }
+  ],
+  "high_risk_silent_except_examples": [
+    {
+      "line": 145,
+      "type": "Exception",
+      "function": "_spina_pg_storage_enabled",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 161,
+      "type": "Exception",
+      "function": "_spina_pg_storage_log",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 186,
+      "type": "Exception",
+      "function": "_spina_pg_app_dir",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 197,
+      "type": "Exception",
+      "function": "_spina_pg_relpath",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 204,
+      "type": "Exception",
+      "function": "_spina_pg_json_table_for_path",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 293,
+      "type": "Exception",
+      "function": "_spina_pg_guess_file_type",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 306,
+      "type": "Exception",
+      "function": "_spina_pg_guess_report_date",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 318,
+      "type": "Exception",
+      "function": "_spina_pg_guess_collector",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 335,
+      "type": "Exception",
+      "function": "_spina_pg_store_file_to_db",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 341,
+      "type": "Exception",
+      "function": "_spina_pg_store_file_to_db",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 385,
+      "type": "Exception",
+      "function": "_spina_pg_store_file_to_db",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 458,
+      "type": "Exception",
+      "function": "_spina_pg_restore_client_picture_to_cache",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 474,
+      "type": "Exception",
+      "function": "_spina_pg_restore_client_picture_to_cache",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 480,
+      "type": "Exception",
+      "function": "_spina_pg_restore_client_picture_to_cache",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 496,
+      "type": "Exception",
+      "function": "_spina_pg_delete_client_picture_token",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 544,
+      "type": "Exception",
+      "function": "_spina_pg_normalize_value",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 608,
+      "type": "Exception",
+      "function": "_spina_pg_escape_literal_percents",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 895,
+      "type": "Exception",
+      "function": "_spina_pg_raise_sqlite_like",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 1152,
+      "type": "Exception",
+      "function": "_spina__split_payment_mode",
+      "risk_area": "payment/balance",
+      "visible_action": false
+    },
+    {
+      "line": 1171,
+      "type": "Exception",
+      "function": "_spina__merge_payment_mode",
+      "risk_area": "payment/balance",
+      "visible_action": false
+    },
+    {
+      "line": 1259,
+      "type": "Exception",
+      "function": "_init_logger",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 1554,
+      "type": "Exception",
+      "function": "_get_reports_root",
+      "risk_area": "reports/pdf",
+      "visible_action": false
+    },
+    {
+      "line": 2147,
+      "type": "Exception",
+      "function": "_parse_any_adv_range",
+      "risk_area": "payment/balance",
+      "visible_action": false
+    },
+    {
+      "line": 2939,
+      "type": "Exception",
+      "function": "_migrate_legacy_notes_by_name",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 2961,
+      "type": "Exception",
+      "function": "_migrate_legacy_notes_by_name",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 2968,
+      "type": "Exception",
+      "function": "_migrate_legacy_notes_by_name",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 3091,
+      "type": "Exception",
+      "function": "NoteEditorDialog._migrate_legacy_notes_if_needed",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 3116,
+      "type": "Exception",
+      "function": "NoteEditorDialog._migrate_legacy_notes_if_needed",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 3122,
+      "type": "Exception",
+      "function": "NoteEditorDialog._migrate_legacy_notes_if_needed",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 3623,
+      "type": "Exception",
+      "function": "_parse_any_adv_range",
+      "risk_area": "payment/balance",
+      "visible_action": false
+    },
+    {
+      "line": 3630,
+      "type": "Exception",
+      "function": "_parse_any_adv_range",
+      "risk_area": "payment/balance",
+      "visible_action": false
+    },
+    {
+      "line": 3664,
+      "type": "Exception",
+      "function": "_load_ledger_prefs",
+      "risk_area": "reports/pdf",
+      "visible_action": false
+    },
+    {
+      "line": 3713,
+      "type": "Exception",
+      "function": "parse_advance_ranges",
+      "risk_area": "payment/balance",
+      "visible_action": false
+    },
+    {
+      "line": 3760,
+      "type": "Exception",
+      "function": "parse_advance_ranges",
+      "risk_area": "payment/balance",
+      "visible_action": false
+    },
+    {
+      "line": 3946,
+      "type": "Exception",
+      "function": "_LockedConnection.close",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 3993,
+      "type": "Exception",
+      "function": "LoanDB._set_last_error",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 3999,
+      "type": "Exception",
+      "function": "LoanDB.get_last_error",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 4012,
+      "type": "Exception",
+      "function": "LoanDB.set_default_loan_type",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 4250,
+      "type": "Exception",
+      "function": "LoanDB._create_tables",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 4435,
+      "type": "Exception",
+      "function": "LoanDB._create_tables",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 4439,
+      "type": "Exception",
+      "function": "LoanDB._create_tables",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 4596,
+      "type": "Exception",
+      "function": "LoanDB._create_tables",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 4622,
+      "type": "Exception",
+      "function": "LoanDB._create_tables",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 4628,
+      "type": "Exception",
+      "function": "LoanDB._create_tables",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 4700,
+      "type": "Exception",
+      "function": "LoanDB._create_tables",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 4779,
+      "type": "Exception",
+      "function": "LoanDB._create_tables",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 4930,
+      "type": "Exception",
+      "function": "LoanDB._active_client_name_exists",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 4936,
+      "type": "Exception",
+      "function": "LoanDB._active_client_name_exists",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 4954,
+      "type": "Exception",
+      "function": "LoanDB._active_client_name_exists",
+      "risk_area": "startup/database",
+      "visible_action": false
+    },
+    {
+      "line": 4962,
+      "type": "Exception",
+      "function": "LoanDB.add_client",
+      "risk_area": "startup/database",
+      "visible_action": false
+    }
+  ],
+  "dynamic_sql_examples": [
+    {
+      "line": 219,
+      "kind": "f-string"
+    },
+    {
+      "line": 4050,
+      "kind": "f-string"
+    },
+    {
+      "line": 4600,
+      "kind": "possible unbound % placeholder"
+    },
+    {
+      "line": 6797,
+      "kind": "f-string"
+    },
+    {
+      "line": 7510,
+      "kind": "f-string"
+    },
+    {
+      "line": 32316,
+      "kind": "f-string"
+    },
+    {
+      "line": 32331,
+      "kind": "f-string"
+    },
+    {
+      "line": 32604,
+      "kind": "f-string"
+    },
+    {
+      "line": 37244,
+      "kind": "% formatting"
+    },
+    {
+      "line": 37274,
+      "kind": "% formatting"
+    },
+    {
+      "line": 37280,
+      "kind": "% formatting"
+    },
+    {
+      "line": 40916,
+      "kind": "f-string"
+    }
+  ],
+  "dynamic_sql_count": 12,
+  "psycopg_connect_calls": [
+    {
+      "line": 151,
+      "call": "psycopg.connect"
+    },
+    {
+      "line": 849,
+      "call": "psycopg.connect"
+    }
+  ],
+  "possible_blocking_ui_calls": [
+    {
+      "line": 1097,
+      "call": "time.sleep"
+    },
+    {
+      "line": 15390,
+      "call": "subprocess.run"
+    },
+    {
+      "line": 15577,
+      "call": "subprocess.run"
+    },
+    {
+      "line": 15595,
+      "call": "subprocess.run"
+    },
+    {
+      "line": 15608,
+      "call": "subprocess.run"
+    }
+  ]
+}

@@ -1,0 +1,5458 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48520,
+  "context_radius": 8,
+  "pass_only_exception_count": 909,
+  "protected_context_count": 602,
+  "non_protected_pass_only_count": 307,
+  "group_counts": {
+    "app_lifecycle_leave": 10,
+    "dashboard_ui_review": 50,
+    "logger_fallback_leave": 2,
+    "other_review": 170,
+    "performance_index_maintenance_review": 7,
+    "protected_review": 602,
+    "queue_empty_control_flow_leave": 1,
+    "role_access_runtime_patch_review": 12,
+    "ui_compatibility_review": 55
+  },
+  "non_protected_group_counts": {
+    "app_lifecycle_leave": 10,
+    "dashboard_ui_review": 50,
+    "logger_fallback_leave": 2,
+    "other_review": 170,
+    "performance_index_maintenance_review": 7,
+    "queue_empty_control_flow_leave": 1,
+    "role_access_runtime_patch_review": 12,
+    "ui_compatibility_review": 55
+  },
+  "selected_cleanup_candidate_count": 0,
+  "safety": {
+    "read_only": true,
+    "app_source_modified": false,
+    "protected_words_used": [
+      "7x7",
+      "7×7",
+      "apply_role_access",
+      "backup",
+      "balance",
+      "cash control",
+      "collector",
+      "database",
+      "interest",
+      "ledger",
+      "migration",
+      "payment",
+      "payroll",
+      "pdf",
+      "pg_",
+      "postgres",
+      "principal",
+      "receipt",
+      "renew",
+      "report",
+      "restore",
+      "role_access",
+      "route",
+      "statement",
+      "transaction"
+    ],
+    "note": "This report only groups remaining handlers. It does not approve cleanup."
+  },
+  "non_protected_group_samples": {
+    "logger_fallback_leave": [
+      {
+        "line": 1284,
+        "end_line": 1285,
+        "scope": "_log_exc",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "logger_fallback_leave",
+        "recommended_action": "Logger fallback must not raise while reporting another exception.",
+        "context": [
+          {
+            "line": 1276,
+            "text": "                \"%s: %s\","
+          },
+          {
+            "line": 1277,
+            "text": "                context,"
+          },
+          {
+            "line": 1278,
+            "text": "                exc,"
+          },
+          {
+            "line": 1279,
+            "text": "                exc_info=(type(exc), exc, exc.__traceback__),"
+          },
+          {
+            "line": 1280,
+            "text": "            )"
+          },
+          {
+            "line": 1281,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 1282,
+            "text": "        try:"
+          },
+          {
+            "line": 1283,
+            "text": "            print(f\"[SPINA][ERROR] {context}: {exc}\", file=sys.stderr)"
+          },
+          {
+            "line": 1284,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 1285,
+            "text": "            pass"
+          },
+          {
+            "line": 1286,
+            "text": ""
+          },
+          {
+            "line": 1287,
+            "text": ""
+          },
+          {
+            "line": 1288,
+            "text": "# --- BEGIN: log suppressed exceptions (log-once) ---"
+          },
+          {
+            "line": 1289,
+            "text": "try:"
+          },
+          {
+            "line": 1290,
+            "text": "    _SUPPRESS_LOG_ONCE_KEYS"
+          },
+          {
+            "line": 1291,
+            "text": "except NameError:"
+          },
+          {
+            "line": 1292,
+            "text": "    _SUPPRESS_LOG_ONCE_KEYS = set()"
+          }
+        ]
+      },
+      {
+        "line": 1309,
+        "end_line": 1310,
+        "scope": "_log_suppressed_once",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "logger_fallback_leave",
+        "recommended_action": "Logger fallback must not raise while reporting another exception.",
+        "context": [
+          {
+            "line": 1301,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 1302,
+            "text": "        # Never call this function recursively from its own failure path."
+          },
+          {
+            "line": 1303,
+            "text": "        k = str(context or \"suppressed\")"
+          },
+          {
+            "line": 1304,
+            "text": "    try:"
+          },
+          {
+            "line": 1305,
+            "text": "        _log_exc(context, exc)"
+          },
+          {
+            "line": 1306,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 1307,
+            "text": "        try:"
+          },
+          {
+            "line": 1308,
+            "text": "            print(f\"[SPINA][SUPPRESSED] {context}: {exc}\", file=sys.stderr)"
+          },
+          {
+            "line": 1309,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 1310,
+            "text": "            pass"
+          },
+          {
+            "line": 1311,
+            "text": "# --- END: log suppressed exceptions (log-once) ---"
+          },
+          {
+            "line": 1312,
+            "text": ""
+          },
+          {
+            "line": 1313,
+            "text": "def _alert_user(title: str, message: str, kind: str = \"error\"):"
+          },
+          {
+            "line": 1314,
+            "text": "    \"\"\"Best-effort UI alert. Safe even if Tk root isn't created yet.\"\"\""
+          },
+          {
+            "line": 1315,
+            "text": "    try:"
+          },
+          {
+            "line": 1316,
+            "text": "        from tkinter import messagebox as _mb"
+          },
+          {
+            "line": 1317,
+            "text": "        if kind == \"warning\":"
+          }
+        ]
+      }
+    ],
+    "other_review": [
+      {
+        "line": 7100,
+        "end_line": 7101,
+        "scope": "LoanDB._append_databank_day_close_history",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "other_review",
+        "recommended_action": "No narrow cleanup family selected yet.",
+        "context": [
+          {
+            "line": 7092,
+            "text": "                    str(actor or '').strip(),"
+          },
+          {
+            "line": 7093,
+            "text": "                    source or 'databank:history',"
+          },
+          {
+            "line": 7094,
+            "text": "                    payload_json,"
+          },
+          {
+            "line": 7095,
+            "text": "                ),"
+          },
+          {
+            "line": 7096,
+            "text": "            )"
+          },
+          {
+            "line": 7097,
+            "text": "        except Exception as e:"
+          },
+          {
+            "line": 7098,
+            "text": "            try:"
+          },
+          {
+            "line": 7099,
+            "text": "                _log_exc('databank_day_close_history:insert', e)"
+          },
+          {
+            "line": 7100,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 7101,
+            "text": "                pass"
+          },
+          {
+            "line": 7102,
+            "text": ""
+          },
+          {
+            "line": 7103,
+            "text": "    def list_databank_day_close_history(self, date_s, loan_type=None, limit=200):"
+          },
+          {
+            "line": 7104,
+            "text": "        cur = self.conn.cursor()"
+          },
+          {
+            "line": 7105,
+            "text": "        bucket = self._databank_day_close_bucket(loan_type)"
+          },
+          {
+            "line": 7106,
+            "text": "        try:"
+          },
+          {
+            "line": 7107,
+            "text": "            rows = cur.execute("
+          },
+          {
+            "line": 7108,
+            "text": "                \"\"\""
+          }
+        ]
+      },
+      {
+        "line": 9960,
+        "end_line": 9961,
+        "scope": "App._get_databank_focus_date",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "other_review",
+        "recommended_action": "No narrow cleanup family selected yet.",
+        "context": [
+          {
+            "line": 9952,
+            "text": "            pass"
+          },
+          {
+            "line": 9953,
+            "text": ""
+          },
+          {
+            "line": 9954,
+            "text": "    def _get_databank_focus_date(self):"
+          },
+          {
+            "line": 9955,
+            "text": "        from datetime import date as _date"
+          },
+          {
+            "line": 9956,
+            "text": "        day = getattr(self, '_dbank_last_day', None)"
+          },
+          {
+            "line": 9957,
+            "text": "        try:"
+          },
+          {
+            "line": 9958,
+            "text": "            if day:"
+          },
+          {
+            "line": 9959,
+            "text": "                return _date(int(self.grid_year), int(self.grid_month), int(day)).strftime('%Y-%m-%d')"
+          },
+          {
+            "line": 9960,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 9961,
+            "text": "            pass"
+          },
+          {
+            "line": 9962,
+            "text": "        try:"
+          },
+          {
+            "line": 9963,
+            "text": "            today = _date.today()"
+          },
+          {
+            "line": 9964,
+            "text": "            gy = int(getattr(self, 'grid_year', today.year))"
+          },
+          {
+            "line": 9965,
+            "text": "            gm = int(getattr(self, 'grid_month', today.month))"
+          },
+          {
+            "line": 9966,
+            "text": "            if gy == today.year and gm == today.month:"
+          },
+          {
+            "line": 9967,
+            "text": "                return today.strftime('%Y-%m-%d')"
+          },
+          {
+            "line": 9968,
+            "text": "            return _date(gy, gm, 1).strftime('%Y-%m-%d')"
+          }
+        ]
+      },
+      {
+        "line": 10008,
+        "end_line": 10009,
+        "scope": "App._system_data_get_date",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "other_review",
+        "recommended_action": "No narrow cleanup family selected yet.",
+        "context": [
+          {
+            "line": 10000,
+            "text": "        try:"
+          },
+          {
+            "line": 10001,
+            "text": "            ds = (self.system_data_date_var.get() or '').strip()"
+          },
+          {
+            "line": 10002,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 10003,
+            "text": "            ds = ''"
+          },
+          {
+            "line": 10004,
+            "text": "        if not ds:"
+          },
+          {
+            "line": 10005,
+            "text": "            ds = (self._get_databank_focus_date() or '').strip()"
+          },
+          {
+            "line": 10006,
+            "text": "            try:"
+          },
+          {
+            "line": 10007,
+            "text": "                self.system_data_date_var.set(ds)"
+          },
+          {
+            "line": 10008,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 10009,
+            "text": "                pass"
+          },
+          {
+            "line": 10010,
+            "text": "        try:"
+          },
+          {
+            "line": 10011,
+            "text": "            return _dt.strptime(ds, '%Y-%m-%d').strftime('%Y-%m-%d')"
+          },
+          {
+            "line": 10012,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 10013,
+            "text": "            messagebox.showerror('Data', 'Use date format YYYY-MM-DD.')"
+          },
+          {
+            "line": 10014,
+            "text": "            return ''"
+          },
+          {
+            "line": 10015,
+            "text": ""
+          },
+          {
+            "line": 10016,
+            "text": "    def _system_data_use_focus_date(self):"
+          }
+        ]
+      },
+      {
+        "line": 10095,
+        "end_line": 10096,
+        "scope": "App._system_data_open_close",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "other_review",
+        "recommended_action": "No narrow cleanup family selected yet.",
+        "context": [
+          {
+            "line": 10087,
+            "text": "        ds = self._system_data_get_date()"
+          },
+          {
+            "line": 10088,
+            "text": "        if not ds:"
+          },
+          {
+            "line": 10089,
+            "text": "            return"
+          },
+          {
+            "line": 10090,
+            "text": "        try:"
+          },
+          {
+            "line": 10091,
+            "text": "            self.open_databank_close_dialog(ds)"
+          },
+          {
+            "line": 10092,
+            "text": "        finally:"
+          },
+          {
+            "line": 10093,
+            "text": "            try:"
+          },
+          {
+            "line": 10094,
+            "text": "                self._system_data_refresh_summary()"
+          },
+          {
+            "line": 10095,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 10096,
+            "text": "                pass"
+          },
+          {
+            "line": 10097,
+            "text": ""
+          },
+          {
+            "line": 10098,
+            "text": "    def _system_data_open_history(self):"
+          },
+          {
+            "line": 10099,
+            "text": "        ds = self._system_data_get_date()"
+          },
+          {
+            "line": 10100,
+            "text": "        if not ds:"
+          },
+          {
+            "line": 10101,
+            "text": "            return"
+          },
+          {
+            "line": 10102,
+            "text": "        self.open_databank_close_history_dialog(ds)"
+          },
+          {
+            "line": 10103,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 10958,
+        "end_line": 10959,
+        "scope": "App.open_databank_close_dialog._apply_mode",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "other_review",
+        "recommended_action": "No narrow cleanup family selected yet.",
+        "context": [
+          {
+            "line": 10950,
+            "text": "            lock_var.set('CLOSED' if is_closed else 'OPEN')"
+          },
+          {
+            "line": 10951,
+            "text": "            edit_allowed = bool(can_edit_close)"
+          },
+          {
+            "line": 10952,
+            "text": "            try:"
+          },
+          {
+            "line": 10953,
+            "text": "                actual_ent.configure(state=('readonly' if (is_closed or (not edit_allowed) or has_split) else 'normal'))"
+          },
+          {
+            "line": 10954,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 10955,
+            "text": "                pass"
+          },
+          {
+            "line": 10956,
+            "text": "            try:"
+          },
+          {
+            "line": 10957,
+            "text": "                note_ent.configure(state=('normal' if edit_allowed else 'disabled'))"
+          },
+          {
+            "line": 10958,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 10959,
+            "text": "                pass"
+          },
+          {
+            "line": 10960,
+            "text": "            try:"
+          },
+          {
+            "line": 10961,
+            "text": "                workflow_cmb.configure(state=('readonly' if edit_allowed else 'disabled'))"
+          },
+          {
+            "line": 10962,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 10963,
+            "text": "                pass"
+          },
+          {
+            "line": 10964,
+            "text": "            try:"
+          },
+          {
+            "line": 10965,
+            "text": "                close_btn.configure(state=('normal' if ((not is_closed) and edit_allowed) else 'disabled'))"
+          },
+          {
+            "line": 10966,
+            "text": "            except Exception:"
+          }
+        ]
+      },
+      {
+        "line": 10962,
+        "end_line": 10963,
+        "scope": "App.open_databank_close_dialog._apply_mode",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "other_review",
+        "recommended_action": "No narrow cleanup family selected yet.",
+        "context": [
+          {
+            "line": 10954,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 10955,
+            "text": "                pass"
+          },
+          {
+            "line": 10956,
+            "text": "            try:"
+          },
+          {
+            "line": 10957,
+            "text": "                note_ent.configure(state=('normal' if edit_allowed else 'disabled'))"
+          },
+          {
+            "line": 10958,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 10959,
+            "text": "                pass"
+          },
+          {
+            "line": 10960,
+            "text": "            try:"
+          },
+          {
+            "line": 10961,
+            "text": "                workflow_cmb.configure(state=('readonly' if edit_allowed else 'disabled'))"
+          },
+          {
+            "line": 10962,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 10963,
+            "text": "                pass"
+          },
+          {
+            "line": 10964,
+            "text": "            try:"
+          },
+          {
+            "line": 10965,
+            "text": "                close_btn.configure(state=('normal' if ((not is_closed) and edit_allowed) else 'disabled'))"
+          },
+          {
+            "line": 10966,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 10967,
+            "text": "                pass"
+          },
+          {
+            "line": 10968,
+            "text": "            try:"
+          },
+          {
+            "line": 10969,
+            "text": "                reopen_btn.configure(state=('normal' if (is_closed and edit_allowed) else 'disabled'))"
+          },
+          {
+            "line": 10970,
+            "text": "            except Exception:"
+          }
+        ]
+      },
+      {
+        "line": 10966,
+        "end_line": 10967,
+        "scope": "App.open_databank_close_dialog._apply_mode",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "other_review",
+        "recommended_action": "No narrow cleanup family selected yet.",
+        "context": [
+          {
+            "line": 10958,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 10959,
+            "text": "                pass"
+          },
+          {
+            "line": 10960,
+            "text": "            try:"
+          },
+          {
+            "line": 10961,
+            "text": "                workflow_cmb.configure(state=('readonly' if edit_allowed else 'disabled'))"
+          },
+          {
+            "line": 10962,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 10963,
+            "text": "                pass"
+          },
+          {
+            "line": 10964,
+            "text": "            try:"
+          },
+          {
+            "line": 10965,
+            "text": "                close_btn.configure(state=('normal' if ((not is_closed) and edit_allowed) else 'disabled'))"
+          },
+          {
+            "line": 10966,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 10967,
+            "text": "                pass"
+          },
+          {
+            "line": 10968,
+            "text": "            try:"
+          },
+          {
+            "line": 10969,
+            "text": "                reopen_btn.configure(state=('normal' if (is_closed and edit_allowed) else 'disabled'))"
+          },
+          {
+            "line": 10970,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 10971,
+            "text": "                pass"
+          },
+          {
+            "line": 10972,
+            "text": "            try:"
+          },
+          {
+            "line": 10973,
+            "text": "                workflow_btn.configure(state=('normal' if edit_allowed else 'disabled'))"
+          },
+          {
+            "line": 10974,
+            "text": "            except Exception:"
+          }
+        ]
+      },
+      {
+        "line": 13507,
+        "end_line": 13509,
+        "scope": "App._save_cell_edit",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "other_review",
+        "recommended_action": "No narrow cleanup family selected yet.",
+        "context": [
+          {
+            "line": 13499,
+            "text": "        except Exception as __spina_exc:"
+          },
+          {
+            "line": 13500,
+            "text": "            _log_suppressed_once('excpass_0258', 'suppressed exception excpass_0258', __spina_exc)"
+          },
+          {
+            "line": 13501,
+            "text": "            pass"
+          },
+          {
+            "line": 13502,
+            "text": ""
+          },
+          {
+            "line": 13503,
+            "text": "        # If you have a lightweight way to update just this cell, do it here."
+          },
+          {
+            "line": 13504,
+            "text": "        # Otherwise, refresh the whole grid to keep it simple & safe:"
+          },
+          {
+            "line": 13505,
+            "text": "        try:"
+          },
+          {
+            "line": 13506,
+            "text": "            self.refresh_data_grid()"
+          },
+          {
+            "line": 13507,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 13508,
+            "text": "            # soft-fail; UI stays as-is if refresh fails"
+          },
+          {
+            "line": 13509,
+            "text": "            pass"
+          },
+          {
+            "line": 13510,
+            "text": "    "
+          },
+          {
+            "line": 13511,
+            "text": "    def _remember_cell_click(self, event):"
+          },
+          {
+            "line": 13512,
+            "text": "        try:"
+          },
+          {
+            "line": 13513,
+            "text": "            tv = getattr(self, \"days_tree\", None)"
+          },
+          {
+            "line": 13514,
+            "text": "            if not tv:"
+          },
+          {
+            "line": 13515,
+            "text": "                return"
+          }
+        ]
+      },
+      {
+        "line": 13765,
+        "end_line": 13766,
+        "scope": "App.open_delete_day_dialog",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "other_review",
+        "recommended_action": "No narrow cleanup family selected yet.",
+        "context": [
+          {
+            "line": 13757,
+            "text": "                        try:"
+          },
+          {
+            "line": 13758,
+            "text": "                            if isinstance(_v, dict) and str(_v.get(\"date\") or \"\").strip()[:10] == ds:"
+          },
+          {
+            "line": 13759,
+            "text": "                                _hit = True"
+          },
+          {
+            "line": 13760,
+            "text": "                        except Exception:"
+          },
+          {
+            "line": 13761,
+            "text": "                            _hit = False"
+          },
+          {
+            "line": 13762,
+            "text": "                        try:"
+          },
+          {
+            "line": 13763,
+            "text": "                            if not _hit and str(_k or \"\").split(\"|\", 1)[0] == ds:"
+          },
+          {
+            "line": 13764,
+            "text": "                                _hit = True"
+          },
+          {
+            "line": 13765,
+            "text": "                        except Exception:"
+          },
+          {
+            "line": 13766,
+            "text": "                            pass"
+          },
+          {
+            "line": 13767,
+            "text": "                        if _hit:"
+          },
+          {
+            "line": 13768,
+            "text": "                            import_log_count += 1"
+          },
+          {
+            "line": 13769,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 13770,
+            "text": "            import_log_count = 0"
+          },
+          {
+            "line": 13771,
+            "text": ""
+          },
+          {
+            "line": 13772,
+            "text": "        if count <= 0 and not close_exists and import_log_count <= 0:"
+          },
+          {
+            "line": 13773,
+            "text": "            messagebox.showinfo(\"Delete a Day\", f\"No Data Bank entries or import-log markers found for {ds}.\")"
+          }
+        ]
+      },
+      {
+        "line": 13900,
+        "end_line": 13901,
+        "scope": "App._audit_set_today",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "other_review",
+        "recommended_action": "No narrow cleanup family selected yet.",
+        "context": [
+          {
+            "line": 13892,
+            "text": "        return (start_s, end_s)"
+          },
+          {
+            "line": 13893,
+            "text": ""
+          },
+          {
+            "line": 13894,
+            "text": "    def _audit_set_today(self):"
+          },
+          {
+            "line": 13895,
+            "text": "        from datetime import date as _date"
+          },
+          {
+            "line": 13896,
+            "text": "        ds = _date.today().strftime('%Y-%m-%d')"
+          },
+          {
+            "line": 13897,
+            "text": "        try:"
+          },
+          {
+            "line": 13898,
+            "text": "            self.audit_from_var.set(ds)"
+          },
+          {
+            "line": 13899,
+            "text": "            self.audit_to_var.set(ds)"
+          },
+          {
+            "line": 13900,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 13901,
+            "text": "            pass"
+          },
+          {
+            "line": 13902,
+            "text": "        self.refresh_audit_tab()"
+          },
+          {
+            "line": 13903,
+            "text": ""
+          },
+          {
+            "line": 13904,
+            "text": "    def _audit_set_last7(self):"
+          },
+          {
+            "line": 13905,
+            "text": "        from datetime import date as _date, timedelta as _td"
+          },
+          {
+            "line": 13906,
+            "text": "        end_s = _date.today().strftime('%Y-%m-%d')"
+          },
+          {
+            "line": 13907,
+            "text": "        start_s = (_date.today() - _td(days=6)).strftime('%Y-%m-%d')"
+          },
+          {
+            "line": 13908,
+            "text": "        try:"
+          }
+        ]
+      },
+      {
+        "line": 13911,
+        "end_line": 13912,
+        "scope": "App._audit_set_last7",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "other_review",
+        "recommended_action": "No narrow cleanup family selected yet.",
+        "context": [
+          {
+            "line": 13903,
+            "text": ""
+          },
+          {
+            "line": 13904,
+            "text": "    def _audit_set_last7(self):"
+          },
+          {
+            "line": 13905,
+            "text": "        from datetime import date as _date, timedelta as _td"
+          },
+          {
+            "line": 13906,
+            "text": "        end_s = _date.today().strftime('%Y-%m-%d')"
+          },
+          {
+            "line": 13907,
+            "text": "        start_s = (_date.today() - _td(days=6)).strftime('%Y-%m-%d')"
+          },
+          {
+            "line": 13908,
+            "text": "        try:"
+          },
+          {
+            "line": 13909,
+            "text": "            self.audit_from_var.set(start_s)"
+          },
+          {
+            "line": 13910,
+            "text": "            self.audit_to_var.set(end_s)"
+          },
+          {
+            "line": 13911,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 13912,
+            "text": "            pass"
+          },
+          {
+            "line": 13913,
+            "text": "        self.refresh_audit_tab()"
+          },
+          {
+            "line": 13914,
+            "text": ""
+          },
+          {
+            "line": 13915,
+            "text": "    def _audit_set_all(self):"
+          },
+          {
+            "line": 13916,
+            "text": "        try:"
+          },
+          {
+            "line": 13917,
+            "text": "            self.audit_from_var.set('')"
+          },
+          {
+            "line": 13918,
+            "text": "            self.audit_to_var.set('')"
+          },
+          {
+            "line": 13919,
+            "text": "        except Exception:"
+          }
+        ]
+      },
+      {
+        "line": 13919,
+        "end_line": 13920,
+        "scope": "App._audit_set_all",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "other_review",
+        "recommended_action": "No narrow cleanup family selected yet.",
+        "context": [
+          {
+            "line": 13911,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 13912,
+            "text": "            pass"
+          },
+          {
+            "line": 13913,
+            "text": "        self.refresh_audit_tab()"
+          },
+          {
+            "line": 13914,
+            "text": ""
+          },
+          {
+            "line": 13915,
+            "text": "    def _audit_set_all(self):"
+          },
+          {
+            "line": 13916,
+            "text": "        try:"
+          },
+          {
+            "line": 13917,
+            "text": "            self.audit_from_var.set('')"
+          },
+          {
+            "line": 13918,
+            "text": "            self.audit_to_var.set('')"
+          },
+          {
+            "line": 13919,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 13920,
+            "text": "            pass"
+          },
+          {
+            "line": 13921,
+            "text": "        self.refresh_audit_tab()"
+          },
+          {
+            "line": 13922,
+            "text": ""
+          },
+          {
+            "line": 13923,
+            "text": "    def _audit_tree_factory(self, parent, columns, headings, widths):"
+          },
+          {
+            "line": 13924,
+            "text": "        import tkinter as tk"
+          },
+          {
+            "line": 13925,
+            "text": "        from tkinter import ttk"
+          },
+          {
+            "line": 13926,
+            "text": "        parent.columnconfigure(0, weight=1)"
+          },
+          {
+            "line": 13927,
+            "text": "        parent.rowconfigure(0, weight=1)"
+          }
+        ]
+      }
+    ],
+    "ui_compatibility_review": [
+      {
+        "line": 10612,
+        "end_line": 10613,
+        "scope": "App.open_databank_close_dialog",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "ui_compatibility_review",
+        "recommended_action": "General UI compatibility fallback; review before cleanup.",
+        "context": [
+          {
+            "line": 10604,
+            "text": ""
+          },
+          {
+            "line": 10605,
+            "text": "        top = tk.Toplevel(self.root)"
+          },
+          {
+            "line": 10606,
+            "text": "        top.title('Data Bank Daily Close')"
+          },
+          {
+            "line": 10607,
+            "text": "        top.transient(self.root)"
+          },
+          {
+            "line": 10608,
+            "text": "        top.grab_set()"
+          },
+          {
+            "line": 10609,
+            "text": "        top.resizable(True, True)"
+          },
+          {
+            "line": 10610,
+            "text": "        try:"
+          },
+          {
+            "line": 10611,
+            "text": "            top.geometry('1080x720')"
+          },
+          {
+            "line": 10612,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 10613,
+            "text": "            pass"
+          },
+          {
+            "line": 10614,
+            "text": ""
+          },
+          {
+            "line": 10615,
+            "text": "        outer = ttk.Frame(top, padding=12)"
+          },
+          {
+            "line": 10616,
+            "text": "        outer.pack(fill='both', expand=True)"
+          },
+          {
+            "line": 10617,
+            "text": "        outer.columnconfigure(1, weight=1)"
+          },
+          {
+            "line": 10618,
+            "text": "        outer.columnconfigure(2, weight=1)"
+          },
+          {
+            "line": 10619,
+            "text": "        outer.rowconfigure(12, weight=1)"
+          },
+          {
+            "line": 10620,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 14802,
+        "end_line": 14803,
+        "scope": "App._setup_style",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "ui_compatibility_review",
+        "recommended_action": "General UI compatibility fallback; review before cleanup.",
+        "context": [
+          {
+            "line": 14794,
+            "text": "            _log_suppressed_once('excpass_0310', 'suppressed exception excpass_0310', __spina_exc)"
+          },
+          {
+            "line": 14795,
+            "text": "            pass"
+          },
+          {
+            "line": 14796,
+            "text": ""
+          },
+          {
+            "line": 14797,
+            "text": "        style = ttk.Style(self.root)"
+          },
+          {
+            "line": 14798,
+            "text": "        try:"
+          },
+          {
+            "line": 14799,
+            "text": "            # Hide the native notebook tabs for the main app notebook."
+          },
+          {
+            "line": 14800,
+            "text": "            # The new left sidebar becomes the visible navigation."
+          },
+          {
+            "line": 14801,
+            "text": "            style.layout(\"Sidebar.TNotebook.Tab\", [])"
+          },
+          {
+            "line": 14802,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 14803,
+            "text": "            pass"
+          },
+          {
+            "line": 14804,
+            "text": ""
+          },
+          {
+            "line": 14805,
+            "text": "        # Theme preference (light/dark) saved in spina_settings.json"
+          },
+          {
+            "line": 14806,
+            "text": "        try:"
+          },
+          {
+            "line": 14807,
+            "text": "            _s = load_settings()"
+          },
+          {
+            "line": 14808,
+            "text": "            _pref = str(_s.get(\"ui_theme\") or \"dark\").strip().lower()"
+          },
+          {
+            "line": 14809,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 14810,
+            "text": "            _pref = \"dark\""
+          }
+        ]
+      },
+      {
+        "line": 15187,
+        "end_line": 15188,
+        "scope": "App._apply_ui_theme",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "ui_compatibility_review",
+        "recommended_action": "General UI compatibility fallback; review before cleanup.",
+        "context": [
+          {
+            "line": 15179,
+            "text": "        # Apply to any already-created plain tk widgets"
+          },
+          {
+            "line": 15180,
+            "text": "        try:"
+          },
+          {
+            "line": 15181,
+            "text": "            self._apply_tk_theme_recursive(self.root)"
+          },
+          {
+            "line": 15182,
+            "text": "        except Exception as __spina_exc:"
+          },
+          {
+            "line": 15183,
+            "text": "            _log_suppressed_once('excpass_0337', 'suppressed exception excpass_0337', __spina_exc)"
+          },
+          {
+            "line": 15184,
+            "text": "            pass"
+          },
+          {
+            "line": 15185,
+            "text": "        try:"
+          },
+          {
+            "line": 15186,
+            "text": "            self._refresh_modern_shell_theme()"
+          },
+          {
+            "line": 15187,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 15188,
+            "text": "            pass"
+          },
+          {
+            "line": 15189,
+            "text": ""
+          },
+          {
+            "line": 15190,
+            "text": "    def _configure_tree_stripes(self, tree):"
+          },
+          {
+            "line": 15191,
+            "text": "        \"\"\"Configure zebra striping tags on a ttk.Treeview based on current theme."
+          },
+          {
+            "line": 15192,
+            "text": ""
+          },
+          {
+            "line": 15193,
+            "text": "        Important: tag backgrounds override ttk style colors. Without this, Dark Mode can end up"
+          },
+          {
+            "line": 15194,
+            "text": "        with light (white) row backgrounds + light foreground, which is hard to read."
+          },
+          {
+            "line": 15195,
+            "text": "        \"\"\""
+          }
+        ]
+      },
+      {
+        "line": 16622,
+        "end_line": 16623,
+        "scope": "App.open_settings_dialog._run_auto_close_now",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "ui_compatibility_review",
+        "recommended_action": "General UI compatibility fallback; review before cleanup.",
+        "context": [
+          {
+            "line": 16614,
+            "text": "            try:"
+          },
+          {
+            "line": 16615,
+            "text": "                if hasattr(self, 'run_auto_daily_close'):"
+          },
+          {
+            "line": 16616,
+            "text": "                    self.run_auto_daily_close(show_message=True)"
+          },
+          {
+            "line": 16617,
+            "text": "                else:"
+          },
+          {
+            "line": 16618,
+            "text": "                    messagebox.showinfo(\"Auto Daily Close\", \"Auto-close engine is not available in this build yet.\", parent=dlg)"
+          },
+          {
+            "line": 16619,
+            "text": "            except Exception as e:"
+          },
+          {
+            "line": 16620,
+            "text": "                try:"
+          },
+          {
+            "line": 16621,
+            "text": "                    _log_exc('settings.run_auto_close_now', e)"
+          },
+          {
+            "line": 16622,
+            "text": "                except Exception:"
+          },
+          {
+            "line": 16623,
+            "text": "                    pass"
+          },
+          {
+            "line": 16624,
+            "text": "                messagebox.showerror(\"Auto Daily Close\", str(e), parent=dlg)"
+          },
+          {
+            "line": 16625,
+            "text": ""
+          },
+          {
+            "line": 16626,
+            "text": "        ttk.Button(tab_general, text=\"Run Auto Close Check Now\", command=_run_auto_close_now).pack(anchor=\"w\", pady=(4, 0))"
+          },
+          {
+            "line": 16627,
+            "text": ""
+          },
+          {
+            "line": 16628,
+            "text": "        # ---------------- Data tab ----------------"
+          },
+          {
+            "line": 16629,
+            "text": "        ttk.Label(tab_data, text=\"System Data\", font=(\"TkDefaultFont\", 11, \"bold\")).pack(anchor='w')"
+          },
+          {
+            "line": 16630,
+            "text": "        ttk.Label("
+          }
+        ]
+      },
+      {
+        "line": 18861,
+        "end_line": 18862,
+        "scope": "App._show_import_log_window",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "ui_compatibility_review",
+        "recommended_action": "General UI compatibility fallback; review before cleanup.",
+        "context": [
+          {
+            "line": 18853,
+            "text": "                groups[cat].append(ln)"
+          },
+          {
+            "line": 18854,
+            "text": "            else:"
+          },
+          {
+            "line": 18855,
+            "text": "                groups[\"Other\"].append(ln)"
+          },
+          {
+            "line": 18856,
+            "text": ""
+          },
+          {
+            "line": 18857,
+            "text": "        # UI scaffold"
+          },
+          {
+            "line": 18858,
+            "text": "        try:"
+          },
+          {
+            "line": 18859,
+            "text": "            win.title(title or \"Import Log\")"
+          },
+          {
+            "line": 18860,
+            "text": "            win.geometry(\"980x640\")"
+          },
+          {
+            "line": 18861,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 18862,
+            "text": "            pass"
+          },
+          {
+            "line": 18863,
+            "text": ""
+          },
+          {
+            "line": 18864,
+            "text": "        outer = ttk.Frame(win)"
+          },
+          {
+            "line": 18865,
+            "text": "        outer.pack(fill=\"both\", expand=True, padx=12, pady=12)"
+          },
+          {
+            "line": 18866,
+            "text": ""
+          },
+          {
+            "line": 18867,
+            "text": "        # Summary header (always visible)"
+          },
+          {
+            "line": 18868,
+            "text": "        if summary:"
+          },
+          {
+            "line": 18869,
+            "text": "            summary_box = ttk.Label(outer, text=str(summary), justify=\"left\")"
+          }
+        ]
+      },
+      {
+        "line": 19111,
+        "end_line": 19112,
+        "scope": "App._show_import_log_window",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "ui_compatibility_review",
+        "recommended_action": "General UI compatibility fallback; review before cleanup.",
+        "context": [
+          {
+            "line": 19103,
+            "text": "        ttk.Button(btn_row, text=\"Close\", command=win.destroy).pack(side=\"right\")"
+          },
+          {
+            "line": 19104,
+            "text": ""
+          },
+          {
+            "line": 19105,
+            "text": "        try:"
+          },
+          {
+            "line": 19106,
+            "text": "            if saved_path:"
+          },
+          {
+            "line": 19107,
+            "text": "                win._spina_saved_import_log_path = saved_path  # type: ignore[attr-defined]"
+          },
+          {
+            "line": 19108,
+            "text": "                btn_open.configure(state=\"normal\")"
+          },
+          {
+            "line": 19109,
+            "text": "            else:"
+          },
+          {
+            "line": 19110,
+            "text": "                btn_open.configure(state=\"disabled\")"
+          },
+          {
+            "line": 19111,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 19112,
+            "text": "            pass"
+          },
+          {
+            "line": 19113,
+            "text": ""
+          },
+          {
+            "line": 19114,
+            "text": "        try:"
+          },
+          {
+            "line": 19115,
+            "text": "            search_entry.bind(\"<KeyRelease>\", _refresh)"
+          },
+          {
+            "line": 19116,
+            "text": "            nb.bind(\"<<NotebookTabChanged>>\", _refresh)"
+          },
+          {
+            "line": 19117,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 19118,
+            "text": "            pass"
+          },
+          {
+            "line": 19119,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 29070,
+        "end_line": 29071,
+        "scope": "_app__client_form._flex_due_code_from_choice",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "ui_compatibility_review",
+        "recommended_action": "General UI compatibility fallback; review before cleanup.",
+        "context": [
+          {
+            "line": 29062,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 29063,
+            "text": "            label = ''"
+          },
+          {
+            "line": 29064,
+            "text": "        if label.startswith('Custom / legacy:'):"
+          },
+          {
+            "line": 29065,
+            "text": "            code = label.split(':', 1)[1].strip()"
+          },
+          {
+            "line": 29066,
+            "text": "        else:"
+          },
+          {
+            "line": 29067,
+            "text": "            code = _flex_due_label_to_code.get(label, '')"
+          },
+          {
+            "line": 29068,
+            "text": "        try:"
+          },
+          {
+            "line": 29069,
+            "text": "            flex_due_rule_var.set(code)"
+          },
+          {
+            "line": 29070,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 29071,
+            "text": "            pass"
+          },
+          {
+            "line": 29072,
+            "text": "        return code"
+          },
+          {
+            "line": 29073,
+            "text": ""
+          },
+          {
+            "line": 29074,
+            "text": "    is_new_var = tk.IntVar(value=1 if str(init.get('new_until') or '').strip() else 0)"
+          },
+          {
+            "line": 29075,
+            "text": ""
+          },
+          {
+            "line": 29076,
+            "text": "    # Pay start offset:"
+          },
+          {
+            "line": 29077,
+            "text": "    # 0 = same-day start, 1 = next-day start (optional)"
+          },
+          {
+            "line": 29078,
+            "text": "    psod = init.get('pay_start_offset_days')"
+          }
+        ]
+      },
+      {
+        "line": 30054,
+        "end_line": 30055,
+        "scope": "_app_open_client_history_dialog",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "ui_compatibility_review",
+        "recommended_action": "General UI compatibility fallback; review before cleanup.",
+        "context": [
+          {
+            "line": 30046,
+            "text": "        action_counts[a] = action_counts.get(a, 0) + 1"
+          },
+          {
+            "line": 30047,
+            "text": ""
+          },
+          {
+            "line": 30048,
+            "text": "    win = tk.Toplevel(self.root)"
+          },
+          {
+            "line": 30049,
+            "text": "    win.title(f\"Audit History: {name} ({lt}){linked_label}\")"
+          },
+          {
+            "line": 30050,
+            "text": "    win.geometry(\"1180x760\")"
+          },
+          {
+            "line": 30051,
+            "text": "    try:"
+          },
+          {
+            "line": 30052,
+            "text": "        win.transient(self.root)"
+          },
+          {
+            "line": 30053,
+            "text": "        win.grab_set()"
+          },
+          {
+            "line": 30054,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 30055,
+            "text": "        pass"
+          },
+          {
+            "line": 30056,
+            "text": ""
+          },
+          {
+            "line": 30057,
+            "text": "    outer = ttk.Frame(win, padding=8)"
+          },
+          {
+            "line": 30058,
+            "text": "    outer.pack(fill='both', expand=True)"
+          },
+          {
+            "line": 30059,
+            "text": ""
+          },
+          {
+            "line": 30060,
+            "text": "    hdr = ttk.Frame(outer)"
+          },
+          {
+            "line": 30061,
+            "text": "    hdr.pack(fill='x', pady=(0, 8))"
+          },
+          {
+            "line": 30062,
+            "text": "    ttk.Label(hdr, text=f\"Audit Trail - {name}\", font=('TkDefaultFont', 12, 'bold')).pack(side='left')"
+          }
+        ]
+      },
+      {
+        "line": 30364,
+        "end_line": 30365,
+        "scope": "_app_open_client_history_dialog",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "ui_compatibility_review",
+        "recommended_action": "General UI compatibility fallback; review before cleanup.",
+        "context": [
+          {
+            "line": 30356,
+            "text": "    for tag, opts in {"
+          },
+          {
+            "line": 30357,
+            "text": "        'ADD': {'foreground': '#1f7a1f'},"
+          },
+          {
+            "line": 30358,
+            "text": "        'UPDATE': {'foreground': '#0b5fa5'},"
+          },
+          {
+            "line": 30359,
+            "text": "        'EDIT': {'foreground': '#0b5fa5'},"
+          },
+          {
+            "line": 30360,
+            "text": "        'DELETE': {'foreground': '#a11a1a'},"
+          },
+          {
+            "line": 30361,
+            "text": "    }.items():"
+          },
+          {
+            "line": 30362,
+            "text": "        try:"
+          },
+          {
+            "line": 30363,
+            "text": "            tree3.tag_configure(tag, **opts)"
+          },
+          {
+            "line": 30364,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 30365,
+            "text": "            pass"
+          },
+          {
+            "line": 30366,
+            "text": ""
+          },
+          {
+            "line": 30367,
+            "text": "    pan3 = ttk.PanedWindow(tab3, orient='horizontal')"
+          },
+          {
+            "line": 30368,
+            "text": "    pan3.pack(fill='both', expand=True, pady=(8,0))"
+          },
+          {
+            "line": 30369,
+            "text": "    old3_frm, old3 = _mk_ro_text(pan3)"
+          },
+          {
+            "line": 30370,
+            "text": "    new3_frm, new3 = _mk_ro_text(pan3)"
+          },
+          {
+            "line": 30371,
+            "text": "    pan3.add(old3_frm, weight=1)"
+          },
+          {
+            "line": 30372,
+            "text": "    pan3.add(new3_frm, weight=1)"
+          }
+        ]
+      },
+      {
+        "line": 35901,
+        "end_line": 35902,
+        "scope": "_app_install_clients_picture_ui",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "ui_compatibility_review",
+        "recommended_action": "General UI compatibility fallback; review before cleanup.",
+        "context": [
+          {
+            "line": 35893,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 35894,
+            "text": "        pass"
+          },
+          {
+            "line": 35895,
+            "text": ""
+          },
+          {
+            "line": 35896,
+            "text": ""
+          },
+          {
+            "line": 35897,
+            "text": "def _app_install_clients_picture_ui(self):"
+          },
+          {
+            "line": 35898,
+            "text": "    if getattr(self, '_clients_picture_ui_ready', False):"
+          },
+          {
+            "line": 35899,
+            "text": "        try:"
+          },
+          {
+            "line": 35900,
+            "text": "            self.refresh_client_picture_panel()"
+          },
+          {
+            "line": 35901,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 35902,
+            "text": "            pass"
+          },
+          {
+            "line": 35903,
+            "text": "        return"
+          },
+          {
+            "line": 35904,
+            "text": ""
+          },
+          {
+            "line": 35905,
+            "text": "    try:"
+          },
+          {
+            "line": 35906,
+            "text": "        box = ttk.LabelFrame(self.tab_clients, text='Client Picture')"
+          },
+          {
+            "line": 35907,
+            "text": "        box.pack(fill='x', padx=8, pady=(0, 8))"
+          },
+          {
+            "line": 35908,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 35909,
+            "text": "        return"
+          }
+        ]
+      },
+      {
+        "line": 35917,
+        "end_line": 35918,
+        "scope": "_app_install_clients_picture_ui",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "ui_compatibility_review",
+        "recommended_action": "General UI compatibility fallback; review before cleanup.",
+        "context": [
+          {
+            "line": 35909,
+            "text": "        return"
+          },
+          {
+            "line": 35910,
+            "text": ""
+          },
+          {
+            "line": 35911,
+            "text": "    top = ttk.Frame(box)"
+          },
+          {
+            "line": 35912,
+            "text": "    top.pack(fill='x', padx=8, pady=8)"
+          },
+          {
+            "line": 35913,
+            "text": ""
+          },
+          {
+            "line": 35914,
+            "text": "    preview = ttk.Label(top, text='No picture selected', anchor='center', width=22)"
+          },
+          {
+            "line": 35915,
+            "text": "    try:"
+          },
+          {
+            "line": 35916,
+            "text": "        preview.configure(relief='solid', padding=8)"
+          },
+          {
+            "line": 35917,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 35918,
+            "text": "        pass"
+          },
+          {
+            "line": 35919,
+            "text": "    preview.pack(side='left', padx=(0, 12), pady=2)"
+          },
+          {
+            "line": 35920,
+            "text": ""
+          },
+          {
+            "line": 35921,
+            "text": "    right = ttk.Frame(top)"
+          },
+          {
+            "line": 35922,
+            "text": "    right.pack(side='left', fill='x', expand=True)"
+          },
+          {
+            "line": 35923,
+            "text": ""
+          },
+          {
+            "line": 35924,
+            "text": "    info_var = tk.StringVar(value='Select a client to view picture.')"
+          },
+          {
+            "line": 35925,
+            "text": "    path_var = tk.StringVar(value='')"
+          }
+        ]
+      },
+      {
+        "line": 36431,
+        "end_line": 36432,
+        "scope": "_spina_perf_refresh_data_grid",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "ui_compatibility_review",
+        "recommended_action": "General UI compatibility fallback; review before cleanup.",
+        "context": [
+          {
+            "line": 36423,
+            "text": "    day_cols = tuple(f\"d{d}\" for d in range(1, days + 1))"
+          },
+          {
+            "line": 36424,
+            "text": "    cols = (\"client\", \"area\") + day_cols"
+          },
+          {
+            "line": 36425,
+            "text": ""
+          },
+          {
+            "line": 36426,
+            "text": "    grid = ttk.Frame(self.inner)"
+          },
+          {
+            "line": 36427,
+            "text": "    grid.grid(row=0, column=0, sticky=\"nsew\")"
+          },
+          {
+            "line": 36428,
+            "text": "    try:"
+          },
+          {
+            "line": 36429,
+            "text": "        self.inner.grid_rowconfigure(0, weight=1)"
+          },
+          {
+            "line": 36430,
+            "text": "        self.inner.grid_columnconfigure(0, weight=1)"
+          },
+          {
+            "line": 36431,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 36432,
+            "text": "        pass"
+          },
+          {
+            "line": 36433,
+            "text": "    grid.grid_rowconfigure(0, weight=1)"
+          },
+          {
+            "line": 36434,
+            "text": "    grid.grid_columnconfigure(1, weight=1)"
+          },
+          {
+            "line": 36435,
+            "text": ""
+          },
+          {
+            "line": 36436,
+            "text": "    self.name_tree = ttk.Treeview(grid, columns=(\"client\", \"area\"), show=\"headings\", height=31)"
+          },
+          {
+            "line": 36437,
+            "text": "    self._configure_tree_stripes(self.name_tree)"
+          },
+          {
+            "line": 36438,
+            "text": "    self.name_tree.heading(\"client\", text=\"Client Name\")"
+          },
+          {
+            "line": 36439,
+            "text": "    self.name_tree.heading(\"area\", text=\"Area\")"
+          }
+        ]
+      }
+    ],
+    "queue_empty_control_flow_leave": [
+      {
+        "line": 14368,
+        "end_line": 14370,
+        "scope": "App._start_ui_queue_pump._pump",
+        "handler": "queue.Empty",
+        "protected_context": false,
+        "group": "queue_empty_control_flow_leave",
+        "recommended_action": "Empty queue is normal control flow.",
+        "context": [
+          {
+            "line": 14360,
+            "text": "                    except Exception as e:"
+          },
+          {
+            "line": 14361,
+            "text": "                        out[\"exc\"] = e"
+          },
+          {
+            "line": 14362,
+            "text": "                    finally:"
+          },
+          {
+            "line": 14363,
+            "text": "                        try:"
+          },
+          {
+            "line": 14364,
+            "text": "                            ev.set()"
+          },
+          {
+            "line": 14365,
+            "text": "                        except Exception as __spina_exc:"
+          },
+          {
+            "line": 14366,
+            "text": "                            _log_suppressed_once('excpass_0275', 'suppressed exception excpass_0275', __spina_exc)"
+          },
+          {
+            "line": 14367,
+            "text": "                            pass"
+          },
+          {
+            "line": 14368,
+            "text": "            except queue.Empty:"
+          },
+          {
+            "line": 14369,
+            "text": "                # nothing pending"
+          },
+          {
+            "line": 14370,
+            "text": "                pass"
+          },
+          {
+            "line": 14371,
+            "text": "            except Exception as e:"
+          },
+          {
+            "line": 14372,
+            "text": "                try:"
+          },
+          {
+            "line": 14373,
+            "text": "                    _log_exc(\"ui_queue_pump\", e)"
+          },
+          {
+            "line": 14374,
+            "text": "                except Exception as __spina_exc:"
+          },
+          {
+            "line": 14375,
+            "text": "                    _log_suppressed_once('excpass_0276', 'suppressed exception excpass_0276', __spina_exc)"
+          },
+          {
+            "line": 14376,
+            "text": "                    pass"
+          }
+        ]
+      }
+    ],
+    "app_lifecycle_leave": [
+      {
+        "line": 14410,
+        "end_line": 14412,
+        "scope": "App._ui_call",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "app_lifecycle_leave",
+        "recommended_action": "Tk root may be closing; avoid noisy failures during shutdown.",
+        "context": [
+          {
+            "line": 14402,
+            "text": "            pass"
+          },
+          {
+            "line": 14403,
+            "text": ""
+          },
+          {
+            "line": 14404,
+            "text": "        # If UI is already closed, don't block forever."
+          },
+          {
+            "line": 14405,
+            "text": "        try:"
+          },
+          {
+            "line": 14406,
+            "text": "            if not self.root.winfo_exists():"
+          },
+          {
+            "line": 14407,
+            "text": "                raise RuntimeError(\"UI is closed; cannot execute UI call from worker thread.\")"
+          },
+          {
+            "line": 14408,
+            "text": "        except RuntimeError:"
+          },
+          {
+            "line": 14409,
+            "text": "            raise"
+          },
+          {
+            "line": 14410,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 14411,
+            "text": "            # best-effort: proceed"
+          },
+          {
+            "line": 14412,
+            "text": "            pass"
+          },
+          {
+            "line": 14413,
+            "text": ""
+          },
+          {
+            "line": 14414,
+            "text": "        ev = threading.Event()"
+          },
+          {
+            "line": 14415,
+            "text": "        out = {}"
+          },
+          {
+            "line": 14416,
+            "text": ""
+          },
+          {
+            "line": 14417,
+            "text": "        # Enqueue request (do NOT call Tk directly from worker thread)."
+          },
+          {
+            "line": 14418,
+            "text": "        try:"
+          }
+        ]
+      },
+      {
+        "line": 14653,
+        "end_line": 14655,
+        "scope": "App._run_long_task._watchdog",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "app_lifecycle_leave",
+        "recommended_action": "Tk root may be closing; avoid noisy failures during shutdown.",
+        "context": [
+          {
+            "line": 14645,
+            "text": "            except Exception as e:"
+          },
+          {
+            "line": 14646,
+            "text": "                try:"
+          },
+          {
+            "line": 14647,
+            "text": "                    _log_exc(\"long_task:watchdog\", e)"
+          },
+          {
+            "line": 14648,
+            "text": "                except Exception as __spina_exc:"
+          },
+          {
+            "line": 14649,
+            "text": "                    _log_suppressed_once('excpass_0300', 'suppressed exception excpass_0300', __spina_exc)"
+          },
+          {
+            "line": 14650,
+            "text": "                    pass"
+          },
+          {
+            "line": 14651,
+            "text": "            try:"
+          },
+          {
+            "line": 14652,
+            "text": "                self.root.after(250, _watchdog)"
+          },
+          {
+            "line": 14653,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 14654,
+            "text": "                # root is likely closing"
+          },
+          {
+            "line": 14655,
+            "text": "                pass"
+          },
+          {
+            "line": 14656,
+            "text": ""
+          },
+          {
+            "line": 14657,
+            "text": "        # --- build dialog (UI thread) ---"
+          },
+          {
+            "line": 14658,
+            "text": "        try:"
+          },
+          {
+            "line": 14659,
+            "text": "            dlg = tk.Toplevel(self.root)"
+          },
+          {
+            "line": 14660,
+            "text": "            dlg.title(title or \"Please wait\")"
+          },
+          {
+            "line": 14661,
+            "text": "            dlg.resizable(False, False)"
+          }
+        ]
+      },
+      {
+        "line": 39417,
+        "end_line": 39418,
+        "scope": "_spina_schedule_auto_daily_close",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "app_lifecycle_leave",
+        "recommended_action": "Tk root may be closing; avoid noisy failures during shutdown.",
+        "context": [
+          {
+            "line": 39409,
+            "text": ""
+          },
+          {
+            "line": 39410,
+            "text": "def _spina_schedule_auto_daily_close(self):"
+          },
+          {
+            "line": 39411,
+            "text": "    \"\"\"Run auto close now and then check periodically while the app is open.\"\"\""
+          },
+          {
+            "line": 39412,
+            "text": "    try:"
+          },
+          {
+            "line": 39413,
+            "text": "        self.run_auto_daily_close(show_message=False)"
+          },
+          {
+            "line": 39414,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 39415,
+            "text": "        try:"
+          },
+          {
+            "line": 39416,
+            "text": "            _log_exc('auto_daily_close.initial', e)"
+          },
+          {
+            "line": 39417,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 39418,
+            "text": "            pass"
+          },
+          {
+            "line": 39419,
+            "text": ""
+          },
+          {
+            "line": 39420,
+            "text": "    try:"
+          },
+          {
+            "line": 39421,
+            "text": "        root = getattr(self, 'root', None)"
+          },
+          {
+            "line": 39422,
+            "text": "        if root is None:"
+          },
+          {
+            "line": 39423,
+            "text": "            return"
+          },
+          {
+            "line": 39424,
+            "text": "        # Check every hour. The date threshold comes from Settings each time."
+          },
+          {
+            "line": 39425,
+            "text": "        root.after(60 * 60 * 1000, lambda: self._schedule_auto_daily_close())"
+          }
+        ]
+      },
+      {
+        "line": 39426,
+        "end_line": 39427,
+        "scope": "_spina_schedule_auto_daily_close",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "app_lifecycle_leave",
+        "recommended_action": "Tk root may be closing; avoid noisy failures during shutdown.",
+        "context": [
+          {
+            "line": 39418,
+            "text": "            pass"
+          },
+          {
+            "line": 39419,
+            "text": ""
+          },
+          {
+            "line": 39420,
+            "text": "    try:"
+          },
+          {
+            "line": 39421,
+            "text": "        root = getattr(self, 'root', None)"
+          },
+          {
+            "line": 39422,
+            "text": "        if root is None:"
+          },
+          {
+            "line": 39423,
+            "text": "            return"
+          },
+          {
+            "line": 39424,
+            "text": "        # Check every hour. The date threshold comes from Settings each time."
+          },
+          {
+            "line": 39425,
+            "text": "        root.after(60 * 60 * 1000, lambda: self._schedule_auto_daily_close())"
+          },
+          {
+            "line": 39426,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 39427,
+            "text": "        pass"
+          },
+          {
+            "line": 39428,
+            "text": ""
+          },
+          {
+            "line": 39429,
+            "text": ""
+          },
+          {
+            "line": 39430,
+            "text": "try:"
+          },
+          {
+            "line": 39431,
+            "text": "    setattr(App, 'run_auto_daily_close', _spina_run_auto_daily_close)"
+          },
+          {
+            "line": 39432,
+            "text": "    setattr(App, '_schedule_auto_daily_close', _spina_schedule_auto_daily_close)"
+          },
+          {
+            "line": 39433,
+            "text": "    _spina_orig_app_init_autoclose = App.__init__"
+          },
+          {
+            "line": 39434,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 42348,
+        "end_line": 42349,
+        "scope": "_spina_v17_build_dashboard_tab",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "app_lifecycle_leave",
+        "recommended_action": "Tk root may be closing; avoid noisy failures during shutdown.",
+        "context": [
+          {
+            "line": 42340,
+            "text": "            )"
+          },
+          {
+            "line": 42341,
+            "text": ""
+          },
+          {
+            "line": 42342,
+            "text": "        try:"
+          },
+          {
+            "line": 42343,
+            "text": "            self.dashboard_tree.tag_configure(\"finish\", background=\"#234b33\" if colors[\"bg\"].startswith(\"#11\") else \"#dcfce7\", foreground=colors[\"fg\"] if colors[\"bg\"].startswith(\"#11\") else \"#14532d\")"
+          },
+          {
+            "line": 42344,
+            "text": "            self.dashboard_tree.tag_configure(\"near\", background=\"#4a3a16\" if colors[\"bg\"].startswith(\"#11\") else \"#fef3c7\", foreground=colors[\"fg\"] if colors[\"bg\"].startswith(\"#11\") else \"#78350f\")"
+          },
+          {
+            "line": 42345,
+            "text": "            self.dashboard_tree.tag_configure(\"due\", background=\"#4a311c\" if colors[\"bg\"].startswith(\"#11\") else \"#ffedd5\", foreground=colors[\"fg\"] if colors[\"bg\"].startswith(\"#11\") else \"#7c2d12\")"
+          },
+          {
+            "line": 42346,
+            "text": "            self.dashboard_tree.tag_configure(\"overdue\", background=\"#4a2424\" if colors[\"bg\"].startswith(\"#11\") else \"#fee2e2\", foreground=colors[\"fg\"] if colors[\"bg\"].startswith(\"#11\") else \"#7f1d1d\")"
+          },
+          {
+            "line": 42347,
+            "text": "            self.dashboard_tree.tag_configure(\"complete\", background=\"#22394c\" if colors[\"bg\"].startswith(\"#11\") else \"#dbeafe\", foreground=colors[\"fg\"] if colors[\"bg\"].startswith(\"#11\") else \"#1e3a8a\")"
+          },
+          {
+            "line": 42348,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 42349,
+            "text": "            pass"
+          },
+          {
+            "line": 42350,
+            "text": ""
+          },
+          {
+            "line": 42351,
+            "text": "        def redraw_on_resize(_event=None):"
+          },
+          {
+            "line": 42352,
+            "text": "            try:"
+          },
+          {
+            "line": 42353,
+            "text": "                if getattr(self, \"_dash_redraw_after_id\", None):"
+          },
+          {
+            "line": 42354,
+            "text": "                    try:"
+          },
+          {
+            "line": 42355,
+            "text": "                        self.root.after_cancel(self._dash_redraw_after_id)"
+          },
+          {
+            "line": 42356,
+            "text": "                    except Exception:"
+          }
+        ]
+      },
+      {
+        "line": 42356,
+        "end_line": 42357,
+        "scope": "_spina_v17_build_dashboard_tab.redraw_on_resize",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "app_lifecycle_leave",
+        "recommended_action": "Tk root may be closing; avoid noisy failures during shutdown.",
+        "context": [
+          {
+            "line": 42348,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 42349,
+            "text": "            pass"
+          },
+          {
+            "line": 42350,
+            "text": ""
+          },
+          {
+            "line": 42351,
+            "text": "        def redraw_on_resize(_event=None):"
+          },
+          {
+            "line": 42352,
+            "text": "            try:"
+          },
+          {
+            "line": 42353,
+            "text": "                if getattr(self, \"_dash_redraw_after_id\", None):"
+          },
+          {
+            "line": 42354,
+            "text": "                    try:"
+          },
+          {
+            "line": 42355,
+            "text": "                        self.root.after_cancel(self._dash_redraw_after_id)"
+          },
+          {
+            "line": 42356,
+            "text": "                    except Exception:"
+          },
+          {
+            "line": 42357,
+            "text": "                        pass"
+          },
+          {
+            "line": 42358,
+            "text": "                self._dash_redraw_after_id = self.root.after(120, lambda: _spina_v17_draw_dashboard_charts(self, _spina_v17_visible_dashboard_rows(self)))"
+          },
+          {
+            "line": 42359,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 42360,
+            "text": "                pass"
+          },
+          {
+            "line": 42361,
+            "text": ""
+          },
+          {
+            "line": 42362,
+            "text": "        for cv in (self.dashboard_gauge_canvas, self.dashboard_status_canvas, self.dashboard_type_canvas):"
+          },
+          {
+            "line": 42363,
+            "text": "            try:"
+          },
+          {
+            "line": 42364,
+            "text": "                cv.bind(\"<Configure>\", redraw_on_resize)"
+          }
+        ]
+      },
+      {
+        "line": 42359,
+        "end_line": 42360,
+        "scope": "_spina_v17_build_dashboard_tab.redraw_on_resize",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "app_lifecycle_leave",
+        "recommended_action": "Tk root may be closing; avoid noisy failures during shutdown.",
+        "context": [
+          {
+            "line": 42351,
+            "text": "        def redraw_on_resize(_event=None):"
+          },
+          {
+            "line": 42352,
+            "text": "            try:"
+          },
+          {
+            "line": 42353,
+            "text": "                if getattr(self, \"_dash_redraw_after_id\", None):"
+          },
+          {
+            "line": 42354,
+            "text": "                    try:"
+          },
+          {
+            "line": 42355,
+            "text": "                        self.root.after_cancel(self._dash_redraw_after_id)"
+          },
+          {
+            "line": 42356,
+            "text": "                    except Exception:"
+          },
+          {
+            "line": 42357,
+            "text": "                        pass"
+          },
+          {
+            "line": 42358,
+            "text": "                self._dash_redraw_after_id = self.root.after(120, lambda: _spina_v17_draw_dashboard_charts(self, _spina_v17_visible_dashboard_rows(self)))"
+          },
+          {
+            "line": 42359,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 42360,
+            "text": "                pass"
+          },
+          {
+            "line": 42361,
+            "text": ""
+          },
+          {
+            "line": 42362,
+            "text": "        for cv in (self.dashboard_gauge_canvas, self.dashboard_status_canvas, self.dashboard_type_canvas):"
+          },
+          {
+            "line": 42363,
+            "text": "            try:"
+          },
+          {
+            "line": 42364,
+            "text": "                cv.bind(\"<Configure>\", redraw_on_resize)"
+          },
+          {
+            "line": 42365,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 42366,
+            "text": "                pass"
+          },
+          {
+            "line": 42367,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 42365,
+        "end_line": 42366,
+        "scope": "_spina_v17_build_dashboard_tab",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "app_lifecycle_leave",
+        "recommended_action": "Tk root may be closing; avoid noisy failures during shutdown.",
+        "context": [
+          {
+            "line": 42357,
+            "text": "                        pass"
+          },
+          {
+            "line": 42358,
+            "text": "                self._dash_redraw_after_id = self.root.after(120, lambda: _spina_v17_draw_dashboard_charts(self, _spina_v17_visible_dashboard_rows(self)))"
+          },
+          {
+            "line": 42359,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 42360,
+            "text": "                pass"
+          },
+          {
+            "line": 42361,
+            "text": ""
+          },
+          {
+            "line": 42362,
+            "text": "        for cv in (self.dashboard_gauge_canvas, self.dashboard_status_canvas, self.dashboard_type_canvas):"
+          },
+          {
+            "line": 42363,
+            "text": "            try:"
+          },
+          {
+            "line": 42364,
+            "text": "                cv.bind(\"<Configure>\", redraw_on_resize)"
+          },
+          {
+            "line": 42365,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 42366,
+            "text": "                pass"
+          },
+          {
+            "line": 42367,
+            "text": ""
+          },
+          {
+            "line": 42368,
+            "text": "        _spina_v17_update_filter_buttons(self)"
+          },
+          {
+            "line": 42369,
+            "text": "        self.refresh_dashboard()"
+          },
+          {
+            "line": 42370,
+            "text": ""
+          },
+          {
+            "line": 42371,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 42372,
+            "text": "        try:"
+          },
+          {
+            "line": 42373,
+            "text": "            _log_exc(\"v17.build_dashboard_tab\", e)"
+          }
+        ]
+      },
+      {
+        "line": 42855,
+        "end_line": 42856,
+        "scope": "_spina_v18_populate_dashboard_tree",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "app_lifecycle_leave",
+        "recommended_action": "Tk root may be closing; avoid noisy failures during shutdown.",
+        "context": [
+          {
+            "line": 42847,
+            "text": "        _spina_v17_populate_dashboard_tree(self)"
+          },
+          {
+            "line": 42848,
+            "text": "        try:"
+          },
+          {
+            "line": 42849,
+            "text": "            rows = _spina_v17_visible_dashboard_rows(self)"
+          },
+          {
+            "line": 42850,
+            "text": "            root = getattr(self, \"root\", None) or getattr(self, \"master\", None)"
+          },
+          {
+            "line": 42851,
+            "text": "            if root is not None:"
+          },
+          {
+            "line": 42852,
+            "text": "                root.after(80, lambda: _spina_v18_draw_dashboard_charts(self, rows))"
+          },
+          {
+            "line": 42853,
+            "text": "            else:"
+          },
+          {
+            "line": 42854,
+            "text": "                _spina_v18_draw_dashboard_charts(self, rows)"
+          },
+          {
+            "line": 42855,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 42856,
+            "text": "            pass"
+          },
+          {
+            "line": 42857,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 42858,
+            "text": "        try:"
+          },
+          {
+            "line": 42859,
+            "text": "            _log_exc(\"v18.populate_dashboard_tree\", e)"
+          },
+          {
+            "line": 42860,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 42861,
+            "text": "            pass"
+          },
+          {
+            "line": 42862,
+            "text": ""
+          },
+          {
+            "line": 42863,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 42860,
+        "end_line": 42861,
+        "scope": "_spina_v18_populate_dashboard_tree",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "app_lifecycle_leave",
+        "recommended_action": "Tk root may be closing; avoid noisy failures during shutdown.",
+        "context": [
+          {
+            "line": 42852,
+            "text": "                root.after(80, lambda: _spina_v18_draw_dashboard_charts(self, rows))"
+          },
+          {
+            "line": 42853,
+            "text": "            else:"
+          },
+          {
+            "line": 42854,
+            "text": "                _spina_v18_draw_dashboard_charts(self, rows)"
+          },
+          {
+            "line": 42855,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 42856,
+            "text": "            pass"
+          },
+          {
+            "line": 42857,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 42858,
+            "text": "        try:"
+          },
+          {
+            "line": 42859,
+            "text": "            _log_exc(\"v18.populate_dashboard_tree\", e)"
+          },
+          {
+            "line": 42860,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 42861,
+            "text": "            pass"
+          },
+          {
+            "line": 42862,
+            "text": ""
+          },
+          {
+            "line": 42863,
+            "text": ""
+          },
+          {
+            "line": 42864,
+            "text": "def _spina_v18_refresh_dashboard(self):"
+          },
+          {
+            "line": 42865,
+            "text": "    try:"
+          },
+          {
+            "line": 42866,
+            "text": "        if not hasattr(self, \"tab_dashboard\"):"
+          },
+          {
+            "line": 42867,
+            "text": "            return"
+          },
+          {
+            "line": 42868,
+            "text": "        self._dashboard_rows = _spina_dashboard_fetch_rows(self)"
+          }
+        ]
+      }
+    ],
+    "role_access_runtime_patch_review": [
+      {
+        "line": 16430,
+        "end_line": 16431,
+        "scope": "App._refresh_user_header",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "role_access_runtime_patch_review",
+        "recommended_action": "Role/access patching affects visible permissions; keep review-only.",
+        "context": [
+          {
+            "line": 16422,
+            "text": "        try:"
+          },
+          {
+            "line": 16423,
+            "text": "            if getattr(self, 'user_role_label', None) is not None:"
+          },
+          {
+            "line": 16424,
+            "text": "                self.user_role_label.config(text=f\"{self.user_name} • {self.user_role}\")"
+          },
+          {
+            "line": 16425,
+            "text": "        except Exception as __spina_exc:"
+          },
+          {
+            "line": 16426,
+            "text": "            _log_suppressed_once('excpass_refresh_user_header', 'suppressed exception excpass_refresh_user_header', __spina_exc)"
+          },
+          {
+            "line": 16427,
+            "text": "            pass"
+          },
+          {
+            "line": 16428,
+            "text": "        try:"
+          },
+          {
+            "line": 16429,
+            "text": "            self._refresh_header_theme()"
+          },
+          {
+            "line": 16430,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 16431,
+            "text": "            pass"
+          },
+          {
+            "line": 16432,
+            "text": ""
+          },
+          {
+            "line": 16433,
+            "text": "    def switch_account(self):"
+          },
+          {
+            "line": 16434,
+            "text": "        old_user = getattr(self, 'user_name', '') or ''"
+          },
+          {
+            "line": 16435,
+            "text": "        old_role = getattr(self, 'user_role', '') or ''"
+          },
+          {
+            "line": 16436,
+            "text": "        try:"
+          },
+          {
+            "line": 16437,
+            "text": "            u, r = self._prompt_login(default_user=(self.user_name or 'admin'))"
+          },
+          {
+            "line": 16438,
+            "text": "        except Exception as e:"
+          }
+        ]
+      },
+      {
+        "line": 37801,
+        "end_line": 37802,
+        "scope": "_spina_refresh_dashboard",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "role_access_runtime_patch_review",
+        "recommended_action": "Role/access patching affects visible permissions; keep review-only.",
+        "context": [
+          {
+            "line": 37793,
+            "text": "            pass"
+          },
+          {
+            "line": 37794,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 37795,
+            "text": "        try:"
+          },
+          {
+            "line": 37796,
+            "text": "            _log_exc('refresh_dashboard', e)"
+          },
+          {
+            "line": 37797,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37798,
+            "text": "            pass"
+          },
+          {
+            "line": 37799,
+            "text": "        try:"
+          },
+          {
+            "line": 37800,
+            "text": "            self.status_var.set('Dashboard refresh failed. See data/spina_app.log.')"
+          },
+          {
+            "line": 37801,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37802,
+            "text": "            pass"
+          },
+          {
+            "line": 37803,
+            "text": ""
+          },
+          {
+            "line": 37804,
+            "text": ""
+          },
+          {
+            "line": 37805,
+            "text": "def _spina_apply_dashboard_role(self):"
+          },
+          {
+            "line": 37806,
+            "text": "    try:"
+          },
+          {
+            "line": 37807,
+            "text": "        if not hasattr(self, 'nb') or not hasattr(self, 'tab_dashboard'):"
+          },
+          {
+            "line": 37808,
+            "text": "            return"
+          },
+          {
+            "line": 37809,
+            "text": "        role = (getattr(self, 'user_role', '') or 'Admin').strip()"
+          }
+        ]
+      },
+      {
+        "line": 37813,
+        "end_line": 37814,
+        "scope": "_spina_apply_dashboard_role",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "role_access_runtime_patch_review",
+        "recommended_action": "Role/access patching affects visible permissions; keep review-only.",
+        "context": [
+          {
+            "line": 37805,
+            "text": "def _spina_apply_dashboard_role(self):"
+          },
+          {
+            "line": 37806,
+            "text": "    try:"
+          },
+          {
+            "line": 37807,
+            "text": "        if not hasattr(self, 'nb') or not hasattr(self, 'tab_dashboard'):"
+          },
+          {
+            "line": 37808,
+            "text": "            return"
+          },
+          {
+            "line": 37809,
+            "text": "        role = (getattr(self, 'user_role', '') or 'Admin').strip()"
+          },
+          {
+            "line": 37810,
+            "text": "        if role == 'System':"
+          },
+          {
+            "line": 37811,
+            "text": "            try:"
+          },
+          {
+            "line": 37812,
+            "text": "                self.nb.hide(self.tab_dashboard)"
+          },
+          {
+            "line": 37813,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 37814,
+            "text": "                pass"
+          },
+          {
+            "line": 37815,
+            "text": "            return"
+          },
+          {
+            "line": 37816,
+            "text": "        try:"
+          },
+          {
+            "line": 37817,
+            "text": "            tabs = list(self.nb.tabs())"
+          },
+          {
+            "line": 37818,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37819,
+            "text": "            tabs = []"
+          },
+          {
+            "line": 37820,
+            "text": "        if str(self.tab_dashboard) not in tabs:"
+          },
+          {
+            "line": 37821,
+            "text": "            try:"
+          }
+        ]
+      },
+      {
+        "line": 38570,
+        "end_line": 38571,
+        "scope": "_spina_cashctl_apply_role",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "role_access_runtime_patch_review",
+        "recommended_action": "Role/access patching affects visible permissions; keep review-only.",
+        "context": [
+          {
+            "line": 38562,
+            "text": "def _spina_cashctl_apply_role(self):"
+          },
+          {
+            "line": 38563,
+            "text": "    try:"
+          },
+          {
+            "line": 38564,
+            "text": "        if not hasattr(self, 'nb') or not hasattr(self, 'tab_cash_control'):"
+          },
+          {
+            "line": 38565,
+            "text": "            return"
+          },
+          {
+            "line": 38566,
+            "text": "        role = (getattr(self, 'user_role', '') or 'Admin').strip()"
+          },
+          {
+            "line": 38567,
+            "text": "        if role == 'System':"
+          },
+          {
+            "line": 38568,
+            "text": "            try:"
+          },
+          {
+            "line": 38569,
+            "text": "                self.nb.hide(self.tab_cash_control)"
+          },
+          {
+            "line": 38570,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 38571,
+            "text": "                pass"
+          },
+          {
+            "line": 38572,
+            "text": "            return"
+          },
+          {
+            "line": 38573,
+            "text": "        try:"
+          },
+          {
+            "line": 38574,
+            "text": "            tabs = list(self.nb.tabs())"
+          },
+          {
+            "line": 38575,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 38576,
+            "text": "            tabs = []"
+          },
+          {
+            "line": 38577,
+            "text": "        if str(self.tab_cash_control) not in tabs:"
+          },
+          {
+            "line": 38578,
+            "text": "            try:"
+          }
+        ]
+      },
+      {
+        "line": 41540,
+        "end_line": 41541,
+        "scope": "_spina_v13_rebuild_side_nav",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "role_access_runtime_patch_review",
+        "recommended_action": "Role/access patching affects visible permissions; keep review-only.",
+        "context": [
+          {
+            "line": 41532,
+            "text": "                    pass"
+          },
+          {
+            "line": 41533,
+            "text": ""
+          },
+          {
+            "line": 41534,
+            "text": "        try:"
+          },
+          {
+            "line": 41535,
+            "text": "            bottom = tk.Frame(frame, bg=panel)"
+          },
+          {
+            "line": 41536,
+            "text": "            bottom.pack(side='bottom', fill='x', pady=(12, 0))"
+          },
+          {
+            "line": 41537,
+            "text": "            try:"
+          },
+          {
+            "line": 41538,
+            "text": "                sep2 = tk.Frame(bottom, bg=border, height=1)"
+          },
+          {
+            "line": 41539,
+            "text": "                sep2.pack(fill='x', padx=8, pady=(0, 8))"
+          },
+          {
+            "line": 41540,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 41541,
+            "text": "                pass"
+          },
+          {
+            "line": 41542,
+            "text": "            role_text = f\"{getattr(self, 'user_name', '')} • {getattr(self, 'user_role', '')}\".strip(' •')"
+          },
+          {
+            "line": 41543,
+            "text": "            lbl = tk.Label(bottom, text=role_text, anchor='w', bg=panel, fg=muted,"
+          },
+          {
+            "line": 41544,
+            "text": "                           font=(family, 8), padx=12, pady=4, wraplength=175)"
+          },
+          {
+            "line": 41545,
+            "text": "            lbl.pack(fill='x')"
+          },
+          {
+            "line": 41546,
+            "text": "            self._side_nav_labels.append(lbl)"
+          },
+          {
+            "line": 41547,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 41548,
+            "text": "            pass"
+          }
+        ]
+      },
+      {
+        "line": 41547,
+        "end_line": 41548,
+        "scope": "_spina_v13_rebuild_side_nav",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "role_access_runtime_patch_review",
+        "recommended_action": "Role/access patching affects visible permissions; keep review-only.",
+        "context": [
+          {
+            "line": 41539,
+            "text": "                sep2.pack(fill='x', padx=8, pady=(0, 8))"
+          },
+          {
+            "line": 41540,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 41541,
+            "text": "                pass"
+          },
+          {
+            "line": 41542,
+            "text": "            role_text = f\"{getattr(self, 'user_name', '')} • {getattr(self, 'user_role', '')}\".strip(' •')"
+          },
+          {
+            "line": 41543,
+            "text": "            lbl = tk.Label(bottom, text=role_text, anchor='w', bg=panel, fg=muted,"
+          },
+          {
+            "line": 41544,
+            "text": "                           font=(family, 8), padx=12, pady=4, wraplength=175)"
+          },
+          {
+            "line": 41545,
+            "text": "            lbl.pack(fill='x')"
+          },
+          {
+            "line": 41546,
+            "text": "            self._side_nav_labels.append(lbl)"
+          },
+          {
+            "line": 41547,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 41548,
+            "text": "            pass"
+          },
+          {
+            "line": 41549,
+            "text": ""
+          },
+          {
+            "line": 41550,
+            "text": "        try:"
+          },
+          {
+            "line": 41551,
+            "text": "            self._refresh_side_nav_selection()"
+          },
+          {
+            "line": 41552,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 41553,
+            "text": "            pass"
+          },
+          {
+            "line": 41554,
+            "text": ""
+          },
+          {
+            "line": 41555,
+            "text": "    def _spina_v13_refresh_side_nav_selection(self):"
+          }
+        ]
+      },
+      {
+        "line": 48385,
+        "end_line": 48386,
+        "scope": "_spina_v32_refresh_user_header",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "role_access_runtime_patch_review",
+        "recommended_action": "Role/access patching affects visible permissions; keep review-only.",
+        "context": [
+          {
+            "line": 48377,
+            "text": "def _spina_v32_refresh_user_header(self):"
+          },
+          {
+            "line": 48378,
+            "text": "    try:"
+          },
+          {
+            "line": 48379,
+            "text": "        if getattr(self, \"user_role_label\", None) is not None:"
+          },
+          {
+            "line": 48380,
+            "text": "            display = _spina_v32_account_display_name(self, getattr(self, \"user_name\", \"\"))"
+          },
+          {
+            "line": 48381,
+            "text": "            self.user_role_label.config(text=f\"Account: {display}\")"
+          },
+          {
+            "line": 48382,
+            "text": "    except Exception as __spina_exc:"
+          },
+          {
+            "line": 48383,
+            "text": "        try:"
+          },
+          {
+            "line": 48384,
+            "text": "            _log_suppressed_once(\"v32_refresh_user_header\", \"v32 refresh user header failed\", __spina_exc)"
+          },
+          {
+            "line": 48385,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48386,
+            "text": "            pass"
+          },
+          {
+            "line": 48387,
+            "text": "    try:"
+          },
+          {
+            "line": 48388,
+            "text": "        self._refresh_header_theme()"
+          },
+          {
+            "line": 48389,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48390,
+            "text": "        pass"
+          },
+          {
+            "line": 48391,
+            "text": ""
+          },
+          {
+            "line": 48392,
+            "text": ""
+          },
+          {
+            "line": 48393,
+            "text": "def _spina_v32_switch_account(self):"
+          }
+        ]
+      },
+      {
+        "line": 48389,
+        "end_line": 48390,
+        "scope": "_spina_v32_refresh_user_header",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "role_access_runtime_patch_review",
+        "recommended_action": "Role/access patching affects visible permissions; keep review-only.",
+        "context": [
+          {
+            "line": 48381,
+            "text": "            self.user_role_label.config(text=f\"Account: {display}\")"
+          },
+          {
+            "line": 48382,
+            "text": "    except Exception as __spina_exc:"
+          },
+          {
+            "line": 48383,
+            "text": "        try:"
+          },
+          {
+            "line": 48384,
+            "text": "            _log_suppressed_once(\"v32_refresh_user_header\", \"v32 refresh user header failed\", __spina_exc)"
+          },
+          {
+            "line": 48385,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48386,
+            "text": "            pass"
+          },
+          {
+            "line": 48387,
+            "text": "    try:"
+          },
+          {
+            "line": 48388,
+            "text": "        self._refresh_header_theme()"
+          },
+          {
+            "line": 48389,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48390,
+            "text": "        pass"
+          },
+          {
+            "line": 48391,
+            "text": ""
+          },
+          {
+            "line": 48392,
+            "text": ""
+          },
+          {
+            "line": 48393,
+            "text": "def _spina_v32_switch_account(self):"
+          },
+          {
+            "line": 48394,
+            "text": "    old_user = getattr(self, \"user_name\", \"\") or \"\""
+          },
+          {
+            "line": 48395,
+            "text": "    old_display = _spina_v32_account_display_name(self, old_user) if old_user else \"\""
+          },
+          {
+            "line": 48396,
+            "text": ""
+          },
+          {
+            "line": 48397,
+            "text": "    try:"
+          }
+        ]
+      },
+      {
+        "line": 48406,
+        "end_line": 48407,
+        "scope": "_spina_v32_switch_account",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "role_access_runtime_patch_review",
+        "recommended_action": "Role/access patching affects visible permissions; keep review-only.",
+        "context": [
+          {
+            "line": 48398,
+            "text": "        u, r = self._prompt_login(default_user=(self.user_name or \"admin\"))"
+          },
+          {
+            "line": 48399,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 48400,
+            "text": "        try:"
+          },
+          {
+            "line": 48401,
+            "text": "            _log_exc(\"switch_account_login\", e)"
+          },
+          {
+            "line": 48402,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48403,
+            "text": "            pass"
+          },
+          {
+            "line": 48404,
+            "text": "        try:"
+          },
+          {
+            "line": 48405,
+            "text": "            messagebox.showerror(\"Switch Account\", \"Failed to open the account sign-in window. See log for details.\")"
+          },
+          {
+            "line": 48406,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48407,
+            "text": "            pass"
+          },
+          {
+            "line": 48408,
+            "text": "        return"
+          },
+          {
+            "line": 48409,
+            "text": ""
+          },
+          {
+            "line": 48410,
+            "text": "    if not u or not r:"
+          },
+          {
+            "line": 48411,
+            "text": "        return"
+          },
+          {
+            "line": 48412,
+            "text": ""
+          },
+          {
+            "line": 48413,
+            "text": "    self.user_name = u"
+          },
+          {
+            "line": 48414,
+            "text": "    self.user_role = r"
+          }
+        ]
+      },
+      {
+        "line": 48418,
+        "end_line": 48419,
+        "scope": "_spina_v32_switch_account",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "role_access_runtime_patch_review",
+        "recommended_action": "Role/access patching affects visible permissions; keep review-only.",
+        "context": [
+          {
+            "line": 48410,
+            "text": "    if not u or not r:"
+          },
+          {
+            "line": 48411,
+            "text": "        return"
+          },
+          {
+            "line": 48412,
+            "text": ""
+          },
+          {
+            "line": 48413,
+            "text": "    self.user_name = u"
+          },
+          {
+            "line": 48414,
+            "text": "    self.user_role = r"
+          },
+          {
+            "line": 48415,
+            "text": ""
+          },
+          {
+            "line": 48416,
+            "text": "    try:"
+          },
+          {
+            "line": 48417,
+            "text": "        self._save_last_user(self.user_name)"
+          },
+          {
+            "line": 48418,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48419,
+            "text": "        pass"
+          },
+          {
+            "line": 48420,
+            "text": "    try:"
+          },
+          {
+            "line": 48421,
+            "text": "        self._save_user_role(self.user_role)"
+          },
+          {
+            "line": 48422,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48423,
+            "text": "        pass"
+          },
+          {
+            "line": 48424,
+            "text": ""
+          },
+          {
+            "line": 48425,
+            "text": "    try:"
+          },
+          {
+            "line": 48426,
+            "text": "        self._refresh_user_header()"
+          }
+        ]
+      },
+      {
+        "line": 48422,
+        "end_line": 48423,
+        "scope": "_spina_v32_switch_account",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "role_access_runtime_patch_review",
+        "recommended_action": "Role/access patching affects visible permissions; keep review-only.",
+        "context": [
+          {
+            "line": 48414,
+            "text": "    self.user_role = r"
+          },
+          {
+            "line": 48415,
+            "text": ""
+          },
+          {
+            "line": 48416,
+            "text": "    try:"
+          },
+          {
+            "line": 48417,
+            "text": "        self._save_last_user(self.user_name)"
+          },
+          {
+            "line": 48418,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48419,
+            "text": "        pass"
+          },
+          {
+            "line": 48420,
+            "text": "    try:"
+          },
+          {
+            "line": 48421,
+            "text": "        self._save_user_role(self.user_role)"
+          },
+          {
+            "line": 48422,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48423,
+            "text": "        pass"
+          },
+          {
+            "line": 48424,
+            "text": ""
+          },
+          {
+            "line": 48425,
+            "text": "    try:"
+          },
+          {
+            "line": 48426,
+            "text": "        self._refresh_user_header()"
+          },
+          {
+            "line": 48427,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48428,
+            "text": "        pass"
+          },
+          {
+            "line": 48429,
+            "text": "    try:"
+          },
+          {
+            "line": 48430,
+            "text": "        self._rebuild_side_nav()"
+          }
+        ]
+      },
+      {
+        "line": 48449,
+        "end_line": 48450,
+        "scope": "_spina_v32_switch_account",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "role_access_runtime_patch_review",
+        "recommended_action": "Role/access patching affects visible permissions; keep review-only.",
+        "context": [
+          {
+            "line": 48441,
+            "text": "        try:"
+          },
+          {
+            "line": 48442,
+            "text": "            messagebox.showwarning(\"Switch Account\", \"The account was switched, but the UI permissions could not be fully refreshed. Please restart the app if something looks wrong.\")"
+          },
+          {
+            "line": 48443,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48444,
+            "text": "            pass"
+          },
+          {
+            "line": 48445,
+            "text": ""
+          },
+          {
+            "line": 48446,
+            "text": "    try:"
+          },
+          {
+            "line": 48447,
+            "text": "        new_display = _spina_v32_account_display_name(self, self.user_name)"
+          },
+          {
+            "line": 48448,
+            "text": "        self.status_var.set(f\"Switched account: {old_display or old_user} → {new_display}\")"
+          },
+          {
+            "line": 48449,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48450,
+            "text": "        pass"
+          },
+          {
+            "line": 48451,
+            "text": ""
+          },
+          {
+            "line": 48452,
+            "text": ""
+          },
+          {
+            "line": 48453,
+            "text": "def _spina_v32_prompt_user_role(self, default: str = \"Admin\") -> str:"
+          },
+          {
+            "line": 48454,
+            "text": "    # Fallback only. Do not show the old role selector anymore."
+          },
+          {
+            "line": 48455,
+            "text": "    d = str(default or \"Admin\").strip()"
+          },
+          {
+            "line": 48456,
+            "text": "    return d if d in (\"Admin\", \"Encoder\", \"Viewer\", \"System\") else \"Admin\""
+          },
+          {
+            "line": 48457,
+            "text": ""
+          }
+        ]
+      }
+    ],
+    "performance_index_maintenance_review": [
+      {
+        "line": 35562,
+        "end_line": 35563,
+        "scope": "_spina__ensure_client_picture_column",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "performance_index_maintenance_review",
+        "recommended_action": "Performance index maintenance should be reviewed separately.",
+        "context": [
+          {
+            "line": 35554,
+            "text": "        cur = db_obj.conn.cursor()"
+          },
+          {
+            "line": 35555,
+            "text": "        cols = [r[1] for r in cur.execute(\"PRAGMA table_info(clients)\").fetchall()]"
+          },
+          {
+            "line": 35556,
+            "text": "        if \"client_picture\" not in cols:"
+          },
+          {
+            "line": 35557,
+            "text": "            cur.execute(\"ALTER TABLE clients ADD COLUMN client_picture TEXT DEFAULT ''\")"
+          },
+          {
+            "line": 35558,
+            "text": "            db_obj.conn.commit()"
+          },
+          {
+            "line": 35559,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 35560,
+            "text": "        try:"
+          },
+          {
+            "line": 35561,
+            "text": "            _log_exc('schema:ensure client_picture', e)"
+          },
+          {
+            "line": 35562,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 35563,
+            "text": "            pass"
+          },
+          {
+            "line": 35564,
+            "text": ""
+          },
+          {
+            "line": 35565,
+            "text": ""
+          },
+          {
+            "line": 35566,
+            "text": "def _spina__client_pictures_dir():"
+          },
+          {
+            "line": 35567,
+            "text": "    try:"
+          },
+          {
+            "line": 35568,
+            "text": "        p = data_path('client_pictures')"
+          },
+          {
+            "line": 35569,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 35570,
+            "text": "        p = os.path.join(APP_DIR, 'data', 'client_pictures')"
+          }
+        ]
+      },
+      {
+        "line": 36034,
+        "end_line": 36035,
+        "scope": "_spina_perf_ensure_indexes",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "performance_index_maintenance_review",
+        "recommended_action": "Performance index maintenance should be reviewed separately.",
+        "context": [
+          {
+            "line": 36026,
+            "text": "            \"CREATE INDEX IF NOT EXISTS idx_clients_name_lt_arch ON clients(name COLLATE NOCASE, loan_type, is_archived)\","
+          },
+          {
+            "line": 36027,
+            "text": "        ]"
+          },
+          {
+            "line": 36028,
+            "text": "        for sql in idx_sql:"
+          },
+          {
+            "line": 36029,
+            "text": "            try:"
+          },
+          {
+            "line": 36030,
+            "text": "                cur.execute(sql)"
+          },
+          {
+            "line": 36031,
+            "text": "            except Exception as e:"
+          },
+          {
+            "line": 36032,
+            "text": "                try:"
+          },
+          {
+            "line": 36033,
+            "text": "                    _log_suppressed_once(\"perf_index\", \"performance index creation skipped\", e)"
+          },
+          {
+            "line": 36034,
+            "text": "                except Exception:"
+          },
+          {
+            "line": 36035,
+            "text": "                    pass"
+          },
+          {
+            "line": 36036,
+            "text": "        try:"
+          },
+          {
+            "line": 36037,
+            "text": "            conn.commit()"
+          },
+          {
+            "line": 36038,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 36039,
+            "text": "            pass"
+          },
+          {
+            "line": 36040,
+            "text": "        try:"
+          },
+          {
+            "line": 36041,
+            "text": "            cur.execute(\"PRAGMA optimize\")"
+          },
+          {
+            "line": 36042,
+            "text": "        except Exception:"
+          }
+        ]
+      },
+      {
+        "line": 36038,
+        "end_line": 36039,
+        "scope": "_spina_perf_ensure_indexes",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "performance_index_maintenance_review",
+        "recommended_action": "Performance index maintenance should be reviewed separately.",
+        "context": [
+          {
+            "line": 36030,
+            "text": "                cur.execute(sql)"
+          },
+          {
+            "line": 36031,
+            "text": "            except Exception as e:"
+          },
+          {
+            "line": 36032,
+            "text": "                try:"
+          },
+          {
+            "line": 36033,
+            "text": "                    _log_suppressed_once(\"perf_index\", \"performance index creation skipped\", e)"
+          },
+          {
+            "line": 36034,
+            "text": "                except Exception:"
+          },
+          {
+            "line": 36035,
+            "text": "                    pass"
+          },
+          {
+            "line": 36036,
+            "text": "        try:"
+          },
+          {
+            "line": 36037,
+            "text": "            conn.commit()"
+          },
+          {
+            "line": 36038,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 36039,
+            "text": "            pass"
+          },
+          {
+            "line": 36040,
+            "text": "        try:"
+          },
+          {
+            "line": 36041,
+            "text": "            cur.execute(\"PRAGMA optimize\")"
+          },
+          {
+            "line": 36042,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 36043,
+            "text": "            pass"
+          },
+          {
+            "line": 36044,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 36045,
+            "text": "        try:"
+          },
+          {
+            "line": 36046,
+            "text": "            _log_suppressed_once(\"perf_indexes_outer\", \"performance index setup failed\", e)"
+          }
+        ]
+      },
+      {
+        "line": 36042,
+        "end_line": 36043,
+        "scope": "_spina_perf_ensure_indexes",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "performance_index_maintenance_review",
+        "recommended_action": "Performance index maintenance should be reviewed separately.",
+        "context": [
+          {
+            "line": 36034,
+            "text": "                except Exception:"
+          },
+          {
+            "line": 36035,
+            "text": "                    pass"
+          },
+          {
+            "line": 36036,
+            "text": "        try:"
+          },
+          {
+            "line": 36037,
+            "text": "            conn.commit()"
+          },
+          {
+            "line": 36038,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 36039,
+            "text": "            pass"
+          },
+          {
+            "line": 36040,
+            "text": "        try:"
+          },
+          {
+            "line": 36041,
+            "text": "            cur.execute(\"PRAGMA optimize\")"
+          },
+          {
+            "line": 36042,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 36043,
+            "text": "            pass"
+          },
+          {
+            "line": 36044,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 36045,
+            "text": "        try:"
+          },
+          {
+            "line": 36046,
+            "text": "            _log_suppressed_once(\"perf_indexes_outer\", \"performance index setup failed\", e)"
+          },
+          {
+            "line": 36047,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 36048,
+            "text": "            pass"
+          },
+          {
+            "line": 36049,
+            "text": ""
+          },
+          {
+            "line": 36050,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 36047,
+        "end_line": 36048,
+        "scope": "_spina_perf_ensure_indexes",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "performance_index_maintenance_review",
+        "recommended_action": "Performance index maintenance should be reviewed separately.",
+        "context": [
+          {
+            "line": 36039,
+            "text": "            pass"
+          },
+          {
+            "line": 36040,
+            "text": "        try:"
+          },
+          {
+            "line": 36041,
+            "text": "            cur.execute(\"PRAGMA optimize\")"
+          },
+          {
+            "line": 36042,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 36043,
+            "text": "            pass"
+          },
+          {
+            "line": 36044,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 36045,
+            "text": "        try:"
+          },
+          {
+            "line": 36046,
+            "text": "            _log_suppressed_once(\"perf_indexes_outer\", \"performance index setup failed\", e)"
+          },
+          {
+            "line": 36047,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 36048,
+            "text": "            pass"
+          },
+          {
+            "line": 36049,
+            "text": ""
+          },
+          {
+            "line": 36050,
+            "text": ""
+          },
+          {
+            "line": 36051,
+            "text": "def _spina_perf_norm_lt(v):"
+          },
+          {
+            "line": 36052,
+            "text": "    try:"
+          },
+          {
+            "line": 36053,
+            "text": "        s = str(v or \"\").strip()"
+          },
+          {
+            "line": 36054,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 36055,
+            "text": "        s = \"\""
+          }
+        ]
+      },
+      {
+        "line": 36609,
+        "end_line": 36610,
+        "scope": "_spina_perf_refresh_data_grid",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "performance_index_maintenance_review",
+        "recommended_action": "Performance index maintenance should be reviewed separately.",
+        "context": [
+          {
+            "line": 36601,
+            "text": ""
+          },
+          {
+            "line": 36602,
+            "text": "    try:"
+          },
+          {
+            "line": 36603,
+            "text": "        self._resize_databank_columns()"
+          },
+          {
+            "line": 36604,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 36605,
+            "text": "        pass"
+          },
+          {
+            "line": 36606,
+            "text": "    try:"
+          },
+          {
+            "line": 36607,
+            "text": "        if hasattr(self, \"_update_data_toolbar\"):"
+          },
+          {
+            "line": 36608,
+            "text": "            self._update_data_toolbar()"
+          },
+          {
+            "line": 36609,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 36610,
+            "text": "        pass"
+          },
+          {
+            "line": 36611,
+            "text": ""
+          },
+          {
+            "line": 36612,
+            "text": ""
+          },
+          {
+            "line": 36613,
+            "text": "# Bind optimized loaders after the normal app methods are installed."
+          },
+          {
+            "line": 36614,
+            "text": "try:"
+          },
+          {
+            "line": 36615,
+            "text": "    if \"App\" in globals():"
+          },
+          {
+            "line": 36616,
+            "text": "        try:"
+          },
+          {
+            "line": 36617,
+            "text": "            _spina_perf_ensure_indexes(LoanDB(DB_FILE))"
+          }
+        ]
+      },
+      {
+        "line": 36618,
+        "end_line": 36619,
+        "scope": "<module>",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "performance_index_maintenance_review",
+        "recommended_action": "Performance index maintenance should be reviewed separately.",
+        "context": [
+          {
+            "line": 36610,
+            "text": "        pass"
+          },
+          {
+            "line": 36611,
+            "text": ""
+          },
+          {
+            "line": 36612,
+            "text": ""
+          },
+          {
+            "line": 36613,
+            "text": "# Bind optimized loaders after the normal app methods are installed."
+          },
+          {
+            "line": 36614,
+            "text": "try:"
+          },
+          {
+            "line": 36615,
+            "text": "    if \"App\" in globals():"
+          },
+          {
+            "line": 36616,
+            "text": "        try:"
+          },
+          {
+            "line": 36617,
+            "text": "            _spina_perf_ensure_indexes(LoanDB(DB_FILE))"
+          },
+          {
+            "line": 36618,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 36619,
+            "text": "            pass"
+          },
+          {
+            "line": 36620,
+            "text": "        setattr(App, \"refresh_clients\", _spina_perf_refresh_clients)"
+          },
+          {
+            "line": 36621,
+            "text": "        setattr(App, \"refresh_data_grid\", _spina_perf_refresh_data_grid)"
+          },
+          {
+            "line": 36622,
+            "text": "except Exception as e:"
+          },
+          {
+            "line": 36623,
+            "text": "    try:"
+          },
+          {
+            "line": 36624,
+            "text": "        _log_suppressed_once(\"perf_bind\", \"performance patch bind failed\", e)"
+          },
+          {
+            "line": 36625,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 36626,
+            "text": "        pass"
+          }
+        ]
+      }
+    ],
+    "dashboard_ui_review": [
+      {
+        "line": 37586,
+        "end_line": 37587,
+        "scope": "_spina_configure_dashboard_tree_theme",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "dashboard_ui_review",
+        "recommended_action": "Dashboard UI and summary behavior should be reviewed separately.",
+        "context": [
+          {
+            "line": 37578,
+            "text": "            base_fg = p.get('fg', '#1a1a1a')"
+          },
+          {
+            "line": 37579,
+            "text": ""
+          },
+          {
+            "line": 37580,
+            "text": "        for tag, (bg, fg) in status_tags.items():"
+          },
+          {
+            "line": 37581,
+            "text": "            try:"
+          },
+          {
+            "line": 37582,
+            "text": "                tree.tag_configure(tag, background=bg, foreground=fg)"
+          },
+          {
+            "line": 37583,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 37584,
+            "text": "                try:"
+          },
+          {
+            "line": 37585,
+            "text": "                    tree.tag_configure(tag, background=bg)"
+          },
+          {
+            "line": 37586,
+            "text": "                except Exception:"
+          },
+          {
+            "line": 37587,
+            "text": "                    pass"
+          },
+          {
+            "line": 37588,
+            "text": ""
+          },
+          {
+            "line": 37589,
+            "text": "        # Optional neutral tags, in case another theme helper applies them later."
+          },
+          {
+            "line": 37590,
+            "text": "        try:"
+          },
+          {
+            "line": 37591,
+            "text": "            tree.tag_configure('dashboard_base', background=base_bg, foreground=base_fg)"
+          },
+          {
+            "line": 37592,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37593,
+            "text": "            pass"
+          },
+          {
+            "line": 37594,
+            "text": "    except Exception as e:"
+          }
+        ]
+      },
+      {
+        "line": 37592,
+        "end_line": 37593,
+        "scope": "_spina_configure_dashboard_tree_theme",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "dashboard_ui_review",
+        "recommended_action": "Dashboard UI and summary behavior should be reviewed separately.",
+        "context": [
+          {
+            "line": 37584,
+            "text": "                try:"
+          },
+          {
+            "line": 37585,
+            "text": "                    tree.tag_configure(tag, background=bg)"
+          },
+          {
+            "line": 37586,
+            "text": "                except Exception:"
+          },
+          {
+            "line": 37587,
+            "text": "                    pass"
+          },
+          {
+            "line": 37588,
+            "text": ""
+          },
+          {
+            "line": 37589,
+            "text": "        # Optional neutral tags, in case another theme helper applies them later."
+          },
+          {
+            "line": 37590,
+            "text": "        try:"
+          },
+          {
+            "line": 37591,
+            "text": "            tree.tag_configure('dashboard_base', background=base_bg, foreground=base_fg)"
+          },
+          {
+            "line": 37592,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37593,
+            "text": "            pass"
+          },
+          {
+            "line": 37594,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 37595,
+            "text": "        try:"
+          },
+          {
+            "line": 37596,
+            "text": "            _log_exc('dashboard.configure_theme', e)"
+          },
+          {
+            "line": 37597,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37598,
+            "text": "            pass"
+          },
+          {
+            "line": 37599,
+            "text": ""
+          },
+          {
+            "line": 37600,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 37597,
+        "end_line": 37598,
+        "scope": "_spina_configure_dashboard_tree_theme",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "dashboard_ui_review",
+        "recommended_action": "Dashboard UI and summary behavior should be reviewed separately.",
+        "context": [
+          {
+            "line": 37589,
+            "text": "        # Optional neutral tags, in case another theme helper applies them later."
+          },
+          {
+            "line": 37590,
+            "text": "        try:"
+          },
+          {
+            "line": 37591,
+            "text": "            tree.tag_configure('dashboard_base', background=base_bg, foreground=base_fg)"
+          },
+          {
+            "line": 37592,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37593,
+            "text": "            pass"
+          },
+          {
+            "line": 37594,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 37595,
+            "text": "        try:"
+          },
+          {
+            "line": 37596,
+            "text": "            _log_exc('dashboard.configure_theme', e)"
+          },
+          {
+            "line": 37597,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37598,
+            "text": "            pass"
+          },
+          {
+            "line": 37599,
+            "text": ""
+          },
+          {
+            "line": 37600,
+            "text": ""
+          },
+          {
+            "line": 37601,
+            "text": "def _spina_build_dashboard_tab(self):"
+          },
+          {
+            "line": 37602,
+            "text": "    try:"
+          },
+          {
+            "line": 37603,
+            "text": "        if not hasattr(self, 'nb') or self.nb is None:"
+          },
+          {
+            "line": 37604,
+            "text": "            return"
+          },
+          {
+            "line": 37605,
+            "text": "        if hasattr(self, 'tab_dashboard') and self.tab_dashboard is not None:"
+          }
+        ]
+      },
+      {
+        "line": 37690,
+        "end_line": 37691,
+        "scope": "_spina_build_dashboard_tab._bind_refresh",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "dashboard_ui_review",
+        "recommended_action": "Dashboard UI and summary behavior should be reviewed separately.",
+        "context": [
+          {
+            "line": 37682,
+            "text": "        try:"
+          },
+          {
+            "line": 37683,
+            "text": "            _spina_configure_dashboard_tree_theme(self)"
+          },
+          {
+            "line": 37684,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37685,
+            "text": "            pass"
+          },
+          {
+            "line": 37686,
+            "text": ""
+          },
+          {
+            "line": 37687,
+            "text": "        def _bind_refresh(*_):"
+          },
+          {
+            "line": 37688,
+            "text": "            try:"
+          },
+          {
+            "line": 37689,
+            "text": "                self._populate_dashboard_tree()"
+          },
+          {
+            "line": 37690,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 37691,
+            "text": "                pass"
+          },
+          {
+            "line": 37692,
+            "text": "        for var in (self.dashboard_loan_filter_var, self.dashboard_status_filter_var, self.dashboard_search_var):"
+          },
+          {
+            "line": 37693,
+            "text": "            try:"
+          },
+          {
+            "line": 37694,
+            "text": "                var.trace_add('write', _bind_refresh)"
+          },
+          {
+            "line": 37695,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 37696,
+            "text": "                try:"
+          },
+          {
+            "line": 37697,
+            "text": "                    var.trace('w', _bind_refresh)"
+          },
+          {
+            "line": 37698,
+            "text": "                except Exception:"
+          }
+        ]
+      },
+      {
+        "line": 37698,
+        "end_line": 37699,
+        "scope": "_spina_build_dashboard_tab",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "dashboard_ui_review",
+        "recommended_action": "Dashboard UI and summary behavior should be reviewed separately.",
+        "context": [
+          {
+            "line": 37690,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 37691,
+            "text": "                pass"
+          },
+          {
+            "line": 37692,
+            "text": "        for var in (self.dashboard_loan_filter_var, self.dashboard_status_filter_var, self.dashboard_search_var):"
+          },
+          {
+            "line": 37693,
+            "text": "            try:"
+          },
+          {
+            "line": 37694,
+            "text": "                var.trace_add('write', _bind_refresh)"
+          },
+          {
+            "line": 37695,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 37696,
+            "text": "                try:"
+          },
+          {
+            "line": 37697,
+            "text": "                    var.trace('w', _bind_refresh)"
+          },
+          {
+            "line": 37698,
+            "text": "                except Exception:"
+          },
+          {
+            "line": 37699,
+            "text": "                    pass"
+          },
+          {
+            "line": 37700,
+            "text": ""
+          },
+          {
+            "line": 37701,
+            "text": "        self.refresh_dashboard()"
+          },
+          {
+            "line": 37702,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 37703,
+            "text": "        try:"
+          },
+          {
+            "line": 37704,
+            "text": "            _log_exc('build_dashboard_tab', e)"
+          },
+          {
+            "line": 37705,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37706,
+            "text": "            pass"
+          }
+        ]
+      },
+      {
+        "line": 37705,
+        "end_line": 37706,
+        "scope": "_spina_build_dashboard_tab",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "dashboard_ui_review",
+        "recommended_action": "Dashboard UI and summary behavior should be reviewed separately.",
+        "context": [
+          {
+            "line": 37697,
+            "text": "                    var.trace('w', _bind_refresh)"
+          },
+          {
+            "line": 37698,
+            "text": "                except Exception:"
+          },
+          {
+            "line": 37699,
+            "text": "                    pass"
+          },
+          {
+            "line": 37700,
+            "text": ""
+          },
+          {
+            "line": 37701,
+            "text": "        self.refresh_dashboard()"
+          },
+          {
+            "line": 37702,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 37703,
+            "text": "        try:"
+          },
+          {
+            "line": 37704,
+            "text": "            _log_exc('build_dashboard_tab', e)"
+          },
+          {
+            "line": 37705,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37706,
+            "text": "            pass"
+          },
+          {
+            "line": 37707,
+            "text": ""
+          },
+          {
+            "line": 37708,
+            "text": ""
+          },
+          {
+            "line": 37709,
+            "text": "def _spina_dashboard_visible_rows(self):"
+          },
+          {
+            "line": 37710,
+            "text": "    try:"
+          },
+          {
+            "line": 37711,
+            "text": "        rows = list(getattr(self, '_dashboard_rows', []) or [])"
+          },
+          {
+            "line": 37712,
+            "text": "        loan_filter = str(getattr(self, 'dashboard_loan_filter_var', tk.StringVar(value='All')).get() or 'All')"
+          },
+          {
+            "line": 37713,
+            "text": "        status_filter = str(getattr(self, 'dashboard_status_filter_var', tk.StringVar(value='Finishing Priority')).get() or 'Finishing Priority')"
+          }
+        ]
+      },
+      {
+        "line": 37736,
+        "end_line": 37737,
+        "scope": "_spina_populate_dashboard_tree",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "dashboard_ui_review",
+        "recommended_action": "Dashboard UI and summary behavior should be reviewed separately.",
+        "context": [
+          {
+            "line": 37728,
+            "text": ""
+          },
+          {
+            "line": 37729,
+            "text": "def _spina_populate_dashboard_tree(self):"
+          },
+          {
+            "line": 37730,
+            "text": "    try:"
+          },
+          {
+            "line": 37731,
+            "text": "        tree = getattr(self, 'dashboard_tree', None)"
+          },
+          {
+            "line": 37732,
+            "text": "        if tree is None:"
+          },
+          {
+            "line": 37733,
+            "text": "            return"
+          },
+          {
+            "line": 37734,
+            "text": "        try:"
+          },
+          {
+            "line": 37735,
+            "text": "            _spina_configure_dashboard_tree_theme(self)"
+          },
+          {
+            "line": 37736,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37737,
+            "text": "            pass"
+          },
+          {
+            "line": 37738,
+            "text": "        for iid in tree.get_children():"
+          },
+          {
+            "line": 37739,
+            "text": "            tree.delete(iid)"
+          },
+          {
+            "line": 37740,
+            "text": "        rows = _spina_dashboard_visible_rows(self)"
+          },
+          {
+            "line": 37741,
+            "text": "        for r in rows:"
+          },
+          {
+            "line": 37742,
+            "text": "            status = r.get('status') or ''"
+          },
+          {
+            "line": 37743,
+            "text": "            tag = ''"
+          },
+          {
+            "line": 37744,
+            "text": "            if status == 'Finishing Now':"
+          }
+        ]
+      },
+      {
+        "line": 37775,
+        "end_line": 37776,
+        "scope": "_spina_populate_dashboard_tree",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "dashboard_ui_review",
+        "recommended_action": "Dashboard UI and summary behavior should be reviewed separately.",
+        "context": [
+          {
+            "line": 37767,
+            "text": "                _spina_dash__fmt_pct(r.get('time_passed_pct') or 0),"
+          },
+          {
+            "line": 37768,
+            "text": "                _spina_dash__fmt_money(r.get('remaining') or 0),"
+          },
+          {
+            "line": 37769,
+            "text": "                '' if days_left is None else str(days_left),"
+          },
+          {
+            "line": 37770,
+            "text": "            )"
+          },
+          {
+            "line": 37771,
+            "text": "            tree.insert('', 'end', values=values, tags=(tag,) if tag else ())"
+          },
+          {
+            "line": 37772,
+            "text": "        try:"
+          },
+          {
+            "line": 37773,
+            "text": "            all_rows = getattr(self, '_dashboard_rows', []) or []"
+          },
+          {
+            "line": 37774,
+            "text": "            self.dashboard_summary_var.set(_spina_dashboard_summary_text(all_rows) + '    Showing: %s' % len(rows))"
+          },
+          {
+            "line": 37775,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37776,
+            "text": "            pass"
+          },
+          {
+            "line": 37777,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 37778,
+            "text": "        try:"
+          },
+          {
+            "line": 37779,
+            "text": "            _log_exc('populate_dashboard_tree', e)"
+          },
+          {
+            "line": 37780,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37781,
+            "text": "            pass"
+          },
+          {
+            "line": 37782,
+            "text": ""
+          },
+          {
+            "line": 37783,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 37780,
+        "end_line": 37781,
+        "scope": "_spina_populate_dashboard_tree",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "dashboard_ui_review",
+        "recommended_action": "Dashboard UI and summary behavior should be reviewed separately.",
+        "context": [
+          {
+            "line": 37772,
+            "text": "        try:"
+          },
+          {
+            "line": 37773,
+            "text": "            all_rows = getattr(self, '_dashboard_rows', []) or []"
+          },
+          {
+            "line": 37774,
+            "text": "            self.dashboard_summary_var.set(_spina_dashboard_summary_text(all_rows) + '    Showing: %s' % len(rows))"
+          },
+          {
+            "line": 37775,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37776,
+            "text": "            pass"
+          },
+          {
+            "line": 37777,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 37778,
+            "text": "        try:"
+          },
+          {
+            "line": 37779,
+            "text": "            _log_exc('populate_dashboard_tree', e)"
+          },
+          {
+            "line": 37780,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37781,
+            "text": "            pass"
+          },
+          {
+            "line": 37782,
+            "text": ""
+          },
+          {
+            "line": 37783,
+            "text": ""
+          },
+          {
+            "line": 37784,
+            "text": "def _spina_refresh_dashboard(self):"
+          },
+          {
+            "line": 37785,
+            "text": "    try:"
+          },
+          {
+            "line": 37786,
+            "text": "        if not hasattr(self, 'dashboard_tree'):"
+          },
+          {
+            "line": 37787,
+            "text": "            return"
+          },
+          {
+            "line": 37788,
+            "text": "        self._dashboard_rows = _spina_dashboard_fetch_rows(self)"
+          }
+        ]
+      },
+      {
+        "line": 37792,
+        "end_line": 37793,
+        "scope": "_spina_refresh_dashboard",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "dashboard_ui_review",
+        "recommended_action": "Dashboard UI and summary behavior should be reviewed separately.",
+        "context": [
+          {
+            "line": 37784,
+            "text": "def _spina_refresh_dashboard(self):"
+          },
+          {
+            "line": 37785,
+            "text": "    try:"
+          },
+          {
+            "line": 37786,
+            "text": "        if not hasattr(self, 'dashboard_tree'):"
+          },
+          {
+            "line": 37787,
+            "text": "            return"
+          },
+          {
+            "line": 37788,
+            "text": "        self._dashboard_rows = _spina_dashboard_fetch_rows(self)"
+          },
+          {
+            "line": 37789,
+            "text": "        _spina_populate_dashboard_tree(self)"
+          },
+          {
+            "line": 37790,
+            "text": "        try:"
+          },
+          {
+            "line": 37791,
+            "text": "            self.status_var.set('Dashboard refreshed. Completion is based on latest released date.')"
+          },
+          {
+            "line": 37792,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37793,
+            "text": "            pass"
+          },
+          {
+            "line": 37794,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 37795,
+            "text": "        try:"
+          },
+          {
+            "line": 37796,
+            "text": "            _log_exc('refresh_dashboard', e)"
+          },
+          {
+            "line": 37797,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37798,
+            "text": "            pass"
+          },
+          {
+            "line": 37799,
+            "text": "        try:"
+          },
+          {
+            "line": 37800,
+            "text": "            self.status_var.set('Dashboard refresh failed. See data/spina_app.log.')"
+          }
+        ]
+      },
+      {
+        "line": 37797,
+        "end_line": 37798,
+        "scope": "_spina_refresh_dashboard",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "dashboard_ui_review",
+        "recommended_action": "Dashboard UI and summary behavior should be reviewed separately.",
+        "context": [
+          {
+            "line": 37789,
+            "text": "        _spina_populate_dashboard_tree(self)"
+          },
+          {
+            "line": 37790,
+            "text": "        try:"
+          },
+          {
+            "line": 37791,
+            "text": "            self.status_var.set('Dashboard refreshed. Completion is based on latest released date.')"
+          },
+          {
+            "line": 37792,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37793,
+            "text": "            pass"
+          },
+          {
+            "line": 37794,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 37795,
+            "text": "        try:"
+          },
+          {
+            "line": 37796,
+            "text": "            _log_exc('refresh_dashboard', e)"
+          },
+          {
+            "line": 37797,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37798,
+            "text": "            pass"
+          },
+          {
+            "line": 37799,
+            "text": "        try:"
+          },
+          {
+            "line": 37800,
+            "text": "            self.status_var.set('Dashboard refresh failed. See data/spina_app.log.')"
+          },
+          {
+            "line": 37801,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37802,
+            "text": "            pass"
+          },
+          {
+            "line": 37803,
+            "text": ""
+          },
+          {
+            "line": 37804,
+            "text": ""
+          },
+          {
+            "line": 37805,
+            "text": "def _spina_apply_dashboard_role(self):"
+          }
+        ]
+      },
+      {
+        "line": 37826,
+        "end_line": 37827,
+        "scope": "_spina_apply_dashboard_role",
+        "handler": "Exception",
+        "protected_context": false,
+        "group": "dashboard_ui_review",
+        "recommended_action": "Dashboard UI and summary behavior should be reviewed separately.",
+        "context": [
+          {
+            "line": 37818,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37819,
+            "text": "            tabs = []"
+          },
+          {
+            "line": 37820,
+            "text": "        if str(self.tab_dashboard) not in tabs:"
+          },
+          {
+            "line": 37821,
+            "text": "            try:"
+          },
+          {
+            "line": 37822,
+            "text": "                self.nb.insert(1, self.tab_dashboard, text='Dashboard')"
+          },
+          {
+            "line": 37823,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 37824,
+            "text": "                try:"
+          },
+          {
+            "line": 37825,
+            "text": "                    self.nb.add(self.tab_dashboard, text='Dashboard')"
+          },
+          {
+            "line": 37826,
+            "text": "                except Exception:"
+          },
+          {
+            "line": 37827,
+            "text": "                    pass"
+          },
+          {
+            "line": 37828,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 37829,
+            "text": "        pass"
+          },
+          {
+            "line": 37830,
+            "text": ""
+          },
+          {
+            "line": 37831,
+            "text": ""
+          },
+          {
+            "line": 37832,
+            "text": "try:"
+          },
+          {
+            "line": 37833,
+            "text": "    if 'App' in globals():"
+          },
+          {
+            "line": 37834,
+            "text": "        setattr(App, '_build_dashboard_tab', _spina_build_dashboard_tab)"
+          }
+        ]
+      }
+    ]
+  },
+  "recommendations": [
+    "Do not clean all remaining handlers together.",
+    "Leave logger fallback, queue.Empty, and shutdown/lifecycle handlers alone unless there is a clear bug.",
+    "Treat role/access, dashboard, performance-index, and protected business contexts as review-only.",
+    "Choose at most one narrow family for a future cleanup plan after reviewing this report."
+  ]
+}

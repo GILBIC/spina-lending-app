@@ -1,0 +1,139 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48525,
+  "context_radius": 8,
+  "pass_only_exception_count": 902,
+  "queue_empty_pass_only_count": 1,
+  "non_queue_empty_pass_only_count": 901,
+  "selected_cleanup_candidate_count": 0,
+  "group_counts": {
+    "non_queue_reference": 901,
+    "queue_empty_ui_pump_review": 1
+  },
+  "queue_scope_counts": {
+    "App._start_ui_queue_pump._pump": 1
+  },
+  "safety": {
+    "read_only": true,
+    "app_source_modified": false,
+    "cleanup_approved": false,
+    "protected_words_used": [
+      "7x7",
+      "7×7",
+      "apply_role_access",
+      "backup",
+      "balance",
+      "cash control",
+      "collector",
+      "database",
+      "interest",
+      "ledger",
+      "migration",
+      "payment",
+      "payroll",
+      "pdf",
+      "pg_",
+      "postgres",
+      "principal",
+      "receipt",
+      "renew",
+      "report",
+      "restore",
+      "role_access",
+      "route",
+      "statement",
+      "transaction"
+    ],
+    "note": "This report narrows to queue.Empty pass-only handlers only. It does not approve cleanup."
+  },
+  "queue_empty_sites": [
+    {
+      "line": 14368,
+      "end_line": 14370,
+      "scope": "App._start_ui_queue_pump._pump",
+      "handler": "queue.Empty",
+      "queue_empty": true,
+      "ui_queue_pump_control_flow": true,
+      "protected_context": false,
+      "group": "queue_empty_ui_pump_review",
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "Review only. This planner does not approve cleanup.",
+      "context": [
+        {
+          "line": 14360,
+          "text": "                    except Exception as e:"
+        },
+        {
+          "line": 14361,
+          "text": "                        out[\"exc\"] = e"
+        },
+        {
+          "line": 14362,
+          "text": "                    finally:"
+        },
+        {
+          "line": 14363,
+          "text": "                        try:"
+        },
+        {
+          "line": 14364,
+          "text": "                            ev.set()"
+        },
+        {
+          "line": 14365,
+          "text": "                        except Exception as __spina_exc:"
+        },
+        {
+          "line": 14366,
+          "text": "                            _log_suppressed_once('excpass_0275', 'suppressed exception excpass_0275', __spina_exc)"
+        },
+        {
+          "line": 14367,
+          "text": "                            pass"
+        },
+        {
+          "line": 14368,
+          "text": "            except queue.Empty:"
+        },
+        {
+          "line": 14369,
+          "text": "                # nothing pending"
+        },
+        {
+          "line": 14370,
+          "text": "                pass"
+        },
+        {
+          "line": 14371,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 14372,
+          "text": "                try:"
+        },
+        {
+          "line": 14373,
+          "text": "                    _log_exc(\"ui_queue_pump\", e)"
+        },
+        {
+          "line": 14374,
+          "text": "                except Exception as __spina_exc:"
+        },
+        {
+          "line": 14375,
+          "text": "                    _log_suppressed_once('excpass_0276', 'suppressed exception excpass_0276', __spina_exc)"
+        },
+        {
+          "line": 14376,
+          "text": "                    pass"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Do not apply cleanup from this report alone.",
+    "Treat queue.Empty as normal empty-queue control flow unless a future exact cleanup tool proves otherwise.",
+    "Only consider a future cleanup tool for exact reviewed queue.Empty handlers.",
+    "Do not touch business logic, reports, payments, balances, database, backups, role/access, login/auth, or report math."
+  ]
+}

@@ -1,0 +1,4573 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48501,
+  "dynamic_sql_call_count": 55,
+  "protected_context_count": 55,
+  "non_protected_dynamic_sql_count": 0,
+  "by_sql_arg_kind": {
+    "name": 31,
+    "f_string": 7,
+    "Starred": 8,
+    "bin_op": 6,
+    "call": 3
+  },
+  "by_severity": {
+    "protected_review": 55
+  },
+  "sites": [
+    {
+      "line": 867,
+      "end_line": 867,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "_PgCompatConnection.execute",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 859,
+          "text": "        # Avoid the old SQLite wrapper repeatedly issuing BEGIN IMMEDIATE."
+        },
+        {
+          "line": 860,
+          "text": "        return True"
+        },
+        {
+          "line": 861,
+          "text": ""
+        },
+        {
+          "line": 862,
+          "text": "    def cursor(self, *args, **kwargs):"
+        },
+        {
+          "line": 863,
+          "text": "        return _PgCompatCursor(self)"
+        },
+        {
+          "line": 864,
+          "text": ""
+        },
+        {
+          "line": 865,
+          "text": "    def execute(self, sql, params=None):"
+        },
+        {
+          "line": 866,
+          "text": "        cur = self.cursor()"
+        },
+        {
+          "line": 867,
+          "text": "        return cur.execute(sql, params)"
+        },
+        {
+          "line": 868,
+          "text": ""
+        },
+        {
+          "line": 869,
+          "text": "    def executemany(self, sql, seq_of_params):"
+        },
+        {
+          "line": 870,
+          "text": "        cur = self.cursor()"
+        },
+        {
+          "line": 871,
+          "text": "        return cur.executemany(sql, seq_of_params)"
+        },
+        {
+          "line": 872,
+          "text": ""
+        },
+        {
+          "line": 873,
+          "text": "    def commit(self):"
+        },
+        {
+          "line": 874,
+          "text": "        return self._pg.commit()"
+        },
+        {
+          "line": 875,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 871,
+      "end_line": 871,
+      "method": "executemany",
+      "function_text": "cur.executemany",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "_PgCompatConnection.executemany",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 863,
+          "text": "        return _PgCompatCursor(self)"
+        },
+        {
+          "line": 864,
+          "text": ""
+        },
+        {
+          "line": 865,
+          "text": "    def execute(self, sql, params=None):"
+        },
+        {
+          "line": 866,
+          "text": "        cur = self.cursor()"
+        },
+        {
+          "line": 867,
+          "text": "        return cur.execute(sql, params)"
+        },
+        {
+          "line": 868,
+          "text": ""
+        },
+        {
+          "line": 869,
+          "text": "    def executemany(self, sql, seq_of_params):"
+        },
+        {
+          "line": 870,
+          "text": "        cur = self.cursor()"
+        },
+        {
+          "line": 871,
+          "text": "        return cur.executemany(sql, seq_of_params)"
+        },
+        {
+          "line": 872,
+          "text": ""
+        },
+        {
+          "line": 873,
+          "text": "    def commit(self):"
+        },
+        {
+          "line": 874,
+          "text": "        return self._pg.commit()"
+        },
+        {
+          "line": 875,
+          "text": ""
+        },
+        {
+          "line": 876,
+          "text": "    def rollback(self):"
+        },
+        {
+          "line": 877,
+          "text": "        return self._pg.rollback()"
+        },
+        {
+          "line": 878,
+          "text": ""
+        },
+        {
+          "line": 879,
+          "text": "    def close(self):"
+        }
+      ]
+    },
+    {
+      "line": 1146,
+      "end_line": 1146,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "_sqlite_fetchall_in_chunks",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 1138,
+          "text": "        tail = ()"
+        },
+        {
+          "line": 1139,
+          "text": "    out = []"
+        },
+        {
+          "line": 1140,
+          "text": "    for i in range(0, len(items_list), max(1, int(chunk))):"
+        },
+        {
+          "line": 1141,
+          "text": "        batch = items_list[i:i + max(1, int(chunk))]"
+        },
+        {
+          "line": 1142,
+          "text": "        if not batch:"
+        },
+        {
+          "line": 1143,
+          "text": "            continue"
+        },
+        {
+          "line": 1144,
+          "text": "        ph = \",\".join([\"?\"] * len(batch))"
+        },
+        {
+          "line": 1145,
+          "text": "        sql = str(sql_template).format(ph=ph)"
+        },
+        {
+          "line": 1146,
+          "text": "        cur.execute(sql, tuple(batch) + tail)"
+        },
+        {
+          "line": 1147,
+          "text": "        out.extend(cur.fetchall() or [])"
+        },
+        {
+          "line": 1148,
+          "text": "    return out"
+        },
+        {
+          "line": 1149,
+          "text": "# --- END: SQLite helper ---"
+        },
+        {
+          "line": 1150,
+          "text": ""
+        },
+        {
+          "line": 1151,
+          "text": "# --- Payment mode helpers ---"
+        },
+        {
+          "line": 1152,
+          "text": "_SPINA_PAYMENT_MODE_OPTIONS = ('Cash', 'GCASH', 'ATM', 'Others')"
+        },
+        {
+          "line": 1153,
+          "text": ""
+        },
+        {
+          "line": 1154,
+          "text": "def _spina__split_payment_mode(value):"
+        }
+      ]
+    },
+    {
+      "line": 6252,
+      "end_line": 6252,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "q",
+      "caller": "LoanDB.get_client_info",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 6244,
+          "text": "        params = [name, lt]"
+        },
+        {
+          "line": 6245,
+          "text": "        try:"
+        },
+        {
+          "line": 6246,
+          "text": "            if not include_archived:"
+        },
+        {
+          "line": 6247,
+          "text": "                cols = [r[1] for r in cur.execute(\"PRAGMA table_info(clients)\").fetchall()]"
+        },
+        {
+          "line": 6248,
+          "text": "                if \"is_archived\" in cols:"
+        },
+        {
+          "line": 6249,
+          "text": "                    q += \" AND COALESCE(is_archived,0)=0\""
+        },
+        {
+          "line": 6250,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 6251,
+          "text": "            pass"
+        },
+        {
+          "line": 6252,
+          "text": "        cur.execute(q, tuple(params))"
+        },
+        {
+          "line": 6253,
+          "text": "        r = cur.fetchone()"
+        },
+        {
+          "line": 6254,
+          "text": "        return dict(r) if r else None"
+        },
+        {
+          "line": 6255,
+          "text": ""
+        },
+        {
+          "line": 6256,
+          "text": "    # -------- Client linking (Regular + 7x7) --------"
+        },
+        {
+          "line": 6257,
+          "text": ""
+        },
+        {
+          "line": 6258,
+          "text": "    def get_client_link_meta(self, name, loan_type=None):"
+        },
+        {
+          "line": 6259,
+          "text": "        \"\"\"Return (client_uid, person_uid, link_opt_out) for a client.\"\"\""
+        },
+        {
+          "line": 6260,
+          "text": "        cur = self.conn.cursor()"
+        }
+      ]
+    },
+    {
+      "line": 8341,
+      "end_line": 8341,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "LoanDB.get_transactions_for_client",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 8333,
+          "text": "        if start_date:"
+        },
+        {
+          "line": 8334,
+          "text": "            sql += \" AND date(date) >= date(?)\""
+        },
+        {
+          "line": 8335,
+          "text": "            params.append(start_date)"
+        },
+        {
+          "line": 8336,
+          "text": "        if end_date:"
+        },
+        {
+          "line": 8337,
+          "text": "            sql += \" AND date(date) <= date(?)\""
+        },
+        {
+          "line": 8338,
+          "text": "            params.append(end_date)"
+        },
+        {
+          "line": 8339,
+          "text": ""
+        },
+        {
+          "line": 8340,
+          "text": "        sql += \" ORDER BY date(date) ASC, id ASC\""
+        },
+        {
+          "line": 8341,
+          "text": "        cur.execute(sql, params)"
+        },
+        {
+          "line": 8342,
+          "text": "        return cur.fetchall()"
+        },
+        {
+          "line": 8343,
+          "text": ""
+        },
+        {
+          "line": 8344,
+          "text": "    def import_missing_clients_from_transactions(self):"
+        },
+        {
+          "line": 8345,
+          "text": "        \"\"\"Ensure every (name, loan_type) in transactions has a matching row in clients."
+        },
+        {
+          "line": 8346,
+          "text": ""
+        },
+        {
+          "line": 8347,
+          "text": "        Older versions only tracked names (no loan_type). This version is multi-loan-type safe."
+        },
+        {
+          "line": 8348,
+          "text": "        For 7x7 loans, we default interest_rate to 0.0."
+        },
+        {
+          "line": 8349,
+          "text": "        \"\"\""
+        }
+      ]
+    },
+    {
+      "line": 40921,
+      "end_line": 40921,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "f_string",
+      "sql_arg_preview": "f'SELECT COALESCE(MAX(id), 0) FROM public.{t}'",
+      "caller": "_spina_pg__reset_id_sequence",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 40913,
+          "text": "        t = str(table_name or '').strip()"
+        },
+        {
+          "line": 40914,
+          "text": "        if t not in {'clients', 'transactions', 'transaction_history', 'renewals', 'client_history', 'databank_day_close', 'databank_day_close_history', 'databank_day_collector_close'}:"
+        },
+        {
+          "line": 40915,
+          "text": "            return"
+        },
+        {
+          "line": 40916,
+          "text": "        cur.execute(\"SELECT pg_get_serial_sequence(%s, 'id')\", (f'public.{t}',))"
+        },
+        {
+          "line": 40917,
+          "text": "        row = cur.fetchone()"
+        },
+        {
+          "line": 40918,
+          "text": "        seq = row[0] if row else None"
+        },
+        {
+          "line": 40919,
+          "text": "        if not seq:"
+        },
+        {
+          "line": 40920,
+          "text": "            return"
+        },
+        {
+          "line": 40921,
+          "text": "        cur.execute(f\"SELECT COALESCE(MAX(id), 0) FROM public.{t}\")"
+        },
+        {
+          "line": 40922,
+          "text": "        row = cur.fetchone()"
+        },
+        {
+          "line": 40923,
+          "text": "        max_id = int(row[0] or 0) if row else 0"
+        },
+        {
+          "line": 40924,
+          "text": "        if max_id > 0:"
+        },
+        {
+          "line": 40925,
+          "text": "            cur.execute(\"SELECT setval(%s::regclass, %s, true)\", (seq, max_id))"
+        },
+        {
+          "line": 40926,
+          "text": "        else:"
+        },
+        {
+          "line": 40927,
+          "text": "            cur.execute(\"SELECT setval(%s::regclass, 1, false)\", (seq,))"
+        },
+        {
+          "line": 40928,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 40929,
+          "text": "        # Never block the main renew path only because sequence repair failed."
+        }
+      ]
+    },
+    {
+      "line": 41310,
+      "end_line": 41310,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "_spina_route_adv_marker_for",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 41302,
+          "text": "        sql = \"\"\""
+        },
+        {
+          "line": 41303,
+          "text": "            SELECT date, description, name, client_uid, loan_type"
+        },
+        {
+          "line": 41304,
+          "text": "              FROM transactions"
+        },
+        {
+          "line": 41305,
+          "text": "             WHERE description IS NOT NULL"
+        },
+        {
+          "line": 41306,
+          "text": "               AND TRIM(description) <> ''"
+        },
+        {
+          "line": 41307,
+          "text": "               AND UPPER(description) LIKE '%ADV%'"
+        },
+        {
+          "line": 41308,
+          "text": "               AND (CASE WHEN LOWER(REPLACE(REPLACE(COALESCE(loan_type,'Regular'),' ',''),'×','x')) LIKE '%7x7%' THEN '7x7' ELSE 'regular' END) = ?"
+        },
+        {
+          "line": 41309,
+          "text": "               AND (\"\"\" + \" OR \".join(clauses) + \")\""
+        },
+        {
+          "line": 41310,
+          "text": "        cur.execute(sql, tuple([lt_key] + params))"
+        },
+        {
+          "line": 41311,
+          "text": "        rows = cur.fetchall() or []"
+        },
+        {
+          "line": 41312,
+          "text": ""
+        },
+        {
+          "line": 41313,
+          "text": "        best_end = \"\""
+        },
+        {
+          "line": 41314,
+          "text": "        for r in rows:"
+        },
+        {
+          "line": 41315,
+          "text": "            try:"
+        },
+        {
+          "line": 41316,
+          "text": "                desc = r['description'] if hasattr(r, 'keys') else r[1]"
+        },
+        {
+          "line": 41317,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 41318,
+          "text": "                desc = \"\""
+        }
+      ]
+    },
+    {
+      "line": 744,
+      "end_line": 744,
+      "method": "execute",
+      "function_text": "self._cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "q",
+      "caller": "_PgCompatCursor.execute",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 736,
+          "text": "                            WHERE tc.constraint_type = 'PRIMARY KEY'"
+        },
+        {
+          "line": 737,
+          "text": "                              AND tc.table_schema = 'public'"
+        },
+        {
+          "line": 738,
+          "text": "                              AND tc.table_name = %s"
+        },
+        {
+          "line": 739,
+          "text": "                       ) THEN 1 ELSE 0 END AS pk"
+        },
+        {
+          "line": 740,
+          "text": "                FROM information_schema.columns"
+        },
+        {
+          "line": 741,
+          "text": "                WHERE table_schema='public' AND table_name=%s"
+        },
+        {
+          "line": 742,
+          "text": "                ORDER BY ordinal_position"
+        },
+        {
+          "line": 743,
+          "text": "            \"\"\""
+        },
+        {
+          "line": 744,
+          "text": "            self._cur.execute(q, (tname, tname))"
+        },
+        {
+          "line": 745,
+          "text": "            self._set_rows([\"cid\", \"name\", \"type\", \"notnull\", \"dflt_value\", \"pk\"], self._cur.fetchall())"
+        },
+        {
+          "line": 746,
+          "text": "            return self"
+        },
+        {
+          "line": 747,
+          "text": ""
+        },
+        {
+          "line": 748,
+          "text": "        # sqlite_master table-exists / table-sql queries used by old migration code."
+        },
+        {
+          "line": 749,
+          "text": "        if \"sqlite_master\" in low:"
+        },
+        {
+          "line": 750,
+          "text": "            if \"select sql\" in low:"
+        },
+        {
+          "line": 751,
+          "text": "                # Return a harmless CREATE SQL string so legacy inspection won't trigger SQLite rebuilds."
+        },
+        {
+          "line": 752,
+          "text": "                name = params[0] if params else \"\""
+        }
+      ]
+    },
+    {
+      "line": 771,
+      "end_line": 771,
+      "method": "execute",
+      "function_text": "self._cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "translated",
+      "caller": "_PgCompatCursor.execute",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 763,
+          "text": "                return self"
+        },
+        {
+          "line": 764,
+          "text": ""
+        },
+        {
+          "line": 765,
+          "text": "        translated = _spina_pg_sql(sql_text)"
+        },
+        {
+          "line": 766,
+          "text": "        if translated is None:"
+        },
+        {
+          "line": 767,
+          "text": "            self._set_rows([], [])"
+        },
+        {
+          "line": 768,
+          "text": "            return self"
+        },
+        {
+          "line": 769,
+          "text": ""
+        },
+        {
+          "line": 770,
+          "text": "        try:"
+        },
+        {
+          "line": 771,
+          "text": "            self._cur.execute(translated, params)"
+        },
+        {
+          "line": 772,
+          "text": "            self.rowcount = self._cur.rowcount"
+        },
+        {
+          "line": 773,
+          "text": "            self._rows = None"
+        },
+        {
+          "line": 774,
+          "text": "            self._idx = 0"
+        },
+        {
+          "line": 775,
+          "text": "            # The application never reads cursor.lastrowid. Avoid SELECT lastval()"
+        },
+        {
+          "line": 776,
+          "text": "            # after every INSERT, which previously doubled INSERT round trips."
+        },
+        {
+          "line": 777,
+          "text": "            self.lastrowid = None"
+        },
+        {
+          "line": 778,
+          "text": "            return self"
+        },
+        {
+          "line": 779,
+          "text": "        except Exception as e:"
+        }
+      ]
+    },
+    {
+      "line": 792,
+      "end_line": 792,
+      "method": "executemany",
+      "function_text": "self._cur.executemany",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "translated",
+      "caller": "_PgCompatCursor.executemany",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 784,
+          "text": "            _spina_pg_raise_sqlite_like(e)"
+        },
+        {
+          "line": 785,
+          "text": ""
+        },
+        {
+          "line": 786,
+          "text": "    def executemany(self, sql, seq_of_params):"
+        },
+        {
+          "line": 787,
+          "text": "        translated = _spina_pg_sql(str(sql or \"\"))"
+        },
+        {
+          "line": 788,
+          "text": "        if translated is None:"
+        },
+        {
+          "line": 789,
+          "text": "            self.rowcount = 0"
+        },
+        {
+          "line": 790,
+          "text": "            return self"
+        },
+        {
+          "line": 791,
+          "text": "        try:"
+        },
+        {
+          "line": 792,
+          "text": "            self._cur.executemany(translated, list(seq_of_params or []))"
+        },
+        {
+          "line": 793,
+          "text": "            self.rowcount = self._cur.rowcount"
+        },
+        {
+          "line": 794,
+          "text": "            return self"
+        },
+        {
+          "line": 795,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 796,
+          "text": "            try:"
+        },
+        {
+          "line": 797,
+          "text": "                self._conn._pg.rollback()"
+        },
+        {
+          "line": 798,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 799,
+          "text": "                pass"
+        },
+        {
+          "line": 800,
+          "text": "            _spina_pg_raise_sqlite_like(e)"
+        }
+      ]
+    },
+    {
+      "line": 6134,
+      "end_line": 6134,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "q",
+      "caller": "LoanDB.get_all_clients",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 6126,
+          "text": "            if \" WHERE \" in q:"
+        },
+        {
+          "line": 6127,
+          "text": "                q += \" AND COALESCE(is_archived,0)=0\""
+        },
+        {
+          "line": 6128,
+          "text": "            else:"
+        },
+        {
+          "line": 6129,
+          "text": "                q += \" WHERE COALESCE(is_archived,0)=0\""
+        },
+        {
+          "line": 6130,
+          "text": ""
+        },
+        {
+          "line": 6131,
+          "text": "        q += \" ORDER BY name COLLATE NOCASE\""
+        },
+        {
+          "line": 6132,
+          "text": ""
+        },
+        {
+          "line": 6133,
+          "text": "        try:"
+        },
+        {
+          "line": 6134,
+          "text": "            cur.execute(q, params)"
+        },
+        {
+          "line": 6135,
+          "text": "            rows = cur.fetchall()"
+        },
+        {
+          "line": 6136,
+          "text": "            return [r[\"name\"] if isinstance(r, sqlite3.Row) else r[0] for r in rows]"
+        },
+        {
+          "line": 6137,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 6138,
+          "text": "            # Last-resort fallback: name-only"
+        },
+        {
+          "line": 6139,
+          "text": "            try:"
+        },
+        {
+          "line": 6140,
+          "text": "                if lt and has_loan_type:"
+        },
+        {
+          "line": 6141,
+          "text": "                    if (not include_archived) and has_archived:"
+        },
+        {
+          "line": 6142,
+          "text": "                        cur.execute(\"SELECT name FROM clients WHERE loan_type=? AND COALESCE(is_archived,0)=0 ORDER BY name COLLATE NOCASE\", (lt,))"
+        }
+      ]
+    },
+    {
+      "line": 41340,
+      "end_line": 41340,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql2",
+      "caller": "_spina_route_adv_marker_for",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 41332,
+          "text": "        if not best_end:"
+        },
+        {
+          "line": 41333,
+          "text": "            sql2 = \"\"\""
+        },
+        {
+          "line": 41334,
+          "text": "                SELECT date, description, name, client_uid, loan_type"
+        },
+        {
+          "line": 41335,
+          "text": "                  FROM transactions"
+        },
+        {
+          "line": 41336,
+          "text": "                 WHERE description IS NOT NULL"
+        },
+        {
+          "line": 41337,
+          "text": "                   AND TRIM(description) <> ''"
+        },
+        {
+          "line": 41338,
+          "text": "                   AND UPPER(description) LIKE '%ADV%'"
+        },
+        {
+          "line": 41339,
+          "text": "                   AND (\"\"\" + \" OR \".join(clauses) + \")\""
+        },
+        {
+          "line": 41340,
+          "text": "            cur.execute(sql2, tuple(params))"
+        },
+        {
+          "line": 41341,
+          "text": "            for r in (cur.fetchall() or []):"
+        },
+        {
+          "line": 41342,
+          "text": "                try:"
+        },
+        {
+          "line": 41343,
+          "text": "                    desc = r['description'] if hasattr(r, 'keys') else r[1]"
+        },
+        {
+          "line": 41344,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 41345,
+          "text": "                    desc = \"\""
+        },
+        {
+          "line": 41346,
+          "text": "                for s, e in (parse_advance_ranges(desc or \"\") or []):"
+        },
+        {
+          "line": 41347,
+          "text": "                    ss = str(s or \"\")[:10]"
+        },
+        {
+          "line": 41348,
+          "text": "                    ee = str(e or \"\")[:10]"
+        }
+      ]
+    },
+    {
+      "line": 174,
+      "end_line": 174,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "_SPINA_PG_STORAGE_SCHEMA_SQL",
+      "caller": "_spina_pg_ensure_storage_schema",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 166,
+          "text": "    global _SPINA_PG_STORAGE_READY"
+        },
+        {
+          "line": 167,
+          "text": "    if _SPINA_PG_STORAGE_READY:"
+        },
+        {
+          "line": 168,
+          "text": "        return True"
+        },
+        {
+          "line": 169,
+          "text": "    if not _spina_pg_storage_enabled():"
+        },
+        {
+          "line": 170,
+          "text": "        return False"
+        },
+        {
+          "line": 171,
+          "text": "    try:"
+        },
+        {
+          "line": 172,
+          "text": "        with _spina_pg_storage_conn() as conn:"
+        },
+        {
+          "line": 173,
+          "text": "            with conn.cursor() as cur:"
+        },
+        {
+          "line": 174,
+          "text": "                cur.execute(_SPINA_PG_STORAGE_SCHEMA_SQL)"
+        },
+        {
+          "line": 175,
+          "text": "            conn.commit()"
+        },
+        {
+          "line": 176,
+          "text": "        _SPINA_PG_STORAGE_READY = True"
+        },
+        {
+          "line": 177,
+          "text": "        return True"
+        },
+        {
+          "line": 178,
+          "text": "    except Exception as e:"
+        },
+        {
+          "line": 179,
+          "text": "        _spina_pg_storage_log('ensure_schema', e)"
+        },
+        {
+          "line": 180,
+          "text": "        return False"
+        },
+        {
+          "line": 181,
+          "text": ""
+        },
+        {
+          "line": 182,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 3825,
+      "end_line": 3825,
+      "method": "execute",
+      "function_text": "self._cur.execute",
+      "sql_arg_kind": "Starred",
+      "sql_arg_preview": "*args",
+      "caller": "_LockedCursor.execute",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 3817,
+          "text": "                    except Exception as __spina_exc:"
+        },
+        {
+          "line": 3818,
+          "text": "                        _log_suppressed_once('excpass_0067', 'suppressed exception excpass_0067', __spina_exc)"
+        },
+        {
+          "line": 3819,
+          "text": "                        pass"
+        },
+        {
+          "line": 3820,
+          "text": "                    return self._cur.execute(*args, **kwargs)"
+        },
+        {
+          "line": 3821,
+          "text": "            run_write(_op)"
+        },
+        {
+          "line": 3822,
+          "text": "            return self"
+        },
+        {
+          "line": 3823,
+          "text": "        else:"
+        },
+        {
+          "line": 3824,
+          "text": "            with self._lock:"
+        },
+        {
+          "line": 3825,
+          "text": "                self._cur.execute(*args, **kwargs)"
+        },
+        {
+          "line": 3826,
+          "text": "            return self"
+        },
+        {
+          "line": 3827,
+          "text": ""
+        },
+        {
+          "line": 3828,
+          "text": "    def executemany(self, *args, **kwargs):"
+        },
+        {
+          "line": 3829,
+          "text": "        sql = args[0] if args else \"\""
+        },
+        {
+          "line": 3830,
+          "text": "        if _is_write_sql(sql):"
+        },
+        {
+          "line": 3831,
+          "text": "            def _op():"
+        },
+        {
+          "line": 3832,
+          "text": "                with self._lock:"
+        },
+        {
+          "line": 3833,
+          "text": "                    try:"
+        }
+      ]
+    },
+    {
+      "line": 3849,
+      "end_line": 3849,
+      "method": "executemany",
+      "function_text": "self._cur.executemany",
+      "sql_arg_kind": "Starred",
+      "sql_arg_preview": "*args",
+      "caller": "_LockedCursor.executemany",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 3841,
+          "text": "                    except Exception as __spina_exc:"
+        },
+        {
+          "line": 3842,
+          "text": "                        _log_suppressed_once('excpass_0069', 'suppressed exception excpass_0069', __spina_exc)"
+        },
+        {
+          "line": 3843,
+          "text": "                        pass"
+        },
+        {
+          "line": 3844,
+          "text": "                    return self._cur.executemany(*args, **kwargs)"
+        },
+        {
+          "line": 3845,
+          "text": "            run_write(_op)"
+        },
+        {
+          "line": 3846,
+          "text": "            return self"
+        },
+        {
+          "line": 3847,
+          "text": "        else:"
+        },
+        {
+          "line": 3848,
+          "text": "            with self._lock:"
+        },
+        {
+          "line": 3849,
+          "text": "                self._cur.executemany(*args, **kwargs)"
+        },
+        {
+          "line": 3850,
+          "text": "            return self"
+        },
+        {
+          "line": 3851,
+          "text": ""
+        },
+        {
+          "line": 3852,
+          "text": "    def fetchone(self, *args, **kwargs):"
+        },
+        {
+          "line": 3853,
+          "text": "        with self._lock:"
+        },
+        {
+          "line": 3854,
+          "text": "            return self._cur.fetchone(*args, **kwargs)"
+        },
+        {
+          "line": 3855,
+          "text": ""
+        },
+        {
+          "line": 3856,
+          "text": "    def fetchall(self, *args, **kwargs):"
+        },
+        {
+          "line": 3857,
+          "text": "        with self._lock:"
+        }
+      ]
+    },
+    {
+      "line": 3910,
+      "end_line": 3910,
+      "method": "execute",
+      "function_text": "self._conn.execute",
+      "sql_arg_kind": "Starred",
+      "sql_arg_preview": "*args",
+      "caller": "_LockedConnection.execute",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 3902,
+          "text": "                        _log_suppressed_once('excpass_0071', 'suppressed exception excpass_0071', __spina_exc)"
+        },
+        {
+          "line": 3903,
+          "text": "                        pass"
+        },
+        {
+          "line": 3904,
+          "text": "                    cur = self._conn.execute(*args, **kwargs)"
+        },
+        {
+          "line": 3905,
+          "text": "                    return cur"
+        },
+        {
+          "line": 3906,
+          "text": "            cur = run_write(_op)"
+        },
+        {
+          "line": 3907,
+          "text": "            return _LockedCursor(cur, self._lock)"
+        },
+        {
+          "line": 3908,
+          "text": "        else:"
+        },
+        {
+          "line": 3909,
+          "text": "            with self._lock:"
+        },
+        {
+          "line": 3910,
+          "text": "                cur = self._conn.execute(*args, **kwargs)"
+        },
+        {
+          "line": 3911,
+          "text": "            return _LockedCursor(cur, self._lock)"
+        },
+        {
+          "line": 3912,
+          "text": ""
+        },
+        {
+          "line": 3913,
+          "text": "    def executemany(self, *args, **kwargs):"
+        },
+        {
+          "line": 3914,
+          "text": "        sql = args[0] if args else \"\""
+        },
+        {
+          "line": 3915,
+          "text": "        if _is_write_sql(sql):"
+        },
+        {
+          "line": 3916,
+          "text": "            def _op():"
+        },
+        {
+          "line": 3917,
+          "text": "                with self._lock:"
+        },
+        {
+          "line": 3918,
+          "text": "                    try:"
+        }
+      ]
+    },
+    {
+      "line": 3934,
+      "end_line": 3934,
+      "method": "executemany",
+      "function_text": "self._conn.executemany",
+      "sql_arg_kind": "Starred",
+      "sql_arg_preview": "*args",
+      "caller": "_LockedConnection.executemany",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 3926,
+          "text": "                        _log_suppressed_once('excpass_0073', 'suppressed exception excpass_0073', __spina_exc)"
+        },
+        {
+          "line": 3927,
+          "text": "                        pass"
+        },
+        {
+          "line": 3928,
+          "text": "                    cur = self._conn.executemany(*args, **kwargs)"
+        },
+        {
+          "line": 3929,
+          "text": "                    return cur"
+        },
+        {
+          "line": 3930,
+          "text": "            cur = run_write(_op)"
+        },
+        {
+          "line": 3931,
+          "text": "            return _LockedCursor(cur, self._lock)"
+        },
+        {
+          "line": 3932,
+          "text": "        else:"
+        },
+        {
+          "line": 3933,
+          "text": "            with self._lock:"
+        },
+        {
+          "line": 3934,
+          "text": "                cur = self._conn.executemany(*args, **kwargs)"
+        },
+        {
+          "line": 3935,
+          "text": "            return _LockedCursor(cur, self._lock)"
+        },
+        {
+          "line": 3936,
+          "text": ""
+        },
+        {
+          "line": 3937,
+          "text": "    def commit(self):"
+        },
+        {
+          "line": 3938,
+          "text": "        def _op():"
+        },
+        {
+          "line": 3939,
+          "text": "            with self._lock:"
+        },
+        {
+          "line": 3940,
+          "text": "                return self._conn.commit()"
+        },
+        {
+          "line": 3941,
+          "text": "        return run_write(_op)"
+        },
+        {
+          "line": 3942,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 4073,
+      "end_line": 4073,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "_ddl",
+      "caller": "LoanDB._create_tables._ensure_column",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 4065,
+          "text": "            \"\"\"Add column only if missing. Returns True if we attempted and succeeded.\"\"\""
+        },
+        {
+          "line": 4066,
+          "text": "            try:"
+        },
+        {
+          "line": 4067,
+          "text": "                if _col in _table_cols(_t):"
+        },
+        {
+          "line": 4068,
+          "text": "                    return False"
+        },
+        {
+          "line": 4069,
+          "text": "            except Exception as __spina_exc:"
+        },
+        {
+          "line": 4070,
+          "text": "                _log_suppressed_once('excpass_0079', 'suppressed exception excpass_0079', __spina_exc)"
+        },
+        {
+          "line": 4071,
+          "text": "                pass"
+        },
+        {
+          "line": 4072,
+          "text": "            try:"
+        },
+        {
+          "line": 4073,
+          "text": "                cur.execute(_ddl)"
+        },
+        {
+          "line": 4074,
+          "text": "                return True"
+        },
+        {
+          "line": 4075,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 4076,
+          "text": "                # Most common/expected: column already exists (race or older DB already updated)"
+        },
+        {
+          "line": 4077,
+          "text": "                try:"
+        },
+        {
+          "line": 4078,
+          "text": "                    msg = str(e).lower()"
+        },
+        {
+          "line": 4079,
+          "text": "                    if (\"duplicate column name\" in msg) or (\"already exists\" in msg):"
+        },
+        {
+          "line": 4080,
+          "text": "                        return False"
+        },
+        {
+          "line": 4081,
+          "text": "                except Exception as __spina_exc:"
+        }
+      ]
+    },
+    {
+      "line": 4094,
+      "end_line": 4094,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "_sql",
+      "caller": "LoanDB._create_tables._try_sql",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 4086,
+          "text": "                except Exception as __spina_exc:"
+        },
+        {
+          "line": 4087,
+          "text": "                    _log_suppressed_once('excpass_0081', 'suppressed exception excpass_0081', __spina_exc)"
+        },
+        {
+          "line": 4088,
+          "text": "                    pass"
+        },
+        {
+          "line": 4089,
+          "text": "                return False"
+        },
+        {
+          "line": 4090,
+          "text": ""
+        },
+        {
+          "line": 4091,
+          "text": "        def _try_sql(_sql: str, _ctx: str):"
+        },
+        {
+          "line": 4092,
+          "text": "            \"\"\"Execute SQL and log on failure.\"\"\""
+        },
+        {
+          "line": 4093,
+          "text": "            try:"
+        },
+        {
+          "line": 4094,
+          "text": "                cur.execute(_sql)"
+        },
+        {
+          "line": 4095,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 4096,
+          "text": "                try:"
+        },
+        {
+          "line": 4097,
+          "text": "                    _log_exc(_ctx, e)"
+        },
+        {
+          "line": 4098,
+          "text": "                except Exception as __spina_exc:"
+        },
+        {
+          "line": 4099,
+          "text": "                    _log_suppressed_once('excpass_0082', 'suppressed exception excpass_0082', __spina_exc)"
+        },
+        {
+          "line": 4100,
+          "text": "                    pass"
+        },
+        {
+          "line": 4101,
+          "text": "        # --- END: Schema migration helpers ---"
+        },
+        {
+          "line": 4102,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 6223,
+      "end_line": 6226,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "bin_op",
+      "sql_arg_preview": "'SELECT name, area, principal, interest_amount, total_to_pay, date_released, due_date, loan_type FROM clients WHERE loan_type = ? ' + ('AND COALESCE(is_archived,0)=0 ' if not include_archived and has_archived else '') + 'ORDER BY area, name",
+      "caller": "LoanDB.fetch_all_clients",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 6215,
+          "text": "        lt = (loan_type or '').strip()"
+        },
+        {
+          "line": 6216,
+          "text": "        if lt:"
+        },
+        {
+          "line": 6217,
+          "text": "            if lt.lower().replace(' ', '') in ('7x7','7×7'):"
+        },
+        {
+          "line": 6218,
+          "text": "                lt = '7x7'"
+        },
+        {
+          "line": 6219,
+          "text": "            else:"
+        },
+        {
+          "line": 6220,
+          "text": "                lt = 'Regular'"
+        },
+        {
+          "line": 6221,
+          "text": "        try:"
+        },
+        {
+          "line": 6222,
+          "text": "            if lt:"
+        },
+        {
+          "line": 6223,
+          "text": "                cur.execute("
+        },
+        {
+          "line": 6224,
+          "text": "                    \"SELECT name, area, principal, interest_amount, total_to_pay, date_released, due_date, loan_type FROM clients WHERE loan_type = ? \" + (\"AND COALESCE(is_archived,0)=0 \" if ((not include_archived) and has_archived) else \"\") + \"ORDER BY area, name;\","
+        },
+        {
+          "line": 6225,
+          "text": "                    (lt,),"
+        },
+        {
+          "line": 6226,
+          "text": "                )"
+        },
+        {
+          "line": 6227,
+          "text": "            else:"
+        },
+        {
+          "line": 6228,
+          "text": "                cur.execute("
+        },
+        {
+          "line": 6229,
+          "text": "                    \"SELECT name, area, principal, interest_amount, total_to_pay, date_released, due_date, loan_type FROM clients \" + (\"WHERE COALESCE(is_archived,0)=0 \" if ((not include_archived) and has_archived) else \"\") + \"ORDER BY area, name;\""
+        },
+        {
+          "line": 6230,
+          "text": "                )"
+        },
+        {
+          "line": 6231,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 6232,
+          "text": "            # Older DB fallback (no loan_type)"
+        },
+        {
+          "line": 6233,
+          "text": "            if lt:"
+        },
+        {
+          "line": 6234,
+          "text": "                cur.execute(\"SELECT name, '' AS area FROM clients ORDER BY name;\")"
+        }
+      ]
+    },
+    {
+      "line": 6228,
+      "end_line": 6230,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "bin_op",
+      "sql_arg_preview": "'SELECT name, area, principal, interest_amount, total_to_pay, date_released, due_date, loan_type FROM clients ' + ('WHERE COALESCE(is_archived,0)=0 ' if not include_archived and has_archived else '') + 'ORDER BY area, name;'",
+      "caller": "LoanDB.fetch_all_clients",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 6220,
+          "text": "                lt = 'Regular'"
+        },
+        {
+          "line": 6221,
+          "text": "        try:"
+        },
+        {
+          "line": 6222,
+          "text": "            if lt:"
+        },
+        {
+          "line": 6223,
+          "text": "                cur.execute("
+        },
+        {
+          "line": 6224,
+          "text": "                    \"SELECT name, area, principal, interest_amount, total_to_pay, date_released, due_date, loan_type FROM clients WHERE loan_type = ? \" + (\"AND COALESCE(is_archived,0)=0 \" if ((not include_archived) and has_archived) else \"\") + \"ORDER BY area, name;\","
+        },
+        {
+          "line": 6225,
+          "text": "                    (lt,),"
+        },
+        {
+          "line": 6226,
+          "text": "                )"
+        },
+        {
+          "line": 6227,
+          "text": "            else:"
+        },
+        {
+          "line": 6228,
+          "text": "                cur.execute("
+        },
+        {
+          "line": 6229,
+          "text": "                    \"SELECT name, area, principal, interest_amount, total_to_pay, date_released, due_date, loan_type FROM clients \" + (\"WHERE COALESCE(is_archived,0)=0 \" if ((not include_archived) and has_archived) else \"\") + \"ORDER BY area, name;\""
+        },
+        {
+          "line": 6230,
+          "text": "                )"
+        },
+        {
+          "line": 6231,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 6232,
+          "text": "            # Older DB fallback (no loan_type)"
+        },
+        {
+          "line": 6233,
+          "text": "            if lt:"
+        },
+        {
+          "line": 6234,
+          "text": "                cur.execute(\"SELECT name, '' AS area FROM clients ORDER BY name;\")"
+        },
+        {
+          "line": 6235,
+          "text": "            else:"
+        },
+        {
+          "line": 6236,
+          "text": "                cur.execute(\"SELECT name, '' AS area FROM clients ORDER BY name;\")"
+        },
+        {
+          "line": 6237,
+          "text": "        rows = cur.fetchall()"
+        },
+        {
+          "line": 6238,
+          "text": "        return [dict(r) for r in rows]"
+        }
+      ]
+    },
+    {
+      "line": 36011,
+      "end_line": 36011,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "_spina_perf_ensure_indexes",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 36003,
+          "text": "            # Clients tab filters and ordering"
+        },
+        {
+          "line": 36004,
+          "text": "            \"CREATE INDEX IF NOT EXISTS idx_clients_lt_arch_name ON clients(loan_type, is_archived, name COLLATE NOCASE)\","
+        },
+        {
+          "line": 36005,
+          "text": "            \"CREATE INDEX IF NOT EXISTS idx_clients_lt_arch_area_name ON clients(loan_type, is_archived, area COLLATE NOCASE, name COLLATE NOCASE)\","
+        },
+        {
+          "line": 36006,
+          "text": "            \"CREATE INDEX IF NOT EXISTS idx_clients_lt_arch_person ON clients(loan_type, is_archived, person_uid)\","
+        },
+        {
+          "line": 36007,
+          "text": "            \"CREATE INDEX IF NOT EXISTS idx_clients_name_lt_arch ON clients(name COLLATE NOCASE, loan_type, is_archived)\","
+        },
+        {
+          "line": 36008,
+          "text": "        ]"
+        },
+        {
+          "line": 36009,
+          "text": "        for sql in idx_sql:"
+        },
+        {
+          "line": 36010,
+          "text": "            try:"
+        },
+        {
+          "line": 36011,
+          "text": "                cur.execute(sql)"
+        },
+        {
+          "line": 36012,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 36013,
+          "text": "                try:"
+        },
+        {
+          "line": 36014,
+          "text": "                    _log_suppressed_once(\"perf_index\", \"performance index creation skipped\", e)"
+        },
+        {
+          "line": 36015,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 36016,
+          "text": "                    pass"
+        },
+        {
+          "line": 36017,
+          "text": "        try:"
+        },
+        {
+          "line": 36018,
+          "text": "            conn.commit()"
+        },
+        {
+          "line": 36019,
+          "text": "        except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 36148,
+      "end_line": 36148,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "_spina_perf_clients_rows",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 36140,
+          "text": "                OR IFNULL(c.date_released,'') LIKE ?"
+        },
+        {
+          "line": 36141,
+          "text": "                OR IFNULL(c.due_date,'') LIKE ?"
+        },
+        {
+          "line": 36142,
+          "text": "                OR IFNULL(date(c.date_released, '+' || IFNULL(c.pay_start_offset_days,0) || ' day'),'') LIKE ?"
+        },
+        {
+          "line": 36143,
+          "text": "                OR IFNULL(c.person_uid,'') LIKE ?"
+        },
+        {
+          "line": 36144,
+          "text": "            )\"\"\")"
+        },
+        {
+          "line": 36145,
+          "text": "            params.extend([like, like, like, like, like, like, like])"
+        },
+        {
+          "line": 36146,
+          "text": ""
+        },
+        {
+          "line": 36147,
+          "text": "    sql = \"SELECT c.* FROM clients c WHERE \" + \" AND \".join(where) + \" ORDER BY c.name COLLATE NOCASE\""
+        },
+        {
+          "line": 36148,
+          "text": "    rows = _spina_perf_dict_rows(cur.execute(sql, params).fetchall())"
+        },
+        {
+          "line": 36149,
+          "text": ""
+        },
+        {
+          "line": 36150,
+          "text": "    # Build fast lookup sets for link labels, no per-row DB calls."
+        },
+        {
+          "line": 36151,
+          "text": "    try:"
+        },
+        {
+          "line": 36152,
+          "text": "        active = _spina_perf_dict_rows(cur.execute("
+        },
+        {
+          "line": 36153,
+          "text": "            \"SELECT name, loan_type, person_uid FROM clients WHERE COALESCE(is_archived,0)=0\""
+        },
+        {
+          "line": 36154,
+          "text": "        ).fetchall())"
+        },
+        {
+          "line": 36155,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 36156,
+          "text": "        active = []"
+        }
+      ]
+    },
+    {
+      "line": 36264,
+      "end_line": 36264,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "_spina_perf_month_transactions",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 36256,
+          "text": "        sql = f\"\"\""
+        },
+        {
+          "line": 36257,
+          "text": "            SELECT client_uid, name, date, payment, id"
+        },
+        {
+          "line": 36258,
+          "text": "            FROM transactions"
+        },
+        {
+          "line": 36259,
+          "text": "            WHERE client_uid IN ({ph})"
+        },
+        {
+          "line": 36260,
+          "text": "              AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular')=?"
+        },
+        {
+          "line": 36261,
+          "text": "              AND date >= ? AND date <= ?"
+        },
+        {
+          "line": 36262,
+          "text": "            ORDER BY id ASC"
+        },
+        {
+          "line": 36263,
+          "text": "        \"\"\""
+        },
+        {
+          "line": 36264,
+          "text": "        for tr in cur.execute(sql, list(chunk) + [lt, start_date, end_date]).fetchall():"
+        },
+        {
+          "line": 36265,
+          "text": "            try:"
+        },
+        {
+          "line": 36266,
+          "text": "                uid = tr[\"client_uid\"] if hasattr(tr, \"keys\") else tr[0]"
+        },
+        {
+          "line": 36267,
+          "text": "                ds = tr[\"date\"] if hasattr(tr, \"keys\") else tr[2]"
+        },
+        {
+          "line": 36268,
+          "text": "                val = tr[\"payment\"] if hasattr(tr, \"keys\") else tr[3]"
+        },
+        {
+          "line": 36269,
+          "text": "                pay[(str(uid), str(ds)[:10])] = val"
+        },
+        {
+          "line": 36270,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 36271,
+          "text": "                pass"
+        },
+        {
+          "line": 36272,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 36284,
+      "end_line": 36284,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "_spina_perf_month_transactions",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 36276,
+          "text": "        sql = f\"\"\""
+        },
+        {
+          "line": 36277,
+          "text": "            SELECT name, date, payment, id"
+        },
+        {
+          "line": 36278,
+          "text": "            FROM transactions"
+        },
+        {
+          "line": 36279,
+          "text": "            WHERE name IN ({ph})"
+        },
+        {
+          "line": 36280,
+          "text": "              AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular')=?"
+        },
+        {
+          "line": 36281,
+          "text": "              AND date >= ? AND date <= ?"
+        },
+        {
+          "line": 36282,
+          "text": "            ORDER BY id ASC"
+        },
+        {
+          "line": 36283,
+          "text": "        \"\"\""
+        },
+        {
+          "line": 36284,
+          "text": "        for tr in cur.execute(sql, list(chunk) + [lt, start_date, end_date]).fetchall():"
+        },
+        {
+          "line": 36285,
+          "text": "            try:"
+        },
+        {
+          "line": 36286,
+          "text": "                nm = tr[\"name\"] if hasattr(tr, \"keys\") else tr[0]"
+        },
+        {
+          "line": 36287,
+          "text": "                ds = tr[\"date\"] if hasattr(tr, \"keys\") else tr[1]"
+        },
+        {
+          "line": 36288,
+          "text": "                val = tr[\"payment\"] if hasattr(tr, \"keys\") else tr[2]"
+        },
+        {
+          "line": 36289,
+          "text": "                pay[(str(nm).strip().lower(), str(ds)[:10])] = val"
+        },
+        {
+          "line": 36290,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 36291,
+          "text": "                pass"
+        },
+        {
+          "line": 36292,
+          "text": "    return pay"
+        }
+      ]
+    },
+    {
+      "line": 37279,
+      "end_line": 37281,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "bin_op",
+      "sql_arg_preview": "'SELECT %s FROM clients c WHERE IFNULL(c.is_archived,0)=0 ORDER BY c.name COLLATE NOCASE' % ', '.join(select_cols)",
+      "caller": "_spina_dashboard_fetch_rows",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 37271,
+          "text": "        _c('total_to_pay', '0'),"
+        },
+        {
+          "line": 37272,
+          "text": "        _c('date_released', \"''\"),"
+        },
+        {
+          "line": 37273,
+          "text": "        _c('due_date', \"''\"),"
+        },
+        {
+          "line": 37274,
+          "text": "        _c('payment_start_date', \"''\"),"
+        },
+        {
+          "line": 37275,
+          "text": "        _c('pay_start_offset_days', '1'),"
+        },
+        {
+          "line": 37276,
+          "text": "        _c('is_archived', '0'),"
+        },
+        {
+          "line": 37277,
+          "text": "    ]"
+        },
+        {
+          "line": 37278,
+          "text": "    try:"
+        },
+        {
+          "line": 37279,
+          "text": "        client_rows = cur.execute("
+        },
+        {
+          "line": 37280,
+          "text": "            'SELECT %s FROM clients c WHERE IFNULL(c.is_archived,0)=0 ORDER BY c.name COLLATE NOCASE' % ', '.join(select_cols)"
+        },
+        {
+          "line": 37281,
+          "text": "        ).fetchall()"
+        },
+        {
+          "line": 37282,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 37283,
+          "text": "        # Some legacy builds may not have is_archived."
+        },
+        {
+          "line": 37284,
+          "text": "        try:"
+        },
+        {
+          "line": 37285,
+          "text": "            client_rows = cur.execute("
+        },
+        {
+          "line": 37286,
+          "text": "                'SELECT %s FROM clients c ORDER BY c.name COLLATE NOCASE' % ', '.join(select_cols)"
+        },
+        {
+          "line": 37287,
+          "text": "            ).fetchall()"
+        },
+        {
+          "line": 37288,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 37289,
+          "text": "            try:"
+        }
+      ]
+    },
+    {
+      "line": 38938,
+      "end_line": 38938,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "q",
+      "caller": "_spina_cilog_fetch_rows",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 38930,
+          "text": "                    source TEXT,"
+        },
+        {
+          "line": 38931,
+          "text": "                    note TEXT"
+        },
+        {
+          "line": 38932,
+          "text": "                )"
+        },
+        {
+          "line": 38933,
+          "text": "            \"\"\")"
+        },
+        {
+          "line": 38934,
+          "text": "            db.conn.commit()"
+        },
+        {
+          "line": 38935,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 38936,
+          "text": "            pass"
+        },
+        {
+          "line": 38937,
+          "text": "        q = \"\"\"SELECT * FROM client_history ORDER BY COALESCE(changed_at,'') DESC, id DESC LIMIT ?\"\"\""
+        },
+        {
+          "line": 38938,
+          "text": "        raw = cur.execute(q, (int(limit or 3000),)).fetchall()"
+        },
+        {
+          "line": 38939,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 38940,
+          "text": "        raw = []"
+        },
+        {
+          "line": 38941,
+          "text": ""
+        },
+        {
+          "line": 38942,
+          "text": "    for h in raw or []:"
+        },
+        {
+          "line": 38943,
+          "text": "        try:"
+        },
+        {
+          "line": 38944,
+          "text": "            r = dict(h)"
+        },
+        {
+          "line": 38945,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 38946,
+          "text": "            try:"
+        }
+      ]
+    },
+    {
+      "line": 40123,
+      "end_line": 40125,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "bin_op",
+      "sql_arg_preview": "'SELECT ' + ', '.join(select_cols) + f' FROM clients {where} ORDER BY area COLLATE NOCASE, name COLLATE NOCASE'",
+      "caller": "_spina_crc_fetch_close_rows",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 40115,
+          "text": "    wanted = [\"client_uid\", \"name\", \"loan_type\", \"area\", \"payment_term\", \"payment_amount\", \"payment_mode\"]"
+        },
+        {
+          "line": 40116,
+          "text": "    select_cols = []"
+        },
+        {
+          "line": 40117,
+          "text": "    for c in wanted:"
+        },
+        {
+          "line": 40118,
+          "text": "        select_cols.append(c if c in cols else f\"'' AS {c}\")"
+        },
+        {
+          "line": 40119,
+          "text": "    where = \"\""
+        },
+        {
+          "line": 40120,
+          "text": "    if \"is_archived\" in cols:"
+        },
+        {
+          "line": 40121,
+          "text": "        where = \"WHERE COALESCE(is_archived,0)=0\""
+        },
+        {
+          "line": 40122,
+          "text": "    try:"
+        },
+        {
+          "line": 40123,
+          "text": "        clients = cur.execute("
+        },
+        {
+          "line": 40124,
+          "text": "            \"SELECT \" + \", \".join(select_cols) + f\" FROM clients {where} ORDER BY area COLLATE NOCASE, name COLLATE NOCASE\""
+        },
+        {
+          "line": 40125,
+          "text": "        ).fetchall()"
+        },
+        {
+          "line": 40126,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 40127,
+          "text": "        clients = []"
+        },
+        {
+          "line": 40128,
+          "text": ""
+        },
+        {
+          "line": 40129,
+          "text": "    # Fetch all payments/entries for the closed day."
+        },
+        {
+          "line": 40130,
+          "text": "    try:"
+        },
+        {
+          "line": 40131,
+          "text": "        txs = cur.execute("
+        },
+        {
+          "line": 40132,
+          "text": "            \"\"\""
+        },
+        {
+          "line": 40133,
+          "text": "            SELECT client_uid, name, IFNULL(loan_type,'Regular') AS loan_type,"
+        }
+      ]
+    },
+    {
+      "line": 3820,
+      "end_line": 3820,
+      "method": "execute",
+      "function_text": "self._cur.execute",
+      "sql_arg_kind": "Starred",
+      "sql_arg_preview": "*args",
+      "caller": "_LockedCursor.execute._op",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 3812,
+          "text": "                            try:"
+        },
+        {
+          "line": 3813,
+          "text": "                                conn.execute(\"BEGIN IMMEDIATE\")"
+        },
+        {
+          "line": 3814,
+          "text": "                            except Exception as __spina_exc:"
+        },
+        {
+          "line": 3815,
+          "text": "                                _log_suppressed_once('excpass_0066', 'suppressed exception excpass_0066', __spina_exc)"
+        },
+        {
+          "line": 3816,
+          "text": "                                pass"
+        },
+        {
+          "line": 3817,
+          "text": "                    except Exception as __spina_exc:"
+        },
+        {
+          "line": 3818,
+          "text": "                        _log_suppressed_once('excpass_0067', 'suppressed exception excpass_0067', __spina_exc)"
+        },
+        {
+          "line": 3819,
+          "text": "                        pass"
+        },
+        {
+          "line": 3820,
+          "text": "                    return self._cur.execute(*args, **kwargs)"
+        },
+        {
+          "line": 3821,
+          "text": "            run_write(_op)"
+        },
+        {
+          "line": 3822,
+          "text": "            return self"
+        },
+        {
+          "line": 3823,
+          "text": "        else:"
+        },
+        {
+          "line": 3824,
+          "text": "            with self._lock:"
+        },
+        {
+          "line": 3825,
+          "text": "                self._cur.execute(*args, **kwargs)"
+        },
+        {
+          "line": 3826,
+          "text": "            return self"
+        },
+        {
+          "line": 3827,
+          "text": ""
+        },
+        {
+          "line": 3828,
+          "text": "    def executemany(self, *args, **kwargs):"
+        }
+      ]
+    },
+    {
+      "line": 3844,
+      "end_line": 3844,
+      "method": "executemany",
+      "function_text": "self._cur.executemany",
+      "sql_arg_kind": "Starred",
+      "sql_arg_preview": "*args",
+      "caller": "_LockedCursor.executemany._op",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 3836,
+          "text": "                            try:"
+        },
+        {
+          "line": 3837,
+          "text": "                                conn.execute(\"BEGIN IMMEDIATE\")"
+        },
+        {
+          "line": 3838,
+          "text": "                            except Exception as __spina_exc:"
+        },
+        {
+          "line": 3839,
+          "text": "                                _log_suppressed_once('excpass_0068', 'suppressed exception excpass_0068', __spina_exc)"
+        },
+        {
+          "line": 3840,
+          "text": "                                pass"
+        },
+        {
+          "line": 3841,
+          "text": "                    except Exception as __spina_exc:"
+        },
+        {
+          "line": 3842,
+          "text": "                        _log_suppressed_once('excpass_0069', 'suppressed exception excpass_0069', __spina_exc)"
+        },
+        {
+          "line": 3843,
+          "text": "                        pass"
+        },
+        {
+          "line": 3844,
+          "text": "                    return self._cur.executemany(*args, **kwargs)"
+        },
+        {
+          "line": 3845,
+          "text": "            run_write(_op)"
+        },
+        {
+          "line": 3846,
+          "text": "            return self"
+        },
+        {
+          "line": 3847,
+          "text": "        else:"
+        },
+        {
+          "line": 3848,
+          "text": "            with self._lock:"
+        },
+        {
+          "line": 3849,
+          "text": "                self._cur.executemany(*args, **kwargs)"
+        },
+        {
+          "line": 3850,
+          "text": "            return self"
+        },
+        {
+          "line": 3851,
+          "text": ""
+        },
+        {
+          "line": 3852,
+          "text": "    def fetchone(self, *args, **kwargs):"
+        }
+      ]
+    },
+    {
+      "line": 3904,
+      "end_line": 3904,
+      "method": "execute",
+      "function_text": "self._conn.execute",
+      "sql_arg_kind": "Starred",
+      "sql_arg_preview": "*args",
+      "caller": "_LockedConnection.execute._op",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 3896,
+          "text": "                            try:"
+        },
+        {
+          "line": 3897,
+          "text": "                                self._conn.execute(\"BEGIN IMMEDIATE\")"
+        },
+        {
+          "line": 3898,
+          "text": "                            except Exception as __spina_exc:"
+        },
+        {
+          "line": 3899,
+          "text": "                                _log_suppressed_once('excpass_0070', 'suppressed exception excpass_0070', __spina_exc)"
+        },
+        {
+          "line": 3900,
+          "text": "                                pass"
+        },
+        {
+          "line": 3901,
+          "text": "                    except Exception as __spina_exc:"
+        },
+        {
+          "line": 3902,
+          "text": "                        _log_suppressed_once('excpass_0071', 'suppressed exception excpass_0071', __spina_exc)"
+        },
+        {
+          "line": 3903,
+          "text": "                        pass"
+        },
+        {
+          "line": 3904,
+          "text": "                    cur = self._conn.execute(*args, **kwargs)"
+        },
+        {
+          "line": 3905,
+          "text": "                    return cur"
+        },
+        {
+          "line": 3906,
+          "text": "            cur = run_write(_op)"
+        },
+        {
+          "line": 3907,
+          "text": "            return _LockedCursor(cur, self._lock)"
+        },
+        {
+          "line": 3908,
+          "text": "        else:"
+        },
+        {
+          "line": 3909,
+          "text": "            with self._lock:"
+        },
+        {
+          "line": 3910,
+          "text": "                cur = self._conn.execute(*args, **kwargs)"
+        },
+        {
+          "line": 3911,
+          "text": "            return _LockedCursor(cur, self._lock)"
+        },
+        {
+          "line": 3912,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 3928,
+      "end_line": 3928,
+      "method": "executemany",
+      "function_text": "self._conn.executemany",
+      "sql_arg_kind": "Starred",
+      "sql_arg_preview": "*args",
+      "caller": "_LockedConnection.executemany._op",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 3920,
+          "text": "                            try:"
+        },
+        {
+          "line": 3921,
+          "text": "                                self._conn.execute(\"BEGIN IMMEDIATE\")"
+        },
+        {
+          "line": 3922,
+          "text": "                            except Exception as __spina_exc:"
+        },
+        {
+          "line": 3923,
+          "text": "                                _log_suppressed_once('excpass_0072', 'suppressed exception excpass_0072', __spina_exc)"
+        },
+        {
+          "line": 3924,
+          "text": "                                pass"
+        },
+        {
+          "line": 3925,
+          "text": "                    except Exception as __spina_exc:"
+        },
+        {
+          "line": 3926,
+          "text": "                        _log_suppressed_once('excpass_0073', 'suppressed exception excpass_0073', __spina_exc)"
+        },
+        {
+          "line": 3927,
+          "text": "                        pass"
+        },
+        {
+          "line": 3928,
+          "text": "                    cur = self._conn.executemany(*args, **kwargs)"
+        },
+        {
+          "line": 3929,
+          "text": "                    return cur"
+        },
+        {
+          "line": 3930,
+          "text": "            cur = run_write(_op)"
+        },
+        {
+          "line": 3931,
+          "text": "            return _LockedCursor(cur, self._lock)"
+        },
+        {
+          "line": 3932,
+          "text": "        else:"
+        },
+        {
+          "line": 3933,
+          "text": "            with self._lock:"
+        },
+        {
+          "line": 3934,
+          "text": "                cur = self._conn.executemany(*args, **kwargs)"
+        },
+        {
+          "line": 3935,
+          "text": "            return _LockedCursor(cur, self._lock)"
+        },
+        {
+          "line": 3936,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 5852,
+      "end_line": 5852,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "q",
+      "caller": "LoanDB.get_archived_clients",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 5844,
+          "text": "        if lt:"
+        },
+        {
+          "line": 5845,
+          "text": "            q += \" AND loan_type=?\""
+        },
+        {
+          "line": 5846,
+          "text": "            params.append(lt)"
+        },
+        {
+          "line": 5847,
+          "text": "        if term:"
+        },
+        {
+          "line": 5848,
+          "text": "            q += \" AND name LIKE ?\""
+        },
+        {
+          "line": 5849,
+          "text": "            params.append(like)"
+        },
+        {
+          "line": 5850,
+          "text": "        q += \" ORDER BY archived_at DESC, name COLLATE NOCASE\""
+        },
+        {
+          "line": 5851,
+          "text": "        try:"
+        },
+        {
+          "line": 5852,
+          "text": "            rows = cur.execute(q, params).fetchall()"
+        },
+        {
+          "line": 5853,
+          "text": "            out = []"
+        },
+        {
+          "line": 5854,
+          "text": "            for r in rows:"
+        },
+        {
+          "line": 5855,
+          "text": "                if isinstance(r, sqlite3.Row):"
+        },
+        {
+          "line": 5856,
+          "text": "                    out.append(dict(r))"
+        },
+        {
+          "line": 5857,
+          "text": "                else:"
+        },
+        {
+          "line": 5858,
+          "text": "                    out.append({\"name\": r[0], \"loan_type\": r[1], \"area\": r[2], \"client_uid\": r[3], \"archived_at\": r[4]})"
+        },
+        {
+          "line": 5859,
+          "text": "            return out"
+        },
+        {
+          "line": 5860,
+          "text": "        except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 6802,
+      "end_line": 6805,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "f_string",
+      "sql_arg_preview": "f'SELECT * FROM transaction_history WHERE client_uid IN ({ph}) ORDER BY id DESC LIMIT ?'",
+      "caller": "LoanDB.get_transaction_history_for_client_uids",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 6794,
+          "text": "        \"\"\"Return databank audit rows (most recent first) for a list of client_uids.\"\"\""
+        },
+        {
+          "line": 6795,
+          "text": "        uids = [ (u or '').strip() for u in (client_uids or []) if (u or '').strip() ]"
+        },
+        {
+          "line": 6796,
+          "text": "        if not uids:"
+        },
+        {
+          "line": 6797,
+          "text": "            return []"
+        },
+        {
+          "line": 6798,
+          "text": "        cur = self.conn.cursor()"
+        },
+        {
+          "line": 6799,
+          "text": "        lim = int(limit or 500)"
+        },
+        {
+          "line": 6800,
+          "text": "        ph = \",\".join([\"?\"] * len(uids))"
+        },
+        {
+          "line": 6801,
+          "text": "        try:"
+        },
+        {
+          "line": 6802,
+          "text": "            rows = cur.execute("
+        },
+        {
+          "line": 6803,
+          "text": "                f\"SELECT * FROM transaction_history WHERE client_uid IN ({ph}) ORDER BY id DESC LIMIT ?\","
+        },
+        {
+          "line": 6804,
+          "text": "                tuple(uids) + (lim,)"
+        },
+        {
+          "line": 6805,
+          "text": "            ).fetchall()"
+        },
+        {
+          "line": 6806,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 6807,
+          "text": "            return []"
+        },
+        {
+          "line": 6808,
+          "text": "        out = []"
+        },
+        {
+          "line": 6809,
+          "text": "        for r in (rows or []):"
+        },
+        {
+          "line": 6810,
+          "text": "            try:"
+        },
+        {
+          "line": 6811,
+          "text": "                d = dict(r)"
+        },
+        {
+          "line": 6812,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 6813,
+          "text": "                d = {}"
+        }
+      ]
+    },
+    {
+      "line": 6865,
+      "end_line": 6865,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "call",
+      "sql_arg_preview": "' '.join(sql)",
+      "caller": "LoanDB.get_audit_new_loan_rows",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 6857,
+          "text": "            sql.append(\"AND date(changed_at) <= date(?)\")"
+        },
+        {
+          "line": 6858,
+          "text": "            params.append(str(end_date)[:10])"
+        },
+        {
+          "line": 6859,
+          "text": "        if lt:"
+        },
+        {
+          "line": 6860,
+          "text": "            sql.append(\"AND IFNULL(NULLIF(TRIM(loan_type_after),''),'Regular') = IFNULL(NULLIF(TRIM(?),''),'Regular')\")"
+        },
+        {
+          "line": 6861,
+          "text": "            params.append(lt)"
+        },
+        {
+          "line": 6862,
+          "text": "        sql.append(\"ORDER BY datetime(changed_at) DESC, id DESC LIMIT ?\")"
+        },
+        {
+          "line": 6863,
+          "text": "        params.append(lim)"
+        },
+        {
+          "line": 6864,
+          "text": "        try:"
+        },
+        {
+          "line": 6865,
+          "text": "            rows = cur.execute(\" \".join(sql), tuple(params)).fetchall()"
+        },
+        {
+          "line": 6866,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 6867,
+          "text": "            return []"
+        },
+        {
+          "line": 6868,
+          "text": ""
+        },
+        {
+          "line": 6869,
+          "text": "        out = []"
+        },
+        {
+          "line": 6870,
+          "text": "        for r in (rows or []):"
+        },
+        {
+          "line": 6871,
+          "text": "            try:"
+        },
+        {
+          "line": 6872,
+          "text": "                d = dict(r)"
+        },
+        {
+          "line": 6873,
+          "text": "            except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 6929,
+      "end_line": 6929,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "call",
+      "sql_arg_preview": "' '.join(sql)",
+      "caller": "LoanDB.get_audit_renewal_rows",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 6921,
+          "text": "            sql.append(\"AND date(changed_at) <= date(?)\")"
+        },
+        {
+          "line": 6922,
+          "text": "            params.append(str(end_date)[:10])"
+        },
+        {
+          "line": 6923,
+          "text": "        if lt:"
+        },
+        {
+          "line": 6924,
+          "text": "            sql.append(\"AND IFNULL(NULLIF(TRIM(COALESCE(loan_type_after, loan_type_before)),''),'Regular') = IFNULL(NULLIF(TRIM(?),''),'Regular')\")"
+        },
+        {
+          "line": 6925,
+          "text": "            params.append(lt)"
+        },
+        {
+          "line": 6926,
+          "text": "        sql.append(\"ORDER BY datetime(changed_at) DESC, id DESC LIMIT ?\")"
+        },
+        {
+          "line": 6927,
+          "text": "        params.append(lim)"
+        },
+        {
+          "line": 6928,
+          "text": "        try:"
+        },
+        {
+          "line": 6929,
+          "text": "            rows = cur.execute(\" \".join(sql), tuple(params)).fetchall()"
+        },
+        {
+          "line": 6930,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 6931,
+          "text": "            return []"
+        },
+        {
+          "line": 6932,
+          "text": ""
+        },
+        {
+          "line": 6933,
+          "text": "        out = []"
+        },
+        {
+          "line": 6934,
+          "text": "        for r in (rows or []):"
+        },
+        {
+          "line": 6935,
+          "text": "            try:"
+        },
+        {
+          "line": 6936,
+          "text": "                d = dict(r)"
+        },
+        {
+          "line": 6937,
+          "text": "            except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 7462,
+      "end_line": 7462,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "call",
+      "sql_arg_preview": "' '.join(sql)",
+      "caller": "LoanDB.list_databank_day_close_records",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 7454,
+          "text": "        if start_date:"
+        },
+        {
+          "line": 7455,
+          "text": "            sql.append(\"AND date(close_date) >= date(?)\")"
+        },
+        {
+          "line": 7456,
+          "text": "            params.append(start_date)"
+        },
+        {
+          "line": 7457,
+          "text": "        if end_date:"
+        },
+        {
+          "line": 7458,
+          "text": "            sql.append(\"AND date(close_date) <= date(?)\")"
+        },
+        {
+          "line": 7459,
+          "text": "            params.append(end_date)"
+        },
+        {
+          "line": 7460,
+          "text": "        sql.append(\"ORDER BY date(close_date) DESC, id DESC\")"
+        },
+        {
+          "line": 7461,
+          "text": "        try:"
+        },
+        {
+          "line": 7462,
+          "text": "            rows = cur.execute(\" \".join(sql), tuple(params)).fetchall()"
+        },
+        {
+          "line": 7463,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 7464,
+          "text": "            return []"
+        },
+        {
+          "line": 7465,
+          "text": "        out = []"
+        },
+        {
+          "line": 7466,
+          "text": "        for r in (rows or []):"
+        },
+        {
+          "line": 7467,
+          "text": "            try:"
+        },
+        {
+          "line": 7468,
+          "text": "                d = dict(r)"
+        },
+        {
+          "line": 7469,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 7470,
+          "text": "                d = {}"
+        }
+      ]
+    },
+    {
+      "line": 7557,
+      "end_line": 7557,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "LoanDB.get_transactions_for_client_uids",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 7549,
+          "text": "                lim = int(limit)"
+        },
+        {
+          "line": 7550,
+          "text": "                sql += \" LIMIT ?\""
+        },
+        {
+          "line": 7551,
+          "text": "                params.append(lim)"
+        },
+        {
+          "line": 7552,
+          "text": "            except Exception as __spina_exc:"
+        },
+        {
+          "line": 7553,
+          "text": "                _log_suppressed_once('excpass_0155', 'suppressed exception excpass_0155', __spina_exc)"
+        },
+        {
+          "line": 7554,
+          "text": "                pass"
+        },
+        {
+          "line": 7555,
+          "text": ""
+        },
+        {
+          "line": 7556,
+          "text": "        try:"
+        },
+        {
+          "line": 7557,
+          "text": "            rows = cur.execute(sql, params).fetchall()"
+        },
+        {
+          "line": 7558,
+          "text": "            return [dict(r) for r in (rows or [])]"
+        },
+        {
+          "line": 7559,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 7560,
+          "text": "            return []"
+        },
+        {
+          "line": 7561,
+          "text": ""
+        },
+        {
+          "line": 7562,
+          "text": ""
+        },
+        {
+          "line": 7563,
+          "text": "    # Areas (master list)"
+        },
+        {
+          "line": 7564,
+          "text": ""
+        },
+        {
+          "line": 7565,
+          "text": "    def get_all_areas(self):"
+        }
+      ]
+    },
+    {
+      "line": 32321,
+      "end_line": 32324,
+      "method": "execute",
+      "function_text": "_cur_link.execute",
+      "sql_arg_kind": "f_string",
+      "sql_arg_preview": "f\"SELECT DISTINCT person_uid FROM clients WHERE name IN ({_ph0}) AND COALESCE(is_archived,0)=0 AND person_uid IS NOT NULL AND TRIM(person_uid) <> ''\"",
+      "caller": "print_full_daily_ledger",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 32313,
+          "text": "                _uniq.append(_b)"
+        },
+        {
+          "line": 32314,
+          "text": ""
+        },
+        {
+          "line": 32315,
+          "text": "            # Expand name list to include linked Regular/7x7 names (via person_uid)."
+        },
+        {
+          "line": 32316,
+          "text": "            # This prevents missing ADV markers in the 7x7 half when the linked record uses a different name."
+        },
+        {
+          "line": 32317,
+          "text": "            try:"
+        },
+        {
+          "line": 32318,
+          "text": "                if getattr(self, \"db\", None) and getattr(self.db, \"conn\", None) and _uniq:"
+        },
+        {
+          "line": 32319,
+          "text": "                    _cur_link = self.db.conn.cursor()"
+        },
+        {
+          "line": 32320,
+          "text": "                    _ph0 = \",\".join([\"?\"] * len(_uniq))"
+        },
+        {
+          "line": 32321,
+          "text": "                    _cur_link.execute("
+        },
+        {
+          "line": 32322,
+          "text": "                        f\"SELECT DISTINCT person_uid FROM clients WHERE name IN ({_ph0}) AND COALESCE(is_archived,0)=0 AND person_uid IS NOT NULL AND TRIM(person_uid) <> ''\","
+        },
+        {
+          "line": 32323,
+          "text": "                        tuple(_uniq),"
+        },
+        {
+          "line": 32324,
+          "text": "                    )"
+        },
+        {
+          "line": 32325,
+          "text": "                    _pus = []"
+        },
+        {
+          "line": 32326,
+          "text": "                    for _r0 in (_cur_link.fetchall() or []):"
+        },
+        {
+          "line": 32327,
+          "text": "                        try:"
+        },
+        {
+          "line": 32328,
+          "text": "                            _pu0 = _r0[0] if not isinstance(_r0, dict) else _r0.get(\"person_uid\")"
+        },
+        {
+          "line": 32329,
+          "text": "                        except Exception:"
+        },
+        {
+          "line": 32330,
+          "text": "                            _pu0 = None"
+        },
+        {
+          "line": 32331,
+          "text": "                        _pu0 = str(_pu0 or \"\").strip()"
+        },
+        {
+          "line": 32332,
+          "text": "                        if _pu0:"
+        }
+      ]
+    },
+    {
+      "line": 32377,
+      "end_line": 32377,
+      "method": "execute",
+      "function_text": "_cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "_sql_adv",
+      "caller": "print_full_daily_ledger",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 32369,
+          "text": ""
+        },
+        {
+          "line": 32370,
+          "text": "                _sql_adv = f\"\"\"SELECT name, loan_type, date, description"
+        },
+        {
+          "line": 32371,
+          "text": "                               FROM transactions"
+        },
+        {
+          "line": 32372,
+          "text": "                               WHERE name IN ({_ph})"
+        },
+        {
+          "line": 32373,
+          "text": "                                 AND description LIKE '%ADV%'"
+        },
+        {
+          "line": 32374,
+          "text": "                                 AND description IS NOT NULL AND TRIM(description) <> ''\"\"\""
+        },
+        {
+          "line": 32375,
+          "text": "                _adv_rows = []"
+        },
+        {
+          "line": 32376,
+          "text": "                try:"
+        },
+        {
+          "line": 32377,
+          "text": "                    _cur.execute(_sql_adv, (*_uniq,))"
+        },
+        {
+          "line": 32378,
+          "text": "                    _adv_rows = _cur.fetchall() or []"
+        },
+        {
+          "line": 32379,
+          "text": "                except Exception as _e_adv:"
+        },
+        {
+          "line": 32380,
+          "text": "                    # Avoid SQLite \"too many SQL variables\" (e.g., >999 names in IN clause)"
+        },
+        {
+          "line": 32381,
+          "text": "                    if \"too many sql variables\" in str(_e_adv).lower():"
+        },
+        {
+          "line": 32382,
+          "text": "                        _adv_rows = []"
+        },
+        {
+          "line": 32383,
+          "text": "                        try:"
+        },
+        {
+          "line": 32384,
+          "text": "                            _uniq_list = list(_uniq)"
+        },
+        {
+          "line": 32385,
+          "text": "                        except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 32456,
+      "end_line": 32456,
+      "method": "execute",
+      "function_text": "_cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "_sql_rc",
+      "caller": "print_full_daily_ledger",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 32448,
+          "text": "                _sql_rc = f\"\"\"SELECT name, loan_type, date, description"
+        },
+        {
+          "line": 32449,
+          "text": "                              FROM transactions"
+        },
+        {
+          "line": 32450,
+          "text": "                              WHERE name IN ({_ph})"
+        },
+        {
+          "line": 32451,
+          "text": "                                AND date BETWEEN ? AND ?"
+        },
+        {
+          "line": 32452,
+          "text": "                                AND description LIKE '%[RC:%'"
+        },
+        {
+          "line": 32453,
+          "text": "                                AND description IS NOT NULL AND TRIM(description) <> ''\"\"\""
+        },
+        {
+          "line": 32454,
+          "text": "                _rc_rows = []"
+        },
+        {
+          "line": 32455,
+          "text": "                try:"
+        },
+        {
+          "line": 32456,
+          "text": "                    _cur.execute(_sql_rc, (*_uniq, _from, _to))"
+        },
+        {
+          "line": 32457,
+          "text": "                    _rc_rows = _cur.fetchall() or []"
+        },
+        {
+          "line": 32458,
+          "text": "                except Exception as _e_rc:"
+        },
+        {
+          "line": 32459,
+          "text": "                    if \"too many sql variables\" in str(_e_rc).lower():"
+        },
+        {
+          "line": 32460,
+          "text": "                        _rc_rows = []"
+        },
+        {
+          "line": 32461,
+          "text": "                        try:"
+        },
+        {
+          "line": 32462,
+          "text": "                            _uniq_list = list(_uniq)"
+        },
+        {
+          "line": 32463,
+          "text": "                        except Exception:"
+        },
+        {
+          "line": 32464,
+          "text": "                            _uniq_list = []"
+        }
+      ]
+    },
+    {
+      "line": 36212,
+      "end_line": 36212,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "extra_sql",
+      "caller": "_spina_perf_clients_rows",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 36204,
+          "text": "            elif sb == \"due_date\":"
+        },
+        {
+          "line": 36205,
+          "text": "                extra_where.append(\"IFNULL(c.due_date,'') LIKE ?\"); extra_params.append(like)"
+        },
+        {
+          "line": 36206,
+          "text": "            elif sb == \"start_date\":"
+        },
+        {
+          "line": 36207,
+          "text": "                extra_where.append(\"IFNULL(date(c.date_released, '+' || IFNULL(c.pay_start_offset_days,0) || ' day'),'') LIKE ?\"); extra_params.append(like)"
+        },
+        {
+          "line": 36208,
+          "text": "            else:"
+        },
+        {
+          "line": 36209,
+          "text": "                extra_where.append(\"(c.name LIKE ? OR IFNULL(c.area,'') LIKE ?)\")"
+        },
+        {
+          "line": 36210,
+          "text": "                extra_params.extend([like, like])"
+        },
+        {
+          "line": 36211,
+          "text": "        extra_sql = \"SELECT c.* FROM clients c WHERE \" + \" AND \".join(extra_where) + \" ORDER BY c.name COLLATE NOCASE\""
+        },
+        {
+          "line": 36212,
+          "text": "        for r in _spina_perf_dict_rows(cur.execute(extra_sql, extra_params).fetchall()):"
+        },
+        {
+          "line": 36213,
+          "text": "            nm_key = str(r.get(\"name\") or \"\").strip().lower()"
+        },
+        {
+          "line": 36214,
+          "text": "            if nm_key in seen:"
+        },
+        {
+          "line": 36215,
+          "text": "                continue"
+        },
+        {
+          "line": 36216,
+          "text": "            r[\"_spina_link_label\"] = \"7x7 ONLY\""
+        },
+        {
+          "line": 36217,
+          "text": "            r[\"_spina_row_lt\"] = \"7x7\""
+        },
+        {
+          "line": 36218,
+          "text": "            r[\"_spina_extra7x7\"] = True"
+        },
+        {
+          "line": 36219,
+          "text": "            final.append(r)"
+        },
+        {
+          "line": 36220,
+          "text": "            seen.add(nm_key)"
+        }
+      ]
+    },
+    {
+      "line": 36923,
+      "end_line": 36923,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "q",
+      "caller": "_spina_fixed_get_archived_clients_with_id",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 36915,
+          "text": "    if search:"
+        },
+        {
+          "line": 36916,
+          "text": "        term = f\"%{str(search).strip()}%\""
+        },
+        {
+          "line": 36917,
+          "text": "        q += \" AND (IFNULL(name,'') LIKE ? OR IFNULL(area,'') LIKE ? OR IFNULL(client_uid,'') LIKE ?)\""
+        },
+        {
+          "line": 36918,
+          "text": "        params.extend([term, term, term])"
+        },
+        {
+          "line": 36919,
+          "text": "    q += \" ORDER BY archived_at DESC, name COLLATE NOCASE, id DESC\""
+        },
+        {
+          "line": 36920,
+          "text": ""
+        },
+        {
+          "line": 36921,
+          "text": "    out = []"
+        },
+        {
+          "line": 36922,
+          "text": "    try:"
+        },
+        {
+          "line": 36923,
+          "text": "        for r in cur.execute(q, params).fetchall() or []:"
+        },
+        {
+          "line": 36924,
+          "text": "            try:"
+        },
+        {
+          "line": 36925,
+          "text": "                out.append({"
+        },
+        {
+          "line": 36926,
+          "text": "                    \"id\": r[\"id\"] if isinstance(r, sqlite3.Row) else r[0],"
+        },
+        {
+          "line": 36927,
+          "text": "                    \"client_uid\": r[\"client_uid\"] if isinstance(r, sqlite3.Row) else r[1],"
+        },
+        {
+          "line": 36928,
+          "text": "                    \"name\": r[\"name\"] if isinstance(r, sqlite3.Row) else r[2],"
+        },
+        {
+          "line": 36929,
+          "text": "                    \"loan_type\": r[\"loan_type\"] if isinstance(r, sqlite3.Row) else r[3],"
+        },
+        {
+          "line": 36930,
+          "text": "                    \"area\": r[\"area\"] if isinstance(r, sqlite3.Row) else r[4],"
+        },
+        {
+          "line": 36931,
+          "text": "                    \"archived_at\": r[\"archived_at\"] if isinstance(r, sqlite3.Row) else r[5],"
+        }
+      ]
+    },
+    {
+      "line": 4958,
+      "end_line": 4958,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "LoanDB._active_client_name_exists",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 4950,
+          "text": "                \"AND IFNULL(is_archived,0)=0\""
+        },
+        {
+          "line": 4951,
+          "text": "            )"
+        },
+        {
+          "line": 4952,
+          "text": "            params = [nm, lt]"
+        },
+        {
+          "line": 4953,
+          "text": "            ex = str(exclude_client_uid or \"\").strip()"
+        },
+        {
+          "line": 4954,
+          "text": "            if ex:"
+        },
+        {
+          "line": 4955,
+          "text": "                sql += \" AND IFNULL(client_uid,'') <> ?\""
+        },
+        {
+          "line": 4956,
+          "text": "                params.append(ex)"
+        },
+        {
+          "line": 4957,
+          "text": "            sql += \" LIMIT 1\""
+        },
+        {
+          "line": 4958,
+          "text": "            return bool(cur.execute(sql, tuple(params)).fetchone())"
+        },
+        {
+          "line": 4959,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 4960,
+          "text": "            return False"
+        },
+        {
+          "line": 4961,
+          "text": ""
+        },
+        {
+          "line": 4962,
+          "text": "    def add_client(self, name, principal=0.0, date_released=None, area=None, interest_rate=None, new_until=None, loan_type=None, pay_start_offset_days=1, contact_number='', payment_term='Daily', payment_amount=0.0, payment_mode='Cash', due_weekday='', semi_due_day1=None, semi_due_day2=None, monthly_due_day=None, flex_due_rule=''):"
+        },
+        {
+          "line": 4963,
+          "text": "        cur = self.conn.cursor()"
+        },
+        {
+          "line": 4964,
+          "text": "        now = date.today().strftime(\"%Y-%m-%d\")"
+        },
+        {
+          "line": 4965,
+          "text": "        try:"
+        },
+        {
+          "line": 4966,
+          "text": "            p = float(principal or 0)"
+        }
+      ]
+    },
+    {
+      "line": 7515,
+      "end_line": 7515,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "f_string",
+      "sql_arg_preview": "f'SELECT name, loan_type FROM clients WHERE client_uid IN ({ph})'",
+      "caller": "LoanDB.get_transactions_for_client_uids",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 7507,
+          "text": "            return []"
+        },
+        {
+          "line": 7508,
+          "text": "        cur = self.conn.cursor()"
+        },
+        {
+          "line": 7509,
+          "text": "        ph = \",\".join([\"?\"] * len(uids))"
+        },
+        {
+          "line": 7510,
+          "text": ""
+        },
+        {
+          "line": 7511,
+          "text": "        # Build fallback (name, loan_type) list from linked clients"
+        },
+        {
+          "line": 7512,
+          "text": "        ors = []"
+        },
+        {
+          "line": 7513,
+          "text": "        or_params = []"
+        },
+        {
+          "line": 7514,
+          "text": "        try:"
+        },
+        {
+          "line": 7515,
+          "text": "            crows = cur.execute(f\"SELECT name, loan_type FROM clients WHERE client_uid IN ({ph})\", tuple(uids)).fetchall() or []"
+        },
+        {
+          "line": 7516,
+          "text": "            for rr in crows:"
+        },
+        {
+          "line": 7517,
+          "text": "                try:"
+        },
+        {
+          "line": 7518,
+          "text": "                    nm = (rr[\"name\"] if isinstance(rr, sqlite3.Row) else rr[0]) or \"\""
+        },
+        {
+          "line": 7519,
+          "text": "                    lt = (rr[\"loan_type\"] if isinstance(rr, sqlite3.Row) else rr[1]) or \"Regular\""
+        },
+        {
+          "line": 7520,
+          "text": "                    nm = nm.strip()"
+        },
+        {
+          "line": 7521,
+          "text": "                    lt = lt.strip()"
+        },
+        {
+          "line": 7522,
+          "text": "                    if nm:"
+        },
+        {
+          "line": 7523,
+          "text": "                        ors.append(\"(name=? AND IFNULL(loan_type,'Regular')=IFNULL(?,'Regular'))\")"
+        }
+      ]
+    },
+    {
+      "line": 32336,
+      "end_line": 32339,
+      "method": "execute",
+      "function_text": "_cur_link.execute",
+      "sql_arg_kind": "f_string",
+      "sql_arg_preview": "f\"SELECT DISTINCT name FROM clients WHERE person_uid IN ({_ph_pu}) AND COALESCE(is_archived,0)=0 AND name IS NOT NULL AND TRIM(name) <> ''\"",
+      "caller": "print_full_daily_ledger",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 32328,
+          "text": "                            _pu0 = _r0[0] if not isinstance(_r0, dict) else _r0.get(\"person_uid\")"
+        },
+        {
+          "line": 32329,
+          "text": "                        except Exception:"
+        },
+        {
+          "line": 32330,
+          "text": "                            _pu0 = None"
+        },
+        {
+          "line": 32331,
+          "text": "                        _pu0 = str(_pu0 or \"\").strip()"
+        },
+        {
+          "line": 32332,
+          "text": "                        if _pu0:"
+        },
+        {
+          "line": 32333,
+          "text": "                            _pus.append(_pu0)"
+        },
+        {
+          "line": 32334,
+          "text": "                    if _pus:"
+        },
+        {
+          "line": 32335,
+          "text": "                        _ph_pu = \",\".join([\"?\"] * len(_pus))"
+        },
+        {
+          "line": 32336,
+          "text": "                        _cur_link.execute("
+        },
+        {
+          "line": 32337,
+          "text": "                            f\"SELECT DISTINCT name FROM clients WHERE person_uid IN ({_ph_pu}) AND COALESCE(is_archived,0)=0 AND name IS NOT NULL AND TRIM(name) <> ''\","
+        },
+        {
+          "line": 32338,
+          "text": "                            tuple(_pus),"
+        },
+        {
+          "line": 32339,
+          "text": "                        )"
+        },
+        {
+          "line": 32340,
+          "text": "                        for _r1 in (_cur_link.fetchall() or []):"
+        },
+        {
+          "line": 32341,
+          "text": "                            try:"
+        },
+        {
+          "line": 32342,
+          "text": "                                _nm2 = _r1[0] if not isinstance(_r1, dict) else _r1.get(\"name\")"
+        },
+        {
+          "line": 32343,
+          "text": "                            except Exception:"
+        },
+        {
+          "line": 32344,
+          "text": "                                _nm2 = None"
+        },
+        {
+          "line": 32345,
+          "text": "                            _nm2 = str(_nm2 or \"\").strip()"
+        },
+        {
+          "line": 32346,
+          "text": "                            if _nm2 and (_nm2 not in _seen):"
+        },
+        {
+          "line": 32347,
+          "text": "                                _seen.add(_nm2)"
+        }
+      ]
+    },
+    {
+      "line": 32609,
+      "end_line": 32612,
+      "method": "execute",
+      "function_text": "_cur2.execute",
+      "sql_arg_kind": "f_string",
+      "sql_arg_preview": "f'SELECT name, loan_type, person_uid FROM clients WHERE person_uid IN ({_ph_pu}) AND COALESCE(is_archived,0)=0'",
+      "caller": "print_full_daily_ledger",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 32601,
+          "text": "                        _by_pu[_pu][_lt_norm] = _nm"
+        },
+        {
+          "line": 32602,
+          "text": ""
+        },
+        {
+          "line": 32603,
+          "text": ""
+        },
+        {
+          "line": 32604,
+          "text": "                # Expand with all linked names for those person_uids (so Regular-tab routes can still resolve 7x7 names)."
+        },
+        {
+          "line": 32605,
+          "text": "                try:"
+        },
+        {
+          "line": 32606,
+          "text": "                    _pus = [str(_pu or \"\").strip() for _pu in _by_pu.keys() if str(_pu or \"\").strip()]"
+        },
+        {
+          "line": 32607,
+          "text": "                    if _pus:"
+        },
+        {
+          "line": 32608,
+          "text": "                        _ph_pu = \",\".join([\"?\"] * len(_pus))"
+        },
+        {
+          "line": 32609,
+          "text": "                        _cur2.execute("
+        },
+        {
+          "line": 32610,
+          "text": "                            f\"SELECT name, loan_type, person_uid FROM clients WHERE person_uid IN ({_ph_pu}) AND COALESCE(is_archived,0)=0\","
+        },
+        {
+          "line": 32611,
+          "text": "                            tuple(_pus),"
+        },
+        {
+          "line": 32612,
+          "text": "                        )"
+        },
+        {
+          "line": 32613,
+          "text": "                        _crow_all = _cur2.fetchall() or []"
+        },
+        {
+          "line": 32614,
+          "text": "                        for _r in _crow_all:"
+        },
+        {
+          "line": 32615,
+          "text": "                            try:"
+        },
+        {
+          "line": 32616,
+          "text": "                                _nm2 = _r[\"name\"]"
+        },
+        {
+          "line": 32617,
+          "text": "                                _lt2 = _r[\"loan_type\"]"
+        },
+        {
+          "line": 32618,
+          "text": "                                _pu2 = _r[\"person_uid\"]"
+        },
+        {
+          "line": 32619,
+          "text": "                            except Exception:"
+        },
+        {
+          "line": 32620,
+          "text": "                                try:"
+        }
+      ]
+    },
+    {
+      "line": 37285,
+      "end_line": 37287,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "bin_op",
+      "sql_arg_preview": "'SELECT %s FROM clients c ORDER BY c.name COLLATE NOCASE' % ', '.join(select_cols)",
+      "caller": "_spina_dashboard_fetch_rows",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 37277,
+          "text": "    ]"
+        },
+        {
+          "line": 37278,
+          "text": "    try:"
+        },
+        {
+          "line": 37279,
+          "text": "        client_rows = cur.execute("
+        },
+        {
+          "line": 37280,
+          "text": "            'SELECT %s FROM clients c WHERE IFNULL(c.is_archived,0)=0 ORDER BY c.name COLLATE NOCASE' % ', '.join(select_cols)"
+        },
+        {
+          "line": 37281,
+          "text": "        ).fetchall()"
+        },
+        {
+          "line": 37282,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 37283,
+          "text": "        # Some legacy builds may not have is_archived."
+        },
+        {
+          "line": 37284,
+          "text": "        try:"
+        },
+        {
+          "line": 37285,
+          "text": "            client_rows = cur.execute("
+        },
+        {
+          "line": 37286,
+          "text": "                'SELECT %s FROM clients c ORDER BY c.name COLLATE NOCASE' % ', '.join(select_cols)"
+        },
+        {
+          "line": 37287,
+          "text": "            ).fetchall()"
+        },
+        {
+          "line": 37288,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 37289,
+          "text": "            try:"
+        },
+        {
+          "line": 37290,
+          "text": "                _log_exc('dashboard.fetch_clients', e)"
+        },
+        {
+          "line": 37291,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 37292,
+          "text": "                pass"
+        },
+        {
+          "line": 37293,
+          "text": "            return []"
+        },
+        {
+          "line": 37294,
+          "text": ""
+        },
+        {
+          "line": 37295,
+          "text": "    renew_latest = {}"
+        }
+      ]
+    },
+    {
+      "line": 37300,
+      "end_line": 37300,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "_spina_dashboard_fetch_rows",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 37292,
+          "text": "                pass"
+        },
+        {
+          "line": 37293,
+          "text": "            return []"
+        },
+        {
+          "line": 37294,
+          "text": ""
+        },
+        {
+          "line": 37295,
+          "text": "    renew_latest = {}"
+        },
+        {
+          "line": 37296,
+          "text": "    if _table_exists('renewals') and {'client_uid', 'renew_date'}.issubset(rcols):"
+        },
+        {
+          "line": 37297,
+          "text": "        try:"
+        },
+        {
+          "line": 37298,
+          "text": "            lt_expr = \"IFNULL(NULLIF(TRIM(loan_type),''),'Regular')\" if 'loan_type' in rcols else \"'Regular'\""
+        },
+        {
+          "line": 37299,
+          "text": "            sql = \"SELECT client_uid, %s AS loan_type, MAX(date(renew_date)) AS latest_renew_date FROM renewals WHERE client_uid IS NOT NULL AND TRIM(client_uid)<>'' GROUP BY client_uid, %s\" % (lt_expr, lt_expr)"
+        },
+        {
+          "line": 37300,
+          "text": "            for r in cur.execute(sql).fetchall() or []:"
+        },
+        {
+          "line": 37301,
+          "text": "                try:"
+        },
+        {
+          "line": 37302,
+          "text": "                    uid = str(r['client_uid'] if isinstance(r, sqlite3.Row) else r[0] or '').strip()"
+        },
+        {
+          "line": 37303,
+          "text": "                    lt = _spina_dash__norm_lt(r['loan_type'] if isinstance(r, sqlite3.Row) else r[1])"
+        },
+        {
+          "line": 37304,
+          "text": "                    rd = _spina_dash__parse_date(r['latest_renew_date'] if isinstance(r, sqlite3.Row) else r[2])"
+        },
+        {
+          "line": 37305,
+          "text": "                    if uid and rd:"
+        },
+        {
+          "line": 37306,
+          "text": "                        renew_latest[(uid, lt)] = rd"
+        },
+        {
+          "line": 37307,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 37308,
+          "text": "                    continue"
+        }
+      ]
+    },
+    {
+      "line": 37442,
+      "end_line": 37442,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "_spina_dashboard_fetch_rows",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 37434,
+          "text": "            params = []"
+        },
+        {
+          "line": 37435,
+          "text": "            where = []"
+        },
+        {
+          "line": 37436,
+          "text": "            if min_start:"
+        },
+        {
+          "line": 37437,
+          "text": "                where.append('date(date) >= date(?)')"
+        },
+        {
+          "line": 37438,
+          "text": "                params.append(min_start.strftime('%Y-%m-%d'))"
+        },
+        {
+          "line": 37439,
+          "text": "            sql = 'SELECT %s FROM transactions' % ', '.join(tx_select)"
+        },
+        {
+          "line": 37440,
+          "text": "            if where:"
+        },
+        {
+          "line": 37441,
+          "text": "                sql += ' WHERE ' + ' AND '.join(where)"
+        },
+        {
+          "line": 37442,
+          "text": "            for t in cur.execute(sql, tuple(params)).fetchall() or []:"
+        },
+        {
+          "line": 37443,
+          "text": "                try:"
+        },
+        {
+          "line": 37444,
+          "text": "                    tuid = str(t['client_uid'] if isinstance(t, sqlite3.Row) else t[0] or '').strip()"
+        },
+        {
+          "line": 37445,
+          "text": "                    tname = str(t['name'] if isinstance(t, sqlite3.Row) else t[1] or '').strip().upper()"
+        },
+        {
+          "line": 37446,
+          "text": "                    tlt = _spina_dash__norm_lt(t['loan_type'] if isinstance(t, sqlite3.Row) else t[2])"
+        },
+        {
+          "line": 37447,
+          "text": "                    tdate = _spina_dash__parse_date(t['date'] if isinstance(t, sqlite3.Row) else t[3])"
+        },
+        {
+          "line": 37448,
+          "text": "                    pay = _spina_dash__float(t['payment'] if isinstance(t, sqlite3.Row) else t[4])"
+        },
+        {
+          "line": 37449,
+          "text": "                    if pay == 0 or not tdate:"
+        },
+        {
+          "line": 37450,
+          "text": "                        continue"
+        }
+      ]
+    },
+    {
+      "line": 38153,
+      "end_line": 38153,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "sql",
+      "caller": "_spina_cashctl_estimated_payoff_with_interest",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 38145,
+          "text": "                where.append('IFNULL(client_uid,\\'\\') = ?')"
+        },
+        {
+          "line": 38146,
+          "text": "                params.append(uid)"
+        },
+        {
+          "line": 38147,
+          "text": "            elif name and 'name' in tcols:"
+        },
+        {
+          "line": 38148,
+          "text": "                where.append('UPPER(IFNULL(name,\\'\\')) = ?')"
+        },
+        {
+          "line": 38149,
+          "text": "                params.append(name.upper())"
+        },
+        {
+          "line": 38150,
+          "text": "            else:"
+        },
+        {
+          "line": 38151,
+          "text": "                where.append('1=0')"
+        },
+        {
+          "line": 38152,
+          "text": "            sql = 'SELECT date, payment FROM transactions WHERE ' + ' AND '.join(where) + ' ORDER BY date(date) ASC'"
+        },
+        {
+          "line": 38153,
+          "text": "            for tr in cur.execute(sql, tuple(params)).fetchall() or []:"
+        },
+        {
+          "line": 38154,
+          "text": "                try:"
+        },
+        {
+          "line": 38155,
+          "text": "                    d = tr['date'] if isinstance(tr, sqlite3.Row) else tr[0]"
+        },
+        {
+          "line": 38156,
+          "text": "                    p = tr['payment'] if isinstance(tr, sqlite3.Row) else tr[1]"
+        },
+        {
+          "line": 38157,
+          "text": "                    dd = datetime.strptime(str(d)[:10], '%Y-%m-%d').date()"
+        },
+        {
+          "line": 38158,
+          "text": "                    amt = float(p or 0.0)"
+        },
+        {
+          "line": 38159,
+          "text": "                    if amt > 0:"
+        },
+        {
+          "line": 38160,
+          "text": "                        payments.append((dd, amt))"
+        },
+        {
+          "line": 38161,
+          "text": "                except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 37249,
+      "end_line": 37249,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "bin_op",
+      "sql_arg_preview": "'PRAGMA table_info(%s)' % table_name",
+      "caller": "_spina_dashboard_fetch_rows._table_cols",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 37241,
+          "text": "        try:"
+        },
+        {
+          "line": 37242,
+          "text": "            r = cur.execute(\"SELECT name FROM sqlite_master WHERE type='table' AND name=?\", (table_name,)).fetchone()"
+        },
+        {
+          "line": 37243,
+          "text": "            return bool(r)"
+        },
+        {
+          "line": 37244,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 37245,
+          "text": "            return False"
+        },
+        {
+          "line": 37246,
+          "text": ""
+        },
+        {
+          "line": 37247,
+          "text": "    def _table_cols(table_name):"
+        },
+        {
+          "line": 37248,
+          "text": "        try:"
+        },
+        {
+          "line": 37249,
+          "text": "            return {str(r[1]) for r in cur.execute('PRAGMA table_info(%s)' % table_name).fetchall()}"
+        },
+        {
+          "line": 37250,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 37251,
+          "text": "            return set()"
+        },
+        {
+          "line": 37252,
+          "text": ""
+        },
+        {
+          "line": 37253,
+          "text": "    ccols = _table_cols('clients')"
+        },
+        {
+          "line": 37254,
+          "text": "    tcols = _table_cols('transactions')"
+        },
+        {
+          "line": 37255,
+          "text": "    rcols = _table_cols('renewals') if _table_exists('renewals') else set()"
+        },
+        {
+          "line": 37256,
+          "text": "    if not ccols or not _table_exists('clients'):"
+        },
+        {
+          "line": 37257,
+          "text": "        return []"
+        }
+      ]
+    },
+    {
+      "line": 4055,
+      "end_line": 4055,
+      "method": "execute",
+      "function_text": "cur.execute",
+      "sql_arg_kind": "f_string",
+      "sql_arg_preview": "f'PRAGMA table_info({_t})'",
+      "caller": "LoanDB._create_tables._table_cols",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 4047,
+          "text": "        cur = self.conn.cursor()"
+        },
+        {
+          "line": 4048,
+          "text": ""
+        },
+        {
+          "line": 4049,
+          "text": "        legacy_rebuilt = False  # legacy DB fix: rebuild clients table to remove name UNIQUE"
+        },
+        {
+          "line": 4050,
+          "text": ""
+        },
+        {
+          "line": 4051,
+          "text": "        # --- BEGIN: Schema migration helpers (avoid silent failures) ---"
+        },
+        {
+          "line": 4052,
+          "text": "        def _table_cols(_t: str) -> set:"
+        },
+        {
+          "line": 4053,
+          "text": "            \"\"\"Return set of column names for table _t (best-effort).\"\"\""
+        },
+        {
+          "line": 4054,
+          "text": "            try:"
+        },
+        {
+          "line": 4055,
+          "text": "                return {r[1] for r in cur.execute(f\"PRAGMA table_info({_t})\").fetchall()}"
+        },
+        {
+          "line": 4056,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 4057,
+          "text": "                try:"
+        },
+        {
+          "line": 4058,
+          "text": "                    _log_exc(f\"schema:pragma_table_info({_t})\", e)"
+        },
+        {
+          "line": 4059,
+          "text": "                except Exception as __spina_exc:"
+        },
+        {
+          "line": 4060,
+          "text": "                    _log_suppressed_once('excpass_0078', 'suppressed exception excpass_0078', __spina_exc)"
+        },
+        {
+          "line": 4061,
+          "text": "                    pass"
+        },
+        {
+          "line": 4062,
+          "text": "                return set()"
+        },
+        {
+          "line": 4063,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 32398,
+      "end_line": 32398,
+      "method": "execute",
+      "function_text": "_cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "_sql_adv2",
+      "caller": "print_full_daily_ledger",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 32390,
+          "text": "                                continue"
+        },
+        {
+          "line": 32391,
+          "text": "                            _ph2 = \",\".join([\"?\"] * len(_chunk))"
+        },
+        {
+          "line": 32392,
+          "text": "                            _sql_adv2 = f\"\"\"SELECT name, loan_type, date, description"
+        },
+        {
+          "line": 32393,
+          "text": "                               FROM transactions"
+        },
+        {
+          "line": 32394,
+          "text": "                               WHERE name IN ({_ph2})"
+        },
+        {
+          "line": 32395,
+          "text": "                                 AND description LIKE '%ADV%'"
+        },
+        {
+          "line": 32396,
+          "text": "                                 AND description IS NOT NULL AND TRIM(description) <> ''\"\"\""
+        },
+        {
+          "line": 32397,
+          "text": "                            try:"
+        },
+        {
+          "line": 32398,
+          "text": "                                _cur.execute(_sql_adv2, (*_chunk,))"
+        },
+        {
+          "line": 32399,
+          "text": "                                _adv_rows.extend(_cur.fetchall() or [])"
+        },
+        {
+          "line": 32400,
+          "text": "                            except Exception as __spina_exc:"
+        },
+        {
+          "line": 32401,
+          "text": "                                _log_suppressed_once('excpass_0481a', 'suppressed exception excpass_0481a', __spina_exc)"
+        },
+        {
+          "line": 32402,
+          "text": "                                pass"
+        },
+        {
+          "line": 32403,
+          "text": "                    else:"
+        },
+        {
+          "line": 32404,
+          "text": "                        raise"
+        },
+        {
+          "line": 32405,
+          "text": ""
+        },
+        {
+          "line": 32406,
+          "text": "                for _r in _adv_rows:"
+        }
+      ]
+    },
+    {
+      "line": 32477,
+      "end_line": 32477,
+      "method": "execute",
+      "function_text": "_cur.execute",
+      "sql_arg_kind": "name",
+      "sql_arg_preview": "_sql_rc2",
+      "caller": "print_full_daily_ledger",
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 32469,
+          "text": "                            _ph2 = \",\".join([\"?\"] * len(_chunk))"
+        },
+        {
+          "line": 32470,
+          "text": "                            _sql_rc2 = f\"\"\"SELECT name, loan_type, date, description"
+        },
+        {
+          "line": 32471,
+          "text": "                              FROM transactions"
+        },
+        {
+          "line": 32472,
+          "text": "                              WHERE name IN ({_ph2})"
+        },
+        {
+          "line": 32473,
+          "text": "                                AND date BETWEEN ? AND ?"
+        },
+        {
+          "line": 32474,
+          "text": "                                AND description LIKE '%[RC:%'"
+        },
+        {
+          "line": 32475,
+          "text": "                                AND description IS NOT NULL AND TRIM(description) <> ''\"\"\""
+        },
+        {
+          "line": 32476,
+          "text": "                            try:"
+        },
+        {
+          "line": 32477,
+          "text": "                                _cur.execute(_sql_rc2, (*_chunk, _from, _to))"
+        },
+        {
+          "line": 32478,
+          "text": "                                _rc_rows.extend(_cur.fetchall() or [])"
+        },
+        {
+          "line": 32479,
+          "text": "                            except Exception as __spina_exc:"
+        },
+        {
+          "line": 32480,
+          "text": "                                _log_suppressed_once('excpass_0482a', 'suppressed exception excpass_0482a', __spina_exc)"
+        },
+        {
+          "line": 32481,
+          "text": "                                pass"
+        },
+        {
+          "line": 32482,
+          "text": "                    else:"
+        },
+        {
+          "line": 32483,
+          "text": "                        raise"
+        },
+        {
+          "line": 32484,
+          "text": ""
+        },
+        {
+          "line": 32485,
+          "text": ""
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Read-only dynamic SQL context audit only; no app source changes are made.",
+    "Do not edit protected database/payment/report/collector/backup paths from this audit alone.",
+    "Review non-protected dynamic SQL one call family at a time before changing behavior.",
+    "Prefer replacing dynamic table or column names with explicit whitelists, not string concatenation, when a change is approved.",
+    "After any approved change, run py_compile and smoke-test login, clients, payments, reports, backups, and collector routes."
+  ]
+}

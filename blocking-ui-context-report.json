@@ -1,0 +1,577 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48496,
+  "context_radius": 12,
+  "blocking_call_count": 5,
+  "ui_blocking_candidate_count": 4,
+  "protected_context_count": 5,
+  "calls": [
+    {
+      "line": 1097,
+      "end_line": 1097,
+      "call": "time.sleep",
+      "scope": "run_write",
+      "worker_like_scope": false,
+      "ui_like_scope": false,
+      "protected_context": true,
+      "severity": "review",
+      "context": [
+        {
+          "line": 1085,
+          "text": "    \"\"\"Retry wrapper for SQLite write operations.\"\"\""
+        },
+        {
+          "line": 1086,
+          "text": "    import time, random, sqlite3 as _sqlite3"
+        },
+        {
+          "line": 1087,
+          "text": "    last = None"
+        },
+        {
+          "line": 1088,
+          "text": "    for i in range(max(1, retries)):"
+        },
+        {
+          "line": 1089,
+          "text": "        try:"
+        },
+        {
+          "line": 1090,
+          "text": "            return op()"
+        },
+        {
+          "line": 1091,
+          "text": "        except _sqlite3.OperationalError as e:"
+        },
+        {
+          "line": 1092,
+          "text": "            msg = str(e).lower()"
+        },
+        {
+          "line": 1093,
+          "text": "            if (\"database is locked\" in msg) or (\"database is busy\" in msg):"
+        },
+        {
+          "line": 1094,
+          "text": "                last = e"
+        },
+        {
+          "line": 1095,
+          "text": "                delay = min(max_delay, base_delay * (2 ** i))"
+        },
+        {
+          "line": 1096,
+          "text": "                delay = delay + (random.random() * base_delay)"
+        },
+        {
+          "line": 1097,
+          "text": "                time.sleep(delay)"
+        },
+        {
+          "line": 1098,
+          "text": "                continue"
+        },
+        {
+          "line": 1099,
+          "text": "            raise"
+        },
+        {
+          "line": 1100,
+          "text": "    if last:"
+        },
+        {
+          "line": 1101,
+          "text": "        raise last"
+        },
+        {
+          "line": 1102,
+          "text": "    return op()"
+        },
+        {
+          "line": 1103,
+          "text": ""
+        },
+        {
+          "line": 1104,
+          "text": "def _is_write_sql(sql: str) -> bool:"
+        },
+        {
+          "line": 1105,
+          "text": "    try:"
+        },
+        {
+          "line": 1106,
+          "text": "        if not sql:"
+        },
+        {
+          "line": 1107,
+          "text": "            return False"
+        },
+        {
+          "line": 1108,
+          "text": "        s = str(sql).lstrip().upper()"
+        },
+        {
+          "line": 1109,
+          "text": "        if not s:"
+        }
+      ]
+    },
+    {
+      "line": 15390,
+      "end_line": 15397,
+      "call": "subprocess.run",
+      "scope": "App._create_postgres_backup_file",
+      "worker_like_scope": false,
+      "ui_like_scope": true,
+      "protected_context": true,
+      "severity": "likely_ui_blocker",
+      "context": [
+        {
+          "line": 15378,
+          "text": "            \"-U\", user,"
+        },
+        {
+          "line": 15379,
+          "text": "            \"-h\", host,"
+        },
+        {
+          "line": 15380,
+          "text": "            \"-p\", port,"
+        },
+        {
+          "line": 15381,
+          "text": "            \"-d\", dbname,"
+        },
+        {
+          "line": 15382,
+          "text": "            \"-F\", \"c\","
+        },
+        {
+          "line": 15383,
+          "text": "            \"-f\", out_file,"
+        },
+        {
+          "line": 15384,
+          "text": "        ]"
+        },
+        {
+          "line": 15385,
+          "text": ""
+        },
+        {
+          "line": 15386,
+          "text": "        env = os.environ.copy()"
+        },
+        {
+          "line": 15387,
+          "text": "        if password:"
+        },
+        {
+          "line": 15388,
+          "text": "            env[\"PGPASSWORD\"] = password"
+        },
+        {
+          "line": 15389,
+          "text": ""
+        },
+        {
+          "line": 15390,
+          "text": "        proc = subprocess.run("
+        },
+        {
+          "line": 15391,
+          "text": "            cmd,"
+        },
+        {
+          "line": 15392,
+          "text": "            env=env,"
+        },
+        {
+          "line": 15393,
+          "text": "            stdout=subprocess.PIPE,"
+        },
+        {
+          "line": 15394,
+          "text": "            stderr=subprocess.PIPE,"
+        },
+        {
+          "line": 15395,
+          "text": "            text=True,"
+        },
+        {
+          "line": 15396,
+          "text": "            shell=False,"
+        },
+        {
+          "line": 15397,
+          "text": "        )"
+        },
+        {
+          "line": 15398,
+          "text": "        if proc.returncode != 0:"
+        },
+        {
+          "line": 15399,
+          "text": "            msg = (proc.stderr or proc.stdout or \"Backup failed.\").strip()"
+        },
+        {
+          "line": 15400,
+          "text": "            raise RuntimeError(msg)"
+        },
+        {
+          "line": 15401,
+          "text": ""
+        },
+        {
+          "line": 15402,
+          "text": "        if not os.path.exists(out_file) or os.path.getsize(out_file) <= 0:"
+        }
+      ]
+    },
+    {
+      "line": 15577,
+      "end_line": 15584,
+      "call": "subprocess.run",
+      "scope": "App._verify_postgres_backup_file",
+      "worker_like_scope": false,
+      "ui_like_scope": true,
+      "protected_context": true,
+      "severity": "likely_ui_blocker",
+      "context": [
+        {
+          "line": 15565,
+          "text": ""
+        },
+        {
+          "line": 15566,
+          "text": "        backup_path = os.path.abspath(str(backup_path or \"\"))"
+        },
+        {
+          "line": 15567,
+          "text": "        if not backup_path or not os.path.exists(backup_path):"
+        },
+        {
+          "line": 15568,
+          "text": "            raise FileNotFoundError(\"Backup file was not found.\")"
+        },
+        {
+          "line": 15569,
+          "text": ""
+        },
+        {
+          "line": 15570,
+          "text": "        pg_restore = self._find_postgres_exe(\"pg_restore.exe\" if os.name == \"nt\" else \"pg_restore\")"
+        },
+        {
+          "line": 15571,
+          "text": "        if not pg_restore:"
+        },
+        {
+          "line": 15572,
+          "text": "            raise FileNotFoundError("
+        },
+        {
+          "line": 15573,
+          "text": "                \"pg_restore.exe was not found. Expected example:\\n\""
+        },
+        {
+          "line": 15574,
+          "text": "                r\"C:\\Program Files\\PostgreSQL\\18\\bin\\pg_restore.exe\""
+        },
+        {
+          "line": 15575,
+          "text": "            )"
+        },
+        {
+          "line": 15576,
+          "text": ""
+        },
+        {
+          "line": 15577,
+          "text": "        proc = subprocess.run("
+        },
+        {
+          "line": 15578,
+          "text": "            [pg_restore, \"-l\", backup_path],"
+        },
+        {
+          "line": 15579,
+          "text": "            env=self._pg_env(),"
+        },
+        {
+          "line": 15580,
+          "text": "            stdout=subprocess.PIPE,"
+        },
+        {
+          "line": 15581,
+          "text": "            stderr=subprocess.PIPE,"
+        },
+        {
+          "line": 15582,
+          "text": "            text=True,"
+        },
+        {
+          "line": 15583,
+          "text": "            shell=False,"
+        },
+        {
+          "line": 15584,
+          "text": "        )"
+        },
+        {
+          "line": 15585,
+          "text": "        if proc.returncode != 0:"
+        },
+        {
+          "line": 15586,
+          "text": "            raise RuntimeError((proc.stderr or proc.stdout or \"Backup verification failed.\").strip())"
+        },
+        {
+          "line": 15587,
+          "text": ""
+        },
+        {
+          "line": 15588,
+          "text": "        toc = proc.stdout or \"\""
+        },
+        {
+          "line": 15589,
+          "text": "        lines = [ln for ln in toc.splitlines() if ln.strip() and not ln.lstrip().startswith(\";\")]"
+        }
+      ]
+    },
+    {
+      "line": 15595,
+      "end_line": 15602,
+      "call": "subprocess.run",
+      "scope": "App._run_pg_command",
+      "worker_like_scope": false,
+      "ui_like_scope": true,
+      "protected_context": true,
+      "severity": "likely_ui_blocker",
+      "context": [
+        {
+          "line": 15583,
+          "text": "            shell=False,"
+        },
+        {
+          "line": 15584,
+          "text": "        )"
+        },
+        {
+          "line": 15585,
+          "text": "        if proc.returncode != 0:"
+        },
+        {
+          "line": 15586,
+          "text": "            raise RuntimeError((proc.stderr or proc.stdout or \"Backup verification failed.\").strip())"
+        },
+        {
+          "line": 15587,
+          "text": ""
+        },
+        {
+          "line": 15588,
+          "text": "        toc = proc.stdout or \"\""
+        },
+        {
+          "line": 15589,
+          "text": "        lines = [ln for ln in toc.splitlines() if ln.strip() and not ln.lstrip().startswith(\";\")]"
+        },
+        {
+          "line": 15590,
+          "text": "        return f\"Backup is readable.\\nObjects listed: {len(lines)}\\n\\nFile:\\n{backup_path}\""
+        },
+        {
+          "line": 15591,
+          "text": ""
+        },
+        {
+          "line": 15592,
+          "text": "    def _run_pg_command(self, cmd: list, allow_retry_without_force: bool = False) -> str:"
+        },
+        {
+          "line": 15593,
+          "text": "        \"\"\"Run PostgreSQL command-line tools with hidden password.\"\"\""
+        },
+        {
+          "line": 15594,
+          "text": "        import subprocess"
+        },
+        {
+          "line": 15595,
+          "text": "        proc = subprocess.run("
+        },
+        {
+          "line": 15596,
+          "text": "            cmd,"
+        },
+        {
+          "line": 15597,
+          "text": "            env=self._pg_env(),"
+        },
+        {
+          "line": 15598,
+          "text": "            stdout=subprocess.PIPE,"
+        },
+        {
+          "line": 15599,
+          "text": "            stderr=subprocess.PIPE,"
+        },
+        {
+          "line": 15600,
+          "text": "            text=True,"
+        },
+        {
+          "line": 15601,
+          "text": "            shell=False,"
+        },
+        {
+          "line": 15602,
+          "text": "        )"
+        },
+        {
+          "line": 15603,
+          "text": "        if proc.returncode == 0:"
+        },
+        {
+          "line": 15604,
+          "text": "            return (proc.stdout or proc.stderr or \"\").strip()"
+        },
+        {
+          "line": 15605,
+          "text": "        msg = (proc.stderr or proc.stdout or \"PostgreSQL command failed.\").strip()"
+        },
+        {
+          "line": 15606,
+          "text": "        if allow_retry_without_force and \"unrecognized option\" in msg.lower() and \"--force\" in cmd:"
+        },
+        {
+          "line": 15607,
+          "text": "            cmd2 = [x for x in cmd if x != \"--force\"]"
+        }
+      ]
+    },
+    {
+      "line": 15608,
+      "end_line": 15615,
+      "call": "subprocess.run",
+      "scope": "App._run_pg_command",
+      "worker_like_scope": false,
+      "ui_like_scope": true,
+      "protected_context": true,
+      "severity": "likely_ui_blocker",
+      "context": [
+        {
+          "line": 15596,
+          "text": "            cmd,"
+        },
+        {
+          "line": 15597,
+          "text": "            env=self._pg_env(),"
+        },
+        {
+          "line": 15598,
+          "text": "            stdout=subprocess.PIPE,"
+        },
+        {
+          "line": 15599,
+          "text": "            stderr=subprocess.PIPE,"
+        },
+        {
+          "line": 15600,
+          "text": "            text=True,"
+        },
+        {
+          "line": 15601,
+          "text": "            shell=False,"
+        },
+        {
+          "line": 15602,
+          "text": "        )"
+        },
+        {
+          "line": 15603,
+          "text": "        if proc.returncode == 0:"
+        },
+        {
+          "line": 15604,
+          "text": "            return (proc.stdout or proc.stderr or \"\").strip()"
+        },
+        {
+          "line": 15605,
+          "text": "        msg = (proc.stderr or proc.stdout or \"PostgreSQL command failed.\").strip()"
+        },
+        {
+          "line": 15606,
+          "text": "        if allow_retry_without_force and \"unrecognized option\" in msg.lower() and \"--force\" in cmd:"
+        },
+        {
+          "line": 15607,
+          "text": "            cmd2 = [x for x in cmd if x != \"--force\"]"
+        },
+        {
+          "line": 15608,
+          "text": "            proc2 = subprocess.run("
+        },
+        {
+          "line": 15609,
+          "text": "                cmd2,"
+        },
+        {
+          "line": 15610,
+          "text": "                env=self._pg_env(),"
+        },
+        {
+          "line": 15611,
+          "text": "                stdout=subprocess.PIPE,"
+        },
+        {
+          "line": 15612,
+          "text": "                stderr=subprocess.PIPE,"
+        },
+        {
+          "line": 15613,
+          "text": "                text=True,"
+        },
+        {
+          "line": 15614,
+          "text": "                shell=False,"
+        },
+        {
+          "line": 15615,
+          "text": "            )"
+        },
+        {
+          "line": 15616,
+          "text": "            if proc2.returncode == 0:"
+        },
+        {
+          "line": 15617,
+          "text": "                return (proc2.stdout or proc2.stderr or \"\").strip()"
+        },
+        {
+          "line": 15618,
+          "text": "            msg = (proc2.stderr or proc2.stdout or msg).strip()"
+        },
+        {
+          "line": 15619,
+          "text": "        raise RuntimeError(msg)"
+        },
+        {
+          "line": 15620,
+          "text": ""
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Read-only context inspection only; no app source changes are made.",
+    "Review the surrounding lines before changing any blocking call.",
+    "Prefer moving long subprocess work to an existing worker/long-task path instead of editing UI code directly.",
+    "Do not touch reports, PDFs, payments, balances, 7x7, renewals, collectors, database migrations, cash-control, or report math from this context report alone.",
+    "If a candidate is confirmed safe, change one call family at a time and smoke-test SPINA after each change."
+  ]
+}

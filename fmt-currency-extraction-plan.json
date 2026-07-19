@@ -1,0 +1,10 @@
+{
+  "already_applied": false,
+  "app_file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "module_file": "spina_app\\utilities\\formatting.py",
+  "function": "fmt_currency",
+  "line": 8627,
+  "end_line": 8631,
+  "safe_to_apply": true,
+  "external_loaded_names": []
+}

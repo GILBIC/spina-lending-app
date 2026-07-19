@@ -1,0 +1,48 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "apply": false,
+  "target_count": 2,
+  "safe_candidate_count": 0,
+  "already_clean_count": 2,
+  "unsafe_count": 0,
+  "safe": true,
+  "patched": false,
+  "app_source_modified": false,
+  "selected_scope": "2 exact logger fallback pass-only handlers only; no recursive logging; no business logic",
+  "safe_candidates": [],
+  "already_clean": [
+    {
+      "key": "log_exc_stderr_fallback",
+      "scope": "_log_exc",
+      "guard_line": 1283,
+      "line": 1284,
+      "end_line": 1285,
+      "handler": "Exception",
+      "guard_text": "print(f\"[SPINA][ERROR] {context}: {exc}\", file=sys.stderr)",
+      "note": "Final stderr fallback inside _log_exc only; do not call logger again.",
+      "recursive_logging_safe": true,
+      "replacement_behavior": "return from logger fallback path; no logging call is added",
+      "status": "already_clean"
+    },
+    {
+      "key": "log_suppressed_once_stderr_fallback",
+      "scope": "_log_suppressed_once",
+      "guard_line": 1308,
+      "line": 1309,
+      "end_line": 1310,
+      "handler": "Exception",
+      "guard_text": "print(f\"[SPINA][SUPPRESSED] {context}: {exc}\", file=sys.stderr)",
+      "note": "Final stderr fallback inside _log_suppressed_once only; do not call logger again.",
+      "recursive_logging_safe": true,
+      "replacement_behavior": "return from logger fallback path; no logging call is added",
+      "status": "already_clean"
+    }
+  ],
+  "unsafe": [],
+  "recommendations": [
+    "Review dry-run JSON before applying.",
+    "Apply only if safe is true and unsafe_count is 0.",
+    "After apply, rerun this tool, the logger fallback planner, and the pass-only exception audit.",
+    "Smoke-test app startup and confirm logging still writes to data/spina_app.log during normal suppressed exceptions."
+  ]
+}

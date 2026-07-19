@@ -1,0 +1,2172 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48501,
+  "context_radius": 8,
+  "pass_only_exception_count": 928,
+  "modern_ui_pass_only_count": 26,
+  "selected_cleanup_candidate_count": 19,
+  "modern_ui_review_only_count": 7,
+  "selected_scopes": [
+    "App._rebuild_side_nav",
+    "App._refresh_header_theme",
+    "App._refresh_mode_toggle",
+    "App._refresh_modern_shell_theme",
+    "App._refresh_side_nav_selection",
+    "App._select_side_tab",
+    "App._set_mode",
+    "App._tk_button_hover",
+    "App.set_theme"
+  ],
+  "safety": {
+    "read_only": true,
+    "app_source_modified": false,
+    "line_window": [
+      14900,
+      16350
+    ],
+    "protected_words_excluded": [
+      "7x7",
+      "7×7",
+      "apply_role_access",
+      "backup",
+      "balance",
+      "cash control",
+      "collector",
+      "database",
+      "interest",
+      "ledger",
+      "migration",
+      "payment",
+      "payroll",
+      "pdf",
+      "pg_",
+      "postgres",
+      "principal",
+      "receipt",
+      "renew",
+      "report",
+      "restore",
+      "role_access",
+      "route",
+      "statement",
+      "transaction"
+    ],
+    "excluded_note": "runtime role/access patches and protected business logic are outside this narrow plan"
+  },
+  "selected_sites": [
+    {
+      "line": 14971,
+      "end_line": 14972,
+      "scope": "App.set_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 14963,
+          "text": "                self.theme_btn.configure(text=self._theme_toggle_text())"
+        },
+        {
+          "line": 14964,
+          "text": "        except Exception as __spina_exc:"
+        },
+        {
+          "line": 14965,
+          "text": "            _log_suppressed_once('excpass_0323', 'suppressed exception excpass_0323', __spina_exc)"
+        },
+        {
+          "line": 14966,
+          "text": "            pass"
+        },
+        {
+          "line": 14967,
+          "text": ""
+        },
+        {
+          "line": 14968,
+          "text": "        # Apply modern top header colors/buttons too"
+        },
+        {
+          "line": 14969,
+          "text": "        try:"
+        },
+        {
+          "line": 14970,
+          "text": "            self._refresh_header_theme()"
+        },
+        {
+          "line": 14971,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 14972,
+          "text": "            pass"
+        },
+        {
+          "line": 14973,
+          "text": ""
+        },
+        {
+          "line": 14974,
+          "text": "        # Apply to plain tk widgets too"
+        },
+        {
+          "line": 14975,
+          "text": "        try:"
+        },
+        {
+          "line": 14976,
+          "text": "            self._apply_tk_theme_recursive(self.root)"
+        },
+        {
+          "line": 14977,
+          "text": "        except Exception as __spina_exc:"
+        },
+        {
+          "line": 14978,
+          "text": "            _log_suppressed_once('excpass_0324', 'suppressed exception excpass_0324', __spina_exc)"
+        },
+        {
+          "line": 14979,
+          "text": "            pass"
+        }
+      ]
+    },
+    {
+      "line": 14982,
+      "end_line": 14983,
+      "scope": "App.set_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 14974,
+          "text": "        # Apply to plain tk widgets too"
+        },
+        {
+          "line": 14975,
+          "text": "        try:"
+        },
+        {
+          "line": 14976,
+          "text": "            self._apply_tk_theme_recursive(self.root)"
+        },
+        {
+          "line": 14977,
+          "text": "        except Exception as __spina_exc:"
+        },
+        {
+          "line": 14978,
+          "text": "            _log_suppressed_once('excpass_0324', 'suppressed exception excpass_0324', __spina_exc)"
+        },
+        {
+          "line": 14979,
+          "text": "            pass"
+        },
+        {
+          "line": 14980,
+          "text": "        try:"
+        },
+        {
+          "line": 14981,
+          "text": "            self._refresh_modern_shell_theme()"
+        },
+        {
+          "line": 14982,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 14983,
+          "text": "            pass"
+        },
+        {
+          "line": 14984,
+          "text": ""
+        },
+        {
+          "line": 14985,
+          "text": "    def _theme_palette(self, theme: str | None = None) -> dict:"
+        },
+        {
+          "line": 14986,
+          "text": "        t = (theme or getattr(self, \"ui_theme\", \"light\") or \"light\").strip().lower()"
+        },
+        {
+          "line": 14987,
+          "text": "        if t.startswith(\"d\"):"
+        },
+        {
+          "line": 14988,
+          "text": "            return {"
+        },
+        {
+          "line": 14989,
+          "text": "                \"bg\": \"#1f1f23\","
+        },
+        {
+          "line": 14990,
+          "text": "                \"panel\": \"#26262b\","
+        }
+      ]
+    },
+    {
+      "line": 15887,
+      "end_line": 15888,
+      "scope": "App._select_side_tab",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 15879,
+          "text": "        return items"
+        },
+        {
+          "line": 15880,
+          "text": ""
+        },
+        {
+          "line": 15881,
+          "text": "    def _select_side_tab(self, tab):"
+        },
+        {
+          "line": 15882,
+          "text": "        try:"
+        },
+        {
+          "line": 15883,
+          "text": "            self.nb.select(tab)"
+        },
+        {
+          "line": 15884,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 15885,
+          "text": "            try:"
+        },
+        {
+          "line": 15886,
+          "text": "                _log_suppressed_once('side_nav_select', 'sidebar select failed', e)"
+        },
+        {
+          "line": 15887,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 15888,
+          "text": "                pass"
+        },
+        {
+          "line": 15889,
+          "text": "        try:"
+        },
+        {
+          "line": 15890,
+          "text": "            self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 15891,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15892,
+          "text": "            pass"
+        },
+        {
+          "line": 15893,
+          "text": ""
+        },
+        {
+          "line": 15894,
+          "text": "    def _rebuild_side_nav(self):"
+        },
+        {
+          "line": 15895,
+          "text": "        \"\"\"Rebuild the modern left-side navigation from the currently visible notebook tabs.\"\"\""
+        }
+      ]
+    },
+    {
+      "line": 15891,
+      "end_line": 15892,
+      "scope": "App._select_side_tab",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 15883,
+          "text": "            self.nb.select(tab)"
+        },
+        {
+          "line": 15884,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 15885,
+          "text": "            try:"
+        },
+        {
+          "line": 15886,
+          "text": "                _log_suppressed_once('side_nav_select', 'sidebar select failed', e)"
+        },
+        {
+          "line": 15887,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 15888,
+          "text": "                pass"
+        },
+        {
+          "line": 15889,
+          "text": "        try:"
+        },
+        {
+          "line": 15890,
+          "text": "            self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 15891,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15892,
+          "text": "            pass"
+        },
+        {
+          "line": 15893,
+          "text": ""
+        },
+        {
+          "line": 15894,
+          "text": "    def _rebuild_side_nav(self):"
+        },
+        {
+          "line": 15895,
+          "text": "        \"\"\"Rebuild the modern left-side navigation from the currently visible notebook tabs.\"\"\""
+        },
+        {
+          "line": 15896,
+          "text": "        frame = getattr(self, 'sidebar_frame', None)"
+        },
+        {
+          "line": 15897,
+          "text": "        if frame is None:"
+        },
+        {
+          "line": 15898,
+          "text": "            return"
+        },
+        {
+          "line": 15899,
+          "text": "        try:"
+        }
+      ]
+    },
+    {
+      "line": 15902,
+      "end_line": 15903,
+      "scope": "App._rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 15894,
+          "text": "    def _rebuild_side_nav(self):"
+        },
+        {
+          "line": 15895,
+          "text": "        \"\"\"Rebuild the modern left-side navigation from the currently visible notebook tabs.\"\"\""
+        },
+        {
+          "line": 15896,
+          "text": "        frame = getattr(self, 'sidebar_frame', None)"
+        },
+        {
+          "line": 15897,
+          "text": "        if frame is None:"
+        },
+        {
+          "line": 15898,
+          "text": "            return"
+        },
+        {
+          "line": 15899,
+          "text": "        try:"
+        },
+        {
+          "line": 15900,
+          "text": "            for child in frame.winfo_children():"
+        },
+        {
+          "line": 15901,
+          "text": "                child.destroy()"
+        },
+        {
+          "line": 15902,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15903,
+          "text": "            pass"
+        },
+        {
+          "line": 15904,
+          "text": ""
+        },
+        {
+          "line": 15905,
+          "text": "        try:"
+        },
+        {
+          "line": 15906,
+          "text": "            p = getattr(self, '_ui_colors', None) or self._theme_palette()"
+        },
+        {
+          "line": 15907,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15908,
+          "text": "            p = {'bg': '#f7f7fb', 'panel': '#ffffff', 'fg': '#1a1a1a', 'muted': '#666666', 'accent': '#ffd1e6', 'border': '#dddddd'}"
+        },
+        {
+          "line": 15909,
+          "text": ""
+        },
+        {
+          "line": 15910,
+          "text": "        try:"
+        }
+      ]
+    },
+    {
+      "line": 15913,
+      "end_line": 15914,
+      "scope": "App._rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 15905,
+          "text": "        try:"
+        },
+        {
+          "line": 15906,
+          "text": "            p = getattr(self, '_ui_colors', None) or self._theme_palette()"
+        },
+        {
+          "line": 15907,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15908,
+          "text": "            p = {'bg': '#f7f7fb', 'panel': '#ffffff', 'fg': '#1a1a1a', 'muted': '#666666', 'accent': '#ffd1e6', 'border': '#dddddd'}"
+        },
+        {
+          "line": 15909,
+          "text": ""
+        },
+        {
+          "line": 15910,
+          "text": "        try:"
+        },
+        {
+          "line": 15911,
+          "text": "            frame.configure(width=190)"
+        },
+        {
+          "line": 15912,
+          "text": "            frame.pack_propagate(False)"
+        },
+        {
+          "line": 15913,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15914,
+          "text": "            pass"
+        },
+        {
+          "line": 15915,
+          "text": ""
+        },
+        {
+          "line": 15916,
+          "text": "        # App label inside sidebar"
+        },
+        {
+          "line": 15917,
+          "text": "        try:"
+        },
+        {
+          "line": 15918,
+          "text": "            title = tk.Label("
+        },
+        {
+          "line": 15919,
+          "text": "                frame,"
+        },
+        {
+          "line": 15920,
+          "text": "                text='SPINA',"
+        },
+        {
+          "line": 15921,
+          "text": "                anchor='w',"
+        }
+      ]
+    },
+    {
+      "line": 15946,
+      "end_line": 15947,
+      "scope": "App._rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 15938,
+          "text": "                bg=p.get('panel', '#ffffff'),"
+        },
+        {
+          "line": 15939,
+          "text": "                fg=p.get('muted', '#666666'),"
+        },
+        {
+          "line": 15940,
+          "text": "                font=('Segoe UI' if os.name == 'nt' else 'TkDefaultFont', 9),"
+        },
+        {
+          "line": 15941,
+          "text": "                padx=8,"
+        },
+        {
+          "line": 15942,
+          "text": "                pady=0,"
+        },
+        {
+          "line": 15943,
+          "text": "            )"
+        },
+        {
+          "line": 15944,
+          "text": "            subtitle.pack(fill='x', pady=(0, 12))"
+        },
+        {
+          "line": 15945,
+          "text": "            self._side_nav_labels.append(subtitle)"
+        },
+        {
+          "line": 15946,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15947,
+          "text": "            pass"
+        },
+        {
+          "line": 15948,
+          "text": ""
+        },
+        {
+          "line": 15949,
+          "text": "        self._side_nav_buttons = {}"
+        },
+        {
+          "line": 15950,
+          "text": "        family = 'Segoe UI' if os.name == 'nt' else 'TkDefaultFont'"
+        },
+        {
+          "line": 15951,
+          "text": "        for tab, title, icon in self._side_nav_items():"
+        },
+        {
+          "line": 15952,
+          "text": "            try:"
+        },
+        {
+          "line": 15953,
+          "text": "                btn = tk.Button("
+        },
+        {
+          "line": 15954,
+          "text": "                    frame,"
+        }
+      ]
+    },
+    {
+      "line": 15970,
+      "end_line": 15971,
+      "scope": "App._rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 15962,
+          "text": "                    font=(family, 10, 'bold'),"
+        },
+        {
+          "line": 15963,
+          "text": "                    command=lambda t=tab: self._select_side_tab(t),"
+        },
+        {
+          "line": 15964,
+          "text": "                )"
+        },
+        {
+          "line": 15965,
+          "text": "                btn.pack(fill='x', pady=3)"
+        },
+        {
+          "line": 15966,
+          "text": "                self._side_nav_buttons[str(tab)] = btn"
+        },
+        {
+          "line": 15967,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 15968,
+          "text": "                try:"
+        },
+        {
+          "line": 15969,
+          "text": "                    _log_suppressed_once('side_nav_btn', 'sidebar button failed', e)"
+        },
+        {
+          "line": 15970,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 15971,
+          "text": "                    pass"
+        },
+        {
+          "line": 15972,
+          "text": ""
+        },
+        {
+          "line": 15973,
+          "text": "        try:"
+        },
+        {
+          "line": 15974,
+          "text": "            bottom = ttk.Frame(frame, style='Sidebar.TFrame')"
+        },
+        {
+          "line": 15975,
+          "text": "            bottom.pack(side='bottom', fill='x', pady=(12, 0))"
+        },
+        {
+          "line": 15976,
+          "text": "            role_text = f\"{getattr(self, 'user_name', '')} • {getattr(self, 'user_role', '')}\""
+        },
+        {
+          "line": 15977,
+          "text": "            lbl = tk.Label("
+        },
+        {
+          "line": 15978,
+          "text": "                bottom,"
+        }
+      ]
+    },
+    {
+      "line": 15990,
+      "end_line": 15991,
+      "scope": "App._rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 15982,
+          "text": "                fg=p.get('muted', '#666666'),"
+        },
+        {
+          "line": 15983,
+          "text": "                font=(family, 8),"
+        },
+        {
+          "line": 15984,
+          "text": "                padx=8,"
+        },
+        {
+          "line": 15985,
+          "text": "                pady=4,"
+        },
+        {
+          "line": 15986,
+          "text": "                wraplength=160,"
+        },
+        {
+          "line": 15987,
+          "text": "            )"
+        },
+        {
+          "line": 15988,
+          "text": "            lbl.pack(fill='x')"
+        },
+        {
+          "line": 15989,
+          "text": "            self._side_nav_labels.append(lbl)"
+        },
+        {
+          "line": 15990,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15991,
+          "text": "            pass"
+        },
+        {
+          "line": 15992,
+          "text": ""
+        },
+        {
+          "line": 15993,
+          "text": "        self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 15994,
+          "text": ""
+        },
+        {
+          "line": 15995,
+          "text": "    def _refresh_side_nav_selection(self):"
+        },
+        {
+          "line": 15996,
+          "text": "        \"\"\"Update sidebar button colors to match the selected notebook tab.\"\"\""
+        },
+        {
+          "line": 15997,
+          "text": "        buttons = getattr(self, '_side_nav_buttons', {}) or {}"
+        },
+        {
+          "line": 15998,
+          "text": "        if not buttons:"
+        }
+      ]
+    },
+    {
+      "line": 16026,
+      "end_line": 16027,
+      "scope": "App._refresh_side_nav_selection",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 16018,
+          "text": "                fg = selected_fg if active else normal_fg"
+        },
+        {
+          "line": 16019,
+          "text": "                btn.configure("
+        },
+        {
+          "line": 16020,
+          "text": "                    bg=bg,"
+        },
+        {
+          "line": 16021,
+          "text": "                    fg=fg,"
+        },
+        {
+          "line": 16022,
+          "text": "                    activebackground=hover_bg,"
+        },
+        {
+          "line": 16023,
+          "text": "                    activeforeground=fg,"
+        },
+        {
+          "line": 16024,
+          "text": "                    highlightthickness=0,"
+        },
+        {
+          "line": 16025,
+          "text": "                )"
+        },
+        {
+          "line": 16026,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16027,
+          "text": "                pass"
+        },
+        {
+          "line": 16028,
+          "text": ""
+        },
+        {
+          "line": 16029,
+          "text": "    def _refresh_modern_shell_theme(self):"
+        },
+        {
+          "line": 16030,
+          "text": "        \"\"\"Apply theme colors to the modern sidebar shell and rebuild nav labels/buttons.\"\"\""
+        },
+        {
+          "line": 16031,
+          "text": "        try:"
+        },
+        {
+          "line": 16032,
+          "text": "            p = getattr(self, '_ui_colors', None) or self._theme_palette()"
+        },
+        {
+          "line": 16033,
+          "text": "            if getattr(self, 'main_shell', None) is not None:"
+        },
+        {
+          "line": 16034,
+          "text": "                self.main_shell.configure(style='AppShell.TFrame')"
+        }
+      ]
+    },
+    {
+      "line": 16039,
+      "end_line": 16040,
+      "scope": "App._refresh_modern_shell_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 16031,
+          "text": "        try:"
+        },
+        {
+          "line": 16032,
+          "text": "            p = getattr(self, '_ui_colors', None) or self._theme_palette()"
+        },
+        {
+          "line": 16033,
+          "text": "            if getattr(self, 'main_shell', None) is not None:"
+        },
+        {
+          "line": 16034,
+          "text": "                self.main_shell.configure(style='AppShell.TFrame')"
+        },
+        {
+          "line": 16035,
+          "text": "            if getattr(self, 'sidebar_frame', None) is not None:"
+        },
+        {
+          "line": 16036,
+          "text": "                self.sidebar_frame.configure(style='Sidebar.TFrame')"
+        },
+        {
+          "line": 16037,
+          "text": "            if getattr(self, 'content_frame', None) is not None:"
+        },
+        {
+          "line": 16038,
+          "text": "                self.content_frame.configure(style='Content.TFrame')"
+        },
+        {
+          "line": 16039,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16040,
+          "text": "            pass"
+        },
+        {
+          "line": 16041,
+          "text": "        try:"
+        },
+        {
+          "line": 16042,
+          "text": "            self._rebuild_side_nav()"
+        },
+        {
+          "line": 16043,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16044,
+          "text": "            try:"
+        },
+        {
+          "line": 16045,
+          "text": "                self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 16046,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16047,
+          "text": "                pass"
+        }
+      ]
+    },
+    {
+      "line": 16046,
+      "end_line": 16047,
+      "scope": "App._refresh_modern_shell_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 16038,
+          "text": "                self.content_frame.configure(style='Content.TFrame')"
+        },
+        {
+          "line": 16039,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16040,
+          "text": "            pass"
+        },
+        {
+          "line": 16041,
+          "text": "        try:"
+        },
+        {
+          "line": 16042,
+          "text": "            self._rebuild_side_nav()"
+        },
+        {
+          "line": 16043,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16044,
+          "text": "            try:"
+        },
+        {
+          "line": 16045,
+          "text": "                self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 16046,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16047,
+          "text": "                pass"
+        },
+        {
+          "line": 16048,
+          "text": ""
+        },
+        {
+          "line": 16049,
+          "text": "    # ---------------- Modern top bar + quick loan-type switch ----------------"
+        },
+        {
+          "line": 16050,
+          "text": "    def _header_palette(self):"
+        },
+        {
+          "line": 16051,
+          "text": "        \"\"\"Compact color palette for the modern top header.\"\"\""
+        },
+        {
+          "line": 16052,
+          "text": "        try:"
+        },
+        {
+          "line": 16053,
+          "text": "            base = getattr(self, '_ui_colors', None) or self._theme_palette()"
+        },
+        {
+          "line": 16054,
+          "text": "        except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 16103,
+      "end_line": 16104,
+      "scope": "App._tk_button_hover",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 16095,
+          "text": "        \"\"\"Small hover helper for plain tk buttons/labels.\"\"\""
+        },
+        {
+          "line": 16096,
+          "text": "        try:"
+        },
+        {
+          "line": 16097,
+          "text": "            if normal_bg is None:"
+        },
+        {
+          "line": 16098,
+          "text": "                normal_bg = widget.cget('bg')"
+        },
+        {
+          "line": 16099,
+          "text": "            if hover_bg is None:"
+        },
+        {
+          "line": 16100,
+          "text": "                hover_bg = normal_bg"
+        },
+        {
+          "line": 16101,
+          "text": "            widget.bind('<Enter>', lambda e, w=widget, h=hover_bg: w.configure(bg=h), add='+')"
+        },
+        {
+          "line": 16102,
+          "text": "            widget.bind('<Leave>', lambda e, w=widget, n=normal_bg: w.configure(bg=n), add='+')"
+        },
+        {
+          "line": 16103,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16104,
+          "text": "            pass"
+        },
+        {
+          "line": 16105,
+          "text": ""
+        },
+        {
+          "line": 16106,
+          "text": "    def _make_header_button(self, master, text, command, *, primary=False, danger=False, width=None):"
+        },
+        {
+          "line": 16107,
+          "text": "        \"\"\"Create a flatter, modern top-bar button using tk.Button for better dark-mode control.\"\"\""
+        },
+        {
+          "line": 16108,
+          "text": "        hp = self._header_palette()"
+        },
+        {
+          "line": 16109,
+          "text": "        family = 'Segoe UI' if os.name == 'nt' else 'TkDefaultFont'"
+        },
+        {
+          "line": 16110,
+          "text": "        bg = hp['accent'] if primary else (hp['danger'] if danger else hp['button'])"
+        },
+        {
+          "line": 16111,
+          "text": "        fg = hp['chip_active_fg'] if primary else hp['fg']"
+        }
+      ]
+    },
+    {
+      "line": 16147,
+      "end_line": 16148,
+      "scope": "App._set_mode",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 16139,
+          "text": "                if (self.mode_var.get() or '') == mode:"
+        },
+        {
+          "line": 16140,
+          "text": "                    self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16141,
+          "text": "                    return"
+        },
+        {
+          "line": 16142,
+          "text": "                self.mode_var.set(mode)"
+        },
+        {
+          "line": 16143,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16144,
+          "text": "            pass"
+        },
+        {
+          "line": 16145,
+          "text": "        try:"
+        },
+        {
+          "line": 16146,
+          "text": "            self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16147,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16148,
+          "text": "            pass"
+        },
+        {
+          "line": 16149,
+          "text": "        try:"
+        },
+        {
+          "line": 16150,
+          "text": "            self._on_mode_change()"
+        },
+        {
+          "line": 16151,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 16152,
+          "text": "            try:"
+        },
+        {
+          "line": 16153,
+          "text": "                _log_suppressed_once('modern_mode_switch', 'modern mode switch failed', e)"
+        },
+        {
+          "line": 16154,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16155,
+          "text": "                pass"
+        }
+      ]
+    },
+    {
+      "line": 16176,
+      "end_line": 16177,
+      "scope": "App._refresh_mode_toggle",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 16168,
+          "text": "                fg = hp['chip_active_fg'] if active else hp['fg']"
+        },
+        {
+          "line": 16169,
+          "text": "                btn.configure("
+        },
+        {
+          "line": 16170,
+          "text": "                    bg=bg,"
+        },
+        {
+          "line": 16171,
+          "text": "                    fg=fg,"
+        },
+        {
+          "line": 16172,
+          "text": "                    activebackground=bg,"
+        },
+        {
+          "line": 16173,
+          "text": "                    activeforeground=fg,"
+        },
+        {
+          "line": 16174,
+          "text": "                    highlightbackground=hp['accent'] if active else hp['border'],"
+        },
+        {
+          "line": 16175,
+          "text": "                )"
+        },
+        {
+          "line": 16176,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16177,
+          "text": "                pass"
+        },
+        {
+          "line": 16178,
+          "text": "        try:"
+        },
+        {
+          "line": 16179,
+          "text": "            if getattr(self, 'mode_status_label', None) is not None:"
+        },
+        {
+          "line": 16180,
+          "text": "                self.mode_status_label.configure("
+        },
+        {
+          "line": 16181,
+          "text": "                    text=f\"Current view: {cur}\","
+        },
+        {
+          "line": 16182,
+          "text": "                    bg=hp['panel'],"
+        },
+        {
+          "line": 16183,
+          "text": "                    fg=hp['muted'],"
+        },
+        {
+          "line": 16184,
+          "text": "                )"
+        }
+      ]
+    },
+    {
+      "line": 16185,
+      "end_line": 16186,
+      "scope": "App._refresh_mode_toggle",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 16177,
+          "text": "                pass"
+        },
+        {
+          "line": 16178,
+          "text": "        try:"
+        },
+        {
+          "line": 16179,
+          "text": "            if getattr(self, 'mode_status_label', None) is not None:"
+        },
+        {
+          "line": 16180,
+          "text": "                self.mode_status_label.configure("
+        },
+        {
+          "line": 16181,
+          "text": "                    text=f\"Current view: {cur}\","
+        },
+        {
+          "line": 16182,
+          "text": "                    bg=hp['panel'],"
+        },
+        {
+          "line": 16183,
+          "text": "                    fg=hp['muted'],"
+        },
+        {
+          "line": 16184,
+          "text": "                )"
+        },
+        {
+          "line": 16185,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16186,
+          "text": "            pass"
+        },
+        {
+          "line": 16187,
+          "text": ""
+        },
+        {
+          "line": 16188,
+          "text": "    def _refresh_header_theme(self):"
+        },
+        {
+          "line": 16189,
+          "text": "        \"\"\"Apply the current theme colors to the modern top header.\"\"\""
+        },
+        {
+          "line": 16190,
+          "text": "        hp = self._header_palette()"
+        },
+        {
+          "line": 16191,
+          "text": "        try:"
+        },
+        {
+          "line": 16192,
+          "text": "            if getattr(self, 'modern_header', None) is not None:"
+        },
+        {
+          "line": 16193,
+          "text": "                self.modern_header.configure(bg=hp['bg'])"
+        }
+      ]
+    },
+    {
+      "line": 16194,
+      "end_line": 16195,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 16186,
+          "text": "            pass"
+        },
+        {
+          "line": 16187,
+          "text": ""
+        },
+        {
+          "line": 16188,
+          "text": "    def _refresh_header_theme(self):"
+        },
+        {
+          "line": 16189,
+          "text": "        \"\"\"Apply the current theme colors to the modern top header.\"\"\""
+        },
+        {
+          "line": 16190,
+          "text": "        hp = self._header_palette()"
+        },
+        {
+          "line": 16191,
+          "text": "        try:"
+        },
+        {
+          "line": 16192,
+          "text": "            if getattr(self, 'modern_header', None) is not None:"
+        },
+        {
+          "line": 16193,
+          "text": "                self.modern_header.configure(bg=hp['bg'])"
+        },
+        {
+          "line": 16194,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16195,
+          "text": "            pass"
+        },
+        {
+          "line": 16196,
+          "text": "        for attr in ('header_left', 'header_center', 'header_right', 'mode_switch_frame'):"
+        },
+        {
+          "line": 16197,
+          "text": "            try:"
+        },
+        {
+          "line": 16198,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16199,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16200,
+          "text": "                    w.configure(bg=hp['bg'] if attr != 'mode_switch_frame' else hp['panel'])"
+        },
+        {
+          "line": 16201,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16202,
+          "text": "                pass"
+        }
+      ]
+    },
+    {
+      "line": 16201,
+      "end_line": 16202,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 16193,
+          "text": "                self.modern_header.configure(bg=hp['bg'])"
+        },
+        {
+          "line": 16194,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16195,
+          "text": "            pass"
+        },
+        {
+          "line": 16196,
+          "text": "        for attr in ('header_left', 'header_center', 'header_right', 'mode_switch_frame'):"
+        },
+        {
+          "line": 16197,
+          "text": "            try:"
+        },
+        {
+          "line": 16198,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16199,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16200,
+          "text": "                    w.configure(bg=hp['bg'] if attr != 'mode_switch_frame' else hp['panel'])"
+        },
+        {
+          "line": 16201,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16202,
+          "text": "                pass"
+        },
+        {
+          "line": 16203,
+          "text": "        for attr in ('header_title_label', 'header_view_title'):"
+        },
+        {
+          "line": 16204,
+          "text": "            try:"
+        },
+        {
+          "line": 16205,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16206,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16207,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_title_label' else hp['panel'], fg=hp['fg'])"
+        },
+        {
+          "line": 16208,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16209,
+          "text": "                pass"
+        }
+      ]
+    },
+    {
+      "line": 16208,
+      "end_line": 16209,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": false,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": true,
+      "recommended_action": "replace pass-only handler with logged UI-chrome suppressed exception",
+      "context": [
+        {
+          "line": 16200,
+          "text": "                    w.configure(bg=hp['bg'] if attr != 'mode_switch_frame' else hp['panel'])"
+        },
+        {
+          "line": 16201,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16202,
+          "text": "                pass"
+        },
+        {
+          "line": 16203,
+          "text": "        for attr in ('header_title_label', 'header_view_title'):"
+        },
+        {
+          "line": 16204,
+          "text": "            try:"
+        },
+        {
+          "line": 16205,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16206,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16207,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_title_label' else hp['panel'], fg=hp['fg'])"
+        },
+        {
+          "line": 16208,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16209,
+          "text": "                pass"
+        },
+        {
+          "line": 16210,
+          "text": "        for attr in ('header_subtitle_label', 'mode_status_label'):"
+        },
+        {
+          "line": 16211,
+          "text": "            try:"
+        },
+        {
+          "line": 16212,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16213,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16214,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_subtitle_label' else hp['panel'], fg=hp['muted'])"
+        },
+        {
+          "line": 16215,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16216,
+          "text": "                pass"
+        }
+      ]
+    }
+  ],
+  "review_only_modern_ui_sites": [
+    {
+      "line": 15930,
+      "end_line": 15931,
+      "scope": "App._rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 15922,
+          "text": "                bg=p.get('panel', '#ffffff'),"
+        },
+        {
+          "line": 15923,
+          "text": "                fg=p.get('fg', '#1a1a1a'),"
+        },
+        {
+          "line": 15924,
+          "text": "                font=('Segoe UI' if os.name == 'nt' else 'TkDefaultFont', 15, 'bold'),"
+        },
+        {
+          "line": 15925,
+          "text": "                padx=8,"
+        },
+        {
+          "line": 15926,
+          "text": "                pady=4,"
+        },
+        {
+          "line": 15927,
+          "text": "            )"
+        },
+        {
+          "line": 15928,
+          "text": "            title.pack(fill='x', pady=(0, 2))"
+        },
+        {
+          "line": 15929,
+          "text": "            self._side_nav_labels.append(title)"
+        },
+        {
+          "line": 15930,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15931,
+          "text": "            pass"
+        },
+        {
+          "line": 15932,
+          "text": ""
+        },
+        {
+          "line": 15933,
+          "text": "        try:"
+        },
+        {
+          "line": 15934,
+          "text": "            subtitle = tk.Label("
+        },
+        {
+          "line": 15935,
+          "text": "                frame,"
+        },
+        {
+          "line": 15936,
+          "text": "                text='PostgreSQL Edition',"
+        },
+        {
+          "line": 15937,
+          "text": "                anchor='w',"
+        },
+        {
+          "line": 15938,
+          "text": "                bg=p.get('panel', '#ffffff'),"
+        }
+      ]
+    },
+    {
+      "line": 16143,
+      "end_line": 16144,
+      "scope": "App._set_mode",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 16135,
+          "text": "        \"\"\"Fast switch between Regular and 7x7 from the modern segmented control.\"\"\""
+        },
+        {
+          "line": 16136,
+          "text": "        try:"
+        },
+        {
+          "line": 16137,
+          "text": "            mode = '7x7' if str(mode or '').lower().replace(' ', '') in ('7x7', '7×7') else 'Regular'"
+        },
+        {
+          "line": 16138,
+          "text": "            if getattr(self, 'mode_var', None) is not None:"
+        },
+        {
+          "line": 16139,
+          "text": "                if (self.mode_var.get() or '') == mode:"
+        },
+        {
+          "line": 16140,
+          "text": "                    self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16141,
+          "text": "                    return"
+        },
+        {
+          "line": 16142,
+          "text": "                self.mode_var.set(mode)"
+        },
+        {
+          "line": 16143,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16144,
+          "text": "            pass"
+        },
+        {
+          "line": 16145,
+          "text": "        try:"
+        },
+        {
+          "line": 16146,
+          "text": "            self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16147,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16148,
+          "text": "            pass"
+        },
+        {
+          "line": 16149,
+          "text": "        try:"
+        },
+        {
+          "line": 16150,
+          "text": "            self._on_mode_change()"
+        },
+        {
+          "line": 16151,
+          "text": "        except Exception as e:"
+        }
+      ]
+    },
+    {
+      "line": 16154,
+      "end_line": 16155,
+      "scope": "App._set_mode",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 16146,
+          "text": "            self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16147,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16148,
+          "text": "            pass"
+        },
+        {
+          "line": 16149,
+          "text": "        try:"
+        },
+        {
+          "line": 16150,
+          "text": "            self._on_mode_change()"
+        },
+        {
+          "line": 16151,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 16152,
+          "text": "            try:"
+        },
+        {
+          "line": 16153,
+          "text": "                _log_suppressed_once('modern_mode_switch', 'modern mode switch failed', e)"
+        },
+        {
+          "line": 16154,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16155,
+          "text": "                pass"
+        },
+        {
+          "line": 16156,
+          "text": ""
+        },
+        {
+          "line": 16157,
+          "text": "    def _refresh_mode_toggle(self):"
+        },
+        {
+          "line": 16158,
+          "text": "        \"\"\"Update the Regular/7x7 segmented buttons after a mode change or theme change.\"\"\""
+        },
+        {
+          "line": 16159,
+          "text": "        hp = self._header_palette()"
+        },
+        {
+          "line": 16160,
+          "text": "        try:"
+        },
+        {
+          "line": 16161,
+          "text": "            cur = '7x7' if self._mode_filter() == '7x7' else 'Regular'"
+        },
+        {
+          "line": 16162,
+          "text": "        except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 16215,
+      "end_line": 16216,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 16207,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_title_label' else hp['panel'], fg=hp['fg'])"
+        },
+        {
+          "line": 16208,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16209,
+          "text": "                pass"
+        },
+        {
+          "line": 16210,
+          "text": "        for attr in ('header_subtitle_label', 'mode_status_label'):"
+        },
+        {
+          "line": 16211,
+          "text": "            try:"
+        },
+        {
+          "line": 16212,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16213,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16214,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_subtitle_label' else hp['panel'], fg=hp['muted'])"
+        },
+        {
+          "line": 16215,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16216,
+          "text": "                pass"
+        },
+        {
+          "line": 16217,
+          "text": "        try:"
+        },
+        {
+          "line": 16218,
+          "text": "            if getattr(self, 'pg_status_label', None) is not None:"
+        },
+        {
+          "line": 16219,
+          "text": "                self.pg_status_label.configure(bg=hp['chip'], fg=hp['accent2'])"
+        },
+        {
+          "line": 16220,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16221,
+          "text": "            pass"
+        },
+        {
+          "line": 16222,
+          "text": "        try:"
+        },
+        {
+          "line": 16223,
+          "text": "            if getattr(self, 'theme_btn', None) is not None:"
+        }
+      ]
+    },
+    {
+      "line": 16220,
+      "end_line": 16221,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 16212,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16213,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16214,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_subtitle_label' else hp['panel'], fg=hp['muted'])"
+        },
+        {
+          "line": 16215,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16216,
+          "text": "                pass"
+        },
+        {
+          "line": 16217,
+          "text": "        try:"
+        },
+        {
+          "line": 16218,
+          "text": "            if getattr(self, 'pg_status_label', None) is not None:"
+        },
+        {
+          "line": 16219,
+          "text": "                self.pg_status_label.configure(bg=hp['chip'], fg=hp['accent2'])"
+        },
+        {
+          "line": 16220,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16221,
+          "text": "            pass"
+        },
+        {
+          "line": 16222,
+          "text": "        try:"
+        },
+        {
+          "line": 16223,
+          "text": "            if getattr(self, 'theme_btn', None) is not None:"
+        },
+        {
+          "line": 16224,
+          "text": "                self.theme_btn.configure(text=self._theme_toggle_text())"
+        },
+        {
+          "line": 16225,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16226,
+          "text": "            pass"
+        },
+        {
+          "line": 16227,
+          "text": "        try:"
+        },
+        {
+          "line": 16228,
+          "text": "            self._refresh_mode_toggle()"
+        }
+      ]
+    },
+    {
+      "line": 16225,
+      "end_line": 16226,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 16217,
+          "text": "        try:"
+        },
+        {
+          "line": 16218,
+          "text": "            if getattr(self, 'pg_status_label', None) is not None:"
+        },
+        {
+          "line": 16219,
+          "text": "                self.pg_status_label.configure(bg=hp['chip'], fg=hp['accent2'])"
+        },
+        {
+          "line": 16220,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16221,
+          "text": "            pass"
+        },
+        {
+          "line": 16222,
+          "text": "        try:"
+        },
+        {
+          "line": 16223,
+          "text": "            if getattr(self, 'theme_btn', None) is not None:"
+        },
+        {
+          "line": 16224,
+          "text": "                self.theme_btn.configure(text=self._theme_toggle_text())"
+        },
+        {
+          "line": 16225,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16226,
+          "text": "            pass"
+        },
+        {
+          "line": 16227,
+          "text": "        try:"
+        },
+        {
+          "line": 16228,
+          "text": "            self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16229,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16230,
+          "text": "            pass"
+        },
+        {
+          "line": 16231,
+          "text": ""
+        },
+        {
+          "line": 16232,
+          "text": "    def _build_header(self):"
+        },
+        {
+          "line": 16233,
+          "text": "        \"\"\"Modern top header: app identity + fast Regular/7x7 switch + app actions.\"\"\""
+        }
+      ]
+    },
+    {
+      "line": 16229,
+      "end_line": 16230,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 16221,
+          "text": "            pass"
+        },
+        {
+          "line": 16222,
+          "text": "        try:"
+        },
+        {
+          "line": 16223,
+          "text": "            if getattr(self, 'theme_btn', None) is not None:"
+        },
+        {
+          "line": 16224,
+          "text": "                self.theme_btn.configure(text=self._theme_toggle_text())"
+        },
+        {
+          "line": 16225,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16226,
+          "text": "            pass"
+        },
+        {
+          "line": 16227,
+          "text": "        try:"
+        },
+        {
+          "line": 16228,
+          "text": "            self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16229,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16230,
+          "text": "            pass"
+        },
+        {
+          "line": 16231,
+          "text": ""
+        },
+        {
+          "line": 16232,
+          "text": "    def _build_header(self):"
+        },
+        {
+          "line": 16233,
+          "text": "        \"\"\"Modern top header: app identity + fast Regular/7x7 switch + app actions.\"\"\""
+        },
+        {
+          "line": 16234,
+          "text": "        hp = self._header_palette()"
+        },
+        {
+          "line": 16235,
+          "text": "        family = 'Segoe UI' if os.name == 'nt' else 'TkDefaultFont'"
+        },
+        {
+          "line": 16236,
+          "text": ""
+        },
+        {
+          "line": 16237,
+          "text": "        top = tk.Frame(self.root, bg=hp['bg'], bd=0, highlightthickness=0)"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Read-only plan only; no app source changes are made.",
+    "Review selected_sites before creating any cleanup tool.",
+    "Only modern sidebar/header/theme UI chrome handlers should be considered.",
+    "Do not touch reports, PDFs, payments, balances, 7x7, renewals, collectors, backups, database migrations, cash-control, or report math."
+  ]
+}

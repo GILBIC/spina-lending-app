@@ -1,0 +1,272 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48494,
+  "target_names": [
+    "import_missing_clients_from_transactions",
+    "print_full_daily_ledger",
+    "import_clients_from_excel",
+    "export_clients_template",
+    "export_range_template",
+    "_app_export_clients_template",
+    "_app_import_clients_from_excel"
+  ],
+  "definitions": [
+    {
+      "class": "LoanDB",
+      "function": "import_missing_clients_from_transactions",
+      "start_line": 8336,
+      "end_line": 8422,
+      "line_count": 87
+    },
+    {
+      "class": "",
+      "function": "export_range_template",
+      "start_line": 26667,
+      "end_line": 26845,
+      "line_count": 179
+    },
+    {
+      "class": "",
+      "function": "_app_export_clients_template",
+      "start_line": 30609,
+      "end_line": 30633,
+      "line_count": 25
+    },
+    {
+      "class": "",
+      "function": "_app_import_clients_from_excel",
+      "start_line": 30635,
+      "end_line": 30748,
+      "line_count": 114
+    },
+    {
+      "class": "",
+      "function": "print_full_daily_ledger",
+      "start_line": 31809,
+      "end_line": 35031,
+      "line_count": 3223
+    }
+  ],
+  "references": {
+    "import_missing_clients_from_transactions": [
+      {
+        "line": 8336,
+        "kind": "definition",
+        "inside_target_definition": true,
+        "protected_context": false,
+        "text": "def import_missing_clients_from_transactions(self):"
+      },
+      {
+        "line": 24877,
+        "kind": "attribute_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "n = self.db.import_missing_clients_from_transactions()"
+      },
+      {
+        "line": 30752,
+        "kind": "attribute_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "n = self.db.import_missing_clients_from_transactions()"
+      }
+    ],
+    "print_full_daily_ledger": [
+      {
+        "line": 21671,
+        "kind": "name_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "Daily Collection Ledger layout as `print_full_daily_ledger`, but ONLY"
+      },
+      {
+        "line": 21676,
+        "kind": "name_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "- Sets temporary flags consumed by print_full_daily_ledger, then cleans them up."
+      },
+      {
+        "line": 21858,
+        "kind": "attribute_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "self.print_full_daily_ledger()"
+      },
+      {
+        "line": 21881,
+        "kind": "definition",
+        "inside_target_definition": false,
+        "protected_context": true,
+        "text": "def print_full_daily_ledger(self):"
+      },
+      {
+        "line": 21911,
+        "kind": "name_reference",
+        "inside_target_definition": false,
+        "protected_context": true,
+        "text": "_log_exc(\"print_full_daily_ledger:missing_reportlab\", e)"
+      },
+      {
+        "line": 31610,
+        "kind": "name_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "Daily Collection Ledger layout as `print_full_daily_ledger`, but ONLY"
+      },
+      {
+        "line": 31615,
+        "kind": "name_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "- Sets temporary flags consumed by print_full_daily_ledger, then cleans them up."
+      },
+      {
+        "line": 31784,
+        "kind": "attribute_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "self.print_full_daily_ledger()"
+      },
+      {
+        "line": 31809,
+        "kind": "definition",
+        "inside_target_definition": true,
+        "protected_context": false,
+        "text": "def print_full_daily_ledger(self):"
+      },
+      {
+        "line": 35171,
+        "kind": "name_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "if \"print_full_daily_ledger\" in globals():"
+      },
+      {
+        "line": 35172,
+        "kind": "attribute_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "App.print_full_daily_ledger = globals()[\"print_full_daily_ledger\"]"
+      },
+      {
+        "line": 40784,
+        "kind": "attribute_reference",
+        "inside_target_definition": false,
+        "protected_context": true,
+        "text": "self.print_full_daily_ledger()"
+      }
+    ],
+    "import_clients_from_excel": [
+      {
+        "line": 24999,
+        "kind": "definition",
+        "inside_target_definition": false,
+        "protected_context": true,
+        "text": "def import_clients_from_excel(self):"
+      },
+      {
+        "line": 30733,
+        "kind": "name_reference",
+        "inside_target_definition": true,
+        "protected_context": true,
+        "text": "_log_exc(f\"import_clients_from_excel.row_{row_number}\", e)"
+      },
+      {
+        "line": 31504,
+        "kind": "name_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "setattr(App, 'import_clients_from_excel', _app_import_clients_from_excel)"
+      }
+    ],
+    "export_clients_template": [
+      {
+        "line": 25823,
+        "kind": "definition",
+        "inside_target_definition": false,
+        "protected_context": true,
+        "text": "def export_clients_template(self):"
+      },
+      {
+        "line": 31503,
+        "kind": "name_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "setattr(App, 'export_clients_template', _app_export_clients_template)"
+      }
+    ],
+    "export_range_template": [
+      {
+        "line": 25859,
+        "kind": "definition",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "def export_range_template(self):"
+      },
+      {
+        "line": 26667,
+        "kind": "definition",
+        "inside_target_definition": true,
+        "protected_context": false,
+        "text": "def export_range_template(self):"
+      },
+      {
+        "line": 31489,
+        "kind": "name_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "if 'export_range_template' in globals():"
+      },
+      {
+        "line": 31490,
+        "kind": "name_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "setattr(App, 'export_range_template', export_range_template)"
+      }
+    ],
+    "_app_export_clients_template": [
+      {
+        "line": 30609,
+        "kind": "definition",
+        "inside_target_definition": true,
+        "protected_context": false,
+        "text": "def _app_export_clients_template(self):"
+      },
+      {
+        "line": 31503,
+        "kind": "name_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "setattr(App, 'export_clients_template', _app_export_clients_template)"
+      }
+    ],
+    "_app_import_clients_from_excel": [
+      {
+        "line": 30635,
+        "kind": "definition",
+        "inside_target_definition": true,
+        "protected_context": false,
+        "text": "def _app_import_clients_from_excel(self):"
+      },
+      {
+        "line": 31504,
+        "kind": "name_reference",
+        "inside_target_definition": false,
+        "protected_context": false,
+        "text": "setattr(App, 'import_clients_from_excel', _app_import_clients_from_excel)"
+      }
+    ]
+  },
+  "recommendations": [
+    "import_missing_clients_from_transactions: REVIEW; definitions exist with non-command external references.",
+    "print_full_daily_ledger: KEEP for now; external references touch protected context.",
+    "import_clients_from_excel: no definition found; nothing to remove for this name.",
+    "export_clients_template: no definition found; nothing to remove for this name.",
+    "export_range_template: REVIEW; definitions exist with non-command external references.",
+    "_app_export_clients_template: REVIEW; definitions exist with non-command external references.",
+    "_app_import_clients_from_excel: REVIEW; definitions exist with non-command external references.",
+    "Do not delete protected report/payment/collector functions unless a separate manual review proves they are unused."
+  ]
+}

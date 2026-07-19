@@ -1,0 +1,3981 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48520,
+  "context_radius": 8,
+  "pass_only_exception_count": 909,
+  "login_pass_only_count": 45,
+  "protected_login_count": 16,
+  "non_protected_login_count": 29,
+  "selected_cleanup_candidate_count": 0,
+  "group_counts": {
+    "login_dialog_ui_review": 6,
+    "login_sensitive_auth_review": 23,
+    "protected_login_review": 16
+  },
+  "non_protected_group_counts": {
+    "login_dialog_ui_review": 6,
+    "login_sensitive_auth_review": 23
+  },
+  "safety": {
+    "read_only": true,
+    "app_source_modified": false,
+    "cleanup_approved": false,
+    "protected_words_used": [
+      "7x7",
+      "7\u00d77",
+      "apply_role_access",
+      "backup",
+      "balance",
+      "cash control",
+      "collector",
+      "database",
+      "interest",
+      "ledger",
+      "migration",
+      "payment",
+      "payroll",
+      "pdf",
+      "pg_",
+      "postgres",
+      "principal",
+      "receipt",
+      "renew",
+      "report",
+      "restore",
+      "role_access",
+      "route",
+      "statement",
+      "transaction"
+    ],
+    "note": "This report only groups login/auth/dialog pass-only handlers. It does not approve cleanup."
+  },
+  "group_samples": {
+    "login_dialog_ui_review": [
+      {
+        "line": 48133,
+        "end_line": 48134,
+        "scope": "_spina_v32_make_users_account_based",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": false,
+        "dialog_like_context": true,
+        "group": "login_dialog_ui_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48125,
+            "text": "                changed = True"
+          },
+          {
+            "line": 48126,
+            "text": ""
+          },
+          {
+            "line": 48127,
+            "text": "            users[username] = rec"
+          },
+          {
+            "line": 48128,
+            "text": ""
+          },
+          {
+            "line": 48129,
+            "text": "        db[\"users\"] = users"
+          },
+          {
+            "line": 48130,
+            "text": "        if changed:"
+          },
+          {
+            "line": 48131,
+            "text": "            try:"
+          },
+          {
+            "line": 48132,
+            "text": "                self._save_users_db(db)"
+          },
+          {
+            "line": 48133,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 48134,
+            "text": "                pass"
+          },
+          {
+            "line": 48135,
+            "text": "        return db"
+          },
+          {
+            "line": 48136,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48137,
+            "text": "        try:"
+          },
+          {
+            "line": 48138,
+            "text": "            orig = getattr(App, \"_spina_v32_orig_load_users_db\", None)"
+          },
+          {
+            "line": 48139,
+            "text": "            if callable(orig):"
+          },
+          {
+            "line": 48140,
+            "text": "                return orig(self)"
+          },
+          {
+            "line": 48141,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48142,
+            "text": "            pass"
+          }
+        ]
+      },
+      {
+        "line": 48175,
+        "end_line": 48176,
+        "scope": "_spina_v32_prompt_login",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": false,
+        "dialog_like_context": true,
+        "group": "login_dialog_ui_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48167,
+            "text": ""
+          },
+          {
+            "line": 48168,
+            "text": "    dlg = tk.Toplevel(self.root)"
+          },
+          {
+            "line": 48169,
+            "text": "    dlg.title(\"Account Sign In\")"
+          },
+          {
+            "line": 48170,
+            "text": "    dlg.configure(bg=c[\"bg\"])"
+          },
+          {
+            "line": 48171,
+            "text": "    dlg.resizable(False, False)"
+          },
+          {
+            "line": 48172,
+            "text": ""
+          },
+          {
+            "line": 48173,
+            "text": "    try:"
+          },
+          {
+            "line": 48174,
+            "text": "        dlg.transient(self.root)"
+          },
+          {
+            "line": 48175,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48176,
+            "text": "        pass"
+          },
+          {
+            "line": 48177,
+            "text": ""
+          },
+          {
+            "line": 48178,
+            "text": "    # Main shell"
+          },
+          {
+            "line": 48179,
+            "text": "    shell = tk.Frame(dlg, bg=c[\"bg\"], padx=18, pady=18)"
+          },
+          {
+            "line": 48180,
+            "text": "    shell.pack(fill=\"both\", expand=True)"
+          },
+          {
+            "line": 48181,
+            "text": ""
+          },
+          {
+            "line": 48182,
+            "text": "    card = tk.Frame(shell, bg=c[\"panel\"], highlightbackground=c[\"border\"], highlightthickness=1, bd=0)"
+          },
+          {
+            "line": 48183,
+            "text": "    card.pack(fill=\"both\", expand=True)"
+          },
+          {
+            "line": 48184,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 48332,
+        "end_line": 48333,
+        "scope": "_spina_v32_prompt_login",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": false,
+        "dialog_like_context": true,
+        "group": "login_dialog_ui_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48324,
+            "text": "        font=(family, 8),"
+          },
+          {
+            "line": 48325,
+            "text": "        anchor=\"w\","
+          },
+          {
+            "line": 48326,
+            "text": "        justify=\"left\","
+          },
+          {
+            "line": 48327,
+            "text": "        wraplength=360,"
+          },
+          {
+            "line": 48328,
+            "text": "    ).pack(fill=\"x\", padx=28, pady=(16, 0))"
+          },
+          {
+            "line": 48329,
+            "text": ""
+          },
+          {
+            "line": 48330,
+            "text": "    try:"
+          },
+          {
+            "line": 48331,
+            "text": "        account_var.trace_add(\"write\", _refresh_account_info)"
+          },
+          {
+            "line": 48332,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48333,
+            "text": "        pass"
+          },
+          {
+            "line": 48334,
+            "text": "    _refresh_account_info()"
+          },
+          {
+            "line": 48335,
+            "text": ""
+          },
+          {
+            "line": 48336,
+            "text": "    def _enter(_=None):"
+          },
+          {
+            "line": 48337,
+            "text": "        _ok()"
+          },
+          {
+            "line": 48338,
+            "text": ""
+          },
+          {
+            "line": 48339,
+            "text": "    try:"
+          },
+          {
+            "line": 48340,
+            "text": "        pw_entry.bind(\"<Return>\", _enter)"
+          },
+          {
+            "line": 48341,
+            "text": "        account_cb.bind(\"<Return>\", _enter)"
+          }
+        ]
+      },
+      {
+        "line": 48342,
+        "end_line": 48343,
+        "scope": "_spina_v32_prompt_login",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": false,
+        "dialog_like_context": true,
+        "group": "login_dialog_ui_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48334,
+            "text": "    _refresh_account_info()"
+          },
+          {
+            "line": 48335,
+            "text": ""
+          },
+          {
+            "line": 48336,
+            "text": "    def _enter(_=None):"
+          },
+          {
+            "line": 48337,
+            "text": "        _ok()"
+          },
+          {
+            "line": 48338,
+            "text": ""
+          },
+          {
+            "line": 48339,
+            "text": "    try:"
+          },
+          {
+            "line": 48340,
+            "text": "        pw_entry.bind(\"<Return>\", _enter)"
+          },
+          {
+            "line": 48341,
+            "text": "        account_cb.bind(\"<Return>\", _enter)"
+          },
+          {
+            "line": 48342,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48343,
+            "text": "        pass"
+          },
+          {
+            "line": 48344,
+            "text": ""
+          },
+          {
+            "line": 48345,
+            "text": "    try:"
+          },
+          {
+            "line": 48346,
+            "text": "        dlg.grab_set()"
+          },
+          {
+            "line": 48347,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48348,
+            "text": "        pass"
+          },
+          {
+            "line": 48349,
+            "text": ""
+          },
+          {
+            "line": 48350,
+            "text": "    try:"
+          },
+          {
+            "line": 48351,
+            "text": "        dlg.update_idletasks()"
+          }
+        ]
+      },
+      {
+        "line": 48347,
+        "end_line": 48348,
+        "scope": "_spina_v32_prompt_login",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": false,
+        "dialog_like_context": true,
+        "group": "login_dialog_ui_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48339,
+            "text": "    try:"
+          },
+          {
+            "line": 48340,
+            "text": "        pw_entry.bind(\"<Return>\", _enter)"
+          },
+          {
+            "line": 48341,
+            "text": "        account_cb.bind(\"<Return>\", _enter)"
+          },
+          {
+            "line": 48342,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48343,
+            "text": "        pass"
+          },
+          {
+            "line": 48344,
+            "text": ""
+          },
+          {
+            "line": 48345,
+            "text": "    try:"
+          },
+          {
+            "line": 48346,
+            "text": "        dlg.grab_set()"
+          },
+          {
+            "line": 48347,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48348,
+            "text": "        pass"
+          },
+          {
+            "line": 48349,
+            "text": ""
+          },
+          {
+            "line": 48350,
+            "text": "    try:"
+          },
+          {
+            "line": 48351,
+            "text": "        dlg.update_idletasks()"
+          },
+          {
+            "line": 48352,
+            "text": "        w, h = 735, 455"
+          },
+          {
+            "line": 48353,
+            "text": "        sw, sh = dlg.winfo_screenwidth(), dlg.winfo_screenheight()"
+          },
+          {
+            "line": 48354,
+            "text": "        try:"
+          },
+          {
+            "line": 48355,
+            "text": "            rx, ry = self.root.winfo_rootx(), self.root.winfo_rooty()"
+          },
+          {
+            "line": 48356,
+            "text": "            rw, rh = self.root.winfo_width(), self.root.winfo_height()"
+          }
+        ]
+      },
+      {
+        "line": 48481,
+        "end_line": 48482,
+        "scope": "_spina_v32_build_header",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": false,
+        "dialog_like_context": true,
+        "group": "login_dialog_ui_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48473,
+            "text": "                res = _spina_v32_orig_build_header(self, *args, **kwargs)"
+          },
+          {
+            "line": 48474,
+            "text": "                try:"
+          },
+          {
+            "line": 48475,
+            "text": "                    self._refresh_user_header()"
+          },
+          {
+            "line": 48476,
+            "text": "                except Exception:"
+          },
+          {
+            "line": 48477,
+            "text": "                    pass"
+          },
+          {
+            "line": 48478,
+            "text": "                try:"
+          },
+          {
+            "line": 48479,
+            "text": "                    if getattr(self, \"switch_account_btn\", None) is not None:"
+          },
+          {
+            "line": 48480,
+            "text": "                        self.switch_account_btn.configure(text=\"Account\")"
+          },
+          {
+            "line": 48481,
+            "text": "                except Exception:"
+          },
+          {
+            "line": 48482,
+            "text": "                    pass"
+          },
+          {
+            "line": 48483,
+            "text": "                return res"
+          },
+          {
+            "line": 48484,
+            "text": "            App._build_header = _spina_v32_build_header"
+          },
+          {
+            "line": 48485,
+            "text": "except Exception as __spina_exc:"
+          },
+          {
+            "line": 48486,
+            "text": "    try:"
+          },
+          {
+            "line": 48487,
+            "text": "        _log_suppressed_once(\"v32_account_login_bind_failed\", \"v32 account login patch failed\", __spina_exc)"
+          },
+          {
+            "line": 48488,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48489,
+            "text": "        pass"
+          },
+          {
+            "line": 48490,
+            "text": "# --- END: v32 Modern Account-Based Login ---"
+          }
+        ]
+      }
+    ],
+    "login_sensitive_auth_review": [
+      {
+        "line": 16430,
+        "end_line": 16431,
+        "scope": "App._refresh_user_header",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 16422,
+            "text": "        try:"
+          },
+          {
+            "line": 16423,
+            "text": "            if getattr(self, 'user_role_label', None) is not None:"
+          },
+          {
+            "line": 16424,
+            "text": "                self.user_role_label.config(text=f\"{self.user_name} \u2022 {self.user_role}\")"
+          },
+          {
+            "line": 16425,
+            "text": "        except Exception as __spina_exc:"
+          },
+          {
+            "line": 16426,
+            "text": "            _log_suppressed_once('excpass_refresh_user_header', 'suppressed exception excpass_refresh_user_header', __spina_exc)"
+          },
+          {
+            "line": 16427,
+            "text": "            pass"
+          },
+          {
+            "line": 16428,
+            "text": "        try:"
+          },
+          {
+            "line": 16429,
+            "text": "            self._refresh_header_theme()"
+          },
+          {
+            "line": 16430,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 16431,
+            "text": "            pass"
+          },
+          {
+            "line": 16432,
+            "text": ""
+          },
+          {
+            "line": 16433,
+            "text": "    def switch_account(self):"
+          },
+          {
+            "line": 16434,
+            "text": "        old_user = getattr(self, 'user_name', '') or ''"
+          },
+          {
+            "line": 16435,
+            "text": "        old_role = getattr(self, 'user_role', '') or ''"
+          },
+          {
+            "line": 16436,
+            "text": "        try:"
+          },
+          {
+            "line": 16437,
+            "text": "            u, r = self._prompt_login(default_user=(self.user_name or 'admin'))"
+          },
+          {
+            "line": 16438,
+            "text": "        except Exception as e:"
+          },
+          {
+            "line": 16439,
+            "text": "            _log_exc('switch_account_login', e)"
+          }
+        ]
+      },
+      {
+        "line": 37801,
+        "end_line": 37802,
+        "scope": "_spina_refresh_dashboard",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": false,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 37793,
+            "text": "            pass"
+          },
+          {
+            "line": 37794,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 37795,
+            "text": "        try:"
+          },
+          {
+            "line": 37796,
+            "text": "            _log_exc('refresh_dashboard', e)"
+          },
+          {
+            "line": 37797,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37798,
+            "text": "            pass"
+          },
+          {
+            "line": 37799,
+            "text": "        try:"
+          },
+          {
+            "line": 37800,
+            "text": "            self.status_var.set('Dashboard refresh failed. See data/spina_app.log.')"
+          },
+          {
+            "line": 37801,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37802,
+            "text": "            pass"
+          },
+          {
+            "line": 37803,
+            "text": ""
+          },
+          {
+            "line": 37804,
+            "text": ""
+          },
+          {
+            "line": 37805,
+            "text": "def _spina_apply_dashboard_role(self):"
+          },
+          {
+            "line": 37806,
+            "text": "    try:"
+          },
+          {
+            "line": 37807,
+            "text": "        if not hasattr(self, 'nb') or not hasattr(self, 'tab_dashboard'):"
+          },
+          {
+            "line": 37808,
+            "text": "            return"
+          },
+          {
+            "line": 37809,
+            "text": "        role = (getattr(self, 'user_role', '') or 'Admin').strip()"
+          },
+          {
+            "line": 37810,
+            "text": "        if role == 'System':"
+          }
+        ]
+      },
+      {
+        "line": 37813,
+        "end_line": 37814,
+        "scope": "_spina_apply_dashboard_role",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": false,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 37805,
+            "text": "def _spina_apply_dashboard_role(self):"
+          },
+          {
+            "line": 37806,
+            "text": "    try:"
+          },
+          {
+            "line": 37807,
+            "text": "        if not hasattr(self, 'nb') or not hasattr(self, 'tab_dashboard'):"
+          },
+          {
+            "line": 37808,
+            "text": "            return"
+          },
+          {
+            "line": 37809,
+            "text": "        role = (getattr(self, 'user_role', '') or 'Admin').strip()"
+          },
+          {
+            "line": 37810,
+            "text": "        if role == 'System':"
+          },
+          {
+            "line": 37811,
+            "text": "            try:"
+          },
+          {
+            "line": 37812,
+            "text": "                self.nb.hide(self.tab_dashboard)"
+          },
+          {
+            "line": 37813,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 37814,
+            "text": "                pass"
+          },
+          {
+            "line": 37815,
+            "text": "            return"
+          },
+          {
+            "line": 37816,
+            "text": "        try:"
+          },
+          {
+            "line": 37817,
+            "text": "            tabs = list(self.nb.tabs())"
+          },
+          {
+            "line": 37818,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 37819,
+            "text": "            tabs = []"
+          },
+          {
+            "line": 37820,
+            "text": "        if str(self.tab_dashboard) not in tabs:"
+          },
+          {
+            "line": 37821,
+            "text": "            try:"
+          },
+          {
+            "line": 37822,
+            "text": "                self.nb.insert(1, self.tab_dashboard, text='Dashboard')"
+          }
+        ]
+      },
+      {
+        "line": 41540,
+        "end_line": 41541,
+        "scope": "_spina_v13_rebuild_side_nav",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": false,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 41532,
+            "text": "                    pass"
+          },
+          {
+            "line": 41533,
+            "text": ""
+          },
+          {
+            "line": 41534,
+            "text": "        try:"
+          },
+          {
+            "line": 41535,
+            "text": "            bottom = tk.Frame(frame, bg=panel)"
+          },
+          {
+            "line": 41536,
+            "text": "            bottom.pack(side='bottom', fill='x', pady=(12, 0))"
+          },
+          {
+            "line": 41537,
+            "text": "            try:"
+          },
+          {
+            "line": 41538,
+            "text": "                sep2 = tk.Frame(bottom, bg=border, height=1)"
+          },
+          {
+            "line": 41539,
+            "text": "                sep2.pack(fill='x', padx=8, pady=(0, 8))"
+          },
+          {
+            "line": 41540,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 41541,
+            "text": "                pass"
+          },
+          {
+            "line": 41542,
+            "text": "            role_text = f\"{getattr(self, 'user_name', '')} \u2022 {getattr(self, 'user_role', '')}\".strip(' \u2022')"
+          },
+          {
+            "line": 41543,
+            "text": "            lbl = tk.Label(bottom, text=role_text, anchor='w', bg=panel, fg=muted,"
+          },
+          {
+            "line": 41544,
+            "text": "                           font=(family, 8), padx=12, pady=4, wraplength=175)"
+          },
+          {
+            "line": 41545,
+            "text": "            lbl.pack(fill='x')"
+          },
+          {
+            "line": 41546,
+            "text": "            self._side_nav_labels.append(lbl)"
+          },
+          {
+            "line": 41547,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 41548,
+            "text": "            pass"
+          },
+          {
+            "line": 41549,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 41547,
+        "end_line": 41548,
+        "scope": "_spina_v13_rebuild_side_nav",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 41539,
+            "text": "                sep2.pack(fill='x', padx=8, pady=(0, 8))"
+          },
+          {
+            "line": 41540,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 41541,
+            "text": "                pass"
+          },
+          {
+            "line": 41542,
+            "text": "            role_text = f\"{getattr(self, 'user_name', '')} \u2022 {getattr(self, 'user_role', '')}\".strip(' \u2022')"
+          },
+          {
+            "line": 41543,
+            "text": "            lbl = tk.Label(bottom, text=role_text, anchor='w', bg=panel, fg=muted,"
+          },
+          {
+            "line": 41544,
+            "text": "                           font=(family, 8), padx=12, pady=4, wraplength=175)"
+          },
+          {
+            "line": 41545,
+            "text": "            lbl.pack(fill='x')"
+          },
+          {
+            "line": 41546,
+            "text": "            self._side_nav_labels.append(lbl)"
+          },
+          {
+            "line": 41547,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 41548,
+            "text": "            pass"
+          },
+          {
+            "line": 41549,
+            "text": ""
+          },
+          {
+            "line": 41550,
+            "text": "        try:"
+          },
+          {
+            "line": 41551,
+            "text": "            self._refresh_side_nav_selection()"
+          },
+          {
+            "line": 41552,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 41553,
+            "text": "            pass"
+          },
+          {
+            "line": 41554,
+            "text": ""
+          },
+          {
+            "line": 41555,
+            "text": "    def _spina_v13_refresh_side_nav_selection(self):"
+          },
+          {
+            "line": 41556,
+            "text": "        buttons = getattr(self, '_side_nav_buttons', {}) or {}"
+          }
+        ]
+      },
+      {
+        "line": 48032,
+        "end_line": 48033,
+        "scope": "_spina_v32_account_display_name",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48024,
+            "text": "def _spina_v32_account_display_name(self, username):"
+          },
+          {
+            "line": 48025,
+            "text": "    username = str(username or \"\").strip()"
+          },
+          {
+            "line": 48026,
+            "text": "    try:"
+          },
+          {
+            "line": 48027,
+            "text": "        db = self._load_users_db()"
+          },
+          {
+            "line": 48028,
+            "text": "        rec = (db.get(\"users\") or {}).get(username) or {}"
+          },
+          {
+            "line": 48029,
+            "text": "        display = str(rec.get(\"display_name\") or rec.get(\"account_name\") or rec.get(\"label\") or \"\").strip()"
+          },
+          {
+            "line": 48030,
+            "text": "        if display:"
+          },
+          {
+            "line": 48031,
+            "text": "            return display"
+          },
+          {
+            "line": 48032,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48033,
+            "text": "        pass"
+          },
+          {
+            "line": 48034,
+            "text": "    return _spina_v32_account_default_name(username)"
+          },
+          {
+            "line": 48035,
+            "text": ""
+          },
+          {
+            "line": 48036,
+            "text": ""
+          },
+          {
+            "line": 48037,
+            "text": "def _spina_v32_account_role(self, username):"
+          },
+          {
+            "line": 48038,
+            "text": "    username = str(username or \"\").strip()"
+          },
+          {
+            "line": 48039,
+            "text": "    try:"
+          },
+          {
+            "line": 48040,
+            "text": "        db = self._load_users_db()"
+          },
+          {
+            "line": 48041,
+            "text": "        rec = (db.get(\"users\") or {}).get(username) or {}"
+          }
+        ]
+      },
+      {
+        "line": 48045,
+        "end_line": 48046,
+        "scope": "_spina_v32_account_role",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48037,
+            "text": "def _spina_v32_account_role(self, username):"
+          },
+          {
+            "line": 48038,
+            "text": "    username = str(username or \"\").strip()"
+          },
+          {
+            "line": 48039,
+            "text": "    try:"
+          },
+          {
+            "line": 48040,
+            "text": "        db = self._load_users_db()"
+          },
+          {
+            "line": 48041,
+            "text": "        rec = (db.get(\"users\") or {}).get(username) or {}"
+          },
+          {
+            "line": 48042,
+            "text": "        r = str(rec.get(\"access_profile\") or rec.get(\"role\") or \"\").strip()"
+          },
+          {
+            "line": 48043,
+            "text": "        if r in (\"Admin\", \"Encoder\", \"Viewer\", \"System\"):"
+          },
+          {
+            "line": 48044,
+            "text": "            return r"
+          },
+          {
+            "line": 48045,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48046,
+            "text": "        pass"
+          },
+          {
+            "line": 48047,
+            "text": "    return \"Viewer\""
+          },
+          {
+            "line": 48048,
+            "text": ""
+          },
+          {
+            "line": 48049,
+            "text": ""
+          },
+          {
+            "line": 48050,
+            "text": "def _spina_v32_account_choices(self, users=None):"
+          },
+          {
+            "line": 48051,
+            "text": "    if not isinstance(users, dict):"
+          },
+          {
+            "line": 48052,
+            "text": "        try:"
+          },
+          {
+            "line": 48053,
+            "text": "            db = self._load_users_db()"
+          },
+          {
+            "line": 48054,
+            "text": "            users = db.get(\"users\") or {}"
+          }
+        ]
+      },
+      {
+        "line": 48141,
+        "end_line": 48142,
+        "scope": "_spina_v32_make_users_account_based",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48133,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 48134,
+            "text": "                pass"
+          },
+          {
+            "line": 48135,
+            "text": "        return db"
+          },
+          {
+            "line": 48136,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48137,
+            "text": "        try:"
+          },
+          {
+            "line": 48138,
+            "text": "            orig = getattr(App, \"_spina_v32_orig_load_users_db\", None)"
+          },
+          {
+            "line": 48139,
+            "text": "            if callable(orig):"
+          },
+          {
+            "line": 48140,
+            "text": "                return orig(self)"
+          },
+          {
+            "line": 48141,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48142,
+            "text": "            pass"
+          },
+          {
+            "line": 48143,
+            "text": "        return {\"users\": {}}"
+          },
+          {
+            "line": 48144,
+            "text": ""
+          },
+          {
+            "line": 48145,
+            "text": ""
+          },
+          {
+            "line": 48146,
+            "text": "def _spina_v32_prompt_login(self, default_user: str = \"admin\"):"
+          },
+          {
+            "line": 48147,
+            "text": "    \"\"\"Modern account-based login dialog. Returns (username, internal_access_profile).\"\"\""
+          },
+          {
+            "line": 48148,
+            "text": "    import tkinter as tk"
+          },
+          {
+            "line": 48149,
+            "text": "    from tkinter import ttk, messagebox"
+          },
+          {
+            "line": 48150,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 48241,
+        "end_line": 48242,
+        "scope": "_spina_v32_prompt_login._toggle_show",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48233,
+            "text": "    pw_var = tk.StringVar(value=\"\")"
+          },
+          {
+            "line": 48234,
+            "text": "    pw_entry = ttk.Entry(form, textvariable=pw_var, show=\"*\", width=34)"
+          },
+          {
+            "line": 48235,
+            "text": "    pw_entry.pack(fill=\"x\", pady=(4, 8), ipady=3)"
+          },
+          {
+            "line": 48236,
+            "text": ""
+          },
+          {
+            "line": 48237,
+            "text": "    show_var = tk.BooleanVar(value=False)"
+          },
+          {
+            "line": 48238,
+            "text": "    def _toggle_show():"
+          },
+          {
+            "line": 48239,
+            "text": "        try:"
+          },
+          {
+            "line": 48240,
+            "text": "            pw_entry.configure(show=\"\" if show_var.get() else \"*\")"
+          },
+          {
+            "line": 48241,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48242,
+            "text": "            pass"
+          },
+          {
+            "line": 48243,
+            "text": ""
+          },
+          {
+            "line": 48244,
+            "text": "    try:"
+          },
+          {
+            "line": 48245,
+            "text": "        ttk.Checkbutton(form, text=\"Show password\", variable=show_var, command=_toggle_show).pack(anchor=\"w\", pady=(0, 8))"
+          },
+          {
+            "line": 48246,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48247,
+            "text": "        pass"
+          },
+          {
+            "line": 48248,
+            "text": ""
+          },
+          {
+            "line": 48249,
+            "text": "    msg_var = tk.StringVar(value=\"\")"
+          },
+          {
+            "line": 48250,
+            "text": "    msg_lbl = tk.Label(form, textvariable=msg_var, bg=c[\"panel\"], fg=c[\"red\"], font=(family, 9, \"bold\"), anchor=\"w\", justify=\"left\", wraplength=360)"
+          }
+        ]
+      },
+      {
+        "line": 48246,
+        "end_line": 48247,
+        "scope": "_spina_v32_prompt_login",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48238,
+            "text": "    def _toggle_show():"
+          },
+          {
+            "line": 48239,
+            "text": "        try:"
+          },
+          {
+            "line": 48240,
+            "text": "            pw_entry.configure(show=\"\" if show_var.get() else \"*\")"
+          },
+          {
+            "line": 48241,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48242,
+            "text": "            pass"
+          },
+          {
+            "line": 48243,
+            "text": ""
+          },
+          {
+            "line": 48244,
+            "text": "    try:"
+          },
+          {
+            "line": 48245,
+            "text": "        ttk.Checkbutton(form, text=\"Show password\", variable=show_var, command=_toggle_show).pack(anchor=\"w\", pady=(0, 8))"
+          },
+          {
+            "line": 48246,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48247,
+            "text": "        pass"
+          },
+          {
+            "line": 48248,
+            "text": ""
+          },
+          {
+            "line": 48249,
+            "text": "    msg_var = tk.StringVar(value=\"\")"
+          },
+          {
+            "line": 48250,
+            "text": "    msg_lbl = tk.Label(form, textvariable=msg_var, bg=c[\"panel\"], fg=c[\"red\"], font=(family, 9, \"bold\"), anchor=\"w\", justify=\"left\", wraplength=360)"
+          },
+          {
+            "line": 48251,
+            "text": "    msg_lbl.pack(fill=\"x\", pady=(0, 8))"
+          },
+          {
+            "line": 48252,
+            "text": ""
+          },
+          {
+            "line": 48253,
+            "text": "    btns = tk.Frame(right, bg=c[\"panel\"])"
+          },
+          {
+            "line": 48254,
+            "text": "    btns.pack(fill=\"x\", padx=28, pady=(4, 0))"
+          },
+          {
+            "line": 48255,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 48284,
+        "end_line": 48285,
+        "scope": "_spina_v32_prompt_login._ok",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48276,
+            "text": "            return"
+          },
+          {
+            "line": 48277,
+            "text": ""
+          },
+          {
+            "line": 48278,
+            "text": "        role = self._verify_login(username, password)"
+          },
+          {
+            "line": 48279,
+            "text": "        if not role:"
+          },
+          {
+            "line": 48280,
+            "text": "            msg_var.set(\"Invalid account or password.\")"
+          },
+          {
+            "line": 48281,
+            "text": "            try:"
+          },
+          {
+            "line": 48282,
+            "text": "                pw_entry.focus_set()"
+          },
+          {
+            "line": 48283,
+            "text": "                pw_entry.selection_range(0, \"end\")"
+          },
+          {
+            "line": 48284,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 48285,
+            "text": "                pass"
+          },
+          {
+            "line": 48286,
+            "text": "            return"
+          },
+          {
+            "line": 48287,
+            "text": ""
+          },
+          {
+            "line": 48288,
+            "text": "        try:"
+          },
+          {
+            "line": 48289,
+            "text": "            if self._must_change_password(username, password):"
+          },
+          {
+            "line": 48290,
+            "text": "                if not self._force_change_password_dialog(username, old_password=password):"
+          },
+          {
+            "line": 48291,
+            "text": "                    msg_var.set(\"Password change required to continue.\")"
+          },
+          {
+            "line": 48292,
+            "text": "                    return"
+          },
+          {
+            "line": 48293,
+            "text": "        except Exception:"
+          }
+        ]
+      },
+      {
+        "line": 48296,
+        "end_line": 48297,
+        "scope": "_spina_v32_prompt_login._ok",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48288,
+            "text": "        try:"
+          },
+          {
+            "line": 48289,
+            "text": "            if self._must_change_password(username, password):"
+          },
+          {
+            "line": 48290,
+            "text": "                if not self._force_change_password_dialog(username, old_password=password):"
+          },
+          {
+            "line": 48291,
+            "text": "                    msg_var.set(\"Password change required to continue.\")"
+          },
+          {
+            "line": 48292,
+            "text": "                    return"
+          },
+          {
+            "line": 48293,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48294,
+            "text": "            try:"
+          },
+          {
+            "line": 48295,
+            "text": "                _log_exc(\"force_change_password\")"
+          },
+          {
+            "line": 48296,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 48297,
+            "text": "                pass"
+          },
+          {
+            "line": 48298,
+            "text": "            msg_var.set(\"Password change required, but the change dialog failed. See log.\")"
+          },
+          {
+            "line": 48299,
+            "text": "            return"
+          },
+          {
+            "line": 48300,
+            "text": ""
+          },
+          {
+            "line": 48301,
+            "text": "        result[\"user\"] = username"
+          },
+          {
+            "line": 48302,
+            "text": "        result[\"role\"] = role"
+          },
+          {
+            "line": 48303,
+            "text": "        try:"
+          },
+          {
+            "line": 48304,
+            "text": "            dlg.grab_release()"
+          },
+          {
+            "line": 48305,
+            "text": "        except Exception:"
+          }
+        ]
+      },
+      {
+        "line": 48305,
+        "end_line": 48306,
+        "scope": "_spina_v32_prompt_login._ok",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48297,
+            "text": "                pass"
+          },
+          {
+            "line": 48298,
+            "text": "            msg_var.set(\"Password change required, but the change dialog failed. See log.\")"
+          },
+          {
+            "line": 48299,
+            "text": "            return"
+          },
+          {
+            "line": 48300,
+            "text": ""
+          },
+          {
+            "line": 48301,
+            "text": "        result[\"user\"] = username"
+          },
+          {
+            "line": 48302,
+            "text": "        result[\"role\"] = role"
+          },
+          {
+            "line": 48303,
+            "text": "        try:"
+          },
+          {
+            "line": 48304,
+            "text": "            dlg.grab_release()"
+          },
+          {
+            "line": 48305,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48306,
+            "text": "            pass"
+          },
+          {
+            "line": 48307,
+            "text": "        dlg.destroy()"
+          },
+          {
+            "line": 48308,
+            "text": ""
+          },
+          {
+            "line": 48309,
+            "text": "    def _cancel():"
+          },
+          {
+            "line": 48310,
+            "text": "        try:"
+          },
+          {
+            "line": 48311,
+            "text": "            dlg.grab_release()"
+          },
+          {
+            "line": 48312,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48313,
+            "text": "            pass"
+          },
+          {
+            "line": 48314,
+            "text": "        dlg.destroy()"
+          }
+        ]
+      },
+      {
+        "line": 48312,
+        "end_line": 48313,
+        "scope": "_spina_v32_prompt_login._cancel",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48304,
+            "text": "            dlg.grab_release()"
+          },
+          {
+            "line": 48305,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48306,
+            "text": "            pass"
+          },
+          {
+            "line": 48307,
+            "text": "        dlg.destroy()"
+          },
+          {
+            "line": 48308,
+            "text": ""
+          },
+          {
+            "line": 48309,
+            "text": "    def _cancel():"
+          },
+          {
+            "line": 48310,
+            "text": "        try:"
+          },
+          {
+            "line": 48311,
+            "text": "            dlg.grab_release()"
+          },
+          {
+            "line": 48312,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48313,
+            "text": "            pass"
+          },
+          {
+            "line": 48314,
+            "text": "        dlg.destroy()"
+          },
+          {
+            "line": 48315,
+            "text": ""
+          },
+          {
+            "line": 48316,
+            "text": "    _spina_v32_login_button(btns, \"Sign In\", command=_ok, kind=\"primary\").pack(side=\"right\")"
+          },
+          {
+            "line": 48317,
+            "text": "    _spina_v32_login_button(btns, \"Cancel\", command=_cancel, kind=\"soft\").pack(side=\"right\", padx=(0, 8))"
+          },
+          {
+            "line": 48318,
+            "text": ""
+          },
+          {
+            "line": 48319,
+            "text": "    tk.Label("
+          },
+          {
+            "line": 48320,
+            "text": "        right,"
+          },
+          {
+            "line": 48321,
+            "text": "        text=\"Existing passwords are unchanged. Default accounts still require password change on first login.\","
+          }
+        ]
+      },
+      {
+        "line": 48365,
+        "end_line": 48366,
+        "scope": "_spina_v32_prompt_login",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48357,
+            "text": "            x = rx + (rw - w) // 2"
+          },
+          {
+            "line": 48358,
+            "text": "            y = ry + (rh - h) // 2"
+          },
+          {
+            "line": 48359,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48360,
+            "text": "            x = (sw - w) // 2"
+          },
+          {
+            "line": 48361,
+            "text": "            y = (sh - h) // 2"
+          },
+          {
+            "line": 48362,
+            "text": "        x = max(10, min(x, sw - w - 10))"
+          },
+          {
+            "line": 48363,
+            "text": "        y = max(10, min(y, sh - h - 60))"
+          },
+          {
+            "line": 48364,
+            "text": "        dlg.geometry(f\"{w}x{h}+{x}+{y}\")"
+          },
+          {
+            "line": 48365,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48366,
+            "text": "        pass"
+          },
+          {
+            "line": 48367,
+            "text": ""
+          },
+          {
+            "line": 48368,
+            "text": "    try:"
+          },
+          {
+            "line": 48369,
+            "text": "        pw_entry.focus_set()"
+          },
+          {
+            "line": 48370,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48371,
+            "text": "        pass"
+          },
+          {
+            "line": 48372,
+            "text": ""
+          },
+          {
+            "line": 48373,
+            "text": "    self.root.wait_window(dlg)"
+          },
+          {
+            "line": 48374,
+            "text": "    return (result.get(\"user\"), result.get(\"role\"))"
+          }
+        ]
+      },
+      {
+        "line": 48370,
+        "end_line": 48371,
+        "scope": "_spina_v32_prompt_login",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48362,
+            "text": "        x = max(10, min(x, sw - w - 10))"
+          },
+          {
+            "line": 48363,
+            "text": "        y = max(10, min(y, sh - h - 60))"
+          },
+          {
+            "line": 48364,
+            "text": "        dlg.geometry(f\"{w}x{h}+{x}+{y}\")"
+          },
+          {
+            "line": 48365,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48366,
+            "text": "        pass"
+          },
+          {
+            "line": 48367,
+            "text": ""
+          },
+          {
+            "line": 48368,
+            "text": "    try:"
+          },
+          {
+            "line": 48369,
+            "text": "        pw_entry.focus_set()"
+          },
+          {
+            "line": 48370,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48371,
+            "text": "        pass"
+          },
+          {
+            "line": 48372,
+            "text": ""
+          },
+          {
+            "line": 48373,
+            "text": "    self.root.wait_window(dlg)"
+          },
+          {
+            "line": 48374,
+            "text": "    return (result.get(\"user\"), result.get(\"role\"))"
+          },
+          {
+            "line": 48375,
+            "text": ""
+          },
+          {
+            "line": 48376,
+            "text": ""
+          },
+          {
+            "line": 48377,
+            "text": "def _spina_v32_refresh_user_header(self):"
+          },
+          {
+            "line": 48378,
+            "text": "    try:"
+          },
+          {
+            "line": 48379,
+            "text": "        if getattr(self, \"user_role_label\", None) is not None:"
+          }
+        ]
+      },
+      {
+        "line": 48385,
+        "end_line": 48386,
+        "scope": "_spina_v32_refresh_user_header",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": false,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48377,
+            "text": "def _spina_v32_refresh_user_header(self):"
+          },
+          {
+            "line": 48378,
+            "text": "    try:"
+          },
+          {
+            "line": 48379,
+            "text": "        if getattr(self, \"user_role_label\", None) is not None:"
+          },
+          {
+            "line": 48380,
+            "text": "            display = _spina_v32_account_display_name(self, getattr(self, \"user_name\", \"\"))"
+          },
+          {
+            "line": 48381,
+            "text": "            self.user_role_label.config(text=f\"Account: {display}\")"
+          },
+          {
+            "line": 48382,
+            "text": "    except Exception as __spina_exc:"
+          },
+          {
+            "line": 48383,
+            "text": "        try:"
+          },
+          {
+            "line": 48384,
+            "text": "            _log_suppressed_once(\"v32_refresh_user_header\", \"v32 refresh user header failed\", __spina_exc)"
+          },
+          {
+            "line": 48385,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48386,
+            "text": "            pass"
+          },
+          {
+            "line": 48387,
+            "text": "    try:"
+          },
+          {
+            "line": 48388,
+            "text": "        self._refresh_header_theme()"
+          },
+          {
+            "line": 48389,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48390,
+            "text": "        pass"
+          },
+          {
+            "line": 48391,
+            "text": ""
+          },
+          {
+            "line": 48392,
+            "text": ""
+          },
+          {
+            "line": 48393,
+            "text": "def _spina_v32_switch_account(self):"
+          },
+          {
+            "line": 48394,
+            "text": "    old_user = getattr(self, \"user_name\", \"\") or \"\""
+          }
+        ]
+      },
+      {
+        "line": 48389,
+        "end_line": 48390,
+        "scope": "_spina_v32_refresh_user_header",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48381,
+            "text": "            self.user_role_label.config(text=f\"Account: {display}\")"
+          },
+          {
+            "line": 48382,
+            "text": "    except Exception as __spina_exc:"
+          },
+          {
+            "line": 48383,
+            "text": "        try:"
+          },
+          {
+            "line": 48384,
+            "text": "            _log_suppressed_once(\"v32_refresh_user_header\", \"v32 refresh user header failed\", __spina_exc)"
+          },
+          {
+            "line": 48385,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48386,
+            "text": "            pass"
+          },
+          {
+            "line": 48387,
+            "text": "    try:"
+          },
+          {
+            "line": 48388,
+            "text": "        self._refresh_header_theme()"
+          },
+          {
+            "line": 48389,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48390,
+            "text": "        pass"
+          },
+          {
+            "line": 48391,
+            "text": ""
+          },
+          {
+            "line": 48392,
+            "text": ""
+          },
+          {
+            "line": 48393,
+            "text": "def _spina_v32_switch_account(self):"
+          },
+          {
+            "line": 48394,
+            "text": "    old_user = getattr(self, \"user_name\", \"\") or \"\""
+          },
+          {
+            "line": 48395,
+            "text": "    old_display = _spina_v32_account_display_name(self, old_user) if old_user else \"\""
+          },
+          {
+            "line": 48396,
+            "text": ""
+          },
+          {
+            "line": 48397,
+            "text": "    try:"
+          },
+          {
+            "line": 48398,
+            "text": "        u, r = self._prompt_login(default_user=(self.user_name or \"admin\"))"
+          }
+        ]
+      },
+      {
+        "line": 48402,
+        "end_line": 48403,
+        "scope": "_spina_v32_switch_account",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48394,
+            "text": "    old_user = getattr(self, \"user_name\", \"\") or \"\""
+          },
+          {
+            "line": 48395,
+            "text": "    old_display = _spina_v32_account_display_name(self, old_user) if old_user else \"\""
+          },
+          {
+            "line": 48396,
+            "text": ""
+          },
+          {
+            "line": 48397,
+            "text": "    try:"
+          },
+          {
+            "line": 48398,
+            "text": "        u, r = self._prompt_login(default_user=(self.user_name or \"admin\"))"
+          },
+          {
+            "line": 48399,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 48400,
+            "text": "        try:"
+          },
+          {
+            "line": 48401,
+            "text": "            _log_exc(\"switch_account_login\", e)"
+          },
+          {
+            "line": 48402,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48403,
+            "text": "            pass"
+          },
+          {
+            "line": 48404,
+            "text": "        try:"
+          },
+          {
+            "line": 48405,
+            "text": "            messagebox.showerror(\"Switch Account\", \"Failed to open the account sign-in window. See log for details.\")"
+          },
+          {
+            "line": 48406,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48407,
+            "text": "            pass"
+          },
+          {
+            "line": 48408,
+            "text": "        return"
+          },
+          {
+            "line": 48409,
+            "text": ""
+          },
+          {
+            "line": 48410,
+            "text": "    if not u or not r:"
+          },
+          {
+            "line": 48411,
+            "text": "        return"
+          }
+        ]
+      },
+      {
+        "line": 48406,
+        "end_line": 48407,
+        "scope": "_spina_v32_switch_account",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48398,
+            "text": "        u, r = self._prompt_login(default_user=(self.user_name or \"admin\"))"
+          },
+          {
+            "line": 48399,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 48400,
+            "text": "        try:"
+          },
+          {
+            "line": 48401,
+            "text": "            _log_exc(\"switch_account_login\", e)"
+          },
+          {
+            "line": 48402,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48403,
+            "text": "            pass"
+          },
+          {
+            "line": 48404,
+            "text": "        try:"
+          },
+          {
+            "line": 48405,
+            "text": "            messagebox.showerror(\"Switch Account\", \"Failed to open the account sign-in window. See log for details.\")"
+          },
+          {
+            "line": 48406,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48407,
+            "text": "            pass"
+          },
+          {
+            "line": 48408,
+            "text": "        return"
+          },
+          {
+            "line": 48409,
+            "text": ""
+          },
+          {
+            "line": 48410,
+            "text": "    if not u or not r:"
+          },
+          {
+            "line": 48411,
+            "text": "        return"
+          },
+          {
+            "line": 48412,
+            "text": ""
+          },
+          {
+            "line": 48413,
+            "text": "    self.user_name = u"
+          },
+          {
+            "line": 48414,
+            "text": "    self.user_role = r"
+          },
+          {
+            "line": 48415,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 48418,
+        "end_line": 48419,
+        "scope": "_spina_v32_switch_account",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": false,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48410,
+            "text": "    if not u or not r:"
+          },
+          {
+            "line": 48411,
+            "text": "        return"
+          },
+          {
+            "line": 48412,
+            "text": ""
+          },
+          {
+            "line": 48413,
+            "text": "    self.user_name = u"
+          },
+          {
+            "line": 48414,
+            "text": "    self.user_role = r"
+          },
+          {
+            "line": 48415,
+            "text": ""
+          },
+          {
+            "line": 48416,
+            "text": "    try:"
+          },
+          {
+            "line": 48417,
+            "text": "        self._save_last_user(self.user_name)"
+          },
+          {
+            "line": 48418,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48419,
+            "text": "        pass"
+          },
+          {
+            "line": 48420,
+            "text": "    try:"
+          },
+          {
+            "line": 48421,
+            "text": "        self._save_user_role(self.user_role)"
+          },
+          {
+            "line": 48422,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48423,
+            "text": "        pass"
+          },
+          {
+            "line": 48424,
+            "text": ""
+          },
+          {
+            "line": 48425,
+            "text": "    try:"
+          },
+          {
+            "line": 48426,
+            "text": "        self._refresh_user_header()"
+          },
+          {
+            "line": 48427,
+            "text": "    except Exception:"
+          }
+        ]
+      },
+      {
+        "line": 48422,
+        "end_line": 48423,
+        "scope": "_spina_v32_switch_account",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": false,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48414,
+            "text": "    self.user_role = r"
+          },
+          {
+            "line": 48415,
+            "text": ""
+          },
+          {
+            "line": 48416,
+            "text": "    try:"
+          },
+          {
+            "line": 48417,
+            "text": "        self._save_last_user(self.user_name)"
+          },
+          {
+            "line": 48418,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48419,
+            "text": "        pass"
+          },
+          {
+            "line": 48420,
+            "text": "    try:"
+          },
+          {
+            "line": 48421,
+            "text": "        self._save_user_role(self.user_role)"
+          },
+          {
+            "line": 48422,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48423,
+            "text": "        pass"
+          },
+          {
+            "line": 48424,
+            "text": ""
+          },
+          {
+            "line": 48425,
+            "text": "    try:"
+          },
+          {
+            "line": 48426,
+            "text": "        self._refresh_user_header()"
+          },
+          {
+            "line": 48427,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48428,
+            "text": "        pass"
+          },
+          {
+            "line": 48429,
+            "text": "    try:"
+          },
+          {
+            "line": 48430,
+            "text": "        self._rebuild_side_nav()"
+          },
+          {
+            "line": 48431,
+            "text": "    except Exception:"
+          }
+        ]
+      },
+      {
+        "line": 48449,
+        "end_line": 48450,
+        "scope": "_spina_v32_switch_account",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": false,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "login_sensitive_auth_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48441,
+            "text": "        try:"
+          },
+          {
+            "line": 48442,
+            "text": "            messagebox.showwarning(\"Switch Account\", \"The account was switched, but the UI permissions could not be fully refreshed. Please restart the app if something looks wrong.\")"
+          },
+          {
+            "line": 48443,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48444,
+            "text": "            pass"
+          },
+          {
+            "line": 48445,
+            "text": ""
+          },
+          {
+            "line": 48446,
+            "text": "    try:"
+          },
+          {
+            "line": 48447,
+            "text": "        new_display = _spina_v32_account_display_name(self, self.user_name)"
+          },
+          {
+            "line": 48448,
+            "text": "        self.status_var.set(f\"Switched account: {old_display or old_user} \u2192 {new_display}\")"
+          },
+          {
+            "line": 48449,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48450,
+            "text": "        pass"
+          },
+          {
+            "line": 48451,
+            "text": ""
+          },
+          {
+            "line": 48452,
+            "text": ""
+          },
+          {
+            "line": 48453,
+            "text": "def _spina_v32_prompt_user_role(self, default: str = \"Admin\") -> str:"
+          },
+          {
+            "line": 48454,
+            "text": "    # Fallback only. Do not show the old role selector anymore."
+          },
+          {
+            "line": 48455,
+            "text": "    d = str(default or \"Admin\").strip()"
+          },
+          {
+            "line": 48456,
+            "text": "    return d if d in (\"Admin\", \"Encoder\", \"Viewer\", \"System\") else \"Admin\""
+          },
+          {
+            "line": 48457,
+            "text": ""
+          },
+          {
+            "line": 48458,
+            "text": ""
+          }
+        ]
+      }
+    ],
+    "protected_login_review": [
+      {
+        "line": 9635,
+        "end_line": 9636,
+        "scope": "App.apply_role_access",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": true,
+        "dialog_like_context": false,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 9627,
+            "text": "        \"\"\"Apply role-based UI restrictions.\"\"\""
+          },
+          {
+            "line": 9628,
+            "text": "        role = (getattr(self, 'user_role', None) or 'Admin').strip()"
+          },
+          {
+            "line": 9629,
+            "text": "        if role not in ('Admin', 'Encoder', 'Viewer', 'System'):"
+          },
+          {
+            "line": 9630,
+            "text": "            role = 'Admin'"
+          },
+          {
+            "line": 9631,
+            "text": ""
+          },
+          {
+            "line": 9632,
+            "text": "        if role != 'System':"
+          },
+          {
+            "line": 9633,
+            "text": "            try:"
+          },
+          {
+            "line": 9634,
+            "text": "                self._hide_system_data_tab()"
+          },
+          {
+            "line": 9635,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 9636,
+            "text": "                pass"
+          },
+          {
+            "line": 9637,
+            "text": ""
+          },
+          {
+            "line": 9638,
+            "text": "        try:"
+          },
+          {
+            "line": 9639,
+            "text": "            if role == 'System':"
+          },
+          {
+            "line": 9640,
+            "text": "                self._show_audit_tab()"
+          },
+          {
+            "line": 9641,
+            "text": "            else:"
+          },
+          {
+            "line": 9642,
+            "text": "                self._hide_audit_tab()"
+          },
+          {
+            "line": 9643,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 9644,
+            "text": "            pass"
+          }
+        ]
+      },
+      {
+        "line": 11163,
+        "end_line": 11164,
+        "scope": "App.open_databank_close_dialog._reopen_day",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": false,
+        "dialog_like_context": true,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 11155,
+            "text": "            self.db.reopen_databank_day("
+          },
+          {
+            "line": 11156,
+            "text": "                ds,"
+          },
+          {
+            "line": 11157,
+            "text": "                opened_by=(getattr(self, 'user_name', '') or '').strip(),"
+          },
+          {
+            "line": 11158,
+            "text": "                source='databank:reopen',"
+          },
+          {
+            "line": 11159,
+            "text": "            )"
+          },
+          {
+            "line": 11160,
+            "text": "            _load()"
+          },
+          {
+            "line": 11161,
+            "text": "            try:"
+          },
+          {
+            "line": 11162,
+            "text": "                self.refresh_data_grid()"
+          },
+          {
+            "line": 11163,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 11164,
+            "text": "                pass"
+          },
+          {
+            "line": 11165,
+            "text": "            messagebox.showinfo('Daily Close', f\"{ds} is open again. You can now edit Regular and 7x7 Data Bank entries for that day.\")"
+          },
+          {
+            "line": 11166,
+            "text": ""
+          },
+          {
+            "line": 11167,
+            "text": "        def _update_workflow():"
+          },
+          {
+            "line": 11168,
+            "text": "            ds = (date_var.get() or '').strip()"
+          },
+          {
+            "line": 11169,
+            "text": "            try:"
+          },
+          {
+            "line": 11170,
+            "text": "                _dt.strptime(ds, '%Y-%m-%d')"
+          },
+          {
+            "line": 11171,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 11172,
+            "text": "                messagebox.showerror('Daily Close', 'Use date format YYYY-MM-DD.')"
+          }
+        ]
+      },
+      {
+        "line": 11194,
+        "end_line": 11195,
+        "scope": "App.open_databank_close_dialog._update_workflow",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": false,
+        "dialog_like_context": true,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 11186,
+            "text": "                note=(note_var.get() or '').strip(),"
+          },
+          {
+            "line": 11187,
+            "text": "                changed_by=(getattr(self, 'user_name', '') or '').strip(),"
+          },
+          {
+            "line": 11188,
+            "text": "                source='databank:workflow',"
+          },
+          {
+            "line": 11189,
+            "text": "            )"
+          },
+          {
+            "line": 11190,
+            "text": "            state['record'] = rec"
+          },
+          {
+            "line": 11191,
+            "text": "            _load()"
+          },
+          {
+            "line": 11192,
+            "text": "            try:"
+          },
+          {
+            "line": 11193,
+            "text": "                self.refresh_data_grid()"
+          },
+          {
+            "line": 11194,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 11195,
+            "text": "                pass"
+          },
+          {
+            "line": 11196,
+            "text": "            messagebox.showinfo('Daily Close', 'Variance workflow updated.')"
+          },
+          {
+            "line": 11197,
+            "text": ""
+          },
+          {
+            "line": 11198,
+            "text": "        def _print_report():"
+          },
+          {
+            "line": 11199,
+            "text": "            ds = (date_var.get() or '').strip()"
+          },
+          {
+            "line": 11200,
+            "text": "            try:"
+          },
+          {
+            "line": 11201,
+            "text": "                _dt.strptime(ds, '%Y-%m-%d')"
+          },
+          {
+            "line": 11202,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 11203,
+            "text": "                messagebox.showerror('Daily Close', 'Use date format YYYY-MM-DD.')"
+          }
+        ]
+      },
+      {
+        "line": 15427,
+        "end_line": 15428,
+        "scope": "App._create_postgres_backup_file",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 15419,
+            "text": "                f.write(f\"Host: {host}:{port}\\n\")"
+          },
+          {
+            "line": 15420,
+            "text": "                f.write(f\"User: {user}\\n\")"
+          },
+          {
+            "line": 15421,
+            "text": "                f.write(f\"Backup file: {out_file}\\n\")"
+          },
+          {
+            "line": 15422,
+            "text": "                f.write(f\"Size: {os.path.getsize(out_file):,} bytes\\n\")"
+          },
+          {
+            "line": 15423,
+            "text": "                f.write(\"Format: PostgreSQL custom format (-F c), restore with pg_restore.\\n\")"
+          },
+          {
+            "line": 15424,
+            "text": "        except Exception as e:"
+          },
+          {
+            "line": 15425,
+            "text": "            try:"
+          },
+          {
+            "line": 15426,
+            "text": "                _log_suppressed_once('pg_backup_manifest', 'backup manifest failed', e)"
+          },
+          {
+            "line": 15427,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 15428,
+            "text": "                pass"
+          },
+          {
+            "line": 15429,
+            "text": ""
+          },
+          {
+            "line": 15430,
+            "text": "        return out_file"
+          },
+          {
+            "line": 15431,
+            "text": ""
+          },
+          {
+            "line": 15432,
+            "text": "    def backup_postgres_database(self):"
+          },
+          {
+            "line": 15433,
+            "text": "        \"\"\"UI handler for the Backup button.\"\"\""
+          },
+          {
+            "line": 15434,
+            "text": "        try:"
+          },
+          {
+            "line": 15435,
+            "text": "            role = (getattr(self, \"user_role\", \"\") or \"\").strip()"
+          },
+          {
+            "line": 15436,
+            "text": "        except Exception:"
+          }
+        ]
+      },
+      {
+        "line": 15441,
+        "end_line": 15442,
+        "scope": "App.backup_postgres_database",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 15433,
+            "text": "        \"\"\"UI handler for the Backup button.\"\"\""
+          },
+          {
+            "line": 15434,
+            "text": "        try:"
+          },
+          {
+            "line": 15435,
+            "text": "            role = (getattr(self, \"user_role\", \"\") or \"\").strip()"
+          },
+          {
+            "line": 15436,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 15437,
+            "text": "            role = \"\""
+          },
+          {
+            "line": 15438,
+            "text": "        if role not in (\"Admin\", \"System\"):"
+          },
+          {
+            "line": 15439,
+            "text": "            try:"
+          },
+          {
+            "line": 15440,
+            "text": "                messagebox.showwarning(\"Backup\", \"Only Admin or System users can create a full database backup.\")"
+          },
+          {
+            "line": 15441,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 15442,
+            "text": "                pass"
+          },
+          {
+            "line": 15443,
+            "text": "            return"
+          },
+          {
+            "line": 15444,
+            "text": ""
+          },
+          {
+            "line": 15445,
+            "text": "        try:"
+          },
+          {
+            "line": 15446,
+            "text": "            ok = messagebox.askyesno("
+          },
+          {
+            "line": 15447,
+            "text": "                \"Backup PostgreSQL Database\","
+          },
+          {
+            "line": 15448,
+            "text": "                \"Create a full backup of spina_db now?\\n\\n\""
+          },
+          {
+            "line": 15449,
+            "text": "                \"This backup includes clients, payments, JSON/settings, PDFs, and pictures stored in PostgreSQL.\""
+          },
+          {
+            "line": 15450,
+            "text": "            )"
+          }
+        ]
+      },
+      {
+        "line": 15524,
+        "end_line": 15525,
+        "scope": "App._pg_env",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 15516,
+            "text": "        }"
+          },
+          {
+            "line": 15517,
+            "text": ""
+          },
+          {
+            "line": 15518,
+            "text": "    def _pg_env(self) -> dict:"
+          },
+          {
+            "line": 15519,
+            "text": "        env = os.environ.copy()"
+          },
+          {
+            "line": 15520,
+            "text": "        try:"
+          },
+          {
+            "line": 15521,
+            "text": "            pw = self._postgres_cfg().get(\"password\") or \"\""
+          },
+          {
+            "line": 15522,
+            "text": "            if pw:"
+          },
+          {
+            "line": 15523,
+            "text": "                env[\"PGPASSWORD\"] = pw"
+          },
+          {
+            "line": 15524,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 15525,
+            "text": "            pass"
+          },
+          {
+            "line": 15526,
+            "text": "        return env"
+          },
+          {
+            "line": 15527,
+            "text": ""
+          },
+          {
+            "line": 15528,
+            "text": "    def _format_bytes(self, n) -> str:"
+          },
+          {
+            "line": 15529,
+            "text": "        try:"
+          },
+          {
+            "line": 15530,
+            "text": "            n = float(n or 0)"
+          },
+          {
+            "line": 15531,
+            "text": "            for unit in (\"B\", \"KB\", \"MB\", \"GB\", \"TB\"):"
+          },
+          {
+            "line": 15532,
+            "text": "                if n < 1024 or unit == \"TB\":"
+          },
+          {
+            "line": 15533,
+            "text": "                    if unit == \"B\":"
+          }
+        ]
+      },
+      {
+        "line": 15674,
+        "end_line": 15675,
+        "scope": "App.open_backup_history_window",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 15666,
+            "text": "        \"\"\"Show backup files and provide verify/restore-test actions.\"\"\""
+          },
+          {
+            "line": 15667,
+            "text": "        try:"
+          },
+          {
+            "line": 15668,
+            "text": "            role = (getattr(self, \"user_role\", \"\") or \"\").strip()"
+          },
+          {
+            "line": 15669,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 15670,
+            "text": "            role = \"\""
+          },
+          {
+            "line": 15671,
+            "text": "        if role not in (\"Admin\", \"System\"):"
+          },
+          {
+            "line": 15672,
+            "text": "            try:"
+          },
+          {
+            "line": 15673,
+            "text": "                messagebox.showwarning(\"Backup History\", \"Only Admin or System users can view backup tools.\")"
+          },
+          {
+            "line": 15674,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 15675,
+            "text": "                pass"
+          },
+          {
+            "line": 15676,
+            "text": "            return"
+          },
+          {
+            "line": 15677,
+            "text": ""
+          },
+          {
+            "line": 15678,
+            "text": "        try:"
+          },
+          {
+            "line": 15679,
+            "text": "            win = tk.Toplevel(self.root)"
+          },
+          {
+            "line": 15680,
+            "text": "            win.title(\"PostgreSQL Backup History\")"
+          },
+          {
+            "line": 15681,
+            "text": "            win.geometry(\"820x420\")"
+          },
+          {
+            "line": 15682,
+            "text": "            win.transient(self.root)"
+          },
+          {
+            "line": 15683,
+            "text": "        except Exception as e:"
+          }
+        ]
+      },
+      {
+        "line": 16416,
+        "end_line": 16417,
+        "scope": "App._build_header",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": true,
+        "dialog_like_context": false,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 16408,
+            "text": "        try:"
+          },
+          {
+            "line": 16409,
+            "text": "            self.root.bind('<Alt-Key-1>', lambda e: self._set_mode('Regular'), add='+')"
+          },
+          {
+            "line": 16410,
+            "text": "            self.root.bind('<Alt-Key-2>', lambda e: self._set_mode('7x7'), add='+')"
+          },
+          {
+            "line": 16411,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 16412,
+            "text": "            pass"
+          },
+          {
+            "line": 16413,
+            "text": ""
+          },
+          {
+            "line": 16414,
+            "text": "        try:"
+          },
+          {
+            "line": 16415,
+            "text": "            ttk.Separator(self.root).pack(fill='x')"
+          },
+          {
+            "line": 16416,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 16417,
+            "text": "            pass"
+          },
+          {
+            "line": 16418,
+            "text": ""
+          },
+          {
+            "line": 16419,
+            "text": "        self._refresh_mode_toggle()"
+          },
+          {
+            "line": 16420,
+            "text": ""
+          },
+          {
+            "line": 16421,
+            "text": "    def _refresh_user_header(self):"
+          },
+          {
+            "line": 16422,
+            "text": "        try:"
+          },
+          {
+            "line": 16423,
+            "text": "            if getattr(self, 'user_role_label', None) is not None:"
+          },
+          {
+            "line": 16424,
+            "text": "                self.user_role_label.config(text=f\"{self.user_name} \u2022 {self.user_role}\")"
+          },
+          {
+            "line": 16425,
+            "text": "        except Exception as __spina_exc:"
+          }
+        ]
+      },
+      {
+        "line": 16462,
+        "end_line": 16463,
+        "scope": "App.switch_account",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": true,
+        "dialog_like_context": false,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 16454,
+            "text": "        try:"
+          },
+          {
+            "line": 16455,
+            "text": "            self._save_user_role(self.user_role)"
+          },
+          {
+            "line": 16456,
+            "text": "        except Exception as __spina_exc:"
+          },
+          {
+            "line": 16457,
+            "text": "            _log_suppressed_once('excpass_switch_account_save_role', 'suppressed exception excpass_switch_account_save_role', __spina_exc)"
+          },
+          {
+            "line": 16458,
+            "text": "            pass"
+          },
+          {
+            "line": 16459,
+            "text": ""
+          },
+          {
+            "line": 16460,
+            "text": "        try:"
+          },
+          {
+            "line": 16461,
+            "text": "            self._refresh_user_header()"
+          },
+          {
+            "line": 16462,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 16463,
+            "text": "            pass"
+          },
+          {
+            "line": 16464,
+            "text": "        try:"
+          },
+          {
+            "line": 16465,
+            "text": "            self._rebuild_side_nav()"
+          },
+          {
+            "line": 16466,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 16467,
+            "text": "            pass"
+          },
+          {
+            "line": 16468,
+            "text": ""
+          },
+          {
+            "line": 16469,
+            "text": "        try:"
+          },
+          {
+            "line": 16470,
+            "text": "            self.apply_role_access()"
+          },
+          {
+            "line": 16471,
+            "text": "        except Exception as e:"
+          }
+        ]
+      },
+      {
+        "line": 16477,
+        "end_line": 16478,
+        "scope": "App.switch_account",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 16469,
+            "text": "        try:"
+          },
+          {
+            "line": 16470,
+            "text": "            self.apply_role_access()"
+          },
+          {
+            "line": 16471,
+            "text": "        except Exception as e:"
+          },
+          {
+            "line": 16472,
+            "text": "            _log_exc('switch_account_apply_role_access', e)"
+          },
+          {
+            "line": 16473,
+            "text": "            messagebox.showwarning('Switch Account', 'The account was switched, but the role UI could not be fully refreshed. Please restart the app if something looks wrong.')"
+          },
+          {
+            "line": 16474,
+            "text": ""
+          },
+          {
+            "line": 16475,
+            "text": "        try:"
+          },
+          {
+            "line": 16476,
+            "text": "            self.status_var.set(f'Switched account: {old_user} ({old_role}) -> {self.user_name} ({self.user_role})')"
+          },
+          {
+            "line": 16477,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 16478,
+            "text": "            pass"
+          },
+          {
+            "line": 16479,
+            "text": ""
+          },
+          {
+            "line": 16480,
+            "text": "    def open_settings_dialog(self):"
+          },
+          {
+            "line": 16481,
+            "text": "        \"\"\"App settings (local-only).\"\"\""
+          },
+          {
+            "line": 16482,
+            "text": "        dlg = tk.Toplevel(self.root)"
+          },
+          {
+            "line": 16483,
+            "text": "        dlg.title(\"Settings\")"
+          },
+          {
+            "line": 16484,
+            "text": "        dlg.transient(self.root)"
+          },
+          {
+            "line": 16485,
+            "text": "        try:"
+          },
+          {
+            "line": 16486,
+            "text": "            dlg.grab_set()"
+          }
+        ]
+      },
+      {
+        "line": 38558,
+        "end_line": 38559,
+        "scope": "_spina_cashctl_refresh",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": true,
+        "dialog_like_context": false,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 38550,
+            "text": "        try:"
+          },
+          {
+            "line": 38551,
+            "text": "            if hasattr(self, 'status_var'):"
+          },
+          {
+            "line": 38552,
+            "text": "                self.status_var.set('Cash Control refreshed. All active clients are included in the renewal reserve.')"
+          },
+          {
+            "line": 38553,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 38554,
+            "text": "            pass"
+          },
+          {
+            "line": 38555,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 38556,
+            "text": "        try:"
+          },
+          {
+            "line": 38557,
+            "text": "            _log_exc('cash_control.refresh', e)"
+          },
+          {
+            "line": 38558,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 38559,
+            "text": "            pass"
+          },
+          {
+            "line": 38560,
+            "text": ""
+          },
+          {
+            "line": 38561,
+            "text": ""
+          },
+          {
+            "line": 38562,
+            "text": "def _spina_cashctl_apply_role(self):"
+          },
+          {
+            "line": 38563,
+            "text": "    try:"
+          },
+          {
+            "line": 38564,
+            "text": "        if not hasattr(self, 'nb') or not hasattr(self, 'tab_cash_control'):"
+          },
+          {
+            "line": 38565,
+            "text": "            return"
+          },
+          {
+            "line": 38566,
+            "text": "        role = (getattr(self, 'user_role', '') or 'Admin').strip()"
+          },
+          {
+            "line": 38567,
+            "text": "        if role == 'System':"
+          }
+        ]
+      },
+      {
+        "line": 38570,
+        "end_line": 38571,
+        "scope": "_spina_cashctl_apply_role",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": true,
+        "dialog_like_context": false,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 38562,
+            "text": "def _spina_cashctl_apply_role(self):"
+          },
+          {
+            "line": 38563,
+            "text": "    try:"
+          },
+          {
+            "line": 38564,
+            "text": "        if not hasattr(self, 'nb') or not hasattr(self, 'tab_cash_control'):"
+          },
+          {
+            "line": 38565,
+            "text": "            return"
+          },
+          {
+            "line": 38566,
+            "text": "        role = (getattr(self, 'user_role', '') or 'Admin').strip()"
+          },
+          {
+            "line": 38567,
+            "text": "        if role == 'System':"
+          },
+          {
+            "line": 38568,
+            "text": "            try:"
+          },
+          {
+            "line": 38569,
+            "text": "                self.nb.hide(self.tab_cash_control)"
+          },
+          {
+            "line": 38570,
+            "text": "            except Exception:"
+          },
+          {
+            "line": 38571,
+            "text": "                pass"
+          },
+          {
+            "line": 38572,
+            "text": "            return"
+          },
+          {
+            "line": 38573,
+            "text": "        try:"
+          },
+          {
+            "line": 38574,
+            "text": "            tabs = list(self.nb.tabs())"
+          },
+          {
+            "line": 38575,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 38576,
+            "text": "            tabs = []"
+          },
+          {
+            "line": 38577,
+            "text": "        if str(self.tab_cash_control) not in tabs:"
+          },
+          {
+            "line": 38578,
+            "text": "            try:"
+          },
+          {
+            "line": 38579,
+            "text": "                self.nb.insert(2, self.tab_cash_control, text='Cash Control')"
+          }
+        ]
+      },
+      {
+        "line": 48427,
+        "end_line": 48428,
+        "scope": "_spina_v32_switch_account",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": true,
+        "dialog_like_context": false,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48419,
+            "text": "        pass"
+          },
+          {
+            "line": 48420,
+            "text": "    try:"
+          },
+          {
+            "line": 48421,
+            "text": "        self._save_user_role(self.user_role)"
+          },
+          {
+            "line": 48422,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48423,
+            "text": "        pass"
+          },
+          {
+            "line": 48424,
+            "text": ""
+          },
+          {
+            "line": 48425,
+            "text": "    try:"
+          },
+          {
+            "line": 48426,
+            "text": "        self._refresh_user_header()"
+          },
+          {
+            "line": 48427,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48428,
+            "text": "        pass"
+          },
+          {
+            "line": 48429,
+            "text": "    try:"
+          },
+          {
+            "line": 48430,
+            "text": "        self._rebuild_side_nav()"
+          },
+          {
+            "line": 48431,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48432,
+            "text": "        pass"
+          },
+          {
+            "line": 48433,
+            "text": ""
+          },
+          {
+            "line": 48434,
+            "text": "    try:"
+          },
+          {
+            "line": 48435,
+            "text": "        self.apply_role_access()"
+          },
+          {
+            "line": 48436,
+            "text": "    except Exception as e:"
+          }
+        ]
+      },
+      {
+        "line": 48439,
+        "end_line": 48440,
+        "scope": "_spina_v32_switch_account",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48431,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48432,
+            "text": "        pass"
+          },
+          {
+            "line": 48433,
+            "text": ""
+          },
+          {
+            "line": 48434,
+            "text": "    try:"
+          },
+          {
+            "line": 48435,
+            "text": "        self.apply_role_access()"
+          },
+          {
+            "line": 48436,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 48437,
+            "text": "        try:"
+          },
+          {
+            "line": 48438,
+            "text": "            _log_exc(\"switch_account_apply_role_access\", e)"
+          },
+          {
+            "line": 48439,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48440,
+            "text": "            pass"
+          },
+          {
+            "line": 48441,
+            "text": "        try:"
+          },
+          {
+            "line": 48442,
+            "text": "            messagebox.showwarning(\"Switch Account\", \"The account was switched, but the UI permissions could not be fully refreshed. Please restart the app if something looks wrong.\")"
+          },
+          {
+            "line": 48443,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48444,
+            "text": "            pass"
+          },
+          {
+            "line": 48445,
+            "text": ""
+          },
+          {
+            "line": 48446,
+            "text": "    try:"
+          },
+          {
+            "line": 48447,
+            "text": "        new_display = _spina_v32_account_display_name(self, self.user_name)"
+          },
+          {
+            "line": 48448,
+            "text": "        self.status_var.set(f\"Switched account: {old_display or old_user} \u2192 {new_display}\")"
+          }
+        ]
+      },
+      {
+        "line": 48443,
+        "end_line": 48444,
+        "scope": "_spina_v32_switch_account",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": true,
+        "dialog_like_context": true,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48435,
+            "text": "        self.apply_role_access()"
+          },
+          {
+            "line": 48436,
+            "text": "    except Exception as e:"
+          },
+          {
+            "line": 48437,
+            "text": "        try:"
+          },
+          {
+            "line": 48438,
+            "text": "            _log_exc(\"switch_account_apply_role_access\", e)"
+          },
+          {
+            "line": 48439,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48440,
+            "text": "            pass"
+          },
+          {
+            "line": 48441,
+            "text": "        try:"
+          },
+          {
+            "line": 48442,
+            "text": "            messagebox.showwarning(\"Switch Account\", \"The account was switched, but the UI permissions could not be fully refreshed. Please restart the app if something looks wrong.\")"
+          },
+          {
+            "line": 48443,
+            "text": "        except Exception:"
+          },
+          {
+            "line": 48444,
+            "text": "            pass"
+          },
+          {
+            "line": 48445,
+            "text": ""
+          },
+          {
+            "line": 48446,
+            "text": "    try:"
+          },
+          {
+            "line": 48447,
+            "text": "        new_display = _spina_v32_account_display_name(self, self.user_name)"
+          },
+          {
+            "line": 48448,
+            "text": "        self.status_var.set(f\"Switched account: {old_display or old_user} \u2192 {new_display}\")"
+          },
+          {
+            "line": 48449,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48450,
+            "text": "        pass"
+          },
+          {
+            "line": 48451,
+            "text": ""
+          },
+          {
+            "line": 48452,
+            "text": ""
+          }
+        ]
+      },
+      {
+        "line": 48488,
+        "end_line": 48489,
+        "scope": "<module>",
+        "handler": "Exception",
+        "login_related": true,
+        "protected_context": true,
+        "sensitive_login_context": false,
+        "dialog_like_context": true,
+        "group": "protected_login_review",
+        "selected_for_cleanup_plan": false,
+        "recommended_action": "Review only. This planner does not approve cleanup.",
+        "context": [
+          {
+            "line": 48480,
+            "text": "                        self.switch_account_btn.configure(text=\"Account\")"
+          },
+          {
+            "line": 48481,
+            "text": "                except Exception:"
+          },
+          {
+            "line": 48482,
+            "text": "                    pass"
+          },
+          {
+            "line": 48483,
+            "text": "                return res"
+          },
+          {
+            "line": 48484,
+            "text": "            App._build_header = _spina_v32_build_header"
+          },
+          {
+            "line": 48485,
+            "text": "except Exception as __spina_exc:"
+          },
+          {
+            "line": 48486,
+            "text": "    try:"
+          },
+          {
+            "line": 48487,
+            "text": "        _log_suppressed_once(\"v32_account_login_bind_failed\", \"v32 account login patch failed\", __spina_exc)"
+          },
+          {
+            "line": 48488,
+            "text": "    except Exception:"
+          },
+          {
+            "line": 48489,
+            "text": "        pass"
+          },
+          {
+            "line": 48490,
+            "text": "# --- END: v32 Modern Account-Based Login ---"
+          },
+          {
+            "line": 48491,
+            "text": ""
+          },
+          {
+            "line": 48492,
+            "text": ""
+          },
+          {
+            "line": 48493,
+            "text": "# --- FINAL ENTRY POINT (after all runtime patches) ---"
+          },
+          {
+            "line": 48494,
+            "text": ""
+          },
+          {
+            "line": 48495,
+            "text": "# --- BEGIN: SPINA REMOVE LEGACY CLIENT ACTION BUTTONS ---"
+          },
+          {
+            "line": 48496,
+            "text": "# Legacy Clients-tab actions are intentionally removed from the UI/action layer:"
+          },
+          {
+            "line": 48497,
+            "text": "# From Transactions, Full Ledger, Export Template, and Import Excel."
+          }
+        ]
+      }
+    ]
+  },
+  "recommendations": [
+    "Do not apply cleanup from this report alone.",
+    "Leave password/auth/role-sensitive login handlers as review-only.",
+    "Only consider a future cleanup tool for a very small login dialog UI-only subgroup, if one exists.",
+    "Smoke-test staff login after any future login UI cleanup."
+  ]
+}

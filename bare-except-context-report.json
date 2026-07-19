@@ -1,0 +1,463 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48501,
+  "context_radius": 12,
+  "bare_except_count": 4,
+  "protected_context_count": 4,
+  "non_protected_bare_except_count": 0,
+  "pass_only_bare_except_count": 2,
+  "by_severity": {
+    "protected_review": 4
+  },
+  "sites": [
+    {
+      "line": 17249,
+      "end_line": 17249,
+      "scope": "App.on_day_double",
+      "pass_only": false,
+      "has_logging_or_notice": false,
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 17237,
+          "text": "            _log_suppressed_once('excpass_0394', 'suppressed exception excpass_0394', __spina_exc)"
+        },
+        {
+          "line": 17238,
+          "text": "            pass"
+        },
+        {
+          "line": 17239,
+          "text": "    def on_day_double(self, event):"
+        },
+        {
+          "line": 17240,
+          "text": "        # Disabled in view-only mode"
+        },
+        {
+          "line": 17241,
+          "text": "        return"
+        },
+        {
+          "line": 17242,
+          "text": "        region = self.days_tree.identify('region', event.x, event.y)"
+        },
+        {
+          "line": 17243,
+          "text": "        if region != 'cell': return"
+        },
+        {
+          "line": 17244,
+          "text": "        row = self.days_tree.identify_row(event.y); col = self.days_tree.identify_column(event.x)"
+        },
+        {
+          "line": 17245,
+          "text": "        if not row or not col: return"
+        },
+        {
+          "line": 17246,
+          "text": "        col_idx = int(col.replace('#','')) - 1; day = col_idx + 1"
+        },
+        {
+          "line": 17247,
+          "text": "        row_idx = self.days_tree.index(row)"
+        },
+        {
+          "line": 17248,
+          "text": "        try: client_item = self.name_tree.get_children()[row_idx]; client = self.name_tree.item(client_item,'values')[0]"
+        },
+        {
+          "line": 17249,
+          "text": "        except: return"
+        },
+        {
+          "line": 17250,
+          "text": "        dt = date(self.grid_year, self.grid_month, day).strftime('%Y-%m-%d')"
+        },
+        {
+          "line": 17251,
+          "text": "        bbox = self.days_tree.bbox(row, f'#{col_idx+1}');"
+        },
+        {
+          "line": 17252,
+          "text": "        if not bbox: return"
+        },
+        {
+          "line": 17253,
+          "text": "        x,y,w,h = bbox"
+        },
+        {
+          "line": 17254,
+          "text": "        if self.current_entry:"
+        },
+        {
+          "line": 17255,
+          "text": "            try: self.current_entry.destroy()"
+        },
+        {
+          "line": 17256,
+          "text": "            except: pass"
+        },
+        {
+          "line": 17257,
+          "text": "            self.current_entry = None"
+        },
+        {
+          "line": 17258,
+          "text": "        ent = self._mk_tk_entry(self.days_tree, justify='center')"
+        },
+        {
+          "line": 17259,
+          "text": "        cur = self.days_tree.set(row, f'd{day}').replace('','').replace(',','').strip()"
+        },
+        {
+          "line": 17260,
+          "text": "        ent.insert(0, cur)"
+        },
+        {
+          "line": 17261,
+          "text": "        ent.place(x=x, y=y, width=w, height=h); ent.focus_set(); self.current_entry = ent"
+        }
+      ]
+    },
+    {
+      "line": 17256,
+      "end_line": 17256,
+      "scope": "App.on_day_double",
+      "pass_only": true,
+      "has_logging_or_notice": false,
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 17244,
+          "text": "        row = self.days_tree.identify_row(event.y); col = self.days_tree.identify_column(event.x)"
+        },
+        {
+          "line": 17245,
+          "text": "        if not row or not col: return"
+        },
+        {
+          "line": 17246,
+          "text": "        col_idx = int(col.replace('#','')) - 1; day = col_idx + 1"
+        },
+        {
+          "line": 17247,
+          "text": "        row_idx = self.days_tree.index(row)"
+        },
+        {
+          "line": 17248,
+          "text": "        try: client_item = self.name_tree.get_children()[row_idx]; client = self.name_tree.item(client_item,'values')[0]"
+        },
+        {
+          "line": 17249,
+          "text": "        except: return"
+        },
+        {
+          "line": 17250,
+          "text": "        dt = date(self.grid_year, self.grid_month, day).strftime('%Y-%m-%d')"
+        },
+        {
+          "line": 17251,
+          "text": "        bbox = self.days_tree.bbox(row, f'#{col_idx+1}');"
+        },
+        {
+          "line": 17252,
+          "text": "        if not bbox: return"
+        },
+        {
+          "line": 17253,
+          "text": "        x,y,w,h = bbox"
+        },
+        {
+          "line": 17254,
+          "text": "        if self.current_entry:"
+        },
+        {
+          "line": 17255,
+          "text": "            try: self.current_entry.destroy()"
+        },
+        {
+          "line": 17256,
+          "text": "            except: pass"
+        },
+        {
+          "line": 17257,
+          "text": "            self.current_entry = None"
+        },
+        {
+          "line": 17258,
+          "text": "        ent = self._mk_tk_entry(self.days_tree, justify='center')"
+        },
+        {
+          "line": 17259,
+          "text": "        cur = self.days_tree.set(row, f'd{day}').replace('','').replace(',','').strip()"
+        },
+        {
+          "line": 17260,
+          "text": "        ent.insert(0, cur)"
+        },
+        {
+          "line": 17261,
+          "text": "        ent.place(x=x, y=y, width=w, height=h); ent.focus_set(); self.current_entry = ent"
+        },
+        {
+          "line": 17262,
+          "text": ""
+        },
+        {
+          "line": 17263,
+          "text": "        def save(e=None):"
+        },
+        {
+          "line": 17264,
+          "text": "            v = ent.get().strip()"
+        },
+        {
+          "line": 17265,
+          "text": "            # 1) Parse amount"
+        },
+        {
+          "line": 17266,
+          "text": "            try:"
+        },
+        {
+          "line": 17267,
+          "text": "                amt = float(v) if v != '' else 0.0"
+        },
+        {
+          "line": 17268,
+          "text": "            except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 17318,
+      "end_line": 17318,
+      "scope": "App._start_edit",
+      "pass_only": false,
+      "has_logging_or_notice": false,
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 17306,
+          "text": "            try:"
+        },
+        {
+          "line": 17307,
+          "text": "                ent.destroy()"
+        },
+        {
+          "line": 17308,
+          "text": "            except Exception as __spina_exc:"
+        },
+        {
+          "line": 17309,
+          "text": "                _log_suppressed_once('excpass_0398', 'suppressed exception excpass_0398', __spina_exc)"
+        },
+        {
+          "line": 17310,
+          "text": "                pass"
+        },
+        {
+          "line": 17311,
+          "text": ""
+        },
+        {
+          "line": 17312,
+          "text": "        ent.bind('<Return>', save)"
+        },
+        {
+          "line": 17313,
+          "text": "        ent.bind('<Escape>', _close_editor)"
+        },
+        {
+          "line": 17314,
+          "text": "        ent.bind('<FocusOut>', _close_editor)"
+        },
+        {
+          "line": 17315,
+          "text": ""
+        },
+        {
+          "line": 17316,
+          "text": "    def _start_edit(self, row_idx, col_idx):"
+        },
+        {
+          "line": 17317,
+          "text": "        try: item = self.days_tree.get_children()[row_idx]"
+        },
+        {
+          "line": 17318,
+          "text": "        except: return"
+        },
+        {
+          "line": 17319,
+          "text": "        day = col_idx+1"
+        },
+        {
+          "line": 17320,
+          "text": "        bbox = self.days_tree.bbox(item, f'#{col_idx+1}')"
+        },
+        {
+          "line": 17321,
+          "text": "        if not bbox:"
+        },
+        {
+          "line": 17322,
+          "text": "            self.days_tree.see(item); self.name_tree.see(self.name_tree.get_children()[row_idx])"
+        },
+        {
+          "line": 17323,
+          "text": "            self.days_tree.update_idletasks(); bbox = self.days_tree.bbox(item, f'#{col_idx+1}')"
+        },
+        {
+          "line": 17324,
+          "text": "            if not bbox: return"
+        },
+        {
+          "line": 17325,
+          "text": "        x,y,w,h = bbox"
+        },
+        {
+          "line": 17326,
+          "text": "        client_item = self.name_tree.get_children()[row_idx]; client = self.name_tree.item(client_item,'values')[0]"
+        },
+        {
+          "line": 17327,
+          "text": "        dt = date(self.grid_year, self.grid_month, day).strftime('%Y-%m-%d')"
+        },
+        {
+          "line": 17328,
+          "text": "        if self.current_entry:"
+        },
+        {
+          "line": 17329,
+          "text": "            try: self.current_entry.destroy()"
+        },
+        {
+          "line": 17330,
+          "text": "            except: pass"
+        }
+      ]
+    },
+    {
+      "line": 17330,
+      "end_line": 17330,
+      "scope": "App._start_edit",
+      "pass_only": true,
+      "has_logging_or_notice": false,
+      "protected_context": true,
+      "severity": "protected_review",
+      "context": [
+        {
+          "line": 17318,
+          "text": "        except: return"
+        },
+        {
+          "line": 17319,
+          "text": "        day = col_idx+1"
+        },
+        {
+          "line": 17320,
+          "text": "        bbox = self.days_tree.bbox(item, f'#{col_idx+1}')"
+        },
+        {
+          "line": 17321,
+          "text": "        if not bbox:"
+        },
+        {
+          "line": 17322,
+          "text": "            self.days_tree.see(item); self.name_tree.see(self.name_tree.get_children()[row_idx])"
+        },
+        {
+          "line": 17323,
+          "text": "            self.days_tree.update_idletasks(); bbox = self.days_tree.bbox(item, f'#{col_idx+1}')"
+        },
+        {
+          "line": 17324,
+          "text": "            if not bbox: return"
+        },
+        {
+          "line": 17325,
+          "text": "        x,y,w,h = bbox"
+        },
+        {
+          "line": 17326,
+          "text": "        client_item = self.name_tree.get_children()[row_idx]; client = self.name_tree.item(client_item,'values')[0]"
+        },
+        {
+          "line": 17327,
+          "text": "        dt = date(self.grid_year, self.grid_month, day).strftime('%Y-%m-%d')"
+        },
+        {
+          "line": 17328,
+          "text": "        if self.current_entry:"
+        },
+        {
+          "line": 17329,
+          "text": "            try: self.current_entry.destroy()"
+        },
+        {
+          "line": 17330,
+          "text": "            except: pass"
+        },
+        {
+          "line": 17331,
+          "text": "            self.current_entry = None"
+        },
+        {
+          "line": 17332,
+          "text": "        ent = self._mk_tk_entry(self.days_tree, justify='center')"
+        },
+        {
+          "line": 17333,
+          "text": "        cur = self.days_tree.set(item, f'd{day}').replace('','').replace(',','').strip()"
+        },
+        {
+          "line": 17334,
+          "text": "        ent.insert(0, cur)"
+        },
+        {
+          "line": 17335,
+          "text": "        ent.place(x=x, y=y, width=w, height=h); ent.focus_set(); self.current_entry = ent"
+        },
+        {
+          "line": 17336,
+          "text": ""
+        },
+        {
+          "line": 17337,
+          "text": "        def save(e=None):"
+        },
+        {
+          "line": 17338,
+          "text": "            # 1) Parse amount"
+        },
+        {
+          "line": 17339,
+          "text": "            try:"
+        },
+        {
+          "line": 17340,
+          "text": "                txt = ent.get().strip()"
+        },
+        {
+          "line": 17341,
+          "text": "                amt = float(txt) if txt != '' else 0.0"
+        },
+        {
+          "line": 17342,
+          "text": "            except Exception:"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Read-only audit only; no app source changes are made.",
+    "Review each bare except in context before editing.",
+    "Change only one narrow area at a time after a separate cleanup plan."
+  ]
+}

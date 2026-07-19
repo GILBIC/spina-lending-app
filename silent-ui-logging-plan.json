@@ -1,0 +1,55 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48494,
+  "candidate_count": 11,
+  "selected_count": 5,
+  "apply": true,
+  "selected": [
+    {
+      "line": 1590,
+      "class": "_PgCompatConnection",
+      "function": "_parse_ymd",
+      "except_text": "        except Exception:",
+      "body_preview": "            return datetime.now().date()\n"
+    },
+    {
+      "line": 9964,
+      "class": "App",
+      "function": "_get_databank_focus_date",
+      "except_text": "            except Exception:",
+      "body_preview": "                return ''\n"
+    },
+    {
+      "line": 11659,
+      "class": "App",
+      "function": "_norm",
+      "except_text": "            except Exception:",
+      "body_preview": "                return str(s or \"\").strip().lower()\n"
+    },
+    {
+      "line": 13176,
+      "class": "App",
+      "function": "_looks_like_data_grid",
+      "except_text": "        except Exception:",
+      "body_preview": "            return False"
+    },
+    {
+      "line": 15857,
+      "class": "App",
+      "function": "_side_nav_items",
+      "except_text": "            except Exception:",
+      "body_preview": "                continue"
+    }
+  ],
+  "skipped_summary": {
+    "not_ui_startup_chrome": 15,
+    "protected_context": 1105,
+    "protected_name": 5
+  },
+  "recommendations": [
+    "Dry-run first and review selected lines.",
+    "This tightened version skips PostgreSQL storage, files, reports/PDFs, notes, collectors, transactions, and loan/payment contexts.",
+    "Use a small limit first, then compile and smoke-test SPINA.",
+    "Do not use this for balances, 7x7, interest, notes, collector route, statements, reports, PDFs, or storage helpers."
+  ]
+}

@@ -1,0 +1,622 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48520,
+  "context_radius": 8,
+  "pass_only_exception_count": 909,
+  "modern_ui_pass_only_count": 7,
+  "selected_cleanup_candidate_count": 0,
+  "modern_ui_review_only_count": 7,
+  "selected_scopes": [],
+  "safety": {
+    "read_only": true,
+    "app_source_modified": false,
+    "line_window": [
+      14900,
+      16350
+    ],
+    "protected_words_excluded": [
+      "7x7",
+      "7×7",
+      "apply_role_access",
+      "backup",
+      "balance",
+      "cash control",
+      "collector",
+      "database",
+      "interest",
+      "ledger",
+      "migration",
+      "payment",
+      "payroll",
+      "pdf",
+      "pg_",
+      "postgres",
+      "principal",
+      "receipt",
+      "renew",
+      "report",
+      "restore",
+      "role_access",
+      "route",
+      "statement",
+      "transaction"
+    ],
+    "excluded_note": "runtime role/access patches and protected business logic are outside this narrow plan"
+  },
+  "selected_sites": [],
+  "review_only_modern_ui_sites": [
+    {
+      "line": 15936,
+      "end_line": 15937,
+      "scope": "App._rebuild_side_nav",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 15928,
+          "text": "                bg=p.get('panel', '#ffffff'),"
+        },
+        {
+          "line": 15929,
+          "text": "                fg=p.get('fg', '#1a1a1a'),"
+        },
+        {
+          "line": 15930,
+          "text": "                font=('Segoe UI' if os.name == 'nt' else 'TkDefaultFont', 15, 'bold'),"
+        },
+        {
+          "line": 15931,
+          "text": "                padx=8,"
+        },
+        {
+          "line": 15932,
+          "text": "                pady=4,"
+        },
+        {
+          "line": 15933,
+          "text": "            )"
+        },
+        {
+          "line": 15934,
+          "text": "            title.pack(fill='x', pady=(0, 2))"
+        },
+        {
+          "line": 15935,
+          "text": "            self._side_nav_labels.append(title)"
+        },
+        {
+          "line": 15936,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15937,
+          "text": "            pass"
+        },
+        {
+          "line": 15938,
+          "text": ""
+        },
+        {
+          "line": 15939,
+          "text": "        try:"
+        },
+        {
+          "line": 15940,
+          "text": "            subtitle = tk.Label("
+        },
+        {
+          "line": 15941,
+          "text": "                frame,"
+        },
+        {
+          "line": 15942,
+          "text": "                text='PostgreSQL Edition',"
+        },
+        {
+          "line": 15943,
+          "text": "                anchor='w',"
+        },
+        {
+          "line": 15944,
+          "text": "                bg=p.get('panel', '#ffffff'),"
+        }
+      ]
+    },
+    {
+      "line": 16156,
+      "end_line": 16157,
+      "scope": "App._set_mode",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 16148,
+          "text": "        \"\"\"Fast switch between Regular and 7x7 from the modern segmented control.\"\"\""
+        },
+        {
+          "line": 16149,
+          "text": "        try:"
+        },
+        {
+          "line": 16150,
+          "text": "            mode = '7x7' if str(mode or '').lower().replace(' ', '') in ('7x7', '7×7') else 'Regular'"
+        },
+        {
+          "line": 16151,
+          "text": "            if getattr(self, 'mode_var', None) is not None:"
+        },
+        {
+          "line": 16152,
+          "text": "                if (self.mode_var.get() or '') == mode:"
+        },
+        {
+          "line": 16153,
+          "text": "                    self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16154,
+          "text": "                    return"
+        },
+        {
+          "line": 16155,
+          "text": "                self.mode_var.set(mode)"
+        },
+        {
+          "line": 16156,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16157,
+          "text": "            pass"
+        },
+        {
+          "line": 16158,
+          "text": "        try:"
+        },
+        {
+          "line": 16159,
+          "text": "            self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16160,
+          "text": "        except Exception as __spina_exc:"
+        },
+        {
+          "line": 16161,
+          "text": "            _log_suppressed_once('modern_ui_pass_16147', 'modern UI mode toggle refresh skipped', __spina_exc)"
+        },
+        {
+          "line": 16162,
+          "text": "            pass"
+        },
+        {
+          "line": 16163,
+          "text": "        try:"
+        },
+        {
+          "line": 16164,
+          "text": "            self._on_mode_change()"
+        }
+      ]
+    },
+    {
+      "line": 16168,
+      "end_line": 16169,
+      "scope": "App._set_mode",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 16160,
+          "text": "        except Exception as __spina_exc:"
+        },
+        {
+          "line": 16161,
+          "text": "            _log_suppressed_once('modern_ui_pass_16147', 'modern UI mode toggle refresh skipped', __spina_exc)"
+        },
+        {
+          "line": 16162,
+          "text": "            pass"
+        },
+        {
+          "line": 16163,
+          "text": "        try:"
+        },
+        {
+          "line": 16164,
+          "text": "            self._on_mode_change()"
+        },
+        {
+          "line": 16165,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 16166,
+          "text": "            try:"
+        },
+        {
+          "line": 16167,
+          "text": "                _log_suppressed_once('modern_mode_switch', 'modern mode switch failed', e)"
+        },
+        {
+          "line": 16168,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16169,
+          "text": "                pass"
+        },
+        {
+          "line": 16170,
+          "text": ""
+        },
+        {
+          "line": 16171,
+          "text": "    def _refresh_mode_toggle(self):"
+        },
+        {
+          "line": 16172,
+          "text": "        \"\"\"Update the Regular/7x7 segmented buttons after a mode change or theme change.\"\"\""
+        },
+        {
+          "line": 16173,
+          "text": "        hp = self._header_palette()"
+        },
+        {
+          "line": 16174,
+          "text": "        try:"
+        },
+        {
+          "line": 16175,
+          "text": "            cur = '7x7' if self._mode_filter() == '7x7' else 'Regular'"
+        },
+        {
+          "line": 16176,
+          "text": "        except Exception:"
+        }
+      ]
+    },
+    {
+      "line": 16234,
+      "end_line": 16235,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 16226,
+          "text": "            except Exception as __spina_exc:"
+        },
+        {
+          "line": 16227,
+          "text": "                _log_suppressed_once('modern_ui_pass_16208', 'modern UI header title color refresh skipped', __spina_exc)"
+        },
+        {
+          "line": 16228,
+          "text": "                pass"
+        },
+        {
+          "line": 16229,
+          "text": "        for attr in ('header_subtitle_label', 'mode_status_label'):"
+        },
+        {
+          "line": 16230,
+          "text": "            try:"
+        },
+        {
+          "line": 16231,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16232,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16233,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_subtitle_label' else hp['panel'], fg=hp['muted'])"
+        },
+        {
+          "line": 16234,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16235,
+          "text": "                pass"
+        },
+        {
+          "line": 16236,
+          "text": "        try:"
+        },
+        {
+          "line": 16237,
+          "text": "            if getattr(self, 'pg_status_label', None) is not None:"
+        },
+        {
+          "line": 16238,
+          "text": "                self.pg_status_label.configure(bg=hp['chip'], fg=hp['accent2'])"
+        },
+        {
+          "line": 16239,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16240,
+          "text": "            pass"
+        },
+        {
+          "line": 16241,
+          "text": "        try:"
+        },
+        {
+          "line": 16242,
+          "text": "            if getattr(self, 'theme_btn', None) is not None:"
+        }
+      ]
+    },
+    {
+      "line": 16239,
+      "end_line": 16240,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 16231,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16232,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16233,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_subtitle_label' else hp['panel'], fg=hp['muted'])"
+        },
+        {
+          "line": 16234,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16235,
+          "text": "                pass"
+        },
+        {
+          "line": 16236,
+          "text": "        try:"
+        },
+        {
+          "line": 16237,
+          "text": "            if getattr(self, 'pg_status_label', None) is not None:"
+        },
+        {
+          "line": 16238,
+          "text": "                self.pg_status_label.configure(bg=hp['chip'], fg=hp['accent2'])"
+        },
+        {
+          "line": 16239,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16240,
+          "text": "            pass"
+        },
+        {
+          "line": 16241,
+          "text": "        try:"
+        },
+        {
+          "line": 16242,
+          "text": "            if getattr(self, 'theme_btn', None) is not None:"
+        },
+        {
+          "line": 16243,
+          "text": "                self.theme_btn.configure(text=self._theme_toggle_text())"
+        },
+        {
+          "line": 16244,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16245,
+          "text": "            pass"
+        },
+        {
+          "line": 16246,
+          "text": "        try:"
+        },
+        {
+          "line": 16247,
+          "text": "            self._refresh_mode_toggle()"
+        }
+      ]
+    },
+    {
+      "line": 16244,
+      "end_line": 16245,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 16236,
+          "text": "        try:"
+        },
+        {
+          "line": 16237,
+          "text": "            if getattr(self, 'pg_status_label', None) is not None:"
+        },
+        {
+          "line": 16238,
+          "text": "                self.pg_status_label.configure(bg=hp['chip'], fg=hp['accent2'])"
+        },
+        {
+          "line": 16239,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16240,
+          "text": "            pass"
+        },
+        {
+          "line": 16241,
+          "text": "        try:"
+        },
+        {
+          "line": 16242,
+          "text": "            if getattr(self, 'theme_btn', None) is not None:"
+        },
+        {
+          "line": 16243,
+          "text": "                self.theme_btn.configure(text=self._theme_toggle_text())"
+        },
+        {
+          "line": 16244,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16245,
+          "text": "            pass"
+        },
+        {
+          "line": 16246,
+          "text": "        try:"
+        },
+        {
+          "line": 16247,
+          "text": "            self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16248,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16249,
+          "text": "            pass"
+        },
+        {
+          "line": 16250,
+          "text": ""
+        },
+        {
+          "line": 16251,
+          "text": "    def _build_header(self):"
+        },
+        {
+          "line": 16252,
+          "text": "        \"\"\"Modern top header: app identity + fast Regular/7x7 switch + app actions.\"\"\""
+        }
+      ]
+    },
+    {
+      "line": 16248,
+      "end_line": 16249,
+      "scope": "App._refresh_header_theme",
+      "handler": "Exception",
+      "protected_context": true,
+      "modern_ui_scope": true,
+      "modern_ui_line_window": true,
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "review only / do not change from this plan",
+      "context": [
+        {
+          "line": 16240,
+          "text": "            pass"
+        },
+        {
+          "line": 16241,
+          "text": "        try:"
+        },
+        {
+          "line": 16242,
+          "text": "            if getattr(self, 'theme_btn', None) is not None:"
+        },
+        {
+          "line": 16243,
+          "text": "                self.theme_btn.configure(text=self._theme_toggle_text())"
+        },
+        {
+          "line": 16244,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16245,
+          "text": "            pass"
+        },
+        {
+          "line": 16246,
+          "text": "        try:"
+        },
+        {
+          "line": 16247,
+          "text": "            self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16248,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16249,
+          "text": "            pass"
+        },
+        {
+          "line": 16250,
+          "text": ""
+        },
+        {
+          "line": 16251,
+          "text": "    def _build_header(self):"
+        },
+        {
+          "line": 16252,
+          "text": "        \"\"\"Modern top header: app identity + fast Regular/7x7 switch + app actions.\"\"\""
+        },
+        {
+          "line": 16253,
+          "text": "        hp = self._header_palette()"
+        },
+        {
+          "line": 16254,
+          "text": "        family = 'Segoe UI' if os.name == 'nt' else 'TkDefaultFont'"
+        },
+        {
+          "line": 16255,
+          "text": ""
+        },
+        {
+          "line": 16256,
+          "text": "        top = tk.Frame(self.root, bg=hp['bg'], bd=0, highlightthickness=0)"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Read-only plan only; no app source changes are made.",
+    "Review selected_sites before creating any cleanup tool.",
+    "Only modern sidebar/header/theme UI chrome handlers should be considered.",
+    "Do not touch reports, PDFs, payments, balances, 7x7, renewals, collectors, backups, database migrations, cash-control, or report math."
+  ]
+}

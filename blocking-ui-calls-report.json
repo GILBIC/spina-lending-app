@@ -1,0 +1,65 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48496,
+  "blocking_call_count": 5,
+  "ui_blocking_candidate_count": 5,
+  "calls": [
+    {
+      "line": 1097,
+      "call": "time.sleep",
+      "scope": "run_write",
+      "worker_like_scope": false,
+      "ui_like_scope": false,
+      "ui_blocking_candidate": true,
+      "severity": "possible_ui_blocker",
+      "text": "time.sleep(delay)"
+    },
+    {
+      "line": 15390,
+      "call": "subprocess.run",
+      "scope": "App._create_postgres_backup_file",
+      "worker_like_scope": false,
+      "ui_like_scope": true,
+      "ui_blocking_candidate": true,
+      "severity": "likely_ui_blocker",
+      "text": "proc = subprocess.run("
+    },
+    {
+      "line": 15577,
+      "call": "subprocess.run",
+      "scope": "App._verify_postgres_backup_file",
+      "worker_like_scope": false,
+      "ui_like_scope": true,
+      "ui_blocking_candidate": true,
+      "severity": "likely_ui_blocker",
+      "text": "proc = subprocess.run("
+    },
+    {
+      "line": 15595,
+      "call": "subprocess.run",
+      "scope": "App._run_pg_command",
+      "worker_like_scope": false,
+      "ui_like_scope": false,
+      "ui_blocking_candidate": true,
+      "severity": "possible_ui_blocker",
+      "text": "proc = subprocess.run("
+    },
+    {
+      "line": 15608,
+      "call": "subprocess.run",
+      "scope": "App._run_pg_command",
+      "worker_like_scope": false,
+      "ui_like_scope": false,
+      "ui_blocking_candidate": true,
+      "severity": "possible_ui_blocker",
+      "text": "proc2 = subprocess.run("
+    }
+  ],
+  "recommendations": [
+    "Read-only audit only; no app source changes are made.",
+    "Review each blocking call in context before changing behavior.",
+    "Prefer moving long subprocess work to an existing worker/long-task path instead of editing UI code directly.",
+    "Do not touch reports, PDFs, payments, balances, 7x7, renewals, collectors, database migrations, or cash-control logic from this report alone.",
+    "If a candidate is confirmed safe, change one call family at a time and smoke-test SPINA after each change."
+  ]
+}

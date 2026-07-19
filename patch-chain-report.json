@@ -1,0 +1,1545 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48509,
+  "patch_assignment_count": 124,
+  "repeated_patch_target_count": 27,
+  "non_protected_repeated_patch_target_count": 1,
+  "repeated_patch_targets": {
+    "App.__init__": {
+      "assignment_count": 5,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App.__init__",
+        "line": 41616,
+        "owner": "App",
+        "attribute": "__init__",
+        "rhs": "_spina_v13_app_init",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          41606
+        ],
+        "protected_context": true,
+        "text": "App.__init__ = _spina_v13_app_init"
+      },
+      "chain": [
+        {
+          "target": "App.__init__",
+          "line": 37851,
+          "owner": "App",
+          "attribute": "__init__",
+          "rhs": "_spina_app_init_with_dashboard",
+          "rhs_kind": "feature_wrapper",
+          "rhs_def_lines": [
+            37841
+          ],
+          "protected_context": true,
+          "text": "App.__init__ = _spina_app_init_with_dashboard"
+        },
+        {
+          "target": "App.__init__",
+          "line": 38597,
+          "owner": "App",
+          "attribute": "__init__",
+          "rhs": "_spina_app_init_with_cash_control",
+          "rhs_kind": "feature_wrapper",
+          "rhs_def_lines": [
+            38587
+          ],
+          "protected_context": true,
+          "text": "App.__init__ = _spina_app_init_with_cash_control"
+        },
+        {
+          "target": "App.__init__",
+          "line": 39200,
+          "owner": "App",
+          "attribute": "__init__",
+          "rhs": "_spina_app_init_with_client_info_logs",
+          "rhs_kind": "feature_wrapper",
+          "rhs_def_lines": [
+            39191
+          ],
+          "protected_context": true,
+          "text": "App.__init__ = _spina_app_init_with_client_info_logs"
+        },
+        {
+          "target": "App.__init__",
+          "line": 39434,
+          "owner": "App",
+          "attribute": "__init__",
+          "rhs": "_spina_app_init_with_auto_close",
+          "rhs_kind": "feature_wrapper",
+          "rhs_def_lines": [
+            39424
+          ],
+          "protected_context": true,
+          "text": "App.__init__ = _spina_app_init_with_auto_close"
+        },
+        {
+          "target": "App.__init__",
+          "line": 41616,
+          "owner": "App",
+          "attribute": "__init__",
+          "rhs": "_spina_v13_app_init",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            41606
+          ],
+          "protected_context": true,
+          "text": "App.__init__ = _spina_v13_app_init"
+        }
+      ]
+    },
+    "App._apply_ui_theme": {
+      "assignment_count": 3,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App._apply_ui_theme",
+        "line": 41942,
+        "owner": "App",
+        "attribute": "_apply_ui_theme",
+        "rhs": "_spina_v15_apply_ui_theme",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          41931
+        ],
+        "protected_context": true,
+        "text": "App._apply_ui_theme = _spina_v15_apply_ui_theme"
+      },
+      "chain": [
+        {
+          "target": "App._apply_ui_theme",
+          "line": 37838,
+          "owner": "App",
+          "attribute": "_apply_ui_theme",
+          "rhs": "_spina_apply_ui_theme_with_dashboard",
+          "rhs_kind": "feature_wrapper",
+          "rhs_def_lines": [
+            37831
+          ],
+          "protected_context": true,
+          "text": "App._apply_ui_theme = _spina_apply_ui_theme_with_dashboard"
+        },
+        {
+          "target": "App._apply_ui_theme",
+          "line": 41603,
+          "owner": "App",
+          "attribute": "_apply_ui_theme",
+          "rhs": "_spina_v13_apply_ui_theme",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            41595
+          ],
+          "protected_context": true,
+          "text": "App._apply_ui_theme = _spina_v13_apply_ui_theme"
+        },
+        {
+          "target": "App._apply_ui_theme",
+          "line": 41942,
+          "owner": "App",
+          "attribute": "_apply_ui_theme",
+          "rhs": "_spina_v15_apply_ui_theme",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            41931
+          ],
+          "protected_context": true,
+          "text": "App._apply_ui_theme = _spina_v15_apply_ui_theme"
+        }
+      ]
+    },
+    "App._build_cash_control_tab": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App._build_cash_control_tab",
+        "line": 43987,
+        "owner": "App",
+        "attribute": "_build_cash_control_tab",
+        "rhs": "_spina_v21_cash_build_tab",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          43399
+        ],
+        "protected_context": true,
+        "text": "App._build_cash_control_tab = _spina_v21_cash_build_tab"
+      },
+      "chain": [
+        {
+          "target": "App._build_cash_control_tab",
+          "line": 38580,
+          "owner": "App",
+          "attribute": "_build_cash_control_tab",
+          "rhs": "_spina_cashctl_build_tab",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            38309
+          ],
+          "protected_context": true,
+          "text": "setattr(App, '_build_cash_control_tab', _spina_cashctl_build_tab)"
+        },
+        {
+          "target": "App._build_cash_control_tab",
+          "line": 43987,
+          "owner": "App",
+          "attribute": "_build_cash_control_tab",
+          "rhs": "_spina_v21_cash_build_tab",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            43399
+          ],
+          "protected_context": true,
+          "text": "App._build_cash_control_tab = _spina_v21_cash_build_tab"
+        }
+      ]
+    },
+    "App._build_client_info_logs_tab": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App._build_client_info_logs_tab",
+        "line": 46375,
+        "owner": "App",
+        "attribute": "_build_client_info_logs_tab",
+        "rhs": "_spina_v24_build_client_info_logs_tab",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          46011
+        ],
+        "protected_context": true,
+        "text": "App._build_client_info_logs_tab = _spina_v24_build_client_info_logs_tab"
+      },
+      "chain": [
+        {
+          "target": "App._build_client_info_logs_tab",
+          "line": 39188,
+          "owner": "App",
+          "attribute": "_build_client_info_logs_tab",
+          "rhs": "_spina_build_client_info_logs_tab",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            38983
+          ],
+          "protected_context": true,
+          "text": "setattr(App, '_build_client_info_logs_tab', _spina_build_client_info_logs_tab)"
+        },
+        {
+          "target": "App._build_client_info_logs_tab",
+          "line": 46375,
+          "owner": "App",
+          "attribute": "_build_client_info_logs_tab",
+          "rhs": "_spina_v24_build_client_info_logs_tab",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            46011
+          ],
+          "protected_context": true,
+          "text": "App._build_client_info_logs_tab = _spina_v24_build_client_info_logs_tab"
+        }
+      ]
+    },
+    "App._build_clients_tab": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App._build_clients_tab",
+        "line": 45665,
+        "owner": "App",
+        "attribute": "_build_clients_tab",
+        "rhs": "_spina_v23_build_clients_tab",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          44803
+        ],
+        "protected_context": true,
+        "text": "App._build_clients_tab = _spina_v23_build_clients_tab"
+      },
+      "chain": [
+        {
+          "target": "App._build_clients_tab",
+          "line": 35971,
+          "owner": "App",
+          "attribute": "_build_clients_tab",
+          "rhs": "_build_clients_tab_with_picture",
+          "rhs_kind": "feature_wrapper",
+          "rhs_def_lines": [
+            35961
+          ],
+          "protected_context": true,
+          "text": "App._build_clients_tab = _build_clients_tab_with_picture"
+        },
+        {
+          "target": "App._build_clients_tab",
+          "line": 45665,
+          "owner": "App",
+          "attribute": "_build_clients_tab",
+          "rhs": "_spina_v23_build_clients_tab",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            44803
+          ],
+          "protected_context": true,
+          "text": "App._build_clients_tab = _spina_v23_build_clients_tab"
+        }
+      ]
+    },
+    "App._build_collectors_tab": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App._build_collectors_tab",
+        "line": 47848,
+        "owner": "App",
+        "attribute": "_build_collectors_tab",
+        "rhs": "_spina_v27_build_collectors_tab",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          47165
+        ],
+        "protected_context": true,
+        "text": "App._build_collectors_tab = _spina_v27_build_collectors_tab"
+      },
+      "chain": [
+        {
+          "target": "App._build_collectors_tab",
+          "line": 46915,
+          "owner": "App",
+          "attribute": "_build_collectors_tab",
+          "rhs": "_spina_v25_build_collectors_tab",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            46565
+          ],
+          "protected_context": true,
+          "text": "App._build_collectors_tab = _spina_v25_build_collectors_tab"
+        },
+        {
+          "target": "App._build_collectors_tab",
+          "line": 47848,
+          "owner": "App",
+          "attribute": "_build_collectors_tab",
+          "rhs": "_spina_v27_build_collectors_tab",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            47165
+          ],
+          "protected_context": true,
+          "text": "App._build_collectors_tab = _spina_v27_build_collectors_tab"
+        }
+      ]
+    },
+    "App._build_dashboard_tab": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App._build_dashboard_tab",
+        "line": 42588,
+        "owner": "App",
+        "attribute": "_build_dashboard_tab",
+        "rhs": "_spina_v17_build_dashboard_tab",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          42118
+        ],
+        "protected_context": true,
+        "text": "App._build_dashboard_tab = _spina_v17_build_dashboard_tab"
+      },
+      "chain": [
+        {
+          "target": "App._build_dashboard_tab",
+          "line": 37823,
+          "owner": "App",
+          "attribute": "_build_dashboard_tab",
+          "rhs": "_spina_build_dashboard_tab",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            37590
+          ],
+          "protected_context": true,
+          "text": "setattr(App, '_build_dashboard_tab', _spina_build_dashboard_tab)"
+        },
+        {
+          "target": "App._build_dashboard_tab",
+          "line": 42588,
+          "owner": "App",
+          "attribute": "_build_dashboard_tab",
+          "rhs": "_spina_v17_build_dashboard_tab",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            42118
+          ],
+          "protected_context": true,
+          "text": "App._build_dashboard_tab = _spina_v17_build_dashboard_tab"
+        }
+      ]
+    },
+    "App._dashboard_visible_rows": {
+      "assignment_count": 3,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App._dashboard_visible_rows",
+        "line": 42972,
+        "owner": "App",
+        "attribute": "_dashboard_visible_rows",
+        "rhs": "_spina_v19_visible_dashboard_rows",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          42888
+        ],
+        "protected_context": true,
+        "text": "App._dashboard_visible_rows = _spina_v19_visible_dashboard_rows"
+      },
+      "chain": [
+        {
+          "target": "App._dashboard_visible_rows",
+          "line": 37826,
+          "owner": "App",
+          "attribute": "_dashboard_visible_rows",
+          "rhs": "_spina_dashboard_visible_rows",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            37698
+          ],
+          "protected_context": true,
+          "text": "setattr(App, '_dashboard_visible_rows', _spina_dashboard_visible_rows)"
+        },
+        {
+          "target": "App._dashboard_visible_rows",
+          "line": 42591,
+          "owner": "App",
+          "attribute": "_dashboard_visible_rows",
+          "rhs": "_spina_v17_visible_dashboard_rows",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            42047
+          ],
+          "protected_context": true,
+          "text": "App._dashboard_visible_rows = _spina_v17_visible_dashboard_rows"
+        },
+        {
+          "target": "App._dashboard_visible_rows",
+          "line": 42972,
+          "owner": "App",
+          "attribute": "_dashboard_visible_rows",
+          "rhs": "_spina_v19_visible_dashboard_rows",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            42888
+          ],
+          "protected_context": true,
+          "text": "App._dashboard_visible_rows = _spina_v19_visible_dashboard_rows"
+        }
+      ]
+    },
+    "App._on_collectors_select": {
+      "assignment_count": 3,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App._on_collectors_select",
+        "line": 47881,
+        "owner": "App",
+        "attribute": "_on_collectors_select",
+        "rhs": "_spina_v27_on_collectors_select",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          47864
+        ],
+        "protected_context": true,
+        "text": "App._on_collectors_select = _spina_v27_on_collectors_select"
+      },
+      "chain": [
+        {
+          "target": "App._on_collectors_select",
+          "line": 38803,
+          "owner": "App",
+          "attribute": "_on_collectors_select",
+          "rhs": "_on_collectors_select",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            21256,
+            38730
+          ],
+          "protected_context": true,
+          "text": "setattr(App, \"_on_collectors_select\", _on_collectors_select)"
+        },
+        {
+          "target": "App._on_collectors_select",
+          "line": 46973,
+          "owner": "App",
+          "attribute": "_on_collectors_select",
+          "rhs": "_spina_v26_on_collectors_select",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            46955
+          ],
+          "protected_context": true,
+          "text": "App._on_collectors_select = _spina_v26_on_collectors_select"
+        },
+        {
+          "target": "App._on_collectors_select",
+          "line": 47881,
+          "owner": "App",
+          "attribute": "_on_collectors_select",
+          "rhs": "_spina_v27_on_collectors_select",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            47864
+          ],
+          "protected_context": true,
+          "text": "App._on_collectors_select = _spina_v27_on_collectors_select"
+        }
+      ]
+    },
+    "App._on_mode_change": {
+      "assignment_count": 3,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App._on_mode_change",
+        "line": 42607,
+        "owner": "App",
+        "attribute": "_on_mode_change",
+        "rhs": "_spina_v17_on_mode_change",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          42596
+        ],
+        "protected_context": true,
+        "text": "App._on_mode_change = _spina_v17_on_mode_change"
+      },
+      "chain": [
+        {
+          "target": "App._on_mode_change",
+          "line": 37873,
+          "owner": "App",
+          "attribute": "_on_mode_change",
+          "rhs": "_spina_on_mode_change_with_dashboard",
+          "rhs_kind": "feature_wrapper",
+          "rhs_def_lines": [
+            37866
+          ],
+          "protected_context": true,
+          "text": "App._on_mode_change = _spina_on_mode_change_with_dashboard"
+        },
+        {
+          "target": "App._on_mode_change",
+          "line": 38619,
+          "owner": "App",
+          "attribute": "_on_mode_change",
+          "rhs": "_spina_on_mode_change_with_cash_control",
+          "rhs_kind": "feature_wrapper",
+          "rhs_def_lines": [
+            38612
+          ],
+          "protected_context": true,
+          "text": "App._on_mode_change = _spina_on_mode_change_with_cash_control"
+        },
+        {
+          "target": "App._on_mode_change",
+          "line": 42607,
+          "owner": "App",
+          "attribute": "_on_mode_change",
+          "rhs": "_spina_v17_on_mode_change",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            42596
+          ],
+          "protected_context": true,
+          "text": "App._on_mode_change = _spina_v17_on_mode_change"
+        }
+      ]
+    },
+    "App._populate_collector_details": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App._populate_collector_details",
+        "line": 46940,
+        "owner": "App",
+        "attribute": "_populate_collector_details",
+        "rhs": "_spina_v25_populate_collector_details",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          46933
+        ],
+        "protected_context": true,
+        "text": "App._populate_collector_details = _spina_v25_populate_collector_details"
+      },
+      "chain": [
+        {
+          "target": "App._populate_collector_details",
+          "line": 38799,
+          "owner": "App",
+          "attribute": "_populate_collector_details",
+          "rhs": "_populate_collector_details",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            21314,
+            38633
+          ],
+          "protected_context": true,
+          "text": "setattr(App, \"_populate_collector_details\", _populate_collector_details)"
+        },
+        {
+          "target": "App._populate_collector_details",
+          "line": 46940,
+          "owner": "App",
+          "attribute": "_populate_collector_details",
+          "rhs": "_spina_v25_populate_collector_details",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            46933
+          ],
+          "protected_context": true,
+          "text": "App._populate_collector_details = _spina_v25_populate_collector_details"
+        }
+      ]
+    },
+    "App._populate_dashboard_tree": {
+      "assignment_count": 5,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App._populate_dashboard_tree",
+        "line": 43278,
+        "owner": "App",
+        "attribute": "_populate_dashboard_tree",
+        "rhs": "_spina_v20_populate_dashboard_tree",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          43218
+        ],
+        "protected_context": true,
+        "text": "App._populate_dashboard_tree = _spina_v20_populate_dashboard_tree"
+      },
+      "chain": [
+        {
+          "target": "App._populate_dashboard_tree",
+          "line": 37825,
+          "owner": "App",
+          "attribute": "_populate_dashboard_tree",
+          "rhs": "_spina_populate_dashboard_tree",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            37718
+          ],
+          "protected_context": true,
+          "text": "setattr(App, '_populate_dashboard_tree', _spina_populate_dashboard_tree)"
+        },
+        {
+          "target": "App._populate_dashboard_tree",
+          "line": 42590,
+          "owner": "App",
+          "attribute": "_populate_dashboard_tree",
+          "rhs": "_spina_v17_populate_dashboard_tree",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            42480
+          ],
+          "protected_context": true,
+          "text": "App._populate_dashboard_tree = _spina_v17_populate_dashboard_tree"
+        },
+        {
+          "target": "App._populate_dashboard_tree",
+          "line": 42877,
+          "owner": "App",
+          "attribute": "_populate_dashboard_tree",
+          "rhs": "_spina_v18_populate_dashboard_tree",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            42833
+          ],
+          "protected_context": true,
+          "text": "App._populate_dashboard_tree = _spina_v18_populate_dashboard_tree"
+        },
+        {
+          "target": "App._populate_dashboard_tree",
+          "line": 42973,
+          "owner": "App",
+          "attribute": "_populate_dashboard_tree",
+          "rhs": "_spina_v19_populate_dashboard_tree",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            42920
+          ],
+          "protected_context": true,
+          "text": "App._populate_dashboard_tree = _spina_v19_populate_dashboard_tree"
+        },
+        {
+          "target": "App._populate_dashboard_tree",
+          "line": 43278,
+          "owner": "App",
+          "attribute": "_populate_dashboard_tree",
+          "rhs": "_spina_v20_populate_dashboard_tree",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            43218
+          ],
+          "protected_context": true,
+          "text": "App._populate_dashboard_tree = _spina_v20_populate_dashboard_tree"
+        }
+      ]
+    },
+    "App.add_client_dialog": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App.add_client_dialog",
+        "line": 45666,
+        "owner": "App",
+        "attribute": "add_client_dialog",
+        "rhs": "_spina_v23_add_client_dialog",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          45510
+        ],
+        "protected_context": true,
+        "text": "App.add_client_dialog = _spina_v23_add_client_dialog"
+      },
+      "chain": [
+        {
+          "target": "App.add_client_dialog",
+          "line": 31509,
+          "owner": "App",
+          "attribute": "add_client_dialog",
+          "rhs": "_app_add_client_dialog",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            29779
+          ],
+          "protected_context": true,
+          "text": "setattr(App, 'add_client_dialog', _app_add_client_dialog)"
+        },
+        {
+          "target": "App.add_client_dialog",
+          "line": 45666,
+          "owner": "App",
+          "attribute": "add_client_dialog",
+          "rhs": "_spina_v23_add_client_dialog",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            45510
+          ],
+          "protected_context": true,
+          "text": "App.add_client_dialog = _spina_v23_add_client_dialog"
+        }
+      ]
+    },
+    "App.apply_role_access": {
+      "assignment_count": 4,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App.apply_role_access",
+        "line": 41631,
+        "owner": "App",
+        "attribute": "apply_role_access",
+        "rhs": "_spina_v13_apply_role_access",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          41620
+        ],
+        "protected_context": true,
+        "text": "App.apply_role_access = _spina_v13_apply_role_access"
+      },
+      "chain": [
+        {
+          "target": "App.apply_role_access",
+          "line": 31553,
+          "owner": "App",
+          "attribute": "apply_role_access",
+          "rhs": "_spina_apply_role_access_modern_sidebar",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            31543
+          ],
+          "protected_context": true,
+          "text": "App.apply_role_access = _spina_apply_role_access_modern_sidebar"
+        },
+        {
+          "target": "App.apply_role_access",
+          "line": 37862,
+          "owner": "App",
+          "attribute": "apply_role_access",
+          "rhs": "_spina_apply_role_access_with_dashboard",
+          "rhs_kind": "feature_wrapper",
+          "rhs_def_lines": [
+            37855
+          ],
+          "protected_context": true,
+          "text": "App.apply_role_access = _spina_apply_role_access_with_dashboard"
+        },
+        {
+          "target": "App.apply_role_access",
+          "line": 38608,
+          "owner": "App",
+          "attribute": "apply_role_access",
+          "rhs": "_spina_apply_role_access_with_cash_control",
+          "rhs_kind": "feature_wrapper",
+          "rhs_def_lines": [
+            38601
+          ],
+          "protected_context": true,
+          "text": "App.apply_role_access = _spina_apply_role_access_with_cash_control"
+        },
+        {
+          "target": "App.apply_role_access",
+          "line": 41631,
+          "owner": "App",
+          "attribute": "apply_role_access",
+          "rhs": "_spina_v13_apply_role_access",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            41620
+          ],
+          "protected_context": true,
+          "text": "App.apply_role_access = _spina_v13_apply_role_access"
+        }
+      ]
+    },
+    "App.on_client_edit": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App.on_client_edit",
+        "line": 45667,
+        "owner": "App",
+        "attribute": "on_client_edit",
+        "rhs": "_spina_v23_on_client_edit",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          45562
+        ],
+        "protected_context": true,
+        "text": "App.on_client_edit = _spina_v23_on_client_edit"
+      },
+      "chain": [
+        {
+          "target": "App.on_client_edit",
+          "line": 31510,
+          "owner": "App",
+          "attribute": "on_client_edit",
+          "rhs": "_app_on_client_edit",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            29824
+          ],
+          "protected_context": true,
+          "text": "setattr(App, 'on_client_edit', _app_on_client_edit)"
+        },
+        {
+          "target": "App.on_client_edit",
+          "line": 45667,
+          "owner": "App",
+          "attribute": "on_client_edit",
+          "rhs": "_spina_v23_on_client_edit",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            45562
+          ],
+          "protected_context": true,
+          "text": "App.on_client_edit = _spina_v23_on_client_edit"
+        }
+      ]
+    },
+    "App.open_archived_clients_dialog": {
+      "assignment_count": 3,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App.open_archived_clients_dialog",
+        "line": 37139,
+        "owner": "App",
+        "attribute": "open_archived_clients_dialog",
+        "rhs": "_spina_fixed_open_archived_clients_dialog_rowid",
+        "rhs_kind": "fix_or_guard_patch",
+        "rhs_def_lines": [
+          36991
+        ],
+        "protected_context": true,
+        "text": "setattr(App, 'open_archived_clients_dialog', _spina_fixed_open_archived_clients_dialog_rowid)"
+      },
+      "chain": [
+        {
+          "target": "App.open_archived_clients_dialog",
+          "line": 31513,
+          "owner": "App",
+          "attribute": "open_archived_clients_dialog",
+          "rhs": "_app_open_archived_clients_dialog",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            31383
+          ],
+          "protected_context": true,
+          "text": "setattr(App, 'open_archived_clients_dialog', _app_open_archived_clients_dialog)"
+        },
+        {
+          "target": "App.open_archived_clients_dialog",
+          "line": 36877,
+          "owner": "App",
+          "attribute": "open_archived_clients_dialog",
+          "rhs": "_spina_fixed_open_archived_clients_dialog",
+          "rhs_kind": "fix_or_guard_patch",
+          "rhs_def_lines": [
+            36733
+          ],
+          "protected_context": true,
+          "text": "setattr(App, 'open_archived_clients_dialog', _spina_fixed_open_archived_clients_dialog)"
+        },
+        {
+          "target": "App.open_archived_clients_dialog",
+          "line": 37139,
+          "owner": "App",
+          "attribute": "open_archived_clients_dialog",
+          "rhs": "_spina_fixed_open_archived_clients_dialog_rowid",
+          "rhs_kind": "fix_or_guard_patch",
+          "rhs_def_lines": [
+            36991
+          ],
+          "protected_context": true,
+          "text": "setattr(App, 'open_archived_clients_dialog', _spina_fixed_open_archived_clients_dialog_rowid)"
+        }
+      ]
+    },
+    "App.refresh_cash_control": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App.refresh_cash_control",
+        "line": 43988,
+        "owner": "App",
+        "attribute": "refresh_cash_control",
+        "rhs": "_spina_v21_cash_refresh",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          43814
+        ],
+        "protected_context": true,
+        "text": "App.refresh_cash_control = _spina_v21_cash_refresh"
+      },
+      "chain": [
+        {
+          "target": "App.refresh_cash_control",
+          "line": 38581,
+          "owner": "App",
+          "attribute": "refresh_cash_control",
+          "rhs": "_spina_cashctl_refresh",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            38436
+          ],
+          "protected_context": true,
+          "text": "setattr(App, 'refresh_cash_control', _spina_cashctl_refresh)"
+        },
+        {
+          "target": "App.refresh_cash_control",
+          "line": 43988,
+          "owner": "App",
+          "attribute": "refresh_cash_control",
+          "rhs": "_spina_v21_cash_refresh",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            43814
+          ],
+          "protected_context": true,
+          "text": "App.refresh_cash_control = _spina_v21_cash_refresh"
+        }
+      ]
+    },
+    "App.refresh_client_info_logs": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App.refresh_client_info_logs",
+        "line": 46377,
+        "owner": "App",
+        "attribute": "refresh_client_info_logs",
+        "rhs": "_spina_v24_refresh_client_info_logs",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          46348
+        ],
+        "protected_context": true,
+        "text": "App.refresh_client_info_logs = _spina_v24_refresh_client_info_logs"
+      },
+      "chain": [
+        {
+          "target": "App.refresh_client_info_logs",
+          "line": 39187,
+          "owner": "App",
+          "attribute": "refresh_client_info_logs",
+          "rhs": "_spina_refresh_client_info_logs",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            39172
+          ],
+          "protected_context": true,
+          "text": "setattr(App, 'refresh_client_info_logs', _spina_refresh_client_info_logs)"
+        },
+        {
+          "target": "App.refresh_client_info_logs",
+          "line": 46377,
+          "owner": "App",
+          "attribute": "refresh_client_info_logs",
+          "rhs": "_spina_v24_refresh_client_info_logs",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            46348
+          ],
+          "protected_context": true,
+          "text": "App.refresh_client_info_logs = _spina_v24_refresh_client_info_logs"
+        }
+      ]
+    },
+    "App.refresh_clients": {
+      "assignment_count": 5,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App.refresh_clients",
+        "line": 45679,
+        "owner": "App",
+        "attribute": "refresh_clients",
+        "rhs": "_spina_v23_refresh_clients",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          45671
+        ],
+        "protected_context": true,
+        "text": "App.refresh_clients = _spina_v23_refresh_clients"
+      },
+      "chain": [
+        {
+          "target": "App.refresh_clients",
+          "line": 31507,
+          "owner": "App",
+          "attribute": "refresh_clients",
+          "rhs": "_app_refresh_clients",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            29602
+          ],
+          "protected_context": true,
+          "text": "setattr(App, 'refresh_clients', _app_refresh_clients)"
+        },
+        {
+          "target": "App.refresh_clients",
+          "line": 35983,
+          "owner": "App",
+          "attribute": "refresh_clients",
+          "rhs": "_refresh_clients_with_picture",
+          "rhs_kind": "feature_wrapper",
+          "rhs_def_lines": [
+            35976
+          ],
+          "protected_context": true,
+          "text": "App.refresh_clients = _refresh_clients_with_picture"
+        },
+        {
+          "target": "App.refresh_clients",
+          "line": 36609,
+          "owner": "App",
+          "attribute": "refresh_clients",
+          "rhs": "_spina_perf_refresh_clients",
+          "rhs_kind": "performance_wrapper",
+          "rhs_def_lines": [
+            36303
+          ],
+          "protected_context": true,
+          "text": "setattr(App, \"refresh_clients\", _spina_perf_refresh_clients)"
+        },
+        {
+          "target": "App.refresh_clients",
+          "line": 39211,
+          "owner": "App",
+          "attribute": "refresh_clients",
+          "rhs": "_spina_refresh_clients_with_client_info_logs",
+          "rhs_kind": "feature_wrapper",
+          "rhs_def_lines": [
+            39204
+          ],
+          "protected_context": true,
+          "text": "App.refresh_clients = _spina_refresh_clients_with_client_info_logs"
+        },
+        {
+          "target": "App.refresh_clients",
+          "line": 45679,
+          "owner": "App",
+          "attribute": "refresh_clients",
+          "rhs": "_spina_v23_refresh_clients",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            45671
+          ],
+          "protected_context": true,
+          "text": "App.refresh_clients = _spina_v23_refresh_clients"
+        }
+      ]
+    },
+    "App.refresh_collectors": {
+      "assignment_count": 3,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App.refresh_collectors",
+        "line": 47860,
+        "owner": "App",
+        "attribute": "refresh_collectors",
+        "rhs": "_spina_v27_refresh_collectors",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          47853
+        ],
+        "protected_context": true,
+        "text": "App.refresh_collectors = _spina_v27_refresh_collectors"
+      },
+      "chain": [
+        {
+          "target": "App.refresh_collectors",
+          "line": 35533,
+          "owner": "App",
+          "attribute": "refresh_collectors",
+          "rhs": "_refresh_collectors_guard",
+          "rhs_kind": "fix_or_guard_patch",
+          "rhs_def_lines": [
+            35521
+          ],
+          "protected_context": true,
+          "text": "App.refresh_collectors = _refresh_collectors_guard"
+        },
+        {
+          "target": "App.refresh_collectors",
+          "line": 46929,
+          "owner": "App",
+          "attribute": "refresh_collectors",
+          "rhs": "_spina_v25_refresh_collectors",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            46919
+          ],
+          "protected_context": true,
+          "text": "App.refresh_collectors = _spina_v25_refresh_collectors"
+        },
+        {
+          "target": "App.refresh_collectors",
+          "line": 47860,
+          "owner": "App",
+          "attribute": "refresh_collectors",
+          "rhs": "_spina_v27_refresh_collectors",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            47853
+          ],
+          "protected_context": true,
+          "text": "App.refresh_collectors = _spina_v27_refresh_collectors"
+        }
+      ]
+    },
+    "App.refresh_dashboard": {
+      "assignment_count": 5,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App.refresh_dashboard",
+        "line": 43279,
+        "owner": "App",
+        "attribute": "refresh_dashboard",
+        "rhs": "_spina_v20_refresh_dashboard",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          43255
+        ],
+        "protected_context": true,
+        "text": "App.refresh_dashboard = _spina_v20_refresh_dashboard"
+      },
+      "chain": [
+        {
+          "target": "App.refresh_dashboard",
+          "line": 37824,
+          "owner": "App",
+          "attribute": "refresh_dashboard",
+          "rhs": "_spina_refresh_dashboard",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            37773
+          ],
+          "protected_context": true,
+          "text": "setattr(App, 'refresh_dashboard', _spina_refresh_dashboard)"
+        },
+        {
+          "target": "App.refresh_dashboard",
+          "line": 42589,
+          "owner": "App",
+          "attribute": "refresh_dashboard",
+          "rhs": "_spina_v17_refresh_dashboard",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            42565
+          ],
+          "protected_context": true,
+          "text": "App.refresh_dashboard = _spina_v17_refresh_dashboard"
+        },
+        {
+          "target": "App.refresh_dashboard",
+          "line": 42876,
+          "owner": "App",
+          "attribute": "refresh_dashboard",
+          "rhs": "_spina_v18_refresh_dashboard",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            42853
+          ],
+          "protected_context": true,
+          "text": "App.refresh_dashboard = _spina_v18_refresh_dashboard"
+        },
+        {
+          "target": "App.refresh_dashboard",
+          "line": 42974,
+          "owner": "App",
+          "attribute": "refresh_dashboard",
+          "rhs": "_spina_v19_refresh_dashboard",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            42941
+          ],
+          "protected_context": true,
+          "text": "App.refresh_dashboard = _spina_v19_refresh_dashboard"
+        },
+        {
+          "target": "App.refresh_dashboard",
+          "line": 43279,
+          "owner": "App",
+          "attribute": "refresh_dashboard",
+          "rhs": "_spina_v20_refresh_dashboard",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            43255
+          ],
+          "protected_context": true,
+          "text": "App.refresh_dashboard = _spina_v20_refresh_dashboard"
+        }
+      ]
+    },
+    "App.refresh_data_grid": {
+      "assignment_count": 3,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App.refresh_data_grid",
+        "line": 41982,
+        "owner": "App",
+        "attribute": "refresh_data_grid",
+        "rhs": "_spina_v16_refresh_data_grid",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          41975
+        ],
+        "protected_context": true,
+        "text": "App.refresh_data_grid = _spina_v16_refresh_data_grid"
+      },
+      "chain": [
+        {
+          "target": "App.refresh_data_grid",
+          "line": 36610,
+          "owner": "App",
+          "attribute": "refresh_data_grid",
+          "rhs": "_spina_perf_refresh_data_grid",
+          "rhs_kind": "performance_wrapper",
+          "rhs_def_lines": [
+            36395
+          ],
+          "protected_context": true,
+          "text": "setattr(App, \"refresh_data_grid\", _spina_perf_refresh_data_grid)"
+        },
+        {
+          "target": "App.refresh_data_grid",
+          "line": 41916,
+          "owner": "App",
+          "attribute": "refresh_data_grid",
+          "rhs": "_spina_v15_refresh_data_grid",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            41898
+          ],
+          "protected_context": true,
+          "text": "App.refresh_data_grid = _spina_v15_refresh_data_grid"
+        },
+        {
+          "target": "App.refresh_data_grid",
+          "line": 41982,
+          "owner": "App",
+          "attribute": "refresh_data_grid",
+          "rhs": "_spina_v16_refresh_data_grid",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            41975
+          ],
+          "protected_context": true,
+          "text": "App.refresh_data_grid = _spina_v16_refresh_data_grid"
+        }
+      ]
+    },
+    "App.render_client_info_logs": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App.render_client_info_logs",
+        "line": 46376,
+        "owner": "App",
+        "attribute": "render_client_info_logs",
+        "rhs": "_spina_v24_render_client_info_logs",
+        "rhs_kind": "versioned_patch",
+        "rhs_def_lines": [
+          46263
+        ],
+        "protected_context": true,
+        "text": "App.render_client_info_logs = _spina_v24_render_client_info_logs"
+      },
+      "chain": [
+        {
+          "target": "App.render_client_info_logs",
+          "line": 39186,
+          "owner": "App",
+          "attribute": "render_client_info_logs",
+          "rhs": "_spina_render_client_info_logs",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            39117
+          ],
+          "protected_context": true,
+          "text": "setattr(App, 'render_client_info_logs', _spina_render_client_info_logs)"
+        },
+        {
+          "target": "App.render_client_info_logs",
+          "line": 46376,
+          "owner": "App",
+          "attribute": "render_client_info_logs",
+          "rhs": "_spina_v24_render_client_info_logs",
+          "rhs_kind": "versioned_patch",
+          "rhs_def_lines": [
+            46263
+          ],
+          "protected_context": true,
+          "text": "App.render_client_info_logs = _spina_v24_render_client_info_logs"
+        }
+      ]
+    },
+    "App.save_closed_collector_route_copy": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "App.save_closed_collector_route_copy",
+        "line": 40897,
+        "owner": "App",
+        "attribute": "save_closed_collector_route_copy",
+        "rhs": "_spina_save_closed_collector_route_copy_same_format",
+        "rhs_kind": "patch",
+        "rhs_def_lines": [
+          40725
+        ],
+        "protected_context": true,
+        "text": "App.save_closed_collector_route_copy = _spina_save_closed_collector_route_copy_same_format"
+      },
+      "chain": [
+        {
+          "target": "App.save_closed_collector_route_copy",
+          "line": 40624,
+          "owner": "App",
+          "attribute": "save_closed_collector_route_copy",
+          "rhs": "_spina_save_closed_collector_route_copy",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            40340
+          ],
+          "protected_context": true,
+          "text": "setattr(App, 'save_closed_collector_route_copy', _spina_save_closed_collector_route_copy)"
+        },
+        {
+          "target": "App.save_closed_collector_route_copy",
+          "line": 40897,
+          "owner": "App",
+          "attribute": "save_closed_collector_route_copy",
+          "rhs": "_spina_save_closed_collector_route_copy_same_format",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            40725
+          ],
+          "protected_context": true,
+          "text": "App.save_closed_collector_route_copy = _spina_save_closed_collector_route_copy_same_format"
+        }
+      ]
+    },
+    "AppClass.__init__": {
+      "assignment_count": 2,
+      "protected_chain": false,
+      "final_assignment": {
+        "target": "AppClass.__init__",
+        "line": 26462,
+        "owner": "AppClass",
+        "attribute": "__init__",
+        "rhs": "orig_App_init",
+        "rhs_kind": "restore_original",
+        "rhs_def_lines": [],
+        "protected_context": false,
+        "text": "AppClass.__init__ = orig_App_init"
+      },
+      "chain": [
+        {
+          "target": "AppClass.__init__",
+          "line": 26458,
+          "owner": "AppClass",
+          "attribute": "__init__",
+          "rhs": "patched_init",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            26451
+          ],
+          "protected_context": false,
+          "text": "AppClass.__init__ = patched_init"
+        },
+        {
+          "target": "AppClass.__init__",
+          "line": 26462,
+          "owner": "AppClass",
+          "attribute": "__init__",
+          "rhs": "orig_App_init",
+          "rhs_kind": "restore_original",
+          "rhs_def_lines": [],
+          "protected_context": false,
+          "text": "AppClass.__init__ = orig_App_init"
+        }
+      ]
+    },
+    "LoanDB.restore_client": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "LoanDB.restore_client",
+        "line": 37135,
+        "owner": "LoanDB",
+        "attribute": "restore_client",
+        "rhs": "_spina_fixed_restore_client",
+        "rhs_kind": "fix_or_guard_patch",
+        "rhs_def_lines": [
+          36667
+        ],
+        "protected_context": true,
+        "text": "setattr(LoanDB, 'restore_client', _spina_fixed_restore_client)"
+      },
+      "chain": [
+        {
+          "target": "LoanDB.restore_client",
+          "line": 36874,
+          "owner": "LoanDB",
+          "attribute": "restore_client",
+          "rhs": "_spina_fixed_restore_client",
+          "rhs_kind": "fix_or_guard_patch",
+          "rhs_def_lines": [
+            36667
+          ],
+          "protected_context": true,
+          "text": "setattr(LoanDB, 'restore_client', _spina_fixed_restore_client)"
+        },
+        {
+          "target": "LoanDB.restore_client",
+          "line": 37135,
+          "owner": "LoanDB",
+          "attribute": "restore_client",
+          "rhs": "_spina_fixed_restore_client",
+          "rhs_kind": "fix_or_guard_patch",
+          "rhs_def_lines": [
+            36667
+          ],
+          "protected_context": true,
+          "text": "setattr(LoanDB, 'restore_client', _spina_fixed_restore_client)"
+        }
+      ]
+    },
+    "LoanDB.restore_client_by_uid": {
+      "assignment_count": 2,
+      "protected_chain": true,
+      "final_assignment": {
+        "target": "LoanDB.restore_client_by_uid",
+        "line": 37137,
+        "owner": "LoanDB",
+        "attribute": "restore_client_by_uid",
+        "rhs": "_spina_fixed_restore_client_by_uid",
+        "rhs_kind": "fix_or_guard_patch",
+        "rhs_def_lines": [
+          36710
+        ],
+        "protected_context": true,
+        "text": "setattr(LoanDB, 'restore_client_by_uid', _spina_fixed_restore_client_by_uid)"
+      },
+      "chain": [
+        {
+          "target": "LoanDB.restore_client_by_uid",
+          "line": 36875,
+          "owner": "LoanDB",
+          "attribute": "restore_client_by_uid",
+          "rhs": "_spina_fixed_restore_client_by_uid",
+          "rhs_kind": "fix_or_guard_patch",
+          "rhs_def_lines": [
+            36710
+          ],
+          "protected_context": true,
+          "text": "setattr(LoanDB, 'restore_client_by_uid', _spina_fixed_restore_client_by_uid)"
+        },
+        {
+          "target": "LoanDB.restore_client_by_uid",
+          "line": 37137,
+          "owner": "LoanDB",
+          "attribute": "restore_client_by_uid",
+          "rhs": "_spina_fixed_restore_client_by_uid",
+          "rhs_kind": "fix_or_guard_patch",
+          "rhs_def_lines": [
+            36710
+          ],
+          "protected_context": true,
+          "text": "setattr(LoanDB, 'restore_client_by_uid', _spina_fixed_restore_client_by_uid)"
+        }
+      ]
+    }
+  },
+  "non_protected_repeated_patch_targets": {
+    "AppClass.__init__": {
+      "assignment_count": 2,
+      "protected_chain": false,
+      "final_assignment": {
+        "target": "AppClass.__init__",
+        "line": 26462,
+        "owner": "AppClass",
+        "attribute": "__init__",
+        "rhs": "orig_App_init",
+        "rhs_kind": "restore_original",
+        "rhs_def_lines": [],
+        "protected_context": false,
+        "text": "AppClass.__init__ = orig_App_init"
+      },
+      "chain": [
+        {
+          "target": "AppClass.__init__",
+          "line": 26458,
+          "owner": "AppClass",
+          "attribute": "__init__",
+          "rhs": "patched_init",
+          "rhs_kind": "patch",
+          "rhs_def_lines": [
+            26451
+          ],
+          "protected_context": false,
+          "text": "AppClass.__init__ = patched_init"
+        },
+        {
+          "target": "AppClass.__init__",
+          "line": 26462,
+          "owner": "AppClass",
+          "attribute": "__init__",
+          "rhs": "orig_App_init",
+          "rhs_kind": "restore_original",
+          "rhs_def_lines": [],
+          "protected_context": false,
+          "text": "AppClass.__init__ = orig_App_init"
+        }
+      ]
+    }
+  },
+  "recommendations": [
+    "Read-only audit only; no app source changes are made.",
+    "The final assignment is the currently effective patch for each repeated target.",
+    "Do not remove earlier assignments until the wrapper chain and behavior are manually reviewed.",
+    "Protected chains should be treated as keep/review, not automatic cleanup.",
+    "Do not touch balances, 7x7, interest, payment allocation, notes, collector route, statements, PDFs, renewals, cash-control, or report math from this report alone."
+  ]
+}

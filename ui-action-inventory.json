@@ -1,0 +1,95 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48494,
+  "ui_groups": [
+    "clients_legacy_actions",
+    "databank_export_controls"
+  ],
+  "label_hits": {
+    "clients_legacy_actions": [],
+    "databank_export_controls": []
+  },
+  "callback_candidates": {
+    "clients_legacy_actions": [
+      {
+        "line": 8336,
+        "function": "import_missing_clients_from_transactions",
+        "class": "LoanDB",
+        "protected_context": false
+      },
+      {
+        "line": 21881,
+        "function": "print_full_daily_ledger",
+        "class": "App",
+        "protected_context": true
+      },
+      {
+        "line": 24999,
+        "function": "import_clients_from_excel",
+        "class": "App",
+        "protected_context": true
+      },
+      {
+        "line": 25823,
+        "function": "export_clients_template",
+        "class": "CollectorDialog",
+        "protected_context": true
+      },
+      {
+        "line": 25859,
+        "function": "export_range_template",
+        "class": "CollectorDialog",
+        "protected_context": false
+      },
+      {
+        "line": 26667,
+        "function": "export_range_template",
+        "class": "",
+        "protected_context": false
+      },
+      {
+        "line": 30609,
+        "function": "_app_export_clients_template",
+        "class": "",
+        "protected_context": false
+      },
+      {
+        "line": 30635,
+        "function": "_app_import_clients_from_excel",
+        "class": "",
+        "protected_context": false
+      },
+      {
+        "line": 31809,
+        "function": "print_full_daily_ledger",
+        "class": "",
+        "protected_context": false
+      }
+    ],
+    "databank_export_controls": []
+  },
+  "command_references": {
+    "clients_legacy_actions": [],
+    "databank_export_controls": []
+  },
+  "protected_keywords": [
+    "balance",
+    "7x7",
+    "principal",
+    "interest",
+    "payment allocation",
+    "advance",
+    "pass",
+    "collector route",
+    "note",
+    "statement",
+    "client_pdf",
+    "ledger total"
+  ],
+  "matching_note": "Label hits require exact display-label literals; SQL FROM clauses and exportselection options are ignored.",
+  "recommendations": [
+    "clients_legacy_actions: no exact UI labels or command references found. 9 callback-name matches remain; treat them as shared app functions unless a later audit proves they are unused.",
+    "databank_export_controls: no exact UI labels, callbacks, or command references found.",
+    "Delete only confirmed UI/action glue first. Do not touch balances, 7x7, interest, payment allocation, notes, or report math."
+  ]
+}

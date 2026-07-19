@@ -1,0 +1,228 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48525,
+  "context_radius": 8,
+  "pass_only_exception_count": 904,
+  "logger_fallback_pass_only_count": 2,
+  "non_logger_pass_only_count": 902,
+  "selected_cleanup_candidate_count": 0,
+  "group_counts": {
+    "logger_fallback_review": 2,
+    "non_logger_reference": 902
+  },
+  "logger_scope_counts": {
+    "_log_exc": 1,
+    "_log_suppressed_once": 1
+  },
+  "safety": {
+    "read_only": true,
+    "app_source_modified": false,
+    "cleanup_approved": false,
+    "protected_words_used": [
+      "7x7",
+      "7×7",
+      "apply_role_access",
+      "backup",
+      "balance",
+      "cash control",
+      "collector",
+      "database",
+      "interest",
+      "ledger",
+      "migration",
+      "payment",
+      "payroll",
+      "pdf",
+      "pg_",
+      "postgres",
+      "principal",
+      "receipt",
+      "renew",
+      "report",
+      "restore",
+      "role_access",
+      "route",
+      "statement",
+      "transaction"
+    ],
+    "note": "This report narrows to logger fallback pass-only handlers only. It does not approve cleanup."
+  },
+  "logger_fallback_sites": [
+    {
+      "line": 1284,
+      "end_line": 1285,
+      "scope": "_log_exc",
+      "handler": "Exception",
+      "logger_fallback": true,
+      "protected_context": false,
+      "group": "logger_fallback_review",
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "Review only. This planner does not approve cleanup.",
+      "context": [
+        {
+          "line": 1276,
+          "text": "                \"%s: %s\","
+        },
+        {
+          "line": 1277,
+          "text": "                context,"
+        },
+        {
+          "line": 1278,
+          "text": "                exc,"
+        },
+        {
+          "line": 1279,
+          "text": "                exc_info=(type(exc), exc, exc.__traceback__),"
+        },
+        {
+          "line": 1280,
+          "text": "            )"
+        },
+        {
+          "line": 1281,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 1282,
+          "text": "        try:"
+        },
+        {
+          "line": 1283,
+          "text": "            print(f\"[SPINA][ERROR] {context}: {exc}\", file=sys.stderr)"
+        },
+        {
+          "line": 1284,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 1285,
+          "text": "            pass"
+        },
+        {
+          "line": 1286,
+          "text": ""
+        },
+        {
+          "line": 1287,
+          "text": ""
+        },
+        {
+          "line": 1288,
+          "text": "# --- BEGIN: log suppressed exceptions (log-once) ---"
+        },
+        {
+          "line": 1289,
+          "text": "try:"
+        },
+        {
+          "line": 1290,
+          "text": "    _SUPPRESS_LOG_ONCE_KEYS"
+        },
+        {
+          "line": 1291,
+          "text": "except NameError:"
+        },
+        {
+          "line": 1292,
+          "text": "    _SUPPRESS_LOG_ONCE_KEYS = set()"
+        },
+        {
+          "line": 1293,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 1309,
+      "end_line": 1310,
+      "scope": "_log_suppressed_once",
+      "handler": "Exception",
+      "logger_fallback": true,
+      "protected_context": false,
+      "group": "logger_fallback_review",
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "Review only. This planner does not approve cleanup.",
+      "context": [
+        {
+          "line": 1301,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 1302,
+          "text": "        # Never call this function recursively from its own failure path."
+        },
+        {
+          "line": 1303,
+          "text": "        k = str(context or \"suppressed\")"
+        },
+        {
+          "line": 1304,
+          "text": "    try:"
+        },
+        {
+          "line": 1305,
+          "text": "        _log_exc(context, exc)"
+        },
+        {
+          "line": 1306,
+          "text": "    except Exception:"
+        },
+        {
+          "line": 1307,
+          "text": "        try:"
+        },
+        {
+          "line": 1308,
+          "text": "            print(f\"[SPINA][SUPPRESSED] {context}: {exc}\", file=sys.stderr)"
+        },
+        {
+          "line": 1309,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 1310,
+          "text": "            pass"
+        },
+        {
+          "line": 1311,
+          "text": "# --- END: log suppressed exceptions (log-once) ---"
+        },
+        {
+          "line": 1312,
+          "text": ""
+        },
+        {
+          "line": 1313,
+          "text": "def _alert_user(title: str, message: str, kind: str = \"error\"):"
+        },
+        {
+          "line": 1314,
+          "text": "    \"\"\"Best-effort UI alert. Safe even if Tk root isn't created yet.\"\"\""
+        },
+        {
+          "line": 1315,
+          "text": "    try:"
+        },
+        {
+          "line": 1316,
+          "text": "        from tkinter import messagebox as _mb"
+        },
+        {
+          "line": 1317,
+          "text": "        if kind == \"warning\":"
+        },
+        {
+          "line": 1318,
+          "text": "            _mb.showwarning(title, message)"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Do not apply cleanup from this report alone.",
+    "Keep logger fallback behavior functionally unchanged.",
+    "Only consider a future cleanup tool for exact reviewed logger fallback handlers.",
+    "Do not touch business logic, reports, payments, balances, database, backups, or role/access handlers."
+  ]
+}

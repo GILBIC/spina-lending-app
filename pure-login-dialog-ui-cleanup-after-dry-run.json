@@ -1,0 +1,53 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "apply": false,
+  "target_count": 5,
+  "safe_candidate_count": 0,
+  "already_clean_count": 5,
+  "unsafe_count": 0,
+  "safe": true,
+  "patched": false,
+  "app_source_modified": false,
+  "selected_scope": "5 exact pure login dialog UI pass-only handlers only; excludes auth/password/role/account database/header/focus handlers",
+  "excluded_focus_handler": "line 48370 pw_entry.focus_set() is intentionally not targeted",
+  "safe_candidates": [],
+  "already_clean": [
+    {
+      "key": "login_dialog_transient",
+      "expected_line": 48175,
+      "status": "already_clean",
+      "note": "Login dialog transient window relation only."
+    },
+    {
+      "key": "login_dialog_account_trace",
+      "expected_line": 48332,
+      "status": "already_clean",
+      "note": "Login dialog account info trace callback only."
+    },
+    {
+      "key": "login_dialog_return_bind",
+      "expected_line": 48342,
+      "status": "already_clean",
+      "note": "Login dialog Return-key binding only."
+    },
+    {
+      "key": "login_dialog_grab_set",
+      "expected_line": 48347,
+      "status": "already_clean",
+      "note": "Login dialog modal grab only."
+    },
+    {
+      "key": "login_dialog_position",
+      "expected_line": 48365,
+      "status": "already_clean",
+      "note": "Login dialog geometry/positioning only."
+    }
+  ],
+  "unsafe": [],
+  "recommendations": [
+    "Review dry-run JSON before applying.",
+    "Apply only if safe is true and unsafe_count is 0.",
+    "After apply, rerun this tool, the pure login dialog planner, and the pass-only exception audit.",
+    "Smoke-test staff login, account switching, password-change-required flow, Cancel, and Return-key login."
+  ]
+}

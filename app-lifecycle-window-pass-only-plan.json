@@ -1,0 +1,237 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48525,
+  "context_radius": 8,
+  "pass_only_exception_count": 902,
+  "app_lifecycle_window_pass_only_count": 2,
+  "non_app_lifecycle_window_pass_only_count": 900,
+  "selected_cleanup_candidate_count": 0,
+  "group_counts": {
+    "non_app_lifecycle_reference": 900,
+    "startup_window_geometry_review": 1,
+    "root_closing_watchdog_review": 1
+  },
+  "app_lifecycle_scope_counts": {
+    "App.__init__": 1,
+    "App._run_long_task._watchdog": 1
+  },
+  "safety": {
+    "read_only": true,
+    "app_source_modified": false,
+    "cleanup_approved": false,
+    "protected_words_used": [
+      "7x7",
+      "7×7",
+      "apply_role_access",
+      "backup",
+      "balance",
+      "cash control",
+      "collector",
+      "database",
+      "interest",
+      "ledger",
+      "migration",
+      "payment",
+      "payroll",
+      "pdf",
+      "pg_",
+      "postgres",
+      "principal",
+      "receipt",
+      "renew",
+      "report",
+      "restore",
+      "role_access",
+      "route",
+      "statement",
+      "transaction"
+    ],
+    "note": "This report narrows to App lifecycle/window fallback pass-only handlers only. It does not approve cleanup."
+  },
+  "app_lifecycle_window_sites": [
+    {
+      "line": 14217,
+      "end_line": 14219,
+      "scope": "App.__init__",
+      "handler": "Exception",
+      "app_lifecycle_window": true,
+      "protected_context": false,
+      "group": "startup_window_geometry_review",
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "Review only. This planner does not approve cleanup.",
+      "context": [
+        {
+          "line": 14209,
+          "text": "            root.geometry(f\"{w}x{h}\")"
+        },
+        {
+          "line": 14210,
+          "text": "            root.minsize(1050, 680)"
+        },
+        {
+          "line": 14211,
+          "text": ""
+        },
+        {
+          "line": 14212,
+          "text": "            # Center on screen"
+        },
+        {
+          "line": 14213,
+          "text": "            root.update_idletasks()"
+        },
+        {
+          "line": 14214,
+          "text": "            sx = max(0, (root.winfo_screenwidth() - w) // 2)"
+        },
+        {
+          "line": 14215,
+          "text": "            sy = max(0, (root.winfo_screenheight() - h) // 2)"
+        },
+        {
+          "line": 14216,
+          "text": "            root.geometry(f\"{w}x{h}+{sx}+{sy}\")"
+        },
+        {
+          "line": 14217,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 14218,
+          "text": "            # Fallback: keep whatever Tk decides"
+        },
+        {
+          "line": 14219,
+          "text": "            pass"
+        },
+        {
+          "line": 14220,
+          "text": "        self.db = LoanDB()"
+        },
+        {
+          "line": 14221,
+          "text": "        try:"
+        },
+        {
+          "line": 14222,
+          "text": "            self.db.set_default_loan_type(self._mode_filter())"
+        },
+        {
+          "line": 14223,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 14224,
+          "text": "            # Mode selector may not be initialized yet; default safely."
+        },
+        {
+          "line": 14225,
+          "text": "            try:"
+        },
+        {
+          "line": 14226,
+          "text": "                self.db.set_default_loan_type(\"Regular\")"
+        },
+        {
+          "line": 14227,
+          "text": "            except Exception as __spina_exc:"
+        }
+      ]
+    },
+    {
+      "line": 14653,
+      "end_line": 14655,
+      "scope": "App._run_long_task._watchdog",
+      "handler": "Exception",
+      "app_lifecycle_window": true,
+      "protected_context": false,
+      "group": "root_closing_watchdog_review",
+      "selected_for_cleanup_plan": false,
+      "recommended_action": "Review only. This planner does not approve cleanup.",
+      "context": [
+        {
+          "line": 14645,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 14646,
+          "text": "                try:"
+        },
+        {
+          "line": 14647,
+          "text": "                    _log_exc(\"long_task:watchdog\", e)"
+        },
+        {
+          "line": 14648,
+          "text": "                except Exception as __spina_exc:"
+        },
+        {
+          "line": 14649,
+          "text": "                    _log_suppressed_once('excpass_0300', 'suppressed exception excpass_0300', __spina_exc)"
+        },
+        {
+          "line": 14650,
+          "text": "                    pass"
+        },
+        {
+          "line": 14651,
+          "text": "            try:"
+        },
+        {
+          "line": 14652,
+          "text": "                self.root.after(250, _watchdog)"
+        },
+        {
+          "line": 14653,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 14654,
+          "text": "                # root is likely closing"
+        },
+        {
+          "line": 14655,
+          "text": "                pass"
+        },
+        {
+          "line": 14656,
+          "text": ""
+        },
+        {
+          "line": 14657,
+          "text": "        # --- build dialog (UI thread) ---"
+        },
+        {
+          "line": 14658,
+          "text": "        try:"
+        },
+        {
+          "line": 14659,
+          "text": "            dlg = tk.Toplevel(self.root)"
+        },
+        {
+          "line": 14660,
+          "text": "            dlg.title(title or \"Please wait\")"
+        },
+        {
+          "line": 14661,
+          "text": "            dlg.resizable(False, False)"
+        },
+        {
+          "line": 14662,
+          "text": "            try:"
+        },
+        {
+          "line": 14663,
+          "text": "                dlg.transient(self.root)"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Do not apply cleanup from this report alone.",
+    "Treat startup geometry and root-closing watchdog fallbacks as review-only unless a future exact cleanup tool proves otherwise.",
+    "Only consider a future cleanup tool for exact reviewed App lifecycle/window handlers.",
+    "Do not touch business logic, reports, payments, balances, database, backups, role/access, login/auth, or report math."
+  ]
+}

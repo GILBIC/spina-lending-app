@@ -1,0 +1,1199 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "apply": false,
+  "target_count": 19,
+  "safe_candidate_count": 19,
+  "already_clean_count": 0,
+  "unsafe_count": 0,
+  "safe": true,
+  "patched": false,
+  "app_source_modified": false,
+  "selected_scope": "modern UI chrome/sidebar/theme only",
+  "sites": [
+    {
+      "line": 14971,
+      "scope": "App.set_theme",
+      "key": "modern_ui_pass_14971",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 14965,
+          "text": "            _log_suppressed_once('excpass_0323', 'suppressed exception excpass_0323', __spina_exc)"
+        },
+        {
+          "line": 14966,
+          "text": "            pass"
+        },
+        {
+          "line": 14967,
+          "text": ""
+        },
+        {
+          "line": 14968,
+          "text": "        # Apply modern top header colors/buttons too"
+        },
+        {
+          "line": 14969,
+          "text": "        try:"
+        },
+        {
+          "line": 14970,
+          "text": "            self._refresh_header_theme()"
+        },
+        {
+          "line": 14971,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 14972,
+          "text": "            pass"
+        },
+        {
+          "line": 14973,
+          "text": ""
+        },
+        {
+          "line": 14974,
+          "text": "        # Apply to plain tk widgets too"
+        },
+        {
+          "line": 14975,
+          "text": "        try:"
+        },
+        {
+          "line": 14976,
+          "text": "            self._apply_tk_theme_recursive(self.root)"
+        },
+        {
+          "line": 14977,
+          "text": "        except Exception as __spina_exc:"
+        }
+      ]
+    },
+    {
+      "line": 14982,
+      "scope": "App.set_theme",
+      "key": "modern_ui_pass_14982",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 14976,
+          "text": "            self._apply_tk_theme_recursive(self.root)"
+        },
+        {
+          "line": 14977,
+          "text": "        except Exception as __spina_exc:"
+        },
+        {
+          "line": 14978,
+          "text": "            _log_suppressed_once('excpass_0324', 'suppressed exception excpass_0324', __spina_exc)"
+        },
+        {
+          "line": 14979,
+          "text": "            pass"
+        },
+        {
+          "line": 14980,
+          "text": "        try:"
+        },
+        {
+          "line": 14981,
+          "text": "            self._refresh_modern_shell_theme()"
+        },
+        {
+          "line": 14982,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 14983,
+          "text": "            pass"
+        },
+        {
+          "line": 14984,
+          "text": ""
+        },
+        {
+          "line": 14985,
+          "text": "    def _theme_palette(self, theme: str | None = None) -> dict:"
+        },
+        {
+          "line": 14986,
+          "text": "        t = (theme or getattr(self, \"ui_theme\", \"light\") or \"light\").strip().lower()"
+        },
+        {
+          "line": 14987,
+          "text": "        if t.startswith(\"d\"):"
+        },
+        {
+          "line": 14988,
+          "text": "            return {"
+        }
+      ]
+    },
+    {
+      "line": 15887,
+      "scope": "App._select_side_tab",
+      "key": "modern_ui_pass_15887",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 15881,
+          "text": "    def _select_side_tab(self, tab):"
+        },
+        {
+          "line": 15882,
+          "text": "        try:"
+        },
+        {
+          "line": 15883,
+          "text": "            self.nb.select(tab)"
+        },
+        {
+          "line": 15884,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 15885,
+          "text": "            try:"
+        },
+        {
+          "line": 15886,
+          "text": "                _log_suppressed_once('side_nav_select', 'sidebar select failed', e)"
+        },
+        {
+          "line": 15887,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 15888,
+          "text": "                pass"
+        },
+        {
+          "line": 15889,
+          "text": "        try:"
+        },
+        {
+          "line": 15890,
+          "text": "            self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 15891,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15892,
+          "text": "            pass"
+        },
+        {
+          "line": 15893,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 15891,
+      "scope": "App._select_side_tab",
+      "key": "modern_ui_pass_15891",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 15885,
+          "text": "            try:"
+        },
+        {
+          "line": 15886,
+          "text": "                _log_suppressed_once('side_nav_select', 'sidebar select failed', e)"
+        },
+        {
+          "line": 15887,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 15888,
+          "text": "                pass"
+        },
+        {
+          "line": 15889,
+          "text": "        try:"
+        },
+        {
+          "line": 15890,
+          "text": "            self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 15891,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15892,
+          "text": "            pass"
+        },
+        {
+          "line": 15893,
+          "text": ""
+        },
+        {
+          "line": 15894,
+          "text": "    def _rebuild_side_nav(self):"
+        },
+        {
+          "line": 15895,
+          "text": "        \"\"\"Rebuild the modern left-side navigation from the currently visible notebook tabs.\"\"\""
+        },
+        {
+          "line": 15896,
+          "text": "        frame = getattr(self, 'sidebar_frame', None)"
+        },
+        {
+          "line": 15897,
+          "text": "        if frame is None:"
+        }
+      ]
+    },
+    {
+      "line": 15902,
+      "scope": "App._rebuild_side_nav",
+      "key": "modern_ui_pass_15902",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 15896,
+          "text": "        frame = getattr(self, 'sidebar_frame', None)"
+        },
+        {
+          "line": 15897,
+          "text": "        if frame is None:"
+        },
+        {
+          "line": 15898,
+          "text": "            return"
+        },
+        {
+          "line": 15899,
+          "text": "        try:"
+        },
+        {
+          "line": 15900,
+          "text": "            for child in frame.winfo_children():"
+        },
+        {
+          "line": 15901,
+          "text": "                child.destroy()"
+        },
+        {
+          "line": 15902,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15903,
+          "text": "            pass"
+        },
+        {
+          "line": 15904,
+          "text": ""
+        },
+        {
+          "line": 15905,
+          "text": "        try:"
+        },
+        {
+          "line": 15906,
+          "text": "            p = getattr(self, '_ui_colors', None) or self._theme_palette()"
+        },
+        {
+          "line": 15907,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15908,
+          "text": "            p = {'bg': '#f7f7fb', 'panel': '#ffffff', 'fg': '#1a1a1a', 'muted': '#666666', 'accent': '#ffd1e6', 'border': '#dddddd'}"
+        }
+      ]
+    },
+    {
+      "line": 15913,
+      "scope": "App._rebuild_side_nav",
+      "key": "modern_ui_pass_15913",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 15907,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15908,
+          "text": "            p = {'bg': '#f7f7fb', 'panel': '#ffffff', 'fg': '#1a1a1a', 'muted': '#666666', 'accent': '#ffd1e6', 'border': '#dddddd'}"
+        },
+        {
+          "line": 15909,
+          "text": ""
+        },
+        {
+          "line": 15910,
+          "text": "        try:"
+        },
+        {
+          "line": 15911,
+          "text": "            frame.configure(width=190)"
+        },
+        {
+          "line": 15912,
+          "text": "            frame.pack_propagate(False)"
+        },
+        {
+          "line": 15913,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15914,
+          "text": "            pass"
+        },
+        {
+          "line": 15915,
+          "text": ""
+        },
+        {
+          "line": 15916,
+          "text": "        # App label inside sidebar"
+        },
+        {
+          "line": 15917,
+          "text": "        try:"
+        },
+        {
+          "line": 15918,
+          "text": "            title = tk.Label("
+        },
+        {
+          "line": 15919,
+          "text": "                frame,"
+        }
+      ]
+    },
+    {
+      "line": 15946,
+      "scope": "App._rebuild_side_nav",
+      "key": "modern_ui_pass_15946",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 15940,
+          "text": "                font=('Segoe UI' if os.name == 'nt' else 'TkDefaultFont', 9),"
+        },
+        {
+          "line": 15941,
+          "text": "                padx=8,"
+        },
+        {
+          "line": 15942,
+          "text": "                pady=0,"
+        },
+        {
+          "line": 15943,
+          "text": "            )"
+        },
+        {
+          "line": 15944,
+          "text": "            subtitle.pack(fill='x', pady=(0, 12))"
+        },
+        {
+          "line": 15945,
+          "text": "            self._side_nav_labels.append(subtitle)"
+        },
+        {
+          "line": 15946,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15947,
+          "text": "            pass"
+        },
+        {
+          "line": 15948,
+          "text": ""
+        },
+        {
+          "line": 15949,
+          "text": "        self._side_nav_buttons = {}"
+        },
+        {
+          "line": 15950,
+          "text": "        family = 'Segoe UI' if os.name == 'nt' else 'TkDefaultFont'"
+        },
+        {
+          "line": 15951,
+          "text": "        for tab, title, icon in self._side_nav_items():"
+        },
+        {
+          "line": 15952,
+          "text": "            try:"
+        }
+      ]
+    },
+    {
+      "line": 15970,
+      "scope": "App._rebuild_side_nav",
+      "key": "modern_ui_pass_15970",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 15964,
+          "text": "                )"
+        },
+        {
+          "line": 15965,
+          "text": "                btn.pack(fill='x', pady=3)"
+        },
+        {
+          "line": 15966,
+          "text": "                self._side_nav_buttons[str(tab)] = btn"
+        },
+        {
+          "line": 15967,
+          "text": "            except Exception as e:"
+        },
+        {
+          "line": 15968,
+          "text": "                try:"
+        },
+        {
+          "line": 15969,
+          "text": "                    _log_suppressed_once('side_nav_btn', 'sidebar button failed', e)"
+        },
+        {
+          "line": 15970,
+          "text": "                except Exception:"
+        },
+        {
+          "line": 15971,
+          "text": "                    pass"
+        },
+        {
+          "line": 15972,
+          "text": ""
+        },
+        {
+          "line": 15973,
+          "text": "        try:"
+        },
+        {
+          "line": 15974,
+          "text": "            bottom = ttk.Frame(frame, style='Sidebar.TFrame')"
+        },
+        {
+          "line": 15975,
+          "text": "            bottom.pack(side='bottom', fill='x', pady=(12, 0))"
+        },
+        {
+          "line": 15976,
+          "text": "            role_text = f\"{getattr(self, 'user_name', '')} • {getattr(self, 'user_role', '')}\""
+        }
+      ]
+    },
+    {
+      "line": 15990,
+      "scope": "App._rebuild_side_nav",
+      "key": "modern_ui_pass_15990",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 15984,
+          "text": "                padx=8,"
+        },
+        {
+          "line": 15985,
+          "text": "                pady=4,"
+        },
+        {
+          "line": 15986,
+          "text": "                wraplength=160,"
+        },
+        {
+          "line": 15987,
+          "text": "            )"
+        },
+        {
+          "line": 15988,
+          "text": "            lbl.pack(fill='x')"
+        },
+        {
+          "line": 15989,
+          "text": "            self._side_nav_labels.append(lbl)"
+        },
+        {
+          "line": 15990,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15991,
+          "text": "            pass"
+        },
+        {
+          "line": 15992,
+          "text": ""
+        },
+        {
+          "line": 15993,
+          "text": "        self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 15994,
+          "text": ""
+        },
+        {
+          "line": 15995,
+          "text": "    def _refresh_side_nav_selection(self):"
+        },
+        {
+          "line": 15996,
+          "text": "        \"\"\"Update sidebar button colors to match the selected notebook tab.\"\"\""
+        }
+      ]
+    },
+    {
+      "line": 16026,
+      "scope": "App._refresh_side_nav_selection",
+      "key": "modern_ui_pass_16026",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 16020,
+          "text": "                    bg=bg,"
+        },
+        {
+          "line": 16021,
+          "text": "                    fg=fg,"
+        },
+        {
+          "line": 16022,
+          "text": "                    activebackground=hover_bg,"
+        },
+        {
+          "line": 16023,
+          "text": "                    activeforeground=fg,"
+        },
+        {
+          "line": 16024,
+          "text": "                    highlightthickness=0,"
+        },
+        {
+          "line": 16025,
+          "text": "                )"
+        },
+        {
+          "line": 16026,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16027,
+          "text": "                pass"
+        },
+        {
+          "line": 16028,
+          "text": ""
+        },
+        {
+          "line": 16029,
+          "text": "    def _refresh_modern_shell_theme(self):"
+        },
+        {
+          "line": 16030,
+          "text": "        \"\"\"Apply theme colors to the modern sidebar shell and rebuild nav labels/buttons.\"\"\""
+        },
+        {
+          "line": 16031,
+          "text": "        try:"
+        },
+        {
+          "line": 16032,
+          "text": "            p = getattr(self, '_ui_colors', None) or self._theme_palette()"
+        }
+      ]
+    },
+    {
+      "line": 16039,
+      "scope": "App._refresh_modern_shell_theme",
+      "key": "modern_ui_pass_16039",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 16033,
+          "text": "            if getattr(self, 'main_shell', None) is not None:"
+        },
+        {
+          "line": 16034,
+          "text": "                self.main_shell.configure(style='AppShell.TFrame')"
+        },
+        {
+          "line": 16035,
+          "text": "            if getattr(self, 'sidebar_frame', None) is not None:"
+        },
+        {
+          "line": 16036,
+          "text": "                self.sidebar_frame.configure(style='Sidebar.TFrame')"
+        },
+        {
+          "line": 16037,
+          "text": "            if getattr(self, 'content_frame', None) is not None:"
+        },
+        {
+          "line": 16038,
+          "text": "                self.content_frame.configure(style='Content.TFrame')"
+        },
+        {
+          "line": 16039,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16040,
+          "text": "            pass"
+        },
+        {
+          "line": 16041,
+          "text": "        try:"
+        },
+        {
+          "line": 16042,
+          "text": "            self._rebuild_side_nav()"
+        },
+        {
+          "line": 16043,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16044,
+          "text": "            try:"
+        },
+        {
+          "line": 16045,
+          "text": "                self._refresh_side_nav_selection()"
+        }
+      ]
+    },
+    {
+      "line": 16046,
+      "scope": "App._refresh_modern_shell_theme",
+      "key": "modern_ui_pass_16046",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 16040,
+          "text": "            pass"
+        },
+        {
+          "line": 16041,
+          "text": "        try:"
+        },
+        {
+          "line": 16042,
+          "text": "            self._rebuild_side_nav()"
+        },
+        {
+          "line": 16043,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16044,
+          "text": "            try:"
+        },
+        {
+          "line": 16045,
+          "text": "                self._refresh_side_nav_selection()"
+        },
+        {
+          "line": 16046,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16047,
+          "text": "                pass"
+        },
+        {
+          "line": 16048,
+          "text": ""
+        },
+        {
+          "line": 16049,
+          "text": "    # ---------------- Modern top bar + quick loan-type switch ----------------"
+        },
+        {
+          "line": 16050,
+          "text": "    def _header_palette(self):"
+        },
+        {
+          "line": 16051,
+          "text": "        \"\"\"Compact color palette for the modern top header.\"\"\""
+        },
+        {
+          "line": 16052,
+          "text": "        try:"
+        }
+      ]
+    },
+    {
+      "line": 16103,
+      "scope": "App._tk_button_hover",
+      "key": "modern_ui_pass_16103",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 16097,
+          "text": "            if normal_bg is None:"
+        },
+        {
+          "line": 16098,
+          "text": "                normal_bg = widget.cget('bg')"
+        },
+        {
+          "line": 16099,
+          "text": "            if hover_bg is None:"
+        },
+        {
+          "line": 16100,
+          "text": "                hover_bg = normal_bg"
+        },
+        {
+          "line": 16101,
+          "text": "            widget.bind('<Enter>', lambda e, w=widget, h=hover_bg: w.configure(bg=h), add='+')"
+        },
+        {
+          "line": 16102,
+          "text": "            widget.bind('<Leave>', lambda e, w=widget, n=normal_bg: w.configure(bg=n), add='+')"
+        },
+        {
+          "line": 16103,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16104,
+          "text": "            pass"
+        },
+        {
+          "line": 16105,
+          "text": ""
+        },
+        {
+          "line": 16106,
+          "text": "    def _make_header_button(self, master, text, command, *, primary=False, danger=False, width=None):"
+        },
+        {
+          "line": 16107,
+          "text": "        \"\"\"Create a flatter, modern top-bar button using tk.Button for better dark-mode control.\"\"\""
+        },
+        {
+          "line": 16108,
+          "text": "        hp = self._header_palette()"
+        },
+        {
+          "line": 16109,
+          "text": "        family = 'Segoe UI' if os.name == 'nt' else 'TkDefaultFont'"
+        }
+      ]
+    },
+    {
+      "line": 16147,
+      "scope": "App._set_mode",
+      "key": "modern_ui_pass_16147",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 16141,
+          "text": "                    return"
+        },
+        {
+          "line": 16142,
+          "text": "                self.mode_var.set(mode)"
+        },
+        {
+          "line": 16143,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16144,
+          "text": "            pass"
+        },
+        {
+          "line": 16145,
+          "text": "        try:"
+        },
+        {
+          "line": 16146,
+          "text": "            self._refresh_mode_toggle()"
+        },
+        {
+          "line": 16147,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16148,
+          "text": "            pass"
+        },
+        {
+          "line": 16149,
+          "text": "        try:"
+        },
+        {
+          "line": 16150,
+          "text": "            self._on_mode_change()"
+        },
+        {
+          "line": 16151,
+          "text": "        except Exception as e:"
+        },
+        {
+          "line": 16152,
+          "text": "            try:"
+        },
+        {
+          "line": 16153,
+          "text": "                _log_suppressed_once('modern_mode_switch', 'modern mode switch failed', e)"
+        }
+      ]
+    },
+    {
+      "line": 16176,
+      "scope": "App._refresh_mode_toggle",
+      "key": "modern_ui_pass_16176",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 16170,
+          "text": "                    bg=bg,"
+        },
+        {
+          "line": 16171,
+          "text": "                    fg=fg,"
+        },
+        {
+          "line": 16172,
+          "text": "                    activebackground=bg,"
+        },
+        {
+          "line": 16173,
+          "text": "                    activeforeground=fg,"
+        },
+        {
+          "line": 16174,
+          "text": "                    highlightbackground=hp['accent'] if active else hp['border'],"
+        },
+        {
+          "line": 16175,
+          "text": "                )"
+        },
+        {
+          "line": 16176,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16177,
+          "text": "                pass"
+        },
+        {
+          "line": 16178,
+          "text": "        try:"
+        },
+        {
+          "line": 16179,
+          "text": "            if getattr(self, 'mode_status_label', None) is not None:"
+        },
+        {
+          "line": 16180,
+          "text": "                self.mode_status_label.configure("
+        },
+        {
+          "line": 16181,
+          "text": "                    text=f\"Current view: {cur}\","
+        },
+        {
+          "line": 16182,
+          "text": "                    bg=hp['panel'],"
+        }
+      ]
+    },
+    {
+      "line": 16185,
+      "scope": "App._refresh_mode_toggle",
+      "key": "modern_ui_pass_16185",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 16179,
+          "text": "            if getattr(self, 'mode_status_label', None) is not None:"
+        },
+        {
+          "line": 16180,
+          "text": "                self.mode_status_label.configure("
+        },
+        {
+          "line": 16181,
+          "text": "                    text=f\"Current view: {cur}\","
+        },
+        {
+          "line": 16182,
+          "text": "                    bg=hp['panel'],"
+        },
+        {
+          "line": 16183,
+          "text": "                    fg=hp['muted'],"
+        },
+        {
+          "line": 16184,
+          "text": "                )"
+        },
+        {
+          "line": 16185,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16186,
+          "text": "            pass"
+        },
+        {
+          "line": 16187,
+          "text": ""
+        },
+        {
+          "line": 16188,
+          "text": "    def _refresh_header_theme(self):"
+        },
+        {
+          "line": 16189,
+          "text": "        \"\"\"Apply the current theme colors to the modern top header.\"\"\""
+        },
+        {
+          "line": 16190,
+          "text": "        hp = self._header_palette()"
+        },
+        {
+          "line": 16191,
+          "text": "        try:"
+        }
+      ]
+    },
+    {
+      "line": 16194,
+      "scope": "App._refresh_header_theme",
+      "key": "modern_ui_pass_16194",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 16188,
+          "text": "    def _refresh_header_theme(self):"
+        },
+        {
+          "line": 16189,
+          "text": "        \"\"\"Apply the current theme colors to the modern top header.\"\"\""
+        },
+        {
+          "line": 16190,
+          "text": "        hp = self._header_palette()"
+        },
+        {
+          "line": 16191,
+          "text": "        try:"
+        },
+        {
+          "line": 16192,
+          "text": "            if getattr(self, 'modern_header', None) is not None:"
+        },
+        {
+          "line": 16193,
+          "text": "                self.modern_header.configure(bg=hp['bg'])"
+        },
+        {
+          "line": 16194,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 16195,
+          "text": "            pass"
+        },
+        {
+          "line": 16196,
+          "text": "        for attr in ('header_left', 'header_center', 'header_right', 'mode_switch_frame'):"
+        },
+        {
+          "line": 16197,
+          "text": "            try:"
+        },
+        {
+          "line": 16198,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16199,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16200,
+          "text": "                    w.configure(bg=hp['bg'] if attr != 'mode_switch_frame' else hp['panel'])"
+        }
+      ]
+    },
+    {
+      "line": 16201,
+      "scope": "App._refresh_header_theme",
+      "key": "modern_ui_pass_16201",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 16195,
+          "text": "            pass"
+        },
+        {
+          "line": 16196,
+          "text": "        for attr in ('header_left', 'header_center', 'header_right', 'mode_switch_frame'):"
+        },
+        {
+          "line": 16197,
+          "text": "            try:"
+        },
+        {
+          "line": 16198,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16199,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16200,
+          "text": "                    w.configure(bg=hp['bg'] if attr != 'mode_switch_frame' else hp['panel'])"
+        },
+        {
+          "line": 16201,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16202,
+          "text": "                pass"
+        },
+        {
+          "line": 16203,
+          "text": "        for attr in ('header_title_label', 'header_view_title'):"
+        },
+        {
+          "line": 16204,
+          "text": "            try:"
+        },
+        {
+          "line": 16205,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16206,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16207,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_title_label' else hp['panel'], fg=hp['fg'])"
+        }
+      ]
+    },
+    {
+      "line": 16208,
+      "scope": "App._refresh_header_theme",
+      "key": "modern_ui_pass_16208",
+      "already_clean": false,
+      "safe": true,
+      "reason": "exact modern UI pass-only handler match",
+      "context": [
+        {
+          "line": 16202,
+          "text": "                pass"
+        },
+        {
+          "line": 16203,
+          "text": "        for attr in ('header_title_label', 'header_view_title'):"
+        },
+        {
+          "line": 16204,
+          "text": "            try:"
+        },
+        {
+          "line": 16205,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16206,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16207,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_title_label' else hp['panel'], fg=hp['fg'])"
+        },
+        {
+          "line": 16208,
+          "text": "            except Exception:"
+        },
+        {
+          "line": 16209,
+          "text": "                pass"
+        },
+        {
+          "line": 16210,
+          "text": "        for attr in ('header_subtitle_label', 'mode_status_label'):"
+        },
+        {
+          "line": 16211,
+          "text": "            try:"
+        },
+        {
+          "line": 16212,
+          "text": "                w = getattr(self, attr, None)"
+        },
+        {
+          "line": 16213,
+          "text": "                if w is not None:"
+        },
+        {
+          "line": 16214,
+          "text": "                    w.configure(bg=hp['bg'] if attr == 'header_subtitle_label' else hp['panel'], fg=hp['muted'])"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Review this dry-run JSON before applying.",
+    "This tool targets only the 19 modern UI chrome/sidebar/theme pass-only handlers from the approved plan.",
+    "Run with --apply only if safe is true and unsafe_count is 0.",
+    "After apply, rerun pass-only and modern UI cleanup plan audits.",
+    "Smoke-test theme toggle, sidebar navigation, and Regular/7x7 mode switch after apply."
+  ]
+}

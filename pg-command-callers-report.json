@@ -1,0 +1,1311 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 48496,
+  "target_names": [
+    "_create_postgres_backup_file",
+    "_find_postgres_exe",
+    "_pg_env",
+    "_run_pg_command",
+    "_verify_postgres_backup_file"
+  ],
+  "definition_count": 5,
+  "definitions": {
+    "_pg_env": [
+      {
+        "name": "_pg_env",
+        "qualname": "App._pg_env",
+        "line": 15511,
+        "end_line": 15519,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      }
+    ],
+    "_find_postgres_exe": [
+      {
+        "name": "_find_postgres_exe",
+        "qualname": "App._find_postgres_exe",
+        "line": 15290,
+        "end_line": 15328,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      }
+    ],
+    "_verify_postgres_backup_file": [
+      {
+        "name": "_verify_postgres_backup_file",
+        "qualname": "App._verify_postgres_backup_file",
+        "line": 15557,
+        "end_line": 15590,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      }
+    ],
+    "_run_pg_command": [
+      {
+        "name": "_run_pg_command",
+        "qualname": "App._run_pg_command",
+        "line": 15592,
+        "end_line": 15619,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      }
+    ],
+    "_create_postgres_backup_file": [
+      {
+        "name": "_create_postgres_backup_file",
+        "qualname": "App._create_postgres_backup_file",
+        "line": 15340,
+        "end_line": 15423,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      }
+    ]
+  },
+  "call_site_count": 12,
+  "high_review_call_site_count": 3,
+  "call_sites": [
+    {
+      "line": 15357,
+      "end_line": 15357,
+      "target": "_find_postgres_exe",
+      "call_text": "self._find_postgres_exe",
+      "caller": {
+        "name": "_create_postgres_backup_file",
+        "qualname": "App._create_postgres_backup_file",
+        "line": 15340,
+        "end_line": 15423,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "caller_worker_like": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15347,
+          "text": "        import subprocess"
+        },
+        {
+          "line": 15348,
+          "text": "        from datetime import datetime as _dt"
+        },
+        {
+          "line": 15349,
+          "text": ""
+        },
+        {
+          "line": 15350,
+          "text": "        # Optional cancel before the heavy work starts."
+        },
+        {
+          "line": 15351,
+          "text": "        try:"
+        },
+        {
+          "line": 15352,
+          "text": "            if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15353,
+          "text": "                raise RuntimeError(\"Backup cancelled.\")"
+        },
+        {
+          "line": 15354,
+          "text": "        except AttributeError:"
+        },
+        {
+          "line": 15355,
+          "text": "            pass"
+        },
+        {
+          "line": 15356,
+          "text": ""
+        },
+        {
+          "line": 15357,
+          "text": "        pg_dump = self._find_postgres_exe(\"pg_dump.exe\" if os.name == \"nt\" else \"pg_dump\")"
+        },
+        {
+          "line": 15358,
+          "text": "        if not pg_dump:"
+        },
+        {
+          "line": 15359,
+          "text": "            raise FileNotFoundError("
+        },
+        {
+          "line": 15360,
+          "text": "                \"pg_dump.exe was not found. PostgreSQL may be installed, but its bin folder is not visible.\\n\\n\""
+        },
+        {
+          "line": 15361,
+          "text": "                \"Expected location example:\\n\""
+        },
+        {
+          "line": 15362,
+          "text": "                r\"C:\\Program Files\\PostgreSQL\\18\\bin\\pg_dump.exe\""
+        },
+        {
+          "line": 15363,
+          "text": "            )"
+        },
+        {
+          "line": 15364,
+          "text": ""
+        },
+        {
+          "line": 15365,
+          "text": "        cfg = dict(globals().get(\"_SPINA_PG_CONFIG\", {}) or {})"
+        },
+        {
+          "line": 15366,
+          "text": "        host = str(cfg.get(\"host\") or os.environ.get(\"SPINA_PG_HOST\") or \"localhost\")"
+        },
+        {
+          "line": 15367,
+          "text": "        port = str(cfg.get(\"port\") or os.environ.get(\"SPINA_PG_PORT\") or \"5432\")"
+        }
+      ]
+    },
+    {
+      "line": 15570,
+      "end_line": 15570,
+      "target": "_find_postgres_exe",
+      "call_text": "self._find_postgres_exe",
+      "caller": {
+        "name": "_verify_postgres_backup_file",
+        "qualname": "App._verify_postgres_backup_file",
+        "line": 15557,
+        "end_line": 15590,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "caller_worker_like": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15560,
+          "text": "        try:"
+        },
+        {
+          "line": 15561,
+          "text": "            if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15562,
+          "text": "                raise RuntimeError(\"Verify cancelled.\")"
+        },
+        {
+          "line": 15563,
+          "text": "        except AttributeError:"
+        },
+        {
+          "line": 15564,
+          "text": "            pass"
+        },
+        {
+          "line": 15565,
+          "text": ""
+        },
+        {
+          "line": 15566,
+          "text": "        backup_path = os.path.abspath(str(backup_path or \"\"))"
+        },
+        {
+          "line": 15567,
+          "text": "        if not backup_path or not os.path.exists(backup_path):"
+        },
+        {
+          "line": 15568,
+          "text": "            raise FileNotFoundError(\"Backup file was not found.\")"
+        },
+        {
+          "line": 15569,
+          "text": ""
+        },
+        {
+          "line": 15570,
+          "text": "        pg_restore = self._find_postgres_exe(\"pg_restore.exe\" if os.name == \"nt\" else \"pg_restore\")"
+        },
+        {
+          "line": 15571,
+          "text": "        if not pg_restore:"
+        },
+        {
+          "line": 15572,
+          "text": "            raise FileNotFoundError("
+        },
+        {
+          "line": 15573,
+          "text": "                \"pg_restore.exe was not found. Expected example:\\n\""
+        },
+        {
+          "line": 15574,
+          "text": "                r\"C:\\Program Files\\PostgreSQL\\18\\bin\\pg_restore.exe\""
+        },
+        {
+          "line": 15575,
+          "text": "            )"
+        },
+        {
+          "line": 15576,
+          "text": ""
+        },
+        {
+          "line": 15577,
+          "text": "        proc = subprocess.run("
+        },
+        {
+          "line": 15578,
+          "text": "            [pg_restore, \"-l\", backup_path],"
+        },
+        {
+          "line": 15579,
+          "text": "            env=self._pg_env(),"
+        },
+        {
+          "line": 15580,
+          "text": "            stdout=subprocess.PIPE,"
+        }
+      ]
+    },
+    {
+      "line": 15579,
+      "end_line": 15579,
+      "target": "_pg_env",
+      "call_text": "self._pg_env",
+      "caller": {
+        "name": "_verify_postgres_backup_file",
+        "qualname": "App._verify_postgres_backup_file",
+        "line": 15557,
+        "end_line": 15590,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "caller_worker_like": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15569,
+          "text": ""
+        },
+        {
+          "line": 15570,
+          "text": "        pg_restore = self._find_postgres_exe(\"pg_restore.exe\" if os.name == \"nt\" else \"pg_restore\")"
+        },
+        {
+          "line": 15571,
+          "text": "        if not pg_restore:"
+        },
+        {
+          "line": 15572,
+          "text": "            raise FileNotFoundError("
+        },
+        {
+          "line": 15573,
+          "text": "                \"pg_restore.exe was not found. Expected example:\\n\""
+        },
+        {
+          "line": 15574,
+          "text": "                r\"C:\\Program Files\\PostgreSQL\\18\\bin\\pg_restore.exe\""
+        },
+        {
+          "line": 15575,
+          "text": "            )"
+        },
+        {
+          "line": 15576,
+          "text": ""
+        },
+        {
+          "line": 15577,
+          "text": "        proc = subprocess.run("
+        },
+        {
+          "line": 15578,
+          "text": "            [pg_restore, \"-l\", backup_path],"
+        },
+        {
+          "line": 15579,
+          "text": "            env=self._pg_env(),"
+        },
+        {
+          "line": 15580,
+          "text": "            stdout=subprocess.PIPE,"
+        },
+        {
+          "line": 15581,
+          "text": "            stderr=subprocess.PIPE,"
+        },
+        {
+          "line": 15582,
+          "text": "            text=True,"
+        },
+        {
+          "line": 15583,
+          "text": "            shell=False,"
+        },
+        {
+          "line": 15584,
+          "text": "        )"
+        },
+        {
+          "line": 15585,
+          "text": "        if proc.returncode != 0:"
+        },
+        {
+          "line": 15586,
+          "text": "            raise RuntimeError((proc.stderr or proc.stdout or \"Backup verification failed.\").strip())"
+        },
+        {
+          "line": 15587,
+          "text": ""
+        },
+        {
+          "line": 15588,
+          "text": "        toc = proc.stdout or \"\""
+        },
+        {
+          "line": 15589,
+          "text": "        lines = [ln for ln in toc.splitlines() if ln.strip() and not ln.lstrip().startswith(\";\")]"
+        }
+      ]
+    },
+    {
+      "line": 15597,
+      "end_line": 15597,
+      "target": "_pg_env",
+      "call_text": "self._pg_env",
+      "caller": {
+        "name": "_run_pg_command",
+        "qualname": "App._run_pg_command",
+        "line": 15592,
+        "end_line": 15619,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "caller_worker_like": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15587,
+          "text": ""
+        },
+        {
+          "line": 15588,
+          "text": "        toc = proc.stdout or \"\""
+        },
+        {
+          "line": 15589,
+          "text": "        lines = [ln for ln in toc.splitlines() if ln.strip() and not ln.lstrip().startswith(\";\")]"
+        },
+        {
+          "line": 15590,
+          "text": "        return f\"Backup is readable.\\nObjects listed: {len(lines)}\\n\\nFile:\\n{backup_path}\""
+        },
+        {
+          "line": 15591,
+          "text": ""
+        },
+        {
+          "line": 15592,
+          "text": "    def _run_pg_command(self, cmd: list, allow_retry_without_force: bool = False) -> str:"
+        },
+        {
+          "line": 15593,
+          "text": "        \"\"\"Run PostgreSQL command-line tools with hidden password.\"\"\""
+        },
+        {
+          "line": 15594,
+          "text": "        import subprocess"
+        },
+        {
+          "line": 15595,
+          "text": "        proc = subprocess.run("
+        },
+        {
+          "line": 15596,
+          "text": "            cmd,"
+        },
+        {
+          "line": 15597,
+          "text": "            env=self._pg_env(),"
+        },
+        {
+          "line": 15598,
+          "text": "            stdout=subprocess.PIPE,"
+        },
+        {
+          "line": 15599,
+          "text": "            stderr=subprocess.PIPE,"
+        },
+        {
+          "line": 15600,
+          "text": "            text=True,"
+        },
+        {
+          "line": 15601,
+          "text": "            shell=False,"
+        },
+        {
+          "line": 15602,
+          "text": "        )"
+        },
+        {
+          "line": 15603,
+          "text": "        if proc.returncode == 0:"
+        },
+        {
+          "line": 15604,
+          "text": "            return (proc.stdout or proc.stderr or \"\").strip()"
+        },
+        {
+          "line": 15605,
+          "text": "        msg = (proc.stderr or proc.stdout or \"PostgreSQL command failed.\").strip()"
+        },
+        {
+          "line": 15606,
+          "text": "        if allow_retry_without_force and \"unrecognized option\" in msg.lower() and \"--force\" in cmd:"
+        },
+        {
+          "line": 15607,
+          "text": "            cmd2 = [x for x in cmd if x != \"--force\"]"
+        }
+      ]
+    },
+    {
+      "line": 15610,
+      "end_line": 15610,
+      "target": "_pg_env",
+      "call_text": "self._pg_env",
+      "caller": {
+        "name": "_run_pg_command",
+        "qualname": "App._run_pg_command",
+        "line": 15592,
+        "end_line": 15619,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "caller_worker_like": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15600,
+          "text": "            text=True,"
+        },
+        {
+          "line": 15601,
+          "text": "            shell=False,"
+        },
+        {
+          "line": 15602,
+          "text": "        )"
+        },
+        {
+          "line": 15603,
+          "text": "        if proc.returncode == 0:"
+        },
+        {
+          "line": 15604,
+          "text": "            return (proc.stdout or proc.stderr or \"\").strip()"
+        },
+        {
+          "line": 15605,
+          "text": "        msg = (proc.stderr or proc.stdout or \"PostgreSQL command failed.\").strip()"
+        },
+        {
+          "line": 15606,
+          "text": "        if allow_retry_without_force and \"unrecognized option\" in msg.lower() and \"--force\" in cmd:"
+        },
+        {
+          "line": 15607,
+          "text": "            cmd2 = [x for x in cmd if x != \"--force\"]"
+        },
+        {
+          "line": 15608,
+          "text": "            proc2 = subprocess.run("
+        },
+        {
+          "line": 15609,
+          "text": "                cmd2,"
+        },
+        {
+          "line": 15610,
+          "text": "                env=self._pg_env(),"
+        },
+        {
+          "line": 15611,
+          "text": "                stdout=subprocess.PIPE,"
+        },
+        {
+          "line": 15612,
+          "text": "                stderr=subprocess.PIPE,"
+        },
+        {
+          "line": 15613,
+          "text": "                text=True,"
+        },
+        {
+          "line": 15614,
+          "text": "                shell=False,"
+        },
+        {
+          "line": 15615,
+          "text": "            )"
+        },
+        {
+          "line": 15616,
+          "text": "            if proc2.returncode == 0:"
+        },
+        {
+          "line": 15617,
+          "text": "                return (proc2.stdout or proc2.stderr or \"\").strip()"
+        },
+        {
+          "line": 15618,
+          "text": "            msg = (proc2.stderr or proc2.stdout or msg).strip()"
+        },
+        {
+          "line": 15619,
+          "text": "        raise RuntimeError(msg)"
+        },
+        {
+          "line": 15620,
+          "text": ""
+        }
+      ]
+    },
+    {
+      "line": 15636,
+      "end_line": 15636,
+      "target": "_find_postgres_exe",
+      "call_text": "self._find_postgres_exe",
+      "caller": {
+        "name": "_restore_backup_to_test_database",
+        "qualname": "App._restore_backup_to_test_database",
+        "line": 15621,
+        "end_line": 15656,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "caller_worker_like": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15626,
+          "text": ""
+        },
+        {
+          "line": 15627,
+          "text": "        cfg = self._postgres_cfg()"
+        },
+        {
+          "line": 15628,
+          "text": "        host = str(cfg.get(\"host\") or \"localhost\")"
+        },
+        {
+          "line": 15629,
+          "text": "        port = str(cfg.get(\"port\") or \"5432\")"
+        },
+        {
+          "line": 15630,
+          "text": "        user = str(cfg.get(\"user\") or \"spina_user\")"
+        },
+        {
+          "line": 15631,
+          "text": "        live_db = str(cfg.get(\"dbname\") or \"spina_db\")"
+        },
+        {
+          "line": 15632,
+          "text": "        test_db = \"spina_restore_test\""
+        },
+        {
+          "line": 15633,
+          "text": "        if test_db == live_db:"
+        },
+        {
+          "line": 15634,
+          "text": "            raise RuntimeError(\"Safety stop: restore test database cannot equal the live database.\")"
+        },
+        {
+          "line": 15635,
+          "text": ""
+        },
+        {
+          "line": 15636,
+          "text": "        dropdb = self._find_postgres_exe(\"dropdb.exe\" if os.name == \"nt\" else \"dropdb\")"
+        },
+        {
+          "line": 15637,
+          "text": "        createdb = self._find_postgres_exe(\"createdb.exe\" if os.name == \"nt\" else \"createdb\")"
+        },
+        {
+          "line": 15638,
+          "text": "        pg_restore = self._find_postgres_exe(\"pg_restore.exe\" if os.name == \"nt\" else \"pg_restore\")"
+        },
+        {
+          "line": 15639,
+          "text": "        missing = [name for name, val in ((\"dropdb\", dropdb), (\"createdb\", createdb), (\"pg_restore\", pg_restore)) if not val]"
+        },
+        {
+          "line": 15640,
+          "text": "        if missing:"
+        },
+        {
+          "line": 15641,
+          "text": "            raise FileNotFoundError(\"Missing PostgreSQL tools: \" + \", \".join(missing))"
+        },
+        {
+          "line": 15642,
+          "text": ""
+        },
+        {
+          "line": 15643,
+          "text": "        def _check_cancel():"
+        },
+        {
+          "line": 15644,
+          "text": "            try:"
+        },
+        {
+          "line": 15645,
+          "text": "                if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15646,
+          "text": "                    raise RuntimeError(\"Restore test cancelled.\")"
+        }
+      ]
+    },
+    {
+      "line": 15637,
+      "end_line": 15637,
+      "target": "_find_postgres_exe",
+      "call_text": "self._find_postgres_exe",
+      "caller": {
+        "name": "_restore_backup_to_test_database",
+        "qualname": "App._restore_backup_to_test_database",
+        "line": 15621,
+        "end_line": 15656,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "caller_worker_like": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15627,
+          "text": "        cfg = self._postgres_cfg()"
+        },
+        {
+          "line": 15628,
+          "text": "        host = str(cfg.get(\"host\") or \"localhost\")"
+        },
+        {
+          "line": 15629,
+          "text": "        port = str(cfg.get(\"port\") or \"5432\")"
+        },
+        {
+          "line": 15630,
+          "text": "        user = str(cfg.get(\"user\") or \"spina_user\")"
+        },
+        {
+          "line": 15631,
+          "text": "        live_db = str(cfg.get(\"dbname\") or \"spina_db\")"
+        },
+        {
+          "line": 15632,
+          "text": "        test_db = \"spina_restore_test\""
+        },
+        {
+          "line": 15633,
+          "text": "        if test_db == live_db:"
+        },
+        {
+          "line": 15634,
+          "text": "            raise RuntimeError(\"Safety stop: restore test database cannot equal the live database.\")"
+        },
+        {
+          "line": 15635,
+          "text": ""
+        },
+        {
+          "line": 15636,
+          "text": "        dropdb = self._find_postgres_exe(\"dropdb.exe\" if os.name == \"nt\" else \"dropdb\")"
+        },
+        {
+          "line": 15637,
+          "text": "        createdb = self._find_postgres_exe(\"createdb.exe\" if os.name == \"nt\" else \"createdb\")"
+        },
+        {
+          "line": 15638,
+          "text": "        pg_restore = self._find_postgres_exe(\"pg_restore.exe\" if os.name == \"nt\" else \"pg_restore\")"
+        },
+        {
+          "line": 15639,
+          "text": "        missing = [name for name, val in ((\"dropdb\", dropdb), (\"createdb\", createdb), (\"pg_restore\", pg_restore)) if not val]"
+        },
+        {
+          "line": 15640,
+          "text": "        if missing:"
+        },
+        {
+          "line": 15641,
+          "text": "            raise FileNotFoundError(\"Missing PostgreSQL tools: \" + \", \".join(missing))"
+        },
+        {
+          "line": 15642,
+          "text": ""
+        },
+        {
+          "line": 15643,
+          "text": "        def _check_cancel():"
+        },
+        {
+          "line": 15644,
+          "text": "            try:"
+        },
+        {
+          "line": 15645,
+          "text": "                if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15646,
+          "text": "                    raise RuntimeError(\"Restore test cancelled.\")"
+        },
+        {
+          "line": 15647,
+          "text": "            except AttributeError:"
+        }
+      ]
+    },
+    {
+      "line": 15638,
+      "end_line": 15638,
+      "target": "_find_postgres_exe",
+      "call_text": "self._find_postgres_exe",
+      "caller": {
+        "name": "_restore_backup_to_test_database",
+        "qualname": "App._restore_backup_to_test_database",
+        "line": 15621,
+        "end_line": 15656,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "caller_worker_like": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15628,
+          "text": "        host = str(cfg.get(\"host\") or \"localhost\")"
+        },
+        {
+          "line": 15629,
+          "text": "        port = str(cfg.get(\"port\") or \"5432\")"
+        },
+        {
+          "line": 15630,
+          "text": "        user = str(cfg.get(\"user\") or \"spina_user\")"
+        },
+        {
+          "line": 15631,
+          "text": "        live_db = str(cfg.get(\"dbname\") or \"spina_db\")"
+        },
+        {
+          "line": 15632,
+          "text": "        test_db = \"spina_restore_test\""
+        },
+        {
+          "line": 15633,
+          "text": "        if test_db == live_db:"
+        },
+        {
+          "line": 15634,
+          "text": "            raise RuntimeError(\"Safety stop: restore test database cannot equal the live database.\")"
+        },
+        {
+          "line": 15635,
+          "text": ""
+        },
+        {
+          "line": 15636,
+          "text": "        dropdb = self._find_postgres_exe(\"dropdb.exe\" if os.name == \"nt\" else \"dropdb\")"
+        },
+        {
+          "line": 15637,
+          "text": "        createdb = self._find_postgres_exe(\"createdb.exe\" if os.name == \"nt\" else \"createdb\")"
+        },
+        {
+          "line": 15638,
+          "text": "        pg_restore = self._find_postgres_exe(\"pg_restore.exe\" if os.name == \"nt\" else \"pg_restore\")"
+        },
+        {
+          "line": 15639,
+          "text": "        missing = [name for name, val in ((\"dropdb\", dropdb), (\"createdb\", createdb), (\"pg_restore\", pg_restore)) if not val]"
+        },
+        {
+          "line": 15640,
+          "text": "        if missing:"
+        },
+        {
+          "line": 15641,
+          "text": "            raise FileNotFoundError(\"Missing PostgreSQL tools: \" + \", \".join(missing))"
+        },
+        {
+          "line": 15642,
+          "text": ""
+        },
+        {
+          "line": 15643,
+          "text": "        def _check_cancel():"
+        },
+        {
+          "line": 15644,
+          "text": "            try:"
+        },
+        {
+          "line": 15645,
+          "text": "                if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15646,
+          "text": "                    raise RuntimeError(\"Restore test cancelled.\")"
+        },
+        {
+          "line": 15647,
+          "text": "            except AttributeError:"
+        },
+        {
+          "line": 15648,
+          "text": "                pass"
+        }
+      ]
+    },
+    {
+      "line": 15651,
+      "end_line": 15651,
+      "target": "_run_pg_command",
+      "call_text": "self._run_pg_command",
+      "caller": {
+        "name": "_restore_backup_to_test_database",
+        "qualname": "App._restore_backup_to_test_database",
+        "line": 15621,
+        "end_line": 15656,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "caller_worker_like": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15641,
+          "text": "            raise FileNotFoundError(\"Missing PostgreSQL tools: \" + \", \".join(missing))"
+        },
+        {
+          "line": 15642,
+          "text": ""
+        },
+        {
+          "line": 15643,
+          "text": "        def _check_cancel():"
+        },
+        {
+          "line": 15644,
+          "text": "            try:"
+        },
+        {
+          "line": 15645,
+          "text": "                if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15646,
+          "text": "                    raise RuntimeError(\"Restore test cancelled.\")"
+        },
+        {
+          "line": 15647,
+          "text": "            except AttributeError:"
+        },
+        {
+          "line": 15648,
+          "text": "                pass"
+        },
+        {
+          "line": 15649,
+          "text": ""
+        },
+        {
+          "line": 15650,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15651,
+          "text": "        self._run_pg_command([dropdb, \"--if-exists\", \"--force\", \"-U\", user, \"-h\", host, \"-p\", port, test_db], allow_retry_without_force=True)"
+        },
+        {
+          "line": 15652,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15653,
+          "text": "        self._run_pg_command([createdb, \"-U\", user, \"-h\", host, \"-p\", port, test_db])"
+        },
+        {
+          "line": 15654,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15655,
+          "text": "        self._run_pg_command([pg_restore, \"-U\", user, \"-h\", host, \"-p\", port, \"-d\", test_db, \"--clean\", \"--if-exists\", backup_path])"
+        },
+        {
+          "line": 15656,
+          "text": "        return f\"Restore test successful.\\n\\nBackup restored into database:\\n{test_db}\\n\\nLive database was not changed:\\n{live_db}\""
+        },
+        {
+          "line": 15657,
+          "text": ""
+        },
+        {
+          "line": 15658,
+          "text": "    def open_backup_history_window(self):"
+        },
+        {
+          "line": 15659,
+          "text": "        \"\"\"Show backup files and provide verify/restore-test actions.\"\"\""
+        },
+        {
+          "line": 15660,
+          "text": "        try:"
+        },
+        {
+          "line": 15661,
+          "text": "            role = (getattr(self, \"user_role\", \"\") or \"\").strip()"
+        }
+      ]
+    },
+    {
+      "line": 15653,
+      "end_line": 15653,
+      "target": "_run_pg_command",
+      "call_text": "self._run_pg_command",
+      "caller": {
+        "name": "_restore_backup_to_test_database",
+        "qualname": "App._restore_backup_to_test_database",
+        "line": 15621,
+        "end_line": 15656,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "caller_worker_like": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15643,
+          "text": "        def _check_cancel():"
+        },
+        {
+          "line": 15644,
+          "text": "            try:"
+        },
+        {
+          "line": 15645,
+          "text": "                if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15646,
+          "text": "                    raise RuntimeError(\"Restore test cancelled.\")"
+        },
+        {
+          "line": 15647,
+          "text": "            except AttributeError:"
+        },
+        {
+          "line": 15648,
+          "text": "                pass"
+        },
+        {
+          "line": 15649,
+          "text": ""
+        },
+        {
+          "line": 15650,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15651,
+          "text": "        self._run_pg_command([dropdb, \"--if-exists\", \"--force\", \"-U\", user, \"-h\", host, \"-p\", port, test_db], allow_retry_without_force=True)"
+        },
+        {
+          "line": 15652,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15653,
+          "text": "        self._run_pg_command([createdb, \"-U\", user, \"-h\", host, \"-p\", port, test_db])"
+        },
+        {
+          "line": 15654,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15655,
+          "text": "        self._run_pg_command([pg_restore, \"-U\", user, \"-h\", host, \"-p\", port, \"-d\", test_db, \"--clean\", \"--if-exists\", backup_path])"
+        },
+        {
+          "line": 15656,
+          "text": "        return f\"Restore test successful.\\n\\nBackup restored into database:\\n{test_db}\\n\\nLive database was not changed:\\n{live_db}\""
+        },
+        {
+          "line": 15657,
+          "text": ""
+        },
+        {
+          "line": 15658,
+          "text": "    def open_backup_history_window(self):"
+        },
+        {
+          "line": 15659,
+          "text": "        \"\"\"Show backup files and provide verify/restore-test actions.\"\"\""
+        },
+        {
+          "line": 15660,
+          "text": "        try:"
+        },
+        {
+          "line": 15661,
+          "text": "            role = (getattr(self, \"user_role\", \"\") or \"\").strip()"
+        },
+        {
+          "line": 15662,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15663,
+          "text": "            role = \"\""
+        }
+      ]
+    },
+    {
+      "line": 15655,
+      "end_line": 15655,
+      "target": "_run_pg_command",
+      "call_text": "self._run_pg_command",
+      "caller": {
+        "name": "_restore_backup_to_test_database",
+        "qualname": "App._restore_backup_to_test_database",
+        "line": 15621,
+        "end_line": 15656,
+        "contains_long_task_call": false,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": false,
+      "caller_worker_like": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15645,
+          "text": "                if cancel_event is not None and cancel_event.is_set():"
+        },
+        {
+          "line": 15646,
+          "text": "                    raise RuntimeError(\"Restore test cancelled.\")"
+        },
+        {
+          "line": 15647,
+          "text": "            except AttributeError:"
+        },
+        {
+          "line": 15648,
+          "text": "                pass"
+        },
+        {
+          "line": 15649,
+          "text": ""
+        },
+        {
+          "line": 15650,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15651,
+          "text": "        self._run_pg_command([dropdb, \"--if-exists\", \"--force\", \"-U\", user, \"-h\", host, \"-p\", port, test_db], allow_retry_without_force=True)"
+        },
+        {
+          "line": 15652,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15653,
+          "text": "        self._run_pg_command([createdb, \"-U\", user, \"-h\", host, \"-p\", port, test_db])"
+        },
+        {
+          "line": 15654,
+          "text": "        _check_cancel()"
+        },
+        {
+          "line": 15655,
+          "text": "        self._run_pg_command([pg_restore, \"-U\", user, \"-h\", host, \"-p\", port, \"-d\", test_db, \"--clean\", \"--if-exists\", backup_path])"
+        },
+        {
+          "line": 15656,
+          "text": "        return f\"Restore test successful.\\n\\nBackup restored into database:\\n{test_db}\\n\\nLive database was not changed:\\n{live_db}\""
+        },
+        {
+          "line": 15657,
+          "text": ""
+        },
+        {
+          "line": 15658,
+          "text": "    def open_backup_history_window(self):"
+        },
+        {
+          "line": 15659,
+          "text": "        \"\"\"Show backup files and provide verify/restore-test actions.\"\"\""
+        },
+        {
+          "line": 15660,
+          "text": "        try:"
+        },
+        {
+          "line": 15661,
+          "text": "            role = (getattr(self, \"user_role\", \"\") or \"\").strip()"
+        },
+        {
+          "line": 15662,
+          "text": "        except Exception:"
+        },
+        {
+          "line": 15663,
+          "text": "            role = \"\""
+        },
+        {
+          "line": 15664,
+          "text": "        if role not in (\"Admin\", \"System\"):"
+        },
+        {
+          "line": 15665,
+          "text": "            try:"
+        }
+      ]
+    },
+    {
+      "line": 15778,
+      "end_line": 15778,
+      "target": "_verify_postgres_backup_file",
+      "call_text": "self._verify_postgres_backup_file",
+      "caller": {
+        "name": "verify",
+        "qualname": "App.verify",
+        "line": 15757,
+        "end_line": 15785,
+        "contains_long_task_call": true,
+        "worker_like_name": false
+      },
+      "caller_uses_long_task": true,
+      "caller_worker_like": false,
+      "protected_context": true,
+      "context": [
+        {
+          "line": 15768,
+          "text": "                        _log_exc(\"backup_verify\", exc)"
+        },
+        {
+          "line": 15769,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 15770,
+          "text": "                        pass"
+        },
+        {
+          "line": 15771,
+          "text": "                    try:"
+        },
+        {
+          "line": 15772,
+          "text": "                        messagebox.showerror(\"Verify Failed\", f\"Could not verify backup.\\n\\n{exc}\")"
+        },
+        {
+          "line": 15773,
+          "text": "                    except Exception:"
+        },
+        {
+          "line": 15774,
+          "text": "                        pass"
+        },
+        {
+          "line": 15775,
+          "text": "                try:"
+        },
+        {
+          "line": 15776,
+          "text": "                    self._run_long_task("
+        },
+        {
+          "line": 15777,
+          "text": "                        \"Verifying backup...\","
+        },
+        {
+          "line": 15778,
+          "text": "                        lambda cancel_event=None, p=path: self._verify_postgres_backup_file(p, cancel_event=cancel_event),"
+        },
+        {
+          "line": 15779,
+          "text": "                        on_success=_success,"
+        },
+        {
+          "line": 15780,
+          "text": "                        on_error=_error,"
+        },
+        {
+          "line": 15781,
+          "text": "                        allow_cancel=False,"
+        },
+        {
+          "line": 15782,
+          "text": "                        timeout_s=None,"
+        },
+        {
+          "line": 15783,
+          "text": "                    )"
+        },
+        {
+          "line": 15784,
+          "text": "                except Exception as e:"
+        },
+        {
+          "line": 15785,
+          "text": "                    _error(e)"
+        },
+        {
+          "line": 15786,
+          "text": ""
+        },
+        {
+          "line": 15787,
+          "text": "            def restore_test():"
+        },
+        {
+          "line": 15788,
+          "text": "                path = selected_path()"
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Read-only call-flow audit only; no app source changes are made.",
+    "Treat protected PostgreSQL backup/restore command paths as review-only until manually confirmed.",
+    "Prefer routing confirmed long-running backup/restore work through an existing long-task/worker path instead of changing command arguments first.",
+    "Do not touch reports, PDFs, payments, balances, 7x7, renewals, collectors, database migrations, cash-control, or report math from this audit alone.",
+    "If a UI-freeze fix is approved, change one backup/restore command family at a time and smoke-test backup, verify backup, and restore-test flows."
+  ]
+}
