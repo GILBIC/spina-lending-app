@@ -1,0 +1,193 @@
+{
+  "targets": [
+    "_spina_dash__fmt_pct",
+    "_spina_v23_money",
+    "_spina_v23_percent"
+  ],
+  "case_names": [
+    "none",
+    "empty",
+    "zero_int",
+    "one_int",
+    "negative_int",
+    "decimal",
+    "negative_decimal",
+    "numeric_text",
+    "comma_text",
+    "bad_text",
+    "true"
+  ],
+  "behavior": {
+    "_spina_dash__fmt_pct": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0.00%'"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0.00%'"
+      },
+      "zero_int": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0.00%'"
+      },
+      "one_int": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1.00%'"
+      },
+      "negative_int": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'-7.00%'"
+      },
+      "decimal": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'12.35%'"
+      },
+      "negative_decimal": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'-42.75%'"
+      },
+      "numeric_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1234.50%'"
+      },
+      "comma_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0.00%'"
+      },
+      "bad_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0.00%'"
+      },
+      "true": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1.00%'"
+      }
+    },
+    "_spina_v23_money": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0.00'"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0.00'"
+      },
+      "zero_int": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0.00'"
+      },
+      "one_int": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1.00'"
+      },
+      "negative_int": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP -7.00'"
+      },
+      "decimal": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 12.35'"
+      },
+      "negative_decimal": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP -42.75'"
+      },
+      "numeric_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1,234.50'"
+      },
+      "comma_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0.00'"
+      },
+      "bad_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0.00'"
+      },
+      "true": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1.00'"
+      }
+    },
+    "_spina_v23_percent": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0%'"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0%'"
+      },
+      "zero_int": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0%'"
+      },
+      "one_int": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1%'"
+      },
+      "negative_int": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'-7%'"
+      },
+      "decimal": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'12%'"
+      },
+      "negative_decimal": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'-43%'"
+      },
+      "numeric_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1234%'"
+      },
+      "comma_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0%'"
+      },
+      "bad_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0%'"
+      },
+      "true": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1%'"
+      }
+    }
+  }
+}
