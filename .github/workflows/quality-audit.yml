@@ -24,6 +24,8 @@ jobs:
         run: |
           python -m py_compile \
             OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/utilities/formatting.py \
+            spina_app/utilities/dates.py \
             tools/redundancy_audit.py \
             tools/spina_quality_audit.py \
             tools/spina_startup_diagnostics.py \
@@ -65,13 +67,18 @@ jobs:
             tools/plan_module_separation.py \
             tools/test_module_separation_planner.py \
             tools/extract_fmt_currency_module.py \
-            tools/test_fmt_currency_extraction.py
+            tools/test_fmt_currency_extraction.py \
+            tools/extract_date_helpers_module.py \
+            tools/test_date_helpers_extraction.py
 
       - name: Test module separation planner
         run: python tools/test_module_separation_planner.py
 
       - name: Test first formatting extraction
         run: python tools/test_fmt_currency_extraction.py
+
+      - name: Test date helper extraction
+        run: python tools/test_date_helpers_extraction.py
 
       - name: Run redundancy audit
         run: |
