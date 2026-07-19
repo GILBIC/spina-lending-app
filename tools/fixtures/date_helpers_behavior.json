@@ -1,0 +1,193 @@
+{
+  "targets": [
+    "_spina_cashctl__valid_date",
+    "_spina__parse_day_ymd",
+    "_spina_dash__parse_date"
+  ],
+  "case_names": [
+    "none",
+    "empty",
+    "iso_date",
+    "iso_datetime",
+    "slash_date",
+    "us_date",
+    "invalid_date",
+    "bad_text",
+    "zero",
+    "date_object",
+    "datetime_object"
+  ],
+  "behavior": {
+    "_spina_cashctl__valid_date": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2026-07-19'"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2026-07-19'"
+      },
+      "iso_date": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2026-07-19'"
+      },
+      "iso_datetime": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2026-07-19'"
+      },
+      "slash_date": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2026-07-19'"
+      },
+      "us_date": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2026-07-19'"
+      },
+      "invalid_date": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2026-07-19'"
+      },
+      "bad_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2026-07-19'"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2026-07-19'"
+      },
+      "date_object": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2026-07-19'"
+      },
+      "datetime_object": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2026-07-19'"
+      }
+    },
+    "_spina__parse_day_ymd": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "iso_date": {
+        "kind": "return",
+        "type": "datetime.date",
+        "repr": "datetime.date(2026, 7, 19)"
+      },
+      "iso_datetime": {
+        "kind": "return",
+        "type": "datetime.date",
+        "repr": "datetime.date(2026, 7, 19)"
+      },
+      "slash_date": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "us_date": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "invalid_date": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "bad_text": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "date_object": {
+        "kind": "return",
+        "type": "datetime.date",
+        "repr": "datetime.date(2026, 7, 19)"
+      },
+      "datetime_object": {
+        "kind": "return",
+        "type": "datetime.date",
+        "repr": "datetime.date(2026, 7, 19)"
+      }
+    },
+    "_spina_dash__parse_date": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "iso_date": {
+        "kind": "return",
+        "type": "datetime.date",
+        "repr": "datetime.date(2026, 7, 19)"
+      },
+      "iso_datetime": {
+        "kind": "return",
+        "type": "datetime.date",
+        "repr": "datetime.date(2026, 7, 19)"
+      },
+      "slash_date": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "us_date": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "invalid_date": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "bad_text": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "date_object": {
+        "kind": "return",
+        "type": "datetime.date",
+        "repr": "datetime.date(2026, 7, 19)"
+      },
+      "datetime_object": {
+        "kind": "return",
+        "type": "datetime.date",
+        "repr": "datetime.date(2026, 7, 19)"
+      }
+    }
+  }
+}

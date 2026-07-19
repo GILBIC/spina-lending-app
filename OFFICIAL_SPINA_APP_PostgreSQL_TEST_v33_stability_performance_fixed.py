@@ -24279,14 +24279,7 @@ def _on_collectors_select(self):
             _log_suppressed_once('excpass_0519', 'suppressed exception excpass_0519', __spina_exc)
             pass
 
-def _spina__parse_day_ymd(_v):
-    try:
-        _s = str(_v or '').strip()[:10]
-        if not _s:
-            return None
-        return datetime.strptime(_s, "%Y-%m-%d").date()
-    except Exception:
-        return None
+from spina_app.utilities.dates import _spina__parse_day_ymd
 
 
 def _spina__norm_weekday(_v):
@@ -37162,14 +37155,7 @@ def _spina_dash__norm_lt(value):
     return '7x7' if v in ('7x7', '7x7emer', 'emer', 'emergency') or '7x7' in v else 'Regular'
 
 
-def _spina_dash__parse_date(value):
-    try:
-        s = str(value or '').strip()[:10]
-        if not s:
-            return None
-        return datetime.strptime(s, '%Y-%m-%d').date()
-    except Exception:
-        return None
+from spina_app.utilities.dates import _spina_dash__parse_date
 
 
 def _spina_dash__date_text(value):
@@ -37938,13 +37924,7 @@ def _spina_cashctl__parse_percent(value, default=10.0):
         return float(default)
 
 
-def _spina_cashctl__valid_date(value):
-    try:
-        s = str(value or '').strip()[:10]
-        datetime.strptime(s, '%Y-%m-%d')
-        return s
-    except Exception:
-        return date.today().strftime('%Y-%m-%d')
+from spina_app.utilities.dates import _spina_cashctl__valid_date
 
 
 def _spina_cashctl__int_range(value, default, min_value=1, max_value=120):
