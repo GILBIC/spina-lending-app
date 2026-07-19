@@ -8624,11 +8624,7 @@ def _spina_route_adv_marker_for(db, name: str, day_yyyy_mm_dd: str, loan_type: s
 
 
 
-def fmt_currency(x):
-    try:
-        return f"PHP {float(x):,.2f}"
-    except Exception:
-        return "PHP 0.00"
+from spina_app.utilities.formatting import fmt_currency
 
 
 
