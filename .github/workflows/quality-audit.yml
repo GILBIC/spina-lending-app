@@ -61,7 +61,12 @@ jobs:
             tools/plan_logger_fallback_pass_only.py \
             tools/cleanup_logger_fallback_pass_only.py \
             tools/plan_queue_empty_pass_only.py \
-            tools/plan_app_lifecycle_window_pass_only.py
+            tools/plan_app_lifecycle_window_pass_only.py \
+            tools/plan_module_separation.py \
+            tools/test_module_separation_planner.py
+
+      - name: Test module separation planner
+        run: python tools/test_module_separation_planner.py
 
       - name: Run redundancy audit
         run: |
