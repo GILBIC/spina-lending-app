@@ -22,57 +22,57 @@
       "none": {
         "kind": "return",
         "type": "builtins.str",
-        "repr": "'2026-07-19'"
+        "repr": "<TODAY:%Y-%m-%d>"
       },
       "empty": {
         "kind": "return",
         "type": "builtins.str",
-        "repr": "'2026-07-19'"
+        "repr": "<TODAY:%Y-%m-%d>"
       },
       "iso_date": {
         "kind": "return",
         "type": "builtins.str",
-        "repr": "'2026-07-19'"
+        "repr": "'2024-02-29'"
       },
       "iso_datetime": {
         "kind": "return",
         "type": "builtins.str",
-        "repr": "'2026-07-19'"
+        "repr": "'2024-02-29'"
       },
       "slash_date": {
         "kind": "return",
         "type": "builtins.str",
-        "repr": "'2026-07-19'"
+        "repr": "<TODAY:%Y-%m-%d>"
       },
       "us_date": {
         "kind": "return",
         "type": "builtins.str",
-        "repr": "'2026-07-19'"
+        "repr": "<TODAY:%Y-%m-%d>"
       },
       "invalid_date": {
         "kind": "return",
         "type": "builtins.str",
-        "repr": "'2026-07-19'"
+        "repr": "<TODAY:%Y-%m-%d>"
       },
       "bad_text": {
         "kind": "return",
         "type": "builtins.str",
-        "repr": "'2026-07-19'"
+        "repr": "<TODAY:%Y-%m-%d>"
       },
       "zero": {
         "kind": "return",
         "type": "builtins.str",
-        "repr": "'2026-07-19'"
+        "repr": "<TODAY:%Y-%m-%d>"
       },
       "date_object": {
         "kind": "return",
         "type": "builtins.str",
-        "repr": "'2026-07-19'"
+        "repr": "'2024-02-29'"
       },
       "datetime_object": {
         "kind": "return",
         "type": "builtins.str",
-        "repr": "'2026-07-19'"
+        "repr": "'2024-02-29'"
       }
     },
     "_spina__parse_day_ymd": {
@@ -89,12 +89,12 @@
       "iso_date": {
         "kind": "return",
         "type": "datetime.date",
-        "repr": "datetime.date(2026, 7, 19)"
+        "repr": "datetime.date(2024, 2, 29)"
       },
       "iso_datetime": {
         "kind": "return",
         "type": "datetime.date",
-        "repr": "datetime.date(2026, 7, 19)"
+        "repr": "datetime.date(2024, 2, 29)"
       },
       "slash_date": {
         "kind": "return",
@@ -124,12 +124,12 @@
       "date_object": {
         "kind": "return",
         "type": "datetime.date",
-        "repr": "datetime.date(2026, 7, 19)"
+        "repr": "datetime.date(2024, 2, 29)"
       },
       "datetime_object": {
         "kind": "return",
         "type": "datetime.date",
-        "repr": "datetime.date(2026, 7, 19)"
+        "repr": "datetime.date(2024, 2, 29)"
       }
     },
     "_spina_dash__parse_date": {
@@ -146,12 +146,12 @@
       "iso_date": {
         "kind": "return",
         "type": "datetime.date",
-        "repr": "datetime.date(2026, 7, 19)"
+        "repr": "datetime.date(2024, 2, 29)"
       },
       "iso_datetime": {
         "kind": "return",
         "type": "datetime.date",
-        "repr": "datetime.date(2026, 7, 19)"
+        "repr": "datetime.date(2024, 2, 29)"
       },
       "slash_date": {
         "kind": "return",
@@ -181,12 +181,12 @@
       "date_object": {
         "kind": "return",
         "type": "datetime.date",
-        "repr": "datetime.date(2026, 7, 19)"
+        "repr": "datetime.date(2024, 2, 29)"
       },
       "datetime_object": {
         "kind": "return",
         "type": "datetime.date",
-        "repr": "datetime.date(2026, 7, 19)"
+        "repr": "datetime.date(2024, 2, 29)"
       }
     }
   }
