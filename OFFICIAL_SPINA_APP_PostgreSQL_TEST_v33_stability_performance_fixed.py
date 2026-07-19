@@ -1282,7 +1282,7 @@ def _log_exc(context: str, exc: Exception | None = None):
         try:
             print(f"[SPINA][ERROR] {context}: {exc}", file=sys.stderr)
         except Exception:
-            pass
+            return
 
 
 # --- BEGIN: log suppressed exceptions (log-once) ---
@@ -1307,7 +1307,7 @@ def _log_suppressed_once(key: str, context: str, exc: Exception | None = None):
         try:
             print(f"[SPINA][SUPPRESSED] {context}: {exc}", file=sys.stderr)
         except Exception:
-            pass
+            return
 # --- END: log suppressed exceptions (log-once) ---
 
 def _alert_user(title: str, message: str, kind: str = "error"):
