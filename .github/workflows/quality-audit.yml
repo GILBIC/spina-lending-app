@@ -35,6 +35,8 @@ jobs:
             spina_app/utilities/records.py \
             spina_app/ui_helpers.py \
             spina_app/area_hierarchy.py \
+            spina_app/area_hierarchy_ops.py \
+            spina_app/area_hierarchy_ui.py \
             tools/redundancy_audit.py \
             tools/spina_quality_audit.py \
             tools/spina_startup_diagnostics.py \
@@ -109,7 +111,10 @@ jobs:
             tools/test_display_data_helper_batch.py \
             tools/test_display_ui_helper_batch_04.py \
             tools/apply_hierarchical_area_storage_phase1.py \
-            tools/test_hierarchical_area_storage_phase1.py
+            tools/test_hierarchical_area_storage_phase1.py \
+            tools/apply_hierarchical_area_ui_phase2.py \
+            tools/test_hierarchical_area_ui_phase2.py \
+            tools/test_hierarchical_area_ui_phase2_source.py
 
       - name: Test module separation planner
         run: python tools/test_module_separation_planner.py
@@ -195,6 +200,12 @@ jobs:
         run: |
           python tools/apply_hierarchical_area_storage_phase1.py
           python tools/test_hierarchical_area_storage_phase1.py
+
+      - name: Test hierarchical Area UI Phase 2
+        run: |
+          python tools/apply_hierarchical_area_ui_phase2.py
+          PYTHONPATH=. python tools/test_hierarchical_area_ui_phase2.py
+          PYTHONPATH=tools:. python tools/test_hierarchical_area_ui_phase2_source.py
 
       - name: Run redundancy audit
         run: |

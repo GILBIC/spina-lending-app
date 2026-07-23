@@ -1,0 +1,36 @@
+[
+  {
+    "name": "add_client",
+    "line": 4949,
+    "end_line": 5129,
+    "signature": "self, name, principal=0.0, date_released=None, area=None, interest_rate=None, new_until=None, loan_type=None, pay_start_offset_days=1, contact_number='', payment_term='Daily', payment_amount=0.0, payment_mode='Cash', due_weekday='', semi_due_day1=None, semi_due_day2=None, monthly_due_day=None, flex_due_rule=''",
+    "commit_contexts": [
+      {
+        "line": 5099,
+        "start_line": 5087,
+        "end_line": 5117,
+        "text": "5087:             try:\n5088:                 _a = (area or '').strip()\n5089:                 if _a:\n5090:                     self.ensure_area_exists(_a)\n5091:             except Exception as __spina_exc:\n5092:                 _log_suppressed_once('excpass_0121', 'suppressed exception excpass_0121', __spina_exc)\n5093:                 pass\n5094: \n5095:             cur.execute(\n5096:                 \"INSERT INTO clients (client_uid, person_uid, link_opt_out, name, contact_number, principal, interest_rate, interest_amount, total_to_pay, date_released, due_date, created_at, area, new_until, pay_start_offset_days, loan_type, payment_term, payment_amount, payment_mode, due_weekday, semi_due_day1, semi_due_day2, monthly_due_day, flex_due_rule) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\",\n5097:                 (uid, '', 0, name.strip(), cn, p, rate, intr, total, dr, due, now, (area or ''), new_until, psod, lt, pt, pa, pm, dwd, sd1, sd2, mdd, fdr)\n5098:             )\n5099:             self.conn.commit()\n5100:             try:\n5101:                 from spina_app.area_hierarchy_ops import sync_client_area_uid_from_path\n5102:                 sync_client_area_uid_from_path(self.conn, uid)\n5103:             except Exception as __spina_exc:\n5104:                 _log_suppressed_once(\n5105:                     'area_uid_sync_add',\n5106:                     'suppressed client Area UID sync after add',\n5107:                     __spina_exc,\n5108:                 )\n5109:                 pass\n5110: \n5111:             # Ensure renew defaults (safe if columns not present)\n5112:             try:\n5113:                 cur.execute(\"UPDATE clients SET last_released_cash = COALESCE(last_released_cash, principal), renew_count = COALESCE(renew_count, 0) WHERE client_uid=?\", (uid,))\n5114:                 self.conn.commit()\n5115:             except Exception as __spina_exc:\n5116:                 _log_suppressed_once('excpass_0122', 'suppressed exception excpass_0122', __spina_exc)\n5117:                 pass"
+      },
+      {
+        "line": 5114,
+        "start_line": 5102,
+        "end_line": 5129,
+        "text": "5102:                 sync_client_area_uid_from_path(self.conn, uid)\n5103:             except Exception as __spina_exc:\n5104:                 _log_suppressed_once(\n5105:                     'area_uid_sync_add',\n5106:                     'suppressed client Area UID sync after add',\n5107:                     __spina_exc,\n5108:                 )\n5109:                 pass\n5110: \n5111:             # Ensure renew defaults (safe if columns not present)\n5112:             try:\n5113:                 cur.execute(\"UPDATE clients SET last_released_cash = COALESCE(last_released_cash, principal), renew_count = COALESCE(renew_count, 0) WHERE client_uid=?\", (uid,))\n5114:                 self.conn.commit()\n5115:             except Exception as __spina_exc:\n5116:                 _log_suppressed_once('excpass_0122', 'suppressed exception excpass_0122', __spina_exc)\n5117:                 pass\n5118: \n5119:             # Log history\n5120:             try:\n5121:                 new_row = self.get_client_by_uid(uid) or self.get_client_info(name.strip(), loan_type=lt) or {}\n5122:                 self._log_client_history(uid, 'ADD', old_row=None, new_row=new_row, source='clients:add')\n5123:             except Exception as __spina_exc:\n5124:                 _log_suppressed_once('excpass_0123', 'suppressed exception excpass_0123', __spina_exc)\n5125:                 pass\n5126: \n5127:             return True\n5128:         except sqlite3.IntegrityError:\n5129:             return False"
+      }
+    ]
+  },
+  {
+    "name": "update_client",
+    "line": 5133,
+    "end_line": 5431,
+    "signature": "self, old_name, new_name=None, principal=None, date_released=None, area=None, interest_rate=None, new_until=None, loan_type=None, pay_start_offset_days=None, contact_number=None, payment_term=None, payment_amount=None, payment_mode=None, due_weekday=None, semi_due_day1=None, semi_due_day2=None, monthly_due_day=None, flex_due_rule=None",
+    "commit_contexts": [
+      {
+        "line": 5405,
+        "start_line": 5393,
+        "end_line": 5423,
+        "text": "5393:             try:\n5394:                 if name_new and name_new != old_name:\n5395:                     _migrate_legacy_notes_by_name(\n5396:                         old_name=old_name,\n5397:                         loan_type=lt,\n5398:                         client_uid=uid or (old_row.get(\"client_uid\") if isinstance(old_row, dict) else None),\n5399:                         person_uid=(old_row.get(\"person_uid\") if isinstance(old_row, dict) else None),\n5400:                     )\n5401:             except Exception as e:\n5402:                 _log_exc(\"notes:migrate_on_rename\", e)\n5403: \n5404: \n5405:             self.conn.commit()\n5406:             try:\n5407:                 from spina_app.area_hierarchy_ops import sync_client_area_uid_from_path\n5408:                 _area_sync_uid = uid or (\n5409:                     old_row.get(\"client_uid\") if isinstance(old_row, dict) else \"\"\n5410:                 )\n5411:                 if _area_sync_uid:\n5412:                     sync_client_area_uid_from_path(self.conn, _area_sync_uid)\n5413:             except Exception as __spina_exc:\n5414:                 _log_suppressed_once(\n5415:                     'area_uid_sync_update',\n5416:                     'suppressed client Area UID sync after update',\n5417:                     __spina_exc,\n5418:                 )\n5419:                 pass\n5420: \n5421:             # Log history\n5422:             try:\n5423:                 new_row = self.get_client_by_uid(uid) if uid else self.get_client_info(name_new, loan_type=lt)"
+      }
+    ]
+  }
+]

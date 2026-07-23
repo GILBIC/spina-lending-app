@@ -5097,6 +5097,16 @@ class LoanDB:
                 (uid, '', 0, name.strip(), cn, p, rate, intr, total, dr, due, now, (area or ''), new_until, psod, lt, pt, pa, pm, dwd, sd1, sd2, mdd, fdr)
             )
             self.conn.commit()
+            try:
+                from spina_app.area_hierarchy_ops import sync_client_area_uid_from_path
+                sync_client_area_uid_from_path(self.conn, uid)
+            except Exception as __spina_exc:
+                _log_suppressed_once(
+                    'area_uid_sync_add',
+                    'suppressed client Area UID sync after add',
+                    __spina_exc,
+                )
+                pass
 
             # Ensure renew defaults (safe if columns not present)
             try:
@@ -5393,6 +5403,20 @@ class LoanDB:
 
 
             self.conn.commit()
+            try:
+                from spina_app.area_hierarchy_ops import sync_client_area_uid_from_path
+                _area_sync_uid = uid or (
+                    old_row.get("client_uid") if isinstance(old_row, dict) else ""
+                )
+                if _area_sync_uid:
+                    sync_client_area_uid_from_path(self.conn, _area_sync_uid)
+            except Exception as __spina_exc:
+                _log_suppressed_once(
+                    'area_uid_sync_update',
+                    'suppressed client Area UID sync after update',
+                    __spina_exc,
+                )
+                pass
 
             # Log history
             try:
@@ -25355,33 +25379,7 @@ def _maybe_suggest_link_clients(self, name, loan_type=None):
             self._areas_cache = _areas
             self.area_cb = ttk.Combobox(_area_row, textvariable=self.area_var, values=([''] + _areas), state='readonly', width=20)
             self.area_cb.pack(side='left')
-            def _add_area_quick():
-                try:
-                    nm = simpledialog.askstring('Add Area', 'Enter new area name:', parent=self)
-                except Exception:
-                    nm = None
-                nm = (nm or '').strip()
-                if not nm:
-                    return
-                try:
-                    if callable(getattr(self, 'area_adder', None)):
-                        self.area_adder(nm)
-                except Exception as __spina_exc:
-                    _log_suppressed_once('excpass_0551', 'suppressed exception excpass_0551', __spina_exc)
-                    pass
-                # refresh values
-                try:
-                    _areas2 = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []
-                except Exception:
-                    _areas2 = []
-                self._areas_cache = _areas2
-                try:
-                    self.area_cb.configure(values=([''] + _areas2))
-                except Exception as __spina_exc:
-                    _log_suppressed_once('excpass_0552', 'suppressed exception excpass_0552', __spina_exc)
-                    pass
-                self.area_var.set(nm)
-            ttk.Button(_area_row, text='Add...', command=_add_area_quick).pack(side='left', padx=4)
+            ttk.Label(_area_row, text='Managed Areas only').pack(side='left', padx=4)
             ttk.Button(_area_row, text='Clear', command=lambda: self.area_var.set('')).pack(side='left')
     
             ttk.Label(master, text='Principal:').grid(row=2, column=0, sticky='w')
@@ -29113,49 +29111,9 @@ def _app__client_form(self, title, initial=None, is_edit=False):
         try: lt_cb.config(state='disabled')
         except Exception: pass
 
-    # Area dropdown
-    area_frame = ttk.Frame(outer)
-    area_cb = ttk.Combobox(area_frame, textvariable=area_var, state='readonly', width=34)
-    area_cb.pack(side='left', fill='x', expand=True)
-    def _refresh_area_values():
-        try:
-            areas = self.db.get_all_areas() or []
-        except Exception:
-            areas = []
-        area_cb['values'] = [''] + list(areas)
-        try:
-            cur = area_var.get().strip()
-            if cur and cur not in areas:
-                area_cb['values'] = [''] + [cur] + list(areas)
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0624', 'suppressed exception excpass_0624', __spina_exc)
-            pass
-    _refresh_area_values()
-
-    def add_area_quick():
-        nm = simpledialog.askstring("Add Area", "Enter new Area name:", parent=win)
-        if not nm:
-            return
-        nm = " ".join(str(nm).strip().split())
-        if not nm:
-            return
-        try:
-            self.db.add_area(nm)
-        except Exception:
-            try:
-                self.db.ensure_area_exists(nm)
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0625', 'suppressed exception excpass_0625', __spina_exc)
-                pass
-        area_var.set(nm)
-        _refresh_area_values()
-        try:
-            self._refresh_area_dropdowns()
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0626', 'suppressed exception excpass_0626', __spina_exc)
-            pass
-
-    ttk.Button(area_frame, text="+", width=3, command=add_area_quick).pack(side='left', padx=6)
+    # Managed hierarchical Area selector
+    from spina_app.area_hierarchy_ui import build_simple_area_selector
+    area_frame = build_simple_area_selector(self, outer, area_var, width=34)
     row("Area:", area_frame, r); r += 1
 
     row("Principal:", ttk.Entry(outer, textvariable=principal_var, width=46), r); r += 1
@@ -31501,6 +31459,12 @@ try:
 except Exception as __spina_exc:
     _log_suppressed_once('excpass_0664', 'suppressed exception excpass_0664', __spina_exc)
     pass
+
+# === Phase 2: hierarchical Area manager override ===
+from spina_app.area_hierarchy_ui import open_area_manager as _spina_area_open_manager
+App.open_areas_manager = _spina_area_open_manager
+# === END Phase 2 hierarchical Area manager override ===
+
 
 def main():
     import tkinter as tk
@@ -44988,11 +44952,10 @@ def _spina_v23_client_form(self, title, initial=None, is_edit=False):
     sec1 = section(right, "1. Borrower Information", "Basic identity and route information.")
     _spina_v23_entry(sec1, "Full Name *", name_var, 28)[0].grid(row=0, column=0, sticky="ew", padx=(0, 10), pady=(0, 8))
     _spina_v23_entry(sec1, "Contact Number", contact_var, 20)[0].grid(row=0, column=1, sticky="ew", padx=(0, 10), pady=(0, 8))
-    try:
-        areas = list(self.db.get_all_areas() or [])
-    except Exception:
-        areas = []
-    area_box, area_cb = _spina_v23_entry(sec1, "Area / Route", area_var, 24, kind="combo", values=([""] + areas), readonly=False)
+    from spina_app.area_hierarchy_ui import build_area_selector_field
+    area_box, area_cb = build_area_selector_field(
+        sec1, self, win, area_var, label="Area / Route", width=24
+    )
     area_box.grid(row=0, column=2, sticky="ew", pady=(0, 8))
 
     sec2 = section(right, "2. Loan Details", "Amounts, release date, and start-of-payment rule.")

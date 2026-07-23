@@ -1,7 +1,7 @@
 """Hierarchical Area storage with legacy flat-text compatibility.
 
 The desktop app historically stores a client's Area as plain text in
-``clients.area`` and keeps valid values in ``areas(name)``.  This module adds
+``clients.area`` and keeps valid values in ``areas(name)``. This module adds
 stable Area node IDs and unlimited parent/child nesting while continuing to
 write the full display path back to those legacy fields.
 """
@@ -14,6 +14,12 @@ import uuid
 from typing import Any, Iterable
 
 AREA_PATH_SEPARATOR = " › "
+
+# The first hierarchy setup may scan the full clients table to migrate legacy
+# Area text. Keep that work once per live database connection instead of doing
+# it again every time a selector or manager window refreshes.
+_READY_CONNECTION_IDS: set[int] = set()
+_EMPTY_STATS = {"paths_found": 0, "nodes_created": 0, "clients_linked": 0}
 
 
 def _now_text() -> str:
@@ -168,8 +174,8 @@ def _fetch_nodes(conn: Any, *, include_inactive: bool = True) -> list[dict[str, 
 def migrate_flat_areas(conn: Any) -> dict[str, int]:
     """Migrate existing flat Area text to root nodes without changing text.
 
-    Existing values are deliberately kept as root nodes.  Staff can later move
-    them under another Area through the hierarchy manager.  This avoids guessing
+    Existing values are deliberately kept as root nodes. Staff can later move
+    them under another Area through the hierarchy manager. This avoids guessing
     whether a dash or slash in an old Area name was intended as a separator.
     """
     cur = conn.cursor()
@@ -236,17 +242,25 @@ def migrate_flat_areas(conn: Any) -> dict[str, int]:
 
 
 def ensure_area_hierarchy_schema(conn: Any) -> dict[str, int]:
-    """Create hierarchy storage and migrate legacy values idempotently."""
+    """Create hierarchy storage and explicitly rescan legacy values."""
     _ensure_legacy_areas_table(conn)
     _ensure_client_area_uid(conn)
     _ensure_area_nodes_table(conn)
     stats = migrate_flat_areas(conn)
     conn.commit()
+    _READY_CONNECTION_IDS.add(id(conn))
     return stats
 
 
+def ensure_area_hierarchy_ready(conn: Any) -> dict[str, int]:
+    """Ensure hierarchy storage once for this live database connection."""
+    if id(conn) in _READY_CONNECTION_IDS:
+        return dict(_EMPTY_STATS)
+    return ensure_area_hierarchy_schema(conn)
+
+
 def list_area_nodes(conn: Any, *, include_inactive: bool = False) -> list[dict[str, Any]]:
-    ensure_area_hierarchy_schema(conn)
+    ensure_area_hierarchy_ready(conn)
     return _fetch_nodes(conn, include_inactive=include_inactive)
 
 
@@ -298,7 +312,7 @@ def _node_by_uid(conn: Any, area_uid: str) -> dict[str, Any] | None:
 
 def add_area_node(conn: Any, name: Any, parent_uid: str = "") -> dict[str, Any]:
     """Add one Area node under any parent and return the saved node."""
-    ensure_area_hierarchy_schema(conn)
+    ensure_area_hierarchy_ready(conn)
     segment = normalize_area_segment(name)
     if not segment:
         raise ValueError("Area name is required.")
@@ -348,7 +362,7 @@ def add_area_node(conn: Any, name: Any, parent_uid: str = "") -> dict[str, Any]:
 
 def set_client_area_node(conn: Any, client_uid: str, area_uid: str) -> dict[str, Any]:
     """Assign a client to a node while synchronizing the legacy Area path text."""
-    ensure_area_hierarchy_schema(conn)
+    ensure_area_hierarchy_ready(conn)
     client_key = str(client_uid or "").strip()
     if not client_key:
         raise ValueError("Client UID is required.")
