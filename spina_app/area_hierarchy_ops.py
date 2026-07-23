@@ -107,7 +107,7 @@ def _direct_client_count(conn: Any, node: dict[str, Any]) -> int:
     cur = conn.cursor()
     row = cur.execute(
         "SELECT COUNT(*) FROM clients "
-        "WHERE area_uid=? OR (IFNULL(TRIM(area_uid),'')='' AND TRIM(IFNULL(area,''))=?)",
+        "WHERE area_uid=? OR TRIM(IFNULL(area,''))=?",
         (node["area_uid"], node["full_path"]),
     ).fetchone()
     try:
