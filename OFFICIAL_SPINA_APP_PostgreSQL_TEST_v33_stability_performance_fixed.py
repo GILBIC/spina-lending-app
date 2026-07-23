@@ -44311,8 +44311,8 @@ def _spina_v22_build_reports_tab(self):
                     self.reports_notes_sep.pack_forget()
                     self.report_notes_btn.configure(text="Notes")
                 else:
-                    self.reports_notes_box.pack(side="bottom", fill="x", padx=18, pady=(0, 18), before=table_card)
-                    self.reports_notes_sep.pack(side="bottom", fill="x", padx=18, pady=(0, 6), before=table_card)
+                    self.reports_notes_sep.pack(fill="x", padx=18, pady=(0, 6))
+                    self.reports_notes_box.pack(fill="x", padx=18, pady=(0, 18))
                     self.report_notes_btn.configure(text="Hide Notes")
                     try:
                         self._auto_load_report_note()
@@ -44321,7 +44321,7 @@ def _spina_v22_build_reports_tab(self):
             except Exception:
                 pass
 
-        self.report_notes_btn.configure(command=_toggle_reports_notes_panel)
+        self.report_notes_btn.configure(command=self._open_note_dialog)
 
         notes_top = tk.Frame(self.reports_notes_box, bg=c["panel"])
         notes_top.pack(fill="x", padx=12, pady=(10, 6))
