@@ -1,0 +1,36 @@
+[
+  {
+    "name": "add_client",
+    "line": 4949,
+    "end_line": 5119,
+    "signature": "self, name, principal=0.0, date_released=None, area=None, interest_rate=None, new_until=None, loan_type=None, pay_start_offset_days=1, contact_number='', payment_term='Daily', payment_amount=0.0, payment_mode='Cash', due_weekday='', semi_due_day1=None, semi_due_day2=None, monthly_due_day=None, flex_due_rule=''",
+    "commit_contexts": [
+      {
+        "line": 5099,
+        "start_line": 5087,
+        "end_line": 5117,
+        "text": "5087:             try:\n5088:                 _a = (area or '').strip()\n5089:                 if _a:\n5090:                     self.ensure_area_exists(_a)\n5091:             except Exception as __spina_exc:\n5092:                 _log_suppressed_once('excpass_0121', 'suppressed exception excpass_0121', __spina_exc)\n5093:                 pass\n5094: \n5095:             cur.execute(\n5096:                 \"INSERT INTO clients (client_uid, person_uid, link_opt_out, name, contact_number, principal, interest_rate, interest_amount, total_to_pay, date_released, due_date, created_at, area, new_until, pay_start_offset_days, loan_type, payment_term, payment_amount, payment_mode, due_weekday, semi_due_day1, semi_due_day2, monthly_due_day, flex_due_rule) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\",\n5097:                 (uid, '', 0, name.strip(), cn, p, rate, intr, total, dr, due, now, (area or ''), new_until, psod, lt, pt, pa, pm, dwd, sd1, sd2, mdd, fdr)\n5098:             )\n5099:             self.conn.commit()\n5100: \n5101:             # Ensure renew defaults (safe if columns not present)\n5102:             try:\n5103:                 cur.execute(\"UPDATE clients SET last_released_cash = COALESCE(last_released_cash, principal), renew_count = COALESCE(renew_count, 0) WHERE client_uid=?\", (uid,))\n5104:                 self.conn.commit()\n5105:             except Exception as __spina_exc:\n5106:                 _log_suppressed_once('excpass_0122', 'suppressed exception excpass_0122', __spina_exc)\n5107:                 pass\n5108: \n5109:             # Log history\n5110:             try:\n5111:                 new_row = self.get_client_by_uid(uid) or self.get_client_info(name.strip(), loan_type=lt) or {}\n5112:                 self._log_client_history(uid, 'ADD', old_row=None, new_row=new_row, source='clients:add')\n5113:             except Exception as __spina_exc:\n5114:                 _log_suppressed_once('excpass_0123', 'suppressed exception excpass_0123', __spina_exc)\n5115:                 pass\n5116: \n5117:             return True"
+      },
+      {
+        "line": 5104,
+        "start_line": 5092,
+        "end_line": 5119,
+        "text": "5092:                 _log_suppressed_once('excpass_0121', 'suppressed exception excpass_0121', __spina_exc)\n5093:                 pass\n5094: \n5095:             cur.execute(\n5096:                 \"INSERT INTO clients (client_uid, person_uid, link_opt_out, name, contact_number, principal, interest_rate, interest_amount, total_to_pay, date_released, due_date, created_at, area, new_until, pay_start_offset_days, loan_type, payment_term, payment_amount, payment_mode, due_weekday, semi_due_day1, semi_due_day2, monthly_due_day, flex_due_rule) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\",\n5097:                 (uid, '', 0, name.strip(), cn, p, rate, intr, total, dr, due, now, (area or ''), new_until, psod, lt, pt, pa, pm, dwd, sd1, sd2, mdd, fdr)\n5098:             )\n5099:             self.conn.commit()\n5100: \n5101:             # Ensure renew defaults (safe if columns not present)\n5102:             try:\n5103:                 cur.execute(\"UPDATE clients SET last_released_cash = COALESCE(last_released_cash, principal), renew_count = COALESCE(renew_count, 0) WHERE client_uid=?\", (uid,))\n5104:                 self.conn.commit()\n5105:             except Exception as __spina_exc:\n5106:                 _log_suppressed_once('excpass_0122', 'suppressed exception excpass_0122', __spina_exc)\n5107:                 pass\n5108: \n5109:             # Log history\n5110:             try:\n5111:                 new_row = self.get_client_by_uid(uid) or self.get_client_info(name.strip(), loan_type=lt) or {}\n5112:                 self._log_client_history(uid, 'ADD', old_row=None, new_row=new_row, source='clients:add')\n5113:             except Exception as __spina_exc:\n5114:                 _log_suppressed_once('excpass_0123', 'suppressed exception excpass_0123', __spina_exc)\n5115:                 pass\n5116: \n5117:             return True\n5118:         except sqlite3.IntegrityError:\n5119:             return False"
+      }
+    ]
+  },
+  {
+    "name": "update_client",
+    "line": 5123,
+    "end_line": 5407,
+    "signature": "self, old_name, new_name=None, principal=None, date_released=None, area=None, interest_rate=None, new_until=None, loan_type=None, pay_start_offset_days=None, contact_number=None, payment_term=None, payment_amount=None, payment_mode=None, due_weekday=None, semi_due_day1=None, semi_due_day2=None, monthly_due_day=None, flex_due_rule=None",
+    "commit_contexts": [
+      {
+        "line": 5395,
+        "start_line": 5383,
+        "end_line": 5407,
+        "text": "5383:             try:\n5384:                 if name_new and name_new != old_name:\n5385:                     _migrate_legacy_notes_by_name(\n5386:                         old_name=old_name,\n5387:                         loan_type=lt,\n5388:                         client_uid=uid or (old_row.get(\"client_uid\") if isinstance(old_row, dict) else None),\n5389:                         person_uid=(old_row.get(\"person_uid\") if isinstance(old_row, dict) else None),\n5390:                     )\n5391:             except Exception as e:\n5392:                 _log_exc(\"notes:migrate_on_rename\", e)\n5393: \n5394: \n5395:             self.conn.commit()\n5396: \n5397:             # Log history\n5398:             try:\n5399:                 new_row = self.get_client_by_uid(uid) if uid else self.get_client_info(name_new, loan_type=lt)\n5400:                 self._log_client_history(uid or (new_row or {}).get(\"client_uid\", \"\"), 'UPDATE', old_row=old_row, new_row=new_row or {}, source='clients:update')\n5401:             except Exception as __spina_exc:\n5402:                 _log_suppressed_once('excpass_0126', 'suppressed exception excpass_0126', __spina_exc)\n5403:                 pass\n5404: \n5405:             return True\n5406:         except Exception:\n5407:             return False"
+      }
+    ]
+  }
+]
