@@ -1,4 +1,5 @@
 name: Legacy Dashboard palette batch 14
+# Normal user commit to rerun final checks after the documentation-only map update.
 
 on:
   push:
