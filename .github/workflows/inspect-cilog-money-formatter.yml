@@ -1,0 +1,76 @@
+name: Inspect CILOG money formatter
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Inspect helper
+        run: |
+          python - <<'PY'
+          import ast
+          import builtins
+          import json
+          from pathlib import Path
+
+          path = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
+          target = '_spina_cilog_fmt_money'
+          source = path.read_text(encoding='utf-8')
+          lines = source.splitlines()
+          tree = ast.parse(source)
+          matches = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == target]
+          if len(matches) != 1:
+              raise RuntimeError(f'Expected one {target}, found {len(matches)}')
+          node = matches[0]
+          locals_ = {a.arg for a in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)}
+          if node.args.vararg:
+              locals_.add(node.args.vararg.arg)
+          if node.args.kwarg:
+              locals_.add(node.args.kwarg.arg)
+          for child in ast.walk(node):
+              if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
+                  locals_.add(child.id)
+              elif isinstance(child, ast.ExceptHandler) and isinstance(child.name, str):
+                  locals_.add(child.name)
+          loaded = {
+              child.id
+              for child in ast.walk(node)
+              if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
+          }
+          external = sorted(loaded - set(dir(builtins)) - locals_ - {target})
+          callers = []
+          for owner in tree.body:
+              if not isinstance(owner, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                  continue
+              count = sum(
+                  1
+                  for child in ast.walk(owner)
+                  if isinstance(child, ast.Call)
+                  and isinstance(child.func, ast.Name)
+                  and child.func.id == target
+              )
+              if count:
+                  callers.append({'name': owner.name, 'line': owner.lineno, 'kind': type(owner).__name__, 'call_count': count})
+          print('INSPECTION_JSON_START')
+          print(json.dumps({
+              'target': target,
+              'line': node.lineno,
+              'end_line': node.end_lineno,
+              'signature': ast.unparse(node.args),
+              'decorators': [ast.unparse(d) for d in node.decorator_list],
+              'uses_global_or_nonlocal': any(isinstance(c, (ast.Global, ast.Nonlocal)) for c in ast.walk(node)),
+              'external_loaded_names': external,
+              'source': '\n'.join(lines[node.lineno - 1:node.end_lineno]),
+              'callers': callers,
+          }, indent=2, ensure_ascii=False))
+          print('INSPECTION_JSON_END')
+          PY
