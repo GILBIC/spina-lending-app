@@ -14,9 +14,9 @@ from typing import Any
 from spina_app.area_hierarchy import (
     add_area_node,
     ensure_area_hierarchy_ready,
-    ensure_area_hierarchy_schema,
     format_area_path,
     list_area_nodes,
+    migrate_flat_areas,
     normalize_area_path,
     normalize_area_segment,
 )
@@ -81,7 +81,7 @@ def sync_client_area_uid_from_path(conn: Any, client_uid: Any) -> dict[str, Any]
     if node is None:
         # A legacy import can introduce a new text Area outside the managed UI.
         # Rescan only for this exceptional missing-path case, not on every save.
-        ensure_area_hierarchy_schema(conn, force=True)
+        migrate_flat_areas(conn)
         node = find_area_node_by_path(conn, path_text, include_inactive=True)
     if node is None:
         return None
