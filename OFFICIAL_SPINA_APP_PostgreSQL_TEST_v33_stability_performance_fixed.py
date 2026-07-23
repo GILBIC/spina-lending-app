@@ -41732,49 +41732,7 @@ except Exception:
 
 
 # --- BEGIN: v17 modern Dashboard UI with easy charts ---
-def _spina_v17_dash_colors(self=None):
-    """Dashboard-specific modern colors that work in light and dark mode."""
-    try:
-        theme = str(getattr(self, "ui_theme", "dark") or "dark").lower()
-    except Exception:
-        theme = "dark"
-
-    if theme.startswith("l"):
-        return {
-            "bg": "#f4f7fb",
-            "panel": "#ffffff",
-            "card": "#ffffff",
-            "card2": "#f8fafc",
-            "border": "#d8e0ea",
-            "fg": "#111827",
-            "muted": "#64748b",
-            "accent": "#2563eb",
-            "accent2": "#16a34a",
-            "warn": "#d97706",
-            "danger": "#dc2626",
-            "soft": "#e8eef7",
-            "track": "#e5e7eb",
-            "bar": "#2563eb",
-            "bar2": "#7c3aed",
-        }
-
-    return {
-        "bg": "#111217",
-        "panel": "#181a21",
-        "card": "#20232d",
-        "card2": "#262a36",
-        "border": "#343946",
-        "fg": "#f8fafc",
-        "muted": "#aab2c0",
-        "accent": "#60a5fa",
-        "accent2": "#4ade80",
-        "warn": "#fbbf24",
-        "danger": "#fb7185",
-        "soft": "#2b3040",
-        "track": "#343946",
-        "bar": "#60a5fa",
-        "bar2": "#c084fc",
-    }
+from spina_app.theme_palettes import _spina_v17_dash_colors
 
 
 from spina_app.utilities.formatting import _spina_v17_fmt_short_money
@@ -42343,54 +42301,7 @@ except Exception as __spina_exc:
 
 
 # --- BEGIN: v18 Dashboard contrast + clearer easy charts ---
-def _spina_v18_dashboard_palette(self=None):
-    try:
-        theme = str(getattr(self, "ui_theme", "dark") or "dark").lower()
-    except Exception:
-        theme = "dark"
-
-    if theme.startswith("l"):
-        return {
-            "bg": "#f3f6fb",
-            "panel": "#ffffff",
-            "chart": "#111827",
-            "chart2": "#172033",
-            "fg": "#111827",
-            "muted": "#64748b",
-            "chart_fg": "#f8fafc",
-            "chart_muted": "#cbd5e1",
-            "border": "#d6dde8",
-            "track": "#334155",
-            "track2": "#e5e7eb",
-            "blue": "#3b82f6",
-            "green": "#22c55e",
-            "yellow": "#f59e0b",
-            "orange": "#fb923c",
-            "red": "#ef4444",
-            "purple": "#8b5cf6",
-            "cyan": "#06b6d4",
-        }
-
-    return {
-        "bg": "#0f1117",
-        "panel": "#171a23",
-        "chart": "#111827",
-        "chart2": "#151d2c",
-        "fg": "#f8fafc",
-        "muted": "#aab3c2",
-        "chart_fg": "#f8fafc",
-        "chart_muted": "#cbd5e1",
-        "border": "#343b4d",
-        "track": "#334155",
-        "track2": "#252b38",
-        "blue": "#60a5fa",
-        "green": "#22c55e",
-        "yellow": "#fbbf24",
-        "orange": "#fb923c",
-        "red": "#fb7185",
-        "purple": "#a78bfa",
-        "cyan": "#22d3ee",
-    }
+from spina_app.theme_palettes import _spina_v18_dashboard_palette
 
 
 from spina_app.utilities.formatting import _spina_v18_fmt_money_compact

@@ -3,19 +3,19 @@
 > Permanent source of truth for tracking the separation of the SPINA desktop application into smaller modules.
 >
 > **Last updated:** 2026-07-24  
-> **Tracked main state:** after merged PR #111  
+> **Tracked main state:** after merged PR #113  
 > **Primary desktop source:** `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py`
 
 ## Current status
 
 | Item | Status |
 |---|---:|
-| Focused helper functions extracted from the large desktop source | **55** |
+| Focused helper functions extracted from the large desktop source | **57** |
 | Focused helper modules receiving extracted functions | **13** |
 | Hierarchical Area production modules | **3** |
-| Accelerated modularization waves completed | **13** |
-| Latest completed extraction | **Wave 13 / PR #111** |
-| Next step | **Wave 14 read-only inspection** |
+| Accelerated modularization waves completed | **14** |
+| Latest completed extraction | **Wave 14 / PR #113** |
+| Next step | **Wave 15 read-only inspection** |
 
 The current approach intentionally starts with low-risk, behavior-preserving helpers. Payment allocation, balances, principal, interest, 7x7 calculations, renewal formulas, report totals, PDF mathematics, authentication, roles, and critical PostgreSQL write paths remain protected until focused tests exist.
 
@@ -63,10 +63,10 @@ flowchart LR
 | `spina_app/utilities/dashboard.py` | Dashboard status selection | 1 |
 | `spina_app/utilities/records.py` | Database-row-to-dictionary conversion | 1 |
 | `spina_app/ui_helpers.py` | Rounded canvas drawing and summary-card value updates | 6 |
-| `spina_app/theme_palettes.py` | Dashboard, Cash Control, Client Information Log, Reports/Clients, and Collector/Collector Route light/dark palettes | 5 |
+| `spina_app/theme_palettes.py` | Modern and legacy Dashboard, Cash Control, Client Information Log, Reports/Clients, and Collector/Collector Route light/dark palettes | 7 |
 | `spina_app/ui_cards.py` | Cash Control, Client Information Log, and Collector Route card constructors | 3 |
 | `spina_app/ui_controls.py` | Cash Control labeled entries and Treeview styling; Client Information Log buttons and Treeview styling; Clients and Collector Route Treeview styling | 6 |
-| **Total** |  | **55** |
+| **Total** |  | **57** |
 
 ### Hierarchical Area modules
 
@@ -148,6 +148,8 @@ flowchart LR
   - `_spina_v24_cilog_colors` — PR #95
   - `_spina_v22_reports_colors` — PR #107
   - `_spina_v25_collector_colors` — PR #107
+  - `_spina_v17_dash_colors` — PR #113
+  - `_spina_v18_dashboard_palette` — PR #113
 - `spina_app/ui_cards.py`
   - `_spina_v21_cash_card` — PR #100
   - `_spina_v24_cilog_card` — PR #100
@@ -212,7 +214,8 @@ PR #67 was a paused note-helper attempt and closed without merging. PR #68 was a
 | 11 | #106 inspection | #107 | `theme_palettes.py` | Reports/Clients and Collector/Collector Route base palettes | ✅ Passed and merged |
 | 12 | #108 inspection | #109 | `ui_controls.py` | Clients and Collector Route Treeview styling | ✅ Passed and merged |
 | 13 | #110 inspection | #111 | `ui_cards.py` | Collector Route summary-card constructor | ✅ Passed and merged |
-| 14 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |
+| 14 | #112 inspection | #113 | `theme_palettes.py` | Legacy Dashboard light/dark palette helpers | ✅ Passed and merged |
+| 15 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |
 
 Temporary inspection/apply PRs are deliberately closed without merging and are not counted as completed production waves.
 
@@ -277,7 +280,8 @@ A deferred item becomes eligible only after focused behavior or calculation test
 | 11 | #106 | #107 | `theme_palettes.py` | Reports and Collector base palette helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
 | 12 | #108 | #109 | `ui_controls.py` | Clients and Collector Route Treeview style helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
 | 13 | #110 | #111 | `ui_cards.py` | Collector Route summary-card constructor | ✅ | ✅ | ✅ | Passed Windows smoke test |
-| 14 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |
+| 14 | #112 | #113 | `theme_palettes.py` | Two legacy Dashboard palette helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
+| 15 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |
 
 Status legend:
 
