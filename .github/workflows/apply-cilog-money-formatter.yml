@@ -1,0 +1,129 @@
+name: Apply CILOG money formatter extraction
+
+on:
+  push:
+    branches:
+      - agent/extract-cilog-money-formatter
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile regression test
+        run: python -m py_compile tools/test_cilog_money_formatter_extraction.py
+      - name: Save original behavior
+        run: |
+          python tools/test_cilog_money_formatter_extraction.py \
+            --write-fixture tools/fixtures/cilog_money_formatter_behavior.json
+      - name: Apply guarded extraction
+        run: |
+          python - <<'PY'
+          import ast
+          import builtins
+          import os
+          import tempfile
+          from pathlib import Path
+
+          app_path = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
+          module_path = Path('spina_app/utilities/formatting.py')
+          target = '_spina_cilog_fmt_money'
+          import_line = f'from spina_app.utilities.formatting import {target}'
+
+          def atomic_write(path: Path, text: str) -> None:
+              fd, temporary = tempfile.mkstemp(prefix=path.name + '.', suffix='.tmp', dir=str(path.parent))
+              try:
+                  with os.fdopen(fd, 'w', encoding='utf-8', newline='') as handle:
+                      handle.write(text)
+                  os.replace(temporary, path)
+              finally:
+                  if os.path.exists(temporary):
+                      os.unlink(temporary)
+
+          source = app_path.read_text(encoding='utf-8')
+          tree = ast.parse(source)
+          matches = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == target]
+          imported = import_line in source
+          module_source = module_path.read_text(encoding='utf-8')
+          module_tree = ast.parse(module_source)
+          module_matches = [node for node in module_tree.body if isinstance(node, ast.FunctionDef) and node.name == target]
+
+          if not matches and imported:
+              if len(module_matches) != 1:
+                  raise RuntimeError('Applied state has missing or duplicate utility function')
+              compile(source, str(app_path), 'exec')
+              compile(module_source, str(module_path), 'exec')
+              raise SystemExit(0)
+
+          if len(matches) != 1 or imported or module_matches:
+              raise RuntimeError(
+                  f'Refusing mixed state: definitions={len(matches)}, import={imported}, module_defs={len(module_matches)}'
+              )
+
+          node = matches[0]
+          if node.decorator_list:
+              raise RuntimeError('Refusing decorated helper')
+          if any(isinstance(child, (ast.Global, ast.Nonlocal)) for child in ast.walk(node)):
+              raise RuntimeError('Refusing helper with global/nonlocal state')
+
+          local_names = {arg.arg for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)}
+          if node.args.vararg:
+              local_names.add(node.args.vararg.arg)
+          if node.args.kwarg:
+              local_names.add(node.args.kwarg.arg)
+          for child in ast.walk(node):
+              if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
+                  local_names.add(child.id)
+              elif isinstance(child, ast.ExceptHandler) and isinstance(child.name, str):
+                  local_names.add(child.name)
+          loaded = {
+              child.id
+              for child in ast.walk(node)
+              if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
+          }
+          external = loaded - set(dir(builtins)) - local_names - {target}
+          if external:
+              raise RuntimeError(f'Unexpected helper dependencies: {sorted(external)}')
+
+          source_lines = source.splitlines(keepends=True)
+          function_text = ''.join(source_lines[node.lineno - 1:node.end_lineno])
+          if not function_text.endswith('\n'):
+              function_text += '\n'
+          source_lines[node.lineno - 1:node.end_lineno] = [import_line + '\n']
+          patched_source = ''.join(source_lines)
+          patched_module = module_source.rstrip() + '\n\n' + function_text.lstrip().rstrip() + '\n'
+
+          compile(patched_source, str(app_path), 'exec')
+          compile(patched_module, str(module_path), 'exec')
+          atomic_write(app_path, patched_source)
+          atomic_write(module_path, patched_module)
+          PY
+      - name: Validate extracted behavior
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/utilities/formatting.py \
+            tools/test_cilog_money_formatter_extraction.py
+          python tools/test_cilog_money_formatter_extraction.py
+      - name: Commit extraction
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/utilities/formatting.py \
+            tools/fixtures/cilog_money_formatter_behavior.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Extract CILOG money formatter"
+          git push origin HEAD:${GITHUB_REF_NAME}
