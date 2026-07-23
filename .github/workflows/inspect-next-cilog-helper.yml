@@ -1,0 +1,126 @@
+name: Inspect next CILOG helper
+
+on:
+  push:
+    branches:
+      - agent/inspect-next-cilog-helper
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Inspect small CILOG helpers
+        run: |
+          python - <<'PY'
+          import ast
+          import builtins
+          import json
+          from pathlib import Path
+
+          app = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
+          report_path = Path('tools/fixtures/next_cilog_helper_candidates.json')
+          source = app.read_text(encoding='utf-8')
+          lines = source.splitlines()
+          tree = ast.parse(source)
+          extracted = {
+              '_spina_cilog_safe_json',
+              '_spina_cilog_fmt_money',
+              '_spina_cilog_fmt_value',
+          }
+
+          def local_names(node):
+              names = {a.arg for a in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)}
+              if node.args.vararg:
+                  names.add(node.args.vararg.arg)
+              if node.args.kwarg:
+                  names.add(node.args.kwarg.arg)
+              for child in ast.walk(node):
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
+                      names.add(child.id)
+                  elif isinstance(child, ast.ExceptHandler) and isinstance(child.name, str):
+                      names.add(child.name)
+              return names
+
+          candidates = []
+          top_level = [n for n in tree.body if isinstance(n, ast.FunctionDef)]
+          for node in top_level:
+              if not node.name.startswith('_spina_cilog_') or node.name in extracted:
+                  continue
+              line_count = node.end_lineno - node.lineno + 1
+              if line_count > 30:
+                  continue
+              loaded = {
+                  child.id
+                  for child in ast.walk(node)
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
+              }
+              external = sorted(loaded - set(dir(builtins)) - local_names(node) - {node.name})
+              called_names = sorted({
+                  child.func.id
+                  for child in ast.walk(node)
+                  if isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
+              })
+              callers = []
+              for owner in top_level:
+                  count = sum(
+                      1
+                      for child in ast.walk(owner)
+                      if isinstance(child, ast.Call)
+                      and isinstance(child.func, ast.Name)
+                      and child.func.id == node.name
+                  )
+                  if count:
+                      callers.append({'name': owner.name, 'line': owner.lineno, 'call_count': count})
+              risky_tokens = {
+                  'execute', 'cursor', 'commit', 'rollback', 'connect', 'psycopg', 'sqlite3',
+                  'payment', 'principal', 'interest', 'balance', 'renewal', 'report', 'pdf',
+                  'messagebox', 'tk', 'ttk', 'filedialog', 'threading', 'subprocess', 'os', 'pathlib'
+              }
+              source_text = '\n'.join(lines[node.lineno - 1:node.end_lineno])
+              lower = source_text.lower()
+              risk_hits = sorted(token for token in risky_tokens if token in lower)
+              candidates.append({
+                  'name': node.name,
+                  'line': node.lineno,
+                  'end_line': node.end_lineno,
+                  'line_count': line_count,
+                  'signature': ast.unparse(node.args),
+                  'decorators': [ast.unparse(item) for item in node.decorator_list],
+                  'uses_global_or_nonlocal': any(isinstance(c, (ast.Global, ast.Nonlocal)) for c in ast.walk(node)),
+                  'external_loaded_names': external,
+                  'called_names': called_names,
+                  'callers': callers,
+                  'risk_hits': risk_hits,
+                  'source': source_text,
+              })
+
+          candidates.sort(key=lambda item: (
+              bool(item['risk_hits']),
+              item['uses_global_or_nonlocal'],
+              len(item['external_loaded_names']),
+              item['line_count'],
+              item['line'],
+          ))
+          report_path.parent.mkdir(parents=True, exist_ok=True)
+          report_path.write_text(json.dumps({'candidates': candidates}, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+          PY
+      - name: Commit inspection report
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/fixtures/next_cilog_helper_candidates.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Inspect next CILOG helper"
+          git push origin HEAD:${GITHUB_REF_NAME}
