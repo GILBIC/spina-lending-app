@@ -38782,16 +38782,7 @@ except Exception:
 from spina_app.utilities.serialization import _spina_cilog_safe_json
 
 
-def _spina_cilog_fmt_money(v):
-    try:
-        if v in (None, ''):
-            return ''
-        return f"{float(v):,.2f}"
-    except Exception:
-        try:
-            return str(v or '')
-        except Exception:
-            return ''
+from spina_app.utilities.formatting import _spina_cilog_fmt_money
 
 
 def _spina_cilog_fmt_value(field, v):

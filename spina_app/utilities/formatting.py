@@ -25,3 +25,14 @@ def _spina_v23_percent(v):
     except Exception:
         n = 0.0
     return "{:.0f}%".format(n)
+
+def _spina_cilog_fmt_money(v):
+    try:
+        if v in (None, ''):
+            return ''
+        return f"{float(v):,.2f}"
+    except Exception:
+        try:
+            return str(v or '')
+        except Exception:
+            return ''

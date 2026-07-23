@@ -1,0 +1,79 @@
+{
+  "target": "_spina_cilog_fmt_money",
+  "case_names": [
+    "none",
+    "empty",
+    "zero",
+    "integer",
+    "negative",
+    "float",
+    "numeric_text",
+    "spaces",
+    "comma_text",
+    "bad_text",
+    "boolean",
+    "list_value"
+  ],
+  "behavior": {
+    "none": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "''"
+    },
+    "empty": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "''"
+    },
+    "zero": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'0.00'"
+    },
+    "integer": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'1,234.00'"
+    },
+    "negative": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'-1,234.50'"
+    },
+    "float": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'1,234.57'"
+    },
+    "numeric_text": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'1,234.50'"
+    },
+    "spaces": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'12.50'"
+    },
+    "comma_text": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'1,234.50'"
+    },
+    "bad_text": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'not-a-number'"
+    },
+    "boolean": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'1.00'"
+    },
+    "list_value": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'[1, 2]'"
+    }
+  }
+}
