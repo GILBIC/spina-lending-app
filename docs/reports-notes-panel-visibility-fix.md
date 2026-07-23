@@ -1,14 +1,15 @@
-# Reports notes panel visibility fix
+# Reports Notes dialog fix
 
-The Reports notes button could change to `Hide Notes` while the notes drawer remained outside the visible area beneath the expanding reports table.
+The modern Reports screen used an inline notes drawer. On Windows, clicking `Notes` changed the button to `Hide Notes`, but the drawer remained invisible even though Tk reported it as packed.
 
-The Reports table is packed with `expand=True`, so later widgets can receive no visible space. This focused fix inserts the notes drawer and separator before the expanding table in Tk pack order while keeping them anchored at the bottom.
+The app already contains a complete `_open_note_dialog` method that opens `NoteEditorDialog` for the selected Reports client. The modern Reports Notes button now uses that existing method instead of the unreliable inline drawer callback.
 
-It does not change note storage, note merging, payments, balances, reports calculations, PostgreSQL operations, authentication, or other business logic.
+The dialog preserves the selected client, report end date, current loan view, client UID, and person UID. No note storage, note merging, payment, balance, report calculation, PostgreSQL, authentication, or role/access logic changed.
 
 Desktop smoke test:
 
 1. Open Reports.
-2. Click Notes.
-3. Confirm the Report Notes drawer becomes visible above the client report list.
-4. Click Hide Notes and confirm it closes.
+2. Select a client.
+3. Click Notes.
+4. Confirm a separate note editor window opens for the selected client.
+5. Close the note editor window and confirm Reports remains usable.
