@@ -12,19 +12,21 @@ TARGET = "_toggle_reports_notes_panel"
 
 def main() -> None:
     source = APP_PATH.read_text(encoding="utf-8")
-    tree = ast.parse(source)
-    matches = [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef) and node.name == TARGET
-    ]
-    if len(matches) != 1:
-        raise AssertionError(f"Expected one {TARGET}, found {len(matches)}")
-
-    node = matches[0]
     lines = source.splitlines()
-    function_source = "\n".join(lines[node.lineno - 1 : node.end_lineno])
+    tree = ast.parse(source)
 
+    matches: list[tuple[ast.FunctionDef, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef) or node.name != TARGET:
+            continue
+        function_source = "\n".join(lines[node.lineno - 1 : node.end_lineno])
+        if 'self.report_notes_btn.configure(text="Hide Notes")' in function_source:
+            matches.append((node, function_source))
+
+    if len(matches) != 1:
+        raise AssertionError(f"Expected one modern {TARGET}, found {len(matches)}")
+
+    function_source = matches[0][1]
     box_pack = 'self.reports_notes_box.pack(side="bottom", fill="x", padx=18, pady=(0, 18))'
     sep_pack = 'self.reports_notes_sep.pack(side="bottom", fill="x", padx=18, pady=(0, 6))'
 
