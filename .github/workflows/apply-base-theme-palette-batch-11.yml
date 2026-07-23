@@ -1,0 +1,69 @@
+name: Apply base theme palette batch 11
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/base-theme-palette-batch-11'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out extraction branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile guarded extraction inputs
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/theme_palettes.py \
+            tools/extract_pure_helper_batch.py \
+            tools/test_base_theme_palette_batch_11.py
+
+      - name: Verify exact original source state
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/base_theme_palette_batch_11_manifest.json
+
+      - name: Capture original behavior
+        run: |
+          PYTHONPATH=. python tools/test_base_theme_palette_batch_11.py \
+            --manifest tools/fixtures/base_theme_palette_batch_11_manifest.json \
+            --fixture tools/fixtures/base_theme_palette_batch_11_behavior.json \
+            --write-fixture
+
+      - name: Apply guarded extraction
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/base_theme_palette_batch_11_manifest.json \
+            --apply
+
+      - name: Verify extracted behavior and compilation
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/theme_palettes.py \
+            tools/test_base_theme_palette_batch_11.py
+          PYTHONPATH=. python tools/test_base_theme_palette_batch_11.py \
+            --manifest tools/fixtures/base_theme_palette_batch_11_manifest.json \
+            --fixture tools/fixtures/base_theme_palette_batch_11_behavior.json
+
+      - name: Commit verified extraction and remove write workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/apply-base-theme-palette-batch-11.yml
+          git add -A
+          git commit -m "Extract base theme palette helpers"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
