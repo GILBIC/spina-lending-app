@@ -1,0 +1,73 @@
+{
+  "target": "_spina_cilog_safe_json",
+  "case_names": [
+    "none",
+    "empty",
+    "dict",
+    "json_object",
+    "json_list",
+    "json_number",
+    "json_true",
+    "json_null",
+    "bytes_object",
+    "invalid",
+    "integer"
+  ],
+  "behavior": {
+    "none": {
+      "kind": "return",
+      "type": "builtins.NoneType",
+      "repr": "None"
+    },
+    "empty": {
+      "kind": "return",
+      "type": "builtins.NoneType",
+      "repr": "None"
+    },
+    "dict": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'a': 1}"
+    },
+    "json_object": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'a': 1, 'b': 'x'}"
+    },
+    "json_list": {
+      "kind": "return",
+      "type": "builtins.list",
+      "repr": "[1, 2, 'x']"
+    },
+    "json_number": {
+      "kind": "return",
+      "type": "builtins.float",
+      "repr": "12.5"
+    },
+    "json_true": {
+      "kind": "return",
+      "type": "builtins.bool",
+      "repr": "True"
+    },
+    "json_null": {
+      "kind": "return",
+      "type": "builtins.NoneType",
+      "repr": "None"
+    },
+    "bytes_object": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'a': 2}"
+    },
+    "invalid": {
+      "kind": "return",
+      "type": "builtins.NoneType",
+      "repr": "None"
+    },
+    "integer": {
+      "kind": "return",
+      "type": "builtins.NoneType",
+      "repr": "None"
+    }
+  }
+}
