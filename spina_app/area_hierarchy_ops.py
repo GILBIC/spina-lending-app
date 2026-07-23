@@ -312,10 +312,31 @@ def move_area_node_order(conn: Any, area_uid: Any, direction: int) -> bool:
     return True
 
 
+def _require_active_ancestor_chain(
+    nodes: dict[str, dict[str, Any]],
+    area_uid: str,
+) -> None:
+    """Prevent an active Area from existing below an inactive ancestor."""
+    parent_uid = str(nodes[area_uid].get("parent_uid") or "")
+    seen: set[str] = set()
+    while parent_uid:
+        if parent_uid in seen:
+            raise ValueError("The Area hierarchy contains a parent cycle.")
+        seen.add(parent_uid)
+        parent = nodes.get(parent_uid)
+        if parent is None:
+            raise ValueError("The Area hierarchy has a missing parent.")
+        if not int(parent.get("is_active") or 0):
+            parent_path = str(parent.get("full_path") or parent.get("name") or "parent Area")
+            raise ValueError(f"Activate the parent Area first: {parent_path}")
+        parent_uid = str(parent.get("parent_uid") or "")
+
+
 def set_area_node_active(conn: Any, area_uid: Any, active: bool) -> list[str]:
     """Activate or deactivate a whole subtree.
 
     Deactivation is blocked while any client is assigned to the subtree.
+    Activation is blocked while any ancestor remains inactive.
     """
     ensure_area_hierarchy_schema(conn)
     uid = str(area_uid or "").strip()
@@ -323,7 +344,9 @@ def set_area_node_active(conn: Any, area_uid: Any, active: bool) -> list[str]:
     if uid not in nodes:
         raise ValueError("Selected Area was not found.")
     subtree = _subtree_uids(nodes, uid)
-    if not active:
+    if active:
+        _require_active_ancestor_chain(nodes, uid)
+    else:
         used = sum(_direct_client_count(conn, nodes[item_uid]) for item_uid in subtree)
         if used:
             raise ValueError(
