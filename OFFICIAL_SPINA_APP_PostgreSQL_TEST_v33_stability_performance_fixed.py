@@ -2861,17 +2861,7 @@ def get_client_notes_in_range(
 
 
 # --- BEGIN: Notes legacy-name migration (for client rename safety) ---
-def _append_unique_text(existing: str, addition: str) -> str:
-    e = (existing or "").strip()
-    a = (addition or "").strip()
-    if not a:
-        return e
-    if not e:
-        return a
-    # Avoid duplicate appends
-    if a in e:
-        return e
-    return e + "\n" + a
+from spina_app.utilities.notes import _append_unique_text
 
 from spina_app.utilities.notes import _as_note_dict
 
