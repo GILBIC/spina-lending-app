@@ -4,13 +4,16 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: agent/extract-cilog-money-formatter
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -24,6 +27,7 @@ jobs:
 
           path = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
           target = '_spina_cilog_fmt_money'
+          report_path = Path('tools/fixtures/cilog_money_formatter_inspection.json')
           source = path.read_text(encoding='utf-8')
           lines = source.splitlines()
           tree = ast.parse(source)
@@ -60,8 +64,7 @@ jobs:
               )
               if count:
                   callers.append({'name': owner.name, 'line': owner.lineno, 'kind': type(owner).__name__, 'call_count': count})
-          print('INSPECTION_JSON_START')
-          print(json.dumps({
+          report = {
               'target': target,
               'line': node.lineno,
               'end_line': node.end_lineno,
@@ -71,6 +74,18 @@ jobs:
               'external_loaded_names': external,
               'source': '\n'.join(lines[node.lineno - 1:node.end_lineno]),
               'callers': callers,
-          }, indent=2, ensure_ascii=False))
-          print('INSPECTION_JSON_END')
+          }
+          report_path.parent.mkdir(parents=True, exist_ok=True)
+          report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
           PY
+      - name: Commit inspection report
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/fixtures/cilog_money_formatter_inspection.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Inspect CILOG money formatter"
+          git push origin HEAD:agent/extract-cilog-money-formatter
