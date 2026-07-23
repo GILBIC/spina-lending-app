@@ -3,21 +3,21 @@
 > Permanent source of truth for tracking the separation of the SPINA desktop application into smaller modules.
 >
 > **Last updated:** 2026-07-23  
-> **Tracked main state:** after merged PR #100  
+> **Tracked main state:** after merged PR #103  
 > **Primary desktop source:** `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py`
 
 ## Current status
 
 | Item | Status |
 |---|---:|
-| Focused helper functions extracted from the large desktop source | **46** |
-| Focused helper modules receiving extracted functions | **12** |
+| Focused helper functions extracted from the large desktop source | **48** |
+| Focused helper modules receiving extracted functions | **13** |
 | Hierarchical Area production modules | **3** |
-| Accelerated modularization waves completed | **8** |
-| Latest completed extraction | **Wave 8 / PR #100** |
-| Next step | **Wave 9 read-only inspection** |
+| Accelerated modularization waves completed | **9** |
+| Latest completed extraction | **Wave 9 / PR #103** |
+| Next step | **Wave 10 read-only inspection** |
 
-The current approach intentionally starts with low-risk, behavior-preserving helpers. Payment allocation, balances, principal, interest, 7x7 calculations, renewal formulas, report totals, PDF mathematics, authentication, roles, and critical PostgreSQL write paths have not been moved by the accelerated helper waves.
+The current approach intentionally starts with low-risk, behavior-preserving helpers. Payment allocation, balances, principal, interest, 7x7 calculations, renewal formulas, report totals, PDF mathematics, authentication, roles, and critical PostgreSQL write paths remain protected until focused tests exist.
 
 ## Architecture map
 
@@ -38,7 +38,9 @@ flowchart LR
     APP --> UIH[ui_helpers.py]
     APP --> PAL[theme_palettes.py]
     APP --> UIC[ui_cards.py]
+    APP --> UICTL[ui_controls.py]
     UIC --> PAL
+    UICTL --> PAL
 
     APP --> AUI[area_hierarchy_ui.py]
     AUI --> AOPS[area_hierarchy_ops.py]
@@ -63,7 +65,8 @@ flowchart LR
 | `spina_app/ui_helpers.py` | Rounded canvas drawing and summary-card value updates | 6 |
 | `spina_app/theme_palettes.py` | Dashboard, Cash Control, and Client Information Log light/dark palettes | 3 |
 | `spina_app/ui_cards.py` | Cash Control and Client Information Log card constructors | 2 |
-| **Total** |  | **46** |
+| `spina_app/ui_controls.py` | Cash Control labeled-entry construction and Treeview styling | 2 |
+| **Total** |  | **48** |
 
 ### Hierarchical Area modules
 
@@ -146,6 +149,9 @@ flowchart LR
 - `spina_app/ui_cards.py`
   - `_spina_v21_cash_card` — PR #100
   - `_spina_v24_cilog_card` — PR #100
+- `spina_app/ui_controls.py`
+  - `_spina_v21_build_labeled_entry` — PR #103
+  - `_spina_v21_style_cash_table` — PR #103
 
 ## Modularization timeline
 
@@ -153,13 +159,13 @@ flowchart LR
 
 | Stage | PR | Result |
 |---|---:|---|
-| Redundancy inventory | #1 | Added the first read-only duplicate/shadowed-function audit. |
+| Redundancy inventory | #1 | Added the first read-only duplicate and shadowed-function audit. |
 | Exact duplicate consolidation | #2 | Consolidated proven identical helper bodies while preserving aliases. |
 | Quality and startup diagnostics | #4 | Added permanent compilation, redundancy, and quality audits. |
-| Shadowed method cleanup | #5 | Removed inactive earlier class-method definitions while preserving final active implementations. |
-| Diagnostic and cleanup planning | #6–#53 | Added read-only audits and narrow dry-run/apply tools for performance, exceptions, legacy UI, dynamic SQL, patch chains, and protected contexts. These were preparation and safety work, not helper-module waves. |
-| Module-separation planner | #54 | Added the read-only source/dependency planner and first-wave checklist. |
-| Guarded extraction framework | #55 | Created the initial `spina_app` package and the first safe extraction process. |
+| Shadowed method cleanup | #5 | Removed inactive earlier class-method definitions while preserving active implementations. |
+| Diagnostic and cleanup planning | #6–#53 | Added audits and narrow dry-run/apply tools for performance, exceptions, legacy UI, dynamic SQL, patch chains, and protected contexts. |
+| Module-separation planner | #54 | Added the read-only source and dependency planner. |
+| Guarded extraction framework | #55 | Created the initial `spina_app` package and safe extraction process. |
 
 ### Foundational helper extractions
 
@@ -180,7 +186,7 @@ flowchart LR
 | #70 | `utilities/notes.py` | Unique note-text append helper | ✅ Merged |
 | #71 | `utilities/notes.py` | Note dictionary merge helper | ✅ Merged |
 
-PR #67 was an earlier paused note-helper attempt and was closed without merging. PR #68 was a Reports Notes UI fix rather than a module extraction.
+PR #67 was a paused note-helper attempt and closed without merging. PR #68 was a Reports Notes UI fix rather than a module extraction.
 
 ### Accelerated modularization waves
 
@@ -194,7 +200,8 @@ PR #67 was an earlier paused note-helper attempt and was closed without merging.
 | 6 | Direct guarded extraction | #96 | `utilities/dates.py` | Payment-schedule weekday/day-of-month normalization | ✅ Passed and merged |
 | 7 | #97 inspection | #98 | `utilities/numbers.py` | Cash Control amount and range normalization | ✅ Passed and merged |
 | 8 | #99 inspection | #100 | `ui_cards.py` | Cash Control and CILOG card constructors | ✅ Passed and merged |
-| 9 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |
+| 9 | #102 inspection | #103 | `ui_controls.py` | Cash Control labeled entries and Treeview styling | ✅ Passed and merged |
+| 10 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |
 
 Temporary inspection/apply PRs are deliberately closed without merging and are not counted as completed production waves.
 
@@ -213,15 +220,15 @@ PR #89 attempted a fixed two-level Area model and was closed because it did not 
 
 ## Permanent safety process
 
-Every new extraction should follow this sequence:
+Every new extraction must follow this sequence:
 
 1. Start from the latest `main` commit.
-2. Open a **read-only inspection PR**. It may generate reports but must not modify production application code.
-3. Review exact source, signature, dependencies, callers, risk area, and textual occurrences.
+2. Open a **read-only inspection PR** that does not modify production code.
+3. Review exact source, signature, dependencies, callers, risk area, and occurrences.
 4. Select one cohesive, low-risk group.
 5. Open a fresh guarded extraction branch.
 6. Capture original behavior before moving code.
-7. Replace each original definition with a same-name import and preserve callers.
+7. Replace original definitions with same-name imports and preserve callers.
 8. Compile the application and destination modules.
 9. Compare original and extracted behavior exactly.
 10. Run Python, redundancy, and SPINA quality audits.
@@ -229,17 +236,17 @@ Every new extraction should follow this sequence:
 12. Add permanent read-only regression CI.
 13. Perform a Windows desktop smoke test.
 14. Merge only after the desktop test passes.
-15. Update this map in the same wave or immediately afterward.
+15. Update this map in the same wave.
 
-## Protected/deferred areas
+## Protected and deferred areas
 
-These areas require stronger domain tests before modularization and should not be selected by a broad helper scan:
+These require stronger domain tests before modularization:
 
-- PostgreSQL compatibility layer, SQL classification, migrations, and critical write paths
+- PostgreSQL compatibility layer, SQL classification, migrations, and critical writes
 - payment entry and payment allocation
 - principal, balance, interest, and 7x7 calculations
 - renewal and offset logic
-- due-date and payment-term formulas beyond already-tested input normalization
+- due-date and payment-term formulas beyond tested input normalization
 - report totals and PDF mathematics
 - Collector Route and large ledger builders
 - authentication, account recovery, permissions, and role access
@@ -248,22 +255,21 @@ These areas require stronger domain tests before modularization and should not b
 - startup lifecycle, global logging, and broad application infrastructure
 - large Tkinter tab/build/refresh functions without deterministic UI tests
 
-A deferred item is not rejected permanently. It becomes eligible only after focused behavior/calculation tests exist and its dependencies are understood.
+A deferred item becomes eligible only after focused behavior or calculation tests exist and its dependencies are understood.
 
-## Tracking template for future waves
-
-Copy one row for every new wave:
+## Future-wave tracker
 
 | Wave | Inspection PR | Extraction PR | Module | Helpers/Classes | CI | Desktop test | Merge | Notes |
 |---:|---:|---:|---|---|---|---|---|---|
-| 9 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |
+| 9 | #102 | #103 | `spina_app/ui_controls.py` | 2 Cash Control UI helpers | ✅ | ✅ | ✅ | Completed |
+| 10 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |
 
 Status legend:
 
 - ✅ completed and merged
-- 🔎 inspection/review in progress
+- 🔎 inspection or review in progress
 - 🧪 extraction or testing in progress
-- ⏸ deferred/protected
+- ⏸ deferred or protected
 - ❌ closed or superseded without merge
 - ⬜ not started
 
@@ -274,18 +280,18 @@ Status legend:
 - Do not continue old closed temporary branches.
 - Do not merge inspection-only PRs.
 - Do not keep a write-enabled GitHub Actions workflow in a final extraction PR.
-- Use exact expected head SHAs when merging tested PRs.
-- PR #3 remains an old open review branch and is not part of the current modularization mainline.
+- Use the tested head SHA when merging.
+- PR #3 remains an old review branch and is not part of the current modularization mainline.
 
-## Quick future-reference checklist
+## Completion checklist
 
-Before saying a wave is complete, confirm all of the following:
+Before marking a wave complete, confirm:
 
 - [ ] Same-name imports replace the original definitions.
 - [ ] Destination functions contain the preserved bodies.
-- [ ] Existing callers are unchanged unless explicitly tested.
+- [ ] Existing callers remain unchanged unless explicitly tested.
 - [ ] Original-versus-extracted behavior matches.
-- [ ] App and destination modules compile.
+- [ ] Application and destination modules compile.
 - [ ] Python audit passes.
 - [ ] Redundancy audit passes.
 - [ ] SPINA quality audit passes.
