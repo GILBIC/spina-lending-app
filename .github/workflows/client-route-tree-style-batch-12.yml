@@ -35,6 +35,7 @@ jobs:
 
       - name: Verify preserved Treeview style behavior
         run: |
+          # Final user-commit validation after the Wave 12 map update.
           PYTHONPATH=. python tools/test_client_route_tree_style_batch_12.py \
             --manifest tools/fixtures/client_route_tree_style_batch_12_manifest.json \
             --fixture tools/fixtures/client_route_tree_style_batch_12_behavior.json
