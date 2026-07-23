@@ -1,0 +1,296 @@
+# SPINA Modularization Map
+
+> Permanent source of truth for tracking the separation of the SPINA desktop application into smaller modules.
+>
+> **Last updated:** 2026-07-23  
+> **Tracked main state:** after merged PR #100  
+> **Primary desktop source:** `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py`
+
+## Current status
+
+| Item | Status |
+|---|---:|
+| Focused helper functions extracted from the large desktop source | **46** |
+| Focused helper modules receiving extracted functions | **12** |
+| Hierarchical Area production modules | **3** |
+| Accelerated modularization waves completed | **8** |
+| Latest completed extraction | **Wave 8 / PR #100** |
+| Next step | **Wave 9 read-only inspection** |
+
+The current approach intentionally starts with low-risk, behavior-preserving helpers. Payment allocation, balances, principal, interest, 7x7 calculations, renewal formulas, report totals, PDF mathematics, authentication, roles, and critical PostgreSQL write paths have not been moved by the accelerated helper waves.
+
+## Architecture map
+
+```mermaid
+flowchart LR
+    APP[Large SPINA desktop source]
+
+    APP --> FMT[utilities/formatting.py]
+    APP --> DATE[utilities/dates.py]
+    APP --> TEXT[utilities/text.py]
+    APP --> NUM[utilities/numbers.py]
+    APP --> SER[utilities/serialization.py]
+    APP --> DIFF[utilities/diffs.py]
+    APP --> NOTES[utilities/notes.py]
+    APP --> DASH[utilities/dashboard.py]
+    APP --> REC[utilities/records.py]
+
+    APP --> UIH[ui_helpers.py]
+    APP --> PAL[theme_palettes.py]
+    APP --> UIC[ui_cards.py]
+    UIC --> PAL
+
+    APP --> AUI[area_hierarchy_ui.py]
+    AUI --> AOPS[area_hierarchy_ops.py]
+    AOPS --> AH[area_hierarchy.py]
+```
+
+## Production module inventory
+
+### Extracted helper modules
+
+| Module | Extracted ownership | Helper count |
+|---|---|---:|
+| `spina_app/utilities/formatting.py` | Currency, money, percentage, compact-money, Collector Close, Dashboard, Cash Control, and Client Information Log formatting | 12 |
+| `spina_app/utilities/dates.py` | Date validation/parsing/display and payment-schedule field normalization | 7 |
+| `spina_app/utilities/text.py` | Area/name normalization and Client Information Log action labels | 4 |
+| `spina_app/utilities/numbers.py` | Numeric parsing, count parsing, Cash Control amount parsing, and integer-range clamping | 5 |
+| `spina_app/utilities/serialization.py` | Safe Client Information Log JSON decoding | 1 |
+| `spina_app/utilities/diffs.py` | Client Information Log old/new value comparison | 1 |
+| `spina_app/utilities/notes.py` | Note normalization, unique text joining, and note dictionary merging | 3 |
+| `spina_app/utilities/dashboard.py` | Dashboard status selection | 1 |
+| `spina_app/utilities/records.py` | Database-row-to-dictionary conversion | 1 |
+| `spina_app/ui_helpers.py` | Rounded canvas drawing and summary-card value updates | 6 |
+| `spina_app/theme_palettes.py` | Dashboard, Cash Control, and Client Information Log light/dark palettes | 3 |
+| `spina_app/ui_cards.py` | Cash Control and Client Information Log card constructors | 2 |
+| **Total** |  | **46** |
+
+### Hierarchical Area modules
+
+| Module | Responsibility | Main PRs |
+|---|---|---:|
+| `spina_app/area_hierarchy.py` | Schema setup, migration, stable Area IDs, unlimited parent/child storage, full legacy-compatible paths, and tree building | #91 |
+| `spina_app/area_hierarchy_ops.py` | Rename, move, ordering, activation/deactivation, subtree/client safeguards, legacy synchronization, and stale-UID repair | #93 |
+| `spina_app/area_hierarchy_ui.py` | Folder-style Area Manager, expand/collapse tree, modal ownership, managed Area selectors, and client-form integration | #93 |
+
+## Exact extracted-helper ownership
+
+### `spina_app/utilities/formatting.py`
+
+- `fmt_currency` — PR #56
+- `_spina_dash__fmt_pct` — PR #58
+- `_spina_v23_money` — PR #58
+- `_spina_v23_percent` — PR #58
+- `_spina_cilog_fmt_money` — PR #63
+- `_spina_cilog_fmt_value` — PR #64
+- `_spina__fmt_client_money` — PR #72
+- `_spina_v17_fmt_short_money` — PR #72
+- `_spina_v18_fmt_money_compact` — PR #72
+- `_spina_crc_fmt_money` — PR #80
+- `_spina_dash__fmt_money` — PR #88
+- `_spina_cashctl__fmt_pct` — PR #88
+
+### `spina_app/utilities/dates.py`
+
+- `_spina_cashctl__valid_date` — PR #57
+- `_spina__parse_day_ymd` — PR #57
+- `_spina_dash__parse_date` — PR #57
+- `_spina_dash__date_text` — PR #61
+- `_spina_v24_cilog_parse_day` — PR #61
+- `_spina__norm_weekday` — PR #96
+- `_spina__norm_dom` — PR #96
+
+### `spina_app/utilities/text.py`
+
+- `_oslp__norm_area_name` — PR #59
+- `_spina_crc_norm_text` — PR #59
+- `_spina_route_notice_norm_name` — PR #59
+- `_spina_cilog_action_label` — PR #65
+
+### `spina_app/utilities/numbers.py`
+
+- `_spina_dash__float` — PR #60
+- `_spina_v27_count_from_text` — PR #60
+- `_spina_v25_parse_count_from_var` — PR #72
+- `_spina_cashctl__parse_amount` — PR #98
+- `_spina_cashctl__int_range` — PR #98
+
+### Other utility modules
+
+- `spina_app/utilities/serialization.py`
+  - `_spina_cilog_safe_json` — PR #62
+- `spina_app/utilities/diffs.py`
+  - `_spina_cilog_diff_pairs` — PR #66
+- `spina_app/utilities/notes.py`
+  - `_as_note_dict` — PR #69
+  - `_append_unique_text` — PR #70
+  - `_merge_note_dict` — PR #71
+- `spina_app/utilities/dashboard.py`
+  - `_spina_dash__status_for` — PR #80
+- `spina_app/utilities/records.py`
+  - `_spina_perf_dict_rows` — PR #80
+
+### UI modules
+
+- `spina_app/ui_helpers.py`
+  - `_spina_v20_round_rect` — PR #74
+  - `_spina_v24_cilog_round_rect` — PR #74
+  - `_spina_v18_draw_round_rect` — PR #74
+  - `_spina_v17_set_card` — PR #74
+  - `_spina_v24_cilog_set_card` — PR #74
+  - `_spina_v21_cash_set_card` — PR #88
+- `spina_app/theme_palettes.py`
+  - `_spina_v20_dash_palette` — PR #95
+  - `_spina_v21_cash_colors` — PR #95
+  - `_spina_v24_cilog_colors` — PR #95
+- `spina_app/ui_cards.py`
+  - `_spina_v21_cash_card` — PR #100
+  - `_spina_v24_cilog_card` — PR #100
+
+## Modularization timeline
+
+### Foundation and safety work
+
+| Stage | PR | Result |
+|---|---:|---|
+| Redundancy inventory | #1 | Added the first read-only duplicate/shadowed-function audit. |
+| Exact duplicate consolidation | #2 | Consolidated proven identical helper bodies while preserving aliases. |
+| Quality and startup diagnostics | #4 | Added permanent compilation, redundancy, and quality audits. |
+| Shadowed method cleanup | #5 | Removed inactive earlier class-method definitions while preserving final active implementations. |
+| Diagnostic and cleanup planning | #6–#53 | Added read-only audits and narrow dry-run/apply tools for performance, exceptions, legacy UI, dynamic SQL, patch chains, and protected contexts. These were preparation and safety work, not helper-module waves. |
+| Module-separation planner | #54 | Added the read-only source/dependency planner and first-wave checklist. |
+| Guarded extraction framework | #55 | Created the initial `spina_app` package and the first safe extraction process. |
+
+### Foundational helper extractions
+
+| PR | Module(s) | Extracted scope | Status |
+|---:|---|---|---|
+| #56 | `utilities/formatting.py` | First production extraction: `fmt_currency` | ✅ Merged |
+| #57 | `utilities/dates.py` | Three pure date helpers | ✅ Merged |
+| #58 | `utilities/formatting.py` | Three display formatters | ✅ Merged |
+| #59 | `utilities/text.py` | Three text/name normalizers | ✅ Merged |
+| #60 | `utilities/numbers.py` | Two numeric parsers | ✅ Merged |
+| #61 | `utilities/dates.py` | Two date display/parsing helpers | ✅ Merged |
+| #62 | `utilities/serialization.py` | Safe Client Information Log JSON parser | ✅ Merged |
+| #63 | `utilities/formatting.py` | Client Information Log money formatter | ✅ Merged |
+| #64 | `utilities/formatting.py` | Client Information Log value formatter | ✅ Merged |
+| #65 | `utilities/text.py` | Client Information Log action label | ✅ Merged |
+| #66 | `utilities/diffs.py` | Client Information Log diff pairs | ✅ Merged |
+| #69 | `utilities/notes.py` | Note dictionary normalizer | ✅ Merged |
+| #70 | `utilities/notes.py` | Unique note-text append helper | ✅ Merged |
+| #71 | `utilities/notes.py` | Note dictionary merge helper | ✅ Merged |
+
+PR #67 was an earlier paused note-helper attempt and was closed without merging. PR #68 was a Reports Notes UI fix rather than a module extraction.
+
+### Accelerated modularization waves
+
+| Wave | Inspection/working PRs | Final extraction PR | Destination | Extracted scope | Desktop result |
+|---:|---|---:|---|---|---|
+| 1 | Batch scan/guard work | #72 | `utilities/formatting.py`, `utilities/numbers.py` | Client/Dashboard compact money and count parsing | ✅ Passed and merged |
+| 2 | #73 temporary | #74 | `ui_helpers.py` | Rounded rectangles and Dashboard/CILOG card updates | ✅ Passed and merged |
+| 3 | #75–#79 temporary | #80 | `utilities/dashboard.py`, `utilities/records.py`, `utilities/formatting.py` | Dashboard status, row conversion, Collector Close money | ✅ Passed and merged |
+| 4 | #81–#87 temporary | #88 | `utilities/formatting.py`, `ui_helpers.py` | Dashboard/Cash Control display helpers | ✅ Passed and merged |
+| 5 | #94 inspection | #95 | `theme_palettes.py` | Dashboard, Cash Control, and CILOG palettes | ✅ Passed and merged |
+| 6 | Direct guarded extraction | #96 | `utilities/dates.py` | Payment-schedule weekday/day-of-month normalization | ✅ Passed and merged |
+| 7 | #97 inspection | #98 | `utilities/numbers.py` | Cash Control amount and range normalization | ✅ Passed and merged |
+| 8 | #99 inspection | #100 | `ui_cards.py` | Cash Control and CILOG card constructors | ✅ Passed and merged |
+| 9 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |
+
+Temporary inspection/apply PRs are deliberately closed without merging and are not counted as completed production waves.
+
+## Area-system modularization
+
+The unlimited Area work is tracked separately because it introduced a complete feature module set rather than moving a few pure helpers.
+
+| Phase | PR | Result | Status |
+|---|---:|---|---|
+| Dependency inspection | #90 | Mapped the original flat Area text model and compatibility requirements | Closed, not merged |
+| Storage foundation | #91 | Added `area_hierarchy.py`, `area_nodes`, `clients.area_uid`, migration, and legacy-path compatibility | ✅ Merged |
+| UI inspection | #92 | Located both client Area controls and the old manager | Closed, not merged |
+| Folder manager and operations | #93 | Added `area_hierarchy_ops.py`, `area_hierarchy_ui.py`, folder tree, selectors, safeguards, and freeze fixes | ✅ Merged |
+
+PR #89 attempted a fixed two-level Area model and was closed because it did not meet the unlimited hierarchy requirement.
+
+## Permanent safety process
+
+Every new extraction should follow this sequence:
+
+1. Start from the latest `main` commit.
+2. Open a **read-only inspection PR**. It may generate reports but must not modify production application code.
+3. Review exact source, signature, dependencies, callers, risk area, and textual occurrences.
+4. Select one cohesive, low-risk group.
+5. Open a fresh guarded extraction branch.
+6. Capture original behavior before moving code.
+7. Replace each original definition with a same-name import and preserve callers.
+8. Compile the application and destination modules.
+9. Compare original and extracted behavior exactly.
+10. Run Python, redundancy, and SPINA quality audits.
+11. Remove all temporary write-enabled workflows.
+12. Add permanent read-only regression CI.
+13. Perform a Windows desktop smoke test.
+14. Merge only after the desktop test passes.
+15. Update this map in the same wave or immediately afterward.
+
+## Protected/deferred areas
+
+These areas require stronger domain tests before modularization and should not be selected by a broad helper scan:
+
+- PostgreSQL compatibility layer, SQL classification, migrations, and critical write paths
+- payment entry and payment allocation
+- principal, balance, interest, and 7x7 calculations
+- renewal and offset logic
+- due-date and payment-term formulas beyond already-tested input normalization
+- report totals and PDF mathematics
+- Collector Route and large ledger builders
+- authentication, account recovery, permissions, and role access
+- backup/restore and filesystem operations
+- client picture/file handling
+- startup lifecycle, global logging, and broad application infrastructure
+- large Tkinter tab/build/refresh functions without deterministic UI tests
+
+A deferred item is not rejected permanently. It becomes eligible only after focused behavior/calculation tests exist and its dependencies are understood.
+
+## Tracking template for future waves
+
+Copy one row for every new wave:
+
+| Wave | Inspection PR | Extraction PR | Module | Helpers/Classes | CI | Desktop test | Merge | Notes |
+|---:|---:|---:|---|---|---|---|---|---|
+| 9 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |
+
+Status legend:
+
+- ✅ completed and merged
+- 🔎 inspection/review in progress
+- 🧪 extraction or testing in progress
+- ⏸ deferred/protected
+- ❌ closed or superseded without merge
+- ⬜ not started
+
+## Branch and PR hygiene
+
+- `main` is the stable source of truth.
+- Create every inspection and extraction branch from current `main`.
+- Do not continue old closed temporary branches.
+- Do not merge inspection-only PRs.
+- Do not keep a write-enabled GitHub Actions workflow in a final extraction PR.
+- Use exact expected head SHAs when merging tested PRs.
+- PR #3 remains an old open review branch and is not part of the current modularization mainline.
+
+## Quick future-reference checklist
+
+Before saying a wave is complete, confirm all of the following:
+
+- [ ] Same-name imports replace the original definitions.
+- [ ] Destination functions contain the preserved bodies.
+- [ ] Existing callers are unchanged unless explicitly tested.
+- [ ] Original-versus-extracted behavior matches.
+- [ ] App and destination modules compile.
+- [ ] Python audit passes.
+- [ ] Redundancy audit passes.
+- [ ] SPINA quality audit passes.
+- [ ] Permanent read-only regression CI exists.
+- [ ] Temporary inspection/write workflows are removed.
+- [ ] Windows desktop smoke test passes.
+- [ ] PR is merged into `main`.
+- [ ] This map is updated.
