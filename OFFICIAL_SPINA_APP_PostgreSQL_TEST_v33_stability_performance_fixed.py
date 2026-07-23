@@ -37755,12 +37755,7 @@ def _spina_cashctl__fmt_money(value):
 from spina_app.utilities.formatting import _spina_cashctl__fmt_pct
 
 
-def _spina_cashctl__parse_amount(value):
-    try:
-        s = str(value or '').replace(',', '').strip()
-        return float(s) if s else 0.0
-    except Exception:
-        return 0.0
+from spina_app.utilities.numbers import _spina_cashctl__parse_amount
 
 
 def _spina_cashctl__parse_percent(value, default=10.0):
@@ -37785,16 +37780,7 @@ def _spina_cashctl__parse_percent(value, default=10.0):
 from spina_app.utilities.dates import _spina_cashctl__valid_date
 
 
-def _spina_cashctl__int_range(value, default, min_value=1, max_value=120):
-    try:
-        v = int(round(_spina_cashctl__parse_amount(value)))
-    except Exception:
-        v = int(default)
-    if v < min_value:
-        v = min_value
-    if v > max_value:
-        v = max_value
-    return v
+from spina_app.utilities.numbers import _spina_cashctl__int_range
 
 
 def _spina_cashctl_get_collection_totals(self, date_s):
