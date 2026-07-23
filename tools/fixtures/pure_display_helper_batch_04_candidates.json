@@ -1,0 +1,18 @@
+[
+  {
+    "name": "_spina_cashctl__ceil_thousand_units",
+    "line": 37972,
+    "end_line": 37982,
+    "lines": 11,
+    "signature": "_amount",
+    "external_names": [],
+    "calls": [
+      "float",
+      "int",
+      "max"
+    ],
+    "reference_count": 0,
+    "source_sha256": "ea88a89d8e8def6125a5870ce3705f48e00b6a514ade2ae947578a7e8fa90981",
+    "source": "def _spina_cashctl__ceil_thousand_units(_amount):\n    try:\n        b = float(_amount or 0.0)\n    except Exception:\n        b = 0.0\n    if b <= 0:\n        return 0\n    try:\n        return max(1, int((b + 999.999999) // 1000))\n    except Exception:\n        return 0"
+  }
+]
