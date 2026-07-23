@@ -1,0 +1,63 @@
+name: Apply display data helper batch 03
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/display-data-helper-batch-03-work
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate exact original batch
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/display_data_helper_batch_03_manifest.json
+      - name: Capture original behavior
+        run: |
+          python tools/test_display_data_helper_batch.py \
+            --manifest tools/fixtures/display_data_helper_batch_03_manifest.json \
+            --fixture tools/fixtures/display_data_helper_batch_03_behavior.json \
+            --write-fixture
+      - name: Apply guarded batch extraction
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/display_data_helper_batch_03_manifest.json \
+            --apply
+      - name: Compile and compare behavior
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/utilities/dashboard.py \
+            spina_app/utilities/records.py \
+            spina_app/utilities/formatting.py \
+            tools/extract_pure_helper_batch.py \
+            tools/test_display_data_helper_batch.py
+          python tools/test_display_data_helper_batch.py \
+            --manifest tools/fixtures/display_data_helper_batch_03_manifest.json \
+            --fixture tools/fixtures/display_data_helper_batch_03_behavior.json
+      - name: Commit extracted batch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/utilities/dashboard.py \
+            spina_app/utilities/records.py \
+            spina_app/utilities/formatting.py \
+            tools/fixtures/display_data_helper_batch_03_behavior.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Extract display data helper batch"
+          git push origin HEAD:agent/display-data-helper-batch-03-work
