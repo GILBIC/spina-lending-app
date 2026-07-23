@@ -1,0 +1,110 @@
+{
+  "target": "_spina_cilog_fmt_value",
+  "dependency": "_spina_cilog_fmt_money",
+  "case_names": [
+    "none_value",
+    "principal_integer",
+    "principal_negative",
+    "principal_text",
+    "principal_comma_text",
+    "payment_amount",
+    "new_principal",
+    "interest_fraction",
+    "interest_one",
+    "interest_percent",
+    "interest_bad",
+    "unknown_newline",
+    "unknown_spaces",
+    "unknown_list",
+    "empty_field",
+    "none_field",
+    "boolean_money"
+  ],
+  "behavior": {
+    "none_value": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "''"
+    },
+    "principal_integer": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'1,234.00'"
+    },
+    "principal_negative": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'-1,234.50'"
+    },
+    "principal_text": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'1,234.50'"
+    },
+    "principal_comma_text": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'1,234.50'"
+    },
+    "payment_amount": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'250.25'"
+    },
+    "new_principal": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'5,000.00'"
+    },
+    "interest_fraction": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'35.00%'"
+    },
+    "interest_one": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'100.00%'"
+    },
+    "interest_percent": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'35.00%'"
+    },
+    "interest_bad": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'not-a-rate'"
+    },
+    "unknown_newline": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'first second'"
+    },
+    "unknown_spaces": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'Approved'"
+    },
+    "unknown_list": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'[1, 2]'"
+    },
+    "empty_field": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'value'"
+    },
+    "none_field": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'value'"
+    },
+    "boolean_money": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'1.00'"
+    }
+  }
+}
