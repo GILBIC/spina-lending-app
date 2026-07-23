@@ -1,0 +1,157 @@
+{
+  "targets": [
+    "_spina_dash__float",
+    "_spina_v27_count_from_text"
+  ],
+  "case_names": [
+    "none",
+    "empty",
+    "spaces",
+    "zero_int",
+    "one_int",
+    "negative_int",
+    "decimal",
+    "negative_decimal",
+    "numeric_text",
+    "padded_numeric_text",
+    "comma_text",
+    "bad_text",
+    "true"
+  ],
+  "behavior": {
+    "_spina_dash__float": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "0.0"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "0.0"
+      },
+      "spaces": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "0.0"
+      },
+      "zero_int": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "0.0"
+      },
+      "one_int": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "1.0"
+      },
+      "negative_int": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "-7.0"
+      },
+      "decimal": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "12.34"
+      },
+      "negative_decimal": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "-42.75"
+      },
+      "numeric_text": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "1234.5"
+      },
+      "padded_numeric_text": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "42.0"
+      },
+      "comma_text": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "1234.0"
+      },
+      "bad_text": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "0.0"
+      },
+      "true": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "0.0"
+      }
+    },
+    "_spina_v27_count_from_text": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "0"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "0"
+      },
+      "spaces": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "0"
+      },
+      "zero_int": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "0"
+      },
+      "one_int": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "1"
+      },
+      "negative_int": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "7"
+      },
+      "decimal": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "12"
+      },
+      "negative_decimal": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "42"
+      },
+      "numeric_text": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "1234"
+      },
+      "padded_numeric_text": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "42"
+      },
+      "comma_text": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "1"
+      },
+      "bad_text": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "0"
+      },
+      "true": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "0"
+      }
+    }
+  }
+}

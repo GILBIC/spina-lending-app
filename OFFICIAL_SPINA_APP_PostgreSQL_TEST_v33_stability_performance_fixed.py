@@ -37165,13 +37165,7 @@ def _spina_dash__date_text(value):
         return ''
 
 
-def _spina_dash__float(value, default=0.0):
-    try:
-        if value is None:
-            return float(default)
-        return float(str(value).replace(',', '').strip() or default)
-    except Exception:
-        return float(default)
+from spina_app.utilities.numbers import _spina_dash__float
 
 
 def _spina_dash__fmt_money(value):
@@ -47016,12 +47010,7 @@ def _spina_v27_style_route_trees(self):
         pass
 
 
-def _spina_v27_count_from_text(value):
-    try:
-        m = re.search(r"(\d+)", str(value or ""))
-        return int(m.group(1)) if m else 0
-    except Exception:
-        return 0
+from spina_app.utilities.numbers import _spina_v27_count_from_text
 
 
 def _spina_v27_update_route_cards(self):
