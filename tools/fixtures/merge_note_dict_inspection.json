@@ -1,0 +1,58 @@
+{
+  "target": "_merge_note_dict",
+  "line": 2868,
+  "end_line": 2880,
+  "signature": "dst: dict, src: dict",
+  "decorators": [],
+  "uses_global_or_nonlocal": false,
+  "external_names": [
+    "_append_unique_text",
+    "_as_note_dict"
+  ],
+  "assigned_names": [
+    "inc",
+    "k",
+    "out",
+    "v",
+    "vv"
+  ],
+  "mutation_targets": [
+    "out",
+    "inc",
+    "vv",
+    "out[k]",
+    "out[k]"
+  ],
+  "source": "def _merge_note_dict(dst: dict, src: dict) -> dict:\n    \"\"\"Merge src into dst without losing data; if conflicts, append text uniquely.\"\"\"\n    out = _as_note_dict(dst)\n    inc = _as_note_dict(src)\n    for k, v in inc.items():\n        vv = (str(v) if v is not None else \"\").strip()\n        if not vv:\n            continue\n        if k not in out or not str(out.get(k) or \"\").strip():\n            out[k] = vv\n        else:\n            out[k] = _append_unique_text(str(out.get(k) or \"\"), vv)\n    return out",
+  "reference_count": 4,
+  "references": [
+    {
+      "owner": "_migrate_legacy_notes_by_name",
+      "owner_type": "FunctionDef",
+      "owner_line": 2882,
+      "call_line": 2917,
+      "call_source": "_merge_note_dict(notes.get(key_shared), {})"
+    },
+    {
+      "owner": "_migrate_legacy_notes_by_name",
+      "owner_type": "FunctionDef",
+      "owner_line": 2882,
+      "call_line": 2939,
+      "call_source": "_merge_note_dict(notes.get(key_type), {})"
+    },
+    {
+      "owner": "_migrate_legacy_notes_by_name",
+      "owner_type": "FunctionDef",
+      "owner_line": 2882,
+      "call_line": 2919,
+      "call_source": "_merge_note_dict(merged, notes.get(lk))"
+    },
+    {
+      "owner": "_migrate_legacy_notes_by_name",
+      "owner_type": "FunctionDef",
+      "owner_line": 2882,
+      "call_line": 2941,
+      "call_source": "_merge_note_dict(merged, notes.get(lk))"
+    }
+  ]
+}
