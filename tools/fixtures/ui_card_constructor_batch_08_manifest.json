@@ -1,0 +1,22 @@
+{
+  "batch": "ui_card_constructor_batch_08",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "helpers": [
+    {
+      "name": "_spina_v21_cash_card",
+      "signature": "parent, title, value='—', subtitle='', accent=None",
+      "module": "spina_app.ui_cards",
+      "module_path": "spina_app/ui_cards.py",
+      "expected_source_sha256": "d2c27d88565530b728595b86c9c9e29c8e4d15d21adf18cedc2eabde5f9475e0",
+      "allowed_external_names": ["_spina_v21_cash_colors", "tk"]
+    },
+    {
+      "name": "_spina_v24_cilog_card",
+      "signature": "parent, title, value='—', subtitle='', accent=None",
+      "module": "spina_app.ui_cards",
+      "module_path": "spina_app/ui_cards.py",
+      "expected_source_sha256": "d68ea7991c1d1556b2b210602fc4871e9a187ee078c9187c164928e410405b9f",
+      "allowed_external_names": ["_spina_v24_cilog_colors", "tk"]
+    }
+  ]
+}
