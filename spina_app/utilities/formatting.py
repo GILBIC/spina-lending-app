@@ -53,3 +53,41 @@ def _spina_cilog_fmt_value(field, v):
     except Exception:
         s = repr(v)
     return s
+
+
+def _spina__fmt_client_money(v):
+    try:
+        n = float(v or 0)
+    except Exception:
+        return str(v or '')
+    if abs(n - int(n)) < 0.000001:
+        return f"{int(n):,}"
+    return f"{n:,.2f}"
+
+
+def _spina_v17_fmt_short_money(value):
+    try:
+        v = float(value or 0)
+    except Exception:
+        v = 0.0
+    av = abs(v)
+    if av >= 1_000_000:
+        return "PHP {:.2f}M".format(v / 1_000_000)
+    if av >= 1_000:
+        return "PHP {:.1f}K".format(v / 1_000)
+    return "PHP {:,.0f}".format(v)
+
+
+def _spina_v18_fmt_money_compact(value):
+    try:
+        v = float(value or 0)
+    except Exception:
+        v = 0.0
+    av = abs(v)
+    if av >= 1_000_000:
+        return "PHP {:.2f}M".format(v / 1_000_000)
+    if av >= 100_000:
+        return "PHP {:.0f}K".format(v / 1_000)
+    if av >= 1_000:
+        return "PHP {:.1f}K".format(v / 1_000)
+    return "PHP {:,.0f}".format(v)
