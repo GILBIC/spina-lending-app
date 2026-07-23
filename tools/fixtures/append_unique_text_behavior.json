@@ -1,0 +1,91 @@
+{
+  "target": "_append_unique_text",
+  "case_names": [
+    "both_none",
+    "both_empty",
+    "existing_only",
+    "addition_only",
+    "append_distinct",
+    "duplicate_exact",
+    "duplicate_substring",
+    "existing_is_substring",
+    "trim_both",
+    "multiline_append",
+    "zero_existing",
+    "zero_addition",
+    "integer_existing",
+    "integer_addition"
+  ],
+  "behavior": {
+    "both_none": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "''"
+    },
+    "both_empty": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "''"
+    },
+    "existing_only": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'old note'"
+    },
+    "addition_only": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'new note'"
+    },
+    "append_distinct": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'old note\\nnew note'"
+    },
+    "duplicate_exact": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'old note'"
+    },
+    "duplicate_substring": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'first line\\nlate payment reason'"
+    },
+    "existing_is_substring": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'late\\nlate payment'"
+    },
+    "trim_both": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'old\\nnew'"
+    },
+    "multiline_append": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'first\\nsecond\\nthird\\nfourth'"
+    },
+    "zero_existing": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'new'"
+    },
+    "zero_addition": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'old'"
+    },
+    "integer_existing": {
+      "kind": "raise",
+      "type": "builtins.AttributeError",
+      "repr": "AttributeError(\"'int' object has no attribute 'strip'\")"
+    },
+    "integer_addition": {
+      "kind": "raise",
+      "type": "builtins.AttributeError",
+      "repr": "AttributeError(\"'int' object has no attribute 'strip'\")"
+    }
+  }
+}

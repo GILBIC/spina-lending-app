@@ -94,7 +94,9 @@ jobs:
             tools/test_cilog_diff_pairs_extraction.py \
             tools/test_reports_notes_dialog_wiring.py \
             tools/extract_note_dict_helper.py \
-            tools/test_note_dict_helper_extraction.py
+            tools/test_note_dict_helper_extraction.py \
+            tools/extract_append_unique_text.py \
+            tools/test_append_unique_text_extraction.py
 
       - name: Test module separation planner
         run: python tools/test_module_separation_planner.py
@@ -137,6 +139,9 @@ jobs:
 
       - name: Test note dictionary helper extraction
         run: python tools/test_note_dict_helper_extraction.py
+
+      - name: Test append unique text helper extraction
+        run: python tools/test_append_unique_text_extraction.py
 
       - name: Run redundancy audit
         run: |
