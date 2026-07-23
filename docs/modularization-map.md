@@ -3,19 +3,19 @@
 > Permanent source of truth for tracking the separation of the SPINA desktop application into smaller modules.
 >
 > **Last updated:** 2026-07-24  
-> **Tracked main state:** after merged PR #109  
+> **Tracked main state:** after merged PR #111  
 > **Primary desktop source:** `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py`
 
 ## Current status
 
 | Item | Status |
 |---|---:|
-| Focused helper functions extracted from the large desktop source | **54** |
+| Focused helper functions extracted from the large desktop source | **55** |
 | Focused helper modules receiving extracted functions | **13** |
 | Hierarchical Area production modules | **3** |
-| Accelerated modularization waves completed | **12** |
-| Latest completed extraction | **Wave 12 / PR #109** |
-| Next step | **Wave 13 read-only inspection** |
+| Accelerated modularization waves completed | **13** |
+| Latest completed extraction | **Wave 13 / PR #111** |
+| Next step | **Wave 14 read-only inspection** |
 
 The current approach intentionally starts with low-risk, behavior-preserving helpers. Payment allocation, balances, principal, interest, 7x7 calculations, renewal formulas, report totals, PDF mathematics, authentication, roles, and critical PostgreSQL write paths remain protected until focused tests exist.
 
@@ -64,9 +64,9 @@ flowchart LR
 | `spina_app/utilities/records.py` | Database-row-to-dictionary conversion | 1 |
 | `spina_app/ui_helpers.py` | Rounded canvas drawing and summary-card value updates | 6 |
 | `spina_app/theme_palettes.py` | Dashboard, Cash Control, Client Information Log, Reports/Clients, and Collector/Collector Route light/dark palettes | 5 |
-| `spina_app/ui_cards.py` | Cash Control and Client Information Log card constructors | 2 |
+| `spina_app/ui_cards.py` | Cash Control, Client Information Log, and Collector Route card constructors | 3 |
 | `spina_app/ui_controls.py` | Cash Control labeled entries and Treeview styling; Client Information Log buttons and Treeview styling; Clients and Collector Route Treeview styling | 6 |
-| **Total** |  | **54** |
+| **Total** |  | **55** |
 
 ### Hierarchical Area modules
 
@@ -151,6 +151,7 @@ flowchart LR
 - `spina_app/ui_cards.py`
   - `_spina_v21_cash_card` — PR #100
   - `_spina_v24_cilog_card` — PR #100
+  - `_spina_v27_route_card` — PR #111
 - `spina_app/ui_controls.py`
   - `_spina_v21_build_labeled_entry` — PR #103
   - `_spina_v21_style_cash_table` — PR #103
@@ -210,7 +211,8 @@ PR #67 was a paused note-helper attempt and closed without merging. PR #68 was a
 | 10 | #104 inspection | #105 | `ui_controls.py` | Client Information Log buttons and Treeview styling | ✅ Passed and merged |
 | 11 | #106 inspection | #107 | `theme_palettes.py` | Reports/Clients and Collector/Collector Route base palettes | ✅ Passed and merged |
 | 12 | #108 inspection | #109 | `ui_controls.py` | Clients and Collector Route Treeview styling | ✅ Passed and merged |
-| 13 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |
+| 13 | #110 inspection | #111 | `ui_cards.py` | Collector Route summary-card constructor | ✅ Passed and merged |
+| 14 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |
 
 Temporary inspection/apply PRs are deliberately closed without merging and are not counted as completed production waves.
 
@@ -274,7 +276,8 @@ A deferred item becomes eligible only after focused behavior or calculation test
 | 10 | #104 | #105 | `ui_controls.py` | CILog button and Treeview style helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
 | 11 | #106 | #107 | `theme_palettes.py` | Reports and Collector base palette helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
 | 12 | #108 | #109 | `ui_controls.py` | Clients and Collector Route Treeview style helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
-| 13 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |
+| 13 | #110 | #111 | `ui_cards.py` | Collector Route summary-card constructor | ✅ | ✅ | ✅ | Passed Windows smoke test |
+| 14 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |
 
 Status legend:
 

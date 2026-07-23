@@ -1,0 +1,766 @@
+{
+  "batch": "collector_route_card_batch_13",
+  "helper_names": [
+    "_spina_v27_route_card"
+  ],
+  "behavior": {
+    "_spina_v27_route_card": {
+      "defaults": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "pack_calls": [],
+          "children": [
+            {
+              "kind": "Frame",
+              "kwargs": {
+                "bg": "route-card",
+                "highlightbackground": "route-border",
+                "highlightthickness": 1,
+                "bd": 0
+              },
+              "pack_calls": [],
+              "children": [
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Active routes",
+                    "bg": "route-card",
+                    "fg": "route-muted",
+                    "font": [
+                      "Segoe UI",
+                      9,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        10,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "—",
+                    "bg": "route-card",
+                    "fg": "route-fg",
+                    "font": [
+                      "Segoe UI",
+                      17,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        4,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "",
+                    "bg": "route-card",
+                    "fg": "route-muted",
+                    "font": [
+                      "Segoe UI",
+                      8
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        2,
+                        10
+                      ]
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        "returned": [
+          {
+            "kind": "Frame",
+            "kwargs": {
+              "bg": "route-card",
+              "highlightbackground": "route-border",
+              "highlightthickness": 1,
+              "bd": 0
+            },
+            "pack_calls": [],
+            "children": [
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Active routes",
+                  "bg": "route-card",
+                  "fg": "route-muted",
+                  "font": [
+                    "Segoe UI",
+                    9,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      10,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "—",
+                  "bg": "route-card",
+                  "fg": "route-fg",
+                  "font": [
+                    "Segoe UI",
+                    17,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      4,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "",
+                  "bg": "route-card",
+                  "fg": "route-muted",
+                  "font": [
+                    "Segoe UI",
+                    8
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      2,
+                      10
+                    ]
+                  }
+                ],
+                "children": []
+              }
+            ]
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "—",
+              "bg": "route-card",
+              "fg": "route-fg",
+              "font": [
+                "Segoe UI",
+                17,
+                "bold"
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  4,
+                  0
+                ]
+              }
+            ],
+            "children": []
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "",
+              "bg": "route-card",
+              "fg": "route-muted",
+              "font": [
+                "Segoe UI",
+                8
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  2,
+                  10
+                ]
+              }
+            ],
+            "children": []
+          }
+        ],
+        "identity": {
+          "frame_is_root_first_child": true,
+          "value_is_frame_child": true,
+          "subtitle_is_frame_child": true,
+          "value_before_subtitle": true
+        }
+      },
+      "explicit_without_accent": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "pack_calls": [],
+          "children": [
+            {
+              "kind": "Frame",
+              "kwargs": {
+                "bg": "route-card",
+                "highlightbackground": "route-border",
+                "highlightthickness": 1,
+                "bd": 0
+              },
+              "pack_calls": [],
+              "children": [
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Collectors",
+                    "bg": "route-card",
+                    "fg": "route-muted",
+                    "font": [
+                      "Segoe UI",
+                      9,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        10,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "8",
+                    "bg": "route-card",
+                    "fg": "route-fg",
+                    "font": [
+                      "Segoe UI",
+                      17,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        4,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Today",
+                    "bg": "route-card",
+                    "fg": "route-muted",
+                    "font": [
+                      "Segoe UI",
+                      8
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        2,
+                        10
+                      ]
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        "returned": [
+          {
+            "kind": "Frame",
+            "kwargs": {
+              "bg": "route-card",
+              "highlightbackground": "route-border",
+              "highlightthickness": 1,
+              "bd": 0
+            },
+            "pack_calls": [],
+            "children": [
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Collectors",
+                  "bg": "route-card",
+                  "fg": "route-muted",
+                  "font": [
+                    "Segoe UI",
+                    9,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      10,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "8",
+                  "bg": "route-card",
+                  "fg": "route-fg",
+                  "font": [
+                    "Segoe UI",
+                    17,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      4,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Today",
+                  "bg": "route-card",
+                  "fg": "route-muted",
+                  "font": [
+                    "Segoe UI",
+                    8
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      2,
+                      10
+                    ]
+                  }
+                ],
+                "children": []
+              }
+            ]
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "8",
+              "bg": "route-card",
+              "fg": "route-fg",
+              "font": [
+                "Segoe UI",
+                17,
+                "bold"
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  4,
+                  0
+                ]
+              }
+            ],
+            "children": []
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "Today",
+              "bg": "route-card",
+              "fg": "route-muted",
+              "font": [
+                "Segoe UI",
+                8
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  2,
+                  10
+                ]
+              }
+            ],
+            "children": []
+          }
+        ],
+        "identity": {
+          "frame_is_root_first_child": true,
+          "value_is_frame_child": true,
+          "subtitle_is_frame_child": true,
+          "value_before_subtitle": true
+        }
+      },
+      "explicit_with_accent": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "pack_calls": [],
+          "children": [
+            {
+              "kind": "Frame",
+              "kwargs": {
+                "bg": "route-card",
+                "highlightbackground": "route-border",
+                "highlightthickness": 1,
+                "bd": 0
+              },
+              "pack_calls": [],
+              "children": [
+                {
+                  "kind": "Frame",
+                  "kwargs": {
+                    "bg": "#60a5fa",
+                    "height": 4
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "side": "top"
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Assigned areas",
+                    "bg": "route-card",
+                    "fg": "route-muted",
+                    "font": [
+                      "Segoe UI",
+                      9,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        10,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "14",
+                    "bg": "route-card",
+                    "fg": "route-fg",
+                    "font": [
+                      "Segoe UI",
+                      17,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        4,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Current route",
+                    "bg": "route-card",
+                    "fg": "route-muted",
+                    "font": [
+                      "Segoe UI",
+                      8
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        2,
+                        10
+                      ]
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        "returned": [
+          {
+            "kind": "Frame",
+            "kwargs": {
+              "bg": "route-card",
+              "highlightbackground": "route-border",
+              "highlightthickness": 1,
+              "bd": 0
+            },
+            "pack_calls": [],
+            "children": [
+              {
+                "kind": "Frame",
+                "kwargs": {
+                  "bg": "#60a5fa",
+                  "height": 4
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "side": "top"
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Assigned areas",
+                  "bg": "route-card",
+                  "fg": "route-muted",
+                  "font": [
+                    "Segoe UI",
+                    9,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      10,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "14",
+                  "bg": "route-card",
+                  "fg": "route-fg",
+                  "font": [
+                    "Segoe UI",
+                    17,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      4,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Current route",
+                  "bg": "route-card",
+                  "fg": "route-muted",
+                  "font": [
+                    "Segoe UI",
+                    8
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      2,
+                      10
+                    ]
+                  }
+                ],
+                "children": []
+              }
+            ]
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "14",
+              "bg": "route-card",
+              "fg": "route-fg",
+              "font": [
+                "Segoe UI",
+                17,
+                "bold"
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  4,
+                  0
+                ]
+              }
+            ],
+            "children": []
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "Current route",
+              "bg": "route-card",
+              "fg": "route-muted",
+              "font": [
+                "Segoe UI",
+                8
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  2,
+                  10
+                ]
+              }
+            ],
+            "children": []
+          }
+        ],
+        "identity": {
+          "frame_is_root_first_child": true,
+          "value_is_frame_child": true,
+          "subtitle_is_frame_child": true,
+          "value_before_subtitle": true
+        }
+      },
+      "palette_failure": {
+        "kind": "raise",
+        "type": "builtins.RuntimeError",
+        "repr": "RuntimeError('route palette unavailable')",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "pack_calls": [],
+          "children": []
+        }
+      }
+    }
+  }
+}
