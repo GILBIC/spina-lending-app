@@ -101,3 +101,53 @@ def _spina_v24_cilog_style_tree(self):
         st.map("ModernCILog.Treeview", background=[("selected", c["blue"])])
     except Exception:
         pass
+
+
+def _spina_v23_style_clients_tree(self):
+    try:
+        c = _spina_v23_clients_colors(self)
+        st = ttk.Style()
+        st.configure(
+            "ModernClients.Treeview",
+            rowheight=32,
+            font=("Segoe UI", 10),
+            background=c["panel"],
+            fieldbackground=c["panel"],
+            foreground=c["fg"],
+            borderwidth=0,
+        )
+        st.configure(
+            "ModernClients.Treeview.Heading",
+            font=("Segoe UI", 10, "bold"),
+            background=c["card2"],
+            foreground=c["fg"],
+            relief="flat",
+        )
+        st.map("ModernClients.Treeview", background=[("selected", c["blue"])])
+    except Exception:
+        pass
+
+
+def _spina_v27_style_route_trees(self):
+    try:
+        c = _spina_v27_route_colors(self)
+        st = ttk.Style()
+        st.configure(
+            "ModernRoute.Treeview",
+            rowheight=32,
+            font=("Segoe UI", 10),
+            background=c["panel"],
+            fieldbackground=c["panel"],
+            foreground=c["fg"],
+            borderwidth=0,
+        )
+        st.configure(
+            "ModernRoute.Treeview.Heading",
+            font=("Segoe UI", 10, "bold"),
+            background=c["card2"],
+            foreground=c["fg"],
+            relief="flat",
+        )
+        st.map("ModernRoute.Treeview", background=[("selected", c["blue"])])
+    except Exception:
+        pass
