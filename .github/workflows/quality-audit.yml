@@ -98,7 +98,9 @@ jobs:
             tools/extract_append_unique_text.py \
             tools/test_append_unique_text_extraction.py \
             tools/extract_merge_note_dict.py \
-            tools/test_merge_note_dict_extraction.py
+            tools/test_merge_note_dict_extraction.py \
+            tools/extract_pure_helper_batch.py \
+            tools/test_pure_helper_batch.py
 
       - name: Test module separation planner
         run: python tools/test_module_separation_planner.py
@@ -147,6 +149,14 @@ jobs:
 
       - name: Test merge note dictionary extraction
         run: python tools/test_merge_note_dict_extraction.py
+
+      - name: Test accelerated pure helper batch 01
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/pure_helper_batch_01_manifest.json
+          python tools/test_pure_helper_batch.py \
+            --manifest tools/fixtures/pure_helper_batch_01_manifest.json \
+            --fixture tools/fixtures/pure_helper_batch_01_behavior.json
 
       - name: Run redundancy audit
         run: |
