@@ -1,0 +1,183 @@
+{
+  "batch": "payment_schedule_normalizer_batch_06",
+  "helper_names": [
+    "_spina__norm_weekday",
+    "_spina__norm_dom"
+  ],
+  "behavior": {
+    "_spina__norm_weekday": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "spaces": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "monday": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Mon'"
+      },
+      "short_monday": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Mon'"
+      },
+      "uppercase_monday": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Mon'"
+      },
+      "tuesday": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Tue'"
+      },
+      "wednesday": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Wed'"
+      },
+      "thursday": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Thu'"
+      },
+      "friday": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Fri'"
+      },
+      "saturday": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Sat'"
+      },
+      "sunday": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Sun'"
+      },
+      "trimmed": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Fri'"
+      },
+      "prefix_only": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Thu'"
+      },
+      "unknown": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "number": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "boolean": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "object_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Mon'"
+      },
+      "broken_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      }
+    },
+    "_spina__norm_dom": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "spaces": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "one_int": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "1"
+      },
+      "thirty_one_int": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "31"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "thirty_two": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "negative": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "one_text": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "1"
+      },
+      "fifteen_text": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "15"
+      },
+      "thirty_one_text": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "31"
+      },
+      "decimal_text": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "letters": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "boolean": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "broken_text": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      }
+    }
+  }
+}

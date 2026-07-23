@@ -46,3 +46,28 @@ def _spina_v24_cilog_parse_day(value):
         return datetime.strptime(s[:10], "%Y-%m-%d").date()
     except Exception:
         return None
+
+
+def _spina__norm_weekday(_v):
+    try:
+        _s = str(_v or '').strip()
+    except Exception:
+        _s = ''
+    if not _s:
+        return ''
+    _k = _s[:3].lower()
+    _mp = {
+        'mon': 'Mon', 'tue': 'Tue', 'wed': 'Wed', 'thu': 'Thu',
+        'fri': 'Fri', 'sat': 'Sat', 'sun': 'Sun'
+    }
+    return _mp.get(_k, '')
+
+
+def _spina__norm_dom(_v):
+    try:
+        if _v in (None, ''):
+            return None
+        _n = int(str(_v).strip())
+        return _n if 1 <= _n <= 31 else None
+    except Exception:
+        return None
