@@ -105,7 +105,8 @@ jobs:
             tools/extract_pure_helper_batch.py \
             tools/test_pure_helper_batch.py \
             tools/test_ui_display_helper_batch.py \
-            tools/test_display_data_helper_batch.py
+            tools/test_display_data_helper_batch.py \
+            tools/test_display_ui_helper_batch_04.py
 
       - name: Test module separation planner
         run: python tools/test_module_separation_planner.py
@@ -178,6 +179,14 @@ jobs:
           python tools/test_display_data_helper_batch.py \
             --manifest tools/fixtures/display_data_helper_batch_03_manifest.json \
             --fixture tools/fixtures/display_data_helper_batch_03_behavior.json
+
+      - name: Test accelerated display UI helper batch 04
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/display_ui_helper_batch_04_manifest.json
+          python tools/test_display_ui_helper_batch_04.py \
+            --manifest tools/fixtures/display_ui_helper_batch_04_manifest.json \
+            --fixture tools/fixtures/display_ui_helper_batch_04_behavior.json
 
       - name: Run redundancy audit
         run: |
