@@ -1,0 +1,57 @@
+name: Update modularization map wave 10
+
+on:
+  push:
+    branches: [agent/cilog-ui-controls-batch-10]
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/cilog-ui-controls-batch-10
+          fetch-depth: 0
+
+      - name: Update Wave 10 tracker
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('docs/modularization-map.md')
+          text = path.read_text(encoding='utf-8')
+
+          replacements = {
+              '**Tracked main state:** after merged PR #103': '**Tracked main state:** after merged PR #105',
+              '| Focused helper functions extracted from the large desktop source | **48** |': '| Focused helper functions extracted from the large desktop source | **50** |',
+              '| Accelerated modularization waves completed | **9** |': '| Accelerated modularization waves completed | **10** |',
+              '| Latest completed extraction | **Wave 9 / PR #103** |': '| Latest completed extraction | **Wave 10 / PR #105** |',
+              '| Next step | **Wave 10 read-only inspection** |': '| Next step | **Wave 11 read-only inspection** |',
+              '| `spina_app/ui_controls.py` | Cash Control labeled-entry construction and Treeview styling | 2 |': '| `spina_app/ui_controls.py` | Cash Control labeled entries and Treeview styling; Client Information Log buttons and Treeview styling | 4 |',
+              '| **Total** |  | **48** |': '| **Total** |  | **50** |',
+              '  - `_spina_v21_style_cash_table` — PR #103\n': '  - `_spina_v21_style_cash_table` — PR #103\n  - `_spina_v24_cilog_button` — PR #105\n  - `_spina_v24_cilog_style_tree` — PR #105\n',
+              '| 10 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |': '| 10 | #104 inspection | #105 | `ui_controls.py` | Client Information Log buttons and Treeview styling | ✅ Passed and merged |\n| 11 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |',
+              '| 10 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |': '| 10 | #104 | #105 | `ui_controls.py` | CILog button and Treeview style helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |\n| 11 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |',
+          }
+
+          for old, new in replacements.items():
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected exactly one match for {old!r}, found {count}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit map and remove temporary workflow
+        run: |
+          rm .github/workflows/update-modularization-map-wave-10.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/modularization-map.md .github/workflows/update-modularization-map-wave-10.yml
+          git commit -m "docs: record modularization wave 10"
+          git push origin HEAD:agent/cilog-ui-controls-batch-10
