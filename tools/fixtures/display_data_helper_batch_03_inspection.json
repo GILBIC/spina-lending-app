@@ -1,26 +1,11 @@
 {
   "_spina_dash__status_for": {
-    "line": 37145,
-    "end_line": 37171,
-    "signature": "completion_pct, remaining, days_left",
-    "external_names": [],
-    "source_sha256": "d8108999d373720ab3d731efbf5b976e4e22cbd52e7e3a7e74f848036017d5cb",
-    "source": "def _spina_dash__status_for(completion_pct, remaining, days_left):\n    try:\n        pct = float(completion_pct or 0)\n    except Exception:\n        pct = 0.0\n    try:\n        rem = float(remaining or 0)\n    except Exception:\n        rem = 0.0\n    dl = None\n    try:\n        if days_left is not None and str(days_left) != '':\n            dl = int(days_left)\n    except Exception:\n        dl = None\n\n    if rem <= 0.004 or pct >= 100:\n        return 'Complete', 90\n    if pct >= 90:\n        return 'Finishing Now', 10\n    if pct >= 75:\n        return 'Near Completion', 20\n    if dl is not None and dl < 0:\n        return 'Overdue', 30\n    if dl is not None and dl <= 14:\n        return 'Due Soon', 40\n    return 'In Progress', 80"
+    "definition_count": 0
   },
   "_spina_perf_dict_rows": {
-    "line": 36013,
-    "end_line": 36023,
-    "signature": "rows",
-    "external_names": [],
-    "source_sha256": "f119690637124a6dd0bbc44e44742f925d452d5d6808b0dcad4294f163291434",
-    "source": "def _spina_perf_dict_rows(rows):\n    out = []\n    for r in rows or []:\n        try:\n            out.append(dict(r))\n        except Exception:\n            try:\n                out.append({k: r[k] for k in r.keys()})\n            except Exception:\n                pass\n    return out"
+    "definition_count": 0
   },
   "_spina_crc_fmt_money": {
-    "line": 39837,
-    "end_line": 39849,
-    "signature": "_v, blank_zero=False",
-    "external_names": [],
-    "source_sha256": "307972ff3358f554c12177c3913b5cc7ab500a49656738682adf99ba86e6fce4",
-    "source": "def _spina_crc_fmt_money(_v, blank_zero=False):\n    try:\n        n = float(_v or 0.0)\n    except Exception:\n        n = 0.0\n    if blank_zero and abs(n) < 0.005:\n        return \"\"\n    try:\n        if abs(n - int(n)) < 0.005:\n            return f\"{int(n):,}\"\n    except Exception:\n        pass\n    return f\"{n:,.2f}\""
+    "definition_count": 0
   }
 }
