@@ -22,26 +22,34 @@ jobs:
       - name: Apply guarded layout fix
         run: |
           python - <<'PY'
+          import re
           from pathlib import Path
 
           path = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
           source = path.read_text(encoding='utf-8')
-          old = "\n".join([
-              '                    self.reports_notes_sep.pack(fill="x", padx=18, pady=(0, 6))',
-              '                    self.reports_notes_box.pack(fill="x", padx=18, pady=(0, 18))',
-          ])
-          new = "\n".join([
-              '                    self.reports_notes_box.pack(side="bottom", fill="x", padx=18, pady=(0, 18))',
-              '                    self.reports_notes_sep.pack(side="bottom", fill="x", padx=18, pady=(0, 6))',
-          ])
-          count = source.count(old)
-          if count == 1:
-              source = source.replace(old, new, 1)
+          pattern = re.compile(
+              r'(?m)^(?P<indent>[ \t]*)self\.reports_notes_sep\.pack\('
+              r'fill=["\']x["\'],\s*padx=18,\s*pady=\(0,\s*6\)\)\s*\n'
+              r'(?P=indent)self\.reports_notes_box\.pack\('
+              r'fill=["\']x["\'],\s*padx=18,\s*pady=\(0,\s*18\)\)'
+          )
+          matches = list(pattern.finditer(source))
+          already_fixed = (
+              'self.reports_notes_box.pack(side="bottom", fill="x", padx=18, pady=(0, 18))' in source
+              and 'self.reports_notes_sep.pack(side="bottom", fill="x", padx=18, pady=(0, 6))' in source
+          )
+          if len(matches) == 1:
+              indent = matches[0].group('indent')
+              replacement = "\n".join([
+                  indent + 'self.reports_notes_box.pack(side="bottom", fill="x", padx=18, pady=(0, 18))',
+                  indent + 'self.reports_notes_sep.pack(side="bottom", fill="x", padx=18, pady=(0, 6))',
+              ])
+              source = source[:matches[0].start()] + replacement + source[matches[0].end():]
               path.write_text(source, encoding='utf-8')
-          elif count == 0 and new in source:
+          elif len(matches) == 0 and already_fixed:
               pass
           else:
-              raise RuntimeError(f'Unexpected Reports notes layout state: old_count={count}, new_present={new in source}')
+              raise RuntimeError(f'Unexpected Reports notes layout matches: {len(matches)}; already_fixed={already_fixed}')
           PY
       - name: Compile and test
         run: |
