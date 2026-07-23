@@ -32,16 +32,22 @@ jobs:
           app = Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py")
           source = app.read_text(encoding="utf-8")
           tree = ast.parse(source, filename=str(app))
-          definitions = {
+          all_functions = [
+              node for node in ast.walk(tree)
+              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+          ]
+          top_level = {
               node.name: node
               for node in tree.body
               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
           }
-          names = sorted(
-              name for name, node in definitions.items()
-              if isinstance(node, ast.FunctionDef)
-              and ("clients" in name.lower() or "route" in name.lower())
-              and any(token in name.lower() for token in ("color", "palette", "style", "card", "button"))
+          selected = sorted(
+              (
+                  node for node in all_functions
+                  if ("clients" in node.name.lower() or "route" in node.name.lower())
+                  and any(token in node.name.lower() for token in ("color", "palette", "style", "card", "button"))
+              ),
+              key=lambda node: (node.lineno, node.name),
           )
           builtin_names = set(dir(builtins))
 
@@ -64,9 +70,17 @@ jobs:
               }
               return sorted(loaded - local - builtin_names - {node.name})
 
+          def enclosing_top_level(node: ast.AST) -> str | None:
+              for owner_name, owner in top_level.items():
+                  if owner is node:
+                      return None
+                  if getattr(owner, "lineno", 0) <= node.lineno <= getattr(owner, "end_lineno", -1):
+                      return owner_name
+              return None
+
           def callers(name: str) -> list[str]:
               result = []
-              for owner_name, owner in definitions.items():
+              for owner_name, owner in top_level.items():
                   if owner_name == name:
                       continue
                   if any(
@@ -79,19 +93,23 @@ jobs:
               return sorted(result)
 
           packet = []
-          for name in names:
-              node = definitions[name]
+          for node in selected:
               exact = ast.get_source_segment(source, node)
               if exact is None:
-                  raise RuntimeError(f"Could not recover source: {name}")
+                  raise RuntimeError(f"Could not recover source: {node.name}")
               packet.append({
-                  "name": name,
+                  "name": node.name,
                   "signature": ast.unparse(node.args),
                   "source": exact,
                   "source_sha256": hashlib.sha256(exact.encode("utf-8")).hexdigest(),
                   "external_names": external_names(node),
-                  "callers": callers(name),
-                  "occurrence_count": source.count(name),
+                  "callers": callers(node.name),
+                  "occurrence_count": source.count(node.name),
+                  "lineno": node.lineno,
+                  "end_lineno": node.end_lineno,
+                  "col_offset": node.col_offset,
+                  "enclosing_top_level": enclosing_top_level(node),
+                  "is_top_level": node in tree.body,
               })
 
           payload = {
@@ -105,7 +123,14 @@ jobs:
           )
           print(json.dumps({
               "functions": [item["name"] for item in packet],
-              "external_names": {item["name"]: item["external_names"] for item in packet},
+              "locations": {
+                  item["name"]: {
+                      "line": item["lineno"],
+                      "owner": item["enclosing_top_level"],
+                      "top_level": item["is_top_level"],
+                  }
+                  for item in packet
+              },
           }, indent=2))
           PY
 
