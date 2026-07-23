@@ -60,3 +60,14 @@ def _spina_v24_cilog_set_card(self, key, value, subtitle=None):
             sub_lbl.configure(text=str(subtitle))
     except Exception:
         pass
+
+
+def _spina_v21_cash_set_card(self, key, value, subtitle=None):
+    try:
+        v_lbl, s_lbl = (getattr(self, "_cashctl_cards", {}) or {}).get(key, (None, None))
+        if v_lbl is not None:
+            v_lbl.configure(text=str(value))
+        if subtitle is not None and s_lbl is not None:
+            s_lbl.configure(text=str(subtitle))
+    except Exception:
+        pass
