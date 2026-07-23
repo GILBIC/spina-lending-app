@@ -1,0 +1,22 @@
+{
+  "batch": "payment_schedule_normalizer_batch_06",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "helpers": [
+    {
+      "name": "_spina__norm_weekday",
+      "signature": "_v",
+      "module": "spina_app.utilities.dates",
+      "module_path": "spina_app/utilities/dates.py",
+      "expected_source_sha256": "6985cb7e1da7bad374bd307f2b8e59a097524dc3273aff1a5baaded6a0b2acac",
+      "allowed_external_names": []
+    },
+    {
+      "name": "_spina__norm_dom",
+      "signature": "_v",
+      "module": "spina_app.utilities.dates",
+      "module_path": "spina_app/utilities/dates.py",
+      "expected_source_sha256": "af4e99ff491362126545711a6a08c260f4bc98fe6cb4ed1a788397c4173e59f2",
+      "allowed_external_names": []
+    }
+  ]
+}

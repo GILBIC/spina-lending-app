@@ -24293,29 +24293,10 @@ def _on_collectors_select(self):
 from spina_app.utilities.dates import _spina__parse_day_ymd
 
 
-def _spina__norm_weekday(_v):
-    try:
-        _s = str(_v or '').strip()
-    except Exception:
-        _s = ''
-    if not _s:
-        return ''
-    _k = _s[:3].lower()
-    _mp = {
-        'mon': 'Mon', 'tue': 'Tue', 'wed': 'Wed', 'thu': 'Thu',
-        'fri': 'Fri', 'sat': 'Sat', 'sun': 'Sun'
-    }
-    return _mp.get(_k, '')
+from spina_app.utilities.dates import _spina__norm_weekday
 
 
-def _spina__norm_dom(_v):
-    try:
-        if _v in (None, ''):
-            return None
-        _n = int(str(_v).strip())
-        return _n if 1 <= _n <= 31 else None
-    except Exception:
-        return None
+from spina_app.utilities.dates import _spina__norm_dom
 
 
 def _spina__client_schedule_anchor(row: dict | None):
