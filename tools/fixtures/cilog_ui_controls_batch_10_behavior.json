@@ -1,0 +1,373 @@
+{
+  "batch": "cilog_ui_controls_batch_10",
+  "helper_names": [
+    "_spina_v24_cilog_button",
+    "_spina_v24_cilog_style_tree"
+  ],
+  "behavior": {
+    "_spina_v24_cilog_button": {
+      "normal_defaults": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "children": [
+            {
+              "kind": "Button",
+              "kwargs": {
+                "text": "Refresh",
+                "command": null,
+                "bg": "cilog-card2",
+                "fg": "cilog-fg",
+                "activebackground": "cilog-card2",
+                "activeforeground": "cilog-fg",
+                "relief": "flat",
+                "bd": 0,
+                "padx": 14,
+                "pady": 8,
+                "font": [
+                  "Segoe UI",
+                  9,
+                  "bold"
+                ],
+                "cursor": "hand2",
+                "width": null
+              },
+              "children": []
+            }
+          ]
+        },
+        "returned": {
+          "kind": "Button",
+          "kwargs": {
+            "text": "Refresh",
+            "command": null,
+            "bg": "cilog-card2",
+            "fg": "cilog-fg",
+            "activebackground": "cilog-card2",
+            "activeforeground": "cilog-fg",
+            "relief": "flat",
+            "bd": 0,
+            "padx": 14,
+            "pady": 8,
+            "font": [
+              "Segoe UI",
+              9,
+              "bold"
+            ],
+            "cursor": "hand2",
+            "width": null
+          },
+          "children": []
+        },
+        "identity": {
+          "button_is_root_first_child": true
+        }
+      },
+      "primary": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "children": [
+            {
+              "kind": "Button",
+              "kwargs": {
+                "text": "Apply",
+                "command": "apply-command",
+                "bg": "cilog-blue",
+                "fg": "#ffffff",
+                "activebackground": "cilog-blue",
+                "activeforeground": "#ffffff",
+                "relief": "flat",
+                "bd": 0,
+                "padx": 14,
+                "pady": 8,
+                "font": [
+                  "Segoe UI",
+                  9,
+                  "bold"
+                ],
+                "cursor": "hand2",
+                "width": null
+              },
+              "children": []
+            }
+          ]
+        },
+        "returned": {
+          "kind": "Button",
+          "kwargs": {
+            "text": "Apply",
+            "command": "apply-command",
+            "bg": "cilog-blue",
+            "fg": "#ffffff",
+            "activebackground": "cilog-blue",
+            "activeforeground": "#ffffff",
+            "relief": "flat",
+            "bd": 0,
+            "padx": 14,
+            "pady": 8,
+            "font": [
+              "Segoe UI",
+              9,
+              "bold"
+            ],
+            "cursor": "hand2",
+            "width": null
+          },
+          "children": []
+        },
+        "identity": {
+          "button_is_root_first_child": true
+        }
+      },
+      "success_width": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "children": [
+            {
+              "kind": "Button",
+              "kwargs": {
+                "text": "Approve",
+                "command": "approve-command",
+                "bg": "cilog-green",
+                "fg": "#ffffff",
+                "activebackground": "cilog-green",
+                "activeforeground": "#ffffff",
+                "relief": "flat",
+                "bd": 0,
+                "padx": 14,
+                "pady": 8,
+                "font": [
+                  "Segoe UI",
+                  9,
+                  "bold"
+                ],
+                "cursor": "hand2",
+                "width": 16
+              },
+              "children": []
+            }
+          ]
+        },
+        "returned": {
+          "kind": "Button",
+          "kwargs": {
+            "text": "Approve",
+            "command": "approve-command",
+            "bg": "cilog-green",
+            "fg": "#ffffff",
+            "activebackground": "cilog-green",
+            "activeforeground": "#ffffff",
+            "relief": "flat",
+            "bd": 0,
+            "padx": 14,
+            "pady": 8,
+            "font": [
+              "Segoe UI",
+              9,
+              "bold"
+            ],
+            "cursor": "hand2",
+            "width": 16
+          },
+          "children": []
+        },
+        "identity": {
+          "button_is_root_first_child": true
+        }
+      },
+      "danger": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "children": [
+            {
+              "kind": "Button",
+              "kwargs": {
+                "text": "Delete",
+                "command": "delete-command",
+                "bg": "cilog-red",
+                "fg": "#ffffff",
+                "activebackground": "cilog-red",
+                "activeforeground": "#ffffff",
+                "relief": "flat",
+                "bd": 0,
+                "padx": 14,
+                "pady": 8,
+                "font": [
+                  "Segoe UI",
+                  9,
+                  "bold"
+                ],
+                "cursor": "hand2",
+                "width": null
+              },
+              "children": []
+            }
+          ]
+        },
+        "returned": {
+          "kind": "Button",
+          "kwargs": {
+            "text": "Delete",
+            "command": "delete-command",
+            "bg": "cilog-red",
+            "fg": "#ffffff",
+            "activebackground": "cilog-red",
+            "activeforeground": "#ffffff",
+            "relief": "flat",
+            "bd": 0,
+            "padx": 14,
+            "pady": 8,
+            "font": [
+              "Segoe UI",
+              9,
+              "bold"
+            ],
+            "cursor": "hand2",
+            "width": null
+          },
+          "children": []
+        },
+        "identity": {
+          "button_is_root_first_child": true
+        }
+      },
+      "soft": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "children": [
+            {
+              "kind": "Button",
+              "kwargs": {
+                "text": "Close",
+                "command": null,
+                "bg": "cilog-soft",
+                "fg": "cilog-fg",
+                "activebackground": "cilog-soft",
+                "activeforeground": "cilog-fg",
+                "relief": "flat",
+                "bd": 0,
+                "padx": 14,
+                "pady": 8,
+                "font": [
+                  "Segoe UI",
+                  9,
+                  "bold"
+                ],
+                "cursor": "hand2",
+                "width": null
+              },
+              "children": []
+            }
+          ]
+        },
+        "returned": {
+          "kind": "Button",
+          "kwargs": {
+            "text": "Close",
+            "command": null,
+            "bg": "cilog-soft",
+            "fg": "cilog-fg",
+            "activebackground": "cilog-soft",
+            "activeforeground": "cilog-fg",
+            "relief": "flat",
+            "bd": 0,
+            "padx": 14,
+            "pady": 8,
+            "font": [
+              "Segoe UI",
+              9,
+              "bold"
+            ],
+            "cursor": "hand2",
+            "width": null
+          },
+          "children": []
+        },
+        "identity": {
+          "button_is_root_first_child": true
+        }
+      },
+      "palette_failure": {
+        "kind": "raise",
+        "type": "builtins.RuntimeError",
+        "repr": "RuntimeError('palette unavailable')",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "children": []
+        }
+      }
+    },
+    "_spina_v24_cilog_style_tree": {
+      "normal": {
+        "kind": "return",
+        "result": null,
+        "styles": [
+          {
+            "configure_calls": [
+              {
+                "style": "ModernCILog.Treeview",
+                "kwargs": {
+                  "rowheight": 31,
+                  "font": [
+                    "Segoe UI",
+                    10
+                  ],
+                  "background": "cilog-panel",
+                  "fieldbackground": "cilog-panel",
+                  "foreground": "cilog-fg",
+                  "borderwidth": 0
+                }
+              },
+              {
+                "style": "ModernCILog.Treeview.Heading",
+                "kwargs": {
+                  "font": [
+                    "Segoe UI",
+                    10,
+                    "bold"
+                  ],
+                  "background": "cilog-card2",
+                  "foreground": "cilog-fg",
+                  "relief": "flat"
+                }
+              }
+            ],
+            "map_calls": [
+              {
+                "style": "ModernCILog.Treeview",
+                "kwargs": {
+                  "background": [
+                    [
+                      "selected",
+                      "cilog-blue"
+                    ]
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "palette_failure": {
+        "kind": "return",
+        "result": null,
+        "styles": []
+      },
+      "style_failure": {
+        "kind": "return",
+        "result": null,
+        "styles": []
+      }
+    }
+  }
+}

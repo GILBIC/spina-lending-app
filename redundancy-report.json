@@ -1,0 +1,105 @@
+{
+  "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "line_count": 47924,
+  "function_definitions": 327,
+  "unique_function_names": 320,
+  "duplicate_top_level_definitions": {
+    "_collectors_areas_drag_motion": [
+      21199,
+      35369
+    ],
+    "_on_collectors_multi_toggle": [
+      20603,
+      35158
+    ],
+    "_on_collectors_select": [
+      21287,
+      38561
+    ],
+    "_on_collectors_tree_click": [
+      20667,
+      35216
+    ],
+    "_on_collectors_tree_wheel": [
+      34979,
+      35180
+    ],
+    "_spina__client_due_meta": [
+      24318,
+      39384
+    ],
+    "_spina_route_adv_marker_for": [
+      8554,
+      40945
+    ]
+  },
+  "duplicate_class_methods": {},
+  "repeated_monkey_patch_assignments": {
+    "App.__init__": [
+      38969,
+      39203,
+      37709,
+      38428,
+      41362
+    ],
+    "App._apply_ui_theme": [
+      37696,
+      41349,
+      41688
+    ],
+    "App._build_clients_tab": [
+      45217,
+      35896
+    ],
+    "App._build_collectors_tab": [
+      46329,
+      47257
+    ],
+    "App._dashboard_visible_rows": [
+      42319,
+      42678
+    ],
+    "App._on_collectors_select": [
+      46387,
+      47290
+    ],
+    "App._on_mode_change": [
+      37731,
+      38450,
+      42335
+    ],
+    "App._populate_dashboard_tree": [
+      42318,
+      42583,
+      42679,
+      42938
+    ],
+    "App.apply_role_access": [
+      31478,
+      37720,
+      38439,
+      41377
+    ],
+    "App.refresh_clients": [
+      38980,
+      35908,
+      45231
+    ],
+    "App.refresh_collectors": [
+      35458,
+      46343,
+      47269
+    ],
+    "App.refresh_dashboard": [
+      42317,
+      42582,
+      42680,
+      42939
+    ],
+    "App.refresh_data_grid": [
+      41662,
+      41728
+    ]
+  },
+  "exact_duplicate_top_level_bodies": []
+}
