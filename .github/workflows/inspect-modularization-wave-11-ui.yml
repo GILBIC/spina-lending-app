@@ -42,11 +42,15 @@ jobs:
               for node in tree.body
               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
           }
+          base_palettes = {"_spina_v22_reports_colors", "_spina_v25_collector_colors"}
           selected = sorted(
               (
                   node for node in all_functions
-                  if ("clients" in node.name.lower() or "route" in node.name.lower())
-                  and any(token in node.name.lower() for token in ("color", "palette", "style", "card", "button"))
+                  if node.name in base_palettes
+                  or (
+                      ("clients" in node.name.lower() or "route" in node.name.lower())
+                      and any(token in node.name.lower() for token in ("color", "palette", "style", "card", "button"))
+                  )
               ),
               key=lambda node: (node.lineno, node.name),
           )
@@ -114,13 +118,18 @@ jobs:
               })
 
           contexts = {}
-          for identifier in ("_spina_v23_clients_colors", "_spina_v27_route_colors"):
+          for identifier in (
+              "_spina_v22_reports_colors",
+              "_spina_v23_clients_colors",
+              "_spina_v25_collector_colors",
+              "_spina_v27_route_colors",
+          ):
               hits = []
               for index, text in enumerate(lines, start=1):
                   if identifier not in text:
                       continue
-                  start = max(1, index - 12)
-                  end = min(len(lines), index + 18)
+                  start = max(1, index - 8)
+                  end = min(len(lines), index + 12)
                   hits.append({
                       "line": index,
                       "start": start,
@@ -144,7 +153,10 @@ jobs:
           )
           print(json.dumps({
               "functions": [item["name"] for item in packet],
-              "context_counts": {key: len(value) for key, value in contexts.items()},
+              "palette_callers": {
+                  item["name"]: item["callers"]
+                  for item in packet if item["name"] in base_palettes
+              },
           }, indent=2))
           PY
 
