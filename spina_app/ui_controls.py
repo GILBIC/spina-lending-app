@@ -5,7 +5,10 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
-from spina_app.theme_palettes import _spina_v21_cash_colors
+from spina_app.theme_palettes import (
+    _spina_v21_cash_colors,
+    _spina_v24_cilog_colors,
+)
 
 
 def _spina_v21_build_labeled_entry(parent, label, var, width=14):
@@ -38,5 +41,61 @@ def _spina_v21_style_cash_table(self):
             relief="flat",
         )
         st.map("ModernCash.Treeview", background=[("selected", colors["button"])])
+    except Exception:
+        pass
+
+
+def _spina_v24_cilog_button(parent, text, command=None, kind="normal", width=None):
+    c = _spina_v24_cilog_colors()
+    bg = c["card2"]
+    fg = c["fg"]
+    if kind == "primary":
+        bg, fg = c["blue"], "#ffffff"
+    elif kind == "success":
+        bg, fg = c["green"], "#ffffff"
+    elif kind == "danger":
+        bg, fg = c["red"], "#ffffff"
+    elif kind == "soft":
+        bg, fg = c["soft"], c["fg"]
+
+    return tk.Button(
+        parent,
+        text=text,
+        command=command,
+        bg=bg,
+        fg=fg,
+        activebackground=bg,
+        activeforeground=fg,
+        relief="flat",
+        bd=0,
+        padx=14,
+        pady=8,
+        font=("Segoe UI", 9, "bold"),
+        cursor="hand2",
+        width=width,
+    )
+
+
+def _spina_v24_cilog_style_tree(self):
+    try:
+        c = _spina_v24_cilog_colors(self)
+        st = ttk.Style()
+        st.configure(
+            "ModernCILog.Treeview",
+            rowheight=31,
+            font=("Segoe UI", 10),
+            background=c["panel"],
+            fieldbackground=c["panel"],
+            foreground=c["fg"],
+            borderwidth=0,
+        )
+        st.configure(
+            "ModernCILog.Treeview.Heading",
+            font=("Segoe UI", 10, "bold"),
+            background=c["card2"],
+            foreground=c["fg"],
+            relief="flat",
+        )
+        st.map("ModernCILog.Treeview", background=[("selected", c["blue"])])
     except Exception:
         pass
