@@ -1,0 +1,187 @@
+{
+  "target": "_merge_note_dict",
+  "case_names": [
+    "both_none",
+    "empty_dicts",
+    "default_into_empty",
+    "text_inputs",
+    "distinct_default",
+    "duplicate_default",
+    "substring_default",
+    "reverse_substring",
+    "blank_incoming",
+    "none_incoming",
+    "empty_existing_value",
+    "dated_new_key",
+    "dated_conflict",
+    "numeric_value",
+    "boolean_value",
+    "nested_value",
+    "list_source",
+    "integer_source"
+  ],
+  "behavior": {
+    "both_none": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{}",
+      "dst_after": "None",
+      "src_after": "None",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "empty_dicts": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{}",
+      "dst_after": "{}",
+      "src_after": "{}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "default_into_empty": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'__default__': 'hello'}",
+      "dst_after": "{}",
+      "src_after": "{'__default__': 'hello'}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "text_inputs": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'__default__': 'old\\nnew'}",
+      "dst_after": "'old'",
+      "src_after": "'new'",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "distinct_default": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'__default__': 'old\\nnew'}",
+      "dst_after": "{'__default__': 'old'}",
+      "src_after": "{'__default__': 'new'}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "duplicate_default": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'__default__': 'old'}",
+      "dst_after": "{'__default__': 'old'}",
+      "src_after": "{'__default__': 'old'}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "substring_default": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'__default__': 'late payment reason'}",
+      "dst_after": "{'__default__': 'late payment reason'}",
+      "src_after": "{'__default__': 'late'}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "reverse_substring": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'__default__': 'late\\nlate payment'}",
+      "dst_after": "{'__default__': 'late'}",
+      "src_after": "{'__default__': 'late payment'}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "blank_incoming": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'__default__': 'old'}",
+      "dst_after": "{'__default__': 'old'}",
+      "src_after": "{'__default__': '   '}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "none_incoming": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'__default__': 'old'}",
+      "dst_after": "{'__default__': 'old'}",
+      "src_after": "{'__default__': None}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "empty_existing_value": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'2026-07-23': 'dated'}",
+      "dst_after": "{'2026-07-23': ' '}",
+      "src_after": "{'2026-07-23': 'dated'}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "dated_new_key": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'__default__': 'general', '2026-07-23': 'dated'}",
+      "dst_after": "{'__default__': 'general'}",
+      "src_after": "{'2026-07-23': 'dated'}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "dated_conflict": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'2026-07-23': 'first\\nsecond'}",
+      "dst_after": "{'2026-07-23': 'first'}",
+      "src_after": "{'2026-07-23': 'second'}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "numeric_value": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'__default__': '123'}",
+      "dst_after": "{}",
+      "src_after": "{'__default__': 123}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "boolean_value": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'__default__': 'False'}",
+      "dst_after": "{}",
+      "src_after": "{'__default__': False}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "nested_value": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'2026-07-23': \"{'reason': 'late'}\"}",
+      "dst_after": "{}",
+      "src_after": "{'2026-07-23': {'reason': 'late'}}",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "list_source": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'__default__': \"['x', 'y']\"}",
+      "dst_after": "{}",
+      "src_after": "['x', 'y']",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    },
+    "integer_source": {
+      "kind": "return",
+      "type": "builtins.dict",
+      "repr": "{'__default__': '5'}",
+      "dst_after": "{}",
+      "src_after": "5",
+      "dst_unchanged": true,
+      "src_unchanged": true
+    }
+  }
+}

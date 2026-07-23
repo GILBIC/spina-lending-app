@@ -2865,19 +2865,7 @@ from spina_app.utilities.notes import _append_unique_text
 
 from spina_app.utilities.notes import _as_note_dict
 
-def _merge_note_dict(dst: dict, src: dict) -> dict:
-    """Merge src into dst without losing data; if conflicts, append text uniquely."""
-    out = _as_note_dict(dst)
-    inc = _as_note_dict(src)
-    for k, v in inc.items():
-        vv = (str(v) if v is not None else "").strip()
-        if not vv:
-            continue
-        if k not in out or not str(out.get(k) or "").strip():
-            out[k] = vv
-        else:
-            out[k] = _append_unique_text(str(out.get(k) or ""), vv)
-    return out
+from spina_app.utilities.notes import _merge_note_dict
 
 def _migrate_legacy_notes_by_name(
     old_name: str,
