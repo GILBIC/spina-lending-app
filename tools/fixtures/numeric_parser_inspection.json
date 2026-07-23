@@ -1,26 +1,10 @@
 {
   "targets": {
     "_spina_dash__float": {
-      "found": true,
-      "line": 37168,
-      "end_line": 37174,
-      "signature": "value, default=0.0",
-      "decorators": [],
-      "uses_global_or_nonlocal": false,
-      "external_loaded_names": [],
-      "source": "def _spina_dash__float(value, default=0.0):\n    try:\n        if value is None:\n            return float(default)\n        return float(str(value).replace(',', '').strip() or default)\n    except Exception:\n        return float(default)"
+      "found": false
     },
     "_spina_v27_count_from_text": {
-      "found": true,
-      "line": 47019,
-      "end_line": 47024,
-      "signature": "value",
-      "decorators": [],
-      "uses_global_or_nonlocal": false,
-      "external_loaded_names": [
-        "re"
-      ],
-      "source": "def _spina_v27_count_from_text(value):\n    try:\n        m = re.search(r\"(\\d+)\", str(value or \"\"))\n        return int(m.group(1)) if m else 0\n    except Exception:\n        return 0"
+      "found": false
     }
   }
 }
