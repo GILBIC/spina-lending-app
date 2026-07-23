@@ -1,0 +1,251 @@
+{
+  "batch": "display_data_helper_batch_03",
+  "helper_names": [
+    "_spina_dash__status_for",
+    "_spina_perf_dict_rows",
+    "_spina_crc_fmt_money"
+  ],
+  "behavior": {
+    "_spina_dash__status_for": {
+      "complete_remaining_zero": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Complete', 90)"
+      },
+      "complete_negative_remaining": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Complete', 90)"
+      },
+      "complete_pct_100": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Complete', 90)"
+      },
+      "complete_precedes_overdue": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Complete', 90)"
+      },
+      "finishing_90": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Finishing Now', 10)"
+      },
+      "finishing_99": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Finishing Now', 10)"
+      },
+      "near_75": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Near Completion', 20)"
+      },
+      "near_precedes_overdue": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Near Completion', 20)"
+      },
+      "overdue": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Overdue', 30)"
+      },
+      "due_today": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Due Soon', 40)"
+      },
+      "due_in_14": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Due Soon', 40)"
+      },
+      "in_progress_15": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('In Progress', 80)"
+      },
+      "empty_days": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('In Progress', 80)"
+      },
+      "none_days": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('In Progress', 80)"
+      },
+      "string_days": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Due Soon', 40)"
+      },
+      "invalid_days": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('In Progress', 80)"
+      },
+      "invalid_pct": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('In Progress', 80)"
+      },
+      "invalid_remaining_becomes_complete": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Complete', 90)"
+      },
+      "none_values": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Complete', 90)"
+      },
+      "boolean_values": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Due Soon', 40)"
+      }
+    },
+    "_spina_perf_dict_rows": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.list",
+        "repr": "[]"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.list",
+        "repr": "[]"
+      },
+      "plain_dicts": {
+        "kind": "return",
+        "type": "builtins.list",
+        "repr": "[{'a': 1}, {'b': 2}]"
+      },
+      "pair_iterable": {
+        "kind": "return",
+        "type": "builtins.list",
+        "repr": "[{'x': 1, 'y': 2}]"
+      },
+      "fallback_keys": {
+        "kind": "return",
+        "type": "builtins.list",
+        "repr": "[{'a': 10, 'b': 20}]"
+      },
+      "bad_row_skipped": {
+        "kind": "return",
+        "type": "builtins.list",
+        "repr": "[{'ok': 1}, {'after': 2}]"
+      },
+      "mixed_rows": {
+        "kind": "return",
+        "type": "builtins.list",
+        "repr": "[{'x': 1, 'y': 2}, {'a': 10, 'b': 20}]"
+      },
+      "false_value": {
+        "kind": "return",
+        "type": "builtins.list",
+        "repr": "[]"
+      }
+    },
+    "_spina_crc_fmt_money": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "zero_blank": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "small_blank": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "threshold_not_blank": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0.01'"
+      },
+      "integer": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1,234'"
+      },
+      "near_integer": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1,234'"
+      },
+      "decimal": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1,234.25'"
+      },
+      "negative_integer": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'-2,500'"
+      },
+      "negative_decimal": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'-2,500.25'"
+      },
+      "numeric_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1,250.50'"
+      },
+      "comma_text_invalid": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "invalid_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "boolean_true": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1'"
+      },
+      "boolean_false_blank": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "list_invalid": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "nan_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'nan'"
+      },
+      "infinity_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'inf'"
+      }
+    }
+  }
+}
