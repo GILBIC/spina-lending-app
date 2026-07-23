@@ -20,14 +20,18 @@ jobs:
         with:
           python-version: "3.12"
       - name: Inspect area storage and UI dependencies
-        run: python tools/inspect_hierarchical_area_system.py
-      - name: Commit inspection report
+        run: |
+          python tools/inspect_hierarchical_area_system.py
+          python tools/inspect_hierarchical_area_focus.py
+      - name: Commit inspection reports
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tools/fixtures/hierarchical_area_system_inspection.json
+          git add \
+            tools/fixtures/hierarchical_area_system_inspection.json \
+            tools/fixtures/hierarchical_area_focus.json
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Record hierarchical area dependencies"
+          git commit -m "Record focused hierarchical area dependencies"
           git push origin HEAD:agent/hierarchical-area-system-inspection
