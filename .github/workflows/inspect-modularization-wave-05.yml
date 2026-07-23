@@ -71,6 +71,115 @@ jobs:
           print(json.dumps(payload, indent=2, ensure_ascii=False))
           PY
 
+      - name: Build exact-source review packet
+        run: |
+          python - <<'PY'
+          import ast
+          import builtins
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
+
+          app_path = Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py")
+          source = app_path.read_text(encoding="utf-8", errors="replace")
+          lines = source.splitlines()
+          tree = ast.parse(source)
+          shortlist = json.loads(Path("modularization-wave-05-shortlist.json").read_text(encoding="utf-8"))
+          wanted = {item["name"] for item in shortlist.get("candidates", [])}
+          definitions = {
+              node.name: node
+              for node in tree.body
+              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+              and node.name in wanted
+          }
+          top_level = [
+              node for node in tree.body
+              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+          ]
+          builtin_names = set(dir(builtins))
+          protected_stems = {
+              "payment", "balance", "principal", "interest", "7x7", "7×7",
+              "renew", "report", "pdf", "auth", "login", "role", "database",
+              "postgres", "backup", "restore", "collector", "ledger", "transaction",
+          }
+
+          packet = []
+          for name in sorted(wanted):
+              node = definitions.get(name)
+              if node is None:
+                  continue
+              start = int(getattr(node, "lineno", 0) or 0)
+              end = int(getattr(node, "end_lineno", start) or start)
+              text = "\n".join(lines[start - 1:end])
+              args = []
+              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                  args = [arg.arg for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)]
+                  if node.args.vararg:
+                      args.append("*" + node.args.vararg.arg)
+                  if node.args.kwarg:
+                      args.append("**" + node.args.kwarg.arg)
+              local_names = set(args)
+              loaded_names = {
+                  child.id
+                  for child in ast.walk(node)
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
+              }
+              stored_names = {
+                  child.id
+                  for child in ast.walk(node)
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Param))
+              }
+              external_names = sorted(loaded_names - local_names - stored_names - builtin_names)
+              callers = []
+              for owner in top_level:
+                  if owner is node:
+                      continue
+                  if any(
+                      isinstance(child, ast.Name)
+                      and isinstance(child.ctx, ast.Load)
+                      and child.id == name
+                      for child in ast.walk(owner)
+                  ):
+                      callers.append(owner.name)
+              textual_occurrences = len(re.findall(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", source))
+              lowered = f"{name}\n{text}".casefold()
+              packet.append({
+                  "name": name,
+                  "kind": type(node).__name__,
+                  "line": start,
+                  "end_line": end,
+                  "line_count": max(0, end - start + 1),
+                  "arguments": args,
+                  "external_names": external_names,
+                  "callers": sorted(callers),
+                  "caller_count": len(callers),
+                  "textual_occurrences": textual_occurrences,
+                  "source_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                  "contains_protected_stem": any(stem in lowered for stem in protected_stems),
+                  "source": text,
+              })
+
+          payload = {
+              "source_commit": "${{ github.sha }}",
+              "candidate_count": len(packet),
+              "candidates": packet,
+              "review_rule": "Reject database wrappers, report drawing, logging ownership, Area compatibility helpers, unused helpers, and any candidate with unclear callers. Prefer one cohesive pure formatting/parsing group with focused behavior tests.",
+              "safety": {
+                  "read_only": True,
+                  "application_modified": False,
+              },
+          }
+          Path("modularization-wave-05-review-packet.json").write_text(
+              json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps({
+              "candidate_count": len(packet),
+              "names": [item["name"] for item in packet],
+          }, indent=2))
+          PY
+
       - name: Upload inspection report
         uses: actions/upload-artifact@v4
         with:
@@ -78,5 +187,6 @@ jobs:
           path: |
             modularization-wave-05-report.json
             modularization-wave-05-shortlist.json
+            modularization-wave-05-review-packet.json
           if-no-files-found: error
           retention-days: 14
