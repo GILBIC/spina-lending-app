@@ -1,8 +1,0 @@
-compile_status=0
-Hierarchical Area UI Phase 2 state: patched
-guard_status=0
-Traceback (most recent call last):
-  File "/home/runner/work/spina-lending-app/spina-lending-app/tools/test_hierarchical_area_ui_phase2.py", line 5, in <module>
-    from spina_app.area_hierarchy import add_area_node, ensure_area_hierarchy_schema, list_area_nodes
-ModuleNotFoundError: No module named 'spina_app'
-ops_status=1
