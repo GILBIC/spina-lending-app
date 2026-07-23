@@ -1,0 +1,79 @@
+{
+  "target": "_spina_cilog_action_label",
+  "case_names": [
+    "update_picture",
+    "update_link",
+    "update_area",
+    "update_generic",
+    "create",
+    "delete",
+    "empty",
+    "none",
+    "spaces",
+    "numeric",
+    "picture_priority",
+    "link_priority"
+  ],
+  "behavior": {
+    "update_picture": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'PICTURE'"
+    },
+    "update_link": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'LINK'"
+    },
+    "update_area": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'AREA UPDATE'"
+    },
+    "update_generic": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'EDIT'"
+    },
+    "create": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'CREATE'"
+    },
+    "delete": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'DELETE'"
+    },
+    "empty": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'CHANGE'"
+    },
+    "none": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'CHANGE'"
+    },
+    "spaces": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'APPROVE'"
+    },
+    "numeric": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'12'"
+    },
+    "picture_priority": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'PICTURE'"
+    },
+    "link_priority": {
+      "kind": "return",
+      "type": "builtins.str",
+      "repr": "'LINK'"
+    }
+  }
+}

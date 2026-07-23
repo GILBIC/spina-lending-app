@@ -38843,18 +38843,7 @@ def _spina_cilog_diff_pairs(old_obj, new_obj):
     return pairs
 
 
-def _spina_cilog_action_label(action, source=''):
-    a = str(action or '').strip().upper()
-    if a == 'UPDATE':
-        src = str(source or '').lower()
-        if 'picture' in src:
-            return 'PICTURE'
-        if 'link' in src:
-            return 'LINK'
-        if 'area' in src:
-            return 'AREA UPDATE'
-        return 'EDIT'
-    return a or 'CHANGE'
+from spina_app.utilities.text import _spina_cilog_action_label
 
 
 def _spina_cilog_fetch_rows(db, limit=3000):
