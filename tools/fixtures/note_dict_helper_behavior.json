@@ -1,0 +1,39 @@
+{
+  "target": "_as_note_dict",
+  "case_names": [
+    "none",
+    "empty",
+    "spaces",
+    "text",
+    "trimmed_text",
+    "zero",
+    "integer",
+    "negative",
+    "false",
+    "true",
+    "list_value",
+    "tuple_value",
+    "empty_dict",
+    "simple_dict",
+    "default_dict",
+    "nested_dict"
+  ],
+  "behavior": {
+    "none": {"kind": "return", "type": "builtins.dict", "repr": "{}"},
+    "empty": {"kind": "return", "type": "builtins.dict", "repr": "{}"},
+    "spaces": {"kind": "return", "type": "builtins.dict", "repr": "{}"},
+    "text": {"kind": "return", "type": "builtins.dict", "repr": "{'__default__': 'payment delayed'}"},
+    "trimmed_text": {"kind": "return", "type": "builtins.dict", "repr": "{'__default__': 'payment delayed'}"},
+    "zero": {"kind": "return", "type": "builtins.dict", "repr": "{'__default__': '0'}"},
+    "integer": {"kind": "return", "type": "builtins.dict", "repr": "{'__default__': '123'}"},
+    "negative": {"kind": "return", "type": "builtins.dict", "repr": "{'__default__': '-5'}"},
+    "false": {"kind": "return", "type": "builtins.dict", "repr": "{'__default__': 'False'}"},
+    "true": {"kind": "return", "type": "builtins.dict", "repr": "{'__default__': 'True'}"},
+    "list_value": {"kind": "return", "type": "builtins.dict", "repr": "{'__default__': '[1, 2]'}"},
+    "tuple_value": {"kind": "return", "type": "builtins.dict", "repr": "{'__default__': '(1, 2)'}"},
+    "empty_dict": {"kind": "return", "type": "builtins.dict", "repr": "{}"},
+    "simple_dict": {"kind": "return", "type": "builtins.dict", "repr": "{'2026-07-23': 'note'}"},
+    "default_dict": {"kind": "return", "type": "builtins.dict", "repr": "{'__default__': 'general'}"},
+    "nested_dict": {"kind": "return", "type": "builtins.dict", "repr": "{'2026-07-23': {'reason': 'late'}}"}
+  }
+}
