@@ -32,18 +32,17 @@ jobs:
           app = Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py")
           source = app.read_text(encoding="utf-8")
           tree = ast.parse(source, filename=str(app))
-          names = [
-              "_spina_v23_clients_colors",
-              "_spina_v23_style_clients_tree",
-              "_spina_v27_route_colors",
-              "_spina_v27_route_card",
-              "_spina_v27_style_route_trees",
-          ]
           definitions = {
               node.name: node
               for node in tree.body
               if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
           }
+          names = sorted(
+              name for name, node in definitions.items()
+              if isinstance(node, ast.FunctionDef)
+              and ("clients" in name.lower() or "route" in name.lower())
+              and any(token in name.lower() for token in ("color", "palette", "style", "card", "button"))
+          )
           builtin_names = set(dir(builtins))
 
           def external_names(node: ast.FunctionDef) -> list[str]:
@@ -81,9 +80,7 @@ jobs:
 
           packet = []
           for name in names:
-              node = definitions.get(name)
-              if not isinstance(node, ast.FunctionDef):
-                  raise RuntimeError(f"Missing focused function: {name}")
+              node = definitions[name]
               exact = ast.get_source_segment(source, node)
               if exact is None:
                   raise RuntimeError(f"Could not recover source: {name}")
