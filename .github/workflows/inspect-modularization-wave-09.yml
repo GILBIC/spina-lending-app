@@ -1,0 +1,163 @@
+name: Inspect modularization wave 09
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile current app and planner
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            tools/plan_module_separation.py
+
+      - name: Build current module-separation report
+        run: |
+          python tools/plan_module_separation.py \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            --json modularization-wave-09-report.json
+
+      - name: Build exact-source review packet
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import ast
+          import builtins
+          import hashlib
+          import json
+          from pathlib import Path
+
+          app_path = Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py")
+          source = app_path.read_text(encoding="utf-8")
+          tree = ast.parse(source, filename=str(app_path))
+          report = json.loads(Path("modularization-wave-09-report.json").read_text(encoding="utf-8"))
+
+          definitions = {
+              node.name: node
+              for node in tree.body
+              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+          }
+
+          builtin_names = set(dir(builtins))
+
+          def external_names(node: ast.FunctionDef) -> list[str]:
+              local = {
+                  arg.arg
+                  for arg in (
+                      *node.args.posonlyargs,
+                      *node.args.args,
+                      *node.args.kwonlyargs,
+                  )
+              }
+              if node.args.vararg:
+                  local.add(node.args.vararg.arg)
+              if node.args.kwarg:
+                  local.add(node.args.kwarg.arg)
+              for child in ast.walk(node):
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
+                      local.add(child.id)
+              loaded = {
+                  child.id
+                  for child in ast.walk(node)
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
+              }
+              return sorted(loaded - local - builtin_names - {node.name})
+
+          def calls(node: ast.AST) -> list[str]:
+              values: set[str] = set()
+              for child in ast.walk(node):
+                  if not isinstance(child, ast.Call):
+                      continue
+                  if isinstance(child.func, ast.Name):
+                      values.add(child.func.id)
+                  elif isinstance(child.func, ast.Attribute):
+                      values.add(child.func.attr)
+              return sorted(values)
+
+          def callers(name: str) -> list[str]:
+              result: list[str] = []
+              for owner_name, owner in definitions.items():
+                  if owner_name == name:
+                      continue
+                  found = False
+                  for child in ast.walk(owner):
+                      if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load) and child.id == name:
+                          found = True
+                          break
+                  if found:
+                      result.append(owner_name)
+              return sorted(result)
+
+          packet: list[dict[str, object]] = []
+          for item in report.get("recommended_first_wave_review", []):
+              name = str(item.get("name") or "")
+              node = definitions.get(name)
+              if not isinstance(node, ast.FunctionDef):
+                  continue
+              exact = ast.get_source_segment(source, node)
+              if exact is None:
+                  raise RuntimeError(f"Could not recover source for {name}")
+              packet.append({
+                  **item,
+                  "signature": ast.unparse(node.args),
+                  "source": exact,
+                  "source_sha256": hashlib.sha256(exact.encode("utf-8")).hexdigest(),
+                  "external_names": external_names(node),
+                  "calls": calls(node),
+                  "textual_occurrence_count": source.count(name),
+                  "callers": callers(name),
+                  "decorator_count": len(node.decorator_list),
+                  "has_global_or_nonlocal": any(
+                      isinstance(child, (ast.Global, ast.Nonlocal))
+                      for child in ast.walk(node)
+                  ),
+              })
+
+          payload = {
+              "source_commit": "${{ github.sha }}",
+              "app_line_count": report.get("line_count"),
+              "candidate_count": len(packet),
+              "candidates": packet,
+              "review_rule": (
+                  "Inspection only. Select a cohesive group only after manually reviewing exact source, "
+                  "callers, dependencies, and behavior-test requirements."
+              ),
+              "safety": {
+                  "read_only": True,
+                  "application_modified": False,
+                  "moves_approved": False,
+              },
+          }
+          Path("modularization-wave-09-review-packet.json").write_text(
+              json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps({
+              "candidate_count": len(packet),
+              "candidate_names": [item["name"] for item in packet],
+          }, indent=2))
+          PY
+
+      - name: Upload inspection artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: modularization-wave-09-report
+          path: |
+            modularization-wave-09-report.json
+            modularization-wave-09-review-packet.json
+          if-no-files-found: error
+          retention-days: 14
