@@ -2004,8 +2004,7 @@ def pick_date(parent, var=None, initial=None, title="Select Date"):
 # --- END: Simple Calendar Picker (no external deps) ---
 
 # === BEGIN: NO-UI area order resolver (reads data/ledger_prefs.json) ===
-def _oslp__norm_area_name(s: str) -> str:
-    return " ".join(str(s).split()).strip().lower()
+from spina_app.utilities.text import _oslp__norm_area_name
 
 def _oslp__load_prefs_json(p):
     try:
@@ -39620,14 +39619,7 @@ def _spina__client_due_meta(info: dict | None, as_of=None) -> tuple[str, bool]:
 
 ROUTE_NOTICES_FILE = data_path("route_notices.json")
 
-def _spina_route_notice_norm_name(value: str) -> str:
-    try:
-        s = str(value or "").strip().lower()
-        s = re.sub(r"\s+", " ", s)
-        s = re.sub(r"\s*\([^)]*\)\s*$", "", s).strip()
-        return s
-    except Exception:
-        return str(value or "").strip().lower()
+from spina_app.utilities.text import _spina_route_notice_norm_name
 
 def _spina_route_notice_norm_lt(value: str) -> str:
     try:
@@ -39940,11 +39932,7 @@ def _spina_route_balance_like_generate_report(app, client_name, loan_type, asof_
 
 
 # --- BEGIN: Save Collector Route copy after Daily Close ---
-def _spina_crc_norm_text(_v):
-    try:
-        return re.sub(r"\s+", " ", str(_v or "").strip()).upper()
-    except Exception:
-        return str(_v or "").strip().upper()
+from spina_app.utilities.text import _spina_crc_norm_text
 
 
 def _spina_crc_norm_lt(_v):

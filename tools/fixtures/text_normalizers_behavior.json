@@ -1,0 +1,209 @@
+{
+  "targets": [
+    "_oslp__norm_area_name",
+    "_spina_crc_norm_text",
+    "_spina_route_notice_norm_name"
+  ],
+  "case_names": [
+    "none",
+    "empty",
+    "spaces",
+    "simple",
+    "padded",
+    "mixed_case",
+    "repeated_spaces",
+    "symbols",
+    "unicode",
+    "zero",
+    "integer",
+    "true"
+  ],
+  "behavior": {
+    "_oslp__norm_area_name": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'none'"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "spaces": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "simple": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'area one'"
+      },
+      "padded": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'area one'"
+      },
+      "mixed_case": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'area one'"
+      },
+      "repeated_spaces": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'area one'"
+      },
+      "symbols": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'a/b_c-1'"
+      },
+      "unicode": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'área ñandú'"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "integer": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'123'"
+      },
+      "true": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'true'"
+      }
+    },
+    "_spina_crc_norm_text": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "spaces": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "simple": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'AREA ONE'"
+      },
+      "padded": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'AREA ONE'"
+      },
+      "mixed_case": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'AREA ONE'"
+      },
+      "repeated_spaces": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'AREA ONE'"
+      },
+      "symbols": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'A/B_C-1'"
+      },
+      "unicode": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'ÁREA ÑANDÚ'"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "integer": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'123'"
+      },
+      "true": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'TRUE'"
+      }
+    },
+    "_spina_route_notice_norm_name": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "spaces": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "simple": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'area one'"
+      },
+      "padded": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'area one'"
+      },
+      "mixed_case": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'area one'"
+      },
+      "repeated_spaces": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'area one'"
+      },
+      "symbols": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'a/b_c-1'"
+      },
+      "unicode": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'área ñandú'"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "integer": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'123'"
+      },
+      "true": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'true'"
+      }
+    }
+  }
+}

@@ -26,6 +26,7 @@ jobs:
             OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
             spina_app/utilities/formatting.py \
             spina_app/utilities/dates.py \
+            spina_app/utilities/text.py \
             tools/redundancy_audit.py \
             tools/spina_quality_audit.py \
             tools/spina_startup_diagnostics.py \
@@ -71,7 +72,9 @@ jobs:
             tools/extract_date_helpers_module.py \
             tools/test_date_helpers_extraction.py \
             tools/extract_display_formatters.py \
-            tools/test_display_formatter_extraction.py
+            tools/test_display_formatter_extraction.py \
+            tools/extract_text_normalizers.py \
+            tools/test_text_normalizer_extraction.py
 
       - name: Test module separation planner
         run: python tools/test_module_separation_planner.py
@@ -84,6 +87,9 @@ jobs:
 
       - name: Test display formatter extraction
         run: python tools/test_display_formatter_extraction.py
+
+      - name: Test text normalizer extraction
+        run: python tools/test_text_normalizer_extraction.py
 
       - name: Run redundancy audit
         run: |
