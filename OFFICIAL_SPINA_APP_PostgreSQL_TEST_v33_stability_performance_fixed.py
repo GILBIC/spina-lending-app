@@ -5097,6 +5097,16 @@ class LoanDB:
                 (uid, '', 0, name.strip(), cn, p, rate, intr, total, dr, due, now, (area or ''), new_until, psod, lt, pt, pa, pm, dwd, sd1, sd2, mdd, fdr)
             )
             self.conn.commit()
+            try:
+                from spina_app.area_hierarchy_ops import sync_client_area_uid_from_path
+                sync_client_area_uid_from_path(self.conn, uid)
+            except Exception as __spina_exc:
+                _log_suppressed_once(
+                    'area_uid_sync_add',
+                    'suppressed client Area UID sync after add',
+                    __spina_exc,
+                )
+                pass
 
             # Ensure renew defaults (safe if columns not present)
             try:
@@ -5393,6 +5403,20 @@ class LoanDB:
 
 
             self.conn.commit()
+            try:
+                from spina_app.area_hierarchy_ops import sync_client_area_uid_from_path
+                _area_sync_uid = uid or (
+                    old_row.get("client_uid") if isinstance(old_row, dict) else ""
+                )
+                if _area_sync_uid:
+                    sync_client_area_uid_from_path(self.conn, _area_sync_uid)
+            except Exception as __spina_exc:
+                _log_suppressed_once(
+                    'area_uid_sync_update',
+                    'suppressed client Area UID sync after update',
+                    __spina_exc,
+                )
+                pass
 
             # Log history
             try:

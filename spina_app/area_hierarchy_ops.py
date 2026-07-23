@@ -69,7 +69,12 @@ def sync_client_area_uid_from_path(conn: Any, client_uid: Any) -> dict[str, Any]
         path = row["area"]
     except Exception:
         path = row[0]
-    node = find_area_node_by_path(conn, path, include_inactive=True)
+    path_text = normalize_area_path(path)
+    if not path_text:
+        cur.execute("UPDATE clients SET area_uid='' WHERE client_uid=?", (key,))
+        conn.commit()
+        return None
+    node = find_area_node_by_path(conn, path_text, include_inactive=True)
     if node is None:
         return None
     cur.execute(
