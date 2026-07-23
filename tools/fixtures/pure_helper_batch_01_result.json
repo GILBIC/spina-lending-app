@@ -1,0 +1,56 @@
+{
+  "batch": "pure_helper_batch_01",
+  "manifest": "tools/fixtures/pure_helper_batch_01_manifest.json",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "state": "extracted",
+  "helper_count": 4,
+  "helpers": [
+    {
+      "name": "_spina__fmt_client_money",
+      "module": "spina_app.utilities.formatting",
+      "module_path": "spina_app/utilities/formatting.py",
+      "state": "extracted",
+      "signature": "v",
+      "external_names": [],
+      "import_line": 29562,
+      "source": "def _spina__fmt_client_money(v):\n    try:\n        n = float(v or 0)\n    except Exception:\n        return str(v or '')\n    if abs(n - int(n)) < 0.000001:\n        return f\"{int(n):,}\"\n    return f\"{n:,.2f}\"",
+      "source_sha256": "510338c29048f6351068c504e4be85f3a33dfb95925440753be38c280d40917d"
+    },
+    {
+      "name": "_spina_v17_fmt_short_money",
+      "module": "spina_app.utilities.formatting",
+      "module_path": "spina_app/utilities/formatting.py",
+      "state": "extracted",
+      "signature": "value",
+      "external_names": [],
+      "import_line": 41896,
+      "source": "def _spina_v17_fmt_short_money(value):\n    try:\n        v = float(value or 0)\n    except Exception:\n        v = 0.0\n    av = abs(v)\n    if av >= 1_000_000:\n        return \"PHP {:.2f}M\".format(v / 1_000_000)\n    if av >= 1_000:\n        return \"PHP {:.1f}K\".format(v / 1_000)\n    return \"PHP {:,.0f}\".format(v)",
+      "source_sha256": "6eb2257b710c200e905ec7101ef6e5509259abcbb7cc7169282bcf57476d8254"
+    },
+    {
+      "name": "_spina_v18_fmt_money_compact",
+      "module": "spina_app.utilities.formatting",
+      "module_path": "spina_app/utilities/formatting.py",
+      "state": "extracted",
+      "signature": "value",
+      "external_names": [],
+      "import_line": 42520,
+      "source": "def _spina_v18_fmt_money_compact(value):\n    try:\n        v = float(value or 0)\n    except Exception:\n        v = 0.0\n    av = abs(v)\n    if av >= 1_000_000:\n        return \"PHP {:.2f}M\".format(v / 1_000_000)\n    if av >= 100_000:\n        return \"PHP {:.0f}K\".format(v / 1_000)\n    if av >= 1_000:\n        return \"PHP {:.1f}K\".format(v / 1_000)\n    return \"PHP {:,.0f}\".format(v)",
+      "source_sha256": "ebf611d4a0b05b01b27465e3af09458c88150ce28a6bf040105837433f5ca7a3"
+    },
+    {
+      "name": "_spina_v25_parse_count_from_var",
+      "module": "spina_app.utilities.numbers",
+      "module_path": "spina_app/utilities/numbers.py",
+      "state": "extracted",
+      "signature": "var_value",
+      "external_names": [
+        "re"
+      ],
+      "import_line": 46323,
+      "source": "def _spina_v25_parse_count_from_var(var_value):\n    try:\n        s = str(var_value or \"\")\n        m = re.search(r\"(\\d+)\", s)\n        return m.group(1) if m else \"0\"\n    except Exception:\n        return \"0\"",
+      "source_sha256": "66d83a7b35694c90a33d9ca96cc958eb687d48d1278aacfd6ce3571d0616fb05"
+    }
+  ],
+  "changed": true
+}

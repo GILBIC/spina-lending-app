@@ -18,3 +18,12 @@ def _spina_v27_count_from_text(value):
         return int(m.group(1)) if m else 0
     except Exception:
         return 0
+
+
+def _spina_v25_parse_count_from_var(var_value):
+    try:
+        s = str(var_value or "")
+        m = re.search(r"(\d+)", s)
+        return m.group(1) if m else "0"
+    except Exception:
+        return "0"

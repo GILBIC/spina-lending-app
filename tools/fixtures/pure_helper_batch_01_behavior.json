@@ -1,0 +1,274 @@
+{
+  "batch": "pure_helper_batch_01",
+  "helper_names": [
+    "_spina__fmt_client_money",
+    "_spina_v17_fmt_short_money",
+    "_spina_v18_fmt_money_compact",
+    "_spina_v25_parse_count_from_var"
+  ],
+  "behavior": {
+    "_spina__fmt_client_money": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "integer": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1,234'"
+      },
+      "decimal": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1,234.50'"
+      },
+      "negative_integer": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'-2,500'"
+      },
+      "negative_decimal": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'-2,500.25'"
+      },
+      "numeric_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1,250.75'"
+      },
+      "comma_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1,250.75'"
+      },
+      "invalid_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'abc'"
+      },
+      "boolean_true": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1'"
+      },
+      "list_value": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "\"['x']\""
+      }
+    },
+    "_spina_v17_fmt_short_money": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0'"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0'"
+      },
+      "under_thousand": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 999'"
+      },
+      "one_thousand": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1.0K'"
+      },
+      "thousand_decimal": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1.5K'"
+      },
+      "under_million": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1000.0K'"
+      },
+      "one_million": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1.00M'"
+      },
+      "multi_million": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 2.45M'"
+      },
+      "negative_thousand": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP -1.2K'"
+      },
+      "negative_million": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP -1.50M'"
+      },
+      "numeric_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 2.5K'"
+      },
+      "invalid_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0'"
+      },
+      "boolean_true": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1'"
+      }
+    },
+    "_spina_v18_fmt_money_compact": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0'"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0'"
+      },
+      "under_thousand": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 999'"
+      },
+      "one_thousand": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1.0K'"
+      },
+      "under_hundred_thousand": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 100.0K'"
+      },
+      "one_hundred_thousand": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 100K'"
+      },
+      "under_million": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1000K'"
+      },
+      "one_million": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1.00M'"
+      },
+      "multi_million": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 2.75M'"
+      },
+      "negative_hundred_thousand": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP -125K'"
+      },
+      "numeric_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1.5K'"
+      },
+      "invalid_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0'"
+      },
+      "boolean_true": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1'"
+      }
+    },
+    "_spina_v25_parse_count_from_var": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "spaces": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "plain_number": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'12'"
+      },
+      "leading_zeroes": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0012'"
+      },
+      "labelled_count": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'27'"
+      },
+      "multiple_numbers": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'27'"
+      },
+      "negative_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'15'"
+      },
+      "decimal_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'12'"
+      },
+      "no_number": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "integer": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'42'"
+      },
+      "boolean_true": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0'"
+      },
+      "list_value": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'7'"
+      }
+    }
+  }
+}

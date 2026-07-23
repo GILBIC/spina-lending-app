@@ -29559,14 +29559,7 @@ def _app__client_form(self, title, initial=None, is_edit=False):
         return result.get("data")
     return None
 
-def _spina__fmt_client_money(v):
-    try:
-        n = float(v or 0)
-    except Exception:
-        return str(v or '')
-    if abs(n - int(n)) < 0.000001:
-        return f"{int(n):,}"
-    return f"{n:,.2f}"
+from spina_app.utilities.formatting import _spina__fmt_client_money
 
 
 def _app_refresh_clients(self):
@@ -41900,17 +41893,7 @@ def _spina_v17_dash_colors(self=None):
     }
 
 
-def _spina_v17_fmt_short_money(value):
-    try:
-        v = float(value or 0)
-    except Exception:
-        v = 0.0
-    av = abs(v)
-    if av >= 1_000_000:
-        return "PHP {:.2f}M".format(v / 1_000_000)
-    if av >= 1_000:
-        return "PHP {:.1f}K".format(v / 1_000)
-    return "PHP {:,.0f}".format(v)
+from spina_app.utilities.formatting import _spina_v17_fmt_short_money
 
 
 def _spina_v17_visible_dashboard_rows(self):
@@ -42534,19 +42517,7 @@ def _spina_v18_dashboard_palette(self=None):
     }
 
 
-def _spina_v18_fmt_money_compact(value):
-    try:
-        v = float(value or 0)
-    except Exception:
-        v = 0.0
-    av = abs(v)
-    if av >= 1_000_000:
-        return "PHP {:.2f}M".format(v / 1_000_000)
-    if av >= 100_000:
-        return "PHP {:.0f}K".format(v / 1_000)
-    if av >= 1_000:
-        return "PHP {:.1f}K".format(v / 1_000)
-    return "PHP {:,.0f}".format(v)
+from spina_app.utilities.formatting import _spina_v18_fmt_money_compact
 
 
 def _spina_v18_patch_dashboard_chart_cards(self):
@@ -46349,13 +46320,7 @@ def _spina_v25_style_collector_trees(self):
         pass
 
 
-def _spina_v25_parse_count_from_var(var_value):
-    try:
-        s = str(var_value or "")
-        m = re.search(r"(\d+)", s)
-        return m.group(1) if m else "0"
-    except Exception:
-        return "0"
+from spina_app.utilities.numbers import _spina_v25_parse_count_from_var
 
 
 def _spina_v25_update_collector_cards(self):
