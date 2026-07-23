@@ -208,7 +208,9 @@ def main() -> int:
     args = parser.parse_args()
 
     manifest_path = args.manifest.resolve()
-    current = capture_batch(manifest_path)
+    current = json.loads(
+        json.dumps(capture_batch(manifest_path), ensure_ascii=False)
+    )
 
     if args.write_fixture:
         args.fixture.write_text(
