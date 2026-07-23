@@ -36010,17 +36010,7 @@ def _spina_perf_norm_lt(v):
     return "Regular"
 
 
-def _spina_perf_dict_rows(rows):
-    out = []
-    for r in rows or []:
-        try:
-            out.append(dict(r))
-        except Exception:
-            try:
-                out.append({k: r[k] for k in r.keys()})
-            except Exception:
-                pass
-    return out
+from spina_app.utilities.records import _spina_perf_dict_rows
 
 
 def _spina_perf_clients_rows(db, loan_type="Regular", search=None, search_by="all", include_extra_7x7=True):
@@ -37142,33 +37132,7 @@ def _spina_dash__fmt_money(value):
 from spina_app.utilities.formatting import _spina_dash__fmt_pct
 
 
-def _spina_dash__status_for(completion_pct, remaining, days_left):
-    try:
-        pct = float(completion_pct or 0)
-    except Exception:
-        pct = 0.0
-    try:
-        rem = float(remaining or 0)
-    except Exception:
-        rem = 0.0
-    dl = None
-    try:
-        if days_left is not None and str(days_left) != '':
-            dl = int(days_left)
-    except Exception:
-        dl = None
-
-    if rem <= 0.004 or pct >= 100:
-        return 'Complete', 90
-    if pct >= 90:
-        return 'Finishing Now', 10
-    if pct >= 75:
-        return 'Near Completion', 20
-    if dl is not None and dl < 0:
-        return 'Overdue', 30
-    if dl is not None and dl <= 14:
-        return 'Due Soon', 40
-    return 'In Progress', 80
+from spina_app.utilities.dashboard import _spina_dash__status_for
 
 
 def _spina_dashboard_fetch_rows(self):
@@ -39834,19 +39798,7 @@ def _spina_crc_norm_lt(_v):
     return "7x7" if ("7x7" in s) else "Regular"
 
 
-def _spina_crc_fmt_money(_v, blank_zero=False):
-    try:
-        n = float(_v or 0.0)
-    except Exception:
-        n = 0.0
-    if blank_zero and abs(n) < 0.005:
-        return ""
-    try:
-        if abs(n - int(n)) < 0.005:
-            return f"{int(n):,}"
-    except Exception:
-        pass
-    return f"{n:,.2f}"
+from spina_app.utilities.formatting import _spina_crc_fmt_money
 
 
 def _spina_crc_clean_reason(_v):

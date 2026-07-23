@@ -91,3 +91,18 @@ def _spina_v18_fmt_money_compact(value):
     if av >= 1_000:
         return "PHP {:.1f}K".format(v / 1_000)
     return "PHP {:,.0f}".format(v)
+
+
+def _spina_crc_fmt_money(_v, blank_zero=False):
+    try:
+        n = float(_v or 0.0)
+    except Exception:
+        n = 0.0
+    if blank_zero and abs(n) < 0.005:
+        return ""
+    try:
+        if abs(n - int(n)) < 0.005:
+            return f"{int(n):,}"
+    except Exception:
+        pass
+    return f"{n:,.2f}"
