@@ -37187,11 +37187,7 @@ def _spina_dash__fmt_money(value):
         return 'PHP 0.00'
 
 
-def _spina_dash__fmt_pct(value):
-    try:
-        return '{:.2f}%'.format(float(value or 0))
-    except Exception:
-        return '0.00%'
+from spina_app.utilities.formatting import _spina_dash__fmt_pct
 
 
 def _spina_dash__status_for(completion_pct, remaining, days_left):
@@ -44565,20 +44561,10 @@ except Exception as __spina_exc:
 _spina_v23_clients_colors = _spina_v22_reports_colors
 
 
-def _spina_v23_money(v):
-    try:
-        n = float(v or 0)
-    except Exception:
-        return "PHP 0.00"
-    return "PHP {:,.2f}".format(n)
+from spina_app.utilities.formatting import _spina_v23_money
 
 
-def _spina_v23_percent(v):
-    try:
-        n = float(v or 0)
-    except Exception:
-        n = 0.0
-    return "{:.0f}%".format(n)
+from spina_app.utilities.formatting import _spina_v23_percent
 
 
 def _spina_v23_button(parent, text, command=None, kind="normal", width=None):

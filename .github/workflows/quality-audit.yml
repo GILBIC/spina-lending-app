@@ -69,7 +69,9 @@ jobs:
             tools/extract_fmt_currency_module.py \
             tools/test_fmt_currency_extraction.py \
             tools/extract_date_helpers_module.py \
-            tools/test_date_helpers_extraction.py
+            tools/test_date_helpers_extraction.py \
+            tools/extract_display_formatters.py \
+            tools/test_display_formatter_extraction.py
 
       - name: Test module separation planner
         run: python tools/test_module_separation_planner.py
@@ -79,6 +81,9 @@ jobs:
 
       - name: Test date helper extraction
         run: python tools/test_date_helpers_extraction.py
+
+      - name: Test display formatter extraction
+        run: python tools/test_display_formatter_extraction.py
 
       - name: Run redundancy audit
         run: |
