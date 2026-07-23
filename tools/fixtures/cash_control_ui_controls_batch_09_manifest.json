@@ -1,0 +1,22 @@
+{
+  "batch": "cash_control_ui_controls_batch_09",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "helpers": [
+    {
+      "name": "_spina_v21_build_labeled_entry",
+      "signature": "parent, label, var, width=14",
+      "module": "spina_app.ui_controls",
+      "module_path": "spina_app/ui_controls.py",
+      "expected_source_sha256": "71a7b0ce040cf8f85de8fecd56f0fd5c0c1a34333ef62c5328e1aac3b795e4e0",
+      "allowed_external_names": ["_spina_v21_cash_colors", "tk", "ttk"]
+    },
+    {
+      "name": "_spina_v21_style_cash_table",
+      "signature": "self",
+      "module": "spina_app.ui_controls",
+      "module_path": "spina_app/ui_controls.py",
+      "expected_source_sha256": "7fd020e057a27413f781820b3c8db972eb9150de035ccf0c5f754f8e84b50e47",
+      "allowed_external_names": ["_spina_v21_cash_colors", "ttk"]
+    }
+  ]
+}
