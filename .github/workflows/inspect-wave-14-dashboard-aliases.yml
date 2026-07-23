@@ -1,0 +1,86 @@
+name: Inspect Wave 14 dashboard aliases
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-dashboard-aliases:
+    if: github.event.pull_request.head.ref == 'agent/modularization-wave-14-inspection'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Inspect exact Dashboard palette aliases
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import ast
+          import json
+          from pathlib import Path
+
+          app = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
+          source = app.read_text(encoding='utf-8')
+          tree = ast.parse(source, filename=str(app))
+          wanted = {
+              '_spina_v17_dash_colors',
+              '_spina_v18_dashboard_palette',
+              '_spina_v20_dash_palette',
+          }
+          results = []
+
+          def target_names(node):
+              if isinstance(node, ast.Name):
+                  return [node.id]
+              if isinstance(node, (ast.Tuple, ast.List)):
+                  out = []
+                  for item in node.elts:
+                      out.extend(target_names(item))
+                  return out
+              return []
+
+          for node in tree.body:
+              names = []
+              if isinstance(node, ast.Assign):
+                  for target in node.targets:
+                      names.extend(target_names(target))
+              elif isinstance(node, ast.AnnAssign):
+                  names.extend(target_names(node.target))
+              elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                  names = [node.name]
+              elif isinstance(node, (ast.Import, ast.ImportFrom)):
+                  names = [alias.asname or alias.name.split('.')[-1] for alias in node.names]
+              if wanted.intersection(names):
+                  exact = ast.get_source_segment(source, node)
+                  results.append({
+                      'line': getattr(node, 'lineno', None),
+                      'end_line': getattr(node, 'end_lineno', None),
+                      'node_type': type(node).__name__,
+                      'names': names,
+                      'source': exact,
+                  })
+
+          payload = {'results': results}
+          Path('wave-14-dashboard-aliases.json').write_text(
+              json.dumps(payload, indent=2, ensure_ascii=False) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(payload, indent=2, ensure_ascii=False))
+          PY
+
+      - name: Upload focused alias report
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-14-dashboard-aliases
+          path: wave-14-dashboard-aliases.json
+          if-no-files-found: error
+          retention-days: 14
