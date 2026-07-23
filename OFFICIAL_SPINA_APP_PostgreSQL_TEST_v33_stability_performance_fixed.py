@@ -4249,6 +4249,23 @@ class LoanDB:
             _log_suppressed_once('excpass_0092', 'suppressed exception excpass_0092', __spina_exc)
             pass
 
+        # Unlimited hierarchical Area storage.
+        # Keep clients.area and areas.name synchronized for existing screens,
+        # Collector Route, Data Bank, reports, and legacy databases.
+        try:
+            from spina_app.area_hierarchy import ensure_area_hierarchy_schema
+            ensure_area_hierarchy_schema(self.conn)
+        except Exception as e:
+            try:
+                _log_exc("schema:ensure hierarchical areas", e)
+            except Exception as __spina_exc:
+                _log_suppressed_once(
+                    'excpass_area_hierarchy_schema',
+                    'suppressed exception excpass_area_hierarchy_schema',
+                    __spina_exc,
+                )
+                pass
+
 
         # Client history/audit log (append-only)
         try:
