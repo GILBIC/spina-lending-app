@@ -38,3 +38,5 @@ jobs:
           PYTHONPATH=. python tools/test_collector_route_card_batch_13.py \
             --manifest tools/fixtures/collector_route_card_batch_13_manifest.json \
             --fixture tools/fixtures/collector_route_card_batch_13_behavior.json
+
+# Final Wave 13 verification after the modularization map update.
