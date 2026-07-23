@@ -1,0 +1,211 @@
+{
+  "batch": "area_text_helper_batch_05",
+  "helper_names": [
+    "split_area_main_sub",
+    "join_area_main_sub",
+    "_spina_crc_split_area"
+  ],
+  "behavior": {
+    "split_area_main_sub": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('', '')"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('', '')"
+      },
+      "spaces": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('', '')"
+      },
+      "plain": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', '')"
+      },
+      "hyphen_spaced": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "slash_spaced": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "pipe_spaced": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "greater_spaced": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "colon_spaced": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "em_dash": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "en_dash": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "single_slash": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "single_pipe": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "single_colon": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "multiple_separators": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona - Looc', 'Zone 1')"
+      },
+      "missing_left": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('/ Looc', '')"
+      },
+      "missing_right": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona /', '')"
+      },
+      "numeric": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('123', '')"
+      },
+      "boolean": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('True', '')"
+      },
+      "list": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "(\"['Cardona', 'Looc']\", '')"
+      }
+    },
+    "join_area_main_sub": {
+      "both_none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "both_empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "main_only": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Cardona'"
+      },
+      "sub_only": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Looc'"
+      },
+      "both": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Cardona - Looc'"
+      },
+      "trim": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'Cardona - Looc'"
+      },
+      "numeric": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'123 - 456'"
+      },
+      "boolean": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'True'"
+      },
+      "list": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "\"['Cardona'] - ['Looc']\""
+      }
+    },
+    "_spina_crc_split_area": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('', '')"
+      },
+      "plain": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', '')"
+      },
+      "hyphen_spaced": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "slash_single": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "em_dash": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "multiple_separators": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona - Looc', 'Zone 1')"
+      },
+      "missing_left": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('/ Looc', '')"
+      },
+      "numeric": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('123', '')"
+      },
+      "fallback_missing_helper": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      },
+      "fallback_raising_helper": {
+        "kind": "return",
+        "type": "builtins.tuple",
+        "repr": "('Cardona', 'Looc')"
+      }
+    }
+  }
+}
