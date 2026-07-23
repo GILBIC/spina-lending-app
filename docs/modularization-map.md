@@ -3,19 +3,19 @@
 > Permanent source of truth for tracking the separation of the SPINA desktop application into smaller modules.
 >
 > **Last updated:** 2026-07-23  
-> **Tracked main state:** after merged PR #105  
+> **Tracked main state:** after merged PR #107  
 > **Primary desktop source:** `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py`
 
 ## Current status
 
 | Item | Status |
 |---|---:|
-| Focused helper functions extracted from the large desktop source | **50** |
+| Focused helper functions extracted from the large desktop source | **52** |
 | Focused helper modules receiving extracted functions | **13** |
 | Hierarchical Area production modules | **3** |
-| Accelerated modularization waves completed | **10** |
-| Latest completed extraction | **Wave 10 / PR #105** |
-| Next step | **Wave 11 read-only inspection** |
+| Accelerated modularization waves completed | **11** |
+| Latest completed extraction | **Wave 11 / PR #107** |
+| Next step | **Wave 12 read-only inspection** |
 
 The current approach intentionally starts with low-risk, behavior-preserving helpers. Payment allocation, balances, principal, interest, 7x7 calculations, renewal formulas, report totals, PDF mathematics, authentication, roles, and critical PostgreSQL write paths remain protected until focused tests exist.
 
@@ -63,10 +63,10 @@ flowchart LR
 | `spina_app/utilities/dashboard.py` | Dashboard status selection | 1 |
 | `spina_app/utilities/records.py` | Database-row-to-dictionary conversion | 1 |
 | `spina_app/ui_helpers.py` | Rounded canvas drawing and summary-card value updates | 6 |
-| `spina_app/theme_palettes.py` | Dashboard, Cash Control, and Client Information Log light/dark palettes | 3 |
+| `spina_app/theme_palettes.py` | Dashboard, Cash Control, Client Information Log, Reports/Clients, and Collector/Collector Route light/dark palettes | 5 |
 | `spina_app/ui_cards.py` | Cash Control and Client Information Log card constructors | 2 |
 | `spina_app/ui_controls.py` | Cash Control labeled entries and Treeview styling; Client Information Log buttons and Treeview styling | 4 |
-| **Total** |  | **50** |
+| **Total** |  | **52** |
 
 ### Hierarchical Area modules
 
@@ -146,6 +146,8 @@ flowchart LR
   - `_spina_v20_dash_palette` — PR #95
   - `_spina_v21_cash_colors` — PR #95
   - `_spina_v24_cilog_colors` — PR #95
+  - `_spina_v22_reports_colors` — PR #107
+  - `_spina_v25_collector_colors` — PR #107
 - `spina_app/ui_cards.py`
   - `_spina_v21_cash_card` — PR #100
   - `_spina_v24_cilog_card` — PR #100
@@ -204,7 +206,8 @@ PR #67 was a paused note-helper attempt and closed without merging. PR #68 was a
 | 8 | #99 inspection | #100 | `ui_cards.py` | Cash Control and CILOG card constructors | ✅ Passed and merged |
 | 9 | #102 inspection | #103 | `ui_controls.py` | Cash Control labeled entries and Treeview styling | ✅ Passed and merged |
 | 10 | #104 inspection | #105 | `ui_controls.py` | Client Information Log buttons and Treeview styling | ✅ Passed and merged |
-| 11 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |
+| 11 | #106 inspection | #107 | `theme_palettes.py` | Reports/Clients and Collector/Collector Route base palettes | ✅ Passed and merged |
+| 12 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |
 
 Temporary inspection/apply PRs are deliberately closed without merging and are not counted as completed production waves.
 
@@ -266,7 +269,8 @@ A deferred item becomes eligible only after focused behavior or calculation test
 |---:|---:|---:|---|---|---|---|---|---|
 | 9 | #102 | #103 | `spina_app/ui_controls.py` | 2 Cash Control UI helpers | ✅ | ✅ | ✅ | Completed |
 | 10 | #104 | #105 | `ui_controls.py` | CILog button and Treeview style helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
-| 11 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |
+| 11 | #106 | #107 | `theme_palettes.py` | Reports and Collector base palette helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
+| 12 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |
 
 Status legend:
 
