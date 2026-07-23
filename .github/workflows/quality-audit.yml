@@ -30,6 +30,7 @@ jobs:
             spina_app/utilities/numbers.py \
             spina_app/utilities/serialization.py \
             spina_app/utilities/diffs.py \
+            spina_app/utilities/notes.py \
             tools/redundancy_audit.py \
             tools/spina_quality_audit.py \
             tools/spina_startup_diagnostics.py \
@@ -91,7 +92,9 @@ jobs:
             tools/test_cilog_action_label_extraction.py \
             tools/extract_cilog_diff_pairs.py \
             tools/test_cilog_diff_pairs_extraction.py \
-            tools/test_reports_notes_dialog_wiring.py
+            tools/test_reports_notes_dialog_wiring.py \
+            tools/extract_note_dict_helper.py \
+            tools/test_note_dict_helper_extraction.py
 
       - name: Test module separation planner
         run: python tools/test_module_separation_planner.py
@@ -131,6 +134,9 @@ jobs:
 
       - name: Test Reports notes dialog wiring
         run: python tools/test_reports_notes_dialog_wiring.py
+
+      - name: Test note dictionary helper extraction
+        run: python tools/test_note_dict_helper_extraction.py
 
       - name: Run redundancy audit
         run: |
