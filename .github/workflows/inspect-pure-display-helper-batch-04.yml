@@ -1,0 +1,126 @@
+name: Inspect pure display helper batch 04
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/pure-display-helper-batch-04-work
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Scan small low-risk top-level helpers
+        run: |
+          python - <<'PY'
+          import ast
+          import builtins
+          import hashlib
+          import json
+          from pathlib import Path
+
+          app = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
+          source = app.read_text(encoding='utf-8')
+          tree = ast.parse(source)
+          builtin_names = set(dir(builtins))
+          rejected_terms = {
+              'sql', 'db', 'postgres', 'sqlite', 'cursor', 'conn', 'commit', 'rollback',
+              'payment', 'balance', 'principal', 'interest', '7x7', 'renew', 'loan',
+              'report', 'pdf', 'canvas', 'widget', 'tk', 'messagebox', 'dialog',
+              'file', 'path', 'folder', 'os.', 'open(', 'auth', 'login', 'role',
+              'thread', 'queue', 'after(', 'bind(', 'configure(', 'destroy(',
+          }
+          allowed_calls = {
+              'abs', 'all', 'any', 'bool', 'dict', 'enumerate', 'float', 'int',
+              'isinstance', 'len', 'list', 'max', 'min', 'range', 'round', 'set',
+              'sorted', 'str', 'sum', 'tuple', 'zip',
+          }
+
+          def signature(node):
+              return ast.unparse(node.args)
+
+          def external_names(node):
+              local = {a.arg for a in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)}
+              if node.args.vararg:
+                  local.add(node.args.vararg.arg)
+              if node.args.kwarg:
+                  local.add(node.args.kwarg.arg)
+              for child in ast.walk(node):
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
+                      local.add(child.id)
+              loaded = {
+                  child.id for child in ast.walk(node)
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
+              }
+              return sorted(loaded - local - builtin_names - {node.name})
+
+          def calls(node):
+              out = []
+              for child in ast.walk(node):
+                  if isinstance(child, ast.Call):
+                      try:
+                          out.append(ast.unparse(child.func))
+                      except Exception:
+                          out.append('?')
+              return sorted(set(out))
+
+          refs = {}
+          for child in ast.walk(tree):
+              if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load):
+                  refs[child.id] = refs.get(child.id, 0) + 1
+
+          candidates = []
+          for node in tree.body:
+              if not isinstance(node, ast.FunctionDef):
+                  continue
+              lines = (node.end_lineno or node.lineno) - node.lineno + 1
+              if lines > 24:
+                  continue
+              exact = ast.get_source_segment(source, node) or ''
+              lower = exact.lower()
+              if any(term in lower for term in rejected_terms):
+                  continue
+              if any(isinstance(x, (ast.Global, ast.Nonlocal, ast.Yield, ast.YieldFrom, ast.Await)) for x in ast.walk(node)):
+                  continue
+              ext = external_names(node)
+              call_names = calls(node)
+              unsafe_calls = [c for c in call_names if c.split('.')[-1] not in allowed_calls]
+              if unsafe_calls:
+                  continue
+              candidates.append({
+                  'name': node.name,
+                  'line': node.lineno,
+                  'end_line': node.end_lineno,
+                  'lines': lines,
+                  'signature': signature(node),
+                  'external_names': ext,
+                  'calls': call_names,
+                  'reference_count': max(0, refs.get(node.name, 0) - 1),
+                  'source_sha256': hashlib.sha256(exact.encode('utf-8')).hexdigest(),
+                  'source': exact,
+              })
+
+          candidates.sort(key=lambda x: (len(x['external_names']), x['lines'], x['name']))
+          out = Path('tools/fixtures/pure_display_helper_batch_04_candidates.json')
+          out.write_text(json.dumps(candidates[:60], indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+          print(f'Wrote {min(len(candidates), 60)} candidates')
+          PY
+      - name: Commit inspection report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/fixtures/pure_display_helper_batch_04_candidates.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Inspect pure display helper candidates"
+          git push origin HEAD:agent/pure-display-helper-batch-04-work
