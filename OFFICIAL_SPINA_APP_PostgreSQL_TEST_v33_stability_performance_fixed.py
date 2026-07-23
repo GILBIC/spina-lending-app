@@ -29089,7 +29089,7 @@ def _app__client_form(self, title, initial=None, is_edit=False):
 
     # Managed hierarchical Area selector
     from spina_app.area_hierarchy_ui import build_simple_area_selector
-    area_frame = build_simple_area_selector(self, win, area_var, width=34)
+    area_frame = build_simple_area_selector(self, outer, area_var, width=34)
     row("Area:", area_frame, r); r += 1
 
     row("Principal:", ttk.Entry(outer, textvariable=principal_var, width=46), r); r += 1
