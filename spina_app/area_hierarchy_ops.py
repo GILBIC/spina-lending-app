@@ -7,11 +7,13 @@ Collector Route, and Data Bank code.
 
 from __future__ import annotations
 
+from collections import deque
 from datetime import datetime, timezone
-from typing import Any, Iterable
+from typing import Any
 
 from spina_app.area_hierarchy import (
     add_area_node,
+    ensure_area_hierarchy_ready,
     ensure_area_hierarchy_schema,
     format_area_path,
     list_area_nodes,
@@ -54,7 +56,7 @@ def find_area_node_by_path(
 
 def sync_client_area_uid_from_path(conn: Any, client_uid: Any) -> dict[str, Any] | None:
     """Link one legacy client Area path to its stable Area node ID."""
-    ensure_area_hierarchy_schema(conn)
+    ensure_area_hierarchy_ready(conn)
     key = str(client_uid or "").strip()
     if not key:
         raise ValueError("Client UID is required.")
@@ -74,9 +76,16 @@ def sync_client_area_uid_from_path(conn: Any, client_uid: Any) -> dict[str, Any]
         cur.execute("UPDATE clients SET area_uid='' WHERE client_uid=?", (key,))
         conn.commit()
         return None
+
     node = find_area_node_by_path(conn, path_text, include_inactive=True)
     if node is None:
+        # A legacy import can introduce a new text Area outside the managed UI.
+        # Rescan only for this exceptional missing-path case, not on every save.
+        ensure_area_hierarchy_schema(conn, force=True)
+        node = find_area_node_by_path(conn, path_text, include_inactive=True)
+    if node is None:
         return None
+
     cur.execute(
         "UPDATE clients SET area_uid=?, area=? WHERE client_uid=?",
         (node["area_uid"], node["full_path"], key),
@@ -90,25 +99,36 @@ def _subtree_uids(nodes: dict[str, dict[str, Any]], root_uid: str) -> list[str]:
     for uid, node in nodes.items():
         children.setdefault(str(node.get("parent_uid") or ""), []).append(uid)
     result: list[str] = []
-    queue = [root_uid]
+    queue: deque[str] = deque([root_uid])
     seen: set[str] = set()
     while queue:
-        uid = queue.pop(0)
+        uid = queue.popleft()
         if uid in seen:
             continue
         seen.add(uid)
         if uid in nodes:
             result.append(uid)
-            queue.extend(children.get(uid, []))
+            queue.extend(children.get(uid, ()))
     return result
 
 
-def _direct_client_count(conn: Any, node: dict[str, Any]) -> int:
-    cur = conn.cursor()
-    row = cur.execute(
+def _client_count_for_nodes(
+    conn: Any,
+    nodes: dict[str, dict[str, Any]],
+    target_uids: list[str],
+) -> int:
+    """Count all matching clients in one query, including stale legacy paths."""
+    targets = [uid for uid in target_uids if uid in nodes]
+    if not targets:
+        return 0
+    paths = [str(nodes[uid].get("full_path") or "") for uid in targets]
+    uid_marks = ",".join("?" for _ in targets)
+    path_marks = ",".join("?" for _ in paths)
+    row = conn.cursor().execute(
         "SELECT COUNT(*) FROM clients "
-        "WHERE area_uid=? OR TRIM(IFNULL(area,''))=?",
-        (node["area_uid"], node["full_path"]),
+        f"WHERE area_uid IN ({uid_marks}) "
+        f"OR TRIM(IFNULL(area,'')) IN ({path_marks})",
+        tuple(targets + paths),
     ).fetchone()
     try:
         return int(row[0] or 0)
@@ -126,13 +146,13 @@ def count_clients_for_area_node(
     include_descendants: bool = False,
 ) -> int:
     """Count clients assigned directly to a node or its whole subtree."""
-    ensure_area_hierarchy_schema(conn)
+    ensure_area_hierarchy_ready(conn)
     uid = str(area_uid or "").strip()
     nodes = _node_map(conn)
     if uid not in nodes:
         return 0
     targets = _subtree_uids(nodes, uid) if include_descendants else [uid]
-    return sum(_direct_client_count(conn, nodes[target]) for target in targets)
+    return _client_count_for_nodes(conn, nodes, targets)
 
 
 def _planned_subtree(
@@ -193,7 +213,7 @@ def _planned_subtree(
             "full_path": full_path,
             "depth": depth_before + 1,
         }
-        for child_uid in children.get(uid, []):
+        for child_uid in children.get(uid, ()):
             walk(child_uid, full_path, depth_before + 1)
 
     walk(root_uid, parent_path, parent_depth)
@@ -220,48 +240,55 @@ def _apply_planned_subtree(
     cur = conn.cursor()
     timestamp = _now_text()
     mapping: dict[str, str] = {}
-
     ordered = sorted(planned, key=lambda uid: int(planned[uid].get("depth") or 0))
-    for uid in ordered:
-        old = nodes[uid]
-        new = planned[uid]
-        mapping[str(old.get("full_path") or "")] = str(new.get("full_path") or "")
-        cur.execute(
-            "UPDATE area_nodes SET parent_uid=?, name=?, full_path=?, depth=?, updated_at=? "
-            "WHERE area_uid=?",
-            (
-                str(new.get("parent_uid") or ""),
-                str(new.get("name") or ""),
-                str(new.get("full_path") or ""),
-                int(new.get("depth") or 0),
-                timestamp,
-                uid,
-            ),
-        )
 
-    for old_path in mapping:
-        cur.execute("DELETE FROM areas WHERE name=?", (old_path,))
-    for uid in ordered:
-        old = nodes[uid]
-        new = planned[uid]
-        new_path = str(new.get("full_path") or "")
-        old_path = str(old.get("full_path") or "")
-        cur.execute(
-            "INSERT OR IGNORE INTO areas(name, created_at) VALUES (?, ?)",
-            (new_path, timestamp),
-        )
-        cur.execute(
-            "UPDATE clients SET area_uid=?, area=? "
-            "WHERE area_uid=? OR TRIM(IFNULL(area,''))=?",
-            (uid, new_path, uid, old_path),
-        )
-    conn.commit()
+    try:
+        for uid in ordered:
+            old = nodes[uid]
+            new = planned[uid]
+            mapping[str(old.get("full_path") or "")] = str(new.get("full_path") or "")
+            cur.execute(
+                "UPDATE area_nodes SET parent_uid=?, name=?, full_path=?, depth=?, updated_at=? "
+                "WHERE area_uid=?",
+                (
+                    str(new.get("parent_uid") or ""),
+                    str(new.get("name") or ""),
+                    str(new.get("full_path") or ""),
+                    int(new.get("depth") or 0),
+                    timestamp,
+                    uid,
+                ),
+            )
+
+        for old_path in mapping:
+            cur.execute("DELETE FROM areas WHERE name=?", (old_path,))
+        for uid in ordered:
+            old = nodes[uid]
+            new = planned[uid]
+            new_path = str(new.get("full_path") or "")
+            old_path = str(old.get("full_path") or "")
+            cur.execute(
+                "INSERT OR IGNORE INTO areas(name, created_at) VALUES (?, ?)",
+                (new_path, timestamp),
+            )
+            cur.execute(
+                "UPDATE clients SET area_uid=?, area=? "
+                "WHERE area_uid=? OR TRIM(IFNULL(area,''))=?",
+                (uid, new_path, uid, old_path),
+            )
+        conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
     return mapping
 
 
 def rename_area_node(conn: Any, area_uid: Any, new_name: Any) -> dict[str, str]:
     """Rename one node and cascade full paths through all descendants and clients."""
-    ensure_area_hierarchy_schema(conn)
+    ensure_area_hierarchy_ready(conn)
     uid = str(area_uid or "").strip()
     nodes = _node_map(conn)
     planned = _planned_subtree(nodes, uid, new_name=new_name)
@@ -270,7 +297,7 @@ def rename_area_node(conn: Any, area_uid: Any, new_name: Any) -> dict[str, str]:
 
 def move_area_node(conn: Any, area_uid: Any, new_parent_uid: Any = "") -> dict[str, str]:
     """Move a node to another parent or to the root, preserving its subtree."""
-    ensure_area_hierarchy_schema(conn)
+    ensure_area_hierarchy_ready(conn)
     uid = str(area_uid or "").strip()
     parent_uid = str(new_parent_uid or "").strip()
     nodes = _node_map(conn)
@@ -280,7 +307,7 @@ def move_area_node(conn: Any, area_uid: Any, new_parent_uid: Any = "") -> dict[s
 
 def move_area_node_order(conn: Any, area_uid: Any, direction: int) -> bool:
     """Move one Area up or down among siblings."""
-    ensure_area_hierarchy_schema(conn)
+    ensure_area_hierarchy_ready(conn)
     uid = str(area_uid or "").strip()
     nodes = _node_map(conn)
     node = nodes.get(uid)
@@ -303,12 +330,19 @@ def move_area_node_order(conn: Any, area_uid: Any, direction: int) -> bool:
     siblings[index], siblings[target] = siblings[target], siblings[index]
     cur = conn.cursor()
     timestamp = _now_text()
-    for order, item in enumerate(siblings):
-        cur.execute(
-            "UPDATE area_nodes SET sort_order=?, updated_at=? WHERE area_uid=?",
-            (order, timestamp, item["area_uid"]),
-        )
-    conn.commit()
+    try:
+        for order, item in enumerate(siblings):
+            cur.execute(
+                "UPDATE area_nodes SET sort_order=?, updated_at=? WHERE area_uid=?",
+                (order, timestamp, item["area_uid"]),
+            )
+        conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
     return True
 
 
@@ -333,12 +367,8 @@ def _require_active_ancestor_chain(
 
 
 def set_area_node_active(conn: Any, area_uid: Any, active: bool) -> list[str]:
-    """Activate or deactivate a whole subtree.
-
-    Deactivation is blocked while any client is assigned to the subtree.
-    Activation is blocked while any ancestor remains inactive.
-    """
-    ensure_area_hierarchy_schema(conn)
+    """Activate or deactivate a whole subtree safely."""
+    ensure_area_hierarchy_ready(conn)
     uid = str(area_uid or "").strip()
     nodes = _node_map(conn)
     if uid not in nodes:
@@ -347,7 +377,7 @@ def set_area_node_active(conn: Any, area_uid: Any, active: bool) -> list[str]:
     if active:
         _require_active_ancestor_chain(nodes, uid)
     else:
-        used = sum(_direct_client_count(conn, nodes[item_uid]) for item_uid in subtree)
+        used = _client_count_for_nodes(conn, nodes, subtree)
         if used:
             raise ValueError(
                 f"This Area subtree is assigned to {used} client(s). Reassign them before deactivating it."
@@ -355,20 +385,27 @@ def set_area_node_active(conn: Any, area_uid: Any, active: bool) -> list[str]:
 
     cur = conn.cursor()
     timestamp = _now_text()
-    for item_uid in subtree:
-        node = nodes[item_uid]
-        cur.execute(
-            "UPDATE area_nodes SET is_active=?, updated_at=? WHERE area_uid=?",
-            (1 if active else 0, timestamp, item_uid),
-        )
-        if active:
+    try:
+        for item_uid in subtree:
+            node = nodes[item_uid]
             cur.execute(
-                "INSERT OR IGNORE INTO areas(name, created_at) VALUES (?, ?)",
-                (node["full_path"], timestamp),
+                "UPDATE area_nodes SET is_active=?, updated_at=? WHERE area_uid=?",
+                (1 if active else 0, timestamp, item_uid),
             )
-        else:
-            cur.execute("DELETE FROM areas WHERE name=?", (node["full_path"],))
-    conn.commit()
+            if active:
+                cur.execute(
+                    "INSERT OR IGNORE INTO areas(name, created_at) VALUES (?, ?)",
+                    (node["full_path"], timestamp),
+                )
+            else:
+                cur.execute("DELETE FROM areas WHERE name=?", (node["full_path"],))
+        conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
     return subtree
 
 
