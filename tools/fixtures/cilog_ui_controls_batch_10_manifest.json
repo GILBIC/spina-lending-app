@@ -1,0 +1,22 @@
+{
+  "batch": "cilog_ui_controls_batch_10",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "helpers": [
+    {
+      "name": "_spina_v24_cilog_button",
+      "signature": "parent, text, command=None, kind='normal', width=None",
+      "module": "spina_app.ui_controls",
+      "module_path": "spina_app/ui_controls.py",
+      "expected_source_sha256": "cf158f07bb7c948766cfaff40bfa859ed463d995549960f885c919346e7b5798",
+      "allowed_external_names": ["_spina_v24_cilog_colors", "tk"]
+    },
+    {
+      "name": "_spina_v24_cilog_style_tree",
+      "signature": "self",
+      "module": "spina_app.ui_controls",
+      "module_path": "spina_app/ui_controls.py",
+      "expected_source_sha256": "53d1a34efc4998835e015894ab20ae7f15a8617bbc041cbbe94f1ab89b143bbb",
+      "allowed_external_names": ["_spina_v24_cilog_colors", "ttk"]
+    }
+  ]
+}
