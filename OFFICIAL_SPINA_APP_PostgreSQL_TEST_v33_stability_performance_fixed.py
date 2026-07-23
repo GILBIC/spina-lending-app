@@ -38785,22 +38785,7 @@ from spina_app.utilities.serialization import _spina_cilog_safe_json
 from spina_app.utilities.formatting import _spina_cilog_fmt_money
 
 
-def _spina_cilog_fmt_value(field, v):
-    if v is None:
-        return ''
-    fld = str(field or '').lower()
-    if fld in {'principal','interest_rate','interest_amount','total_to_pay','payment_amount','last_cash_released','released_cash','new_principal'}:
-        if fld == 'interest_rate':
-            try:
-                return f"{float(v) * 100:.2f}%" if float(v) <= 1 else f"{float(v):.2f}%"
-            except Exception:
-                return str(v or '')
-        return _spina_cilog_fmt_money(v)
-    try:
-        s = str(v).replace('\n', ' ').strip()
-    except Exception:
-        s = repr(v)
-    return s
+from spina_app.utilities.formatting import _spina_cilog_fmt_value
 
 
 def _spina_cilog_field_label(field):
