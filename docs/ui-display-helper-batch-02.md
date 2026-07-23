@@ -25,6 +25,8 @@ The regression fixture records:
 - missing keys and missing card maps
 - existing exception-swallowing behavior for widget failures
 
+Permanent read-only CI compiles the extracted module and compares every saved behavior case on each pull request.
+
 ## Desktop smoke test
 
 1. Launch SPINA and log in.
