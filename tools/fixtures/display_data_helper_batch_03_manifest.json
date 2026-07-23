@@ -23,7 +23,7 @@
       "signature": "_v, blank_zero=False",
       "module": "spina_app.utilities.formatting",
       "module_path": "spina_app/utilities/formatting.py",
-      "expected_source_sha256": "a781159c9d8e12917f178c6c034433287d46d13c2532ed2c719228d4536e8872",
+      "expected_source_sha256": "307972ff3358f554c12177c3913b5cc7ab500a49656738682adf99ba86e6fce4",
       "allowed_external_names": []
     }
   ]
