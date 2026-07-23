@@ -1,0 +1,42 @@
+name: Base theme palette batch 11
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile app, module, and tests
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/theme_palettes.py \
+            tools/extract_pure_helper_batch.py \
+            tools/test_base_theme_palette_batch_11.py
+
+      - name: Verify exact extracted state
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/base_theme_palette_batch_11_manifest.json
+
+      - name: Verify preserved palette behavior
+        run: |
+          PYTHONPATH=. python tools/test_base_theme_palette_batch_11.py \
+            --manifest tools/fixtures/base_theme_palette_batch_11_manifest.json \
+            --fixture tools/fixtures/base_theme_palette_batch_11_behavior.json
+
+# Wave 11 desktop smoke test passed on Windows.
