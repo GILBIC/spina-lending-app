@@ -43559,46 +43559,7 @@ except Exception as __spina_exc:
 
 
 # --- BEGIN: v22 Modern Reports UI ---
-def _spina_v22_reports_colors(self=None):
-    try:
-        theme = str(getattr(self, "ui_theme", "dark") or "dark").lower()
-    except Exception:
-        theme = "dark"
-
-    if theme.startswith("l"):
-        return {
-            "bg": "#f3f6fb",
-            "panel": "#ffffff",
-            "card": "#ffffff",
-            "card2": "#f8fafc",
-            "border": "#d6dde8",
-            "fg": "#111827",
-            "muted": "#64748b",
-            "blue": "#2563eb",
-            "green": "#16a34a",
-            "orange": "#ea580c",
-            "purple": "#7c3aed",
-            "red": "#dc2626",
-            "soft": "#e8eef7",
-            "entry": "#ffffff",
-        }
-
-    return {
-        "bg": "#0f1117",
-        "panel": "#171a23",
-        "card": "#20232d",
-        "card2": "#262a36",
-        "border": "#343b4d",
-        "fg": "#f8fafc",
-        "muted": "#aab3c2",
-        "blue": "#60a5fa",
-        "green": "#22c55e",
-        "orange": "#fb923c",
-        "purple": "#a78bfa",
-        "red": "#fb7185",
-        "soft": "#252b38",
-        "entry": "#111827",
-    }
+from spina_app.theme_palettes import _spina_v22_reports_colors
 
 
 def _spina_v22_style_reports_tree(self):
@@ -45805,48 +45766,7 @@ except Exception as __spina_exc:
 
 
 # --- BEGIN: v25 Modern Collector Route UI ---
-def _spina_v25_collector_colors(self=None):
-    try:
-        theme = str(getattr(self, "ui_theme", "dark") or "dark").lower()
-    except Exception:
-        theme = "dark"
-
-    if theme.startswith("l"):
-        return {
-            "bg": "#f3f6fb",
-            "panel": "#ffffff",
-            "card": "#ffffff",
-            "card2": "#f8fafc",
-            "border": "#d6dde8",
-            "fg": "#111827",
-            "muted": "#64748b",
-            "blue": "#2563eb",
-            "green": "#16a34a",
-            "orange": "#ea580c",
-            "purple": "#7c3aed",
-            "red": "#dc2626",
-            "yellow": "#d97706",
-            "soft": "#e8eef7",
-            "entry": "#ffffff",
-        }
-
-    return {
-        "bg": "#0f1117",
-        "panel": "#171a23",
-        "card": "#20232d",
-        "card2": "#262a36",
-        "border": "#343b4d",
-        "fg": "#f8fafc",
-        "muted": "#aab3c2",
-        "blue": "#60a5fa",
-        "green": "#22c55e",
-        "orange": "#fb923c",
-        "purple": "#a78bfa",
-        "red": "#fb7185",
-        "yellow": "#fbbf24",
-        "soft": "#252b38",
-        "entry": "#111827",
-    }
+from spina_app.theme_palettes import _spina_v25_collector_colors
 
 
 def _spina_v25_collector_button(parent, text, command=None, kind="normal", width=None):
