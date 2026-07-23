@@ -49,23 +49,30 @@ jobs:
           if target is None or parent is None:
               raise RuntimeError('Modern Reports notes toggle not found')
 
-          names = ('report_notes_btn', 'reports_notes_box', 'reports_notes_sep', 'table_card', 'reports_tree')
+          names = (
+              'report_notes_btn', 'reports_notes_box', 'reports_notes_sep',
+              'table_card', 'reports_tree', 'outer', 'Canvas', 'canvas',
+              'scroll', 'pack_propagate', 'grid_propagate'
+          )
           refs = []
           for lineno, line in enumerate(lines, 1):
               if parent.lineno <= lineno <= parent.end_lineno and any(name in line for name in names):
                   refs.append({'line': lineno, 'text': line})
 
+          prefix_end = min(parent.end_lineno, parent.lineno + 170)
           report = {
               'parent_name': parent.name,
               'parent_line': parent.lineno,
               'parent_end_line': parent.end_lineno,
               'toggle_line': target.lineno,
               'toggle_end_line': target.end_lineno,
-              'context_start': max(parent.lineno, target.lineno - 150),
-              'context_end': min(parent.end_lineno, target.end_lineno + 180),
-              'context': '\n'.join(
+              'parent_prefix': '\n'.join(
                   f'{i}: {lines[i-1]}'
-                  for i in range(max(parent.lineno, target.lineno - 150), min(parent.end_lineno, target.end_lineno + 180) + 1)
+                  for i in range(parent.lineno, prefix_end + 1)
+              ),
+              'toggle_context': '\n'.join(
+                  f'{i}: {lines[i-1]}'
+                  for i in range(max(parent.lineno, target.lineno - 90), min(parent.end_lineno, target.end_lineno + 80) + 1)
               ),
               'references': refs,
           }
@@ -81,5 +88,5 @@ jobs:
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Inspect Reports notes runtime wiring"
+          git commit -m "Expand Reports notes runtime wiring inspection"
           git push origin HEAD:agent/fix-reports-notes-panel-visible
