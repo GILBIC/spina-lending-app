@@ -27,13 +27,19 @@ def main() -> None:
         raise AssertionError(f"Expected one modern {TARGET}, found {len(matches)}")
 
     function_source = matches[0][1]
-    box_pack = 'self.reports_notes_box.pack(side="bottom", fill="x", padx=18, pady=(0, 18))'
-    sep_pack = 'self.reports_notes_sep.pack(side="bottom", fill="x", padx=18, pady=(0, 6))'
+    box_pack = (
+        'self.reports_notes_box.pack(side="bottom", fill="x", padx=18, '
+        'pady=(0, 18), before=table_card)'
+    )
+    sep_pack = (
+        'self.reports_notes_sep.pack(side="bottom", fill="x", padx=18, '
+        'pady=(0, 6), before=table_card)'
+    )
 
     if box_pack not in function_source:
-        raise AssertionError("Reports notes box must reserve visible bottom space")
+        raise AssertionError("Reports notes box must be inserted before the expanding table")
     if sep_pack not in function_source:
-        raise AssertionError("Reports notes separator must reserve visible bottom space")
+        raise AssertionError("Reports notes separator must be inserted before the expanding table")
     if function_source.index(box_pack) > function_source.index(sep_pack):
         raise AssertionError("Pack the notes box before the separator so the separator stays above it")
     if 'self.reports_notes_box.pack_forget()' not in function_source:
