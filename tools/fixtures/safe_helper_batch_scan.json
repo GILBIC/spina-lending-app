@@ -1,0 +1,1629 @@
+{
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "top_level_function_count": 355,
+  "candidate_count": 21,
+  "groups": {
+    "dates": [
+      {
+        "name": "_spina__norm_weekday",
+        "line": 24255,
+        "end_line": 24267,
+        "lines": 13,
+        "signature": "_v",
+        "external_names": [],
+        "group": "dates",
+        "reference_count": 6,
+        "references": [
+          {
+            "owner": "_spina__client_due_meta",
+            "line": 24313
+          },
+          {
+            "owner": "_app__client_form",
+            "line": 29421
+          },
+          {
+            "owner": "_app__client_form",
+            "line": 28927
+          },
+          {
+            "owner": "_spina_v23_client_form",
+            "line": 45281
+          },
+          {
+            "owner": "save",
+            "line": 29421
+          },
+          {
+            "owner": "save",
+            "line": 45281
+          }
+        ],
+        "source": "def _spina__norm_weekday(_v):\n    try:\n        _s = str(_v or '').strip()\n    except Exception:\n        _s = ''\n    if not _s:\n        return ''\n    _k = _s[:3].lower()\n    _mp = {\n        'mon': 'Mon', 'tue': 'Tue', 'wed': 'Wed', 'thu': 'Thu',\n        'fri': 'Fri', 'sat': 'Sat', 'sun': 'Sun'\n    }\n    return _mp.get(_k, '')"
+      },
+      {
+        "name": "_spina_dash__status_for",
+        "line": 37152,
+        "end_line": 37178,
+        "lines": 27,
+        "signature": "completion_pct, remaining, days_left",
+        "external_names": [],
+        "group": "dates",
+        "reference_count": 1,
+        "references": [
+          {
+            "owner": "_spina_dashboard_fetch_rows",
+            "line": 37432
+          }
+        ],
+        "source": "def _spina_dash__status_for(completion_pct, remaining, days_left):\n    try:\n        pct = float(completion_pct or 0)\n    except Exception:\n        pct = 0.0\n    try:\n        rem = float(remaining or 0)\n    except Exception:\n        rem = 0.0\n    dl = None\n    try:\n        if days_left is not None and str(days_left) != '':\n            dl = int(days_left)\n    except Exception:\n        dl = None\n\n    if rem <= 0.004 or pct >= 100:\n        return 'Complete', 90\n    if pct >= 90:\n        return 'Finishing Now', 10\n    if pct >= 75:\n        return 'Near Completion', 20\n    if dl is not None and dl < 0:\n        return 'Overdue', 30\n    if dl is not None and dl <= 14:\n        return 'Due Soon', 40\n    return 'In Progress', 80"
+      }
+    ],
+    "formatting": [
+      {
+        "name": "_spina__fmt_client_money",
+        "line": 29562,
+        "end_line": 29569,
+        "lines": 8,
+        "signature": "v",
+        "external_names": [],
+        "group": "formatting",
+        "reference_count": 14,
+        "references": [
+          {
+            "owner": "App",
+            "line": 17793
+          },
+          {
+            "owner": "App",
+            "line": 17797
+          },
+          {
+            "owner": "App",
+            "line": 17798
+          },
+          {
+            "owner": "_app_refresh_clients",
+            "line": 29673
+          },
+          {
+            "owner": "_app_refresh_clients",
+            "line": 29677
+          },
+          {
+            "owner": "_app_refresh_clients",
+            "line": 29678
+          },
+          {
+            "owner": "_app_refresh_clients",
+            "line": 29679
+          },
+          {
+            "owner": "_spina_perf_refresh_clients",
+            "line": 36324
+          },
+          {
+            "owner": "_spina_perf_refresh_clients",
+            "line": 36328
+          },
+          {
+            "owner": "_spina_perf_refresh_clients",
+            "line": 36329
+          },
+          {
+            "owner": "_spina_perf_refresh_clients",
+            "line": 36330
+          },
+          {
+            "owner": "refresh_reports",
+            "line": 17793
+          }
+        ],
+        "source": "def _spina__fmt_client_money(v):\n    try:\n        n = float(v or 0)\n    except Exception:\n        return str(v or '')\n    if abs(n - int(n)) < 0.000001:\n        return f\"{int(n):,}\"\n    return f\"{n:,.2f}\""
+      },
+      {
+        "name": "_spina_v17_fmt_short_money",
+        "line": 41903,
+        "end_line": 41913,
+        "lines": 11,
+        "signature": "value",
+        "external_names": [],
+        "group": "formatting",
+        "reference_count": 6,
+        "references": [
+          {
+            "owner": "_spina_v17_draw_dashboard_charts",
+            "line": 42283
+          },
+          {
+            "owner": "_spina_v17_draw_dashboard_charts",
+            "line": 42284
+          },
+          {
+            "owner": "_spina_v17_draw_dashboard_charts",
+            "line": 42338
+          },
+          {
+            "owner": "_spina_v17_draw_dashboard_charts",
+            "line": 42340
+          },
+          {
+            "owner": "_spina_v17_populate_dashboard_tree",
+            "line": 42364
+          },
+          {
+            "owner": "_spina_v17_populate_dashboard_tree",
+            "line": 42365
+          }
+        ],
+        "source": "def _spina_v17_fmt_short_money(value):\n    try:\n        v = float(value or 0)\n    except Exception:\n        v = 0.0\n    av = abs(v)\n    if av >= 1_000_000:\n        return \"PHP {:.2f}M\".format(v / 1_000_000)\n    if av >= 1_000:\n        return \"PHP {:.1f}K\".format(v / 1_000)\n    return \"PHP {:,.0f}\".format(v)"
+      },
+      {
+        "name": "_spina_crc_fmt_money",
+        "line": 39844,
+        "end_line": 39856,
+        "lines": 13,
+        "signature": "_v, blank_zero=False",
+        "external_names": [],
+        "group": "formatting",
+        "reference_count": 17,
+        "references": [
+          {
+            "owner": "_spina_crc_fetch_close_rows",
+            "line": 40093
+          },
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40429
+          },
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40301
+          },
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40341
+          },
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40342
+          },
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40343
+          },
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40344
+          },
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40344
+          },
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40418
+          },
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40418
+          },
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40418
+          },
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40420
+          }
+        ],
+        "source": "def _spina_crc_fmt_money(_v, blank_zero=False):\n    try:\n        n = float(_v or 0.0)\n    except Exception:\n        n = 0.0\n    if blank_zero and abs(n) < 0.005:\n        return \"\"\n    try:\n        if abs(n - int(n)) < 0.005:\n            return f\"{int(n):,}\"\n    except Exception:\n        pass\n    return f\"{n:,.2f}\""
+      },
+      {
+        "name": "_spina_v18_fmt_money_compact",
+        "line": 42537,
+        "end_line": 42549,
+        "lines": 13,
+        "signature": "value",
+        "external_names": [],
+        "group": "formatting",
+        "reference_count": 4,
+        "references": [
+          {
+            "owner": "_spina_v18_draw_dashboard_charts",
+            "line": 42621
+          },
+          {
+            "owner": "_spina_v18_draw_dashboard_charts",
+            "line": 42622
+          },
+          {
+            "owner": "_spina_v18_draw_dashboard_charts",
+            "line": 42686
+          },
+          {
+            "owner": "_spina_v18_draw_dashboard_charts",
+            "line": 42693
+          }
+        ],
+        "source": "def _spina_v18_fmt_money_compact(value):\n    try:\n        v = float(value or 0)\n    except Exception:\n        v = 0.0\n    av = abs(v)\n    if av >= 1_000_000:\n        return \"PHP {:.2f}M\".format(v / 1_000_000)\n    if av >= 100_000:\n        return \"PHP {:.0f}K\".format(v / 1_000)\n    if av >= 1_000:\n        return \"PHP {:.1f}K\".format(v / 1_000)\n    return \"PHP {:,.0f}\".format(v)"
+      },
+      {
+        "name": "_spina_pg__table_has_column",
+        "line": 40810,
+        "end_line": 40825,
+        "lines": 16,
+        "signature": "cur, table_name, column_name",
+        "external_names": [],
+        "group": "formatting",
+        "reference_count": 1,
+        "references": [
+          {
+            "owner": "_spina_pg_renew_client_direct",
+            "line": 40936
+          }
+        ],
+        "source": "def _spina_pg__table_has_column(cur, table_name, column_name):\n    try:\n        cur.execute(\n            \"\"\"\n            SELECT 1\n              FROM information_schema.columns\n             WHERE table_schema='public'\n               AND table_name=%s\n               AND column_name=%s\n             LIMIT 1\n            \"\"\",\n            (str(table_name or ''), str(column_name or ''))\n        )\n        return cur.fetchone() is not None\n    except Exception:\n        return False"
+      }
+    ],
+    "misc": [
+      {
+        "name": "_spina_v20_round_rect",
+        "line": 42898,
+        "end_line": 42907,
+        "lines": 10,
+        "signature": "cv, x1, y1, x2, y2, r=10, **kw",
+        "external_names": [],
+        "group": "misc",
+        "reference_count": 7,
+        "references": [
+          {
+            "owner": "_spina_v20_draw_dashboard_charts",
+            "line": 42990
+          },
+          {
+            "owner": "_spina_v20_draw_dashboard_charts",
+            "line": 42992
+          },
+          {
+            "owner": "_spina_v20_draw_dashboard_charts",
+            "line": 42994
+          },
+          {
+            "owner": "_spina_v20_draw_dashboard_charts",
+            "line": 43028
+          },
+          {
+            "owner": "_spina_v20_draw_dashboard_charts",
+            "line": 43070
+          },
+          {
+            "owner": "_spina_v20_draw_dashboard_charts",
+            "line": 43031
+          },
+          {
+            "owner": "_spina_v20_draw_dashboard_charts",
+            "line": 43073
+          }
+        ],
+        "source": "def _spina_v20_round_rect(cv, x1, y1, x2, y2, r=10, **kw):\n    try:\n        pts = [\n            x1+r, y1, x2-r, y1, x2, y1, x2, y1+r,\n            x2, y2-r, x2, y2, x2-r, y2, x1+r, y2,\n            x1, y2, x1, y2-r, x1, y1+r, x1, y1\n        ]\n        return cv.create_polygon(pts, smooth=True, **kw)\n    except Exception:\n        return cv.create_rectangle(x1, y1, x2, y2, **kw)"
+      },
+      {
+        "name": "_spina_v24_cilog_round_rect",
+        "line": 45643,
+        "end_line": 45652,
+        "lines": 10,
+        "signature": "cv, x1, y1, x2, y2, r=10, **kw",
+        "external_names": [],
+        "group": "misc",
+        "reference_count": 5,
+        "references": [
+          {
+            "owner": "_spina_v24_cilog_draw_charts",
+            "line": 45812
+          },
+          {
+            "owner": "_spina_v24_cilog_draw_charts",
+            "line": 45753
+          },
+          {
+            "owner": "_spina_v24_cilog_draw_charts",
+            "line": 45755
+          },
+          {
+            "owner": "_spina_v24_cilog_draw_charts",
+            "line": 45781
+          },
+          {
+            "owner": "_spina_v24_cilog_draw_charts",
+            "line": 45783
+          }
+        ],
+        "source": "def _spina_v24_cilog_round_rect(cv, x1, y1, x2, y2, r=10, **kw):\n    try:\n        pts = [\n            x1+r, y1, x2-r, y1, x2, y1, x2, y1+r,\n            x2, y2-r, x2, y2, x2-r, y2, x1+r, y2,\n            x1+r, y2, x1, y2, x1, y2-r, x1, y1+r, x1, y1\n        ]\n        return cv.create_polygon(pts, smooth=True, **kw)\n    except Exception:\n        return cv.create_rectangle(x1, y1, x2, y2, **kw)"
+      },
+      {
+        "name": "_spina_perf_dict_rows",
+        "line": 36020,
+        "end_line": 36030,
+        "lines": 11,
+        "signature": "rows",
+        "external_names": [],
+        "group": "misc",
+        "reference_count": 3,
+        "references": [
+          {
+            "owner": "_spina_perf_clients_rows",
+            "line": 36126
+          },
+          {
+            "owner": "_spina_perf_clients_rows",
+            "line": 36130
+          },
+          {
+            "owner": "_spina_perf_clients_rows",
+            "line": 36190
+          }
+        ],
+        "source": "def _spina_perf_dict_rows(rows):\n    out = []\n    for r in rows or []:\n        try:\n            out.append(dict(r))\n        except Exception:\n            try:\n                out.append({k: r[k] for k in r.keys()})\n            except Exception:\n                pass\n    return out"
+      }
+    ],
+    "numbers": [
+      {
+        "name": "_spina_v25_parse_count_from_var",
+        "line": 46352,
+        "end_line": 46358,
+        "lines": 7,
+        "signature": "var_value",
+        "external_names": [
+          "re"
+        ],
+        "group": "numbers",
+        "reference_count": 4,
+        "references": [
+          {
+            "owner": "_spina_v25_update_collector_cards",
+            "line": 46371
+          },
+          {
+            "owner": "_spina_v25_update_collector_cards",
+            "line": 46372
+          },
+          {
+            "owner": "_spina_v25_update_collector_cards",
+            "line": 46373
+          },
+          {
+            "owner": "_spina_v25_update_collector_cards",
+            "line": 46374
+          }
+        ],
+        "source": "def _spina_v25_parse_count_from_var(var_value):\n    try:\n        s = str(var_value or \"\")\n        m = re.search(r\"(\\d+)\", s)\n        return m.group(1) if m else \"0\"\n    except Exception:\n        return \"0\""
+      },
+      {
+        "name": "_spina_v18_draw_round_rect",
+        "line": 42575,
+        "end_line": 42585,
+        "lines": 11,
+        "signature": "cv, x1, y1, x2, y2, r=14, **kwargs",
+        "external_names": [],
+        "group": "numbers",
+        "reference_count": 6,
+        "references": [
+          {
+            "owner": "_spina_v18_draw_dashboard_charts",
+            "line": 42619
+          },
+          {
+            "owner": "_spina_v18_draw_dashboard_charts",
+            "line": 42620
+          },
+          {
+            "owner": "_spina_v18_draw_dashboard_charts",
+            "line": 42655
+          },
+          {
+            "owner": "_spina_v18_draw_dashboard_charts",
+            "line": 42687
+          },
+          {
+            "owner": "_spina_v18_draw_dashboard_charts",
+            "line": 42658
+          },
+          {
+            "owner": "_spina_v18_draw_dashboard_charts",
+            "line": 42689
+          }
+        ],
+        "source": "def _spina_v18_draw_round_rect(cv, x1, y1, x2, y2, r=14, **kwargs):\n    \"\"\"Canvas rounded rectangle fallback using polygon smoothing.\"\"\"\n    try:\n        points = [\n            x1+r, y1, x2-r, y1, x2, y1, x2, y1+r,\n            x2, y2-r, x2, y2, x2-r, y2, x1+r, y2,\n            x1, y2, x1, y2-r, x1, y1+r, x1, y1\n        ]\n        return cv.create_polygon(points, smooth=True, **kwargs)\n    except Exception:\n        return cv.create_rectangle(x1, y1, x2, y2, **kwargs)"
+      },
+      {
+        "name": "join_area_main_sub",
+        "line": 2110,
+        "end_line": 2128,
+        "lines": 19,
+        "signature": "main_area: str, sub_area: str=''",
+        "external_names": [],
+        "group": "numbers",
+        "reference_count": 6,
+        "references": [
+          {
+            "owner": "App",
+            "line": 11976
+          },
+          {
+            "owner": "App",
+            "line": 11830
+          },
+          {
+            "owner": "_area_picker_dialog",
+            "line": 11976
+          },
+          {
+            "owner": "_area_picker_dialog",
+            "line": 11830
+          },
+          {
+            "owner": "_get_tree_selection_route_values",
+            "line": 11830
+          },
+          {
+            "owner": "add_new_area",
+            "line": 11976
+          }
+        ],
+        "source": "def join_area_main_sub(main_area: str, sub_area: str = \"\") -> str:\n    \"\"\"Join main/sub into a single Area string using a consistent separator.\n\n    - If sub_area is blank -> returns main_area\n    - Else -> 'Main - Sub'\n    \"\"\"\n    try:\n        ma = str(main_area or \"\").strip()\n    except Exception:\n        ma = \"\"\n    try:\n        su = str(sub_area or \"\").strip()\n    except Exception:\n        su = \"\"\n    if not ma:\n        return su\n    if not su:\n        return ma\n    return f\"{ma} - {su}\""
+      },
+      {
+        "name": "split_area_main_sub",
+        "line": 2074,
+        "end_line": 2107,
+        "lines": 34,
+        "signature": "area: str",
+        "external_names": [],
+        "group": "numbers",
+        "reference_count": 47,
+        "references": [
+          {
+            "owner": "App",
+            "line": 11646
+          },
+          {
+            "owner": "App",
+            "line": 12303
+          },
+          {
+            "owner": "App",
+            "line": 11764
+          },
+          {
+            "owner": "App",
+            "line": 11774
+          },
+          {
+            "owner": "App",
+            "line": 11799
+          },
+          {
+            "owner": "App",
+            "line": 12229
+          },
+          {
+            "owner": "App",
+            "line": 12272
+          },
+          {
+            "owner": "App",
+            "line": 12479
+          },
+          {
+            "owner": "App",
+            "line": 12530
+          },
+          {
+            "owner": "App",
+            "line": 12537
+          },
+          {
+            "owner": "App",
+            "line": 12546
+          },
+          {
+            "owner": "_on_collectors_select",
+            "line": 21382
+          }
+        ],
+        "source": "def split_area_main_sub(area: str):\n    \"\"\"Split a single Area string into (main_area, sub_area).\n\n    Backwards compatible:\n      - If no separator is found, main_area = original, sub_area = \"\"\n      - Supports separators like: 'Main - Sub', 'Main / Sub', 'Main | Sub', 'Main: Sub'\n    \"\"\"\n    try:\n        a = str(area or \"\").strip()\n    except Exception:\n        a = \"\"\n    if not a:\n        return (\"\", \"\")\n\n    # Prefer separators with spaces first (less chance of false split)\n    seps = [\" | \", \" / \", \" - \", \" > \", \" : \", \" — \", \" – \"]\n    for sep in seps:\n        if sep in a:\n            left, right = a.split(sep, 1)\n            left = (left or \"\").strip()\n            right = (right or \"\").strip()\n            if left and right:\n                return (left, right)\n\n    # Fallback single-char separators (use only if it looks like two parts)\n    for sep in [\"|\", \"/\", \">\", \":\"]:\n        if sep in a:\n            left, right = a.split(sep, 1)\n            left = (left or \"\").strip()\n            right = (right or \"\").strip()\n            if left and right:\n                return (left, right)\n\n    return (a, \"\")"
+      }
+    ],
+    "text": [
+      {
+        "name": "_spina_early_log",
+        "line": 27,
+        "end_line": 31,
+        "lines": 5,
+        "signature": "context, exc=None",
+        "external_names": [],
+        "group": "text",
+        "reference_count": 0,
+        "references": [],
+        "source": "def _spina_early_log(context, exc=None):\n    try:\n        print(f\"[SPINA][EARLY] {context}: {exc}\")\n    except Exception:\n        pass"
+      },
+      {
+        "name": "_spina__norm_dom",
+        "line": 24270,
+        "end_line": 24277,
+        "lines": 8,
+        "signature": "_v",
+        "external_names": [],
+        "group": "text",
+        "reference_count": 13,
+        "references": [
+          {
+            "owner": "_spina__client_due_meta",
+            "line": 24326
+          },
+          {
+            "owner": "_spina__client_due_meta",
+            "line": 24342
+          },
+          {
+            "owner": "_spina__client_due_meta",
+            "line": 24343
+          },
+          {
+            "owner": "_app__client_form",
+            "line": 29422
+          },
+          {
+            "owner": "_app__client_form",
+            "line": 29423
+          },
+          {
+            "owner": "_app__client_form",
+            "line": 29424
+          },
+          {
+            "owner": "_app__client_form",
+            "line": 29163
+          },
+          {
+            "owner": "_spina_v23_client_form",
+            "line": 45242
+          },
+          {
+            "owner": "_dom_seed_date",
+            "line": 29163
+          },
+          {
+            "owner": "save",
+            "line": 29422
+          },
+          {
+            "owner": "save",
+            "line": 29423
+          },
+          {
+            "owner": "save",
+            "line": 29424
+          }
+        ],
+        "source": "def _spina__norm_dom(_v):\n    try:\n        if _v in (None, ''):\n            return None\n        _n = int(str(_v).strip())\n        return _n if 1 <= _n <= 31 else None\n    except Exception:\n        return None"
+      },
+      {
+        "name": "_spina_v17_set_card",
+        "line": 42249,
+        "end_line": 42257,
+        "lines": 9,
+        "signature": "self, key, value, subtitle=None",
+        "external_names": [],
+        "group": "text",
+        "reference_count": 4,
+        "references": [
+          {
+            "owner": "_spina_v17_populate_dashboard_tree",
+            "line": 42362
+          },
+          {
+            "owner": "_spina_v17_populate_dashboard_tree",
+            "line": 42363
+          },
+          {
+            "owner": "_spina_v17_populate_dashboard_tree",
+            "line": 42364
+          },
+          {
+            "owner": "_spina_v17_populate_dashboard_tree",
+            "line": 42365
+          }
+        ],
+        "source": "def _spina_v17_set_card(self, key, value, subtitle=None):\n    try:\n        val_lbl, sub_lbl = (getattr(self, \"_dash_cards\", {}) or {}).get(key, (None, None))\n        if val_lbl is not None:\n            val_lbl.configure(text=str(value))\n        if subtitle is not None and sub_lbl is not None:\n            sub_lbl.configure(text=str(subtitle))\n    except Exception:\n        pass"
+      },
+      {
+        "name": "_spina_v24_cilog_set_card",
+        "line": 45824,
+        "end_line": 45832,
+        "lines": 9,
+        "signature": "self, key, value, subtitle=None",
+        "external_names": [],
+        "group": "text",
+        "reference_count": 4,
+        "references": [
+          {
+            "owner": "_spina_v24_cilog_update_cards",
+            "line": 45842
+          },
+          {
+            "owner": "_spina_v24_cilog_update_cards",
+            "line": 45843
+          },
+          {
+            "owner": "_spina_v24_cilog_update_cards",
+            "line": 45844
+          },
+          {
+            "owner": "_spina_v24_cilog_update_cards",
+            "line": 45849
+          }
+        ],
+        "source": "def _spina_v24_cilog_set_card(self, key, value, subtitle=None):\n    try:\n        val_lbl, sub_lbl = (getattr(self, \"_cilog_cards\", {}) or {}).get(key, (None, None))\n        if val_lbl is not None:\n            val_lbl.configure(text=str(value))\n        if subtitle is not None and sub_lbl is not None:\n            sub_lbl.configure(text=str(subtitle))\n    except Exception:\n        pass"
+      },
+      {
+        "name": "_app__get_selected_client_name",
+        "line": 28860,
+        "end_line": 28870,
+        "lines": 11,
+        "signature": "self",
+        "external_names": [],
+        "group": "text",
+        "reference_count": 5,
+        "references": [
+          {
+            "owner": "_app_on_client_edit",
+            "line": 29795
+          },
+          {
+            "owner": "_app_delete_client_selected",
+            "line": 29846
+          },
+          {
+            "owner": "_app_open_client_history_dialog",
+            "line": 29870
+          },
+          {
+            "owner": "_app_link_selected_client",
+            "line": 30386
+          },
+          {
+            "owner": "_app_unlink_selected_client",
+            "line": 30509
+          }
+        ],
+        "source": "def _app__get_selected_client_name(self):\n    try:\n        sel = self.clients_tree.selection()\n        if not sel:\n            return None\n        vals = self.clients_tree.item(sel[0], 'values') or ()\n        if not vals:\n            return None\n        return str(vals[0]).strip()\n    except Exception:\n        return None"
+      },
+      {
+        "name": "_spina_crc_clean_reason",
+        "line": 39859,
+        "end_line": 39872,
+        "lines": 14,
+        "signature": "_v",
+        "external_names": [
+          "re"
+        ],
+        "group": "text",
+        "reference_count": 3,
+        "references": [
+          {
+            "owner": "_spina_crc_fetch_close_rows",
+            "line": 40031
+          },
+          {
+            "owner": "_spina_crc_fetch_close_rows",
+            "line": 40138
+          },
+          {
+            "owner": "_add_pay",
+            "line": 40031
+          }
+        ],
+        "source": "def _spina_crc_clean_reason(_v):\n    try:\n        s = str(_v or \"\").strip()\n    except Exception:\n        s = \"\"\n    if not s:\n        return \"\"\n    try:\n        s = re.sub(r\"\\[RC:[^\\]]+\\]\", \"\", s, flags=re.I).strip()\n        s = re.sub(r\"\\[ADV:[^\\]]+\\]\", \"\", s, flags=re.I).strip()\n        s = re.sub(r\"\\s+\", \" \", s).strip()\n    except Exception:\n        pass\n    return s"
+      },
+      {
+        "name": "_spina_crc_wrap",
+        "line": 40149,
+        "end_line": 40171,
+        "lines": 23,
+        "signature": "c, text, width, font='Helvetica', size=8.0",
+        "external_names": [],
+        "group": "text",
+        "reference_count": 3,
+        "references": [
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40436
+          },
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40437
+          },
+          {
+            "owner": "_spina_save_closed_collector_route_copy",
+            "line": 40452
+          }
+        ],
+        "source": "def _spina_crc_wrap(c, text, width, font=\"Helvetica\", size=8.0):\n    try:\n        words = str(text or \"\").split()\n    except Exception:\n        words = []\n    if not words:\n        return [\"\"]\n    lines = []\n    cur = \"\"\n    for w in words:\n        test = (cur + \" \" + w).strip()\n        try:\n            ok = c.stringWidth(test, font, size) <= width\n        except Exception:\n            ok = len(test) * size * 0.5 <= width\n        if ok or not cur:\n            cur = test\n        else:\n            lines.append(cur)\n            cur = w\n    if cur:\n        lines.append(cur)\n    return lines or [\"\"]"
+      }
+    ]
+  },
+  "rejected_sample": [
+    {
+      "name": "_spina_pg_storage_enabled",
+      "line": 142,
+      "lines": 5,
+      "reasons": [
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "SPINA_PG_STORE_FILES",
+        "SPINA_POSTGRESQL_TEST_MODE"
+      ]
+    },
+    {
+      "name": "_spina_pg_storage_conn",
+      "line": 149,
+      "lines": 3,
+      "reasons": [
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_SPINA_PG_CONFIG",
+        "psycopg"
+      ]
+    },
+    {
+      "name": "_spina_pg_storage_log",
+      "line": 154,
+      "lines": 9,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_log_suppressed_once"
+      ]
+    },
+    {
+      "name": "_spina_pg_ensure_storage_schema",
+      "line": 165,
+      "lines": 16,
+      "reasons": [
+        "stateful_or_async",
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_SPINA_PG_STORAGE_SCHEMA_SQL",
+        "_spina_pg_storage_conn",
+        "_spina_pg_storage_enabled",
+        "_spina_pg_storage_log",
+        "e"
+      ]
+    },
+    {
+      "name": "_spina_pg_app_dir",
+      "line": 183,
+      "lines": 5,
+      "reasons": [
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "__file__",
+        "os"
+      ]
+    },
+    {
+      "name": "_spina_pg_relpath",
+      "line": 190,
+      "lines": 9,
+      "reasons": [
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_spina_pg_app_dir",
+        "os"
+      ]
+    },
+    {
+      "name": "_spina_pg_json_table_for_path",
+      "line": 201,
+      "lines": 8,
+      "reasons": [
+        "sensitive_term",
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "os"
+      ]
+    },
+    {
+      "name": "_spina_pg_read_json",
+      "line": 211,
+      "lines": 22,
+      "reasons": [
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_spina_pg_ensure_storage_schema",
+        "_spina_pg_json_table_for_path",
+        "_spina_pg_relpath",
+        "_spina_pg_storage_conn",
+        "_spina_pg_storage_log",
+        "e"
+      ]
+    },
+    {
+      "name": "_spina_pg_sha256",
+      "line": 273,
+      "lines": 3,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "hashlib"
+      ]
+    },
+    {
+      "name": "_spina_pg_guess_file_type",
+      "line": 278,
+      "lines": 22,
+      "reasons": [
+        "sensitive_term",
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_spina_pg_relpath",
+        "os"
+      ]
+    },
+    {
+      "name": "_spina_pg_guess_report_date",
+      "line": 302,
+      "lines": 11,
+      "reasons": [
+        "sensitive_term",
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_date",
+        "os",
+        "re"
+      ]
+    },
+    {
+      "name": "_spina_pg_guess_collector",
+      "line": 315,
+      "lines": 10,
+      "reasons": [
+        "sensitive_term",
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "os",
+        "re"
+      ]
+    },
+    {
+      "name": "_spina_pg_delete_client_picture_token",
+      "line": 495,
+      "lines": 19,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_spina_pg_ensure_storage_schema",
+        "_spina_pg_storage_conn",
+        "_spina_pg_storage_log",
+        "e"
+      ]
+    },
+    {
+      "name": "_spina_pg_patch_reportlab_canvas_save",
+      "line": 516,
+      "lines": 21,
+      "reasons": [
+        "sensitive_term",
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_pg_save_and_store",
+        "_spina_pg_storage_enabled",
+        "_spina_pg_storage_log",
+        "_spina_pg_store_file_to_db",
+        "args",
+        "e",
+        "kwargs",
+        "os",
+        "self"
+      ]
+    },
+    {
+      "name": "_spina_pg_normalize_value",
+      "line": 544,
+      "lines": 8,
+      "reasons": [
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_spina_decimal"
+      ]
+    },
+    {
+      "name": "_spina_pg_replace_qmarks",
+      "line": 576,
+      "lines": 25,
+      "reasons": [
+        "sensitive_term"
+      ],
+      "external_names": []
+    },
+    {
+      "name": "_spina_pg_escape_literal_percents",
+      "line": 603,
+      "lines": 27,
+      "reasons": [
+        "sensitive_term"
+      ],
+      "external_names": []
+    },
+    {
+      "name": "_spina_pg_table_name_from_pragma",
+      "line": 693,
+      "lines": 3,
+      "reasons": [
+        "sensitive_term"
+      ],
+      "external_names": [
+        "re"
+      ]
+    },
+    {
+      "name": "_spina_pg_raise_sqlite_like",
+      "line": 887,
+      "lines": 16,
+      "reasons": [
+        "sensitive_term",
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "psycopg",
+        "sqlite3"
+      ]
+    },
+    {
+      "name": "_spina_pg_connect_db",
+      "line": 905,
+      "lines": 2,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_PgCompatConnection"
+      ]
+    },
+    {
+      "name": "_read_json_file",
+      "line": 942,
+      "lines": 15,
+      "reasons": [
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_spina_pg_read_json",
+        "json"
+      ]
+    },
+    {
+      "name": "_write_json_atomic",
+      "line": 958,
+      "lines": 24,
+      "reasons": [
+        "sensitive_term",
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "__spina_exc",
+        "_log_suppressed_once",
+        "_spina_pg_write_json",
+        "json",
+        "os"
+      ]
+    },
+    {
+      "name": "load_settings",
+      "line": 983,
+      "lines": 33,
+      "reasons": [
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "SETTINGS_FILE",
+        "_DEFAULT_SETTINGS",
+        "_read_json_file"
+      ]
+    },
+    {
+      "name": "save_settings",
+      "line": 1017,
+      "lines": 7,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "SETTINGS_FILE",
+        "_DEFAULT_SETTINGS",
+        "_write_json_atomic"
+      ]
+    },
+    {
+      "name": "_can_use_dir",
+      "line": 1025,
+      "lines": 15,
+      "reasons": [
+        "sensitive_term",
+        "blocked_dependency",
+        "unsupported_dependencies",
+        "mutates_arguments"
+      ],
+      "external_names": [
+        "os",
+        "time"
+      ]
+    },
+    {
+      "name": "data_path",
+      "line": 1050,
+      "lines": 2,
+      "reasons": [
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "DATA_DIR",
+        "os"
+      ]
+    },
+    {
+      "name": "connect_db",
+      "line": 1053,
+      "lines": 35,
+      "reasons": [
+        "sensitive_term",
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "DB_FILE",
+        "__spina_exc",
+        "_log_suppressed_once",
+        "_spina_pg_connect_db",
+        "sqlite3"
+      ]
+    },
+    {
+      "name": "run_write",
+      "line": 1089,
+      "lines": 19,
+      "reasons": [
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_sqlite3",
+        "e",
+        "random",
+        "time"
+      ]
+    },
+    {
+      "name": "_is_write_sql",
+      "line": 1109,
+      "lines": 11,
+      "reasons": [
+        "sensitive_term"
+      ],
+      "external_names": []
+    },
+    {
+      "name": "_sqlite_fetchall_in_chunks",
+      "line": 1122,
+      "lines": 27,
+      "reasons": [
+        "sensitive_term"
+      ],
+      "external_names": []
+    },
+    {
+      "name": "_spina__split_payment_mode",
+      "line": 1154,
+      "lines": 17,
+      "reasons": [
+        "sensitive_term"
+      ],
+      "external_names": []
+    },
+    {
+      "name": "_spina__merge_payment_mode",
+      "line": 1172,
+      "lines": 10,
+      "reasons": [
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_spina__split_payment_mode"
+      ]
+    },
+    {
+      "name": "_init_logger",
+      "line": 1251,
+      "lines": 15,
+      "reasons": [
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "DATA_DIR",
+        "_logging",
+        "os"
+      ]
+    },
+    {
+      "name": "_log_exc",
+      "line": 1269,
+      "lines": 17,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_logging",
+        "sys"
+      ]
+    },
+    {
+      "name": "_log_suppressed_once",
+      "line": 1294,
+      "lines": 17,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_SUPPRESS_LOG_ONCE_KEYS",
+        "_log_exc",
+        "sys"
+      ]
+    },
+    {
+      "name": "_alert_user",
+      "line": 1313,
+      "lines": 16,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "__spina_exc",
+        "_log_suppressed_once",
+        "_mb",
+        "sys"
+      ]
+    },
+    {
+      "name": "_log_ignored",
+      "line": 1336,
+      "lines": 11,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_UI_IGNORED_ONCE",
+        "__spina_exc",
+        "_log_exc",
+        "_log_suppressed_once"
+      ]
+    },
+    {
+      "name": "_pick_writable_dir",
+      "line": 1516,
+      "lines": 20,
+      "reasons": [
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "__spina_exc",
+        "_log_suppressed_once",
+        "os"
+      ]
+    },
+    {
+      "name": "_get_reports_root",
+      "line": 1553,
+      "lines": 9,
+      "reasons": [
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "PDF_DIR",
+        "_can_use_dir",
+        "load_settings"
+      ]
+    },
+    {
+      "name": "_parse_ymd",
+      "line": 1589,
+      "lines": 11,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "__spina_exc",
+        "date",
+        "datetime"
+      ]
+    },
+    {
+      "name": "pick_date",
+      "line": 1974,
+      "lines": 30,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_CalendarPopup",
+        "__spina_exc",
+        "_log_suppressed_once",
+        "_parse_ymd",
+        "date"
+      ]
+    },
+    {
+      "name": "_oslp__load_prefs_json",
+      "line": 2009,
+      "lines": 11,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_Path",
+        "__spina_exc",
+        "_json",
+        "_log_suppressed_once"
+      ]
+    },
+    {
+      "name": "_find_ttf",
+      "line": 2213,
+      "lines": 5,
+      "reasons": [
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "os"
+      ]
+    },
+    {
+      "name": "_candidate_note_keys",
+      "line": 2296,
+      "lines": 14,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "__spina_exc",
+        "_log_suppressed_once"
+      ]
+    },
+    {
+      "name": "_resolve_note_key",
+      "line": 2313,
+      "lines": 12,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "__spina_exc",
+        "_candidate_note_keys",
+        "_log_suppressed_once"
+      ]
+    },
+    {
+      "name": "_normalize_loan_type_value",
+      "line": 2327,
+      "lines": 8,
+      "reasons": [
+        "sensitive_term"
+      ],
+      "external_names": []
+    },
+    {
+      "name": "_note_scoped_prefix",
+      "line": 2336,
+      "lines": 2,
+      "reasons": [
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_normalize_loan_type_value"
+      ]
+    },
+    {
+      "name": "_note_id_key",
+      "line": 2339,
+      "lines": 16,
+      "reasons": [
+        "sensitive_term"
+      ],
+      "external_names": []
+    },
+    {
+      "name": "_note_type_key",
+      "line": 2356,
+      "lines": 16,
+      "reasons": [
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_normalize_loan_type_value"
+      ]
+    },
+    {
+      "name": "_split_scoped_key",
+      "line": 2442,
+      "lines": 11,
+      "reasons": [
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "__spina_exc",
+        "_log_suppressed_once",
+        "_normalize_loan_type_value"
+      ]
+    },
+    {
+      "name": "_ensure_notes_dir",
+      "line": 2469,
+      "lines": 6,
+      "reasons": [
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "CLIENT_NOTES_PATH",
+        "__spina_exc",
+        "_log_suppressed_once",
+        "os"
+      ]
+    },
+    {
+      "name": "_save_client_notes",
+      "line": 2636,
+      "lines": 34,
+      "reasons": [
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "CLIENT_NOTES_PATH",
+        "_ensure_notes_dir",
+        "_json2",
+        "_log_exc",
+        "e",
+        "os"
+      ]
+    },
+    {
+      "name": "_parse_any_adv_range",
+      "line": 3590,
+      "lines": 18,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_ADV_PLAIN_RE",
+        "_ADV_TAG_RE",
+        "_dt_advpatch"
+      ]
+    },
+    {
+      "name": "_expand_range_inclusive",
+      "line": 3609,
+      "lines": 5,
+      "reasons": [
+        "stateful_or_async",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "_date_advpatch",
+        "_td_advpatch"
+      ]
+    },
+    {
+      "name": "_safe_string",
+      "line": 3617,
+      "lines": 11,
+      "reasons": [
+        "sensitive_term"
+      ],
+      "external_names": []
+    },
+    {
+      "name": "_load_ledger_prefs",
+      "line": 3635,
+      "lines": 6,
+      "reasons": [
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "PREFS_FILE",
+        "json"
+      ]
+    },
+    {
+      "name": "_save_ledger_prefs",
+      "line": 3642,
+      "lines": 7,
+      "reasons": [
+        "sensitive_term",
+        "blocked_dependency",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "DATA_DIR",
+        "PREFS_FILE",
+        "__spina_exc",
+        "_log_suppressed_once",
+        "_write_json_atomic",
+        "os"
+      ]
+    },
+    {
+      "name": "parse_advance_range",
+      "line": 3758,
+      "lines": 4,
+      "reasons": [
+        "sensitive_term",
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "parse_advance_ranges"
+      ]
+    },
+    {
+      "name": "_getv",
+      "line": 8604,
+      "lines": 10,
+      "reasons": [
+        "sensitive_term"
+      ],
+      "external_names": []
+    },
+    {
+      "name": "_wrap_to_width",
+      "line": 8707,
+      "lines": 13,
+      "reasons": [
+        "unsupported_dependencies"
+      ],
+      "external_names": [
+        "stringWidth"
+      ]
+    }
+  ],
+  "policy": {
+    "max_lines": 35,
+    "mutating_arguments_rejected": true,
+    "sensitive_terms_rejected": [
+      "7x7",
+      "advance",
+      "allocation",
+      "auth",
+      "backup",
+      "balance",
+      "cashctl",
+      "collector",
+      "database",
+      "due_date",
+      "gcash",
+      "interest",
+      "ledger",
+      "loan",
+      "login",
+      "migrate",
+      "migration",
+      "payment",
+      "payroll",
+      "pdf",
+      "postgres",
+      "principal",
+      "receipt",
+      "renew",
+      "report",
+      "role",
+      "schedule",
+      "sql",
+      "statement",
+      "transaction"
+    ],
+    "blocked_dependencies": [
+      "Button",
+      "Canvas",
+      "Entry",
+      "Frame",
+      "Image",
+      "ImageTk",
+      "Label",
+      "Path",
+      "Toplevel",
+      "Treeview",
+      "Workbook",
+      "app",
+      "canvas",
+      "commit",
+      "conn",
+      "cur",
+      "cursor",
+      "db",
+      "execute",
+      "executemany",
+      "filedialog",
+      "load_workbook",
+      "messagebox",
+      "open",
+      "os",
+      "psycopg",
+      "queue",
+      "reportlab",
+      "rollback",
+      "root",
+      "self",
+      "simpledialog",
+      "sqlite3",
+      "subprocess",
+      "threading",
+      "tk",
+      "ttk"
+    ],
+    "allowed_external_names": [
+      "Decimal",
+      "_append_unique_text",
+      "_as_note_dict",
+      "_merge_note_dict",
+      "_spina_cilog_fmt_money",
+      "_spina_dash__parse_date",
+      "date",
+      "datetime",
+      "json",
+      "math",
+      "re",
+      "timedelta"
+    ]
+  }
+}
