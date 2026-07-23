@@ -1,7 +1,7 @@
 {
   "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-  "top_level_function_count": 355,
-  "candidate_count": 21,
+  "top_level_function_count": 351,
+  "candidate_count": 17,
   "groups": {
     "dates": [
       {
@@ -28,7 +28,7 @@
           },
           {
             "owner": "_spina_v23_client_form",
-            "line": 45281
+            "line": 45252
           },
           {
             "owner": "save",
@@ -36,15 +36,15 @@
           },
           {
             "owner": "save",
-            "line": 45281
+            "line": 45252
           }
         ],
         "source": "def _spina__norm_weekday(_v):\n    try:\n        _s = str(_v or '').strip()\n    except Exception:\n        _s = ''\n    if not _s:\n        return ''\n    _k = _s[:3].lower()\n    _mp = {\n        'mon': 'Mon', 'tue': 'Tue', 'wed': 'Wed', 'thu': 'Thu',\n        'fri': 'Fri', 'sat': 'Sat', 'sun': 'Sun'\n    }\n    return _mp.get(_k, '')"
       },
       {
         "name": "_spina_dash__status_for",
-        "line": 37152,
-        "end_line": 37178,
+        "line": 37145,
+        "end_line": 37171,
         "lines": 27,
         "signature": "completion_pct, remaining, days_left",
         "external_names": [],
@@ -53,7 +53,7 @@
         "references": [
           {
             "owner": "_spina_dashboard_fetch_rows",
-            "line": 37432
+            "line": 37425
           }
         ],
         "source": "def _spina_dash__status_for(completion_pct, remaining, days_left):\n    try:\n        pct = float(completion_pct or 0)\n    except Exception:\n        pct = 0.0\n    try:\n        rem = float(remaining or 0)\n    except Exception:\n        rem = 0.0\n    dl = None\n    try:\n        if days_left is not None and str(days_left) != '':\n            dl = int(days_left)\n    except Exception:\n        dl = None\n\n    if rem <= 0.004 or pct >= 100:\n        return 'Complete', 90\n    if pct >= 90:\n        return 'Finishing Now', 10\n    if pct >= 75:\n        return 'Near Completion', 20\n    if dl is not None and dl < 0:\n        return 'Overdue', 30\n    if dl is not None and dl <= 14:\n        return 'Due Soon', 40\n    return 'In Progress', 80"
@@ -61,107 +61,9 @@
     ],
     "formatting": [
       {
-        "name": "_spina__fmt_client_money",
-        "line": 29562,
-        "end_line": 29569,
-        "lines": 8,
-        "signature": "v",
-        "external_names": [],
-        "group": "formatting",
-        "reference_count": 14,
-        "references": [
-          {
-            "owner": "App",
-            "line": 17793
-          },
-          {
-            "owner": "App",
-            "line": 17797
-          },
-          {
-            "owner": "App",
-            "line": 17798
-          },
-          {
-            "owner": "_app_refresh_clients",
-            "line": 29673
-          },
-          {
-            "owner": "_app_refresh_clients",
-            "line": 29677
-          },
-          {
-            "owner": "_app_refresh_clients",
-            "line": 29678
-          },
-          {
-            "owner": "_app_refresh_clients",
-            "line": 29679
-          },
-          {
-            "owner": "_spina_perf_refresh_clients",
-            "line": 36324
-          },
-          {
-            "owner": "_spina_perf_refresh_clients",
-            "line": 36328
-          },
-          {
-            "owner": "_spina_perf_refresh_clients",
-            "line": 36329
-          },
-          {
-            "owner": "_spina_perf_refresh_clients",
-            "line": 36330
-          },
-          {
-            "owner": "refresh_reports",
-            "line": 17793
-          }
-        ],
-        "source": "def _spina__fmt_client_money(v):\n    try:\n        n = float(v or 0)\n    except Exception:\n        return str(v or '')\n    if abs(n - int(n)) < 0.000001:\n        return f\"{int(n):,}\"\n    return f\"{n:,.2f}\""
-      },
-      {
-        "name": "_spina_v17_fmt_short_money",
-        "line": 41903,
-        "end_line": 41913,
-        "lines": 11,
-        "signature": "value",
-        "external_names": [],
-        "group": "formatting",
-        "reference_count": 6,
-        "references": [
-          {
-            "owner": "_spina_v17_draw_dashboard_charts",
-            "line": 42283
-          },
-          {
-            "owner": "_spina_v17_draw_dashboard_charts",
-            "line": 42284
-          },
-          {
-            "owner": "_spina_v17_draw_dashboard_charts",
-            "line": 42338
-          },
-          {
-            "owner": "_spina_v17_draw_dashboard_charts",
-            "line": 42340
-          },
-          {
-            "owner": "_spina_v17_populate_dashboard_tree",
-            "line": 42364
-          },
-          {
-            "owner": "_spina_v17_populate_dashboard_tree",
-            "line": 42365
-          }
-        ],
-        "source": "def _spina_v17_fmt_short_money(value):\n    try:\n        v = float(value or 0)\n    except Exception:\n        v = 0.0\n    av = abs(v)\n    if av >= 1_000_000:\n        return \"PHP {:.2f}M\".format(v / 1_000_000)\n    if av >= 1_000:\n        return \"PHP {:.1f}K\".format(v / 1_000)\n    return \"PHP {:,.0f}\".format(v)"
-      },
-      {
         "name": "_spina_crc_fmt_money",
-        "line": 39844,
-        "end_line": 39856,
+        "line": 39837,
+        "end_line": 39849,
         "lines": 13,
         "signature": "_v, blank_zero=False",
         "external_names": [],
@@ -170,88 +72,59 @@
         "references": [
           {
             "owner": "_spina_crc_fetch_close_rows",
-            "line": 40093
+            "line": 40086
           },
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40429
+            "line": 40422
           },
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40301
+            "line": 40294
           },
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40341
+            "line": 40334
           },
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40342
+            "line": 40335
           },
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40343
+            "line": 40336
           },
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40344
+            "line": 40337
           },
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40344
+            "line": 40337
           },
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40418
+            "line": 40411
           },
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40418
+            "line": 40411
           },
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40418
+            "line": 40411
           },
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40420
+            "line": 40413
           }
         ],
         "source": "def _spina_crc_fmt_money(_v, blank_zero=False):\n    try:\n        n = float(_v or 0.0)\n    except Exception:\n        n = 0.0\n    if blank_zero and abs(n) < 0.005:\n        return \"\"\n    try:\n        if abs(n - int(n)) < 0.005:\n            return f\"{int(n):,}\"\n    except Exception:\n        pass\n    return f\"{n:,.2f}\""
       },
       {
-        "name": "_spina_v18_fmt_money_compact",
-        "line": 42537,
-        "end_line": 42549,
-        "lines": 13,
-        "signature": "value",
-        "external_names": [],
-        "group": "formatting",
-        "reference_count": 4,
-        "references": [
-          {
-            "owner": "_spina_v18_draw_dashboard_charts",
-            "line": 42621
-          },
-          {
-            "owner": "_spina_v18_draw_dashboard_charts",
-            "line": 42622
-          },
-          {
-            "owner": "_spina_v18_draw_dashboard_charts",
-            "line": 42686
-          },
-          {
-            "owner": "_spina_v18_draw_dashboard_charts",
-            "line": 42693
-          }
-        ],
-        "source": "def _spina_v18_fmt_money_compact(value):\n    try:\n        v = float(value or 0)\n    except Exception:\n        v = 0.0\n    av = abs(v)\n    if av >= 1_000_000:\n        return \"PHP {:.2f}M\".format(v / 1_000_000)\n    if av >= 100_000:\n        return \"PHP {:.0f}K\".format(v / 1_000)\n    if av >= 1_000:\n        return \"PHP {:.1f}K\".format(v / 1_000)\n    return \"PHP {:,.0f}\".format(v)"
-      },
-      {
         "name": "_spina_pg__table_has_column",
-        "line": 40810,
-        "end_line": 40825,
+        "line": 40803,
+        "end_line": 40818,
         "lines": 16,
         "signature": "cur, table_name, column_name",
         "external_names": [],
@@ -260,7 +133,7 @@
         "references": [
           {
             "owner": "_spina_pg_renew_client_direct",
-            "line": 40936
+            "line": 40929
           }
         ],
         "source": "def _spina_pg__table_has_column(cur, table_name, column_name):\n    try:\n        cur.execute(\n            \"\"\"\n            SELECT 1\n              FROM information_schema.columns\n             WHERE table_schema='public'\n               AND table_name=%s\n               AND column_name=%s\n             LIMIT 1\n            \"\"\",\n            (str(table_name or ''), str(column_name or ''))\n        )\n        return cur.fetchone() is not None\n    except Exception:\n        return False"
@@ -269,8 +142,8 @@
     "misc": [
       {
         "name": "_spina_v20_round_rect",
-        "line": 42898,
-        "end_line": 42907,
+        "line": 42869,
+        "end_line": 42878,
         "lines": 10,
         "signature": "cv, x1, y1, x2, y2, r=10, **kw",
         "external_names": [],
@@ -279,39 +152,39 @@
         "references": [
           {
             "owner": "_spina_v20_draw_dashboard_charts",
-            "line": 42990
+            "line": 42961
           },
           {
             "owner": "_spina_v20_draw_dashboard_charts",
-            "line": 42992
+            "line": 42963
           },
           {
             "owner": "_spina_v20_draw_dashboard_charts",
-            "line": 42994
+            "line": 42965
           },
           {
             "owner": "_spina_v20_draw_dashboard_charts",
-            "line": 43028
+            "line": 42999
           },
           {
             "owner": "_spina_v20_draw_dashboard_charts",
-            "line": 43070
+            "line": 43041
           },
           {
             "owner": "_spina_v20_draw_dashboard_charts",
-            "line": 43031
+            "line": 43002
           },
           {
             "owner": "_spina_v20_draw_dashboard_charts",
-            "line": 43073
+            "line": 43044
           }
         ],
         "source": "def _spina_v20_round_rect(cv, x1, y1, x2, y2, r=10, **kw):\n    try:\n        pts = [\n            x1+r, y1, x2-r, y1, x2, y1, x2, y1+r,\n            x2, y2-r, x2, y2, x2-r, y2, x1+r, y2,\n            x1, y2, x1, y2-r, x1, y1+r, x1, y1\n        ]\n        return cv.create_polygon(pts, smooth=True, **kw)\n    except Exception:\n        return cv.create_rectangle(x1, y1, x2, y2, **kw)"
       },
       {
         "name": "_spina_v24_cilog_round_rect",
-        "line": 45643,
-        "end_line": 45652,
+        "line": 45614,
+        "end_line": 45623,
         "lines": 10,
         "signature": "cv, x1, y1, x2, y2, r=10, **kw",
         "external_names": [],
@@ -320,31 +193,31 @@
         "references": [
           {
             "owner": "_spina_v24_cilog_draw_charts",
-            "line": 45812
-          },
-          {
-            "owner": "_spina_v24_cilog_draw_charts",
-            "line": 45753
-          },
-          {
-            "owner": "_spina_v24_cilog_draw_charts",
-            "line": 45755
-          },
-          {
-            "owner": "_spina_v24_cilog_draw_charts",
-            "line": 45781
-          },
-          {
-            "owner": "_spina_v24_cilog_draw_charts",
             "line": 45783
+          },
+          {
+            "owner": "_spina_v24_cilog_draw_charts",
+            "line": 45724
+          },
+          {
+            "owner": "_spina_v24_cilog_draw_charts",
+            "line": 45726
+          },
+          {
+            "owner": "_spina_v24_cilog_draw_charts",
+            "line": 45752
+          },
+          {
+            "owner": "_spina_v24_cilog_draw_charts",
+            "line": 45754
           }
         ],
         "source": "def _spina_v24_cilog_round_rect(cv, x1, y1, x2, y2, r=10, **kw):\n    try:\n        pts = [\n            x1+r, y1, x2-r, y1, x2, y1, x2, y1+r,\n            x2, y2-r, x2, y2, x2-r, y2, x1+r, y2,\n            x1+r, y2, x1, y2, x1, y2-r, x1, y1+r, x1, y1\n        ]\n        return cv.create_polygon(pts, smooth=True, **kw)\n    except Exception:\n        return cv.create_rectangle(x1, y1, x2, y2, **kw)"
       },
       {
         "name": "_spina_perf_dict_rows",
-        "line": 36020,
-        "end_line": 36030,
+        "line": 36013,
+        "end_line": 36023,
         "lines": 11,
         "signature": "rows",
         "external_names": [],
@@ -353,15 +226,15 @@
         "references": [
           {
             "owner": "_spina_perf_clients_rows",
-            "line": 36126
+            "line": 36119
           },
           {
             "owner": "_spina_perf_clients_rows",
-            "line": 36130
+            "line": 36123
           },
           {
             "owner": "_spina_perf_clients_rows",
-            "line": 36190
+            "line": 36183
           }
         ],
         "source": "def _spina_perf_dict_rows(rows):\n    out = []\n    for r in rows or []:\n        try:\n            out.append(dict(r))\n        except Exception:\n            try:\n                out.append({k: r[k] for k in r.keys()})\n            except Exception:\n                pass\n    return out"
@@ -369,40 +242,9 @@
     ],
     "numbers": [
       {
-        "name": "_spina_v25_parse_count_from_var",
-        "line": 46352,
-        "end_line": 46358,
-        "lines": 7,
-        "signature": "var_value",
-        "external_names": [
-          "re"
-        ],
-        "group": "numbers",
-        "reference_count": 4,
-        "references": [
-          {
-            "owner": "_spina_v25_update_collector_cards",
-            "line": 46371
-          },
-          {
-            "owner": "_spina_v25_update_collector_cards",
-            "line": 46372
-          },
-          {
-            "owner": "_spina_v25_update_collector_cards",
-            "line": 46373
-          },
-          {
-            "owner": "_spina_v25_update_collector_cards",
-            "line": 46374
-          }
-        ],
-        "source": "def _spina_v25_parse_count_from_var(var_value):\n    try:\n        s = str(var_value or \"\")\n        m = re.search(r\"(\\d+)\", s)\n        return m.group(1) if m else \"0\"\n    except Exception:\n        return \"0\""
-      },
-      {
         "name": "_spina_v18_draw_round_rect",
-        "line": 42575,
-        "end_line": 42585,
+        "line": 42546,
+        "end_line": 42556,
         "lines": 11,
         "signature": "cv, x1, y1, x2, y2, r=14, **kwargs",
         "external_names": [],
@@ -411,19 +253,15 @@
         "references": [
           {
             "owner": "_spina_v18_draw_dashboard_charts",
-            "line": 42619
+            "line": 42590
           },
           {
             "owner": "_spina_v18_draw_dashboard_charts",
-            "line": 42620
+            "line": 42591
           },
           {
             "owner": "_spina_v18_draw_dashboard_charts",
-            "line": 42655
-          },
-          {
-            "owner": "_spina_v18_draw_dashboard_charts",
-            "line": 42687
+            "line": 42626
           },
           {
             "owner": "_spina_v18_draw_dashboard_charts",
@@ -431,7 +269,11 @@
           },
           {
             "owner": "_spina_v18_draw_dashboard_charts",
-            "line": 42689
+            "line": 42629
+          },
+          {
+            "owner": "_spina_v18_draw_dashboard_charts",
+            "line": 42660
           }
         ],
         "source": "def _spina_v18_draw_round_rect(cv, x1, y1, x2, y2, r=14, **kwargs):\n    \"\"\"Canvas rounded rectangle fallback using polygon smoothing.\"\"\"\n    try:\n        points = [\n            x1+r, y1, x2-r, y1, x2, y1, x2, y1+r,\n            x2, y2-r, x2, y2, x2-r, y2, x1+r, y2,\n            x1, y2, x1, y2-r, x1, y1+r, x1, y1\n        ]\n        return cv.create_polygon(points, smooth=True, **kwargs)\n    except Exception:\n        return cv.create_rectangle(x1, y1, x2, y2, **kwargs)"
@@ -588,7 +430,7 @@
           },
           {
             "owner": "_spina_v23_client_form",
-            "line": 45242
+            "line": 45213
           },
           {
             "owner": "_dom_seed_date",
@@ -611,8 +453,8 @@
       },
       {
         "name": "_spina_v17_set_card",
-        "line": 42249,
-        "end_line": 42257,
+        "line": 42232,
+        "end_line": 42240,
         "lines": 9,
         "signature": "self, key, value, subtitle=None",
         "external_names": [],
@@ -621,27 +463,27 @@
         "references": [
           {
             "owner": "_spina_v17_populate_dashboard_tree",
-            "line": 42362
+            "line": 42345
           },
           {
             "owner": "_spina_v17_populate_dashboard_tree",
-            "line": 42363
+            "line": 42346
           },
           {
             "owner": "_spina_v17_populate_dashboard_tree",
-            "line": 42364
+            "line": 42347
           },
           {
             "owner": "_spina_v17_populate_dashboard_tree",
-            "line": 42365
+            "line": 42348
           }
         ],
         "source": "def _spina_v17_set_card(self, key, value, subtitle=None):\n    try:\n        val_lbl, sub_lbl = (getattr(self, \"_dash_cards\", {}) or {}).get(key, (None, None))\n        if val_lbl is not None:\n            val_lbl.configure(text=str(value))\n        if subtitle is not None and sub_lbl is not None:\n            sub_lbl.configure(text=str(subtitle))\n    except Exception:\n        pass"
       },
       {
         "name": "_spina_v24_cilog_set_card",
-        "line": 45824,
-        "end_line": 45832,
+        "line": 45795,
+        "end_line": 45803,
         "lines": 9,
         "signature": "self, key, value, subtitle=None",
         "external_names": [],
@@ -650,19 +492,19 @@
         "references": [
           {
             "owner": "_spina_v24_cilog_update_cards",
-            "line": 45842
+            "line": 45813
           },
           {
             "owner": "_spina_v24_cilog_update_cards",
-            "line": 45843
+            "line": 45814
           },
           {
             "owner": "_spina_v24_cilog_update_cards",
-            "line": 45844
+            "line": 45815
           },
           {
             "owner": "_spina_v24_cilog_update_cards",
-            "line": 45849
+            "line": 45820
           }
         ],
         "source": "def _spina_v24_cilog_set_card(self, key, value, subtitle=None):\n    try:\n        val_lbl, sub_lbl = (getattr(self, \"_cilog_cards\", {}) or {}).get(key, (None, None))\n        if val_lbl is not None:\n            val_lbl.configure(text=str(value))\n        if subtitle is not None and sub_lbl is not None:\n            sub_lbl.configure(text=str(subtitle))\n    except Exception:\n        pass"
@@ -679,31 +521,31 @@
         "references": [
           {
             "owner": "_app_on_client_edit",
-            "line": 29795
+            "line": 29788
           },
           {
             "owner": "_app_delete_client_selected",
-            "line": 29846
+            "line": 29839
           },
           {
             "owner": "_app_open_client_history_dialog",
-            "line": 29870
+            "line": 29863
           },
           {
             "owner": "_app_link_selected_client",
-            "line": 30386
+            "line": 30379
           },
           {
             "owner": "_app_unlink_selected_client",
-            "line": 30509
+            "line": 30502
           }
         ],
         "source": "def _app__get_selected_client_name(self):\n    try:\n        sel = self.clients_tree.selection()\n        if not sel:\n            return None\n        vals = self.clients_tree.item(sel[0], 'values') or ()\n        if not vals:\n            return None\n        return str(vals[0]).strip()\n    except Exception:\n        return None"
       },
       {
         "name": "_spina_crc_clean_reason",
-        "line": 39859,
-        "end_line": 39872,
+        "line": 39852,
+        "end_line": 39865,
         "lines": 14,
         "signature": "_v",
         "external_names": [
@@ -714,23 +556,23 @@
         "references": [
           {
             "owner": "_spina_crc_fetch_close_rows",
-            "line": 40031
+            "line": 40024
           },
           {
             "owner": "_spina_crc_fetch_close_rows",
-            "line": 40138
+            "line": 40131
           },
           {
             "owner": "_add_pay",
-            "line": 40031
+            "line": 40024
           }
         ],
         "source": "def _spina_crc_clean_reason(_v):\n    try:\n        s = str(_v or \"\").strip()\n    except Exception:\n        s = \"\"\n    if not s:\n        return \"\"\n    try:\n        s = re.sub(r\"\\[RC:[^\\]]+\\]\", \"\", s, flags=re.I).strip()\n        s = re.sub(r\"\\[ADV:[^\\]]+\\]\", \"\", s, flags=re.I).strip()\n        s = re.sub(r\"\\s+\", \" \", s).strip()\n    except Exception:\n        pass\n    return s"
       },
       {
         "name": "_spina_crc_wrap",
-        "line": 40149,
-        "end_line": 40171,
+        "line": 40142,
+        "end_line": 40164,
         "lines": 23,
         "signature": "c, text, width, font='Helvetica', size=8.0",
         "external_names": [],
@@ -739,15 +581,15 @@
         "references": [
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40436
+            "line": 40429
           },
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40437
+            "line": 40430
           },
           {
             "owner": "_spina_save_closed_collector_route_copy",
-            "line": 40452
+            "line": 40445
           }
         ],
         "source": "def _spina_crc_wrap(c, text, width, font=\"Helvetica\", size=8.0):\n    try:\n        words = str(text or \"\").split()\n    except Exception:\n        words = []\n    if not words:\n        return [\"\"]\n    lines = []\n    cur = \"\"\n    for w in words:\n        test = (cur + \" \" + w).strip()\n        try:\n            ok = c.stringWidth(test, font, size) <= width\n        except Exception:\n            ok = len(test) * size * 0.5 <= width\n        if ok or not cur:\n            cur = test\n        else:\n            lines.append(cur)\n            cur = w\n    if cur:\n        lines.append(cur)\n    return lines or [\"\"]"
