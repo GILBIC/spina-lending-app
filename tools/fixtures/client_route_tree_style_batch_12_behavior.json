@@ -1,0 +1,133 @@
+{
+  "batch": "client_route_tree_style_batch_12",
+  "helper_names": [
+    "_spina_v23_style_clients_tree",
+    "_spina_v27_style_route_trees"
+  ],
+  "behavior": {
+    "_spina_v23_style_clients_tree": {
+      "normal": {
+        "kind": "return",
+        "result": null,
+        "styles": [
+          {
+            "configure_calls": [
+              {
+                "style": "ModernClients.Treeview",
+                "kwargs": {
+                  "rowheight": 32,
+                  "font": [
+                    "Segoe UI",
+                    10
+                  ],
+                  "background": "clients-panel",
+                  "fieldbackground": "clients-panel",
+                  "foreground": "clients-fg",
+                  "borderwidth": 0
+                }
+              },
+              {
+                "style": "ModernClients.Treeview.Heading",
+                "kwargs": {
+                  "font": [
+                    "Segoe UI",
+                    10,
+                    "bold"
+                  ],
+                  "background": "clients-card2",
+                  "foreground": "clients-fg",
+                  "relief": "flat"
+                }
+              }
+            ],
+            "map_calls": [
+              {
+                "style": "ModernClients.Treeview",
+                "kwargs": {
+                  "background": [
+                    [
+                      "selected",
+                      "clients-blue"
+                    ]
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "palette_failure": {
+        "kind": "return",
+        "result": null,
+        "styles": []
+      },
+      "style_failure": {
+        "kind": "return",
+        "result": null,
+        "styles": []
+      }
+    },
+    "_spina_v27_style_route_trees": {
+      "normal": {
+        "kind": "return",
+        "result": null,
+        "styles": [
+          {
+            "configure_calls": [
+              {
+                "style": "ModernRoute.Treeview",
+                "kwargs": {
+                  "rowheight": 32,
+                  "font": [
+                    "Segoe UI",
+                    10
+                  ],
+                  "background": "route-panel",
+                  "fieldbackground": "route-panel",
+                  "foreground": "route-fg",
+                  "borderwidth": 0
+                }
+              },
+              {
+                "style": "ModernRoute.Treeview.Heading",
+                "kwargs": {
+                  "font": [
+                    "Segoe UI",
+                    10,
+                    "bold"
+                  ],
+                  "background": "route-card2",
+                  "foreground": "route-fg",
+                  "relief": "flat"
+                }
+              }
+            ],
+            "map_calls": [
+              {
+                "style": "ModernRoute.Treeview",
+                "kwargs": {
+                  "background": [
+                    [
+                      "selected",
+                      "route-blue"
+                    ]
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "palette_failure": {
+        "kind": "return",
+        "result": null,
+        "styles": []
+      },
+      "style_failure": {
+        "kind": "return",
+        "result": null,
+        "styles": []
+      }
+    }
+  }
+}

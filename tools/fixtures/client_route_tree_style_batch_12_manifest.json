@@ -1,0 +1,22 @@
+{
+  "batch": "client_route_tree_style_batch_12",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "helpers": [
+    {
+      "name": "_spina_v23_style_clients_tree",
+      "signature": "self",
+      "module": "spina_app.ui_controls",
+      "module_path": "spina_app/ui_controls.py",
+      "expected_source_sha256": "9f1ccadaa00e098246cb68fbf7d9d5efcb0e670bf1a98e03b027796e7275fa5f",
+      "allowed_external_names": ["_spina_v23_clients_colors", "ttk"]
+    },
+    {
+      "name": "_spina_v27_style_route_trees",
+      "signature": "self",
+      "module": "spina_app.ui_controls",
+      "module_path": "spina_app/ui_controls.py",
+      "expected_source_sha256": "28de97930631adbb1838b4853e6bdc221951da186d9af498b6cf373eba477ece",
+      "allowed_external_names": ["_spina_v27_route_colors", "ttk"]
+    }
+  ]
+}

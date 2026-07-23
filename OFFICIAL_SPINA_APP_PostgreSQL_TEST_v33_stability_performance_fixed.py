@@ -44152,29 +44152,7 @@ def _spina_v23_card(parent, title, value="—", subtitle="", accent=None):
     return frame, value_lbl, sub_lbl
 
 
-def _spina_v23_style_clients_tree(self):
-    try:
-        c = _spina_v23_clients_colors(self)
-        st = ttk.Style()
-        st.configure(
-            "ModernClients.Treeview",
-            rowheight=32,
-            font=("Segoe UI", 10),
-            background=c["panel"],
-            fieldbackground=c["panel"],
-            foreground=c["fg"],
-            borderwidth=0,
-        )
-        st.configure(
-            "ModernClients.Treeview.Heading",
-            font=("Segoe UI", 10, "bold"),
-            background=c["card2"],
-            foreground=c["fg"],
-            relief="flat",
-        )
-        st.map("ModernClients.Treeview", background=[("selected", c["blue"])])
-    except Exception:
-        pass
+from spina_app.ui_controls import _spina_v23_style_clients_tree
 
 
 def _spina_v23_selected_name_lt(self):
@@ -46364,29 +46342,7 @@ def _spina_v27_route_card(parent, title, value="—", subtitle="", accent=None):
     return frame, value_lbl, sub_lbl
 
 
-def _spina_v27_style_route_trees(self):
-    try:
-        c = _spina_v27_route_colors(self)
-        st = ttk.Style()
-        st.configure(
-            "ModernRoute.Treeview",
-            rowheight=32,
-            font=("Segoe UI", 10),
-            background=c["panel"],
-            fieldbackground=c["panel"],
-            foreground=c["fg"],
-            borderwidth=0,
-        )
-        st.configure(
-            "ModernRoute.Treeview.Heading",
-            font=("Segoe UI", 10, "bold"),
-            background=c["card2"],
-            foreground=c["fg"],
-            relief="flat",
-        )
-        st.map("ModernRoute.Treeview", background=[("selected", c["blue"])])
-    except Exception:
-        pass
+from spina_app.ui_controls import _spina_v27_style_route_trees
 
 
 from spina_app.utilities.numbers import _spina_v27_count_from_text
