@@ -1,0 +1,69 @@
+name: Update modularization map wave 14
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [agent/legacy-dashboard-palette-batch-14]
+    paths:
+      - .github/workflows/update-modularization-map-wave-14.yml
+
+permissions:
+  contents: write
+
+jobs:
+  update-map:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out extraction branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/legacy-dashboard-palette-batch-14
+          fetch-depth: 0
+
+      - name: Apply verified Wave 14 map replacements
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('docs/modularization-map.md')
+          text = path.read_text(encoding='utf-8')
+
+          replacements = [
+              ('> **Tracked main state:** after merged PR #111  ', '> **Tracked main state:** after merged PR #113  '),
+              ('| Focused helper functions extracted from the large desktop source | **55** |', '| Focused helper functions extracted from the large desktop source | **57** |'),
+              ('| Accelerated modularization waves completed | **13** |', '| Accelerated modularization waves completed | **14** |'),
+              ('| Latest completed extraction | **Wave 13 / PR #111** |', '| Latest completed extraction | **Wave 14 / PR #113** |'),
+              ('| Next step | **Wave 14 read-only inspection** |', '| Next step | **Wave 15 read-only inspection** |'),
+              ('| `spina_app/theme_palettes.py` | Dashboard, Cash Control, Client Information Log, Reports/Clients, and Collector/Collector Route light/dark palettes | 5 |', '| `spina_app/theme_palettes.py` | Modern and legacy Dashboard, Cash Control, Client Information Log, Reports/Clients, and Collector/Collector Route light/dark palettes | 7 |'),
+              ('| **Total** |  | **55** |', '| **Total** |  | **57** |'),
+              ('  - `_spina_v25_collector_colors` — PR #107\n', '  - `_spina_v25_collector_colors` — PR #107\n  - `_spina_v17_dash_colors` — PR #113\n  - `_spina_v18_dashboard_palette` — PR #113\n'),
+              ('| 14 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |', '| 14 | #112 inspection | #113 | `theme_palettes.py` | Legacy Dashboard light/dark palette helpers | ✅ Passed and merged |\n| 15 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |'),
+              ('| 14 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |', '| 14 | #112 | #113 | `theme_palettes.py` | Two legacy Dashboard palette helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |\n| 15 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |'),
+          ]
+
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f'Expected exactly one occurrence of {old!r}, found {count}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Verify updated map
+        run: |
+          grep -F '**57**' docs/modularization-map.md
+          grep -F '**Wave 14 / PR #113**' docs/modularization-map.md
+          grep -F '_spina_v17_dash_colors` — PR #113' docs/modularization-map.md
+          grep -F '_spina_v18_dashboard_palette` — PR #113' docs/modularization-map.md
+          grep -F '| 15 | Not started' docs/modularization-map.md
+          grep -F '| 15 | Pending' docs/modularization-map.md
+
+      - name: Commit map and remove updater
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/update-modularization-map-wave-14.yml
+          git add docs/modularization-map.md
+          git commit -m 'Update modularization map for Wave 14'
+          git push origin HEAD:agent/legacy-dashboard-palette-batch-14
