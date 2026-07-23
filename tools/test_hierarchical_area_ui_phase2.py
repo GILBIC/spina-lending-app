@@ -72,6 +72,13 @@ def main() -> None:
     conn.commit()
     assert count_clients_for_area_node(conn, cardona["area_uid"], include_descendants=True) == 1
 
+    conn.execute(
+        "INSERT INTO clients(client_uid, name, area, area_uid) VALUES (?,?,?,?)",
+        ("stale-client", "Stale Client", street["full_path"], "stale-area-uid"),
+    )
+    conn.commit()
+    assert count_clients_for_area_node(conn, cardona["area_uid"], include_descendants=True) == 2
+
     rename_map = rename_area_node(conn, looc["area_uid"], "Looc Proper")
     assert rename_map["Cardona › Looc"] == "Cardona › Looc Proper"
     renamed_group = find_area_node_by_path(
@@ -84,6 +91,11 @@ def main() -> None:
     ).fetchone()
     assert nested_row["area_uid"] == group["area_uid"]
     assert nested_row["area"] == renamed_group["full_path"]
+    stale_row = conn.execute(
+        "SELECT area_uid, area FROM clients WHERE client_uid='stale-client'"
+    ).fetchone()
+    assert stale_row["area_uid"] == street["area_uid"]
+    assert stale_row["area"] == "Cardona › Looc Proper › Zone 1 › Street A"
 
     rizal = add_area_node(conn, "Rizal")
     move_map = move_area_node(conn, looc["area_uid"], rizal["area_uid"])
@@ -120,12 +132,12 @@ def main() -> None:
     try:
         set_area_node_active(conn, looc["area_uid"], False)
     except ValueError as exc:
-        assert "assigned to 1 client" in str(exc)
+        assert "assigned to 2 client" in str(exc)
     else:
         raise AssertionError("In-use subtree deactivation should be blocked")
 
     conn.execute(
-        "UPDATE clients SET area_uid=?, area=? WHERE client_uid='nested-client'",
+        "UPDATE clients SET area_uid=?, area=? WHERE client_uid IN ('nested-client','stale-client')",
         (cardona["area_uid"], cardona["full_path"]),
     )
     conn.commit()
