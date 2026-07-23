@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Capture exact toggle source
+      - name: Capture exact toggle sources
         run: |
           python - <<'PY'
           import ast
@@ -34,16 +34,20 @@ jobs:
               node for node in ast.walk(tree)
               if isinstance(node, ast.FunctionDef) and node.name == '_toggle_reports_notes_panel'
           ]
-          if len(matches) != 1:
-              raise RuntimeError(f'Expected one toggle function, found {len(matches)}')
-          node = matches[0]
-          chunk = lines[node.lineno - 1:node.end_lineno]
-          report = {
-              'line': node.lineno,
-              'end_line': node.end_lineno,
-              'source': '\n'.join(chunk),
-              'repr_lines': [repr(line) for line in chunk],
-          }
+          if not matches:
+              raise RuntimeError('No Reports notes toggle function found')
+          entries = []
+          for node in matches:
+              chunk = lines[node.lineno - 1:node.end_lineno]
+              text = '\n'.join(chunk)
+              entries.append({
+                  'line': node.lineno,
+                  'end_line': node.end_lineno,
+                  'contains_modern_hide_label': 'self.report_notes_btn.configure(text="Hide Notes")' in text,
+                  'source': text,
+                  'repr_lines': [repr(line) for line in chunk],
+              })
+          report = {'count': len(entries), 'matches': entries}
           output = Path('tools/fixtures/reports_notes_toggle_source.json')
           output.parent.mkdir(parents=True, exist_ok=True)
           output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
@@ -56,5 +60,5 @@ jobs:
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Inspect Reports notes toggle source"
+          git commit -m "Inspect Reports notes toggle sources"
           git push origin HEAD:agent/fix-reports-notes-panel-visible
