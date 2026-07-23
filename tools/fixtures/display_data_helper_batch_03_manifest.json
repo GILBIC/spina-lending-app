@@ -1,0 +1,30 @@
+{
+  "batch": "display_data_helper_batch_03",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "helpers": [
+    {
+      "name": "_spina_dash__status_for",
+      "signature": "completion_pct, remaining, days_left",
+      "module": "spina_app.utilities.dashboard",
+      "module_path": "spina_app/utilities/dashboard.py",
+      "expected_source_sha256": "d8108999d373720ab3d731efbf5b976e4e22cbd52e7e3a7e74f848036017d5cb",
+      "allowed_external_names": []
+    },
+    {
+      "name": "_spina_perf_dict_rows",
+      "signature": "rows",
+      "module": "spina_app.utilities.records",
+      "module_path": "spina_app/utilities/records.py",
+      "expected_source_sha256": "f119690637124a6dd0bbc44e44742f925d452d5d6808b0dcad4294f163291434",
+      "allowed_external_names": []
+    },
+    {
+      "name": "_spina_crc_fmt_money",
+      "signature": "_v, blank_zero=False",
+      "module": "spina_app.utilities.formatting",
+      "module_path": "spina_app/utilities/formatting.py",
+      "expected_source_sha256": "a781159c9d8e12917f178c6c034433287d46d13c2532ed2c719228d4536e8872",
+      "allowed_external_names": []
+    }
+  ]
+}
