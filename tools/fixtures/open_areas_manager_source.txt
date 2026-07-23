@@ -1,0 +1,162 @@
+def open_areas_manager(self):
+        """Open the Areas manager window (create/rename/delete areas)."""
+        try:
+            if getattr(self, '_areas_win', None) is not None and self._areas_win.winfo_exists():
+                self._areas_win.lift()
+                self._areas_win.focus_force()
+                return
+        except Exception as __spina_exc:
+            _log_suppressed_once('excpass_0452', 'suppressed exception excpass_0452', __spina_exc)
+            pass
+
+        win = tk.Toplevel(self.root)
+        self._areas_win = win
+        win.title('Areas Manager')
+        win.geometry('420x460')
+        win.transient(self.root)
+
+        frm = ttk.Frame(win, padding=10)
+        frm.pack(fill='both', expand=True)
+
+        ttk.Label(frm, text='Areas', font=('TkDefaultFont', 11, 'bold')).pack(anchor='w', pady=(0,8))
+
+        # List
+        list_frame = ttk.Frame(frm)
+        list_frame.pack(fill='both', expand=True)
+
+        self._areas_list = tk.Listbox(list_frame, height=14)
+        self._areas_list.pack(side='left', fill='both', expand=True)
+
+        sb = ttk.Scrollbar(list_frame, orient='vertical', command=self._areas_list.yview)
+        sb.pack(side='right', fill='y')
+        self._areas_list.configure(yscrollcommand=sb.set)
+
+        # Entry + buttons
+        form = ttk.Frame(frm)
+        form.pack(fill='x', pady=10)
+
+        ttk.Label(form, text='Area name:').grid(row=0, column=0, sticky='w')
+        area_name_var = tk.StringVar(value='')
+        ent = ttk.Entry(form, textvariable=area_name_var)
+        ent.grid(row=1, column=0, sticky='we', padx=(0,8))
+        form.columnconfigure(0, weight=1)
+
+        btns = ttk.Frame(form)
+        btns.grid(row=1, column=1, sticky='e')
+
+        def _refresh():
+            try:
+                self._areas_list.delete(0, 'end')
+                for a in (self.db.get_all_areas() or []):
+                    self._areas_list.insert('end', a)
+            except Exception as __spina_exc:
+                _log_suppressed_once('excpass_0453', 'suppressed exception excpass_0453', __spina_exc)
+                pass
+            try:
+                self._refresh_area_dropdowns()
+            except Exception as __spina_exc:
+                _log_suppressed_once('excpass_0454', 'suppressed exception excpass_0454', __spina_exc)
+                pass
+
+        def _selected():
+            try:
+                idxs = self._areas_list.curselection()
+                if not idxs:
+                    return ''
+                return str(self._areas_list.get(idxs[0]) or '').strip()
+            except Exception:
+                return ''
+
+        def _on_select(_=None):
+            try:
+                s = _selected()
+                if s:
+                    area_name_var.set(s)
+            except Exception as __spina_exc:
+                _log_suppressed_once('excpass_0455', 'suppressed exception excpass_0455', __spina_exc)
+                pass
+
+        try:
+            self._areas_list.bind('<<ListboxSelect>>', _on_select)
+        except Exception as e:
+            _log_ignored("ui.bind failed", e, key="ui.bind_failed")
+
+        def add_area():
+            nm = (area_name_var.get() or '').strip()
+            if not nm:
+                messagebox.showwarning('Required', 'Please enter an area name.')
+                return
+            try:
+                self.db.add_area(nm)
+                _refresh()
+                area_name_var.set(nm)
+            except Exception as e:
+                messagebox.showerror('Error', f'Failed to add area: {e}')
+
+        def rename_area():
+            old = _selected()
+            if not old:
+                messagebox.showwarning('Select', 'Please select an area to rename.')
+                return
+            new = (area_name_var.get() or '').strip()
+            if not new:
+                messagebox.showwarning('Required', 'Please enter the new area name.')
+                return
+            if new == old:
+                return
+            # Rename and update all clients with the old area
+            try:
+                ok = self.db.rename_area(old, new)
+                if ok:
+                    messagebox.showinfo('Updated', f"Renamed '{old}' to '{new}' and updated all clients.")
+                _refresh()
+                area_name_var.set(new)
+            except Exception as e:
+                messagebox.showerror('Error', f'Failed to rename area: {e}')
+
+        def delete_area():
+            nm = _selected()
+            if not nm:
+                messagebox.showwarning('Select', 'Please select an area to delete.')
+                return
+            try:
+                used = self.db.count_clients_in_area(nm)
+            except Exception:
+                used = 0
+            if used > 0:
+                ok = messagebox.askyesno('Area in use',
+                                         f"'{nm}' is used by {used} client(s).\n\nDelete it and CLEAR that area from those clients?")
+                if not ok:
+                    return
+                clear_clients = True
+            else:
+                clear_clients = True
+            try:
+                self.db.delete_area(nm, clear_clients=clear_clients)
+                _refresh()
+                area_name_var.set('')
+            except Exception as e:
+                messagebox.showerror('Error', f'Failed to delete area: {e}')
+
+        ttk.Button(btns, text='Add', command=add_area).pack(side='left', padx=2)
+        ttk.Button(btns, text='Rename', command=rename_area).pack(side='left', padx=2)
+        ttk.Button(btns, text='Delete', command=delete_area).pack(side='left', padx=2)
+
+        # Footer note
+        ttk.Label(frm, text='Renaming an area updates ALL clients using it.', foreground='#555').pack(anchor='w')
+
+        def _on_close():
+            try:
+                self._refresh_area_dropdowns()
+            except Exception as __spina_exc:
+                _log_suppressed_once('excpass_0456', 'suppressed exception excpass_0456', __spina_exc)
+                pass
+            try:
+                self._areas_win = None
+            except Exception as __spina_exc:
+                _log_suppressed_once('excpass_0457', 'suppressed exception excpass_0457', __spina_exc)
+                pass
+            win.destroy()
+
+        win.protocol('WM_DELETE_WINDOW', _on_close)
+        _refresh()
