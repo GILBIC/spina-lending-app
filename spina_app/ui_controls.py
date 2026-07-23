@@ -5,7 +5,10 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk
 
-from spina_app.theme_palettes import _spina_v21_cash_colors
+from spina_app.theme_palettes import (
+    _spina_v21_cash_colors,
+    _spina_v24_cilog_colors,
+)
 
 
 def _spina_v21_build_labeled_entry(parent, label, var, width=14):
