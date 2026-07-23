@@ -1,0 +1,14 @@
+{
+  "batch": "collector_route_card_batch_13",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "helpers": [
+    {
+      "name": "_spina_v27_route_card",
+      "signature": "parent, title, value='—', subtitle='', accent=None",
+      "module": "spina_app.ui_cards",
+      "module_path": "spina_app/ui_cards.py",
+      "expected_source_sha256": "54b99bffb2f9e0923da9400b320a52200c5cc468cdb722e4ec54b1a99e63fe51",
+      "allowed_external_names": ["_spina_v27_route_colors", "tk"]
+    }
+  ]
+}
