@@ -1,0 +1,108 @@
+name: Inspect note dictionary helper
+
+on:
+  push:
+    branches:
+      - agent/extract-note-dict-helper
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Inspect helper
+        run: |
+          python - <<'PY'
+          import ast
+          import builtins
+          import json
+          from pathlib import Path
+
+          app = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
+          report_path = Path('tools/fixtures/note_dict_helper_inspection.json')
+          target = '_as_note_dict'
+          source = app.read_text(encoding='utf-8')
+          lines = source.splitlines()
+          tree = ast.parse(source)
+          matches = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == target]
+          if len(matches) != 1:
+              raise RuntimeError(f'Expected exactly one top-level {target}, found {len(matches)}')
+          node = matches[0]
+
+          local_names = {arg.arg for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)}
+          if node.args.vararg:
+              local_names.add(node.args.vararg.arg)
+          if node.args.kwarg:
+              local_names.add(node.args.kwarg.arg)
+          for child in ast.walk(node):
+              if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
+                  local_names.add(child.id)
+              elif isinstance(child, ast.ExceptHandler) and isinstance(child.name, str):
+                  local_names.add(child.name)
+
+          loaded = {
+              child.id
+              for child in ast.walk(node)
+              if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
+          }
+          external = sorted(loaded - set(dir(builtins)) - local_names - {target})
+          called = sorted({
+              child.func.id
+              for child in ast.walk(node)
+              if isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
+          })
+
+          callers = []
+          for owner in tree.body:
+              if not isinstance(owner, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                  continue
+              count = sum(
+                  1
+                  for child in ast.walk(owner)
+                  if isinstance(child, ast.Call)
+                  and isinstance(child.func, ast.Name)
+                  and child.func.id == target
+              )
+              if count:
+                  callers.append({
+                      'name': owner.name,
+                      'line': owner.lineno,
+                      'kind': type(owner).__name__,
+                      'call_count': count,
+                  })
+
+          report = {
+              'target': target,
+              'line': node.lineno,
+              'end_line': node.end_lineno,
+              'line_count': node.end_lineno - node.lineno + 1,
+              'signature': ast.unparse(node.args),
+              'decorators': [ast.unparse(item) for item in node.decorator_list],
+              'uses_global_or_nonlocal': any(isinstance(child, (ast.Global, ast.Nonlocal)) for child in ast.walk(node)),
+              'external_loaded_names': external,
+              'called_names': called,
+              'source': '\n'.join(lines[node.lineno - 1:node.end_lineno]),
+              'callers': callers,
+          }
+          report_path.parent.mkdir(parents=True, exist_ok=True)
+          report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+          PY
+      - name: Commit inspection report
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/fixtures/note_dict_helper_inspection.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Inspect note dictionary helper"
+          git push origin HEAD:${GITHUB_REF_NAME}
