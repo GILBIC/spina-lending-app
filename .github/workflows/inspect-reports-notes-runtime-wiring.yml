@@ -1,0 +1,85 @@
+name: Inspect Reports notes runtime wiring
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-reports-notes-panel-visible
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Inspect active Reports notes wiring
+        run: |
+          python - <<'PY'
+          import ast
+          import json
+          from pathlib import Path
+
+          app = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
+          source = app.read_text(encoding='utf-8')
+          lines = source.splitlines()
+          tree = ast.parse(source)
+
+          target = None
+          parent = None
+          for owner in ast.walk(tree):
+              if not isinstance(owner, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                  continue
+              for node in ast.walk(owner):
+                  if not isinstance(node, ast.FunctionDef) or node.name != '_toggle_reports_notes_panel':
+                      continue
+                  text = '\n'.join(lines[node.lineno - 1:node.end_lineno])
+                  if 'self.report_notes_btn.configure(text="Hide Notes")' in text:
+                      target = node
+                      parent = owner
+                      break
+              if target is not None:
+                  break
+          if target is None or parent is None:
+              raise RuntimeError('Modern Reports notes toggle not found')
+
+          names = ('report_notes_btn', 'reports_notes_box', 'reports_notes_sep', 'table_card', 'reports_tree')
+          refs = []
+          for lineno, line in enumerate(lines, 1):
+              if parent.lineno <= lineno <= parent.end_lineno and any(name in line for name in names):
+                  refs.append({'line': lineno, 'text': line})
+
+          report = {
+              'parent_name': parent.name,
+              'parent_line': parent.lineno,
+              'parent_end_line': parent.end_lineno,
+              'toggle_line': target.lineno,
+              'toggle_end_line': target.end_lineno,
+              'context_start': max(parent.lineno, target.lineno - 150),
+              'context_end': min(parent.end_lineno, target.end_lineno + 180),
+              'context': '\n'.join(
+                  f'{i}: {lines[i-1]}'
+                  for i in range(max(parent.lineno, target.lineno - 150), min(parent.end_lineno, target.end_lineno + 180) + 1)
+              ),
+              'references': refs,
+          }
+          out = Path('tools/fixtures/reports_notes_runtime_wiring.json')
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+          PY
+      - name: Commit inspection
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/fixtures/reports_notes_runtime_wiring.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Inspect Reports notes runtime wiring"
+          git push origin HEAD:agent/fix-reports-notes-panel-visible
