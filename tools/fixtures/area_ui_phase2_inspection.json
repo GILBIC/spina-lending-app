@@ -1,0 +1,353 @@
+{
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "functions": [
+    {
+      "owner": "LoanDB",
+      "name": "add_client",
+      "line": 4949,
+      "end_line": 5119,
+      "signature": "self, name, principal=0.0, date_released=None, area=None, interest_rate=None, new_until=None, loan_type=None, pay_start_offset_days=1, contact_number='', payment_term='Daily', payment_amount=0.0, payment_mode='Cash', due_weekday='', semi_due_day1=None, semi_due_day2=None, monthly_due_day=None, flex_due_rule=''",
+      "contexts": [
+        {
+          "match_line": 5090,
+          "start_line": 5078,
+          "end_line": 5108,
+          "text": "5078:         # Stable uid for history\n5079:         try:\n5080:             import uuid\n5081:             uid = uuid.uuid4().hex\n5082:         except Exception:\n5083:             uid = str(datetime.now().timestamp()).replace('.', '')\n5084: \n5085:         try:\n5086:             # Ensure area exists in master list (best-effort)\n5087:             try:\n5088:                 _a = (area or '').strip()\n5089:                 if _a:\n5090:                     self.ensure_area_exists(_a)\n5091:             except Exception as __spina_exc:\n5092:                 _log_suppressed_once('excpass_0121', 'suppressed exception excpass_0121', __spina_exc)\n5093:                 pass\n5094: \n5095:             cur.execute(\n5096:                 \"INSERT INTO clients (client_uid, person_uid, link_opt_out, name, contact_number, principal, interest_rate, interest_amount, total_to_pay, date_released, due_date, created_at, area, new_until, pay_start_offset_days, loan_type, payment_term, payment_amount, payment_mode, due_weekday, semi_due_day1, semi_due_day2, monthly_due_day, flex_due_rule) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\",\n5097:                 (uid, '', 0, name.strip(), cn, p, rate, intr, total, dr, due, now, (area or ''), new_until, psod, lt, pt, pa, pm, dwd, sd1, sd2, mdd, fdr)\n5098:             )\n5099:             self.conn.commit()\n5100: \n5101:             # Ensure renew defaults (safe if columns not present)\n5102:             try:\n5103:                 cur.execute(\"UPDATE clients SET last_released_cash = COALESCE(last_released_cash, principal), renew_count = COALESCE(renew_count, 0) WHERE client_uid=?\", (uid,))\n5104:                 self.conn.commit()\n5105:             except Exception as __spina_exc:\n5106:                 _log_suppressed_once('excpass_0122', 'suppressed exception excpass_0122', __spina_exc)\n5107:                 pass\n5108: "
+        }
+      ]
+    },
+    {
+      "owner": "LoanDB",
+      "name": "update_client",
+      "line": 5123,
+      "end_line": 5407,
+      "signature": "self, old_name, new_name=None, principal=None, date_released=None, area=None, interest_rate=None, new_until=None, loan_type=None, pay_start_offset_days=None, contact_number=None, payment_term=None, payment_amount=None, payment_mode=None, due_weekday=None, semi_due_day1=None, semi_due_day2=None, monthly_due_day=None, flex_due_rule=None",
+      "contexts": [
+        {
+          "match_line": 5183,
+          "start_line": 5171,
+          "end_line": 5201,
+          "text": "5171: \n5172:         due_days = 49 if lt == '7x7' else 120\n5173:         due = (datetime.strptime(dr, \"%Y-%m-%d\") + timedelta(days=due_days)).strftime(\"%Y-%m-%d\")\n5174: \n5175:         # Area\n5176:         if area is None:\n5177:             area_val = old_row.get(\"area\") or \"\"\n5178:         else:\n5179:             area_val = area\n5180:             try:\n5181:                 _a = (area_val or '').strip()\n5182:                 if _a:\n5183:                     self.ensure_area_exists(_a)\n5184:             except Exception as __spina_exc:\n5185:                 _log_suppressed_once('excpass_0124', 'suppressed exception excpass_0124', __spina_exc)\n5186:                 pass\n5187: \n5188:         # Contact number\n5189:         if contact_number is None:\n5190:             cn = old_row.get(\"contact_number\") or \"\"\n5191:         else:\n5192:             try:\n5193:                 cn = str(contact_number).strip()\n5194:             except Exception:\n5195:                 cn = \"\"\n5196: \n5197:         # Payment term & payment amount\n5198:         def _norm_term(v):\n5199:             try:\n5200:                 s = str(v or '').strip()\n5201:             except Exception:"
+        }
+      ]
+    },
+    {
+      "owner": "LoanDB",
+      "name": "ensure_area_exists",
+      "line": 7589,
+      "end_line": 7600,
+      "signature": "self, name",
+      "contexts": [
+        {
+          "match_line": 7589,
+          "start_line": 7589,
+          "end_line": 7600,
+          "text": "7589:     def ensure_area_exists(self, name):\n7590:         \"\"\"Insert area into master table if not present.\"\"\"\n7591:         nm = (name or \"\").strip()\n7592:         if not nm:\n7593:             return False\n7594:         cur = self.conn.cursor()\n7595:         try:\n7596:             cur.execute(\"INSERT OR IGNORE INTO areas(name, created_at) VALUES (?, datetime('now'))\", (nm,))\n7597:             self.conn.commit()\n7598:             return True\n7599:         except Exception:\n7600:             return False"
+        }
+      ]
+    },
+    {
+      "owner": "LoanDB",
+      "name": "add_area",
+      "line": 7602,
+      "end_line": 7604,
+      "signature": "self, name",
+      "contexts": [
+        {
+          "match_line": 7604,
+          "start_line": 7602,
+          "end_line": 7604,
+          "text": "7602:     def add_area(self, name):\n7603:         \"\"\"Add a new area. Returns True if inserted or already exists.\"\"\"\n7604:         return self.ensure_area_exists(name)"
+        }
+      ]
+    },
+    {
+      "owner": "App",
+      "name": "_build_clients_tab",
+      "line": 19698,
+      "end_line": 19853,
+      "signature": "self",
+      "contexts": [
+        {
+          "match_line": 19733,
+          "start_line": 19721,
+          "end_line": 19751,
+          "text": "19721:             width=14,\n19722:         )\n19723:         mode_cb.pack(side='left')\n19724:         try:\n19725:             mode_cb.bind('<<ComboboxSelected>>', lambda e: self._schedule_refresh_clients())\n19726:         except Exception as e:\n19727:             _log_ignored(\"ui.bind failed\", e, key=\"ui.bind_failed\")\n19728: \n19729:         try:\n19730:             area_box = ttk.Frame(filters)\n19731:             area_box.pack(side='left', padx=(14, 0))\n19732:             ttk.Label(area_box, text='Set Area:').pack(side='left')\n19733:             self.bulk_area_var = tk.StringVar(value='')\n19734:             self.bulk_area_cb = ttk.Combobox(area_box, textvariable=self.bulk_area_var, width=18, state='readonly')\n19735:             self.bulk_area_cb.pack(side='left', padx=4)\n19736:             ttk.Button(area_box, text='Set Area (Selected)', command=self.set_area_for_selected_clients).pack(side='left', padx=4)\n19737:             ttk.Button(area_box, text='Manage Areas', command=self.open_areas_manager).pack(side='left', padx=4)\n19738:         except Exception as __spina_exc:\n19739:             _log_suppressed_once('excpass_0446', 'suppressed exception excpass_0446', __spina_exc)\n19740:             pass\n19741: \n19742:         self.clients_count_var = tk.StringVar(value='Rows: 0')\n19743:         ttk.Label(filters, textvariable=self.clients_count_var).pack(side='right', padx=(8, 0))\n19744: \n19745:         actions = ttk.Frame(top_wrap, style='Toolbar.TFrame')\n19746:         actions.pack(fill='x')\n19747: \n19748:         # Main actions\n19749:         ttk.Button(actions, text='Add Client', command=self.add_client_dialog).pack(side='left', padx=(0, 6))\n19750:         ttk.Button(actions, text='Renew', command=self.renew_client_selected).pack(side='left', padx=6)\n19751:         ttk.Button(actions, text='Link', command=self.link_selected_client).pack(side='left', padx=6)"
+        },
+        {
+          "match_line": 19734,
+          "start_line": 19722,
+          "end_line": 19752,
+          "text": "19722:         )\n19723:         mode_cb.pack(side='left')\n19724:         try:\n19725:             mode_cb.bind('<<ComboboxSelected>>', lambda e: self._schedule_refresh_clients())\n19726:         except Exception as e:\n19727:             _log_ignored(\"ui.bind failed\", e, key=\"ui.bind_failed\")\n19728: \n19729:         try:\n19730:             area_box = ttk.Frame(filters)\n19731:             area_box.pack(side='left', padx=(14, 0))\n19732:             ttk.Label(area_box, text='Set Area:').pack(side='left')\n19733:             self.bulk_area_var = tk.StringVar(value='')\n19734:             self.bulk_area_cb = ttk.Combobox(area_box, textvariable=self.bulk_area_var, width=18, state='readonly')\n19735:             self.bulk_area_cb.pack(side='left', padx=4)\n19736:             ttk.Button(area_box, text='Set Area (Selected)', command=self.set_area_for_selected_clients).pack(side='left', padx=4)\n19737:             ttk.Button(area_box, text='Manage Areas', command=self.open_areas_manager).pack(side='left', padx=4)\n19738:         except Exception as __spina_exc:\n19739:             _log_suppressed_once('excpass_0446', 'suppressed exception excpass_0446', __spina_exc)\n19740:             pass\n19741: \n19742:         self.clients_count_var = tk.StringVar(value='Rows: 0')\n19743:         ttk.Label(filters, textvariable=self.clients_count_var).pack(side='right', padx=(8, 0))\n19744: \n19745:         actions = ttk.Frame(top_wrap, style='Toolbar.TFrame')\n19746:         actions.pack(fill='x')\n19747: \n19748:         # Main actions\n19749:         ttk.Button(actions, text='Add Client', command=self.add_client_dialog).pack(side='left', padx=(0, 6))\n19750:         ttk.Button(actions, text='Renew', command=self.renew_client_selected).pack(side='left', padx=6)\n19751:         ttk.Button(actions, text='Link', command=self.link_selected_client).pack(side='left', padx=6)\n19752:         ttk.Button(actions, text='Unlink', command=self.unlink_selected_client).pack(side='left', padx=6)"
+        },
+        {
+          "match_line": 19737,
+          "start_line": 19725,
+          "end_line": 19755,
+          "text": "19725:             mode_cb.bind('<<ComboboxSelected>>', lambda e: self._schedule_refresh_clients())\n19726:         except Exception as e:\n19727:             _log_ignored(\"ui.bind failed\", e, key=\"ui.bind_failed\")\n19728: \n19729:         try:\n19730:             area_box = ttk.Frame(filters)\n19731:             area_box.pack(side='left', padx=(14, 0))\n19732:             ttk.Label(area_box, text='Set Area:').pack(side='left')\n19733:             self.bulk_area_var = tk.StringVar(value='')\n19734:             self.bulk_area_cb = ttk.Combobox(area_box, textvariable=self.bulk_area_var, width=18, state='readonly')\n19735:             self.bulk_area_cb.pack(side='left', padx=4)\n19736:             ttk.Button(area_box, text='Set Area (Selected)', command=self.set_area_for_selected_clients).pack(side='left', padx=4)\n19737:             ttk.Button(area_box, text='Manage Areas', command=self.open_areas_manager).pack(side='left', padx=4)\n19738:         except Exception as __spina_exc:\n19739:             _log_suppressed_once('excpass_0446', 'suppressed exception excpass_0446', __spina_exc)\n19740:             pass\n19741: \n19742:         self.clients_count_var = tk.StringVar(value='Rows: 0')\n19743:         ttk.Label(filters, textvariable=self.clients_count_var).pack(side='right', padx=(8, 0))\n19744: \n19745:         actions = ttk.Frame(top_wrap, style='Toolbar.TFrame')\n19746:         actions.pack(fill='x')\n19747: \n19748:         # Main actions\n19749:         ttk.Button(actions, text='Add Client', command=self.add_client_dialog).pack(side='left', padx=(0, 6))\n19750:         ttk.Button(actions, text='Renew', command=self.renew_client_selected).pack(side='left', padx=6)\n19751:         ttk.Button(actions, text='Link', command=self.link_selected_client).pack(side='left', padx=6)\n19752:         ttk.Button(actions, text='Unlink', command=self.unlink_selected_client).pack(side='left', padx=6)\n19753:         ttk.Button(actions, text='History', command=self.open_client_history_dialog).pack(side='left', padx=6)\n19754:         ttk.Button(actions, text='Archived', command=self.open_archived_clients_dialog).pack(side='left', padx=6)\n19755: "
+        }
+      ]
+    },
+    {
+      "owner": "App",
+      "name": "open_areas_manager",
+      "line": 19885,
+      "end_line": 20046,
+      "signature": "self",
+      "contexts": [
+        {
+          "match_line": 19885,
+          "start_line": 19885,
+          "end_line": 19903,
+          "text": "19885:     def open_areas_manager(self):\n19886:         \"\"\"Open the Areas manager window (create/rename/delete areas).\"\"\"\n19887:         try:\n19888:             if getattr(self, '_areas_win', None) is not None and self._areas_win.winfo_exists():\n19889:                 self._areas_win.lift()\n19890:                 self._areas_win.focus_force()\n19891:                 return\n19892:         except Exception as __spina_exc:\n19893:             _log_suppressed_once('excpass_0452', 'suppressed exception excpass_0452', __spina_exc)\n19894:             pass\n19895: \n19896:         win = tk.Toplevel(self.root)\n19897:         self._areas_win = win\n19898:         win.title('Areas Manager')\n19899:         win.geometry('420x460')\n19900:         win.transient(self.root)\n19901: \n19902:         frm = ttk.Frame(win, padding=10)\n19903:         frm.pack(fill='both', expand=True)"
+        }
+      ]
+    },
+    {
+      "owner": "",
+      "name": "_build_collectors_tab",
+      "line": 20102,
+      "end_line": 20448,
+      "signature": "self",
+      "contexts": [
+        {
+          "match_line": 20194,
+          "start_line": 20182,
+          "end_line": 20212,
+          "text": "20182: \n20183:     # internal checked set (multi-select)\n20184:     try:\n20185:         self._collectors_checked = set()\n20186:     except Exception:\n20187:         self._collectors_checked = set()\n20188: \n20189:     # --- Status line ---\n20190:     status = ttk.Frame(frm)\n20191:     status.pack(fill=\"x\", padx=8, pady=(0, 6))\n20192: \n20193:     self.collector_route_unassigned_var = tk.StringVar(value=\"Unassigned areas: 0\")\n20194:     self.collector_route_noarea_var = tk.StringVar(value=\"No-area clients: 0\")\n20195:     self.collector_route_unknown_var = tk.StringVar(value=\"\")\n20196:     self.collector_route_conflict_var = tk.StringVar(value=\"\")\n20197: \n20198:     ttk.Label(status, textvariable=self.collector_route_unassigned_var).pack(side=\"left\")\n20199:     ttk.Label(status, text=\"   \").pack(side=\"left\")\n20200:     ttk.Label(status, textvariable=self.collector_route_noarea_var).pack(side=\"left\")\n20201:     ttk.Label(status, text=\"   \").pack(side=\"left\")\n20202:     ttk.Label(status, textvariable=self.collector_route_unknown_var, foreground=\"#b00020\").pack(side=\"left\")\n20203:     ttk.Label(status, text=\"   \").pack(side=\"left\")\n20204:     ttk.Label(status, textvariable=self.collector_route_conflict_var, foreground=\"#b00020\").pack(side=\"left\")\n20205: \n20206:     # --- Main split ---\n20207:     split = ttk.Panedwindow(frm, orient=\"horizontal\")\n20208:     split.pack(fill=\"both\", expand=True, padx=8, pady=(0, 8))\n20209: \n20210:     left = ttk.Frame(split)\n20211:     right = ttk.Frame(split)\n20212:     split.add(left, weight=3)"
+        }
+      ]
+    },
+    {
+      "owner": "",
+      "name": "_maybe_suggest_link_clients",
+      "line": 24647,
+      "end_line": 26660,
+      "signature": "self, name, loan_type=None",
+      "contexts": [
+        {
+          "match_line": 25347,
+          "start_line": 25335,
+          "end_line": 25365,
+          "text": "25335:             self.area_adder = area_adder\n25336:             super().__init__(parent, title=title)\n25337:     \n25338:         def body(self, master):\n25339:             ttk.Label(master, text='Client Name:').grid(row=0, column=0, sticky='w')\n25340:             self.name_var = tk.StringVar(value=self.client.get('name', ''))\n25341:             ttk.Entry(master, textvariable=self.name_var, width=30).grid(row=0, column=1, pady=5)\n25342:             ttk.Label(master, text='Contact No:').grid(row=0, column=2, sticky='w', padx=(12,0))\n25343:             self.contact_var = tk.StringVar(value=(self.client.get('contact_number', '') or ''))\n25344:             ttk.Entry(master, textvariable=self.contact_var, width=20).grid(row=0, column=3, pady=5, padx=(2,0))\n25345:     \n25346:             ttk.Label(master, text='Area:').grid(row=1, column=0, sticky='w')\n25347:             self.area_var = tk.StringVar(value=self.client.get('area', ''))\n25348:             _area_row = ttk.Frame(master)\n25349:             _area_row.grid(row=1, column=1, sticky='w', pady=5)\n25350:             # Load areas (include blank option)\n25351:             try:\n25352:                 _areas = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25353:             except Exception:\n25354:                 _areas = []\n25355:             self._areas_cache = _areas\n25356:             self.area_cb = ttk.Combobox(_area_row, textvariable=self.area_var, values=([''] + _areas), state='readonly', width=20)\n25357:             self.area_cb.pack(side='left')\n25358:             def _add_area_quick():\n25359:                 try:\n25360:                     nm = simpledialog.askstring('Add Area', 'Enter new area name:', parent=self)\n25361:                 except Exception:\n25362:                     nm = None\n25363:                 nm = (nm or '').strip()\n25364:                 if not nm:\n25365:                     return"
+        },
+        {
+          "match_line": 25356,
+          "start_line": 25344,
+          "end_line": 25374,
+          "text": "25344:             ttk.Entry(master, textvariable=self.contact_var, width=20).grid(row=0, column=3, pady=5, padx=(2,0))\n25345:     \n25346:             ttk.Label(master, text='Area:').grid(row=1, column=0, sticky='w')\n25347:             self.area_var = tk.StringVar(value=self.client.get('area', ''))\n25348:             _area_row = ttk.Frame(master)\n25349:             _area_row.grid(row=1, column=1, sticky='w', pady=5)\n25350:             # Load areas (include blank option)\n25351:             try:\n25352:                 _areas = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25353:             except Exception:\n25354:                 _areas = []\n25355:             self._areas_cache = _areas\n25356:             self.area_cb = ttk.Combobox(_area_row, textvariable=self.area_var, values=([''] + _areas), state='readonly', width=20)\n25357:             self.area_cb.pack(side='left')\n25358:             def _add_area_quick():\n25359:                 try:\n25360:                     nm = simpledialog.askstring('Add Area', 'Enter new area name:', parent=self)\n25361:                 except Exception:\n25362:                     nm = None\n25363:                 nm = (nm or '').strip()\n25364:                 if not nm:\n25365:                     return\n25366:                 try:\n25367:                     if callable(getattr(self, 'area_adder', None)):\n25368:                         self.area_adder(nm)\n25369:                 except Exception as __spina_exc:\n25370:                     _log_suppressed_once('excpass_0551', 'suppressed exception excpass_0551', __spina_exc)\n25371:                     pass\n25372:                 # refresh values\n25373:                 try:\n25374:                     _areas2 = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []"
+        },
+        {
+          "match_line": 25358,
+          "start_line": 25346,
+          "end_line": 25376,
+          "text": "25346:             ttk.Label(master, text='Area:').grid(row=1, column=0, sticky='w')\n25347:             self.area_var = tk.StringVar(value=self.client.get('area', ''))\n25348:             _area_row = ttk.Frame(master)\n25349:             _area_row.grid(row=1, column=1, sticky='w', pady=5)\n25350:             # Load areas (include blank option)\n25351:             try:\n25352:                 _areas = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25353:             except Exception:\n25354:                 _areas = []\n25355:             self._areas_cache = _areas\n25356:             self.area_cb = ttk.Combobox(_area_row, textvariable=self.area_var, values=([''] + _areas), state='readonly', width=20)\n25357:             self.area_cb.pack(side='left')\n25358:             def _add_area_quick():\n25359:                 try:\n25360:                     nm = simpledialog.askstring('Add Area', 'Enter new area name:', parent=self)\n25361:                 except Exception:\n25362:                     nm = None\n25363:                 nm = (nm or '').strip()\n25364:                 if not nm:\n25365:                     return\n25366:                 try:\n25367:                     if callable(getattr(self, 'area_adder', None)):\n25368:                         self.area_adder(nm)\n25369:                 except Exception as __spina_exc:\n25370:                     _log_suppressed_once('excpass_0551', 'suppressed exception excpass_0551', __spina_exc)\n25371:                     pass\n25372:                 # refresh values\n25373:                 try:\n25374:                     _areas2 = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25375:                 except Exception:\n25376:                     _areas2 = []"
+        },
+        {
+          "match_line": 25360,
+          "start_line": 25348,
+          "end_line": 25378,
+          "text": "25348:             _area_row = ttk.Frame(master)\n25349:             _area_row.grid(row=1, column=1, sticky='w', pady=5)\n25350:             # Load areas (include blank option)\n25351:             try:\n25352:                 _areas = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25353:             except Exception:\n25354:                 _areas = []\n25355:             self._areas_cache = _areas\n25356:             self.area_cb = ttk.Combobox(_area_row, textvariable=self.area_var, values=([''] + _areas), state='readonly', width=20)\n25357:             self.area_cb.pack(side='left')\n25358:             def _add_area_quick():\n25359:                 try:\n25360:                     nm = simpledialog.askstring('Add Area', 'Enter new area name:', parent=self)\n25361:                 except Exception:\n25362:                     nm = None\n25363:                 nm = (nm or '').strip()\n25364:                 if not nm:\n25365:                     return\n25366:                 try:\n25367:                     if callable(getattr(self, 'area_adder', None)):\n25368:                         self.area_adder(nm)\n25369:                 except Exception as __spina_exc:\n25370:                     _log_suppressed_once('excpass_0551', 'suppressed exception excpass_0551', __spina_exc)\n25371:                     pass\n25372:                 # refresh values\n25373:                 try:\n25374:                     _areas2 = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25375:                 except Exception:\n25376:                     _areas2 = []\n25377:                 self._areas_cache = _areas2\n25378:                 try:"
+        },
+        {
+          "match_line": 25384,
+          "start_line": 25372,
+          "end_line": 25402,
+          "text": "25372:                 # refresh values\n25373:                 try:\n25374:                     _areas2 = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25375:                 except Exception:\n25376:                     _areas2 = []\n25377:                 self._areas_cache = _areas2\n25378:                 try:\n25379:                     self.area_cb.configure(values=([''] + _areas2))\n25380:                 except Exception as __spina_exc:\n25381:                     _log_suppressed_once('excpass_0552', 'suppressed exception excpass_0552', __spina_exc)\n25382:                     pass\n25383:                 self.area_var.set(nm)\n25384:             ttk.Button(_area_row, text='Add...', command=_add_area_quick).pack(side='left', padx=4)\n25385:             ttk.Button(_area_row, text='Clear', command=lambda: self.area_var.set('')).pack(side='left')\n25386:     \n25387:             ttk.Label(master, text='Principal:').grid(row=2, column=0, sticky='w')\n25388:             self.principal_var = tk.StringVar(value=str(self.client.get('principal', 0)))\n25389:             ttk.Entry(master, textvariable=self.principal_var, width=30).grid(row=2, column=1, pady=5)\n25390:     \n25391:             ttk.Label(master, text='Interest Rate:').grid(row=3, column=0, sticky='w')\n25392:             self.rate_var = tk.StringVar(value=str(self.client.get('interest_rate', 0.20)))\n25393:             self.rate_entry = ttk.Entry(master, textvariable=self.rate_var, width=30)\n25394:             self.rate_entry.grid(row=3, column=1, pady=5)\n25395:     \n25396:             ttk.Label(master, text='Date Released (YYYY-MM-DD):').grid(row=4, column=0, sticky='w')\n25397:             self.date_var = tk.StringVar(value=self.client.get('date_released', ''))\n25398:             _dr_row = ttk.Frame(master)\n25399:             _dr_row.grid(row=4, column=1, sticky='w', pady=5)\n25400:             ttk.Entry(_dr_row, textvariable=self.date_var, width=22).pack(side='left')\n25401:             ttk.Button(_dr_row, text='📅', width=3, command=lambda: pick_date(self, self.date_var, title='Select Release Date')).pack(side='left', padx=4)\n25402: "
+        }
+      ]
+    },
+    {
+      "owner": "ClientDialog",
+      "name": "body",
+      "line": 25338,
+      "end_line": 25563,
+      "signature": "self, master",
+      "contexts": [
+        {
+          "match_line": 25347,
+          "start_line": 25338,
+          "end_line": 25365,
+          "text": "25338:         def body(self, master):\n25339:             ttk.Label(master, text='Client Name:').grid(row=0, column=0, sticky='w')\n25340:             self.name_var = tk.StringVar(value=self.client.get('name', ''))\n25341:             ttk.Entry(master, textvariable=self.name_var, width=30).grid(row=0, column=1, pady=5)\n25342:             ttk.Label(master, text='Contact No:').grid(row=0, column=2, sticky='w', padx=(12,0))\n25343:             self.contact_var = tk.StringVar(value=(self.client.get('contact_number', '') or ''))\n25344:             ttk.Entry(master, textvariable=self.contact_var, width=20).grid(row=0, column=3, pady=5, padx=(2,0))\n25345:     \n25346:             ttk.Label(master, text='Area:').grid(row=1, column=0, sticky='w')\n25347:             self.area_var = tk.StringVar(value=self.client.get('area', ''))\n25348:             _area_row = ttk.Frame(master)\n25349:             _area_row.grid(row=1, column=1, sticky='w', pady=5)\n25350:             # Load areas (include blank option)\n25351:             try:\n25352:                 _areas = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25353:             except Exception:\n25354:                 _areas = []\n25355:             self._areas_cache = _areas\n25356:             self.area_cb = ttk.Combobox(_area_row, textvariable=self.area_var, values=([''] + _areas), state='readonly', width=20)\n25357:             self.area_cb.pack(side='left')\n25358:             def _add_area_quick():\n25359:                 try:\n25360:                     nm = simpledialog.askstring('Add Area', 'Enter new area name:', parent=self)\n25361:                 except Exception:\n25362:                     nm = None\n25363:                 nm = (nm or '').strip()\n25364:                 if not nm:\n25365:                     return"
+        },
+        {
+          "match_line": 25356,
+          "start_line": 25344,
+          "end_line": 25374,
+          "text": "25344:             ttk.Entry(master, textvariable=self.contact_var, width=20).grid(row=0, column=3, pady=5, padx=(2,0))\n25345:     \n25346:             ttk.Label(master, text='Area:').grid(row=1, column=0, sticky='w')\n25347:             self.area_var = tk.StringVar(value=self.client.get('area', ''))\n25348:             _area_row = ttk.Frame(master)\n25349:             _area_row.grid(row=1, column=1, sticky='w', pady=5)\n25350:             # Load areas (include blank option)\n25351:             try:\n25352:                 _areas = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25353:             except Exception:\n25354:                 _areas = []\n25355:             self._areas_cache = _areas\n25356:             self.area_cb = ttk.Combobox(_area_row, textvariable=self.area_var, values=([''] + _areas), state='readonly', width=20)\n25357:             self.area_cb.pack(side='left')\n25358:             def _add_area_quick():\n25359:                 try:\n25360:                     nm = simpledialog.askstring('Add Area', 'Enter new area name:', parent=self)\n25361:                 except Exception:\n25362:                     nm = None\n25363:                 nm = (nm or '').strip()\n25364:                 if not nm:\n25365:                     return\n25366:                 try:\n25367:                     if callable(getattr(self, 'area_adder', None)):\n25368:                         self.area_adder(nm)\n25369:                 except Exception as __spina_exc:\n25370:                     _log_suppressed_once('excpass_0551', 'suppressed exception excpass_0551', __spina_exc)\n25371:                     pass\n25372:                 # refresh values\n25373:                 try:\n25374:                     _areas2 = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []"
+        },
+        {
+          "match_line": 25358,
+          "start_line": 25346,
+          "end_line": 25376,
+          "text": "25346:             ttk.Label(master, text='Area:').grid(row=1, column=0, sticky='w')\n25347:             self.area_var = tk.StringVar(value=self.client.get('area', ''))\n25348:             _area_row = ttk.Frame(master)\n25349:             _area_row.grid(row=1, column=1, sticky='w', pady=5)\n25350:             # Load areas (include blank option)\n25351:             try:\n25352:                 _areas = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25353:             except Exception:\n25354:                 _areas = []\n25355:             self._areas_cache = _areas\n25356:             self.area_cb = ttk.Combobox(_area_row, textvariable=self.area_var, values=([''] + _areas), state='readonly', width=20)\n25357:             self.area_cb.pack(side='left')\n25358:             def _add_area_quick():\n25359:                 try:\n25360:                     nm = simpledialog.askstring('Add Area', 'Enter new area name:', parent=self)\n25361:                 except Exception:\n25362:                     nm = None\n25363:                 nm = (nm or '').strip()\n25364:                 if not nm:\n25365:                     return\n25366:                 try:\n25367:                     if callable(getattr(self, 'area_adder', None)):\n25368:                         self.area_adder(nm)\n25369:                 except Exception as __spina_exc:\n25370:                     _log_suppressed_once('excpass_0551', 'suppressed exception excpass_0551', __spina_exc)\n25371:                     pass\n25372:                 # refresh values\n25373:                 try:\n25374:                     _areas2 = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25375:                 except Exception:\n25376:                     _areas2 = []"
+        },
+        {
+          "match_line": 25360,
+          "start_line": 25348,
+          "end_line": 25378,
+          "text": "25348:             _area_row = ttk.Frame(master)\n25349:             _area_row.grid(row=1, column=1, sticky='w', pady=5)\n25350:             # Load areas (include blank option)\n25351:             try:\n25352:                 _areas = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25353:             except Exception:\n25354:                 _areas = []\n25355:             self._areas_cache = _areas\n25356:             self.area_cb = ttk.Combobox(_area_row, textvariable=self.area_var, values=([''] + _areas), state='readonly', width=20)\n25357:             self.area_cb.pack(side='left')\n25358:             def _add_area_quick():\n25359:                 try:\n25360:                     nm = simpledialog.askstring('Add Area', 'Enter new area name:', parent=self)\n25361:                 except Exception:\n25362:                     nm = None\n25363:                 nm = (nm or '').strip()\n25364:                 if not nm:\n25365:                     return\n25366:                 try:\n25367:                     if callable(getattr(self, 'area_adder', None)):\n25368:                         self.area_adder(nm)\n25369:                 except Exception as __spina_exc:\n25370:                     _log_suppressed_once('excpass_0551', 'suppressed exception excpass_0551', __spina_exc)\n25371:                     pass\n25372:                 # refresh values\n25373:                 try:\n25374:                     _areas2 = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25375:                 except Exception:\n25376:                     _areas2 = []\n25377:                 self._areas_cache = _areas2\n25378:                 try:"
+        },
+        {
+          "match_line": 25384,
+          "start_line": 25372,
+          "end_line": 25402,
+          "text": "25372:                 # refresh values\n25373:                 try:\n25374:                     _areas2 = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25375:                 except Exception:\n25376:                     _areas2 = []\n25377:                 self._areas_cache = _areas2\n25378:                 try:\n25379:                     self.area_cb.configure(values=([''] + _areas2))\n25380:                 except Exception as __spina_exc:\n25381:                     _log_suppressed_once('excpass_0552', 'suppressed exception excpass_0552', __spina_exc)\n25382:                     pass\n25383:                 self.area_var.set(nm)\n25384:             ttk.Button(_area_row, text='Add...', command=_add_area_quick).pack(side='left', padx=4)\n25385:             ttk.Button(_area_row, text='Clear', command=lambda: self.area_var.set('')).pack(side='left')\n25386:     \n25387:             ttk.Label(master, text='Principal:').grid(row=2, column=0, sticky='w')\n25388:             self.principal_var = tk.StringVar(value=str(self.client.get('principal', 0)))\n25389:             ttk.Entry(master, textvariable=self.principal_var, width=30).grid(row=2, column=1, pady=5)\n25390:     \n25391:             ttk.Label(master, text='Interest Rate:').grid(row=3, column=0, sticky='w')\n25392:             self.rate_var = tk.StringVar(value=str(self.client.get('interest_rate', 0.20)))\n25393:             self.rate_entry = ttk.Entry(master, textvariable=self.rate_var, width=30)\n25394:             self.rate_entry.grid(row=3, column=1, pady=5)\n25395:     \n25396:             ttk.Label(master, text='Date Released (YYYY-MM-DD):').grid(row=4, column=0, sticky='w')\n25397:             self.date_var = tk.StringVar(value=self.client.get('date_released', ''))\n25398:             _dr_row = ttk.Frame(master)\n25399:             _dr_row.grid(row=4, column=1, sticky='w', pady=5)\n25400:             ttk.Entry(_dr_row, textvariable=self.date_var, width=22).pack(side='left')\n25401:             ttk.Button(_dr_row, text='📅', width=3, command=lambda: pick_date(self, self.date_var, title='Select Release Date')).pack(side='left', padx=4)\n25402: "
+        }
+      ]
+    },
+    {
+      "owner": "",
+      "name": "_add_area_quick",
+      "line": 25358,
+      "end_line": 25383,
+      "signature": "",
+      "contexts": [
+        {
+          "match_line": 25358,
+          "start_line": 25358,
+          "end_line": 25376,
+          "text": "25358:             def _add_area_quick():\n25359:                 try:\n25360:                     nm = simpledialog.askstring('Add Area', 'Enter new area name:', parent=self)\n25361:                 except Exception:\n25362:                     nm = None\n25363:                 nm = (nm or '').strip()\n25364:                 if not nm:\n25365:                     return\n25366:                 try:\n25367:                     if callable(getattr(self, 'area_adder', None)):\n25368:                         self.area_adder(nm)\n25369:                 except Exception as __spina_exc:\n25370:                     _log_suppressed_once('excpass_0551', 'suppressed exception excpass_0551', __spina_exc)\n25371:                     pass\n25372:                 # refresh values\n25373:                 try:\n25374:                     _areas2 = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25375:                 except Exception:\n25376:                     _areas2 = []"
+        },
+        {
+          "match_line": 25360,
+          "start_line": 25358,
+          "end_line": 25378,
+          "text": "25358:             def _add_area_quick():\n25359:                 try:\n25360:                     nm = simpledialog.askstring('Add Area', 'Enter new area name:', parent=self)\n25361:                 except Exception:\n25362:                     nm = None\n25363:                 nm = (nm or '').strip()\n25364:                 if not nm:\n25365:                     return\n25366:                 try:\n25367:                     if callable(getattr(self, 'area_adder', None)):\n25368:                         self.area_adder(nm)\n25369:                 except Exception as __spina_exc:\n25370:                     _log_suppressed_once('excpass_0551', 'suppressed exception excpass_0551', __spina_exc)\n25371:                     pass\n25372:                 # refresh values\n25373:                 try:\n25374:                     _areas2 = list(self.areas_provider()) if callable(getattr(self, 'areas_provider', None)) else []\n25375:                 except Exception:\n25376:                     _areas2 = []\n25377:                 self._areas_cache = _areas2\n25378:                 try:"
+        }
+      ]
+    },
+    {
+      "owner": "",
+      "name": "_app__client_form",
+      "line": 28889,
+      "end_line": 29577,
+      "signature": "self, title, initial=None, is_edit=False",
+      "contexts": [
+        {
+          "match_line": 28927,
+          "start_line": 28915,
+          "end_line": 28945,
+          "text": "28915:         _client_editor_font = None\n28916:         _client_editor_label_font = None\n28917:         _client_editor_button_font = None\n28918:     try:\n28919:         win.option_add(\"*TCombobox*Listbox.font\", _client_editor_font)\n28920:     except Exception:\n28921:         pass\n28922: \n28923:     # Vars\n28924:     name_var = tk.StringVar(value=str(init.get('name') or '').strip())\n28925:     contact_var = tk.StringVar(value=str(init.get('contact_number') or '').strip())\n28926:     loan_type_var = tk.StringVar(value=lt)\n28927:     area_var = tk.StringVar(value=str(init.get('area') or '').strip())\n28928:     principal_var = tk.StringVar(value=str(init.get('principal') or 0).strip())\n28929:     # interest rate stored as decimal (0.20) - only for Regular\n28930:     ir_init = init.get('interest_rate')\n28931:     if ir_init is None:\n28932:         ir_init = 0.20\n28933:     interest_var = tk.StringVar(value=str(ir_init))\n28934:     released_var = tk.StringVar(value=str(init.get('date_released') or '').strip())\n28935:     new_until_var = tk.StringVar(value=str(init.get('new_until') or '').strip())\n28936: \n28937: \n28938:     # Payment Term / Payment Amount / Payment Mode (optional)\n28939:     payterm_var = tk.StringVar(value=str(init.get('payment_term') or 'Daily').strip() or 'Daily')\n28940:     payamt_var = tk.StringVar(value=str(init.get('payment_amount') or '').strip())\n28941:     _pm_base0, _pm_other0 = _spina__split_payment_mode(init.get('payment_mode') or 'Cash')\n28942:     paymode_var = tk.StringVar(value=_pm_base0)\n28943:     paymode_other_var = tk.StringVar(value=_pm_other0)\n28944:     due_weekday_var = tk.StringVar(value=_spina__norm_weekday(init.get('due_weekday') or ''))\n28945:     semi_due_day1_var = tk.StringVar(value='' if init.get('semi_due_day1') in (None, '') else str(init.get('semi_due_day1')))"
+        },
+        {
+          "match_line": 29118,
+          "start_line": 29106,
+          "end_line": 29136,
+          "text": "29106:     row(\"Name:\", ttk.Entry(outer, textvariable=name_var, width=46), r); r += 1\n29107:     row(\"Contact No:\", ttk.Entry(outer, textvariable=contact_var, width=46), r); r += 1\n29108: \n29109:     # Loan type (readonly; locked on edit)\n29110:     lt_cb = ttk.Combobox(outer, textvariable=loan_type_var, values=('Regular','7x7'), state='readonly', width=44)\n29111:     row(\"Loan Type:\", lt_cb, r); r += 1\n29112:     if is_edit:\n29113:         try: lt_cb.config(state='disabled')\n29114:         except Exception: pass\n29115: \n29116:     # Area dropdown\n29117:     area_frame = ttk.Frame(outer)\n29118:     area_cb = ttk.Combobox(area_frame, textvariable=area_var, state='readonly', width=34)\n29119:     area_cb.pack(side='left', fill='x', expand=True)\n29120:     def _refresh_area_values():\n29121:         try:\n29122:             areas = self.db.get_all_areas() or []\n29123:         except Exception:\n29124:             areas = []\n29125:         area_cb['values'] = [''] + list(areas)\n29126:         try:\n29127:             cur = area_var.get().strip()\n29128:             if cur and cur not in areas:\n29129:                 area_cb['values'] = [''] + [cur] + list(areas)\n29130:         except Exception as __spina_exc:\n29131:             _log_suppressed_once('excpass_0624', 'suppressed exception excpass_0624', __spina_exc)\n29132:             pass\n29133:     _refresh_area_values()\n29134: \n29135:     def add_area_quick():\n29136:         nm = simpledialog.askstring(\"Add Area\", \"Enter new Area name:\", parent=win)"
+        },
+        {
+          "match_line": 29136,
+          "start_line": 29124,
+          "end_line": 29154,
+          "text": "29124:             areas = []\n29125:         area_cb['values'] = [''] + list(areas)\n29126:         try:\n29127:             cur = area_var.get().strip()\n29128:             if cur and cur not in areas:\n29129:                 area_cb['values'] = [''] + [cur] + list(areas)\n29130:         except Exception as __spina_exc:\n29131:             _log_suppressed_once('excpass_0624', 'suppressed exception excpass_0624', __spina_exc)\n29132:             pass\n29133:     _refresh_area_values()\n29134: \n29135:     def add_area_quick():\n29136:         nm = simpledialog.askstring(\"Add Area\", \"Enter new Area name:\", parent=win)\n29137:         if not nm:\n29138:             return\n29139:         nm = \" \".join(str(nm).strip().split())\n29140:         if not nm:\n29141:             return\n29142:         try:\n29143:             self.db.add_area(nm)\n29144:         except Exception:\n29145:             try:\n29146:                 self.db.ensure_area_exists(nm)\n29147:             except Exception as __spina_exc:\n29148:                 _log_suppressed_once('excpass_0625', 'suppressed exception excpass_0625', __spina_exc)\n29149:                 pass\n29150:         area_var.set(nm)\n29151:         _refresh_area_values()\n29152:         try:\n29153:             self._refresh_area_dropdowns()\n29154:         except Exception as __spina_exc:"
+        },
+        {
+          "match_line": 29146,
+          "start_line": 29134,
+          "end_line": 29164,
+          "text": "29134: \n29135:     def add_area_quick():\n29136:         nm = simpledialog.askstring(\"Add Area\", \"Enter new Area name:\", parent=win)\n29137:         if not nm:\n29138:             return\n29139:         nm = \" \".join(str(nm).strip().split())\n29140:         if not nm:\n29141:             return\n29142:         try:\n29143:             self.db.add_area(nm)\n29144:         except Exception:\n29145:             try:\n29146:                 self.db.ensure_area_exists(nm)\n29147:             except Exception as __spina_exc:\n29148:                 _log_suppressed_once('excpass_0625', 'suppressed exception excpass_0625', __spina_exc)\n29149:                 pass\n29150:         area_var.set(nm)\n29151:         _refresh_area_values()\n29152:         try:\n29153:             self._refresh_area_dropdowns()\n29154:         except Exception as __spina_exc:\n29155:             _log_suppressed_once('excpass_0626', 'suppressed exception excpass_0626', __spina_exc)\n29156:             pass\n29157: \n29158:     ttk.Button(area_frame, text=\"+\", width=3, command=add_area_quick).pack(side='left', padx=6)\n29159:     row(\"Area:\", area_frame, r); r += 1\n29160: \n29161:     row(\"Principal:\", ttk.Entry(outer, textvariable=principal_var, width=46), r); r += 1\n29162: \n29163:     ir_entry = ttk.Entry(outer, textvariable=interest_var, width=46)\n29164:     row(\"Interest Rate:\", ir_entry, r); r += 1"
+        }
+      ]
+    },
+    {
+      "owner": "",
+      "name": "add_area_quick",
+      "line": 29135,
+      "end_line": 29156,
+      "signature": "",
+      "contexts": [
+        {
+          "match_line": 29136,
+          "start_line": 29135,
+          "end_line": 29154,
+          "text": "29135:     def add_area_quick():\n29136:         nm = simpledialog.askstring(\"Add Area\", \"Enter new Area name:\", parent=win)\n29137:         if not nm:\n29138:             return\n29139:         nm = \" \".join(str(nm).strip().split())\n29140:         if not nm:\n29141:             return\n29142:         try:\n29143:             self.db.add_area(nm)\n29144:         except Exception:\n29145:             try:\n29146:                 self.db.ensure_area_exists(nm)\n29147:             except Exception as __spina_exc:\n29148:                 _log_suppressed_once('excpass_0625', 'suppressed exception excpass_0625', __spina_exc)\n29149:                 pass\n29150:         area_var.set(nm)\n29151:         _refresh_area_values()\n29152:         try:\n29153:             self._refresh_area_dropdowns()\n29154:         except Exception as __spina_exc:"
+        },
+        {
+          "match_line": 29146,
+          "start_line": 29135,
+          "end_line": 29156,
+          "text": "29135:     def add_area_quick():\n29136:         nm = simpledialog.askstring(\"Add Area\", \"Enter new Area name:\", parent=win)\n29137:         if not nm:\n29138:             return\n29139:         nm = \" \".join(str(nm).strip().split())\n29140:         if not nm:\n29141:             return\n29142:         try:\n29143:             self.db.add_area(nm)\n29144:         except Exception:\n29145:             try:\n29146:                 self.db.ensure_area_exists(nm)\n29147:             except Exception as __spina_exc:\n29148:                 _log_suppressed_once('excpass_0625', 'suppressed exception excpass_0625', __spina_exc)\n29149:                 pass\n29150:         area_var.set(nm)\n29151:         _refresh_area_values()\n29152:         try:\n29153:             self._refresh_area_dropdowns()\n29154:         except Exception as __spina_exc:\n29155:             _log_suppressed_once('excpass_0626', 'suppressed exception excpass_0626', __spina_exc)\n29156:             pass"
+        }
+      ]
+    },
+    {
+      "owner": "",
+      "name": "_spina_v23_build_clients_tab",
+      "line": 44551,
+      "end_line": 44783,
+      "signature": "self",
+      "contexts": [
+        {
+          "match_line": 44565,
+          "start_line": 44553,
+          "end_line": 44583,
+          "text": "44553:         frm = self.tab_clients\n44554:         try:\n44555:             for w in frm.winfo_children():\n44556:                 w.destroy()\n44557:         except Exception:\n44558:             pass\n44559: \n44560:         c = _spina_v23_clients_colors(self)\n44561:         _spina_v23_style_clients_tree(self)\n44562: \n44563:         self.search_clients_var = tk.StringVar(value=\"\")\n44564:         self.clients_search_mode_var = tk.StringVar(value=\"All\")\n44565:         self.bulk_area_var = tk.StringVar(value=\"\")\n44566:         self.clients_count_var = tk.StringVar(value=\"Rows: 0\")\n44567:         self._clients_stat_labels = {}\n44568:         self._clients_profile_vars = {}\n44569: \n44570:         outer = tk.Frame(frm, bg=c[\"bg\"])\n44571:         outer.pack(fill=\"both\", expand=True)\n44572: \n44573:         header = tk.Frame(outer, bg=c[\"bg\"])\n44574:         header.pack(fill=\"x\", padx=18, pady=(16, 10))\n44575: \n44576:         titlebox = tk.Frame(header, bg=c[\"bg\"])\n44577:         titlebox.pack(side=\"left\", fill=\"x\", expand=True)\n44578:         tk.Label(titlebox, text=\"Clients\", bg=c[\"bg\"], fg=c[\"fg\"], font=(\"Segoe UI\", 20, \"bold\"), anchor=\"w\").pack(fill=\"x\")\n44579:         tk.Label(\n44580:             titlebox,\n44581:             text=\"Modern client file with profile picture, loan summary, linking, area assignment, and application-form editing.\",\n44582:             bg=c[\"bg\"], fg=c[\"muted\"], font=(\"Segoe UI\", 10), anchor=\"w\"\n44583:         ).pack(fill=\"x\", pady=(2, 0))"
+        },
+        {
+          "match_line": 44621,
+          "start_line": 44609,
+          "end_line": 44639,
+          "text": "44609:             textvariable=self.clients_search_mode_var,\n44610:             values=(\"All\", \"Client\", \"Area\", \"Linked\", \"Unlinked\", \"Suggested Link\", \"Blanks\", \"Principal\", \"Released\", \"Start Date\", \"Due Date\"),\n44611:             state=\"readonly\",\n44612:             width=16,\n44613:         )\n44614:         cb_mode.pack(fill=\"x\", pady=(3, 0))\n44615: \n44616:         area_box = tk.Frame(row, bg=c[\"panel\"])\n44617:         area_box.pack(side=\"left\", padx=(0, 10))\n44618:         tk.Label(area_box, text=\"Bulk Area\", bg=c[\"panel\"], fg=c[\"muted\"], font=(\"Segoe UI\", 8, \"bold\"), anchor=\"w\").pack(fill=\"x\")\n44619:         area_line = tk.Frame(area_box, bg=c[\"panel\"])\n44620:         area_line.pack(fill=\"x\", pady=(3, 0))\n44621:         self.bulk_area_cb = ttk.Combobox(area_line, textvariable=self.bulk_area_var, width=18, state=\"readonly\")\n44622:         self.bulk_area_cb.pack(side=\"left\")\n44623:         _spina_v23_button(area_line, \"Set\", command=self.set_area_for_selected_clients, kind=\"soft\").pack(side=\"left\", padx=(6, 0))\n44624:         _spina_v23_button(area_line, \"Manage\", command=self.open_areas_manager, kind=\"soft\").pack(side=\"left\", padx=(6, 0))\n44625: \n44626:         try:\n44627:             self.search_clients_var.trace_add(\"write\", self._schedule_refresh_clients)\n44628:             cb_mode.bind(\"<<ComboboxSelected>>\", lambda e: self._schedule_refresh_clients())\n44629:         except Exception:\n44630:             pass\n44631: \n44632:         actions = tk.Frame(controls, bg=c[\"panel\"])\n44633:         actions.pack(fill=\"x\", padx=12, pady=(0, 10))\n44634:         _spina_v23_button(actions, \"Link\", command=self.link_selected_client, kind=\"soft\").pack(side=\"left\", padx=(0, 6))\n44635:         _spina_v23_button(actions, \"Unlink\", command=self.unlink_selected_client, kind=\"soft\").pack(side=\"left\", padx=(0, 6))\n44636:         _spina_v23_button(actions, \"Archived\", command=self.open_archived_clients_dialog, kind=\"soft\").pack(side=\"left\", padx=(0, 6))\n44637:         self._del_client_btn = _spina_v23_button(actions, \"Archive Client\", command=self.delete_client_selected, kind=\"danger\")\n44638:         self._del_client_btn.pack(side=\"left\", padx=(0, 6))\n44639:         try:"
+        },
+        {
+          "match_line": 44624,
+          "start_line": 44612,
+          "end_line": 44642,
+          "text": "44612:             width=16,\n44613:         )\n44614:         cb_mode.pack(fill=\"x\", pady=(3, 0))\n44615: \n44616:         area_box = tk.Frame(row, bg=c[\"panel\"])\n44617:         area_box.pack(side=\"left\", padx=(0, 10))\n44618:         tk.Label(area_box, text=\"Bulk Area\", bg=c[\"panel\"], fg=c[\"muted\"], font=(\"Segoe UI\", 8, \"bold\"), anchor=\"w\").pack(fill=\"x\")\n44619:         area_line = tk.Frame(area_box, bg=c[\"panel\"])\n44620:         area_line.pack(fill=\"x\", pady=(3, 0))\n44621:         self.bulk_area_cb = ttk.Combobox(area_line, textvariable=self.bulk_area_var, width=18, state=\"readonly\")\n44622:         self.bulk_area_cb.pack(side=\"left\")\n44623:         _spina_v23_button(area_line, \"Set\", command=self.set_area_for_selected_clients, kind=\"soft\").pack(side=\"left\", padx=(6, 0))\n44624:         _spina_v23_button(area_line, \"Manage\", command=self.open_areas_manager, kind=\"soft\").pack(side=\"left\", padx=(6, 0))\n44625: \n44626:         try:\n44627:             self.search_clients_var.trace_add(\"write\", self._schedule_refresh_clients)\n44628:             cb_mode.bind(\"<<ComboboxSelected>>\", lambda e: self._schedule_refresh_clients())\n44629:         except Exception:\n44630:             pass\n44631: \n44632:         actions = tk.Frame(controls, bg=c[\"panel\"])\n44633:         actions.pack(fill=\"x\", padx=12, pady=(0, 10))\n44634:         _spina_v23_button(actions, \"Link\", command=self.link_selected_client, kind=\"soft\").pack(side=\"left\", padx=(0, 6))\n44635:         _spina_v23_button(actions, \"Unlink\", command=self.unlink_selected_client, kind=\"soft\").pack(side=\"left\", padx=(0, 6))\n44636:         _spina_v23_button(actions, \"Archived\", command=self.open_archived_clients_dialog, kind=\"soft\").pack(side=\"left\", padx=(0, 6))\n44637:         self._del_client_btn = _spina_v23_button(actions, \"Archive Client\", command=self.delete_client_selected, kind=\"danger\")\n44638:         self._del_client_btn.pack(side=\"left\", padx=(0, 6))\n44639:         try:\n44640:             self._del_client_btn.config(state=\"disabled\")\n44641:         except Exception:\n44642:             pass"
+        }
+      ]
+    },
+    {
+      "owner": "",
+      "name": "_spina_v23_client_form",
+      "line": 44798,
+      "end_line": 45255,
+      "signature": "self, title, initial=None, is_edit=False",
+      "contexts": [
+        {
+          "match_line": 44828,
+          "start_line": 44816,
+          "end_line": 44846,
+          "text": "44816:     win.minsize(900, 680)\n44817:     win.resizable(True, True)\n44818:     try:\n44819:         win.transient(self.root)\n44820:         win.grab_set()\n44821:     except Exception:\n44822:         pass\n44823: \n44824:     # Variables\n44825:     name_var = tk.StringVar(value=str(init.get(\"name\") or \"\").strip())\n44826:     contact_var = tk.StringVar(value=str(init.get(\"contact_number\") or \"\").strip())\n44827:     loan_type_var = tk.StringVar(value=lt0)\n44828:     area_var = tk.StringVar(value=str(init.get(\"area\") or \"\").strip())\n44829:     principal_var = tk.StringVar(value=str(init.get(\"principal\") or 0).strip())\n44830:     ir0 = init.get(\"interest_rate\")\n44831:     if ir0 is None:\n44832:         ir0 = 0.20\n44833:     interest_var = tk.StringVar(value=str(ir0))\n44834:     released_var = tk.StringVar(value=str(init.get(\"date_released\") or date.today().strftime(\"%Y-%m-%d\")).strip())\n44835:     new_until_var = tk.StringVar(value=str(init.get(\"new_until\") or \"\").strip())\n44836:     is_new_var = tk.IntVar(value=1 if str(init.get(\"new_until\") or \"\").strip() else 0)\n44837: \n44838:     payterm_var = tk.StringVar(value=str(init.get(\"payment_term\") or \"Daily\").strip() or \"Daily\")\n44839:     payamt_var = tk.StringVar(value=str(init.get(\"payment_amount\") or \"\").strip())\n44840:     try:\n44841:         _pm_base0, _pm_other0 = _spina__split_payment_mode(init.get(\"payment_mode\") or \"Cash\")\n44842:     except Exception:\n44843:         _pm_base0, _pm_other0 = \"Cash\", \"\"\n44844:     paymode_var = tk.StringVar(value=_pm_base0)\n44845:     paymode_other_var = tk.StringVar(value=_pm_other0)\n44846:     due_weekday_var = tk.StringVar(value=str(init.get(\"due_weekday\") or \"\").strip())"
+        },
+        {
+          "match_line": 44995,
+          "start_line": 44983,
+          "end_line": 45013,
+          "text": "44983:         inner.pack(fill=\"x\", padx=14, pady=(6, 14))\n44984:         for i in range(3):\n44985:             inner.columnconfigure(i, weight=1)\n44986:         return inner\n44987: \n44988:     sec1 = section(right, \"1. Borrower Information\", \"Basic identity and route information.\")\n44989:     _spina_v23_entry(sec1, \"Full Name *\", name_var, 28)[0].grid(row=0, column=0, sticky=\"ew\", padx=(0, 10), pady=(0, 8))\n44990:     _spina_v23_entry(sec1, \"Contact Number\", contact_var, 20)[0].grid(row=0, column=1, sticky=\"ew\", padx=(0, 10), pady=(0, 8))\n44991:     try:\n44992:         areas = list(self.db.get_all_areas() or [])\n44993:     except Exception:\n44994:         areas = []\n44995:     area_box, area_cb = _spina_v23_entry(sec1, \"Area / Route\", area_var, 24, kind=\"combo\", values=([\"\"] + areas), readonly=False)\n44996:     area_box.grid(row=0, column=2, sticky=\"ew\", pady=(0, 8))\n44997: \n44998:     sec2 = section(right, \"2. Loan Details\", \"Amounts, release date, and start-of-payment rule.\")\n44999:     _spina_v23_entry(sec2, \"Loan Type *\", loan_type_var, 18, kind=\"combo\", values=[\"Regular\", \"7x7\"], readonly=True)[0].grid(row=0, column=0, sticky=\"ew\", padx=(0, 10), pady=(0, 8))\n45000:     _spina_v23_entry(sec2, \"Principal / Loan Amount *\", principal_var, 18)[0].grid(row=0, column=1, sticky=\"ew\", padx=(0, 10), pady=(0, 8))\n45001:     _spina_v23_entry(sec2, \"Interest Rate (Regular)\", interest_var, 18)[0].grid(row=0, column=2, sticky=\"ew\", pady=(0, 8))\n45002: \n45003:     date_box = tk.Frame(sec2, bg=c[\"panel\"])\n45004:     date_box.grid(row=1, column=0, sticky=\"ew\", padx=(0, 10), pady=(0, 8))\n45005:     tk.Label(date_box, text=\"Date Released *\", bg=c[\"panel\"], fg=c[\"muted\"], font=(\"Segoe UI\", 8, \"bold\"), anchor=\"w\").pack(fill=\"x\")\n45006:     date_line = tk.Frame(date_box, bg=c[\"panel\"])\n45007:     date_line.pack(fill=\"x\", pady=(3, 0))\n45008:     ttk.Entry(date_line, textvariable=released_var, width=14).pack(side=\"left\", fill=\"x\", expand=True)\n45009:     _spina_v23_button(date_line, \"📅\", command=lambda: pick_date(win, released_var, title=\"Select Release Date\"), kind=\"soft\", width=3).pack(side=\"left\", padx=(6, 0))\n45010: \n45011:     paystart_var = tk.StringVar(value=\"\")\n45012:     pay_box = tk.Frame(sec2, bg=c[\"panel\"])\n45013:     pay_box.grid(row=1, column=1, sticky=\"ew\", padx=(0, 10), pady=(0, 8))"
+        }
+      ]
+    },
+    {
+      "owner": "",
+      "name": "_spina_v25_build_collectors_tab",
+      "line": 46282,
+      "end_line": 46627,
+      "signature": "self",
+      "contexts": [
+        {
+          "match_line": 46300,
+          "start_line": 46288,
+          "end_line": 46318,
+          "text": "46288:         except Exception:\n46289:             pass\n46290: \n46291:         c = _spina_v25_collector_colors(self)\n46292:         _spina_v25_style_collector_trees(self)\n46293: \n46294:         self.collector_route_search_var = tk.StringVar(value=\"\")\n46295:         self.collector_route_filter_main_var = tk.StringVar(value=\"(All)\")\n46296:         self.collector_route_filter_conflicts_var = tk.BooleanVar(value=False)\n46297:         self.collector_route_filter_unknown_var = tk.BooleanVar(value=False)\n46298:         self.collector_route_multi_var = tk.BooleanVar(value=False)\n46299:         self.collector_route_unassigned_var = tk.StringVar(value=\"Unassigned areas: 0\")\n46300:         self.collector_route_noarea_var = tk.StringVar(value=\"No-area clients: 0\")\n46301:         self.collector_route_unknown_var = tk.StringVar(value=\"\")\n46302:         self.collector_route_conflict_var = tk.StringVar(value=\"\")\n46303:         self.collectors_bulk_count_var = tk.StringVar(value=\"\")\n46304:         self._collectors_checked = set()\n46305:         self._collector_route_cards = {}\n46306: \n46307:         outer = tk.Frame(frm, bg=c[\"bg\"])\n46308:         outer.pack(fill=\"both\", expand=True)\n46309: \n46310:         # Header\n46311:         header = tk.Frame(outer, bg=c[\"bg\"])\n46312:         header.pack(fill=\"x\", padx=18, pady=(16, 10))\n46313: \n46314:         titlebox = tk.Frame(header, bg=c[\"bg\"])\n46315:         titlebox.pack(side=\"left\", fill=\"x\", expand=True)\n46316:         tk.Label(titlebox, text=\"Collector Route\", bg=c[\"bg\"], fg=c[\"fg\"], font=(\"Segoe UI\", 20, \"bold\"), anchor=\"w\").pack(fill=\"x\")\n46317:         tk.Label(\n46318:             titlebox,"
+        }
+      ]
+    },
+    {
+      "owner": "",
+      "name": "_spina_v27_build_collectors_tab",
+      "line": 46877,
+      "end_line": 47169,
+      "signature": "self",
+      "contexts": [
+        {
+          "match_line": 46896,
+          "start_line": 46884,
+          "end_line": 46914,
+          "text": "46884:             pass\n46885: \n46886:         c = _spina_v27_route_colors(self)\n46887:         _spina_v27_style_route_trees(self)\n46888: \n46889:         # Vars used by existing route logic\n46890:         self.collector_route_search_var = tk.StringVar(value=\"\")\n46891:         self.collector_route_filter_main_var = tk.StringVar(value=\"(All)\")\n46892:         self.collector_route_filter_conflicts_var = tk.BooleanVar(value=False)\n46893:         self.collector_route_filter_unknown_var = tk.BooleanVar(value=False)\n46894:         self.collector_route_multi_var = tk.BooleanVar(value=False)\n46895:         self.collector_route_unassigned_var = tk.StringVar(value=\"Unassigned areas: 0\")\n46896:         self.collector_route_noarea_var = tk.StringVar(value=\"No-area clients: 0\")\n46897:         self.collector_route_unknown_var = tk.StringVar(value=\"\")\n46898:         self.collector_route_conflict_var = tk.StringVar(value=\"\")\n46899:         self.collectors_bulk_count_var = tk.StringVar(value=\"\")\n46900:         self._collectors_checked = set()\n46901:         self._collector_route_cards = {}\n46902:         self._route_health_labels = {}\n46903: \n46904:         outer = tk.Frame(frm, bg=c[\"bg\"])\n46905:         outer.pack(fill=\"both\", expand=True)\n46906: \n46907:         # Header\n46908:         header = tk.Frame(outer, bg=c[\"bg\"])\n46909:         header.pack(fill=\"x\", padx=18, pady=(16, 10))\n46910: \n46911:         titlebox = tk.Frame(header, bg=c[\"bg\"])\n46912:         titlebox.pack(side=\"left\", fill=\"x\", expand=True)\n46913:         tk.Label(titlebox, text=\"Collector Route\", bg=c[\"bg\"], fg=c[\"fg\"], font=(\"Segoe UI\", 20, \"bold\"), anchor=\"w\").pack(fill=\"x\")\n46914:         tk.Label("
+        }
+      ]
+    }
+  ]
+}
