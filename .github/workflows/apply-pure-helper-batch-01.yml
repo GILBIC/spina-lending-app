@@ -1,0 +1,63 @@
+name: Apply pure helper batch 01
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/batch-pure-helper-scan
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate exact original batch
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/pure_helper_batch_01_manifest.json
+      - name: Capture original behavior
+        run: |
+          python tools/test_pure_helper_batch.py \
+            --manifest tools/fixtures/pure_helper_batch_01_manifest.json \
+            --fixture tools/fixtures/pure_helper_batch_01_behavior.json \
+            --write-fixture
+      - name: Apply guarded batch extraction
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/pure_helper_batch_01_manifest.json \
+            --apply \
+            --json tools/fixtures/pure_helper_batch_01_result.json
+      - name: Compile and compare behavior
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/utilities/formatting.py \
+            spina_app/utilities/numbers.py \
+            tools/extract_pure_helper_batch.py \
+            tools/test_pure_helper_batch.py
+          python tools/test_pure_helper_batch.py \
+            --manifest tools/fixtures/pure_helper_batch_01_manifest.json \
+            --fixture tools/fixtures/pure_helper_batch_01_behavior.json
+      - name: Commit extracted batch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/utilities/formatting.py \
+            spina_app/utilities/numbers.py \
+            tools/fixtures/pure_helper_batch_01_behavior.json \
+            tools/fixtures/pure_helper_batch_01_result.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Extract first pure helper batch"
+          git push origin HEAD:agent/batch-pure-helper-scan
