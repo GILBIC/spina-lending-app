@@ -1,0 +1,30 @@
+{
+  "batch": "theme_palette_helper_batch_05",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "helpers": [
+    {
+      "name": "_spina_v20_dash_palette",
+      "signature": "self=None",
+      "module": "spina_app.theme_palettes",
+      "module_path": "spina_app/theme_palettes.py",
+      "expected_source_sha256": "6f0b955625421aa38895979768d48b2e68313ed499eabe6e4b97d1b4ef7c4c93",
+      "allowed_external_names": []
+    },
+    {
+      "name": "_spina_v21_cash_colors",
+      "signature": "self=None",
+      "module": "spina_app.theme_palettes",
+      "module_path": "spina_app/theme_palettes.py",
+      "expected_source_sha256": "9c90fb119f60fbdaebc5df068e36a4a104d30382cf0bec94a2affbc3f2078843",
+      "allowed_external_names": []
+    },
+    {
+      "name": "_spina_v24_cilog_colors",
+      "signature": "self=None",
+      "module": "spina_app.theme_palettes",
+      "module_path": "spina_app/theme_palettes.py",
+      "expected_source_sha256": "bf3c99899d1d8e84131dba8e4475818682cfbe2fcb0d0df6c4ca566a8e57b55b",
+      "allowed_external_names": []
+    }
+  ]
+}
