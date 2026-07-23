@@ -1,0 +1,40 @@
+name: Client and route tree style batch 12
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile app, module, and tests
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/ui_controls.py \
+            tools/extract_pure_helper_batch.py \
+            tools/test_client_route_tree_style_batch_12.py
+
+      - name: Verify exact extracted state
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/client_route_tree_style_batch_12_manifest.json
+
+      - name: Verify preserved Treeview style behavior
+        run: |
+          PYTHONPATH=. python tools/test_client_route_tree_style_batch_12.py \
+            --manifest tools/fixtures/client_route_tree_style_batch_12_manifest.json \
+            --fixture tools/fixtures/client_route_tree_style_batch_12_behavior.json
