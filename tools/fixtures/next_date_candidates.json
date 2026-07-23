@@ -1,0 +1,38 @@
+{
+  "targets": {
+    "_spina_dash__date_text": {
+      "found": true,
+      "line": 37160,
+      "end_line": 37165,
+      "signature": "value",
+      "decorators": [],
+      "uses_global_or_nonlocal": false,
+      "external_loaded_names": [
+        "_spina_dash__parse_date"
+      ],
+      "source": "def _spina_dash__date_text(value):\n    try:\n        d = _spina_dash__parse_date(value)\n        return d.strftime('%Y-%m-%d') if d else ''\n    except Exception:\n        return ''"
+    },
+    "_spina_v24_cilog_parse_day": {
+      "found": true,
+      "line": 45776,
+      "end_line": 45784,
+      "signature": "value",
+      "decorators": [],
+      "uses_global_or_nonlocal": false,
+      "external_loaded_names": [
+        "datetime"
+      ],
+      "source": "def _spina_v24_cilog_parse_day(value):\n    try:\n        s = str(value or \"\").strip()\n        if not s:\n            return None\n        # Common format is YYYY-MM-DD HH:MM:SS. Only first 10 characters are needed.\n        return datetime.strptime(s[:10], \"%Y-%m-%d\").date()\n    except Exception:\n        return None"
+    },
+    "_spina__norm_dom": {
+      "found": true,
+      "line": 24299,
+      "end_line": 24306,
+      "signature": "_v",
+      "decorators": [],
+      "uses_global_or_nonlocal": false,
+      "external_loaded_names": [],
+      "source": "def _spina__norm_dom(_v):\n    try:\n        if _v in (None, ''):\n            return None\n        _n = int(str(_v).strip())\n        return _n if 1 <= _n <= 31 else None\n    except Exception:\n        return None"
+    }
+  }
+}
