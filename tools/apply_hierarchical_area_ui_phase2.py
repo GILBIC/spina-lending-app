@@ -10,7 +10,7 @@ MODERN_NEW = '''    from spina_app.area_hierarchy_ui import build_area_selector_
 
 LEGACY_START = "    # Area dropdown\n    area_frame = ttk.Frame(outer)\n"
 LEGACY_END = '    row("Area:", area_frame, r); r += 1\n'
-LEGACY_NEW = '''    # Managed hierarchical Area selector\n    from spina_app.area_hierarchy_ui import build_simple_area_selector\n    area_frame = build_simple_area_selector(self, win, area_var, width=34)\n    row("Area:", area_frame, r); r += 1\n'''
+LEGACY_NEW = '''    # Managed hierarchical Area selector\n    from spina_app.area_hierarchy_ui import build_simple_area_selector\n    area_frame = build_simple_area_selector(self, outer, area_var, width=34)\n    row("Area:", area_frame, r); r += 1\n'''
 
 QUICK_START = "            def _add_area_quick():\n"
 QUICK_END = "            ttk.Button(_area_row, text='Add...', command=_add_area_quick).pack(side='left', padx=4)\n"
