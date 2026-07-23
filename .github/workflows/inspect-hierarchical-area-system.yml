@@ -19,19 +19,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Inspect area storage and UI dependencies
-        run: |
-          python tools/inspect_hierarchical_area_system.py
-          python tools/inspect_hierarchical_area_focus.py
-          python tools/inspect_hierarchical_area_implementation.py
-      - name: Commit inspection reports
+      - name: Inspect exact hierarchy implementation points
+        run: python tools/inspect_hierarchical_area_implementation.py
+      - name: Commit implementation report
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            tools/fixtures/hierarchical_area_system_inspection.json \
-            tools/fixtures/hierarchical_area_focus.json \
-            tools/fixtures/hierarchical_area_implementation.json
+          git add tools/fixtures/hierarchical_area_implementation.json
           if git diff --cached --quiet; then
             exit 0
           fi
