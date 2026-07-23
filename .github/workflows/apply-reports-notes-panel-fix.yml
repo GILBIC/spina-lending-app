@@ -1,0 +1,56 @@
+name: Apply Reports notes panel fix
+
+on:
+  push:
+    branches:
+      - agent/fix-reports-notes-panel-visible
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Apply guarded layout fix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
+          source = path.read_text(encoding='utf-8')
+          old = '''                    self.reports_notes_sep.pack(fill="x", padx=18, pady=(0, 6))
+                    self.reports_notes_box.pack(fill="x", padx=18, pady=(0, 18))'''
+          new = '''                    self.reports_notes_box.pack(side="bottom", fill="x", padx=18, pady=(0, 18))
+                    self.reports_notes_sep.pack(side="bottom", fill="x", padx=18, pady=(0, 6))'''
+          count = source.count(old)
+          if count == 1:
+              source = source.replace(old, new, 1)
+              path.write_text(source, encoding='utf-8')
+          elif count == 0 and new in source:
+              pass
+          else:
+              raise RuntimeError(f'Unexpected Reports notes layout state: old_count={count}, new_present={new in source}')
+          PY
+      - name: Compile and test
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            tools/test_reports_notes_panel_layout.py
+          python tools/test_reports_notes_panel_layout.py
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Fix Reports notes panel visibility"
+          git push origin HEAD:${GITHUB_REF_NAME}
