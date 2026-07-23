@@ -1,0 +1,550 @@
+{
+  "batch": "ui_display_helper_batch_02",
+  "helper_names": [
+    "_spina_v20_round_rect",
+    "_spina_v24_cilog_round_rect",
+    "_spina_v18_draw_round_rect",
+    "_spina_v17_set_card",
+    "_spina_v24_cilog_set_card"
+  ],
+  "behavior": {
+    "_spina_v20_round_rect": {
+      "default_radius": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'polygon-result'",
+        "canvas_calls": [
+          {
+            "method": "create_polygon",
+            "args": [
+              [
+                11,
+                2,
+                91,
+                2,
+                101,
+                2,
+                101,
+                12,
+                101,
+                42,
+                101,
+                52,
+                91,
+                52,
+                11,
+                52,
+                1,
+                52,
+                1,
+                42,
+                1,
+                12,
+                1,
+                2
+              ]
+            ],
+            "kwargs": {
+              "smooth": true,
+              "fill": "pink",
+              "outline": ""
+            }
+          }
+        ]
+      },
+      "custom_radius": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'polygon-result'",
+        "canvas_calls": [
+          {
+            "method": "create_polygon",
+            "args": [
+              [
+                2,
+                0,
+                193,
+                0,
+                200,
+                0,
+                200,
+                7,
+                200,
+                73,
+                200,
+                80,
+                193,
+                80,
+                2,
+                80,
+                -5,
+                80,
+                -5,
+                73,
+                -5,
+                7,
+                -5,
+                0
+              ]
+            ],
+            "kwargs": {
+              "smooth": true,
+              "width": 2,
+              "tags": "card"
+            }
+          }
+        ]
+      },
+      "polygon_fallback": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'rectangle-result'",
+        "canvas_calls": [
+          {
+            "method": "create_polygon",
+            "args": [
+              [
+                22,
+                20,
+                98,
+                20,
+                110,
+                20,
+                110,
+                32,
+                110,
+                58,
+                110,
+                70,
+                98,
+                70,
+                22,
+                70,
+                10,
+                70,
+                10,
+                58,
+                10,
+                32,
+                10,
+                20
+              ]
+            ],
+            "kwargs": {
+              "smooth": true,
+              "fill": "cream"
+            }
+          },
+          {
+            "method": "create_rectangle",
+            "args": [
+              10,
+              20,
+              110,
+              70
+            ],
+            "kwargs": {
+              "fill": "cream"
+            }
+          }
+        ]
+      }
+    },
+    "_spina_v24_cilog_round_rect": {
+      "default_radius": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'polygon-result'",
+        "canvas_calls": [
+          {
+            "method": "create_polygon",
+            "args": [
+              [
+                11,
+                2,
+                91,
+                2,
+                101,
+                2,
+                101,
+                12,
+                101,
+                42,
+                101,
+                52,
+                91,
+                52,
+                11,
+                52,
+                11,
+                52,
+                1,
+                52,
+                1,
+                42,
+                1,
+                12,
+                1,
+                2
+              ]
+            ],
+            "kwargs": {
+              "smooth": true,
+              "fill": "pink",
+              "outline": ""
+            }
+          }
+        ]
+      },
+      "custom_radius": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'polygon-result'",
+        "canvas_calls": [
+          {
+            "method": "create_polygon",
+            "args": [
+              [
+                2,
+                0,
+                193,
+                0,
+                200,
+                0,
+                200,
+                7,
+                200,
+                73,
+                200,
+                80,
+                193,
+                80,
+                2,
+                80,
+                2,
+                80,
+                -5,
+                80,
+                -5,
+                73,
+                -5,
+                7,
+                -5,
+                0
+              ]
+            ],
+            "kwargs": {
+              "smooth": true,
+              "width": 2,
+              "tags": "card"
+            }
+          }
+        ]
+      },
+      "polygon_fallback": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'rectangle-result'",
+        "canvas_calls": [
+          {
+            "method": "create_polygon",
+            "args": [
+              [
+                22,
+                20,
+                98,
+                20,
+                110,
+                20,
+                110,
+                32,
+                110,
+                58,
+                110,
+                70,
+                98,
+                70,
+                22,
+                70,
+                22,
+                70,
+                10,
+                70,
+                10,
+                58,
+                10,
+                32,
+                10,
+                20
+              ]
+            ],
+            "kwargs": {
+              "smooth": true,
+              "fill": "cream"
+            }
+          },
+          {
+            "method": "create_rectangle",
+            "args": [
+              10,
+              20,
+              110,
+              70
+            ],
+            "kwargs": {
+              "fill": "cream"
+            }
+          }
+        ]
+      }
+    },
+    "_spina_v18_draw_round_rect": {
+      "default_radius": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'polygon-result'",
+        "canvas_calls": [
+          {
+            "method": "create_polygon",
+            "args": [
+              [
+                15,
+                2,
+                87,
+                2,
+                101,
+                2,
+                101,
+                16,
+                101,
+                38,
+                101,
+                52,
+                87,
+                52,
+                15,
+                52,
+                1,
+                52,
+                1,
+                38,
+                1,
+                16,
+                1,
+                2
+              ]
+            ],
+            "kwargs": {
+              "smooth": true,
+              "fill": "pink",
+              "outline": ""
+            }
+          }
+        ]
+      },
+      "custom_radius": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'polygon-result'",
+        "canvas_calls": [
+          {
+            "method": "create_polygon",
+            "args": [
+              [
+                2,
+                0,
+                193,
+                0,
+                200,
+                0,
+                200,
+                7,
+                200,
+                73,
+                200,
+                80,
+                193,
+                80,
+                2,
+                80,
+                -5,
+                80,
+                -5,
+                73,
+                -5,
+                7,
+                -5,
+                0
+              ]
+            ],
+            "kwargs": {
+              "smooth": true,
+              "width": 2,
+              "tags": "card"
+            }
+          }
+        ]
+      },
+      "polygon_fallback": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'rectangle-result'",
+        "canvas_calls": [
+          {
+            "method": "create_polygon",
+            "args": [
+              [
+                22,
+                20,
+                98,
+                20,
+                110,
+                20,
+                110,
+                32,
+                110,
+                58,
+                110,
+                70,
+                98,
+                70,
+                22,
+                70,
+                10,
+                70,
+                10,
+                58,
+                10,
+                32,
+                10,
+                20
+              ]
+            ],
+            "kwargs": {
+              "smooth": true,
+              "fill": "cream"
+            }
+          },
+          {
+            "method": "create_rectangle",
+            "args": [
+              10,
+              20,
+              110,
+              70
+            ],
+            "kwargs": {
+              "fill": "cream"
+            }
+          }
+        ]
+      }
+    },
+    "_spina_v17_set_card": {
+      "value_and_subtitle": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": [
+          {
+            "text": "1234"
+          }
+        ],
+        "subtitle_calls": [
+          {
+            "text": "Active"
+          }
+        ]
+      },
+      "value_only": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": [
+          {
+            "text": "None"
+          }
+        ],
+        "subtitle_calls": []
+      },
+      "missing_key": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": [],
+        "subtitle_calls": []
+      },
+      "missing_attribute": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": null,
+        "subtitle_calls": null
+      },
+      "value_label_failure": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": [
+          {
+            "text": "X"
+          }
+        ],
+        "subtitle_calls": []
+      }
+    },
+    "_spina_v24_cilog_set_card": {
+      "value_and_subtitle": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": [
+          {
+            "text": "1234"
+          }
+        ],
+        "subtitle_calls": [
+          {
+            "text": "Active"
+          }
+        ]
+      },
+      "value_only": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": [
+          {
+            "text": "None"
+          }
+        ],
+        "subtitle_calls": []
+      },
+      "missing_key": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": [],
+        "subtitle_calls": []
+      },
+      "missing_attribute": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": null,
+        "subtitle_calls": null
+      },
+      "value_label_failure": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": [
+          {
+            "text": "X"
+          }
+        ],
+        "subtitle_calls": []
+      }
+    }
+  }
+}

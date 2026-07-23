@@ -31,6 +31,7 @@ jobs:
             spina_app/utilities/serialization.py \
             spina_app/utilities/diffs.py \
             spina_app/utilities/notes.py \
+            spina_app/ui_helpers.py \
             tools/redundancy_audit.py \
             tools/spina_quality_audit.py \
             tools/spina_startup_diagnostics.py \
@@ -100,7 +101,8 @@ jobs:
             tools/extract_merge_note_dict.py \
             tools/test_merge_note_dict_extraction.py \
             tools/extract_pure_helper_batch.py \
-            tools/test_pure_helper_batch.py
+            tools/test_pure_helper_batch.py \
+            tools/test_ui_display_helper_batch.py
 
       - name: Test module separation planner
         run: python tools/test_module_separation_planner.py
@@ -157,6 +159,14 @@ jobs:
           python tools/test_pure_helper_batch.py \
             --manifest tools/fixtures/pure_helper_batch_01_manifest.json \
             --fixture tools/fixtures/pure_helper_batch_01_behavior.json
+
+      - name: Test accelerated UI display helper batch 02
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/ui_display_helper_batch_02_manifest.json
+          python tools/test_ui_display_helper_batch.py \
+            --manifest tools/fixtures/ui_display_helper_batch_02_manifest.json \
+            --fixture tools/fixtures/ui_display_helper_batch_02_behavior.json
 
       - name: Run redundancy audit
         run: |
