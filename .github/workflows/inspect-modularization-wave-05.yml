@@ -1,0 +1,82 @@
+name: Inspect modularization wave 05
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile planner and app
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            tools/plan_module_separation.py
+
+      - name: Build read-only module separation report
+        run: |
+          python tools/plan_module_separation.py \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            --json modularization-wave-05-report.json
+
+      - name: Build low-risk shortlist
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("modularization-wave-05-report.json").read_text(encoding="utf-8"))
+          candidates = report.get("recommended_first_wave_review", [])
+          shortlist = []
+          for item in candidates:
+              if item.get("move_risk") != "low":
+                  continue
+              if item.get("protected_or_business_critical"):
+                  continue
+              if item.get("dependency_signals"):
+                  continue
+              if int(item.get("shared_global_read_count", 0)) > 2:
+                  continue
+              if int(item.get("cross_definition_call_count", 0)) > 2:
+                  continue
+              shortlist.append(item)
+
+          payload = {
+              "source_commit": "${{ github.sha }}",
+              "app_line_count": report.get("line_count"),
+              "candidate_count": len(shortlist),
+              "candidates": shortlist[:30],
+              "safety": {
+                  "read_only": True,
+                  "application_modified": False,
+                  "business_logic_selected": False,
+                  "note": "Inspection only. Every candidate still requires manual review and behavior tests before extraction."
+              }
+          }
+          Path("modularization-wave-05-shortlist.json").write_text(
+              json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(payload, indent=2, ensure_ascii=False))
+          PY
+
+      - name: Upload inspection report
+        uses: actions/upload-artifact@v4
+        with:
+          name: modularization-wave-05-report
+          path: |
+            modularization-wave-05-report.json
+            modularization-wave-05-shortlist.json
+          if-no-files-found: error
+          retention-days: 14
