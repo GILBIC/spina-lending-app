@@ -1,0 +1,22 @@
+{
+  "batch": "cash_control_input_normalizer_batch_07",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "helpers": [
+    {
+      "name": "_spina_cashctl__parse_amount",
+      "signature": "value",
+      "module": "spina_app.utilities.numbers",
+      "module_path": "spina_app/utilities/numbers.py",
+      "expected_source_sha256": "5671ba8fdfb0d0da2f2bc8a0081ce2aedbde8dbccc50f6f1505c3eb5472966e9",
+      "allowed_external_names": []
+    },
+    {
+      "name": "_spina_cashctl__int_range",
+      "signature": "value, default, min_value=1, max_value=120",
+      "module": "spina_app.utilities.numbers",
+      "module_path": "spina_app/utilities/numbers.py",
+      "expected_source_sha256": "6c4615ef798879faa3747688c2eb679f24483ab25c410c48519c157ab251277b",
+      "allowed_external_names": ["_spina_cashctl__parse_amount"]
+    }
+  ]
+}
