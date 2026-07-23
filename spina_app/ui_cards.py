@@ -7,6 +7,7 @@ import tkinter as tk
 from spina_app.theme_palettes import (
     _spina_v21_cash_colors,
     _spina_v24_cilog_colors,
+    _spina_v25_collector_colors as _spina_v27_route_colors,
 )
 
 
