@@ -1,0 +1,1512 @@
+{
+  "batch": "ui_card_constructor_batch_08",
+  "helper_names": [
+    "_spina_v21_cash_card",
+    "_spina_v24_cilog_card"
+  ],
+  "behavior": {
+    "_spina_v21_cash_card": {
+      "defaults": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "pack_calls": [],
+          "children": [
+            {
+              "kind": "Frame",
+              "kwargs": {
+                "bg": "cash-card",
+                "highlightbackground": "cash-border",
+                "highlightthickness": 1,
+                "bd": 0
+              },
+              "pack_calls": [],
+              "children": [
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Collections",
+                    "bg": "cash-card",
+                    "fg": "cash-muted",
+                    "font": [
+                      "Segoe UI",
+                      9,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        10,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "—",
+                    "bg": "cash-card",
+                    "fg": "cash-fg",
+                    "font": [
+                      "Segoe UI",
+                      17,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        4,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "",
+                    "bg": "cash-card",
+                    "fg": "cash-muted",
+                    "font": [
+                      "Segoe UI",
+                      8
+                    ],
+                    "anchor": "w",
+                    "justify": "left"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        2,
+                        10
+                      ]
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        "returned": [
+          {
+            "kind": "Frame",
+            "kwargs": {
+              "bg": "cash-card",
+              "highlightbackground": "cash-border",
+              "highlightthickness": 1,
+              "bd": 0
+            },
+            "pack_calls": [],
+            "children": [
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Collections",
+                  "bg": "cash-card",
+                  "fg": "cash-muted",
+                  "font": [
+                    "Segoe UI",
+                    9,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      10,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "—",
+                  "bg": "cash-card",
+                  "fg": "cash-fg",
+                  "font": [
+                    "Segoe UI",
+                    17,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      4,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "",
+                  "bg": "cash-card",
+                  "fg": "cash-muted",
+                  "font": [
+                    "Segoe UI",
+                    8
+                  ],
+                  "anchor": "w",
+                  "justify": "left"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      2,
+                      10
+                    ]
+                  }
+                ],
+                "children": []
+              }
+            ]
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "—",
+              "bg": "cash-card",
+              "fg": "cash-fg",
+              "font": [
+                "Segoe UI",
+                17,
+                "bold"
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  4,
+                  0
+                ]
+              }
+            ],
+            "children": []
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "",
+              "bg": "cash-card",
+              "fg": "cash-muted",
+              "font": [
+                "Segoe UI",
+                8
+              ],
+              "anchor": "w",
+              "justify": "left"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  2,
+                  10
+                ]
+              }
+            ],
+            "children": []
+          }
+        ],
+        "identity": {
+          "frame_is_root_first_child": true,
+          "value_is_frame_child": true,
+          "subtitle_is_frame_child": true,
+          "value_before_subtitle": true
+        }
+      },
+      "explicit_without_accent": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "pack_calls": [],
+          "children": [
+            {
+              "kind": "Frame",
+              "kwargs": {
+                "bg": "cash-card",
+                "highlightbackground": "cash-border",
+                "highlightthickness": 1,
+                "bd": 0
+              },
+              "pack_calls": [],
+              "children": [
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Expected",
+                    "bg": "cash-card",
+                    "fg": "cash-muted",
+                    "font": [
+                      "Segoe UI",
+                      9,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        10,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "PHP 1,000.00",
+                    "bg": "cash-card",
+                    "fg": "cash-fg",
+                    "font": [
+                      "Segoe UI",
+                      17,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        4,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Today",
+                    "bg": "cash-card",
+                    "fg": "cash-muted",
+                    "font": [
+                      "Segoe UI",
+                      8
+                    ],
+                    "anchor": "w",
+                    "justify": "left"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        2,
+                        10
+                      ]
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        "returned": [
+          {
+            "kind": "Frame",
+            "kwargs": {
+              "bg": "cash-card",
+              "highlightbackground": "cash-border",
+              "highlightthickness": 1,
+              "bd": 0
+            },
+            "pack_calls": [],
+            "children": [
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Expected",
+                  "bg": "cash-card",
+                  "fg": "cash-muted",
+                  "font": [
+                    "Segoe UI",
+                    9,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      10,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "PHP 1,000.00",
+                  "bg": "cash-card",
+                  "fg": "cash-fg",
+                  "font": [
+                    "Segoe UI",
+                    17,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      4,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Today",
+                  "bg": "cash-card",
+                  "fg": "cash-muted",
+                  "font": [
+                    "Segoe UI",
+                    8
+                  ],
+                  "anchor": "w",
+                  "justify": "left"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      2,
+                      10
+                    ]
+                  }
+                ],
+                "children": []
+              }
+            ]
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "PHP 1,000.00",
+              "bg": "cash-card",
+              "fg": "cash-fg",
+              "font": [
+                "Segoe UI",
+                17,
+                "bold"
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  4,
+                  0
+                ]
+              }
+            ],
+            "children": []
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "Today",
+              "bg": "cash-card",
+              "fg": "cash-muted",
+              "font": [
+                "Segoe UI",
+                8
+              ],
+              "anchor": "w",
+              "justify": "left"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  2,
+                  10
+                ]
+              }
+            ],
+            "children": []
+          }
+        ],
+        "identity": {
+          "frame_is_root_first_child": true,
+          "value_is_frame_child": true,
+          "subtitle_is_frame_child": true,
+          "value_before_subtitle": true
+        }
+      },
+      "explicit_with_accent": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "pack_calls": [],
+          "children": [
+            {
+              "kind": "Frame",
+              "kwargs": {
+                "bg": "cash-card",
+                "highlightbackground": "cash-border",
+                "highlightthickness": 1,
+                "bd": 0
+              },
+              "pack_calls": [],
+              "children": [
+                {
+                  "kind": "Frame",
+                  "kwargs": {
+                    "bg": "#22c55e",
+                    "height": 4
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "side": "top"
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Collected",
+                    "bg": "cash-card",
+                    "fg": "cash-muted",
+                    "font": [
+                      "Segoe UI",
+                      9,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        10,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "PHP 750.00",
+                    "bg": "cash-card",
+                    "fg": "cash-fg",
+                    "font": [
+                      "Segoe UI",
+                      17,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        4,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "75%",
+                    "bg": "cash-card",
+                    "fg": "cash-muted",
+                    "font": [
+                      "Segoe UI",
+                      8
+                    ],
+                    "anchor": "w",
+                    "justify": "left"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        2,
+                        10
+                      ]
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        "returned": [
+          {
+            "kind": "Frame",
+            "kwargs": {
+              "bg": "cash-card",
+              "highlightbackground": "cash-border",
+              "highlightthickness": 1,
+              "bd": 0
+            },
+            "pack_calls": [],
+            "children": [
+              {
+                "kind": "Frame",
+                "kwargs": {
+                  "bg": "#22c55e",
+                  "height": 4
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "side": "top"
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Collected",
+                  "bg": "cash-card",
+                  "fg": "cash-muted",
+                  "font": [
+                    "Segoe UI",
+                    9,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      10,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "PHP 750.00",
+                  "bg": "cash-card",
+                  "fg": "cash-fg",
+                  "font": [
+                    "Segoe UI",
+                    17,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      4,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "75%",
+                  "bg": "cash-card",
+                  "fg": "cash-muted",
+                  "font": [
+                    "Segoe UI",
+                    8
+                  ],
+                  "anchor": "w",
+                  "justify": "left"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      2,
+                      10
+                    ]
+                  }
+                ],
+                "children": []
+              }
+            ]
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "PHP 750.00",
+              "bg": "cash-card",
+              "fg": "cash-fg",
+              "font": [
+                "Segoe UI",
+                17,
+                "bold"
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  4,
+                  0
+                ]
+              }
+            ],
+            "children": []
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "75%",
+              "bg": "cash-card",
+              "fg": "cash-muted",
+              "font": [
+                "Segoe UI",
+                8
+              ],
+              "anchor": "w",
+              "justify": "left"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  2,
+                  10
+                ]
+              }
+            ],
+            "children": []
+          }
+        ],
+        "identity": {
+          "frame_is_root_first_child": true,
+          "value_is_frame_child": true,
+          "subtitle_is_frame_child": true,
+          "value_before_subtitle": true
+        }
+      }
+    },
+    "_spina_v24_cilog_card": {
+      "defaults": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "pack_calls": [],
+          "children": [
+            {
+              "kind": "Frame",
+              "kwargs": {
+                "bg": "cilog-card",
+                "highlightbackground": "cilog-border",
+                "highlightthickness": 1,
+                "bd": 0
+              },
+              "pack_calls": [],
+              "children": [
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Changes",
+                    "bg": "cilog-card",
+                    "fg": "cilog-muted",
+                    "font": [
+                      "Segoe UI",
+                      9,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        10,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "—",
+                    "bg": "cilog-card",
+                    "fg": "cilog-fg",
+                    "font": [
+                      "Segoe UI",
+                      16,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        4,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "",
+                    "bg": "cilog-card",
+                    "fg": "cilog-muted",
+                    "font": [
+                      "Segoe UI",
+                      8
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        2,
+                        10
+                      ]
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        "returned": [
+          {
+            "kind": "Frame",
+            "kwargs": {
+              "bg": "cilog-card",
+              "highlightbackground": "cilog-border",
+              "highlightthickness": 1,
+              "bd": 0
+            },
+            "pack_calls": [],
+            "children": [
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Changes",
+                  "bg": "cilog-card",
+                  "fg": "cilog-muted",
+                  "font": [
+                    "Segoe UI",
+                    9,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      10,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "—",
+                  "bg": "cilog-card",
+                  "fg": "cilog-fg",
+                  "font": [
+                    "Segoe UI",
+                    16,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      4,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "",
+                  "bg": "cilog-card",
+                  "fg": "cilog-muted",
+                  "font": [
+                    "Segoe UI",
+                    8
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      2,
+                      10
+                    ]
+                  }
+                ],
+                "children": []
+              }
+            ]
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "—",
+              "bg": "cilog-card",
+              "fg": "cilog-fg",
+              "font": [
+                "Segoe UI",
+                16,
+                "bold"
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  4,
+                  0
+                ]
+              }
+            ],
+            "children": []
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "",
+              "bg": "cilog-card",
+              "fg": "cilog-muted",
+              "font": [
+                "Segoe UI",
+                8
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  2,
+                  10
+                ]
+              }
+            ],
+            "children": []
+          }
+        ],
+        "identity": {
+          "frame_is_root_first_child": true,
+          "value_is_frame_child": true,
+          "subtitle_is_frame_child": true,
+          "value_before_subtitle": true
+        }
+      },
+      "explicit_without_accent": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "pack_calls": [],
+          "children": [
+            {
+              "kind": "Frame",
+              "kwargs": {
+                "bg": "cilog-card",
+                "highlightbackground": "cilog-border",
+                "highlightthickness": 1,
+                "bd": 0
+              },
+              "pack_calls": [],
+              "children": [
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Edits",
+                    "bg": "cilog-card",
+                    "fg": "cilog-muted",
+                    "font": [
+                      "Segoe UI",
+                      9,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        10,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "12",
+                    "bg": "cilog-card",
+                    "fg": "cilog-fg",
+                    "font": [
+                      "Segoe UI",
+                      16,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        4,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "This month",
+                    "bg": "cilog-card",
+                    "fg": "cilog-muted",
+                    "font": [
+                      "Segoe UI",
+                      8
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        2,
+                        10
+                      ]
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        "returned": [
+          {
+            "kind": "Frame",
+            "kwargs": {
+              "bg": "cilog-card",
+              "highlightbackground": "cilog-border",
+              "highlightthickness": 1,
+              "bd": 0
+            },
+            "pack_calls": [],
+            "children": [
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Edits",
+                  "bg": "cilog-card",
+                  "fg": "cilog-muted",
+                  "font": [
+                    "Segoe UI",
+                    9,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      10,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "12",
+                  "bg": "cilog-card",
+                  "fg": "cilog-fg",
+                  "font": [
+                    "Segoe UI",
+                    16,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      4,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "This month",
+                  "bg": "cilog-card",
+                  "fg": "cilog-muted",
+                  "font": [
+                    "Segoe UI",
+                    8
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      2,
+                      10
+                    ]
+                  }
+                ],
+                "children": []
+              }
+            ]
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "12",
+              "bg": "cilog-card",
+              "fg": "cilog-fg",
+              "font": [
+                "Segoe UI",
+                16,
+                "bold"
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  4,
+                  0
+                ]
+              }
+            ],
+            "children": []
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "This month",
+              "bg": "cilog-card",
+              "fg": "cilog-muted",
+              "font": [
+                "Segoe UI",
+                8
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  2,
+                  10
+                ]
+              }
+            ],
+            "children": []
+          }
+        ],
+        "identity": {
+          "frame_is_root_first_child": true,
+          "value_is_frame_child": true,
+          "subtitle_is_frame_child": true,
+          "value_before_subtitle": true
+        }
+      },
+      "explicit_with_accent": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "pack_calls": [],
+          "children": [
+            {
+              "kind": "Frame",
+              "kwargs": {
+                "bg": "cilog-card",
+                "highlightbackground": "cilog-border",
+                "highlightthickness": 1,
+                "bd": 0
+              },
+              "pack_calls": [],
+              "children": [
+                {
+                  "kind": "Frame",
+                  "kwargs": {
+                    "bg": "#60a5fa",
+                    "height": 4
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "side": "top"
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Updates",
+                    "bg": "cilog-card",
+                    "fg": "cilog-muted",
+                    "font": [
+                      "Segoe UI",
+                      9,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        10,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "5",
+                    "bg": "cilog-card",
+                    "fg": "cilog-fg",
+                    "font": [
+                      "Segoe UI",
+                      16,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        4,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Today",
+                    "bg": "cilog-card",
+                    "fg": "cilog-muted",
+                    "font": [
+                      "Segoe UI",
+                      8
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "padx": 14,
+                      "pady": [
+                        2,
+                        10
+                      ]
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        "returned": [
+          {
+            "kind": "Frame",
+            "kwargs": {
+              "bg": "cilog-card",
+              "highlightbackground": "cilog-border",
+              "highlightthickness": 1,
+              "bd": 0
+            },
+            "pack_calls": [],
+            "children": [
+              {
+                "kind": "Frame",
+                "kwargs": {
+                  "bg": "#60a5fa",
+                  "height": 4
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "side": "top"
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Updates",
+                  "bg": "cilog-card",
+                  "fg": "cilog-muted",
+                  "font": [
+                    "Segoe UI",
+                    9,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      10,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "5",
+                  "bg": "cilog-card",
+                  "fg": "cilog-fg",
+                  "font": [
+                    "Segoe UI",
+                    16,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      4,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Today",
+                  "bg": "cilog-card",
+                  "fg": "cilog-muted",
+                  "font": [
+                    "Segoe UI",
+                    8
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "padx": 14,
+                    "pady": [
+                      2,
+                      10
+                    ]
+                  }
+                ],
+                "children": []
+              }
+            ]
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "5",
+              "bg": "cilog-card",
+              "fg": "cilog-fg",
+              "font": [
+                "Segoe UI",
+                16,
+                "bold"
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  4,
+                  0
+                ]
+              }
+            ],
+            "children": []
+          },
+          {
+            "kind": "Label",
+            "kwargs": {
+              "text": "Today",
+              "bg": "cilog-card",
+              "fg": "cilog-muted",
+              "font": [
+                "Segoe UI",
+                8
+              ],
+              "anchor": "w"
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "padx": 14,
+                "pady": [
+                  2,
+                  10
+                ]
+              }
+            ],
+            "children": []
+          }
+        ],
+        "identity": {
+          "frame_is_root_first_child": true,
+          "value_is_frame_child": true,
+          "subtitle_is_frame_child": true,
+          "value_before_subtitle": true
+        }
+      }
+    }
+  }
+}
