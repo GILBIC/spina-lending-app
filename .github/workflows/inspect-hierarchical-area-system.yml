@@ -23,15 +23,17 @@ jobs:
         run: |
           python tools/inspect_hierarchical_area_system.py
           python tools/inspect_hierarchical_area_focus.py
+          python tools/inspect_hierarchical_area_implementation.py
       - name: Commit inspection reports
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
             tools/fixtures/hierarchical_area_system_inspection.json \
-            tools/fixtures/hierarchical_area_focus.json
+            tools/fixtures/hierarchical_area_focus.json \
+            tools/fixtures/hierarchical_area_implementation.json
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Record focused hierarchical area dependencies"
+          git commit -m "Record exact hierarchical area implementation points"
           git push origin HEAD:agent/hierarchical-area-system-inspection
