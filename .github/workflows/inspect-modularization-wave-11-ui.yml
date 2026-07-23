@@ -1,0 +1,121 @@
+name: Inspect modularization wave 11 UI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build focused exact-source packet
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import ast
+          import builtins
+          import hashlib
+          import json
+          from pathlib import Path
+
+          app = Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py")
+          source = app.read_text(encoding="utf-8")
+          tree = ast.parse(source, filename=str(app))
+          names = [
+              "_spina_v23_clients_colors",
+              "_spina_v23_style_clients_tree",
+              "_spina_v27_route_colors",
+              "_spina_v27_route_card",
+              "_spina_v27_style_route_trees",
+          ]
+          definitions = {
+              node.name: node
+              for node in tree.body
+              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+          }
+          builtin_names = set(dir(builtins))
+
+          def external_names(node: ast.FunctionDef) -> list[str]:
+              local = {
+                  arg.arg
+                  for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)
+              }
+              if node.args.vararg:
+                  local.add(node.args.vararg.arg)
+              if node.args.kwarg:
+                  local.add(node.args.kwarg.arg)
+              for child in ast.walk(node):
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
+                      local.add(child.id)
+              loaded = {
+                  child.id
+                  for child in ast.walk(node)
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
+              }
+              return sorted(loaded - local - builtin_names - {node.name})
+
+          def callers(name: str) -> list[str]:
+              result = []
+              for owner_name, owner in definitions.items():
+                  if owner_name == name:
+                      continue
+                  if any(
+                      isinstance(child, ast.Name)
+                      and isinstance(child.ctx, ast.Load)
+                      and child.id == name
+                      for child in ast.walk(owner)
+                  ):
+                      result.append(owner_name)
+              return sorted(result)
+
+          packet = []
+          for name in names:
+              node = definitions.get(name)
+              if not isinstance(node, ast.FunctionDef):
+                  raise RuntimeError(f"Missing focused function: {name}")
+              exact = ast.get_source_segment(source, node)
+              if exact is None:
+                  raise RuntimeError(f"Could not recover source: {name}")
+              packet.append({
+                  "name": name,
+                  "signature": ast.unparse(node.args),
+                  "source": exact,
+                  "source_sha256": hashlib.sha256(exact.encode("utf-8")).hexdigest(),
+                  "external_names": external_names(node),
+                  "callers": callers(name),
+                  "occurrence_count": source.count(name),
+              })
+
+          payload = {
+              "source_commit": "${{ github.sha }}",
+              "functions": packet,
+              "safety": {"read_only": True, "application_modified": False},
+          }
+          Path("modularization-wave-11-ui.json").write_text(
+              json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps({
+              "functions": [item["name"] for item in packet],
+              "external_names": {item["name"]: item["external_names"] for item in packet},
+          }, indent=2))
+          PY
+
+      - name: Upload focused inspection artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: modularization-wave-11-ui
+          path: modularization-wave-11-ui.json
+          if-no-files-found: error
+          retention-days: 14
