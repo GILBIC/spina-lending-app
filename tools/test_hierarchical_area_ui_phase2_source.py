@@ -14,7 +14,7 @@ def main() -> None:
     assert "def _add_area_quick():" not in source
     assert 'def add_area_quick():\n        nm = simpledialog.askstring("Add Area"' not in source
     assert source.count("build_area_selector_field(") == 1
-    assert source.count("build_simple_area_selector(self, win, area_var, width=34)") == 1
+    assert source.count("build_simple_area_selector(self, outer, area_var, width=34)") == 1
     assert source.count("App.open_areas_manager = _spina_area_open_manager") == 1
     compile(source, str(APP), "exec")
     print("Hierarchical Area UI Phase 2 source checks passed")
