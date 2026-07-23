@@ -1,0 +1,98 @@
+name: Inspect append unique text helper
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/inspect-append-unique-text
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Inspect helper and callers
+        run: |
+          python - <<'PY'
+          import ast
+          import builtins
+          import json
+          from pathlib import Path
+
+          app = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
+          source = app.read_text(encoding='utf-8')
+          lines = source.splitlines()
+          tree = ast.parse(source)
+          target_name = '_append_unique_text'
+
+          targets = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == target_name]
+          if len(targets) != 1:
+              raise RuntimeError(f'Expected one top-level {target_name}, found {len(targets)}')
+          target = targets[0]
+
+          local_names = {arg.arg for arg in (*target.args.posonlyargs, *target.args.args, *target.args.kwonlyargs)}
+          if target.args.vararg:
+              local_names.add(target.args.vararg.arg)
+          if target.args.kwarg:
+              local_names.add(target.args.kwarg.arg)
+          for child in ast.walk(target):
+              if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
+                  local_names.add(child.id)
+          loaded = {
+              child.id for child in ast.walk(target)
+              if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
+          }
+          external_names = sorted(loaded - local_names - set(dir(builtins)) - {target_name})
+
+          references = []
+          for owner in ast.walk(tree):
+              if not isinstance(owner, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                  continue
+              for node in ast.walk(owner):
+                  if not isinstance(node, ast.Call):
+                      continue
+                  fn = node.func
+                  matched = isinstance(fn, ast.Name) and fn.id == target_name
+                  if matched:
+                      references.append({
+                          'owner': owner.name,
+                          'owner_type': type(owner).__name__,
+                          'owner_line': owner.lineno,
+                          'call_line': node.lineno,
+                          'call_source': ast.get_source_segment(source, node),
+                      })
+
+          report = {
+              'target': target_name,
+              'line': target.lineno,
+              'end_line': target.end_lineno,
+              'signature': ast.unparse(target.args),
+              'decorators': [ast.unparse(item) for item in target.decorator_list],
+              'uses_global_or_nonlocal': any(isinstance(node, (ast.Global, ast.Nonlocal)) for node in ast.walk(target)),
+              'external_names': external_names,
+              'source': '\n'.join(lines[target.lineno - 1:target.end_lineno]),
+              'reference_count': len(references),
+              'references': references,
+          }
+          out = Path('tools/fixtures/append_unique_text_inspection.json')
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+          PY
+      - name: Commit inspection report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/fixtures/append_unique_text_inspection.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Inspect append unique text helper"
+          git push origin HEAD:agent/inspect-append-unique-text
