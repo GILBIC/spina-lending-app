@@ -21,3 +21,16 @@ def _spina_route_notice_norm_name(value: str) -> str:
         return s
     except Exception:
         return str(value or "").strip().lower()
+
+def _spina_cilog_action_label(action, source=''):
+    a = str(action or '').strip().upper()
+    if a == 'UPDATE':
+        src = str(source or '').lower()
+        if 'picture' in src:
+            return 'PICTURE'
+        if 'link' in src:
+            return 'LINK'
+        if 'area' in src:
+            return 'AREA UPDATE'
+        return 'EDIT'
+    return a or 'CHANGE'
