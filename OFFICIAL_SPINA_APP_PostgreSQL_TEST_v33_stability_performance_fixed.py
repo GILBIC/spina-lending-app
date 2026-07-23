@@ -44321,7 +44321,7 @@ def _spina_v22_build_reports_tab(self):
             except Exception:
                 pass
 
-        self.report_notes_btn.configure(command=_toggle_reports_notes_panel)
+        self.report_notes_btn.configure(command=self._open_note_dialog)
 
         notes_top = tk.Frame(self.reports_notes_box, bg=c["panel"])
         notes_top.pack(fill="x", padx=12, pady=(10, 6))
