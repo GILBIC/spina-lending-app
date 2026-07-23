@@ -137,9 +137,27 @@ def main() -> None:
     legacy_paths = {row[0] for row in conn.execute("SELECT name FROM areas").fetchall()}
     assert "Rizal › Looc Proper" not in legacy_paths
 
+    try:
+        set_area_node_active(conn, zone["area_uid"], True)
+    except ValueError as exc:
+        assert "Activate the parent Area first" in str(exc)
+    else:
+        raise AssertionError("A child Area must not activate below an inactive parent")
+    assert find_area_node_by_path(
+        conn,
+        "Rizal › Looc Proper › Zone 1",
+        include_inactive=False,
+    ) is None
+
     set_area_node_active(conn, looc["area_uid"], True)
     active = find_area_node_by_path(conn, "Rizal › Looc Proper", include_inactive=False)
     assert active is not None
+    active_zone = find_area_node_by_path(
+        conn,
+        "Rizal › Looc Proper › Zone 1",
+        include_inactive=False,
+    )
+    assert active_zone is not None
     legacy_paths = {row[0] for row in conn.execute("SELECT name FROM areas").fetchall()}
     assert "Rizal › Looc Proper" in legacy_paths
 
