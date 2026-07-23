@@ -31,6 +31,7 @@ jobs:
 
           app = Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py")
           source = app.read_text(encoding="utf-8")
+          lines = source.splitlines()
           tree = ast.parse(source, filename=str(app))
           all_functions = [
               node for node in ast.walk(tree)
@@ -112,9 +113,29 @@ jobs:
                   "is_top_level": node in tree.body,
               })
 
+          contexts = {}
+          for identifier in ("_spina_v23_clients_colors", "_spina_v27_route_colors"):
+              hits = []
+              for index, text in enumerate(lines, start=1):
+                  if identifier not in text:
+                      continue
+                  start = max(1, index - 12)
+                  end = min(len(lines), index + 18)
+                  hits.append({
+                      "line": index,
+                      "start": start,
+                      "end": end,
+                      "text": "\n".join(
+                          f"{line_no}: {lines[line_no - 1]}"
+                          for line_no in range(start, end + 1)
+                      ),
+                  })
+              contexts[identifier] = hits
+
           payload = {
               "source_commit": "${{ github.sha }}",
               "functions": packet,
+              "contexts": contexts,
               "safety": {"read_only": True, "application_modified": False},
           }
           Path("modularization-wave-11-ui.json").write_text(
@@ -123,14 +144,7 @@ jobs:
           )
           print(json.dumps({
               "functions": [item["name"] for item in packet],
-              "locations": {
-                  item["name"]: {
-                      "line": item["lineno"],
-                      "owner": item["enclosing_top_level"],
-                      "top_level": item["is_top_level"],
-                  }
-                  for item in packet
-              },
+              "context_counts": {key: len(value) for key, value in contexts.items()},
           }, indent=2))
           PY
 
