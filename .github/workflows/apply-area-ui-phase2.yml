@@ -29,7 +29,7 @@ jobs:
             tools/test_hierarchical_area_ui_phase2.py \
             tools/test_hierarchical_area_ui_phase2_source.py
           python tools/apply_hierarchical_area_ui_phase2.py
-          python tools/test_hierarchical_area_ui_phase2.py
+          PYTHONPATH=. python tools/test_hierarchical_area_ui_phase2.py
       - name: Apply guarded UI patch
         run: python tools/apply_hierarchical_area_ui_phase2.py --apply
       - name: Compile and retest
@@ -43,8 +43,8 @@ jobs:
             tools/test_hierarchical_area_ui_phase2.py \
             tools/test_hierarchical_area_ui_phase2_source.py
           python tools/apply_hierarchical_area_ui_phase2.py
-          python tools/test_hierarchical_area_ui_phase2.py
-          python tools/test_hierarchical_area_ui_phase2_source.py
+          PYTHONPATH=. python tools/test_hierarchical_area_ui_phase2.py
+          PYTHONPATH=tools:. python tools/test_hierarchical_area_ui_phase2_source.py
       - name: Commit Phase 2 app wiring
         run: |
           git config user.name "github-actions[bot]"
