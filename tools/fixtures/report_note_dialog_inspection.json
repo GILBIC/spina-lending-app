@@ -16,6 +16,10 @@
     {
       "line": 17687,
       "text": "        self.report_notes_btn.configure(command=self._open_note_dialog)"
+    },
+    {
+      "line": 44324,
+      "text": "        self.report_notes_btn.configure(command=self._open_note_dialog)"
     }
   ]
 }
