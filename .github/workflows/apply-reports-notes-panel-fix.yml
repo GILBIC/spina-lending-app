@@ -26,10 +26,14 @@ jobs:
 
           path = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
           source = path.read_text(encoding='utf-8')
-          old = '''                    self.reports_notes_sep.pack(fill="x", padx=18, pady=(0, 6))
-                    self.reports_notes_box.pack(fill="x", padx=18, pady=(0, 18))'''
-          new = '''                    self.reports_notes_box.pack(side="bottom", fill="x", padx=18, pady=(0, 18))
-                    self.reports_notes_sep.pack(side="bottom", fill="x", padx=18, pady=(0, 6))'''
+          old = "\n".join([
+              '                    self.reports_notes_sep.pack(fill="x", padx=18, pady=(0, 6))',
+              '                    self.reports_notes_box.pack(fill="x", padx=18, pady=(0, 18))',
+          ])
+          new = "\n".join([
+              '                    self.reports_notes_box.pack(side="bottom", fill="x", padx=18, pady=(0, 18))',
+              '                    self.reports_notes_sep.pack(side="bottom", fill="x", padx=18, pady=(0, 6))',
+          ])
           count = source.count(old)
           if count == 1:
               source = source.replace(old, new, 1)
