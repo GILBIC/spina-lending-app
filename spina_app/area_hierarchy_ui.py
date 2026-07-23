@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any
 
 from spina_app.area_hierarchy import add_area_node, build_area_tree, list_area_nodes
 from spina_app.area_hierarchy_ops import (
@@ -14,6 +14,9 @@ from spina_app.area_hierarchy_ops import (
     set_area_node_active,
 )
 
+_FOLDER_CLOSED = "📁"
+_FOLDER_OPEN = "📂"
+
 
 def _connection(app: Any) -> Any:
     db = getattr(app, "db", None)
@@ -24,6 +27,7 @@ def _connection(app: Any) -> Any:
 
 
 def _refresh_app_area_views(app: Any) -> None:
+    """Refresh legacy Area consumers only after the manager actually changed data."""
     for name in (
         "_refresh_area_dropdowns",
         "_schedule_refresh_clients",
@@ -35,6 +39,17 @@ def _refresh_app_area_views(app: Any) -> None:
                 callback()
         except Exception:
             pass
+
+
+def _restore_parent_grab(parent: Any) -> None:
+    """Return modal control to the form that opened the Area window."""
+    try:
+        if parent is not None and parent.winfo_exists():
+            parent.grab_set()
+            parent.lift()
+            parent.focus_force()
+    except Exception:
+        pass
 
 
 def _tree_visible_uids(nodes: list[dict[str, Any]], query: str) -> set[str] | None:
@@ -49,9 +64,50 @@ def _tree_visible_uids(nodes: list[dict[str, Any]], query: str) -> set[str] | No
         uid = str(node.get("area_uid") or "")
         while uid and uid not in visible:
             visible.add(uid)
-            parent_uid = str(by_uid.get(uid, {}).get("parent_uid") or "")
-            uid = parent_uid
+            uid = str(by_uid.get(uid, {}).get("parent_uid") or "")
     return visible
+
+
+def _folder_text(name: Any, opened: bool) -> str:
+    icon = _FOLDER_OPEN if opened else _FOLDER_CLOSED
+    return f"{icon} {str(name or '').strip()}"
+
+
+def _remember_open_folders(tree: Any) -> set[str]:
+    opened: set[str] = set()
+
+    def walk(parent: str = "") -> None:
+        for iid in tree.get_children(parent):
+            try:
+                if bool(tree.item(iid, "open")):
+                    opened.add(str(iid))
+            except Exception:
+                pass
+            walk(str(iid))
+
+    walk()
+    return opened
+
+
+def _refresh_folder_icons(tree: Any, by_uid: dict[str, dict[str, Any]]) -> None:
+    def walk(parent: str = "") -> None:
+        for iid in tree.get_children(parent):
+            uid = str(iid)
+            node = by_uid.get(uid, {})
+            opened = bool(tree.item(iid, "open"))
+            tree.item(iid, text=_folder_text(node.get("name"), opened))
+            walk(uid)
+
+    walk()
+
+
+def _set_all_folders(tree: Any, opened: bool) -> None:
+    def walk(parent: str = "") -> None:
+        for iid in tree.get_children(parent):
+            tree.item(iid, open=opened)
+            walk(str(iid))
+
+    walk()
 
 
 def _populate_area_tree(
@@ -60,16 +116,27 @@ def _populate_area_tree(
     *,
     query: str = "",
     include_status: bool = False,
-) -> None:
+    open_uids: set[str] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Render a true parent/child folder tree and return its UID lookup."""
     for iid in tree.get_children(""):
         tree.delete(iid)
+
+    by_uid = {
+        str(node.get("area_uid") or ""): dict(node)
+        for node in nodes
+        if str(node.get("area_uid") or "")
+    }
     visible = _tree_visible_uids(nodes, query)
+    filtering = visible is not None
+    wanted_open = set(open_uids or ())
 
     def insert_branch(items: list[dict[str, Any]], parent_iid: str = "") -> None:
         for node in items:
             uid = str(node.get("area_uid") or "")
             if not uid or (visible is not None and uid not in visible):
                 continue
+            opened = filtering or uid in wanted_open
             values: tuple[Any, ...]
             if include_status:
                 values = (
@@ -82,14 +149,15 @@ def _populate_area_tree(
                 parent_iid,
                 "end",
                 iid=uid,
-                text=str(node.get("name") or ""),
+                text=_folder_text(node.get("name"), opened),
                 values=values,
-                open=True,
+                open=opened,
                 tags=("inactive",) if not int(node.get("is_active") or 0) else (),
             )
             insert_branch(list(node.get("children") or []), uid)
 
     insert_branch(build_area_tree(nodes))
+    return by_uid
 
 
 def select_area_node(
@@ -100,7 +168,7 @@ def select_area_node(
     allow_blank: bool = True,
     title: str = "Select Area",
 ) -> dict[str, Any] | None:
-    """Open a modal hierarchy browser and return the selected active node."""
+    """Open a modal folder browser and return the selected active Area node."""
     import tkinter as tk
     from tkinter import ttk
 
@@ -112,8 +180,8 @@ def select_area_node(
     owner = parent or getattr(app, "root", None)
     win = tk.Toplevel(owner)
     win.title(title)
-    win.geometry("760x560")
-    win.minsize(620, 440)
+    win.geometry("820x580")
+    win.minsize(660, 460)
     try:
         win.transient(owner)
         win.grab_set()
@@ -123,12 +191,17 @@ def select_area_node(
     outer = ttk.Frame(win, padding=12)
     outer.pack(fill="both", expand=True)
 
+    ttk.Label(
+        outer,
+        text="Choose an Area folder. Use the arrows to expand or collapse child Areas.",
+    ).pack(anchor="w", pady=(0, 8))
+
     search_var = tk.StringVar(value="")
     search_row = ttk.Frame(outer)
     search_row.pack(fill="x", pady=(0, 8))
     ttk.Label(search_row, text="Search:").pack(side="left")
     search_entry = ttk.Entry(search_row, textvariable=search_var)
-    search_entry.pack(side="left", fill="x", expand=True, padx=(6, 0))
+    search_entry.pack(side="left", fill="x", expand=True, padx=(6, 10))
 
     tree_box = ttk.Frame(outer)
     tree_box.pack(fill="both", expand=True)
@@ -138,23 +211,33 @@ def select_area_node(
         show="tree headings",
         selectmode="browse",
     )
-    tree.heading("#0", text="Area")
-    tree.heading("path", text="Full Path")
-    tree.column("#0", width=230, minwidth=140, stretch=True)
-    tree.column("path", width=430, minwidth=220, stretch=True)
+    tree.heading("#0", text="Area folders")
+    tree.heading("path", text="Complete Area path")
+    tree.column("#0", width=300, minwidth=180, stretch=True)
+    tree.column("path", width=470, minwidth=260, stretch=True)
     ysb = ttk.Scrollbar(tree_box, orient="vertical", command=tree.yview)
-    tree.configure(yscrollcommand=ysb.set)
-    tree.pack(side="left", fill="both", expand=True)
-    ysb.pack(side="right", fill="y")
+    xsb = ttk.Scrollbar(tree_box, orient="horizontal", command=tree.xview)
+    tree.configure(yscrollcommand=ysb.set, xscrollcommand=xsb.set)
+    tree.grid(row=0, column=0, sticky="nsew")
+    ysb.grid(row=0, column=1, sticky="ns")
+    xsb.grid(row=1, column=0, sticky="ew")
+    tree_box.rowconfigure(0, weight=1)
+    tree_box.columnconfigure(0, weight=1)
+
+    found = find_area_node_by_path(conn, initial_path, include_inactive=False) if initial_path else None
+    initial_uid = str(found.get("area_uid") or "") if found else ""
 
     def refresh(*_args: Any) -> None:
         current = tree.selection()
-        _populate_area_tree(tree, nodes, query=search_var.get())
-        wanted_uid = current[0] if current else ""
-        if not wanted_uid and initial_path:
-            found = find_area_node_by_path(conn, initial_path, include_inactive=False)
-            wanted_uid = str(found.get("area_uid") or "") if found else ""
-        if wanted_uid and tree.exists(wanted_uid):
+        open_uids = _remember_open_folders(tree)
+        rendered = _populate_area_tree(
+            tree,
+            nodes,
+            query=search_var.get(),
+            open_uids=open_uids,
+        )
+        wanted_uid = str(current[0]) if current else initial_uid
+        if wanted_uid and wanted_uid in rendered and tree.exists(wanted_uid):
             tree.selection_set(wanted_uid)
             tree.focus(wanted_uid)
             tree.see(wanted_uid)
@@ -167,21 +250,34 @@ def select_area_node(
         if node is None:
             return
         result["value"] = dict(node)
-        win.destroy()
+        close()
 
     def clear() -> None:
         result["value"] = {"area_uid": "", "full_path": "", "name": ""}
-        win.destroy()
+        close()
 
-    buttons = ttk.Frame(outer)
-    buttons.pack(fill="x", pady=(10, 0))
-    ttk.Button(buttons, text="Select Area", command=accept).pack(side="right")
-    ttk.Button(buttons, text="Cancel", command=win.destroy).pack(side="right", padx=(0, 6))
+    def close() -> None:
+        try:
+            win.grab_release()
+        except Exception:
+            pass
+        win.destroy()
+        _restore_parent_grab(owner)
+
+    controls = ttk.Frame(outer)
+    controls.pack(fill="x", pady=(8, 0))
+    ttk.Button(controls, text="Expand All", command=lambda: (_set_all_folders(tree, True), _refresh_folder_icons(tree, by_uid))).pack(side="left")
+    ttk.Button(controls, text="Collapse All", command=lambda: (_set_all_folders(tree, False), _refresh_folder_icons(tree, by_uid))).pack(side="left", padx=(6, 0))
     if allow_blank:
-        ttk.Button(buttons, text="Clear Area", command=clear).pack(side="left")
+        ttk.Button(controls, text="Clear Area", command=clear).pack(side="left", padx=(12, 0))
+    ttk.Button(controls, text="Select Area", command=accept).pack(side="right")
+    ttk.Button(controls, text="Cancel", command=close).pack(side="right", padx=(0, 6))
 
     search_var.trace_add("write", refresh)
     tree.bind("<Double-1>", accept)
+    tree.bind("<<TreeviewOpen>>", lambda _event: _refresh_folder_icons(tree, by_uid))
+    tree.bind("<<TreeviewClose>>", lambda _event: _refresh_folder_icons(tree, by_uid))
+    win.protocol("WM_DELETE_WINDOW", close)
     refresh()
     try:
         search_entry.focus_set()
@@ -228,7 +324,11 @@ def build_simple_area_selector(
         command=lambda: select_area_for_variable(app, owner, variable),
     ).pack(side="left", padx=(6, 0))
     ttk.Button(frame, text="Clear", command=lambda: variable.set("")).pack(side="left", padx=(4, 0))
-    ttk.Button(frame, text="Manage", command=lambda: open_area_manager(app)).pack(side="left", padx=(4, 0))
+    ttk.Button(
+        frame,
+        text="Manage Areas",
+        command=lambda: open_area_manager(app, owner),
+    ).pack(side="left", padx=(4, 0))
     return frame
 
 
@@ -271,13 +371,13 @@ def build_area_selector_field(
     ttk.Button(
         line,
         text="Manage Areas",
-        command=lambda: open_area_manager(app),
+        command=lambda: open_area_manager(app, owner),
     ).pack(side="left", padx=(4, 0))
     return box, entry
 
 
 def _select_parent_area(app: Any, owner: Any, moving_uid: str) -> str | None:
-    """Select a new parent; an empty string means move to the root."""
+    """Select a new parent folder; an empty string means move to the root."""
     import tkinter as tk
     from tkinter import ttk
 
@@ -288,7 +388,7 @@ def _select_parent_area(app: Any, owner: Any, moving_uid: str) -> str | None:
 
     win = tk.Toplevel(owner)
     win.title("Choose New Parent Area")
-    win.geometry("700x520")
+    win.geometry("760x540")
     try:
         win.transient(owner)
         win.grab_set()
@@ -298,17 +398,17 @@ def _select_parent_area(app: Any, owner: Any, moving_uid: str) -> str | None:
     outer.pack(fill="both", expand=True)
     ttk.Label(
         outer,
-        text="Choose the new parent. Select ‘Top level’ to make it a main Area.",
+        text="Choose the destination folder. Select Top level to make it a main Area.",
     ).pack(anchor="w", pady=(0, 8))
 
     tree = ttk.Treeview(outer, columns=("path",), show="tree headings", selectmode="browse")
-    tree.heading("#0", text="Area")
-    tree.heading("path", text="Full Path")
-    tree.column("#0", width=220)
-    tree.column("path", width=420)
+    tree.heading("#0", text="Area folders")
+    tree.heading("path", text="Complete Area path")
+    tree.column("#0", width=280)
+    tree.column("path", width=430)
     tree.pack(fill="both", expand=True)
     root_iid = "__ROOT__"
-    tree.insert("", "end", iid=root_iid, text="Top level", values=("Main Area",), open=True)
+    tree.insert("", "end", iid=root_iid, text=f"{_FOLDER_OPEN} Top level", values=("Main Area",), open=True)
 
     def insert(items: list[dict[str, Any]], parent_iid: str) -> None:
         for node in items:
@@ -319,7 +419,7 @@ def _select_parent_area(app: Any, owner: Any, moving_uid: str) -> str | None:
                 parent_iid,
                 "end",
                 iid=uid,
-                text=str(node.get("name") or ""),
+                text=_folder_text(node.get("name"), True),
                 values=(str(node.get("full_path") or ""),),
                 open=True,
             )
@@ -327,6 +427,14 @@ def _select_parent_area(app: Any, owner: Any, moving_uid: str) -> str | None:
 
     insert(build_area_tree(nodes), root_iid)
     tree.selection_set(root_iid)
+
+    def close() -> None:
+        try:
+            win.grab_release()
+        except Exception:
+            pass
+        win.destroy()
+        _restore_parent_grab(owner)
 
     def accept(*_args: Any) -> None:
         selected = tree.selection()
@@ -336,40 +444,46 @@ def _select_parent_area(app: Any, owner: Any, moving_uid: str) -> str | None:
         if uid != root_iid and uid not in by_uid:
             return
         result["value"] = "" if uid == root_iid else uid
-        win.destroy()
+        close()
 
     buttons = ttk.Frame(outer)
     buttons.pack(fill="x", pady=(10, 0))
     ttk.Button(buttons, text="Move Here", command=accept).pack(side="right")
-    ttk.Button(buttons, text="Cancel", command=win.destroy).pack(side="right", padx=(0, 6))
+    ttk.Button(buttons, text="Cancel", command=close).pack(side="right", padx=(0, 6))
     tree.bind("<Double-1>", accept)
+    win.protocol("WM_DELETE_WINDOW", close)
     win.wait_window()
     return result["value"]
 
 
-def open_area_manager(app: Any) -> None:
-    """Open the unlimited hierarchical Area Management tree."""
+def open_area_manager(app: Any, parent: Any = None) -> None:
+    """Open the folder-style unlimited hierarchical Area manager."""
     import tkinter as tk
     from tkinter import messagebox, simpledialog, ttk
 
+    owner = parent or getattr(app, "root", None)
     try:
         existing = getattr(app, "_areas_win", None)
         if existing is not None and existing.winfo_exists():
             existing.lift()
             existing.focus_force()
+            try:
+                existing.grab_set()
+            except Exception:
+                pass
             return
     except Exception:
         pass
 
     conn = _connection(app)
-    owner = getattr(app, "root", None)
     win = tk.Toplevel(owner)
     app._areas_win = win
     win.title("Area Management")
-    win.geometry("920x640")
-    win.minsize(760, 520)
+    win.geometry("980x680")
+    win.minsize(800, 540)
     try:
         win.transient(owner)
+        win.grab_set()
     except Exception:
         pass
 
@@ -382,7 +496,7 @@ def open_area_manager(app: Any) -> None:
     ).pack(anchor="w")
     ttk.Label(
         outer,
-        text="Create unlimited levels. Clients select these managed paths and cannot type new Areas in the client form.",
+        text="Areas are organized like folders. Expand a folder to see its child Areas.",
     ).pack(anchor="w", pady=(2, 10))
 
     tools = ttk.Frame(outer)
@@ -399,22 +513,30 @@ def open_area_manager(app: Any) -> None:
         show="tree headings",
         selectmode="browse",
     )
-    tree.heading("#0", text="Area Level")
-    tree.heading("path", text="Full Path")
+    tree.heading("#0", text="Area folders")
+    tree.heading("path", text="Complete Area path")
     tree.heading("status", text="Status")
-    tree.column("#0", width=220, minwidth=130, stretch=True)
-    tree.column("path", width=500, minwidth=260, stretch=True)
+    tree.column("#0", width=310, minwidth=180, stretch=True)
+    tree.column("path", width=500, minwidth=280, stretch=True)
     tree.column("status", width=90, minwidth=70, anchor="center", stretch=False)
     tree.tag_configure("inactive", foreground="#888888")
     ysb = ttk.Scrollbar(tree_box, orient="vertical", command=tree.yview)
-    tree.configure(yscrollcommand=ysb.set)
-    tree.pack(side="left", fill="both", expand=True)
-    ysb.pack(side="right", fill="y")
+    xsb = ttk.Scrollbar(tree_box, orient="horizontal", command=tree.xview)
+    tree.configure(yscrollcommand=ysb.set, xscrollcommand=xsb.set)
+    tree.grid(row=0, column=0, sticky="nsew")
+    ysb.grid(row=0, column=1, sticky="ns")
+    xsb.grid(row=1, column=0, sticky="ew")
+    tree_box.rowconfigure(0, weight=1)
+    tree_box.columnconfigure(0, weight=1)
 
     status_var = tk.StringVar(value="")
     ttk.Label(outer, textvariable=status_var).pack(anchor="w", pady=(7, 0))
 
-    state: dict[str, Any] = {"nodes": [], "by_uid": {}}
+    state: dict[str, Any] = {
+        "nodes": [],
+        "by_uid": {},
+        "changed": False,
+    }
 
     def selected_uid() -> str:
         selected = tree.selection()
@@ -423,65 +545,72 @@ def open_area_manager(app: Any) -> None:
     def selected_node() -> dict[str, Any] | None:
         return state["by_uid"].get(selected_uid())
 
-    def refresh(*_args: Any, keep_uid: str = "") -> None:
+    def render(*_args: Any, keep_uid: str = "") -> None:
         current = keep_uid or selected_uid()
-        nodes = list_area_nodes(conn, include_inactive=True)
-        state["nodes"] = nodes
-        state["by_uid"] = {str(node.get("area_uid") or ""): node for node in nodes}
-        _populate_area_tree(
+        opened = _remember_open_folders(tree)
+        state["by_uid"] = _populate_area_tree(
             tree,
-            nodes,
+            state["nodes"],
             query=search_var.get(),
             include_status=True,
+            open_uids=opened,
         )
         if current and tree.exists(current):
             tree.selection_set(current)
             tree.focus(current)
             tree.see(current)
-        active_count = sum(1 for node in nodes if int(node.get("is_active") or 0))
-        inactive_count = len(nodes) - active_count
-        status_var.set(f"{active_count} active Area(s) · {inactive_count} inactive")
-        _refresh_app_area_views(app)
+        active_count = sum(1 for node in state["nodes"] if int(node.get("is_active") or 0))
+        inactive_count = len(state["nodes"]) - active_count
+        status_var.set(f"{active_count} active Area folder(s) · {inactive_count} inactive")
+
+    def reload_tree(*, keep_uid: str = "") -> None:
+        state["nodes"] = list_area_nodes(conn, include_inactive=True)
+        render(keep_uid=keep_uid)
+
+    def mark_changed() -> None:
+        state["changed"] = True
 
     def add_main() -> None:
-        name = simpledialog.askstring("Add Main Area", "Main Area name:", parent=win)
+        name = simpledialog.askstring("Add Main Area", "Main Area folder name:", parent=win)
         if not name:
             return
         try:
             node = add_area_node(conn, name, "")
-            refresh(keep_uid=str(node.get("area_uid") or ""))
+            mark_changed()
+            reload_tree(keep_uid=str(node.get("area_uid") or ""))
         except Exception as exc:
             messagebox.showerror("Area", str(exc), parent=win)
 
     def add_child() -> None:
         parent_node = selected_node()
         if parent_node is None:
-            messagebox.showwarning("Select", "Select the parent Area first.", parent=win)
+            messagebox.showwarning("Select", "Select the parent Area folder first.", parent=win)
             return
         if not int(parent_node.get("is_active") or 0):
             messagebox.showwarning("Inactive", "Activate the parent Area before adding a child.", parent=win)
             return
         name = simpledialog.askstring(
             "Add Child Area",
-            f"Child name under:\n{parent_node.get('full_path')}",
+            f"Child folder name under:\n{parent_node.get('full_path')}",
             parent=win,
         )
         if not name:
             return
         try:
             node = add_area_node(conn, name, str(parent_node.get("area_uid") or ""))
-            refresh(keep_uid=str(node.get("area_uid") or ""))
+            mark_changed()
+            reload_tree(keep_uid=str(node.get("area_uid") or ""))
         except Exception as exc:
             messagebox.showerror("Area", str(exc), parent=win)
 
     def rename_selected() -> None:
         node = selected_node()
         if node is None:
-            messagebox.showwarning("Select", "Select an Area to rename.", parent=win)
+            messagebox.showwarning("Select", "Select an Area folder to rename.", parent=win)
             return
         name = simpledialog.askstring(
             "Rename Area",
-            "New name for this Area level:",
+            "New name for this Area folder:",
             initialvalue=str(node.get("name") or ""),
             parent=win,
         )
@@ -489,21 +618,23 @@ def open_area_manager(app: Any) -> None:
             return
         try:
             rename_area_node(conn, node["area_uid"], name)
-            refresh(keep_uid=node["area_uid"])
+            mark_changed()
+            reload_tree(keep_uid=node["area_uid"])
         except Exception as exc:
             messagebox.showerror("Area", str(exc), parent=win)
 
     def move_selected() -> None:
         node = selected_node()
         if node is None:
-            messagebox.showwarning("Select", "Select an Area to move.", parent=win)
+            messagebox.showwarning("Select", "Select an Area folder to move.", parent=win)
             return
         parent_uid = _select_parent_area(app, win, str(node.get("area_uid") or ""))
         if parent_uid is None:
             return
         try:
             move_area_node(conn, node["area_uid"], parent_uid)
-            refresh(keep_uid=node["area_uid"])
+            mark_changed()
+            reload_tree(keep_uid=node["area_uid"])
         except Exception as exc:
             messagebox.showerror("Area", str(exc), parent=win)
 
@@ -512,15 +643,16 @@ def open_area_manager(app: Any) -> None:
         if node is None:
             return
         try:
-            move_area_node_order(conn, node["area_uid"], direction)
-            refresh(keep_uid=node["area_uid"])
+            if move_area_node_order(conn, node["area_uid"], direction):
+                mark_changed()
+            reload_tree(keep_uid=node["area_uid"])
         except Exception as exc:
             messagebox.showerror("Area", str(exc), parent=win)
 
     def toggle_active() -> None:
         node = selected_node()
         if node is None:
-            messagebox.showwarning("Select", "Select an Area first.", parent=win)
+            messagebox.showwarning("Select", "Select an Area folder first.", parent=win)
             return
         becoming_active = not bool(int(node.get("is_active") or 0))
         action = "activate" if becoming_active else "deactivate"
@@ -532,41 +664,66 @@ def open_area_manager(app: Any) -> None:
         if not becoming_active and used:
             messagebox.showwarning(
                 "Area in use",
-                f"This Area subtree is assigned to {used} client(s). Reassign them before deactivating it.",
+                f"This Area folder and its children are assigned to {used} client(s). Reassign them before deactivating it.",
                 parent=win,
             )
             return
         if not messagebox.askyesno(
             "Confirm",
-            f"{action.title()} this Area and its child Areas?",
+            f"{action.title()} this Area folder and all child folders?",
             parent=win,
         ):
             return
         try:
             set_area_node_active(conn, node["area_uid"], becoming_active)
-            refresh(keep_uid=node["area_uid"])
+            mark_changed()
+            reload_tree(keep_uid=node["area_uid"])
         except Exception as exc:
             messagebox.showerror("Area", str(exc), parent=win)
 
     actions = ttk.Frame(outer)
     actions.pack(fill="x", pady=(10, 0))
-    ttk.Button(actions, text="Add Main", command=add_main).pack(side="left")
-    ttk.Button(actions, text="Add Child", command=add_child).pack(side="left", padx=(6, 0))
+    ttk.Button(actions, text="Add Main Folder", command=add_main).pack(side="left")
+    ttk.Button(actions, text="Add Child Folder", command=add_child).pack(side="left", padx=(6, 0))
     ttk.Button(actions, text="Rename", command=rename_selected).pack(side="left", padx=(6, 0))
     ttk.Button(actions, text="Move", command=move_selected).pack(side="left", padx=(6, 0))
     ttk.Button(actions, text="Move Up", command=lambda: reorder(-1)).pack(side="left", padx=(6, 0))
     ttk.Button(actions, text="Move Down", command=lambda: reorder(1)).pack(side="left", padx=(6, 0))
     ttk.Button(actions, text="Activate / Deactivate", command=toggle_active).pack(side="left", padx=(6, 0))
-    ttk.Button(actions, text="Close", command=win.destroy).pack(side="right")
+
+    view_actions = ttk.Frame(outer)
+    view_actions.pack(fill="x", pady=(8, 0))
+    ttk.Button(
+        view_actions,
+        text="Expand All",
+        command=lambda: (_set_all_folders(tree, True), _refresh_folder_icons(tree, state["by_uid"])),
+    ).pack(side="left")
+    ttk.Button(
+        view_actions,
+        text="Collapse All",
+        command=lambda: (_set_all_folders(tree, False), _refresh_folder_icons(tree, state["by_uid"])),
+    ).pack(side="left", padx=(6, 0))
 
     def close() -> None:
-        _refresh_app_area_views(app)
+        if state.get("changed"):
+            try:
+                win.after_idle(lambda: _refresh_app_area_views(app))
+            except Exception:
+                _refresh_app_area_views(app)
         try:
             app._areas_win = None
         except Exception:
             pass
+        try:
+            win.grab_release()
+        except Exception:
+            pass
         win.destroy()
+        _restore_parent_grab(owner)
 
+    ttk.Button(view_actions, text="Close", command=close).pack(side="right")
     win.protocol("WM_DELETE_WINDOW", close)
-    search_var.trace_add("write", refresh)
-    refresh()
+    search_var.trace_add("write", render)
+    tree.bind("<<TreeviewOpen>>", lambda _event: _refresh_folder_icons(tree, state["by_uid"]))
+    tree.bind("<<TreeviewClose>>", lambda _event: _refresh_folder_icons(tree, state["by_uid"]))
+    reload_tree()
