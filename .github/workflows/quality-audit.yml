@@ -83,7 +83,9 @@ jobs:
             tools/test_date_display_helper_extraction.py \
             tools/extract_log_serialization_helper.py \
             tools/test_log_serialization_helper_extraction.py \
-            tools/test_cilog_money_formatter_extraction.py
+            tools/test_cilog_money_formatter_extraction.py \
+            tools/extract_cilog_value_formatter.py \
+            tools/test_cilog_value_formatter_extraction.py
 
       - name: Test module separation planner
         run: python tools/test_module_separation_planner.py
@@ -111,6 +113,9 @@ jobs:
 
       - name: Test CILOG money formatter extraction
         run: python tools/test_cilog_money_formatter_extraction.py
+
+      - name: Test CILOG value formatter extraction
+        run: python tools/test_cilog_value_formatter_extraction.py
 
       - name: Run redundancy audit
         run: |
