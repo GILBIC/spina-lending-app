@@ -1,0 +1,38 @@
+{
+  "batch": "pure_helper_batch_01",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "helpers": [
+    {
+      "name": "_spina__fmt_client_money",
+      "signature": "v",
+      "module": "spina_app.utilities.formatting",
+      "module_path": "spina_app/utilities/formatting.py",
+      "expected_source_sha256": "510338c29048f6351068c504e4be85f3a33dfb95925440753be38c280d40917d",
+      "allowed_external_names": []
+    },
+    {
+      "name": "_spina_v17_fmt_short_money",
+      "signature": "value",
+      "module": "spina_app.utilities.formatting",
+      "module_path": "spina_app/utilities/formatting.py",
+      "expected_source_sha256": "6eb2257b710c200e905ec7101ef6e5509259abcbb7cc7169282bcf57476d8254",
+      "allowed_external_names": []
+    },
+    {
+      "name": "_spina_v18_fmt_money_compact",
+      "signature": "value",
+      "module": "spina_app.utilities.formatting",
+      "module_path": "spina_app/utilities/formatting.py",
+      "expected_source_sha256": "ebf611d4a0b05b01b27465e3af09458c88150ce28a6bf040105837433f5ca7a3",
+      "allowed_external_names": []
+    },
+    {
+      "name": "_spina_v25_parse_count_from_var",
+      "signature": "var_value",
+      "module": "spina_app.utilities.numbers",
+      "module_path": "spina_app/utilities/numbers.py",
+      "expected_source_sha256": "66d83a7b35694c90a33d9ca96cc958eb687d48d1278aacfd6ce3571d0616fb05",
+      "allowed_external_names": ["re"]
+    }
+  ]
+}
