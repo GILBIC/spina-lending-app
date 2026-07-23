@@ -1,0 +1,135 @@
+{
+  "targets": [
+    "_spina_dash__date_text",
+    "_spina_v24_cilog_parse_day"
+  ],
+  "case_names": [
+    "none",
+    "empty",
+    "spaces",
+    "iso_date",
+    "iso_datetime",
+    "slash_date",
+    "invalid_date",
+    "bad_text",
+    "zero",
+    "date_object",
+    "datetime_object"
+  ],
+  "behavior": {
+    "_spina_dash__date_text": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "spaces": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "iso_date": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2024-02-29'"
+      },
+      "iso_datetime": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2024-02-29'"
+      },
+      "slash_date": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "invalid_date": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "bad_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "''"
+      },
+      "date_object": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2024-02-29'"
+      },
+      "datetime_object": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'2024-02-29'"
+      }
+    },
+    "_spina_v24_cilog_parse_day": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "spaces": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "iso_date": {
+        "kind": "return",
+        "type": "datetime.date",
+        "repr": "datetime.date(2024, 2, 29)"
+      },
+      "iso_datetime": {
+        "kind": "return",
+        "type": "datetime.date",
+        "repr": "datetime.date(2024, 2, 29)"
+      },
+      "slash_date": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "invalid_date": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "bad_text": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None"
+      },
+      "date_object": {
+        "kind": "return",
+        "type": "datetime.date",
+        "repr": "datetime.date(2024, 2, 29)"
+      },
+      "datetime_object": {
+        "kind": "return",
+        "type": "datetime.date",
+        "repr": "datetime.date(2024, 2, 29)"
+      }
+    }
+  }
+}

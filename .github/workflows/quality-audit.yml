@@ -77,7 +77,9 @@ jobs:
             tools/extract_text_normalizers.py \
             tools/test_text_normalizer_extraction.py \
             tools/extract_numeric_parsers.py \
-            tools/test_numeric_parser_extraction.py
+            tools/test_numeric_parser_extraction.py \
+            tools/extract_date_display_helpers.py \
+            tools/test_date_display_helper_extraction.py
 
       - name: Test module separation planner
         run: python tools/test_module_separation_planner.py
@@ -96,6 +98,9 @@ jobs:
 
       - name: Test numeric parser extraction
         run: python tools/test_numeric_parser_extraction.py
+
+      - name: Test date display helper extraction
+        run: python tools/test_date_display_helper_extraction.py
 
       - name: Run redundancy audit
         run: |

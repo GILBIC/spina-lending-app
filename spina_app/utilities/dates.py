@@ -29,3 +29,20 @@ def _spina_dash__parse_date(value):
         return datetime.strptime(s, '%Y-%m-%d').date()
     except Exception:
         return None
+
+def _spina_dash__date_text(value):
+    try:
+        d = _spina_dash__parse_date(value)
+        return d.strftime('%Y-%m-%d') if d else ''
+    except Exception:
+        return ''
+
+def _spina_v24_cilog_parse_day(value):
+    try:
+        s = str(value or "").strip()
+        if not s:
+            return None
+        # Common format is YYYY-MM-DD HH:MM:SS. Only first 10 characters are needed.
+        return datetime.strptime(s[:10], "%Y-%m-%d").date()
+    except Exception:
+        return None
