@@ -1,0 +1,57 @@
+name: Update modularization map wave 13
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  update-map:
+    if: github.event.pull_request.head.ref == 'agent/collector-route-card-batch-13'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out extraction branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update permanent modularization map
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('docs/modularization-map.md')
+          text = path.read_text(encoding='utf-8')
+          replacements = [
+              ('**Tracked main state:** after merged PR #109', '**Tracked main state:** after merged PR #111'),
+              ('Focused helper functions extracted from the large desktop source | **54**', 'Focused helper functions extracted from the large desktop source | **55**'),
+              ('Accelerated modularization waves completed | **12**', 'Accelerated modularization waves completed | **13**'),
+              ('Latest completed extraction | **Wave 12 / PR #109**', 'Latest completed extraction | **Wave 13 / PR #111**'),
+              ('Next step | **Wave 13 read-only inspection**', 'Next step | **Wave 14 read-only inspection**'),
+              ('`spina_app/ui_cards.py` | Cash Control and Client Information Log card constructors | 2', '`spina_app/ui_cards.py` | Cash Control, Client Information Log, and Collector Route card constructors | 3'),
+              ('| **Total** |  | **54** |', '| **Total** |  | **55** |'),
+              ('  - `_spina_v24_cilog_card` — PR #100\n', '  - `_spina_v24_cilog_card` — PR #100\n  - `_spina_v27_route_card` — PR #111\n'),
+              ('| 13 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |', '| 13 | #110 inspection | #111 | `ui_cards.py` | Collector Route summary-card constructor | ✅ Passed and merged |\n| 14 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |'),
+              ('| 13 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |', '| 13 | #110 | #111 | `ui_cards.py` | Collector Route summary-card constructor | ✅ | ✅ | ✅ | Passed Windows smoke test |\n| 14 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |'),
+          ]
+
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected exactly one match for {old!r}, found {count}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit map and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/update-modularization-map-wave-13.yml
+          git add -A
+          git commit -m "Update modularization map for wave 13"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
