@@ -1,0 +1,57 @@
+name: Update modularization map wave 11
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  update-map:
+    if: github.head_ref == 'agent/base-theme-palette-batch-11'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out extraction branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/base-theme-palette-batch-11
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update permanent modularization map
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('docs/modularization-map.md')
+          text = path.read_text(encoding='utf-8')
+
+          replacements = [
+              ('**Tracked main state:** after merged PR #105', '**Tracked main state:** after merged PR #107'),
+              ('Focused helper functions extracted from the large desktop source | **50**', 'Focused helper functions extracted from the large desktop source | **52**'),
+              ('Accelerated modularization waves completed | **10**', 'Accelerated modularization waves completed | **11**'),
+              ('Latest completed extraction | **Wave 10 / PR #105**', 'Latest completed extraction | **Wave 11 / PR #107**'),
+              ('Next step | **Wave 11 read-only inspection**', 'Next step | **Wave 12 read-only inspection**'),
+              ('`spina_app/theme_palettes.py` | Dashboard, Cash Control, and Client Information Log light/dark palettes | 3', '`spina_app/theme_palettes.py` | Dashboard, Cash Control, Client Information Log, Reports/Clients, and Collector/Collector Route light/dark palettes | 5'),
+              ('| **Total** |  | **50** |', '| **Total** |  | **52** |'),
+              ('  - `_spina_v24_cilog_colors` — PR #95\n', '  - `_spina_v24_cilog_colors` — PR #95\n  - `_spina_v22_reports_colors` — PR #107\n  - `_spina_v25_collector_colors` — PR #107\n'),
+              ('| 11 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |', '| 11 | #106 inspection | #107 | `theme_palettes.py` | Reports/Clients and Collector/Collector Route base palettes | ✅ Passed and merged |\n| 12 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |'),
+              ('| 11 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |', '| 11 | #106 | #107 | `theme_palettes.py` | Reports and Collector base palette helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |\n| 12 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |'),
+          ]
+
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f'Expected exactly one map match for {old!r}, found {count}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit map and remove temporary workflow
+        run: |
+          rm .github/workflows/update-modularization-map-wave-11.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/modularization-map.md .github/workflows/update-modularization-map-wave-11.yml
+          git commit -m "Update modularization map for Wave 11"
+          git push origin HEAD:agent/base-theme-palette-batch-11
