@@ -268,6 +268,11 @@ def build_area_selector_field(
         command=lambda: select_area_for_variable(app, owner, variable),
     ).pack(side="left", padx=(6, 0))
     ttk.Button(line, text="Clear", command=lambda: variable.set("")).pack(side="left", padx=(4, 0))
+    ttk.Button(
+        line,
+        text="Manage Areas",
+        command=lambda: open_area_manager(app),
+    ).pack(side="left", padx=(4, 0))
     return box, entry
 
 
