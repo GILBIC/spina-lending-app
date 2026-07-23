@@ -1,0 +1,21 @@
+{
+  "definition_count": 1,
+  "definitions": [
+    {
+      "line": 9886,
+      "end_line": 9912,
+      "args": "self",
+      "source": "    def _open_note_dialog(self):\n        name = self._get_selected_report_client()\n        if not name:\n            from tkinter import messagebox\n            messagebox.showwarning('Notes', 'Select a client in the Reports list first.')\n            return\n        default_date = \"\"\n        try:\n            default_date = self.end_date_var.get().strip()\n        except Exception as __spina_exc:\n            _log_suppressed_once('excpass_0204', 'suppressed exception excpass_0204', __spina_exc)\n            pass\n        client_uid = None\n        person_uid = None\n        try:\n            if hasattr(self, \"db\") and getattr(self, \"db\", None):\n                meta = self.db.get_client_link_meta(name, loan_type=self._mode_filter())\n                if meta:\n                    client_uid = (meta.get(\"client_uid\") or \"\").strip() or None\n                    person_uid = (meta.get(\"person_uid\") or \"\").strip() or None\n        except Exception as _e:\n            try:\n                _log_exc(\"notes:fetch_link_meta\", _e)\n            except Exception as __spina_exc:\n                _log_suppressed_once('excpass_0205', 'suppressed exception excpass_0205', __spina_exc)\n                pass\n        NoteEditorDialog(self.root, name, default_date=default_date, loan_type=self._mode_filter(), client_uid=client_uid, person_uid=person_uid)"
+    }
+  ],
+  "references": [
+    {
+      "line": 9886,
+      "text": "    def _open_note_dialog(self):"
+    },
+    {
+      "line": 17687,
+      "text": "        self.report_notes_btn.configure(command=self._open_note_dialog)"
+    }
+  ]
+}
