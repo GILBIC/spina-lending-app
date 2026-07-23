@@ -1,0 +1,77 @@
+name: Apply text normalizer extraction
+
+on:
+  push:
+    branches:
+      - agent/extract-text-normalizers
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out extraction branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile guard and regression test
+        run: |
+          python -m py_compile \
+            tools/extract_text_normalizers.py \
+            tools/test_text_normalizer_extraction.py
+
+      - name: Test original state and save behavior fixture
+        run: |
+          python tools/test_text_normalizer_extraction.py \
+            --write-fixture tools/fixtures/text_normalizers_behavior.json
+
+      - name: Run guarded dry-run
+        run: |
+          python tools/extract_text_normalizers.py \
+            --json /tmp/text-normalizer-plan.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path('/tmp/text-normalizer-plan.json').read_text())
+          assert result['safe_to_apply'] is True
+          assert result['targets']
+          PY
+
+      - name: Apply guarded extraction
+        run: |
+          python tools/extract_text_normalizers.py \
+            --apply \
+            --json /tmp/text-normalizer-result.json
+
+      - name: Validate extracted state
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/utilities/text.py \
+            tools/extract_text_normalizers.py \
+            tools/test_text_normalizer_extraction.py
+          python tools/test_text_normalizer_extraction.py
+
+      - name: Commit generated extraction
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/utilities/text.py \
+            tools/fixtures/text_normalizers_behavior.json
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git commit -m "Extract text normalizers"
+          git push origin HEAD:${GITHUB_REF_NAME}
