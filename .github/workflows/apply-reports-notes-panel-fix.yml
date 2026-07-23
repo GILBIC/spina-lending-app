@@ -1,4 +1,4 @@
-name: Apply Reports notes panel fix
+name: Inspect Reports notes panel source
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  apply:
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,51 +19,42 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Apply guarded layout fix
+      - name: Capture exact toggle source
         run: |
           python - <<'PY'
-          import re
+          import ast
+          import json
           from pathlib import Path
 
-          path = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
-          source = path.read_text(encoding='utf-8')
-          pattern = re.compile(
-              r'(?m)^(?P<indent>[ \t]*)self\.reports_notes_sep\.pack\('
-              r'fill=["\']x["\'],\s*padx=18,\s*pady=\(0,\s*6\)\)\s*\n'
-              r'(?P=indent)self\.reports_notes_box\.pack\('
-              r'fill=["\']x["\'],\s*padx=18,\s*pady=\(0,\s*18\)\)'
-          )
-          matches = list(pattern.finditer(source))
-          already_fixed = (
-              'self.reports_notes_box.pack(side="bottom", fill="x", padx=18, pady=(0, 18))' in source
-              and 'self.reports_notes_sep.pack(side="bottom", fill="x", padx=18, pady=(0, 6))' in source
-          )
-          if len(matches) == 1:
-              indent = matches[0].group('indent')
-              replacement = "\n".join([
-                  indent + 'self.reports_notes_box.pack(side="bottom", fill="x", padx=18, pady=(0, 18))',
-                  indent + 'self.reports_notes_sep.pack(side="bottom", fill="x", padx=18, pady=(0, 6))',
-              ])
-              source = source[:matches[0].start()] + replacement + source[matches[0].end():]
-              path.write_text(source, encoding='utf-8')
-          elif len(matches) == 0 and already_fixed:
-              pass
-          else:
-              raise RuntimeError(f'Unexpected Reports notes layout matches: {len(matches)}; already_fixed={already_fixed}')
+          app = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
+          source = app.read_text(encoding='utf-8')
+          lines = source.splitlines()
+          tree = ast.parse(source)
+          matches = [
+              node for node in ast.walk(tree)
+              if isinstance(node, ast.FunctionDef) and node.name == '_toggle_reports_notes_panel'
+          ]
+          if len(matches) != 1:
+              raise RuntimeError(f'Expected one toggle function, found {len(matches)}')
+          node = matches[0]
+          chunk = lines[node.lineno - 1:node.end_lineno]
+          report = {
+              'line': node.lineno,
+              'end_line': node.end_lineno,
+              'source': '\n'.join(chunk),
+              'repr_lines': [repr(line) for line in chunk],
+          }
+          output = Path('tools/fixtures/reports_notes_toggle_source.json')
+          output.parent.mkdir(parents=True, exist_ok=True)
+          output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
           PY
-      - name: Compile and test
-        run: |
-          python -m py_compile \
-            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
-            tools/test_reports_notes_panel_layout.py
-          python tools/test_reports_notes_panel_layout.py
-      - name: Commit fix
+      - name: Commit source report
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          git add tools/fixtures/reports_notes_toggle_source.json
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Fix Reports notes panel visibility"
+          git commit -m "Inspect Reports notes toggle source"
           git push origin HEAD:agent/fix-reports-notes-panel-visible
