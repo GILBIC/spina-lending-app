@@ -1,0 +1,336 @@
+{
+  "batch": "cash_control_ui_controls_batch_09",
+  "helper_names": [
+    "_spina_v21_build_labeled_entry",
+    "_spina_v21_style_cash_table"
+  ],
+  "behavior": {
+    "_spina_v21_build_labeled_entry": {
+      "default_width": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "pack_calls": [],
+          "children": [
+            {
+              "kind": "Frame",
+              "kwargs": {
+                "bg": "cash-panel"
+              },
+              "pack_calls": [],
+              "children": [
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Daily Amount",
+                    "bg": "cash-panel",
+                    "fg": "cash-muted",
+                    "font": [
+                      "Segoe UI",
+                      8,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x"
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Entry",
+                  "kwargs": {
+                    "textvariable": "daily-var",
+                    "width": 14
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "pady": [
+                        3,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        "returned": [
+          {
+            "kind": "Frame",
+            "kwargs": {
+              "bg": "cash-panel"
+            },
+            "pack_calls": [],
+            "children": [
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Daily Amount",
+                  "bg": "cash-panel",
+                  "fg": "cash-muted",
+                  "font": [
+                    "Segoe UI",
+                    8,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x"
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Entry",
+                "kwargs": {
+                  "textvariable": "daily-var",
+                  "width": 14
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "pady": [
+                      3,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              }
+            ]
+          },
+          {
+            "kind": "Entry",
+            "kwargs": {
+              "textvariable": "daily-var",
+              "width": 14
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "pady": [
+                  3,
+                  0
+                ]
+              }
+            ],
+            "children": []
+          }
+        ],
+        "identity": {
+          "box_is_root_first_child": true,
+          "entry_is_box_child": true,
+          "entry_is_last_box_child": true
+        }
+      },
+      "custom_width": {
+        "kind": "return",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "pack_calls": [],
+          "children": [
+            {
+              "kind": "Frame",
+              "kwargs": {
+                "bg": "cash-panel"
+              },
+              "pack_calls": [],
+              "children": [
+                {
+                  "kind": "Label",
+                  "kwargs": {
+                    "text": "Average Days",
+                    "bg": "cash-panel",
+                    "fg": "cash-muted",
+                    "font": [
+                      "Segoe UI",
+                      8,
+                      "bold"
+                    ],
+                    "anchor": "w"
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x"
+                    }
+                  ],
+                  "children": []
+                },
+                {
+                  "kind": "Entry",
+                  "kwargs": {
+                    "textvariable": "days-var",
+                    "width": 24
+                  },
+                  "pack_calls": [
+                    {
+                      "fill": "x",
+                      "pady": [
+                        3,
+                        0
+                      ]
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        "returned": [
+          {
+            "kind": "Frame",
+            "kwargs": {
+              "bg": "cash-panel"
+            },
+            "pack_calls": [],
+            "children": [
+              {
+                "kind": "Label",
+                "kwargs": {
+                  "text": "Average Days",
+                  "bg": "cash-panel",
+                  "fg": "cash-muted",
+                  "font": [
+                    "Segoe UI",
+                    8,
+                    "bold"
+                  ],
+                  "anchor": "w"
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x"
+                  }
+                ],
+                "children": []
+              },
+              {
+                "kind": "Entry",
+                "kwargs": {
+                  "textvariable": "days-var",
+                  "width": 24
+                },
+                "pack_calls": [
+                  {
+                    "fill": "x",
+                    "pady": [
+                      3,
+                      0
+                    ]
+                  }
+                ],
+                "children": []
+              }
+            ]
+          },
+          {
+            "kind": "Entry",
+            "kwargs": {
+              "textvariable": "days-var",
+              "width": 24
+            },
+            "pack_calls": [
+              {
+                "fill": "x",
+                "pady": [
+                  3,
+                  0
+                ]
+              }
+            ],
+            "children": []
+          }
+        ],
+        "identity": {
+          "box_is_root_first_child": true,
+          "entry_is_box_child": true,
+          "entry_is_last_box_child": true
+        }
+      },
+      "palette_failure": {
+        "kind": "raise",
+        "type": "builtins.RuntimeError",
+        "repr": "RuntimeError('palette unavailable')",
+        "tree": {
+          "kind": "Root",
+          "kwargs": {},
+          "pack_calls": [],
+          "children": []
+        }
+      }
+    },
+    "_spina_v21_style_cash_table": {
+      "normal": {
+        "kind": "return",
+        "result": null,
+        "styles": [
+          {
+            "configure_calls": [
+              {
+                "style": "ModernCash.Treeview",
+                "kwargs": {
+                  "rowheight": 30,
+                  "font": [
+                    "Segoe UI",
+                    10
+                  ],
+                  "background": "cash-panel",
+                  "fieldbackground": "cash-panel",
+                  "foreground": "cash-fg",
+                  "borderwidth": 0
+                }
+              },
+              {
+                "style": "ModernCash.Treeview.Heading",
+                "kwargs": {
+                  "font": [
+                    "Segoe UI",
+                    10,
+                    "bold"
+                  ],
+                  "background": "cash-card2",
+                  "foreground": "cash-fg",
+                  "relief": "flat"
+                }
+              }
+            ],
+            "map_calls": [
+              {
+                "style": "ModernCash.Treeview",
+                "kwargs": {
+                  "background": [
+                    [
+                      "selected",
+                      "cash-button"
+                    ]
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "palette_failure": {
+        "kind": "return",
+        "result": null,
+        "styles": []
+      },
+      "style_failure": {
+        "kind": "return",
+        "result": null,
+        "styles": []
+      }
+    }
+  }
+}
