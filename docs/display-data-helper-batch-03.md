@@ -22,6 +22,8 @@ The manifest-driven extractor verifies every source hash, function signature, de
 - silently skipped invalid rows
 - collector-close integer, decimal, blank-zero, invalid, NaN, and infinity formatting
 
+Permanent read-only CI compiles the touched modules and compares every saved behavior case.
+
 ## Desktop smoke test
 
 1. Launch SPINA and log in.
