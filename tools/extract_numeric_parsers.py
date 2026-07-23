@@ -25,6 +25,7 @@ TARGETS = (
 IMPORT_LINES = {
     name: f"from spina_app.utilities.numbers import {name}" for name in TARGETS
 }
+ALLOWED_STDLIB_IMPORTS = {"re"}
 
 
 def _line_source(source: str, node: ast.AST) -> str:
@@ -84,19 +85,31 @@ def _validate_function(name: str, node: ast.FunctionDef) -> list[str]:
     if any(isinstance(child, (ast.Global, ast.Nonlocal)) for child in ast.walk(node)):
         raise RuntimeError(f"Refusing extraction because {name} uses global/nonlocal state.")
     external = _external_loaded_names(node)
-    if external:
+    unexpected = sorted(set(external) - ALLOWED_STDLIB_IMPORTS)
+    if unexpected:
         raise RuntimeError(
-            f"Refusing extraction because {name} depends on external names: "
-            + ", ".join(external)
+            f"Refusing extraction because {name} depends on unsupported external names: "
+            + ", ".join(unexpected)
         )
     return external
 
 
-def _module_source(source: str, functions: dict[str, ast.FunctionDef]) -> str:
+def _module_source(
+    source: str,
+    functions: dict[str, ast.FunctionDef],
+    external_by_target: dict[str, list[str]],
+) -> str:
     parts = [
         '"""Pure numeric parsing helpers extracted from SPINA."""\n\n',
         "from __future__ import annotations\n\n",
     ]
+    copied_imports = sorted(
+        {name for external in external_by_target.values() for name in external}
+    )
+    for name in copied_imports:
+        parts.append(f"import {name}\n")
+    if copied_imports:
+        parts.append("\n")
     for name in TARGETS:
         parts.append(_line_source(source, functions[name]).lstrip())
         parts.append("\n")
@@ -149,7 +162,7 @@ def build_plan(app_path: Path, package_root: Path) -> dict[str, Any]:
     external_by_target = {
         name: _validate_function(name, functions[name]) for name in TARGETS
     }
-    module_text = _module_source(source, functions)
+    module_text = _module_source(source, functions, external_by_target)
     patched_text = _patched_source(source, functions)
     compile(module_text, str(module_path), "exec")
     compile(patched_text, str(app_path), "exec")
@@ -157,6 +170,9 @@ def build_plan(app_path: Path, package_root: Path) -> dict[str, Any]:
     if module_path.exists():
         raise RuntimeError("Refusing to overwrite an existing numbers.py module.")
 
+    copied_imports = sorted(
+        {name for external in external_by_target.values() for name in external}
+    )
     return {
         "already_applied": False,
         "safe_to_apply": True,
@@ -172,6 +188,7 @@ def build_plan(app_path: Path, package_root: Path) -> dict[str, Any]:
             }
             for name in TARGETS
         ],
+        "copied_imports": copied_imports,
         "_module_text": module_text,
         "_patched_source": patched_text,
     }
