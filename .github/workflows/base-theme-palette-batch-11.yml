@@ -38,3 +38,5 @@ jobs:
           PYTHONPATH=. python tools/test_base_theme_palette_batch_11.py \
             --manifest tools/fixtures/base_theme_palette_batch_11_manifest.json \
             --fixture tools/fixtures/base_theme_palette_batch_11_behavior.json
+
+# Wave 11 desktop smoke test passed on Windows.
