@@ -1,0 +1,88 @@
+name: Apply theme palette helper batch 05
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out working branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile guarded tools
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            tools/extract_pure_helper_batch.py \
+            tools/test_theme_palette_helper_batch_05.py \
+            spina_app/theme_palettes.py
+
+      - name: Verify exact source state
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/theme_palette_helper_batch_05_manifest.json \
+            --json theme-palette-before.json
+
+      - name: Capture original behavior
+        run: |
+          python tools/test_theme_palette_helper_batch_05.py \
+            --manifest tools/fixtures/theme_palette_helper_batch_05_manifest.json \
+            --fixture tools/fixtures/theme_palette_helper_batch_05_behavior.json \
+            --write-fixture
+
+      - name: Apply guarded extraction
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/theme_palette_helper_batch_05_manifest.json \
+            --apply \
+            --json theme-palette-after.json
+
+      - name: Compile extracted state
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/theme_palettes.py \
+            tools/test_theme_palette_helper_batch_05.py
+
+      - name: Compare extracted behavior
+        run: |
+          PYTHONPATH=. python tools/test_theme_palette_helper_batch_05.py \
+            --manifest tools/fixtures/theme_palette_helper_batch_05_manifest.json \
+            --fixture tools/fixtures/theme_palette_helper_batch_05_behavior.json
+
+      - name: Run focused audits
+        run: |
+          python tools/redundancy_audit.py \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            --json theme-palette-redundancy.json
+          python tools/spina_quality_audit.py \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            --json theme-palette-quality.json
+
+      - name: Commit verified extraction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/theme_palettes.py \
+            tools/fixtures/theme_palette_helper_batch_05_behavior.json
+          if git diff --cached --quiet; then
+            echo "No extraction changes to commit."
+          else
+            git commit -m "Extract display theme palette helpers"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
