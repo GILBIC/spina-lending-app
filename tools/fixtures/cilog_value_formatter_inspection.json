@@ -1,0 +1,20 @@
+{
+  "target": "_spina_cilog_fmt_value",
+  "line": 38788,
+  "end_line": 38803,
+  "signature": "field, v",
+  "decorators": [],
+  "uses_global_or_nonlocal": false,
+  "external_loaded_names": [
+    "_spina_cilog_fmt_money"
+  ],
+  "source": "def _spina_cilog_fmt_value(field, v):\n    if v is None:\n        return ''\n    fld = str(field or '').lower()\n    if fld in {'principal','interest_rate','interest_amount','total_to_pay','payment_amount','last_cash_released','released_cash','new_principal'}:\n        if fld == 'interest_rate':\n            try:\n                return f\"{float(v) * 100:.2f}%\" if float(v) <= 1 else f\"{float(v):.2f}%\"\n            except Exception:\n                return str(v or '')\n        return _spina_cilog_fmt_money(v)\n    try:\n        s = str(v).replace('\\n', ' ').strip()\n    except Exception:\n        s = repr(v)\n    return s",
+  "callers": [
+    {
+      "name": "_spina_cilog_fetch_rows",
+      "line": 38875,
+      "kind": "FunctionDef",
+      "call_count": 2
+    }
+  ]
+}
