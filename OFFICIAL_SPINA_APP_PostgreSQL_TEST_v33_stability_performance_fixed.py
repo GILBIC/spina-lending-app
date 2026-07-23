@@ -37157,12 +37157,7 @@ def _spina_dash__norm_lt(value):
 from spina_app.utilities.dates import _spina_dash__parse_date
 
 
-def _spina_dash__date_text(value):
-    try:
-        d = _spina_dash__parse_date(value)
-        return d.strftime('%Y-%m-%d') if d else ''
-    except Exception:
-        return ''
+from spina_app.utilities.dates import _spina_dash__date_text
 
 
 from spina_app.utilities.numbers import _spina_dash__float
@@ -45773,15 +45768,7 @@ def _spina_v24_cilog_style_tree(self):
         pass
 
 
-def _spina_v24_cilog_parse_day(value):
-    try:
-        s = str(value or "").strip()
-        if not s:
-            return None
-        # Common format is YYYY-MM-DD HH:MM:SS. Only first 10 characters are needed.
-        return datetime.strptime(s[:10], "%Y-%m-%d").date()
-    except Exception:
-        return None
+from spina_app.utilities.dates import _spina_v24_cilog_parse_day
 
 
 def _spina_v24_cilog_action_color(action, colors):
