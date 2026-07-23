@@ -28,6 +28,7 @@ jobs:
             spina_app/utilities/dates.py \
             spina_app/utilities/text.py \
             spina_app/utilities/numbers.py \
+            spina_app/utilities/serialization.py \
             tools/redundancy_audit.py \
             tools/spina_quality_audit.py \
             tools/spina_startup_diagnostics.py \
@@ -79,7 +80,9 @@ jobs:
             tools/extract_numeric_parsers.py \
             tools/test_numeric_parser_extraction.py \
             tools/extract_date_display_helpers.py \
-            tools/test_date_display_helper_extraction.py
+            tools/test_date_display_helper_extraction.py \
+            tools/extract_log_serialization_helper.py \
+            tools/test_log_serialization_helper_extraction.py
 
       - name: Test module separation planner
         run: python tools/test_module_separation_planner.py
@@ -101,6 +104,9 @@ jobs:
 
       - name: Test date display helper extraction
         run: python tools/test_date_display_helper_extraction.py
+
+      - name: Test log serialization helper extraction
+        run: python tools/test_log_serialization_helper_extraction.py
 
       - name: Run redundancy audit
         run: |

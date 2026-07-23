@@ -38779,15 +38779,7 @@ except Exception:
 
 
 # --- BEGIN: Easy Client Info Logs tab ---
-def _spina_cilog_safe_json(blob):
-    try:
-        if blob in (None, ''):
-            return None
-        if isinstance(blob, dict):
-            return blob
-        return json.loads(blob)
-    except Exception:
-        return None
+from spina_app.utilities.serialization import _spina_cilog_safe_json
 
 
 def _spina_cilog_fmt_money(v):
