@@ -1,0 +1,117 @@
+name: Inspect modularization wave 10 CILog UI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build focused exact-source packet
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import ast
+          import builtins
+          import hashlib
+          import json
+          from pathlib import Path
+
+          app = Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py")
+          source = app.read_text(encoding="utf-8")
+          tree = ast.parse(source, filename=str(app))
+          targets = ["_spina_v24_cilog_button", "_spina_v24_cilog_style_tree"]
+          definitions = {
+              node.name: node
+              for node in tree.body
+              if isinstance(node, ast.FunctionDef)
+          }
+          builtin_names = set(dir(builtins))
+
+          def external_names(node: ast.FunctionDef) -> list[str]:
+              local = {
+                  arg.arg
+                  for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)
+              }
+              if node.args.vararg:
+                  local.add(node.args.vararg.arg)
+              if node.args.kwarg:
+                  local.add(node.args.kwarg.arg)
+              for child in ast.walk(node):
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del)):
+                      local.add(child.id)
+              loaded = {
+                  child.id
+                  for child in ast.walk(node)
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
+              }
+              return sorted(loaded - local - builtin_names - {node.name})
+
+          def callers(name: str) -> list[str]:
+              result = []
+              for owner in tree.body:
+                  if not isinstance(owner, (ast.FunctionDef, ast.ClassDef)) or owner.name == name:
+                      continue
+                  if any(
+                      isinstance(child, ast.Name)
+                      and isinstance(child.ctx, ast.Load)
+                      and child.id == name
+                      for child in ast.walk(owner)
+                  ):
+                      result.append(owner.name)
+              return sorted(result)
+
+          packet = []
+          for name in targets:
+              node = definitions.get(name)
+              if node is None:
+                  raise RuntimeError(f"Missing target: {name}")
+              exact = ast.get_source_segment(source, node)
+              if exact is None:
+                  raise RuntimeError(f"Could not recover source: {name}")
+              packet.append({
+                  "name": name,
+                  "line": node.lineno,
+                  "end_line": node.end_lineno,
+                  "signature": ast.unparse(node.args),
+                  "source": exact,
+                  "source_sha256": hashlib.sha256(exact.encode("utf-8")).hexdigest(),
+                  "external_names": external_names(node),
+                  "callers": callers(name),
+                  "textual_occurrence_count": source.count(name),
+                  "decorator_count": len(node.decorator_list),
+                  "has_global_or_nonlocal": any(
+                      isinstance(child, (ast.Global, ast.Nonlocal)) for child in ast.walk(node)
+                  ),
+              })
+
+          Path("modularization-wave-10-cilog-ui.json").write_text(
+              json.dumps({
+                  "source_commit": "${{ github.sha }}",
+                  "read_only": True,
+                  "targets": packet,
+              }, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(packet, indent=2, ensure_ascii=False))
+          PY
+
+      - name: Upload focused inspection artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: modularization-wave-10-cilog-ui
+          path: modularization-wave-10-cilog-ui.json
+          if-no-files-found: error
+          retention-days: 14
