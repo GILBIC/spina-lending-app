@@ -1,0 +1,48 @@
+name: Apply append unique text extraction
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/inspect-append-unique-text
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate original helper
+        run: python tools/extract_append_unique_text.py
+      - name: Capture original behavior
+        run: python tools/test_append_unique_text_extraction.py --write-fixture tools/fixtures/append_unique_text_behavior.json
+      - name: Apply guarded extraction
+        run: python tools/extract_append_unique_text.py --apply
+      - name: Compile and compare behavior
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/utilities/notes.py \
+            tools/extract_append_unique_text.py \
+            tools/test_append_unique_text_extraction.py
+          python tools/test_append_unique_text_extraction.py
+      - name: Commit extraction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/utilities/notes.py \
+            tools/fixtures/append_unique_text_behavior.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Extract append unique text helper"
+          git push origin HEAD:agent/inspect-append-unique-text
