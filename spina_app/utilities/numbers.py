@@ -27,3 +27,23 @@ def _spina_v25_parse_count_from_var(var_value):
         return m.group(1) if m else "0"
     except Exception:
         return "0"
+
+
+def _spina_cashctl__parse_amount(value):
+    try:
+        s = str(value or '').replace(',', '').strip()
+        return float(s) if s else 0.0
+    except Exception:
+        return 0.0
+
+
+def _spina_cashctl__int_range(value, default, min_value=1, max_value=120):
+    try:
+        v = int(round(_spina_cashctl__parse_amount(value)))
+    except Exception:
+        v = int(default)
+    if v < min_value:
+        v = min_value
+    if v > max_value:
+        v = max_value
+    return v

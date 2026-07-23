@@ -1,0 +1,153 @@
+{
+  "batch": "cash_control_input_normalizer_batch_07",
+  "helper_names": [
+    "_spina_cashctl__parse_amount",
+    "_spina_cashctl__int_range"
+  ],
+  "behavior": {
+    "_spina_cashctl__parse_amount": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "0.0"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "0.0"
+      },
+      "spaces": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "0.0"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "0.0"
+      },
+      "integer": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "1234.0"
+      },
+      "decimal": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "12.5"
+      },
+      "comma_text": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "1234.5"
+      },
+      "negative": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "-25.75"
+      },
+      "invalid": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "0.0"
+      },
+      "true": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "0.0"
+      },
+      "false": {
+        "kind": "return",
+        "type": "builtins.float",
+        "repr": "0.0"
+      }
+    },
+    "_spina_cashctl__int_range": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "1"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "1"
+      },
+      "invalid": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "1"
+      },
+      "valid": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "25"
+      },
+      "comma": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "120"
+      },
+      "round_5_6": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "6"
+      },
+      "round_4_5": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "4"
+      },
+      "round_5_5": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "6"
+      },
+      "below_min": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "1"
+      },
+      "negative": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "1"
+      },
+      "above_max": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "120"
+      },
+      "zero_min": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "0"
+      },
+      "negative_min": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "-3"
+      },
+      "custom_max": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "10"
+      },
+      "equal_bounds": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "7"
+      },
+      "reversed_bounds": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "3"
+      },
+      "true": {
+        "kind": "return",
+        "type": "builtins.int",
+        "repr": "1"
+      }
+    }
+  }
+}
