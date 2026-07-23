@@ -106,3 +106,25 @@ def _spina_crc_fmt_money(_v, blank_zero=False):
     except Exception:
         pass
     return f"{n:,.2f}"
+
+
+def _spina_dash__fmt_money(value):
+    try:
+        if 'fmt_currency' in globals() and callable(fmt_currency):
+            return fmt_currency(value)
+    except Exception:
+        pass
+    try:
+        return 'PHP {:,.2f}'.format(float(value or 0))
+    except Exception:
+        return 'PHP 0.00'
+
+
+def _spina_cashctl__fmt_pct(value):
+    try:
+        return _spina_dash__fmt_pct(value)
+    except Exception:
+        try:
+            return '{:.2f}%'.format(float(value or 0.0))
+        except Exception:
+            return '0.00%'

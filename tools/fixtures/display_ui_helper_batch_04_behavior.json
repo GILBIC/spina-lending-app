@@ -1,0 +1,157 @@
+{
+  "batch": "display_ui_helper_batch_04",
+  "helper_names": [
+    "_spina_dash__fmt_money",
+    "_spina_cashctl__fmt_pct",
+    "_spina_v21_cash_set_card"
+  ],
+  "behavior": {
+    "_spina_dash__fmt_money": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0.00'"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0.00'"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0.00'"
+      },
+      "integer": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1,234.00'"
+      },
+      "decimal": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1,234.50'"
+      },
+      "negative": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP -2,500.25'"
+      },
+      "numeric_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1,250.75'"
+      },
+      "invalid_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 0.00'"
+      },
+      "boolean_true": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'PHP 1.00'"
+      }
+    },
+    "_spina_cashctl__fmt_pct": {
+      "none": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0.00%'"
+      },
+      "empty": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0.00%'"
+      },
+      "zero": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0.00%'"
+      },
+      "integer": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'25.00%'"
+      },
+      "decimal": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'12.35%'"
+      },
+      "negative": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'-5.00%'"
+      },
+      "numeric_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'7.50%'"
+      },
+      "invalid_text": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'0.00%'"
+      },
+      "boolean_true": {
+        "kind": "return",
+        "type": "builtins.str",
+        "repr": "'1.00%'"
+      }
+    },
+    "_spina_v21_cash_set_card": {
+      "value_and_subtitle": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": [
+          {
+            "text": "1234"
+          }
+        ],
+        "subtitle_calls": [
+          {
+            "text": "Active"
+          }
+        ]
+      },
+      "value_only": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": [
+          {
+            "text": "None"
+          }
+        ],
+        "subtitle_calls": []
+      },
+      "missing_key": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": [],
+        "subtitle_calls": []
+      },
+      "missing_attribute": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": null,
+        "subtitle_calls": null
+      },
+      "value_label_failure": {
+        "kind": "return",
+        "type": "builtins.NoneType",
+        "repr": "None",
+        "value_calls": [
+          {
+            "text": "X"
+          }
+        ],
+        "subtitle_calls": []
+      }
+    }
+  }
+}

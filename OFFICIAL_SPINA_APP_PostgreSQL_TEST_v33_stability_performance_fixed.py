@@ -37117,16 +37117,7 @@ from spina_app.utilities.dates import _spina_dash__date_text
 from spina_app.utilities.numbers import _spina_dash__float
 
 
-def _spina_dash__fmt_money(value):
-    try:
-        if 'fmt_currency' in globals() and callable(fmt_currency):
-            return fmt_currency(value)
-    except Exception:
-        pass
-    try:
-        return 'PHP {:,.2f}'.format(float(value or 0))
-    except Exception:
-        return 'PHP 0.00'
+from spina_app.utilities.formatting import _spina_dash__fmt_money
 
 
 from spina_app.utilities.formatting import _spina_dash__fmt_pct
@@ -37799,14 +37790,7 @@ def _spina_cashctl__fmt_money(value):
                 return 'PHP 0.00'
 
 
-def _spina_cashctl__fmt_pct(value):
-    try:
-        return _spina_dash__fmt_pct(value)
-    except Exception:
-        try:
-            return '{:.2f}%'.format(float(value or 0.0))
-        except Exception:
-            return '0.00%'
+from spina_app.utilities.formatting import _spina_cashctl__fmt_pct
 
 
 def _spina_cashctl__parse_amount(value):
@@ -43440,15 +43424,7 @@ def _spina_v21_cash_build_tab(self):
             pass
 
 
-def _spina_v21_cash_set_card(self, key, value, subtitle=None):
-    try:
-        v_lbl, s_lbl = (getattr(self, "_cashctl_cards", {}) or {}).get(key, (None, None))
-        if v_lbl is not None:
-            v_lbl.configure(text=str(value))
-        if subtitle is not None and s_lbl is not None:
-            s_lbl.configure(text=str(subtitle))
-    except Exception:
-        pass
+from spina_app.ui_helpers import _spina_v21_cash_set_card
 
 
 def _spina_v21_cash_draw_charts(self, data):
