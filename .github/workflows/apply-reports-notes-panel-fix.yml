@@ -1,4 +1,4 @@
-name: Inspect Reports notes panel source
+name: Apply Reports notes panel fix
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  inspect:
+  apply:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,46 +19,68 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Capture exact toggle sources
+      - name: Apply AST-selected layout fix
         run: |
           python - <<'PY'
           import ast
-          import json
           from pathlib import Path
 
           app = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
           source = app.read_text(encoding='utf-8')
-          lines = source.splitlines()
+          lines = source.splitlines(keepends=True)
           tree = ast.parse(source)
-          matches = [
-              node for node in ast.walk(tree)
-              if isinstance(node, ast.FunctionDef) and node.name == '_toggle_reports_notes_panel'
-          ]
-          if not matches:
-              raise RuntimeError('No Reports notes toggle function found')
-          entries = []
-          for node in matches:
-              chunk = lines[node.lineno - 1:node.end_lineno]
-              text = '\n'.join(chunk)
-              entries.append({
-                  'line': node.lineno,
-                  'end_line': node.end_lineno,
-                  'contains_modern_hide_label': 'self.report_notes_btn.configure(text="Hide Notes")' in text,
-                  'source': text,
-                  'repr_lines': [repr(line) for line in chunk],
-              })
-          report = {'count': len(entries), 'matches': entries}
-          output = Path('tools/fixtures/reports_notes_toggle_source.json')
-          output.parent.mkdir(parents=True, exist_ok=True)
-          output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+
+          candidates = []
+          for node in ast.walk(tree):
+              if not isinstance(node, ast.FunctionDef) or node.name != '_toggle_reports_notes_panel':
+                  continue
+              text = ''.join(lines[node.lineno - 1:node.end_lineno])
+              if 'self.report_notes_btn.configure(text="Hide Notes")' in text:
+                  candidates.append(node)
+          if len(candidates) != 1:
+              raise RuntimeError(f'Expected one modern Reports notes toggle, found {len(candidates)}')
+
+          node = candidates[0]
+          sep_target = 'self.reports_notes_sep.pack(fill="x", padx=18, pady=(0, 6))'
+          box_target = 'self.reports_notes_box.pack(fill="x", padx=18, pady=(0, 18))'
+          fixed_box = 'self.reports_notes_box.pack(side="bottom", fill="x", padx=18, pady=(0, 18))'
+          fixed_sep = 'self.reports_notes_sep.pack(side="bottom", fill="x", padx=18, pady=(0, 6))'
+
+          region = lines[node.lineno - 1:node.end_lineno]
+          stripped = [line.strip() for line in region]
+          if fixed_box in stripped and fixed_sep in stripped:
+              pass
+          else:
+              sep_positions = [i for i, value in enumerate(stripped) if value == sep_target]
+              box_positions = [i for i, value in enumerate(stripped) if value == box_target]
+              if len(sep_positions) != 1 or len(box_positions) != 1:
+                  raise RuntimeError(
+                      f'Unexpected modern toggle pack calls: sep={sep_positions}, box={box_positions}'
+                  )
+              sep_i = sep_positions[0]
+              box_i = box_positions[0]
+              if box_i != sep_i + 1:
+                  raise RuntimeError(f'Expected adjacent pack calls, got sep={sep_i}, box={box_i}')
+              indent = region[sep_i][:len(region[sep_i]) - len(region[sep_i].lstrip())]
+              newline = '\r\n' if region[sep_i].endswith('\r\n') else '\n'
+              region[sep_i] = indent + fixed_box + newline
+              region[box_i] = indent + fixed_sep + newline
+              lines[node.lineno - 1:node.end_lineno] = region
+              app.write_text(''.join(lines), encoding='utf-8')
           PY
-      - name: Commit source report
+      - name: Compile and test
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            tools/test_reports_notes_panel_layout.py
+          python tools/test_reports_notes_panel_layout.py
+      - name: Commit fix
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tools/fixtures/reports_notes_toggle_source.json
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Inspect Reports notes toggle sources"
+          git commit -m "Fix Reports notes panel visibility"
           git push origin HEAD:agent/fix-reports-notes-panel-visible
