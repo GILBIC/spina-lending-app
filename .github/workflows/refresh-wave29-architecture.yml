@@ -1,0 +1,54 @@
+name: Refresh Wave 29 architecture map
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.head_ref == 'agent/navigation-databank-shell-wave-29'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out Wave 29 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/navigation-databank-shell-wave-29
+          fetch-depth: 0
+
+      - name: Verify Python and GitHub CLI
+        shell: cmd
+        run: |
+          where python
+          python --version
+          where gh
+          gh --version
+          gh auth status
+
+      - name: Remove temporary refresh workflow
+        shell: cmd
+        run: del .github\workflows\refresh-wave29-architecture.yml
+
+      - name: Regenerate and validate architecture map
+        shell: cmd
+        run: |
+          python -m py_compile tools\generate_architecture_map.py
+          python -m py_compile tools\test_architecture_map.py
+          python -m tools.generate_architecture_map
+          python -m tools.test_architecture_map
+
+      - name: Commit refreshed maps and cleanup
+        shell: cmd
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader 2>nul || ver >nul
+          gh auth setup-git
+          git config user.name "GILBIC"
+          git config user.email "267608671+GILBIC@users.noreply.github.com"
+          git add architecture-map.json docs/architecture
+          git add -u .github/workflows
+          git diff --cached --check
+          git commit -m "Refresh Wave 29 architecture validation"
+          git push origin HEAD:agent/navigation-databank-shell-wave-29
