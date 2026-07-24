@@ -2,14 +2,13 @@
   "wave": 19,
   "feature": "clients_presentation",
   "destination": "spina_app/tabs/clients.py",
-  "selected_functions": [
-    "_spina_v23_button",
-    "_spina_v23_card",
-    "_spina_v23_selected_name_lt",
-    "_spina_v23_refresh_client_profile",
-    "_spina_v23_build_clients_tab",
-    "_spina_v23_entry",
-    "_spina_v23_update_client_cards"
+  "function_count": 7,
+  "moved_source_lines": 387,
+  "dependencies_kept_in_desktop": [
+    "_spina_v23_clients_colors",
+    "_app__norm_lt_value",
+    "_spina_v23_client_loan_summary",
+    "_log_exc"
   ],
   "protected_functions_kept_in_desktop": [
     "_spina_v23_client_loan_summary",
@@ -17,5 +16,56 @@
     "_spina_v23_add_client_dialog",
     "_spina_v23_on_client_edit"
   ],
-  "status": "inventory_selected"
+  "functions": [
+    {
+      "name": "_spina_v23_button",
+      "start_line": 43028,
+      "end_line": 43056,
+      "source_lines": 29,
+      "sha256": "6494efce07479ceb08d40d3e4915e6d935a34bd142d484ab02fa2779256ba8f5"
+    },
+    {
+      "name": "_spina_v23_card",
+      "start_line": 43059,
+      "end_line": 43069,
+      "source_lines": 11,
+      "sha256": "8f652d54bfffe6bba7a6173661f52ffb586428f65c31ee0dca18755a78945119"
+    },
+    {
+      "name": "_spina_v23_selected_name_lt",
+      "start_line": 43075,
+      "end_line": 43094,
+      "source_lines": 20,
+      "sha256": "d8b06aec702eff2fba8a64e2f5cde9b5abad2547285ef5b2012a961d019aad9c"
+    },
+    {
+      "name": "_spina_v23_refresh_client_profile",
+      "start_line": 43156,
+      "end_line": 43209,
+      "source_lines": 54,
+      "sha256": "18a4893cb4cc8c08996e9e4c85d0d0ccc39a213a8246591af9fefa76c44d51a3"
+    },
+    {
+      "name": "_spina_v23_build_clients_tab",
+      "start_line": 43212,
+      "end_line": 43444,
+      "source_lines": 233,
+      "sha256": "9fd162cf2011af50b77a590e6494d1dd3fe118b3045b252f0b73e2d859a6aa47"
+    },
+    {
+      "name": "_spina_v23_entry",
+      "start_line": 43447,
+      "end_line": 43456,
+      "source_lines": 10,
+      "sha256": "7616aaf2e0dbea43205b394953ebe1098107abccc6074f99275eedff09b96949"
+    },
+    {
+      "name": "_spina_v23_update_client_cards",
+      "start_line": 44039,
+      "end_line": 44068,
+      "source_lines": 30,
+      "sha256": "d5557fe858d777ca046c6089432257596abd9d66615dba06bb737192bc2e98d5"
+    }
+  ],
+  "status": "extracted"
 }
