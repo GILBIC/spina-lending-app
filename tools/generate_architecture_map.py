@@ -69,13 +69,25 @@ IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 FEATURE_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("dashboard", ("dashboard", "kpi", "summary_card")),
     ("cash_control", ("cash_control", "cashcontrol", "cashctl")),
+    ("navigation", (
+        "side_nav", "sidebar", "navigation", "build_header", "header_button",
+        "header_palette", "mode_toggle", "toolbar", "mousewheel", "vscroll",
+        "month_label", "tab_selector",
+    )),
     ("clients", ("client", "borrower", "application_form", "client_info", "cilog")),
-    ("collectors", ("collector", "route", "area_assignment")),
+    ("collectors", (
+        "collector", "route", "area_assignment", "show_conflict", "unassigned_area",
+    )),
     ("data_bank", (
         "data_bank", "databank", "data_grid", "payment_grid", "monthly_grid",
-        "system_data", "delete_day", "close_day", "databank_day",
+        "system_data", "delete_day", "close_day", "databank_day", "build_data_tab",
+        "data_tree", "selected_cell", "cell_edit", "audit_tab", "clear_preview",
+        "import_from_excel", "resize_databank", "refresh_data_grid",
     )),
-    ("payments", ("payment", "transaction", "advance", "pass", "allocation")),
+    ("payments", (
+        "payment", "transaction", "advance", "pass", "allocation", "paid_",
+        "missed_reason",
+    )),
     ("loans", ("loan", "principal", "interest", "renew", "offset", "7x7", "x7")),
     ("reports", ("report", "statement", "receipt", "pdf", "ledger", "print")),
     ("payroll", ("payroll", "employee", "salary", "payslip", "sss", "pagibig", "philhealth")),
@@ -84,10 +96,14 @@ FEATURE_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("database", ("postgres", "postgresql", "pg_", "sql", "database", "loandb", "cursor", "connection")),
     ("notes", ("note_editor", "noteeditor", "client_notes", "collector_notes", "notes", "note")),
     ("web_portal", ("fastapi", "router", "portal", "endpoint", "api")),
-    ("utilities", ("util", "helper", "format", "parse", "normalize", "validate", "date_range", "open_path")),
+    ("utilities", (
+        "util", "helper", "format", "parse", "normalize", "validate", "date_range",
+        "open_path", "getv", "wrap_to_width", "walk_widgets",
+    )),
     ("authentication", (
         "login", "password", "account", "permission", "role_access", "apply_role",
-        "session", "users_db", "user_role", "switch_account", "account_based", "role",
+        "session", "users_db", "user_role", "switch_account", "account_based",
+        "role", "make_salt", "access_prefs",
     )),
 )
 
@@ -124,16 +140,18 @@ FILE_CALLS = {
 
 
 def git_sha() -> str:
-    """Return the latest commit that changed scanned Python source.
+    """Return the latest commit that changed non-architecture Python source.
 
-    The generator itself is excluded from the map, so committing generated maps does
-    not change this marker. That keeps regeneration deterministic for CI.
+    The generator and its validator are excluded from this marker, keeping generated
+    documentation deterministic when architecture tooling itself is improved.
     """
     try:
         return subprocess.check_output(
             [
                 "git", "log", "-1", "--format=%H", "--",
-                "*.py", ":(exclude)tools/generate_architecture_map.py",
+                "*.py",
+                ":(exclude)tools/generate_architecture_map.py",
+                ":(exclude)tools/test_architecture_map.py",
             ],
             cwd=ROOT,
             text=True,
@@ -187,7 +205,7 @@ def infer_feature(name: str, file_path: str, source: str) -> str:
     full = name.lower()
     leaf = full.rsplit(".", 1)[-1]
     parent = full.rsplit(".", 1)[0] if "." in full else ""
-    path = file_path.lower()
+    path = file_path.lower() if file_path.startswith("spina_app/") else ""
     ranked: list[tuple[int, int, str]] = []
     for order, (feature, terms) in enumerate(FEATURE_RULES):
         score = 0
@@ -550,7 +568,10 @@ def collect_symbols(path: Path, tree: ast.Module, text: str) -> tuple[list[Symbo
         )
         globals_written = sorted(name for name in scanner.stores if name in module_globals)
         imports_used = sorted(imports[name] for name in scanner.loads if name in imports)
-        feature = infer_feature(qual, file_path, "")
+        feature_identity = ".".join(
+            part for part in (class_name, parent, node.name) if part
+        )
+        feature = infer_feature(feature_identity, file_path, "")
         risk, flags = risk_for(
             node.name,
             src,
@@ -602,7 +623,7 @@ def collect_symbols(path: Path, tree: ast.Module, text: str) -> tuple[list[Symbo
             add_function(node, None, None, False)
         elif isinstance(node, ast.ClassDef):
             class_src = source_segment(lines, node)
-            feature = infer_feature(f"{module}.{node.name}", file_path, "")
+            feature = infer_feature(node.name, file_path, "")
             risk, flags = "container", []
             class_id = f"{file_path}:{node.lineno}:{module}.{node.name}"
             symbols.append(Symbol(
@@ -787,7 +808,8 @@ def scan_repository() -> dict[str, Any]:
     for (feature, file_path), items in sorted(by_feature_file.items()):
         safe = [
             s for s in items
-            if s.risk in {"ui_only", "support", "database_read"}
+            if feature != "other"
+            and s.risk in {"ui_only", "support", "database_read"}
             and s.lines <= 300
         ]
         safe.sort(key=lambda s: s.line)

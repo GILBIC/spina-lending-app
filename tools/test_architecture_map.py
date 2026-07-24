@@ -113,6 +113,13 @@ def main() -> None:
         ".LoanDB.add_client": "clients",
         ".LoanDB.delete_transaction": "payments",
         ".App._postgres_cfg": "database",
+        ".App._side_nav_items": "navigation",
+        ".App._build_data_tab": "data_bank",
+        "._adv_paid_on_dates_covering": "payments",
+        ".App._access_prefs_path": "authentication",
+        ".App._show_conflicts": "collectors",
+        ".App._locate_data_tree": "data_bank",
+        ".App._walk_widgets": "utilities",
         ".NoteEditorDialog._save_note": "notes",
         "._spina_apply_dashboard_role": "dashboard",
         "._spina_v32_prompt_login": "authentication",
@@ -124,6 +131,7 @@ def main() -> None:
         assert actual == expected, f"Feature mismatch for {suffix}: {actual} != {expected}"
 
     for suggestion in indexes["modularization_suggestions"]:
+        assert suggestion["feature"] != "other", f"Low-confidence batch: {suggestion}"
         assert all(
             by_id[sid]["feature"] == suggestion["feature"]
             for sid in suggestion["functions"]

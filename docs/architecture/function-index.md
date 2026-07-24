@@ -1,14 +1,14 @@
 # SPINA Function and Class Index
 
-Generated from commit `ed50b9768533fcf5b6320b9c9d4221f7f294cfd4`.
+Generated from commit `501bd162b80d6ab968beae2eb35c324a55d31432`.
 
-Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
+Scanned **131 Python files**, **70,893 lines**, and **2,149 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
 ## `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py`
 
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_early_log** (function, lines 27–31, 5 lines, risk `reports`): Handles spina early log for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_early_log** (function, lines 27–31, 5 lines, risk `reports`): Handles spina early log for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_storage_enabled** (function, lines 142–146, 5 lines, risk `support`): Handles spina pg storage enabled for the database feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_storage_conn** (function, lines 149–151, 3 lines, risk `support`): Handles spina pg storage conn for the database feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_storage_log** (function, lines 154–162, 9 lines, risk `reports`): Handles spina pg storage log for the database feature.
@@ -29,10 +29,10 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_patch_reportlab_canvas_save** (function, lines 516–536, 21 lines, risk `reports`): Handles spina pg patch reportlab canvas save for the reports feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_normalize_value** (function, lines 544–551, 8 lines, risk `support`): Convert PostgreSQL-returned values into SQLite-like values.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow** (class, lines 554–573, 20 lines, risk `container`): SQLite Row-like object: supports row['name'], row[0], dict(row), row.get().
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__init__** (method, lines 558–562, 5 lines, risk `support`): Handles init for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__getitem__** (method, lines 564–567, 4 lines, risk `support`): Handles getitem for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__iter__** (method, lines 569–570, 2 lines, risk `support`): Handles iter for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.keys** (method, lines 572–573, 2 lines, risk `support`): Handles keys for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__init__** (method, lines 558–562, 5 lines, risk `support`): Handles init for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__getitem__** (method, lines 564–567, 4 lines, risk `support`): Handles getitem for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__iter__** (method, lines 569–570, 2 lines, risk `support`): Handles iter for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.keys** (method, lines 572–573, 2 lines, risk `support`): Handles keys for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_replace_qmarks** (function, lines 576–600, 25 lines, risk `support`): Replace SQLite ? parameters with psycopg %s outside quoted strings.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_escape_literal_percents** (function, lines 603–629, 27 lines, risk `support`): Escape literal percent signs for psycopg while preserving %s/%b/%t placeholders. Old SQLite queries commonly contain LIKE '%ADV%' or LIKE '%[RC:%'. Psycopg uses %s-style placeholders, so a literal % in the SQL text must be doubled as %%. Without this, ADV/reason queries can fail silently inside the 
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_sql** (function, lines 632–690, 59 lines, risk `support`): Translate common SQLite SQL into PostgreSQL-compatible SQL.
@@ -61,12 +61,12 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatConnection.backup** (method, lines 882–884, 3 lines, risk `backup`): Handles backup for the backup feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_raise_sqlite_like** (function, lines 887–902, 16 lines, risk `support`): Raise sqlite3-style exceptions so existing catch blocks still work.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_connect_db** (function, lines 905–906, 2 lines, risk `support`): Handles spina pg connect db for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._read_json_file** (function, lines 942–956, 15 lines, risk `filesystem`): Handles read json file for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._write_json_atomic** (function, lines 958–981, 24 lines, risk `filesystem`): Saves write json atomic for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._read_json_file** (function, lines 942–956, 15 lines, risk `filesystem`): Handles read json file for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._write_json_atomic** (function, lines 958–981, 24 lines, risk `filesystem`): Saves write json atomic for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.load_settings** (function, lines 983–1015, 33 lines, risk `support`): Loads load settings for the settings feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.save_settings** (function, lines 1017–1023, 7 lines, risk `support`): Saves save settings for the settings feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._can_use_dir** (function, lines 1025–1039, 15 lines, risk `filesystem`): Best-effort check if a directory is writable (used for reports_root).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path** (function, lines 1050–1051, 2 lines, risk `support`): Handles data path for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path** (function, lines 1050–1051, 2 lines, risk `support`): Handles data path for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.connect_db** (function, lines 1053–1087, 35 lines, risk `database_read`): Central DB connector. PostgreSQL TEST MODE: ignores the old SQLite file path and connects to spina_db using psycopg through a SQLite-compatibility wrapper.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.run_write** (function, lines 1089–1107, 19 lines, risk `support`): Retry wrapper for SQLite write operations.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._is_write_sql** (function, lines 1109–1119, 11 lines, risk `support`): Handles is write sql for the database feature.
@@ -74,7 +74,7 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina__split_payment_mode** (function, lines 1154–1170, 17 lines, risk `filesystem`): Handles spina split payment mode for the payments feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina__merge_payment_mode** (function, lines 1172–1181, 10 lines, risk `support`): Handles spina merge payment mode for the payments feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._open_path** (function, lines 1192–1236, 45 lines, risk `support`): Safely open a generated file/folder. v29 fix: Python 3.14 on Windows can crash hard with os.startfile() in some Tk/PDF workflows. Use subprocess instead so PDF generation does not close the app.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._init_logger** (function, lines 1251–1265, 15 lines, risk `support`): Handles init logger for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._init_logger** (function, lines 1251–1265, 15 lines, risk `support`): Handles init logger for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_exc** (function, lines 1269–1285, 17 lines, risk `reports`): Log exceptions to data/spina_app.log (best-effort).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once** (function, lines 1294–1310, 17 lines, risk `reports`): Log a suppressed exception only once per key (to avoid log spam).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._alert_user** (function, lines 1313–1328, 16 lines, risk `reports`): Best-effort UI alert. Safe even if Tk root isn't created yet.
@@ -84,35 +84,35 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._pick_writable_dir** (function, lines 1516–1535, 20 lines, risk `filesystem`): Return first directory we can create + write into (best-effort).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._get_reports_root** (function, lines 1553–1561, 9 lines, risk `reports`): Return the configured reports folder, with a writable fallback.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._parse_ymd** (function, lines 1589–1599, 11 lines, risk `support`): Handles parse ymd for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup** (class, lines 1601–1729, 129 lines, risk `container`): Groups CalendarPopup for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup.__init__** (method, lines 1602–1633, 32 lines, risk `ui_only`): Handles init for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._build_ui** (method, lines 1635–1670, 36 lines, risk `ui_only`): Builds build ui for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._render** (method, lines 1672–1691, 20 lines, risk `ui_only`): Handles render for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._pick** (method, lines 1693–1698, 6 lines, risk `support`): Handles pick for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._prev_month** (method, lines 1700–1705, 6 lines, risk `support`): Handles prev month for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._next_month** (method, lines 1707–1712, 6 lines, risk `support`): Handles next month for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._today** (method, lines 1714–1717, 4 lines, risk `support`): Handles today for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._clear** (method, lines 1719–1721, 3 lines, risk `support`): Handles clear for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._close** (method, lines 1723–1729, 7 lines, risk `support`): Handles close for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup** (class, lines 1732–1927, 196 lines, risk `container`): Groups CalendarRangePopup for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup.__init__** (method, lines 1733–1778, 46 lines, risk `ui_only`): Handles init for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._build_ui** (method, lines 1780–1820, 41 lines, risk `ui_only`): Builds build ui for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._render** (method, lines 1822–1851, 30 lines, risk `ui_only`): Handles render for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._refresh_info** (method, lines 1853–1859, 7 lines, risk `ui_only`): Refreshes refresh info for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._pick** (method, lines 1861–1885, 25 lines, risk `support`): Handles pick for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._apply** (method, lines 1887–1892, 6 lines, risk `support`): Handles apply for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._prev_month** (method, lines 1894–1900, 7 lines, risk `support`): Handles prev month for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._next_month** (method, lines 1902–1908, 7 lines, risk `support`): Handles next month for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._today** (method, lines 1910–1914, 5 lines, risk `support`): Handles today for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._clear** (method, lines 1916–1919, 4 lines, risk `support`): Handles clear for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._close** (method, lines 1921–1927, 7 lines, risk `support`): Handles close for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup** (class, lines 1601–1729, 129 lines, risk `container`): Groups CalendarPopup for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup.__init__** (method, lines 1602–1633, 32 lines, risk `ui_only`): Handles init for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._build_ui** (method, lines 1635–1670, 36 lines, risk `ui_only`): Builds build ui for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._render** (method, lines 1672–1691, 20 lines, risk `ui_only`): Handles render for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._pick** (method, lines 1693–1698, 6 lines, risk `support`): Handles pick for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._prev_month** (method, lines 1700–1705, 6 lines, risk `support`): Handles prev month for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._next_month** (method, lines 1707–1712, 6 lines, risk `support`): Handles next month for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._today** (method, lines 1714–1717, 4 lines, risk `support`): Handles today for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._clear** (method, lines 1719–1721, 3 lines, risk `support`): Handles clear for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._close** (method, lines 1723–1729, 7 lines, risk `support`): Handles close for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup** (class, lines 1732–1927, 196 lines, risk `container`): Groups CalendarRangePopup for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup.__init__** (method, lines 1733–1778, 46 lines, risk `ui_only`): Handles init for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._build_ui** (method, lines 1780–1820, 41 lines, risk `ui_only`): Builds build ui for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._render** (method, lines 1822–1851, 30 lines, risk `ui_only`): Handles render for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._refresh_info** (method, lines 1853–1859, 7 lines, risk `ui_only`): Refreshes refresh info for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._pick** (method, lines 1861–1885, 25 lines, risk `support`): Handles pick for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._apply** (method, lines 1887–1892, 6 lines, risk `support`): Handles apply for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._prev_month** (method, lines 1894–1900, 7 lines, risk `support`): Handles prev month for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._next_month** (method, lines 1902–1908, 7 lines, risk `support`): Handles next month for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._today** (method, lines 1910–1914, 5 lines, risk `support`): Handles today for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._clear** (method, lines 1916–1919, 4 lines, risk `support`): Handles clear for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._close** (method, lines 1921–1927, 7 lines, risk `support`): Handles close for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.pick_date_range** (function, lines 1929–1972, 44 lines, risk `support`): Handles pick date range for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.pick_date** (function, lines 1974–2003, 30 lines, risk `support`): Handles pick date for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._oslp__load_prefs_json** (function, lines 2009–2019, 11 lines, risk `filesystem`): Handles oslp load prefs json for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.pick_date** (function, lines 1974–2003, 30 lines, risk `support`): Handles pick date for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._oslp__load_prefs_json** (function, lines 2009–2019, 11 lines, risk `filesystem`): Handles oslp load prefs json for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.resolve_area_order_from_prefs** (function, lines 2021–2070, 50 lines, risk `support`): NO-UI resolver: - Reads order from data/ledger_prefs.json["areas_order"] - Case/whitespace-insensitive matching - Appends new areas (not in prefs) alphabetically Returns arranged list.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.split_area_main_sub** (function, lines 2074–2107, 34 lines, risk `support`): Split a single Area string into (main_area, sub_area). Backwards compatible: - If no separator is found, main_area = original, sub_area = "" - Supports separators like: 'Main - Sub', 'Main / Sub', 'Main | Sub', 'Main: Sub'
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.join_area_main_sub** (function, lines 2110–2128, 19 lines, risk `support`): Join main/sub into a single Area string using a consistent separator. - If sub_area is blank -> returns main_area - Else -> 'Main - Sub'
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._find_ttf** (function, lines 2213–2217, 5 lines, risk `support`): Retrieves find ttf for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._find_ttf** (function, lines 2213–2217, 5 lines, risk `support`): Retrieves find ttf for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._register_unicode_fonts** (function, lines 2219–2289, 71 lines, risk `reports`): Try to register a Unicode TTF so ReportLab can encode non-ASCII safely. Falls back to built-ins if none found.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._candidate_note_keys** (function, lines 2296–2309, 14 lines, risk `support`): Handles candidate note keys for the notes feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._resolve_note_key** (function, lines 2313–2324, 12 lines, risk `support`): Return an existing key in notes_dict matching 'name' using _candidate_note_keys. If none found, default to the original name.
@@ -124,50 +124,50 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._split_scoped_key** (function, lines 2442–2452, 11 lines, risk `support`): Return (loan_type_or_none, name) for keys that may be scoped like '7x7::Juan'
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._ensure_notes_dir** (function, lines 2469–2474, 6 lines, risk `support`): Handles ensure notes dir for the notes feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._load_client_notes** (function, lines 2476–2635, 160 lines, risk `support`): Load client notes safely (cached). - Primary: <APP_DIR>/data/client_notes.json - Fallback (legacy): <CWD>/data/client_notes.json - Shallow-merge (primary wins on conflicts) - Cached in-memory to avoid frequent disk reads. - Logs problems to data/spina_app.log and shows a one-time warning if unreadab
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._load_client_notes._warn_once** (nested_function, lines 2504–2515, 12 lines, risk `support`): Handles warn once for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._load_client_notes._safe_load_one** (nested_function, lines 2517–2575, 59 lines, risk `filesystem`): Handles safe load one for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._load_client_notes._warn_once** (nested_function, lines 2504–2515, 12 lines, risk `support`): Handles warn once for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._load_client_notes._safe_load_one** (nested_function, lines 2517–2575, 59 lines, risk `filesystem`): Handles safe load one for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._save_client_notes** (function, lines 2636–2669, 34 lines, risk `filesystem`): Save client notes atomically and refresh in-memory cache.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.get_client_note** (function, lines 2670–2720, 51 lines, risk `support`): Fetch a note for a client. scope: - 'shared' (default): shared notes (prefer person_uid/client_uid; legacy name fallback) - 'type': loan-type specific notes (prefer person_uid+loan_type or client_uid; legacy fallback) - 'effective': prefer type-specific if present, otherwise shared
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.set_client_note** (function, lines 2723–2781, 59 lines, risk `support`): Persist note for client. scope: - 'shared' (default): shared notes (prefer person_uid/client_uid; legacy name fallback) - 'type': loan-type specific notes (prefer person_uid+loan_type or client_uid; legacy fallback)
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.get_client_notes_in_range** (function, lines 2784–2859, 76 lines, risk `support`): Return list of (date, text) notes for 'name' between s and e inclusive. - Includes default (undated) note(s) as ("", text) first when present. - When include_type=True, includes loan-type specific notes for the current mode. - If include_other_type=True, also includes the other loan type (prefixed).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._migrate_legacy_notes_by_name** (function, lines 2870–2945, 76 lines, risk `support`): Migrate legacy name-based notes (old_name and '<loan_type>::old_name') into stable-id keys. Use this when a client's name changes to avoid orphaning notes that were stored under the old name. Returns True if any changes were saved.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog** (class, lines 2949–3586, 638 lines, risk `container`): Improved per-client notes editor. Features: - Dated and undated notes - Scope: Shared (both Regular/7x7) or This loan type - Left panel: list of existing notes (with search) - Autosave (debounced) + unsaved indicator - Safe switching between notes (prompts if needed) Notes storage is handled by get_
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog.__init__** (method, lines 2961–3026, 66 lines, risk `ui_only`): Handles init for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog.__init__** (method, lines 2961–3026, 66 lines, risk `ui_only`): Handles init for the notes feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._migrate_legacy_notes_if_needed** (method, lines 3029–3098, 70 lines, risk `support`): Move legacy name-based keys into stable-id keys for this client (best-effort). This prevents collisions if names repeat, and keeps notes attached even if a name changes. Runs only when we have a stable id (person_uid or client_uid).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._title_text** (method, lines 3100–3102, 3 lines, risk `support`): Handles title text for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._set_dirty** (method, lines 3104–3110, 7 lines, risk `support`): Updates set dirty for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._title_text** (method, lines 3100–3102, 3 lines, risk `support`): Handles title text for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._set_dirty** (method, lines 3104–3110, 7 lines, risk `support`): Updates set dirty for the notes feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._note_date_value** (method, lines 3112–3114, 3 lines, risk `support`): Handles note date value for the notes feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._sig_for_text** (method, lines 3116–3121, 6 lines, risk `support`): Handles sig for text for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._sig_for_text** (method, lines 3116–3121, 6 lines, risk `support`): Handles sig for text for the notes feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._validate_date_or_warn** (method, lines 3123–3136, 14 lines, risk `support`): Validates validate date or warn for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._auto_choose_scope** (method, lines 3138–3147, 10 lines, risk `support`): Handles auto choose scope for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._scope_label** (method, lines 3149–3154, 6 lines, risk `support`): Handles scope label for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._auto_choose_scope** (method, lines 3138–3147, 10 lines, risk `support`): Handles auto choose scope for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._scope_label** (method, lines 3149–3154, 6 lines, risk `support`): Handles scope label for the notes feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._format_list_item** (method, lines 3156–3161, 6 lines, risk `filesystem`): Handles format list item for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._focus_search** (method, lines 3163–3169, 7 lines, risk `ui_only`): Handles focus search for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._build_ui** (method, lines 3172–3257, 86 lines, risk `ui_only`): Builds build ui for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._collect_items** (method, lines 3260–3303, 44 lines, risk `support`): Handles collect items for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._collect_items.add_scope** (nested_function, lines 3263–3289, 27 lines, risk `support`): Handles add scope for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._refresh_list** (method, lines 3305–3329, 25 lines, risk `ui_only`): Refreshes refresh list for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._on_list_select** (method, lines 3331–3357, 27 lines, risk `support`): Handles on list select for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._pick_date** (method, lines 3360–3368, 9 lines, risk `support`): Handles pick date for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._jump_today** (method, lines 3370–3380, 11 lines, risk `support`): Handles jump today for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._jump_default** (method, lines 3382–3388, 7 lines, risk `support`): Handles jump default for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._clear_text** (method, lines 3390–3399, 10 lines, risk `support`): Handles clear text for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._focus_search** (method, lines 3163–3169, 7 lines, risk `ui_only`): Handles focus search for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._build_ui** (method, lines 3172–3257, 86 lines, risk `ui_only`): Builds build ui for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._collect_items** (method, lines 3260–3303, 44 lines, risk `support`): Handles collect items for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._collect_items.add_scope** (nested_function, lines 3263–3289, 27 lines, risk `support`): Handles add scope for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._refresh_list** (method, lines 3305–3329, 25 lines, risk `ui_only`): Refreshes refresh list for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._on_list_select** (method, lines 3331–3357, 27 lines, risk `support`): Handles on list select for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._pick_date** (method, lines 3360–3368, 9 lines, risk `support`): Handles pick date for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._jump_today** (method, lines 3370–3380, 11 lines, risk `support`): Handles jump today for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._jump_default** (method, lines 3382–3388, 7 lines, risk `support`): Handles jump default for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._clear_text** (method, lines 3390–3399, 10 lines, risk `support`): Handles clear text for the notes feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._open_notes_file** (method, lines 3401–3409, 9 lines, risk `support`): Handles open notes file for the notes feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._load_note** (method, lines 3412–3444, 33 lines, risk `support`): Loads load note for the notes feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._save_note** (method, lines 3446–3488, 43 lines, risk `support`): Saves save note for the notes feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._delete_note** (method, lines 3490–3527, 38 lines, risk `support`): Removes delete note for the notes feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._on_text_modified** (method, lines 3530–3538, 9 lines, risk `support`): Handles on text modified for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._schedule_autosave** (method, lines 3540–3552, 13 lines, risk `ui_only`): Handles schedule autosave for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._confirm_before_switch** (method, lines 3554–3572, 19 lines, risk `support`): Handles confirm before switch for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._save_and_close** (method, lines 3574–3576, 3 lines, risk `support`): Saves save and close for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._close** (method, lines 3578–3586, 9 lines, risk `support`): Handles close for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._on_text_modified** (method, lines 3530–3538, 9 lines, risk `support`): Handles on text modified for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._schedule_autosave** (method, lines 3540–3552, 13 lines, risk `ui_only`): Handles schedule autosave for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._confirm_before_switch** (method, lines 3554–3572, 19 lines, risk `support`): Handles confirm before switch for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._save_and_close** (method, lines 3574–3576, 3 lines, risk `support`): Saves save and close for the notes feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.NoteEditorDialog._close** (method, lines 3578–3586, 9 lines, risk `support`): Handles close for the notes feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._parse_any_adv_range** (function, lines 3590–3607, 18 lines, risk `support`): Handles parse any adv range for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._expand_range_inclusive** (function, lines 3609–3613, 5 lines, risk `support`): Handles expand range inclusive for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._expand_range_inclusive** (function, lines 3609–3613, 5 lines, risk `support`): Handles expand range inclusive for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._safe_string** (function, lines 3617–3627, 11 lines, risk `support`): As a last resort, coerce to an encodable string for current font.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._load_ledger_prefs** (function, lines 3635–3640, 6 lines, risk `filesystem`): Loads load ledger prefs for the reports feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._save_ledger_prefs** (function, lines 3642–3648, 7 lines, risk `reports`): Saves save ledger prefs for the reports feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.parse_advance_ranges** (function, lines 3649–3756, 108 lines, risk `support`): Parse one or more ADV date ranges from a transaction description. Supported tags (whitespace/case-tolerant): - [ADV:YYYY-MM-DD..YYYY-MM-DD] (single range) - [ADV:YYYY-MM-DD,YYYY-MM-DD,YYYY-MM-DD] (explicit days) - [ADV:range;range;...] where range is either: * YYYY-MM-DD..YYYY-MM-DD * YYYY-MM-DD (si
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.parse_advance_ranges._is_date** (nested_function, lines 3691–3692, 2 lines, risk `support`): Handles is date for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.parse_advance_ranges._is_date** (nested_function, lines 3691–3692, 2 lines, risk `support`): Handles is date for the payments feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.parse_advance_range** (function, lines 3758–3761, 4 lines, risk `support`): Backward-compatible helper: return first (start,end) ADV range if present.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._LockedCursor** (class, lines 3769–3846, 78 lines, risk `container`): Groups LockedCursor for the database feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._LockedCursor.__init__** (method, lines 3770–3772, 3 lines, risk `support`): Handles init for the database feature.
@@ -190,29 +190,29 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._LockedConnection.close** (method, lines 3917–3922, 6 lines, risk `support`): Handles close for the database feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._LockedConnection.__getattr__** (method, lines 3924–3925, 2 lines, risk `support`): Handles getattr for the database feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB** (class, lines 3931–8441, 4511 lines, risk `container`): Groups LoanDB for the loans feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.__init__** (method, lines 3932–3959, 28 lines, risk `database_read`): Handles init for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._set_last_error** (method, lines 3965–3969, 5 lines, risk `support`): Updates set last error for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_last_error** (method, lines 3971–3975, 5 lines, risk `support`): Retrieves get last error for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._norm_lt** (method, lines 3977–3981, 5 lines, risk `filesystem`): Handles norm lt for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.__init__** (method, lines 3932–3959, 28 lines, risk `database_read`): Handles init for the loans feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._set_last_error** (method, lines 3965–3969, 5 lines, risk `support`): Updates set last error for the loans feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_last_error** (method, lines 3971–3975, 5 lines, risk `support`): Retrieves get last error for the loans feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._norm_lt** (method, lines 3977–3981, 5 lines, risk `filesystem`): Handles norm lt for the loans feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.set_default_loan_type** (method, lines 3983–3988, 6 lines, risk `support`): Set the default loan_type context used when caller does not pass loan_type.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._effective_lt** (method, lines 3990–3993, 4 lines, risk `support`): Handles effective lt for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._effective_lt** (method, lines 3990–3993, 4 lines, risk `support`): Handles effective lt for the loans feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_pdf_header** (method, lines 3995–4014, 20 lines, risk `reports`): Reusable header for PDFs with logo, title, and current date.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._create_tables** (method, lines 4016–4916, 901 lines, risk `database_write`): Builds create tables for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._create_tables** (method, lines 4016–4916, 901 lines, risk `database_write`): Builds create tables for the loans feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._create_tables._table_cols** (nested_function, lines 4022–4032, 11 lines, risk `database_read`): Return set of column names for table _t (best-effort).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._create_tables._ensure_column** (nested_function, lines 4034–4059, 26 lines, risk `database_read`): Add column only if missing. Returns True if we attempted and succeeded.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._create_tables._try_sql** (nested_function, lines 4061–4070, 10 lines, risk `database_read`): Execute SQL and log on failure.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._active_client_name_exists** (method, lines 4918–4947, 30 lines, risk `filesystem`): True if an active client already uses this exact visible name in the same loan type.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client** (method, lines 4949–5129, 181 lines, risk `database_write`): Handles add client for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_term** (nested_function, lines 5016–5034, 19 lines, risk `filesystem`): Handles norm term for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_weekday** (nested_function, lines 5046–5058, 13 lines, risk `support`): Handles norm weekday for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_dom** (nested_function, lines 5060–5067, 8 lines, risk `support`): Handles norm dom for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_term** (nested_function, lines 5016–5034, 19 lines, risk `filesystem`): Handles norm term for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_weekday** (nested_function, lines 5046–5058, 13 lines, risk `support`): Handles norm weekday for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_dom** (nested_function, lines 5060–5067, 8 lines, risk `support`): Handles norm dom for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client** (method, lines 5133–5431, 299 lines, risk `database_write`): Update a client (append-only history is written to client_history).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_term** (nested_function, lines 5208–5225, 18 lines, risk `filesystem`): Handles norm term for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_weekday** (nested_function, lines 5248–5260, 13 lines, risk `support`): Handles norm weekday for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_dom** (nested_function, lines 5262–5269, 8 lines, risk `support`): Handles norm dom for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_term** (nested_function, lines 5208–5225, 18 lines, risk `filesystem`): Handles norm term for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_weekday** (nested_function, lines 5248–5260, 13 lines, risk `support`): Handles norm weekday for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_dom** (nested_function, lines 5262–5269, 8 lines, risk `support`): Handles norm dom for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.renew_client** (method, lines 5436–5663, 228 lines, risk `financial_calculation`): Renew a client (reloan). Updates the client row to a new cycle and records an event. - released_cash: cash actually released to the client for this renew (for display in reports). - new_principal: the new loan principal. If None/blank, defaults to released_cash.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.renew_client._ensure_renewals_table** (nested_function, lines 5517–5576, 60 lines, risk `financial_calculation`): Handles ensure renewals table for the loans feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.renew_client._do** (nested_function, lines 5581–5618, 38 lines, risk `database_write`): Handles do for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.renew_client._do** (nested_function, lines 5581–5618, 38 lines, risk `database_write`): Handles do for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_renewal_stats** (method, lines 5665–5728, 64 lines, risk `financial_calculation`): Return (renew_count, last_released_cash, last_release_date). - renew_count counts renew events (not including the original loan release). - last_released_cash is the last recorded released cash; if none, returns None.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.delete_client** (method, lines 5731–5754, 24 lines, risk `database_write`): Delete a client and related transactions for the given loan_type (history is written).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._ensure_archive_columns** (method, lines 5755–5772, 18 lines, risk `database_write`): Best-effort: ensure archive columns exist for older DBs.
@@ -221,7 +221,7 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.restore_client_by_uid** (method, lines 5822–5840, 19 lines, risk `backup`): Restore a previously archived client by client_uid.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_archived_clients** (method, lines 5842–5872, 31 lines, risk `backup`): List archived clients for restore UI.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_all_clients** (method, lines 5878–6164, 287 lines, risk `database_read`): Return client names (optionally filtered by loan_type) with optional search. search_by: - 'all' / 'both' : match across common client fields (default) - 'client' : match in client name only - 'area' : match in area only - 'principal' : match in principal (as text) - 'released' : match in date_releas
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_all_clients._start_date_expr** (nested_function, lines 5948–5956, 9 lines, risk `support`): Handles start date expr for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_all_clients._start_date_expr** (nested_function, lines 5948–5956, 9 lines, risk `support`): Handles start date expr for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_unpaired_7x7_names** (method, lines 6166–6213, 48 lines, risk `financial_calculation`): Return 7x7 client names that have NO Regular record and are NOT linked. Used so 7x7-only clients can still be managed from the Regular view (appear at the bottom) and included in Collector Route prints. Rules: - loan_type must be '7x7' - there is no same-name Regular record - person_uid is blank/emp
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.fetch_all_clients** (method, lines 6216–6249, 34 lines, risk `filesystem`): Return list of dict rows for clients (optionally filtered by loan_type).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_client_info** (method, lines 6251–6265, 15 lines, risk `database_read`): Retrieves get client info for the clients feature.
@@ -235,19 +235,19 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.repair_transaction_identity_links** (method, lines 6522–6574, 53 lines, risk `database_write`): Best-effort global repair for transaction/client identity drift. - backfills missing transaction.client_uid from exact current (name, loan_type) - normalizes transaction.name from the current clients.name when client_uid is present Returns a small stats dict.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_client_by_uid** (method, lines 6576–6585, 10 lines, risk `database_read`): Retrieves get client by uid for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._log_client_history** (method, lines 6587–6625, 39 lines, risk `database_write`): Append-only audit entry. old_row/new_row are dicts or None.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._log_client_history._safe_json** (nested_function, lines 6600–6607, 8 lines, risk `support`): Handles safe json for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._log_client_history._safe_json** (nested_function, lines 6600–6607, 8 lines, risk `support`): Handles safe json for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_client_history** (method, lines 6627–6677, 51 lines, risk `database_read`): Return audit history rows (most recent first). Prefer client_uid. Normalizes key names for UI: ts -> changed_at before_json -> old_json after_json -> new_json
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_person_uid_for_client_uid** (method, lines 6681–6695, 15 lines, risk `database_read`): Retrieves get person uid for client uid for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_linked_client_uids** (method, lines 6697–6731, 35 lines, risk `support`): Return all client_uids linked to the same person_uid (includes self). If not linked, returns [client_uid].
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._log_transaction_history** (method, lines 6733–6802, 70 lines, risk `database_write`): Append-only audit entry for Data Bank transactions.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._log_transaction_history._safe_json** (nested_function, lines 6758–6765, 8 lines, risk `support`): Handles safe json for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._log_transaction_history._safe_json** (nested_function, lines 6758–6765, 8 lines, risk `support`): Handles safe json for the payments feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_transaction_history_for_client_uids** (method, lines 6804–6833, 30 lines, risk `database_read`): Return databank audit rows (most recent first) for a list of client_uids.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._audit_parse_json_payload** (method, lines 6835–6855, 21 lines, risk `support`): Handles audit parse json payload for the utilities feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_audit_new_loan_rows** (method, lines 6857–6919, 63 lines, risk `database_read`): Return append-only ADD audit rows for new loans.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_audit_renewal_rows** (method, lines 6921–6977, 57 lines, risk `financial_calculation`): Return append-only RENEW audit rows.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._databank_day_close_bucket** (method, lines 6979–6981, 3 lines, risk `support`): Handles databank day close bucket for the data bank feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._dayclose_norm_workflow** (method, lines 6983–6993, 11 lines, risk `support`): Handles dayclose norm workflow for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._dayclose_variance_status** (method, lines 6995–7002, 8 lines, risk `support`): Handles dayclose variance status for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._dayclose_norm_workflow** (method, lines 6983–6993, 11 lines, risk `support`): Handles dayclose norm workflow for the loans feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._dayclose_variance_status** (method, lines 6995–7002, 8 lines, risk `support`): Handles dayclose variance status for the loans feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_databank_daily_total** (method, lines 7004–7035, 32 lines, risk `database_read`): Retrieves get databank daily total for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_databank_day_close** (method, lines 7037–7068, 32 lines, risk `database_read`): Retrieves get databank day close for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.is_databank_day_closed** (method, lines 7070–7075, 6 lines, risk `support`): Handles is databank day closed for the data bank feature.
@@ -281,38 +281,38 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_route_adv_marker_for** (function, lines 8554–8632, 79 lines, risk `filesystem`): Robust Collector Route ADV lookup for PostgreSQL test builds. Returns (True, adv_end_date) when an ADV range covers the ledger day. It is intentionally case-insensitive on name and supports client_uid fallback. The actual payment date is included when the ADV range covers it, so collector route can 
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._getv** (function, lines 8645–8654, 10 lines, risk `support`): Safe getter for dict / sqlite3.Row / objects.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._sum_paid_per_day** (function, lines 8658–8746, 89 lines, risk `support`): Sum payments per date in a way that matches the app's Data Bank behavior. - Data Bank updates are keyed by (name, loan_type, date) so normally there's only 1 row per date. - If legacy/duplicate rows exist, we treat the **last non-zero** payment as the effective payment. - We do NOT let later 0.00 "r
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._wrap_to_width** (function, lines 8748–8760, 13 lines, risk `support`): Handles wrap to width for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._wrap_to_width** (function, lines 8748–8760, 13 lines, risk `support`): Handles wrap to width for the utilities feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.draw_notes_aligned** (function, lines 8762–8811, 50 lines, risk `support`): Draws: Note: YYYY-MM-DD wrapped note text (blank) continuation lines aligned under text column Returns the new y after drawing.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App** (class, lines 8817–20123, 11307 lines, risk `container`): Groups App for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App** (class, lines 8817–20123, 11307 lines, risk `container`): Groups App for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._mode_filter** (method, lines 8820–8828, 9 lines, risk `filesystem`): Return loan_type filter value for DB queries (Regular / 7x7).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._on_mode_change** (method, lines 8830–8852, 23 lines, risk `reports`): Refresh visible tables when the mode selector changes.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._access_prefs_path** (method, lines 8861–8864, 4 lines, risk `support`): Handles access prefs path for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._access_prefs_path** (method, lines 8861–8864, 4 lines, risk `support`): Handles access prefs path for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_user_role** (method, lines 8866–8878, 13 lines, risk `authentication`): Best-effort load of last used role. Not security—just convenience.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_user_role** (method, lines 8880–8908, 29 lines, risk `authentication`): Saves save user role for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._users_db_path** (method, lines 8911–8914, 4 lines, risk `authentication`): Handles users db path for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._hash_password_legacy** (method, lines 8915–8921, 7 lines, risk `authentication`): Handles hash password legacy for the payments feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._hash_password** (method, lines 8923–8959, 37 lines, risk `authentication`): Hash passwords using PBKDF2-HMAC-SHA256 by default. Legacy scheme supported for backward compatibility: - scheme: 'sha256_salt' (or 'legacy') uses SHA-256(salt + password) Stored records should include: - scheme: 'pbkdf2_sha256' (recommended) or 'sha256_salt' - iterations: integer (PBKDF2 only)
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._make_salt** (method, lines 8961–8970, 10 lines, risk `support`): Handles make salt for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._make_salt** (method, lines 8961–8970, 10 lines, risk `support`): Handles make salt for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._default_password_for** (method, lines 8972–8974, 3 lines, risk `authentication`): Handles default password for for the payments feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._is_default_password_rec** (method, lines 8976–8994, 19 lines, risk `authentication`): True if this user's stored hash matches the known default password.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._must_change_password** (method, lines 8996–9021, 26 lines, risk `authentication`): Enforce password change if account is still using the known defaults.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._set_user_password** (method, lines 9023–9049, 27 lines, risk `authentication`): Update password hash+salt for user and clear must_change_password.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog** (method, lines 9051–9169, 119 lines, risk `authentication`): Modal dialog that forces a password change. Returns True if changed.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog._save** (nested_function, lines 9095–9123, 29 lines, risk `authentication`): Handles save for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog._cancel** (nested_function, lines 9125–9133, 9 lines, risk `support`): Handles cancel for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog._on_enter** (nested_function, lines 9138–9139, 2 lines, risk `support`): Handles on enter for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog._save** (nested_function, lines 9095–9123, 29 lines, risk `authentication`): Handles save for the payments feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog._cancel** (nested_function, lines 9125–9133, 9 lines, risk `support`): Handles cancel for the payments feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog._on_enter** (nested_function, lines 9138–9139, 2 lines, risk `support`): Handles on enter for the payments feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_users_db** (method, lines 9171–9192, 22 lines, risk `authentication`): Saves save users db for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_users_db** (method, lines 9194–9264, 71 lines, risk `authentication`): Load users database from data/users.json. If missing, create defaults. Default accounts (created only if missing): - admin / admin123 -> Admin - encoder / encoder123 -> Encoder - viewer / viewer123 -> Viewer - system / system123 -> System
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login** (method, lines 9266–9305, 40 lines, risk `authentication`): Handles verify login for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_last_user** (method, lines 9307–9314, 8 lines, risk `filesystem`): Loads load last user for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_last_user** (method, lines 9316–9344, 29 lines, risk `filesystem`): Saves save last user for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_last_user** (method, lines 9307–9314, 8 lines, risk `filesystem`): Loads load last user for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_last_user** (method, lines 9316–9344, 29 lines, risk `filesystem`): Saves save last user for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login** (method, lines 9346–9471, 126 lines, risk `authentication`): Login dialog: returns (username, role) or (None, None) if cancelled.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok** (nested_function, lines 9395–9427, 33 lines, risk `authentication`): Handles ok for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._cancel** (nested_function, lines 9429–9435, 7 lines, risk `support`): Handles cancel for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._on_enter** (nested_function, lines 9440–9441, 2 lines, risk `support`): Handles on enter for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok** (nested_function, lines 9395–9427, 33 lines, risk `authentication`): Handles ok for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._cancel** (nested_function, lines 9429–9435, 7 lines, risk `support`): Handles cancel for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._on_enter** (nested_function, lines 9440–9441, 2 lines, risk `support`): Handles on enter for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role** (method, lines 9474–9556, 83 lines, risk `authentication`): Simple role selector shown at startup.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role._ok** (nested_function, lines 9511–9521, 11 lines, risk `support`): Handles ok for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role._cancel** (nested_function, lines 9523–9529, 7 lines, risk `support`): Handles cancel for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role._ok** (nested_function, lines 9511–9521, 11 lines, risk `support`): Handles ok for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role._cancel** (nested_function, lines 9523–9529, 7 lines, risk `support`): Handles cancel for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._remove_role_overlays** (method, lines 9558–9571, 14 lines, risk `support`): Removes remove role overlays for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._restore_main_tabs** (method, lines 9574–9591, 18 lines, risk `backup`): Handles restore main tabs for the backup feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._make_import_only_overlay** (method, lines 9593–9611, 19 lines, risk `ui_only`): Overlay that blocks tab interaction, leaving only an Import button.
@@ -320,15 +320,15 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.apply_role_access** (method, lines 9633–9769, 137 lines, risk `authentication`): Apply role-based UI restrictions.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._is_client_new** (method, lines 9771–9894, 124 lines, risk `reports`): Return True if client is NEW. Rules: - If 'new_until' is explicitly set in the DB: * If it's an empty string or unparsable -> treat as explicit OFF (return False). * If it's a valid date -> return (ledger_date <= new_until). No fallback. - Otherwise (no explicit 'new_until' value present): * If 'day
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._open_note_dialog** (method, lines 9898–9924, 27 lines, risk `reports`): Handles open note dialog for the notes feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._clear_preview** (method, lines 9927–9929, 3 lines, risk `support`): Handles clear preview for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._update_data_toolbar** (method, lines 9931–9959, 29 lines, risk `support`): Updates update data toolbar for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._clear_preview** (method, lines 9927–9929, 3 lines, risk `support`): Handles clear preview for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._update_data_toolbar** (method, lines 9931–9959, 29 lines, risk `support`): Updates update data toolbar for the navigation feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._get_databank_focus_date** (method, lines 9961–9983, 23 lines, risk `support`): Retrieves get databank focus date for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_system_data_tab** (method, lines 9985–9994, 10 lines, risk `support`): Handles show system data tab for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._hide_system_data_tab** (method, lines 9996–10001, 6 lines, risk `support`): Handles hide system data tab for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._system_data_get_date** (method, lines 10003–10021, 19 lines, risk `support`): Handles system data get date for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._system_data_use_focus_date** (method, lines 10023–10030, 8 lines, risk `support`): Handles system data use focus date for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._system_data_refresh_summary** (method, lines 10032–10091, 60 lines, risk `support`): Handles system data refresh summary for the data bank feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._system_data_refresh_summary._fmt_amt** (nested_function, lines 10037–10044, 8 lines, risk `support`): Handles fmt amt for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._system_data_refresh_summary._fmt_amt** (nested_function, lines 10037–10044, 8 lines, risk `support`): Handles fmt amt for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._system_data_open_close** (method, lines 10093–10103, 11 lines, risk `support`): Handles system data open close for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._system_data_open_history** (method, lines 10105–10109, 5 lines, risk `support`): Handles system data open history for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._system_data_open_records** (method, lines 10111–10115, 5 lines, risk `support`): Handles system data open records for the data bank feature.
@@ -337,117 +337,117 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_current_password** (method, lines 10170–10183, 14 lines, risk `authentication`): Handles prompt current password for the payments feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_collectors_route_map** (method, lines 10186–10225, 40 lines, risk `filesystem`): Loads load collectors route map for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_databank_collector_defaults_for_date** (method, lines 10227–10296, 70 lines, risk `database_read`): Builds build databank collector defaults for date for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_databank_collector_defaults_for_date._norm_area** (nested_function, lines 10228–10232, 5 lines, risk `support`): Handles norm area for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_databank_collector_defaults_for_date._norm_area** (nested_function, lines 10228–10232, 5 lines, risk `support`): Handles norm area for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_history_dialog** (method, lines 10298–10368, 71 lines, risk `ui_only`): Handles open databank close history dialog for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.print_databank_close_report** (method, lines 10371–10605, 235 lines, risk `filesystem`): Generates print databank close report for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog** (method, lines 10607–11257, 651 lines, risk `reports`): Handles open databank close dialog for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._parse_amount** (nested_function, lines 10658–10663, 6 lines, risk `filesystem`): Handles parse amount for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._fmt_amount** (nested_function, lines 10665–10672, 8 lines, risk `support`): Handles fmt amount for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._variance_status** (nested_function, lines 10674–10681, 8 lines, risk `support`): Handles variance status for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._default_workflow** (nested_function, lines 10683–10688, 6 lines, risk `support`): Handles default workflow for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._selected_split_index** (nested_function, lines 10785–10792, 8 lines, risk `support`): Handles selected split index for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._clear_split_editor** (nested_function, lines 10794–10799, 6 lines, risk `support`): Handles clear split editor for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._refresh_split_tree** (nested_function, lines 10801–10848, 48 lines, risk `ui_only`): Refreshes refresh split tree for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._load_split_editor_from_selection** (nested_function, lines 10850–10862, 13 lines, risk `support`): Loads load split editor from selection for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._upsert_split_row** (nested_function, lines 10864–10895, 32 lines, risk `support`): Handles upsert split row for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._remove_split_row** (nested_function, lines 10897–10917, 21 lines, risk `support`): Removes remove split row for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._fmt_amount** (nested_function, lines 10665–10672, 8 lines, risk `support`): Handles fmt amount for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._variance_status** (nested_function, lines 10674–10681, 8 lines, risk `support`): Handles variance status for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._default_workflow** (nested_function, lines 10683–10688, 6 lines, risk `support`): Handles default workflow for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._selected_split_index** (nested_function, lines 10785–10792, 8 lines, risk `support`): Handles selected split index for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._clear_split_editor** (nested_function, lines 10794–10799, 6 lines, risk `support`): Handles clear split editor for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._refresh_split_tree** (nested_function, lines 10801–10848, 48 lines, risk `ui_only`): Refreshes refresh split tree for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._load_split_editor_from_selection** (nested_function, lines 10850–10862, 13 lines, risk `support`): Loads load split editor from selection for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._upsert_split_row** (nested_function, lines 10864–10895, 32 lines, risk `support`): Handles upsert split row for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._remove_split_row** (nested_function, lines 10897–10917, 21 lines, risk `support`): Removes remove split row for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._load_route_collectors** (nested_function, lines 10919–10931, 13 lines, risk `support`): Loads load route collectors for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._save_split** (nested_function, lines 10933–10951, 19 lines, risk `support`): Saves save split for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._apply_mode** (nested_function, lines 10953–10992, 40 lines, risk `ui_only`): Handles apply mode for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._recalc** (nested_function, lines 10994–11016, 23 lines, risk `support`): Handles recalc for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._load** (nested_function, lines 11018–11082, 65 lines, risk `support`): Handles load for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._save_split** (nested_function, lines 10933–10951, 19 lines, risk `support`): Saves save split for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._apply_mode** (nested_function, lines 10953–10992, 40 lines, risk `ui_only`): Handles apply mode for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._recalc** (nested_function, lines 10994–11016, 23 lines, risk `support`): Handles recalc for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._load** (nested_function, lines 11018–11082, 65 lines, risk `support`): Handles load for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._close_day** (nested_function, lines 11084–11143, 60 lines, risk `authentication`): Handles close day for the data bank feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._reopen_day** (nested_function, lines 11145–11172, 28 lines, risk `authentication`): Handles reopen day for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._update_workflow** (nested_function, lines 11174–11203, 30 lines, risk `authentication`): Updates update workflow for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._reopen_day** (nested_function, lines 11145–11172, 28 lines, risk `authentication`): Handles reopen day for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._update_workflow** (nested_function, lines 11174–11203, 30 lines, risk `authentication`): Updates update workflow for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._print_report** (nested_function, lines 11205–11212, 8 lines, risk `reports`): Generates print report for the reports feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._save_route_copy_now** (nested_function, lines 11214–11237, 24 lines, risk `support`): Saves save route copy now for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._open_records_list** (nested_function, lines 11239–11240, 2 lines, risk `support`): Handles open records list for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._open_records_list** (nested_function, lines 11239–11240, 2 lines, risk `support`): Handles open records list for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog** (method, lines 11259–11482, 224 lines, risk `filesystem`): Handles open databank close records dialog for the data bank feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._coerce_date** (nested_function, lines 11264–11271, 8 lines, risk `support`): Handles coerce date for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._fmt_amt** (nested_function, lines 11380–11387, 8 lines, risk `support`): Handles fmt amt for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._selected_date** (nested_function, lines 11389–11394, 6 lines, risk `support`): Handles selected date for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._load_records** (nested_function, lines 11396–11462, 67 lines, risk `filesystem`): Loads load records for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._open_selected** (nested_function, lines 11464–11469, 6 lines, risk `support`): Handles open selected for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._coerce_date** (nested_function, lines 11264–11271, 8 lines, risk `support`): Handles coerce date for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._fmt_amt** (nested_function, lines 11380–11387, 8 lines, risk `support`): Handles fmt amt for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._selected_date** (nested_function, lines 11389–11394, 6 lines, risk `support`): Handles selected date for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._load_records** (nested_function, lines 11396–11462, 67 lines, risk `filesystem`): Loads load records for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._open_selected** (nested_function, lines 11464–11469, 6 lines, risk `support`): Handles open selected for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._print_selected** (nested_function, lines 11471–11476, 6 lines, risk `reports`): Generates print selected for the reports feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason** (method, lines 11484–11628, 145 lines, risk `ui_only`): Modal checkbox dialog to choose one or more missed-payment reasons, plus optional 'Other' note. If 'Advance' is selected, you can enter a date range. Returns a single string (joined reasons + optional [ADV:s..e] tag) or None if cancelled.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason.set_enabled** (nested_function, lines 11535–11542, 8 lines, risk `ui_only`): Updates set enabled for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason.on_adv_toggle** (nested_function, lines 11544–11545, 2 lines, risk `support`): Handles on adv toggle for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason.set_enabled** (nested_function, lines 11535–11542, 8 lines, risk `ui_only`): Updates set enabled for the payments feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason.on_adv_toggle** (nested_function, lines 11544–11545, 2 lines, risk `support`): Handles on adv toggle for the payments feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason._parse_any_date** (nested_function, lines 11559–11579, 21 lines, risk `support`): Handles parse any date for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason.on_ok** (nested_function, lines 11581–11605, 25 lines, risk `support`): Handles on ok for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason.on_cancel** (nested_function, lines 11607–11609, 3 lines, risk `support`): Handles on cancel for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason.on_ok** (nested_function, lines 11581–11605, 25 lines, risk `support`): Handles on ok for the payments feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason.on_cancel** (nested_function, lines 11607–11609, 3 lines, risk `support`): Handles on cancel for the payments feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog** (method, lines 11630–12140, 511 lines, risk `database_read`): Route area picker (Main/Sub Tree + ordered selection). What you get: - Left: Tree of Main Areas with Sub Areas underneath - Right: Selected Route (ordered) as MAIN or MAIN - SUB entries - MAIN entry covers all its Sub Areas when printing/validating routes.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._norm** (nested_function, lines 11674–11681, 8 lines, risk `support`): Handles norm for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._set_info** (nested_function, lines 11789–11794, 6 lines, risk `support`): Updates set info for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._current_selected_values** (nested_function, lines 11796–11800, 5 lines, risk `support`): Handles current selected values for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._has_main_selected** (nested_function, lines 11802–11808, 7 lines, risk `support`): Handles has main selected for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._remove_subs_of_main** (nested_function, lines 11810–11819, 10 lines, risk `support`): Removes remove subs of main for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._replace_right** (nested_function, lines 11821–11830, 10 lines, risk `support`): Handles replace right for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._add_to_right** (nested_function, lines 11832–11855, 24 lines, risk `support`): Handles add to right for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._norm** (nested_function, lines 11674–11681, 8 lines, risk `support`): Handles norm for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._set_info** (nested_function, lines 11789–11794, 6 lines, risk `support`): Updates set info for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._current_selected_values** (nested_function, lines 11796–11800, 5 lines, risk `support`): Handles current selected values for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._has_main_selected** (nested_function, lines 11802–11808, 7 lines, risk `support`): Handles has main selected for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._remove_subs_of_main** (nested_function, lines 11810–11819, 10 lines, risk `support`): Removes remove subs of main for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._replace_right** (nested_function, lines 11821–11830, 10 lines, risk `support`): Handles replace right for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._add_to_right** (nested_function, lines 11832–11855, 24 lines, risk `support`): Handles add to right for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._get_tree_selection_route_values** (nested_function, lines 11857–11872, 16 lines, risk `support`): Retrieves get tree selection route values for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.add_sel** (nested_function, lines 11874–11878, 5 lines, risk `support`): Handles add sel for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.remove_sel** (nested_function, lines 11880–11886, 7 lines, risk `support`): Removes remove sel for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.move_up** (nested_function, lines 11888–11903, 16 lines, risk `ui_only`): Handles move up for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.move_down** (nested_function, lines 11905–11920, 16 lines, risk `ui_only`): Handles move down for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.add_sel** (nested_function, lines 11874–11878, 5 lines, risk `support`): Handles add sel for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.remove_sel** (nested_function, lines 11880–11886, 7 lines, risk `support`): Removes remove sel for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.move_up** (nested_function, lines 11888–11903, 16 lines, risk `ui_only`): Handles move up for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.move_down** (nested_function, lines 11905–11920, 16 lines, risk `ui_only`): Handles move down for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._selected_main_from_tree** (nested_function, lines 11922–11944, 23 lines, risk `ui_only`): Try to infer the current Main area from the left tree selection.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._on_tree_select_fill** (nested_function, lines 11946–11975, 30 lines, risk `ui_only`): Clicking a Main fills the Main entry, so you can add Sub areas quickly.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.add_new_area** (nested_function, lines 11977–12028, 52 lines, risk `ui_only`): Handles add new area for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._expand_all** (nested_function, lines 12030–12036, 7 lines, risk `support`): Handles expand all for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._refresh_tree** (nested_function, lines 12038–12068, 31 lines, risk `support`): Refreshes refresh tree for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.on_ok** (nested_function, lines 12084–12095, 12 lines, risk `support`): Handles on ok for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.on_cancel** (nested_function, lines 12097–12104, 8 lines, risk `support`): Handles on cancel for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._on_search** (nested_function, lines 12116–12117, 2 lines, risk `support`): Handles on search for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.add_new_area** (nested_function, lines 11977–12028, 52 lines, risk `ui_only`): Handles add new area for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._expand_all** (nested_function, lines 12030–12036, 7 lines, risk `support`): Handles expand all for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._refresh_tree** (nested_function, lines 12038–12068, 31 lines, risk `support`): Refreshes refresh tree for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.on_ok** (nested_function, lines 12084–12095, 12 lines, risk `support`): Handles on ok for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog.on_cancel** (nested_function, lines 12097–12104, 8 lines, risk `support`): Handles on cancel for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._area_picker_dialog._on_search** (nested_function, lines 12116–12117, 2 lines, risk `support`): Handles on search for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_collectors** (method, lines 12142–12749, 608 lines, risk `filesystem`): Refresh the Collector's Route table (enhanced). - Supports older collectors.json schemas (dict/list/strings) and normalizes to: {name: {areas: [...], notes: "..."}} - Computes: * unassigned areas (master areas not in any route) * unknown route areas (route areas not found in master areas) * conflict
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_collectors._norm_area** (nested_function, lines 12222–12226, 5 lines, risk `support`): Handles norm area for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_collectors._lt_key** (nested_function, lines 12228–12232, 5 lines, risk `filesystem`): Handles lt key for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_collectors._norm_area** (nested_function, lines 12222–12226, 5 lines, risk `support`): Handles norm area for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_collectors._lt_key** (nested_function, lines 12228–12232, 5 lines, risk `filesystem`): Handles lt key for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_collectors._expand_route_area_to_master_norms** (nested_function, lines 12333–12366, 34 lines, risk `support`): Return list of master area norms covered by this route entry. Rules: - If route entry has sub: match exact (main, sub) in master areas (separator-insensitive). - If route entry is MAIN-only: cover ALL master areas that share that main. - Legacy: if the full string matches a master area exactly, acce
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_collectors._sort_key** (nested_function, lines 12649–12665, 17 lines, risk `support`): Handles sort key for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_collectors._sort_key** (nested_function, lines 12649–12665, 17 lines, risk `support`): Handles sort key for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_conflicts** (method, lines 12751–12775, 25 lines, risk `support`): Show areas assigned to multiple collectors.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_unassigned_areas** (method, lines 12777–12804, 28 lines, risk `support`): Show areas not assigned to any collector (plus any unknown route areas).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_no_area_clients** (method, lines 12806–12830, 25 lines, risk `database_read`): Show clients that still have blank area (needs assignment).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._delete_selected_collector** (method, lines 12833–12899, 67 lines, risk `filesystem`): Removes delete selected collector for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._collector_editor_dialog** (method, lines 12901–13036, 136 lines, risk `ui_only`): Unified editor for Collector name + route areas + notes.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._collector_editor_dialog._summarize** (nested_function, lines 12954–12961, 8 lines, risk `support`): Handles summarize for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._collector_editor_dialog.choose_areas** (nested_function, lines 12967–12972, 6 lines, risk `support`): Handles choose areas for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._collector_editor_dialog.on_ok** (nested_function, lines 12992–13011, 20 lines, risk `support`): Handles on ok for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._collector_editor_dialog.on_cancel** (nested_function, lines 13013–13020, 8 lines, risk `support`): Handles on cancel for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._collector_editor_dialog._summarize** (nested_function, lines 12954–12961, 8 lines, risk `support`): Handles summarize for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._collector_editor_dialog.choose_areas** (nested_function, lines 12967–12972, 6 lines, risk `support`): Handles choose areas for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._collector_editor_dialog.on_ok** (nested_function, lines 12992–13011, 20 lines, risk `support`): Handles on ok for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._collector_editor_dialog.on_cancel** (nested_function, lines 13013–13020, 8 lines, risk `support`): Handles on cancel for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._edit_selected_collector** (method, lines 13038–13129, 92 lines, risk `filesystem`): Handles edit selected collector for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._add_collector** (method, lines 13131–13183, 53 lines, risk `filesystem`): Handles add collector for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._walk_widgets** (method, lines 13185–13191, 7 lines, risk `support`): Handles walk widgets for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._walk_widgets** (method, lines 13185–13191, 7 lines, risk `support`): Handles walk widgets for the utilities feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._looks_like_data_grid** (method, lines 13193–13227, 35 lines, risk `ui_only`): Heuristic: columns contain 'client' + 'area' and many day columns (d1..d31 or numeric headings).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._locate_data_tree** (method, lines 13229–13254, 26 lines, risk `ui_only`): Find and memoize the actual Treeview used by the Data grid.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._ensure_databank_edit_bindings** (method, lines 13256–13286, 31 lines, risk `ui_only`): Bind double-click/F2 editing for Data grid (auto-detected) only once per Treeview instance.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._begin_cell_edit** (method, lines 13289–13430, 142 lines, risk `filesystem`): Create an Entry over the clicked (or remembered) day cell and save back to DB.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._begin_cell_edit._commit** (nested_function, lines 13424–13425, 2 lines, risk `support`): Handles commit for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._begin_cell_edit._commit** (nested_function, lines 13424–13425, 2 lines, risk `support`): Handles commit for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_cell_edit** (method, lines 13433–13516, 84 lines, risk `filesystem`): Save an edited day-cell value into the DB (no undo/redo). - amount == 0 → prompt for reason (stored in description) - amount > 0 → clears description
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._remember_cell_click** (method, lines 13518–13536, 19 lines, risk `support`): Handles remember cell click for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.delete_selected_cell** (method, lines 13538–13625, 88 lines, risk `support`): Removes delete selected cell for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._remember_cell_click** (method, lines 13518–13536, 19 lines, risk `support`): Handles remember cell click for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.delete_selected_cell** (method, lines 13538–13625, 88 lines, risk `support`): Removes delete selected cell for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._mark_missed_for_selected** (method, lines 13629–13699, 71 lines, risk `filesystem`): Right-click action in Data Bank: set selected day as MISSED (0.0) with a reason.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_delete_day_dialog** (method, lines 13702–13842, 141 lines, risk `authentication`): Delete all Data Bank entries for one selected date, with backup + password confirmation.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_audit_tab** (method, lines 13845–13853, 9 lines, risk `support`): Handles show audit tab for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._hide_audit_tab** (method, lines 13855–13860, 6 lines, risk `support`): Handles hide audit tab for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_money_text** (method, lines 13862–13869, 8 lines, risk `support`): Handles audit money text for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_audit_tab** (method, lines 13845–13853, 9 lines, risk `support`): Handles show audit tab for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._hide_audit_tab** (method, lines 13855–13860, 6 lines, risk `support`): Handles hide audit tab for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_money_text** (method, lines 13862–13869, 8 lines, risk `support`): Handles audit money text for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_parse_date_filters** (method, lines 13871–13899, 29 lines, risk `support`): Handles audit parse date filters for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_today** (method, lines 13901–13909, 9 lines, risk `support`): Handles audit set today for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_last7** (method, lines 13911–13920, 10 lines, risk `support`): Handles audit set last7 for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_all** (method, lines 13922–13928, 7 lines, risk `support`): Handles audit set all for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_tree_factory** (method, lines 13930–13946, 17 lines, risk `ui_only`): Handles audit tree factory for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_audit_tab** (method, lines 13948–14017, 70 lines, risk `financial_calculation`): Builds build audit tab for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_detail_text** (method, lines 14019–14026, 8 lines, risk `ui_only`): Handles audit set detail text for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_show_selected** (method, lines 14028–14083, 56 lines, risk `financial_calculation`): Handles audit show selected for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_audit_tab** (method, lines 14085–14197, 113 lines, risk `financial_calculation`): Refreshes refresh audit tab for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__** (method, lines 14199–14351, 153 lines, risk `authentication`): Handles init for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_today** (method, lines 13901–13909, 9 lines, risk `support`): Handles audit set today for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_last7** (method, lines 13911–13920, 10 lines, risk `support`): Handles audit set last7 for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_all** (method, lines 13922–13928, 7 lines, risk `support`): Handles audit set all for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_tree_factory** (method, lines 13930–13946, 17 lines, risk `ui_only`): Handles audit tree factory for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_audit_tab** (method, lines 13948–14017, 70 lines, risk `financial_calculation`): Builds build audit tab for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_detail_text** (method, lines 14019–14026, 8 lines, risk `ui_only`): Handles audit set detail text for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_show_selected** (method, lines 14028–14083, 56 lines, risk `financial_calculation`): Handles audit show selected for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_audit_tab** (method, lines 14085–14197, 113 lines, risk `financial_calculation`): Refreshes refresh audit tab for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__** (method, lines 14199–14351, 153 lines, risk `authentication`): Handles init for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._start_ui_queue_pump** (method, lines 14355–14395, 41 lines, risk `ui_only`): Process UI-call requests from worker threads. This keeps Tk operations on the main thread. Any unexpected errors in the pump are logged (instead of silently swallowed) to avoid "stuck UI" mysteries.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._start_ui_queue_pump._pump** (nested_function, lines 14361–14389, 29 lines, risk `ui_only`): Handles pump for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._start_ui_queue_pump._pump** (nested_function, lines 14361–14389, 29 lines, risk `ui_only`): Handles pump for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._ui_call** (method, lines 14397–14444, 48 lines, risk `support`): Call a UI function from any thread and wait for completion. - If called from the Tk main thread, runs immediately. - If called from a worker thread, marshals execution onto the Tk main thread. - Includes a timeout to avoid deadlocks when the UI is closing.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._ui_async** (method, lines 14446–14459, 14 lines, risk `ui_only`): Schedule a UI function to run on the Tk main thread (non-blocking).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._patch_messagebox_threadsafe** (method, lines 14461–14504, 44 lines, risk `support`): Make tkinter.messagebox safe to call from worker threads.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._run_long_task** (method, lines 14506–14778, 273 lines, risk `ui_only`): Run work_fn() in a background thread with a simple modal 'Please wait' dialog. Improvements: - Optional Cancel button (signals a cancel_event to work_fn if it supports it) - Optional timeout (prevents UI from hanging forever on stuck tasks) - Cleanup is guarded so it can't run twice
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._run_long_task._cleanup_dialog** (nested_function, lines 14531–14552, 22 lines, risk `support`): Handles cleanup dialog for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._run_long_task._finish** (nested_function, lines 14554–14599, 46 lines, risk `support`): Handles finish for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._run_long_task._request_cancel** (nested_function, lines 14601–14625, 25 lines, risk `ui_only`): Handles request cancel for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._run_long_task._watchdog** (nested_function, lines 14627–14662, 36 lines, risk `ui_only`): Handles watchdog for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._run_long_task._cleanup_dialog** (nested_function, lines 14531–14552, 22 lines, risk `support`): Handles cleanup dialog for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._run_long_task._finish** (nested_function, lines 14554–14599, 46 lines, risk `support`): Handles finish for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._run_long_task._request_cancel** (nested_function, lines 14601–14625, 25 lines, risk `ui_only`): Handles request cancel for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._run_long_task._watchdog** (nested_function, lines 14627–14662, 36 lines, risk `ui_only`): Handles watchdog for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._run_long_task._call_work_fn** (nested_function, lines 14725–14747, 23 lines, risk `support`): Call work_fn, optionally passing cancel_event if supported.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._run_long_task._worker** (nested_function, lines 14749–14776, 28 lines, risk `ui_only`): Handles worker for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._run_long_task._worker** (nested_function, lines 14749–14776, 28 lines, risk `ui_only`): Handles worker for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._setup_style** (method, lines 14779–14915, 137 lines, risk `ui_only`): Centralized ttk styling. Goals: - cleaner spacing / typography - readable Treeviews - consistent Notebook tabs - best-effort HiDPI handling on Windows
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._theme_toggle_text** (method, lines 14919–14924, 6 lines, risk `support`): Handles theme toggle text for the settings feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.toggle_theme** (method, lines 14926–14931, 6 lines, risk `support`): Handles toggle theme for the settings feature.
@@ -457,13 +457,13 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._configure_tree_stripes** (method, lines 15197–15230, 34 lines, risk `ui_only`): Configure zebra striping tags on a ttk.Treeview based on current theme. Important: tag backgrounds override ttk style colors. Without this, Dark Mode can end up with light (white) row backgrounds + light foreground, which is hard to read.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._apply_tree_stripes_all** (method, lines 15232–15241, 10 lines, risk `ui_only`): Re-apply zebra striping for known Treeviews (called after theme switch).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._apply_tk_theme_recursive** (method, lines 15243–15281, 39 lines, risk `ui_only`): Handles apply tk theme recursive for the settings feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._mk_tk_entry** (method, lines 15283–15299, 17 lines, risk `ui_only`): Handles mk tk entry for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._mk_tk_entry** (method, lines 15283–15299, 17 lines, risk `ui_only`): Handles mk tk entry for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._find_postgres_exe** (method, lines 15304–15342, 39 lines, risk `filesystem`): Find pg_dump.exe / pg_restore.exe without requiring PostgreSQL bin in PATH.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._postgres_backup_dir** (method, lines 15344–15352, 9 lines, risk `backup`): Return/create the app backup folder.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._create_postgres_backup_file** (method, lines 15354–15437, 84 lines, risk `backup`): Create a full PostgreSQL backup using pg_dump custom format. The backup includes clients, payments, JSON rows, PDFs, and pictures because those are now stored in spina_db. Password is passed through PGPASSWORD, not printed on screen.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.backup_postgres_database** (method, lines 15439–15507, 69 lines, risk `backup`): UI handler for the Backup button.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.backup_postgres_database._success** (nested_function, lines 15463–15479, 17 lines, risk `support`): Handles success for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.backup_postgres_database._error** (nested_function, lines 15481–15495, 15 lines, risk `support`): Handles error for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.backup_postgres_database._success** (nested_function, lines 15463–15479, 17 lines, risk `support`): Handles success for the backup feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.backup_postgres_database._error** (nested_function, lines 15481–15495, 15 lines, risk `support`): Handles error for the backup feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._postgres_cfg** (method, lines 15511–15523, 13 lines, risk `support`): Return PostgreSQL connection settings used by this test build.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pg_env** (method, lines 15525–15533, 9 lines, risk `filesystem`): Handles pg env for the database feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._format_bytes** (method, lines 15535–15545, 11 lines, risk `support`): Handles format bytes for the utilities feature.
@@ -471,10 +471,10 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_postgres_backup_file** (method, lines 15571–15604, 34 lines, risk `backup`): Verify a PostgreSQL custom backup by reading its table of contents.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._run_pg_command** (method, lines 15606–15633, 28 lines, risk `support`): Run PostgreSQL command-line tools with hidden password.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._restore_backup_to_test_database** (method, lines 15635–15670, 36 lines, risk `backup`): Restore selected backup into spina_restore_test only; never overwrites live spina_db.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._restore_backup_to_test_database._check_cancel** (nested_function, lines 15657–15662, 6 lines, risk `support`): Handles check cancel for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._restore_backup_to_test_database._check_cancel** (nested_function, lines 15657–15662, 6 lines, risk `support`): Handles check cancel for the backup feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_backup_history_window** (method, lines 15672–15853, 182 lines, risk `backup`): Show backup files and provide verify/restore-test actions.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._side_nav_items** (method, lines 15857–15888, 32 lines, risk `support`): Return visible main tabs as (tab_widget, title, icon).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._select_side_tab** (method, lines 15890–15903, 14 lines, risk `support`): Handles select side tab for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._select_side_tab** (method, lines 15890–15903, 14 lines, risk `support`): Handles select side tab for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._rebuild_side_nav** (method, lines 15905–16009, 105 lines, risk `ui_only`): Rebuild the modern left-side navigation from the currently visible notebook tabs.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._refresh_side_nav_selection** (method, lines 16011–16044, 34 lines, risk `ui_only`): Update sidebar button colors to match the selected notebook tab.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._refresh_modern_shell_theme** (method, lines 16046–16066, 21 lines, risk `ui_only`): Apply theme colors to the modern sidebar shell and rebuild nav labels/buttons.
@@ -485,36 +485,36 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._refresh_mode_toggle** (method, lines 16178–16209, 32 lines, risk `ui_only`): Update the Regular/7x7 segmented buttons after a mode change or theme change.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._refresh_header_theme** (method, lines 16211–16256, 46 lines, risk `ui_only`): Apply the current theme colors to the modern top header.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_header** (method, lines 16258–16426, 169 lines, risk `authentication`): Modern top header: app identity + fast Regular/7x7 switch + app actions.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._refresh_user_header** (method, lines 16428–16438, 11 lines, risk `authentication`): Refreshes refresh user header for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._refresh_user_header** (method, lines 16428–16438, 11 lines, risk `authentication`): Refreshes refresh user header for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account** (method, lines 16440–16485, 46 lines, risk `authentication`): Handles switch account for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog** (method, lines 16487–16774, 288 lines, risk `authentication`): App settings (local-only).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog._browse_reports** (nested_function, lines 16553–16563, 11 lines, risk `reports`): Handles browse reports for the reports feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog._save_auto_close_setting_only** (nested_function, lines 16599–16616, 18 lines, risk `support`): Saves save auto close setting only for the settings feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog._run_auto_close_now** (nested_function, lines 16618–16631, 14 lines, risk `support`): Handles run auto close now for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog._open_target** (nested_function, lines 16680–16690, 11 lines, risk `support`): Handles open target for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog._run_auto_close_now** (nested_function, lines 16618–16631, 14 lines, risk `support`): Handles run auto close now for the settings feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog._open_target** (nested_function, lines 16680–16690, 11 lines, risk `support`): Handles open target for the settings feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog._test_reports** (nested_function, lines 16706–16719, 14 lines, risk `reports`): Handles test reports for the reports feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog._save** (nested_function, lines 16721–16756, 36 lines, risk `reports`): Handles save for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_data_tab** (method, lines 16780–16846, 67 lines, risk `ui_only`): Builds build data tab for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._vscroll** (method, lines 16848–16854, 7 lines, risk `support`): Handles vscroll for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._month_label** (method, lines 16856–16857, 2 lines, risk `support`): Handles month label for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.goto_current_month** (method, lines 16858–16862, 5 lines, risk `support`): Handles goto current month for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.prev_month** (method, lines 16863–16866, 4 lines, risk `ui_only`): Handles prev month for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.next_month** (method, lines 16867–16870, 4 lines, risk `ui_only`): Handles next month for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog._save** (nested_function, lines 16721–16756, 36 lines, risk `reports`): Handles save for the settings feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_data_tab** (method, lines 16780–16846, 67 lines, risk `ui_only`): Builds build data tab for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._vscroll** (method, lines 16848–16854, 7 lines, risk `support`): Handles vscroll for the navigation feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._month_label** (method, lines 16856–16857, 2 lines, risk `support`): Handles month label for the navigation feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.goto_current_month** (method, lines 16858–16862, 5 lines, risk `support`): Handles goto current month for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.prev_month** (method, lines 16863–16866, 4 lines, risk `ui_only`): Handles prev month for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.next_month** (method, lines 16867–16870, 4 lines, risk `ui_only`): Handles next month for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._on_mousewheel_sync** (method, lines 16873–16902, 30 lines, risk `support`): Mouse wheel scroll should move both name_tree (left) and days_tree (right) together.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._resize_databank_columns** (method, lines 16904–16993, 90 lines, risk `ui_only`): Resize Data Bank columns responsively. Supports 'freeze panes' layout: - name_tree shows Client + Area (fixed, no horizontal scroll) - days_tree shows day columns with horizontal scroll
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_data_grid** (method, lines 16994–17264, 271 lines, risk `ui_only`): Refreshes refresh data grid for the data bank feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_data_grid._yview** (nested_function, lines 17051–17061, 11 lines, risk `support`): Handles yview for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_data_grid._sync_selection** (nested_function, lines 17076–17090, 15 lines, risk `ui_only`): Handles sync selection for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_data_grid._on_sel_left** (nested_function, lines 17092–17093, 2 lines, risk `support`): Handles on sel left for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_data_grid._on_sel_right** (nested_function, lines 17095–17096, 2 lines, risk `support`): Handles on sel right for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_data_grid._focus_right_from_left** (nested_function, lines 17105–17113, 9 lines, risk `ui_only`): Handles focus right from left for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_data_grid._focus_left_from_right** (nested_function, lines 17115–17123, 9 lines, risk `ui_only`): Handles focus left from right for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.on_day_double** (method, lines 17265–17340, 76 lines, risk `filesystem`): Handles on day double for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.on_day_double.save** (nested_function, lines 17289–17328, 40 lines, risk `ui_only`): Handles save for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.on_day_double._close_editor** (nested_function, lines 17331–17336, 6 lines, risk `support`): Handles close editor for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._start_edit** (method, lines 17342–17412, 71 lines, risk `filesystem`): Handles start edit for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._start_edit.save** (nested_function, lines 17363–17401, 39 lines, risk `ui_only`): Handles save for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._start_edit._close_editor** (nested_function, lines 17403–17408, 6 lines, risk `support`): Handles close editor for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_data_grid._yview** (nested_function, lines 17051–17061, 11 lines, risk `support`): Handles yview for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_data_grid._sync_selection** (nested_function, lines 17076–17090, 15 lines, risk `ui_only`): Handles sync selection for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_data_grid._on_sel_left** (nested_function, lines 17092–17093, 2 lines, risk `support`): Handles on sel left for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_data_grid._on_sel_right** (nested_function, lines 17095–17096, 2 lines, risk `support`): Handles on sel right for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_data_grid._focus_right_from_left** (nested_function, lines 17105–17113, 9 lines, risk `ui_only`): Handles focus right from left for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_data_grid._focus_left_from_right** (nested_function, lines 17115–17123, 9 lines, risk `ui_only`): Handles focus left from right for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.on_day_double** (method, lines 17265–17340, 76 lines, risk `filesystem`): Handles on day double for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.on_day_double.save** (nested_function, lines 17289–17328, 40 lines, risk `ui_only`): Handles save for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.on_day_double._close_editor** (nested_function, lines 17331–17336, 6 lines, risk `support`): Handles close editor for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._start_edit** (method, lines 17342–17412, 71 lines, risk `filesystem`): Handles start edit for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._start_edit.save** (nested_function, lines 17363–17401, 39 lines, risk `ui_only`): Handles save for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._start_edit._close_editor** (nested_function, lines 17403–17408, 6 lines, risk `support`): Handles close editor for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_reports_tab** (method, lines 17415–17752, 338 lines, risk `filesystem`): Builds build reports tab for the reports feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_reports_tab._sync_reports_range** (nested_function, lines 17438–17458, 21 lines, risk `reports`): Handles sync reports range for the reports feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_reports_tab._apply_report_range_from_fields** (nested_function, lines 17460–17485, 26 lines, risk `reports`): Handles apply report range from fields for the reports feature.
@@ -527,9 +527,9 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_report_generation_log** (method, lines 17865–17886, 22 lines, risk `filesystem`): Open the global Generate Report log file/folder.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.generate_pdf_selected** (method, lines 17888–18145, 258 lines, risk `reports`): Generate a client statement PDF without freezing the UI.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.generate_pdf_selected._effective_cycle_start** (nested_function, lines 17900–17944, 45 lines, risk `filesystem`): Normalize the current cycle start the same way the client screen and report body do. This prevents renewed clients from inheriting a stale earlier report start range.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.generate_pdf_selected._work** (nested_function, lines 18064–18124, 61 lines, risk `filesystem`): Handles work for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.generate_pdf_selected._done** (nested_function, lines 18126–18136, 11 lines, risk `support`): Handles done for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.generate_pdf_selected._err** (nested_function, lines 18138–18143, 6 lines, risk `support`): Handles err for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.generate_pdf_selected._work** (nested_function, lines 18064–18124, 61 lines, risk `filesystem`): Handles work for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.generate_pdf_selected._done** (nested_function, lines 18126–18136, 11 lines, risk `support`): Handles done for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.generate_pdf_selected._err** (nested_function, lines 18138–18143, 6 lines, risk `support`): Handles err for the reports feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._get_report_note_text** (method, lines 18148–18159, 12 lines, risk `reports`): Retrieves get report note text for the reports feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._set_report_note_text** (method, lines 18161–18190, 30 lines, risk `reports`): Updates set report note text for the reports feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_dated_note_for_client** (method, lines 18192–18231, 40 lines, risk `reports`): Saves save dated note for client for the clients feature.
@@ -539,48 +539,48 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_report_note_for_client** (method, lines 18319–18348, 30 lines, risk `reports`): Loads load report note for client for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_entry** (method, lines 18355–18396, 42 lines, risk `support`): Import payments from Excel. Supports: 1) Date-grid templates (first row has 'Client Name' + date columns like YYYY-MM-DD) via _import_from_excel_core() 2) One-day Daily Collection templates (Client | Payment | Reason), optionally grouped by [AREA] rows Notes: - Unknown clients are skipped (to avoid 
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_entry_worker** (method, lines 18398–18794, 397 lines, risk `support`): Worker for _import_from_excel_entry (runs off the Tk main thread).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_entry_worker._norm** (nested_function, lines 18457–18459, 3 lines, risk `filesystem`): Handles norm for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_entry_worker._looks_like_date_header** (nested_function, lines 18461–18473, 13 lines, risk `support`): Handles looks like date header for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_entry_worker._norm** (nested_function, lines 18457–18459, 3 lines, risk `filesystem`): Handles norm for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_entry_worker._looks_like_date_header** (nested_function, lines 18461–18473, 13 lines, risk `support`): Handles looks like date header for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_entry_worker._parse_sheet** (nested_function, lines 18572–18705, 134 lines, risk `filesystem`): Handles parse sheet for the utilities feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window** (method, lines 18796–19132, 337 lines, risk `filesystem`): Organized import log viewer (tabs + search + save/copy). Tabs: - All (chronological) - Inserted / Updated - Skipped Duplicates / Skipped Unknown / Skipped - Errors - Header/Info / Other
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._classify** (nested_function, lines 18824–18841, 18 lines, risk `support`): Handles classify for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._make_tab** (nested_function, lines 18901–18925, 25 lines, risk `ui_only`): Handles make tab for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._render** (nested_function, lines 18930–18950, 21 lines, risk `ui_only`): Handles render for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._current_cat** (nested_function, lines 18952–18957, 6 lines, risk `support`): Handles current cat for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._refresh** (nested_function, lines 18959–18972, 14 lines, risk `support`): Handles refresh for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._build_save_text** (nested_function, lines 18975–19003, 29 lines, risk `support`): Builds build save text for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._write_to** (nested_function, lines 19005–19016, 12 lines, risk `filesystem`): Saves write to for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._copy_visible** (nested_function, lines 19028–19035, 8 lines, risk `support`): Handles copy visible for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._copy_all** (nested_function, lines 19037–19043, 7 lines, risk `support`): Handles copy all for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._save_visible_as** (nested_function, lines 19045–19063, 19 lines, risk `ui_only`): Saves save visible as for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._save_all_as** (nested_function, lines 19065–19082, 18 lines, risk `ui_only`): Saves save all as for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._open_saved** (nested_function, lines 19084–19090, 7 lines, risk `support`): Handles open saved for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._open_data_folder** (nested_function, lines 19092–19096, 5 lines, risk `support`): Handles open data folder for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._classify** (nested_function, lines 18824–18841, 18 lines, risk `support`): Handles classify for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._make_tab** (nested_function, lines 18901–18925, 25 lines, risk `ui_only`): Handles make tab for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._render** (nested_function, lines 18930–18950, 21 lines, risk `ui_only`): Handles render for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._current_cat** (nested_function, lines 18952–18957, 6 lines, risk `support`): Handles current cat for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._refresh** (nested_function, lines 18959–18972, 14 lines, risk `support`): Handles refresh for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._build_save_text** (nested_function, lines 18975–19003, 29 lines, risk `support`): Builds build save text for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._write_to** (nested_function, lines 19005–19016, 12 lines, risk `filesystem`): Saves write to for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._copy_visible** (nested_function, lines 19028–19035, 8 lines, risk `support`): Handles copy visible for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._copy_all** (nested_function, lines 19037–19043, 7 lines, risk `support`): Handles copy all for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._save_visible_as** (nested_function, lines 19045–19063, 19 lines, risk `ui_only`): Saves save visible as for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._save_all_as** (nested_function, lines 19065–19082, 18 lines, risk `ui_only`): Saves save all as for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._open_saved** (nested_function, lines 19084–19090, 7 lines, risk `support`): Handles open saved for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_import_log_window._open_data_folder** (nested_function, lines 19092–19096, 5 lines, risk `support`): Handles open data folder for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch** (method, lines 19134–19553, 420 lines, risk `filesystem`): Import One-Day Encoder exports (.jsonl or .csv) into the DB. - Dedupe by record_id (preferred) or a content hash fallback - Unknown clients are skipped (no auto-create) - Advances are stored via description tag: [ADV:s..e; s..e; ...] (supports multiple ranges)
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch._canon_lt** (nested_function, lines 19155–19159, 5 lines, risk `filesystem`): Handles canon lt for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch._is_date** (nested_function, lines 19161–19163, 3 lines, risk `support`): Handles is date for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch._adv_tag_from_ranges** (nested_function, lines 19165–19178, 14 lines, risk `support`): Handles adv tag from ranges for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch._ilog** (nested_function, lines 19227–19231, 5 lines, risk `support`): Handles ilog for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch._canon_lt** (nested_function, lines 19155–19159, 5 lines, risk `filesystem`): Handles canon lt for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch._is_date** (nested_function, lines 19161–19163, 3 lines, risk `support`): Handles is date for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch._adv_tag_from_ranges** (nested_function, lines 19165–19178, 14 lines, risk `support`): Handles adv tag from ranges for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch._ilog** (nested_function, lines 19227–19231, 5 lines, risk `support`): Handles ilog for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_core** (method, lines 19555–19720, 166 lines, risk `database_read`): Auto-detect payments and reasons from Excel. Rules: " First row = headers. Must include 'Client Name' and at least one date column. " A date column can be an Excel date/datetime or a string 'YYYY-MM-DD'. " If a cell under a date column is numeric (or numeric-looking text): that's the amount. " If a 
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_core._parse_date_header** (nested_function, lines 19574–19585, 12 lines, risk `support`): Handles parse date header for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_core._to_number** (nested_function, lines 19587–19603, 17 lines, risk `filesystem`): Handles to number for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_core._is_text_reason** (nested_function, lines 19605–19612, 8 lines, risk `support`): Handles is text reason for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_core._to_number** (nested_function, lines 19587–19603, 17 lines, risk `filesystem`): Handles to number for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_core._is_text_reason** (nested_function, lines 19605–19612, 8 lines, risk `support`): Handles is text reason for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_clients_tab** (method, lines 19722–19877, 156 lines, risk `ui_only`): Builds build clients tab for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._update_toolbar_states** (method, lines 19879–19886, 8 lines, risk `ui_only`): Updates update toolbar states for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._update_toolbar_states** (method, lines 19879–19886, 8 lines, risk `ui_only`): Updates update toolbar states for the navigation feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._refresh_area_dropdowns** (method, lines 19891–19907, 17 lines, risk `ui_only`): Refresh any area dropdowns (best-effort).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager** (method, lines 19909–20070, 162 lines, risk `ui_only`): Open the Areas manager window (create/rename/delete areas).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager._refresh** (nested_function, lines 19955–19967, 13 lines, risk `support`): Handles refresh for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager._selected** (nested_function, lines 19969–19976, 8 lines, risk `support`): Handles selected for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager._on_select** (nested_function, lines 19978–19985, 8 lines, risk `support`): Handles on select for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager.add_area** (nested_function, lines 19992–20002, 11 lines, risk `support`): Handles add area for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager.rename_area** (nested_function, lines 20004–20023, 20 lines, risk `support`): Handles rename area for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager.delete_area** (nested_function, lines 20025–20047, 23 lines, risk `support`): Removes delete area for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager._on_close** (nested_function, lines 20056–20067, 12 lines, risk `support`): Handles on close for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager._refresh** (nested_function, lines 19955–19967, 13 lines, risk `support`): Handles refresh for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager._selected** (nested_function, lines 19969–19976, 8 lines, risk `support`): Handles selected for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager._on_select** (nested_function, lines 19978–19985, 8 lines, risk `support`): Handles on select for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager.add_area** (nested_function, lines 19992–20002, 11 lines, risk `support`): Handles add area for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager.rename_area** (nested_function, lines 20004–20023, 20 lines, risk `support`): Handles rename area for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager.delete_area** (nested_function, lines 20025–20047, 23 lines, risk `support`): Removes delete area for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager._on_close** (nested_function, lines 20056–20067, 12 lines, risk `support`): Handles on close for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.set_area_for_selected_clients** (method, lines 20072–20123, 52 lines, risk `reports`): Set one area for all selected clients in the Clients tab (current mode only).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._build_collectors_tab** (function, lines 20126–20472, 347 lines, risk `ui_only`): Collector's Route UI (organized + obvious selection + inline edit). Adds: - Obvious selection column (radio in single-select, checkbox in multi-select) - Per-row Actions column (View / Edit / Delete) - Multi-select bulk bar (Delete / Export / Clear) - Inline edit in the right-side panel (name + area
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._build_collectors_tab._set_sort** (nested_function, lines 20250–20260, 11 lines, risk `support`): Updates set sort for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._build_collectors_tab._popup** (nested_function, lines 20323–20338, 16 lines, risk `ui_only`): Handles popup for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._build_collectors_tab._on_search** (nested_function, lines 20454–20458, 5 lines, risk `support`): Handles on search for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._build_collectors_tab._set_sort** (nested_function, lines 20250–20260, 11 lines, risk `support`): Updates set sort for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._build_collectors_tab._popup** (nested_function, lines 20323–20338, 16 lines, risk `ui_only`): Handles popup for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._build_collectors_tab._on_search** (nested_function, lines 20454–20458, 5 lines, risk `support`): Handles on search for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_name_from_values** (function, lines 20476–20519, 44 lines, risk `ui_only`): Return the collector name from a Treeview row values tuple. Backwards compatible with older layouts: - Old layout: first value is the collector name. - New layout: first value is a select marker (radio/checkbox/bullet), second is the collector name.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_multi_toggle** (function, lines 20539–20561, 23 lines, risk `support`): Handles on collectors multi toggle for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_tree_click** (function, lines 20565–20656, 92 lines, risk `filesystem`): Handle clicks in Sel + Actions columns.
@@ -604,21 +604,21 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_collector_route_daily_ledger** (nested_function, lines 21410–21620, 211 lines, risk `filesystem`): Print the SELECTED collector's route using the same 3-column Daily Collection Ledger layout as `print_full_daily_ledger`, but ONLY for that collector's areas (no 'arrange all areas' step). - Uses selection() first (more reliable than focus()). - Reads collectors.json in multiple historical schemas. 
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger** (nested_function, lines 21622–23986, 2365 lines, risk `financial_calculation`): Print a 3-column DAILY COLLECTION LEDGER with a small UI to change: - Ledger Date - Paper size and orientation - Areas order (arrange ALL areas)
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._fetch_clients_for** (nested_function, lines 21667–21674, 8 lines, risk `support`): Loads fetch clients for for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._s** (nested_function, lines 21697–21697, 1 lines, risk `support`): Handles s for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._options_dialog** (nested_function, lines 21702–21763, 62 lines, risk `ui_only`): Handles options dialog for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._options_dialog._ok** (nested_function, lines 21741–21743, 3 lines, risk `support`): Handles ok for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._options_dialog._cancel** (nested_function, lines 21744–21746, 3 lines, risk `support`): Handles cancel for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._arrange_areas_dialog** (nested_function, lines 21766–21839, 74 lines, risk `reports`): Handles arrange areas dialog for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._arrange_areas_dialog._move** (nested_function, lines 21799–21812, 14 lines, risk `ui_only`): Handles move for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._arrange_areas_dialog._ok** (nested_function, lines 21821–21822, 2 lines, risk `support`): Handles ok for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._arrange_areas_dialog._cancel** (nested_function, lines 21823–21824, 2 lines, risk `support`): Handles cancel for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._wrap_text_to_width** (nested_function, lines 22848–22875, 28 lines, risk `support`): Handles wrap text to width for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._wrap_text_to_width._fits** (nested_function, lines 22853–22853, 1 lines, risk `support`): Handles fits for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._draw_page_number** (nested_function, lines 22877–22883, 7 lines, risk `support`): Handles draw page number for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._draw_final_footer** (nested_function, lines 22885–22900, 16 lines, risk `support`): Handles draw final footer for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._draw_global_header** (nested_function, lines 22901–22946, 46 lines, risk `support`): Handles draw global header for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger.new_page_headers** (nested_function, lines 22965–22995, 31 lines, risk `support`): Handles new page headers for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger.ensure_space** (nested_function, lines 23001–23019, 19 lines, risk `support`): Handles ensure space for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._s** (nested_function, lines 21697–21697, 1 lines, risk `support`): Handles s for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._options_dialog** (nested_function, lines 21702–21763, 62 lines, risk `ui_only`): Handles options dialog for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._options_dialog._ok** (nested_function, lines 21741–21743, 3 lines, risk `support`): Handles ok for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._options_dialog._cancel** (nested_function, lines 21744–21746, 3 lines, risk `support`): Handles cancel for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._arrange_areas_dialog** (nested_function, lines 21766–21839, 74 lines, risk `reports`): Handles arrange areas dialog for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._arrange_areas_dialog._move** (nested_function, lines 21799–21812, 14 lines, risk `ui_only`): Handles move for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._arrange_areas_dialog._ok** (nested_function, lines 21821–21822, 2 lines, risk `support`): Handles ok for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._arrange_areas_dialog._cancel** (nested_function, lines 21823–21824, 2 lines, risk `support`): Handles cancel for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._wrap_text_to_width** (nested_function, lines 22848–22875, 28 lines, risk `support`): Handles wrap text to width for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._wrap_text_to_width._fits** (nested_function, lines 22853–22853, 1 lines, risk `support`): Handles fits for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._draw_page_number** (nested_function, lines 22877–22883, 7 lines, risk `support`): Handles draw page number for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._draw_final_footer** (nested_function, lines 22885–22900, 16 lines, risk `support`): Handles draw final footer for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._draw_global_header** (nested_function, lines 22901–22946, 46 lines, risk `support`): Handles draw global header for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger.new_page_headers** (nested_function, lines 22965–22995, 31 lines, risk `support`): Handles new page headers for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger.ensure_space** (nested_function, lines 23001–23019, 19 lines, risk `support`): Handles ensure space for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina__client_schedule_anchor** (function, lines 23997–24010, 14 lines, risk `support`): Handles spina client schedule anchor for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina__client_due_meta** (function, lines 24013–24077, 65 lines, risk `support`): Return (day_due_label, due_today_bool) using stored schedule fields when present.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.refresh_clients** (function, lines 24079–24341, 263 lines, risk `filesystem`): Refresh the Clients tab table from the database, honoring the search box.
@@ -629,40 +629,40 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.refresh_clients.on_client_edit** (nested_function, lines 24315–24341, 27 lines, risk `reports`): Handles on client edit for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients** (function, lines 24347–26334, 1988 lines, risk `filesystem`): Auto-suggest linking when a matching client exists in the other loan type. - YES links both rows (same person_uid). - NO sets link_opt_out=1 for BOTH rows so you won't be asked again from either side, unless you manually link later.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.link_selected_client** (nested_function, lines 24435–24558, 124 lines, risk `ui_only`): Manually link the selected client to another loan type record.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.link_selected_client.do_link** (nested_function, lines 24502–24546, 45 lines, risk `support`): Handles do link for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.link_selected_client.cancel** (nested_function, lines 24548–24549, 2 lines, risk `support`): Handles cancel for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.link_selected_client.do_link** (nested_function, lines 24502–24546, 45 lines, risk `support`): Handles do link for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.link_selected_client.cancel** (nested_function, lines 24548–24549, 2 lines, risk `support`): Handles cancel for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.unlink_selected_client** (nested_function, lines 24560–24589, 30 lines, risk `support`): Unlink the selected client (clears person_uid for the whole link group).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.import_missing** (nested_function, lines 24591–24594, 4 lines, risk `reports`): Handles import missing for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.import_from_excel** (nested_function, lines 24596–24657, 62 lines, risk `database_read`): Handles import from excel for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.import_missing** (nested_function, lines 24591–24594, 4 lines, risk `reports`): Handles import missing for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.import_from_excel** (nested_function, lines 24596–24657, 62 lines, risk `database_read`): Handles import from excel for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.export_monthly_template** (nested_function, lines 24659–24712, 54 lines, risk `support`): Export an Excel template for the current visible month (view-only data entry). Columns: Client Name + one column per date (YYYY-MM-DD). Users will fill payments in Excel and use 'Import from Excel' to load into the app.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.import_clients_from_excel** (nested_function, lines 24714–25028, 315 lines, risk `filesystem`): Import ONLY client details from an Excel file into the Clients DB. Multi-loan-type safe: - If the sheet has a "Loan Type" column, it imports per-row (Regular / 7x7). - Otherwise, it imports into the CURRENT view mode (top selector).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.import_clients_from_excel._norm_lt** (nested_function, lines 24735–24743, 9 lines, risk `filesystem`): Handles norm lt for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.import_clients_from_excel.to_date** (nested_function, lines 24747–24762, 16 lines, risk `support`): Handles to date for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.import_clients_from_excel.to_float** (nested_function, lines 24764–24770, 7 lines, risk `filesystem`): Handles to float for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.import_clients_from_excel._norm_lt** (nested_function, lines 24735–24743, 9 lines, risk `filesystem`): Handles norm lt for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.import_clients_from_excel.to_date** (nested_function, lines 24747–24762, 16 lines, risk `support`): Handles to date for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.import_clients_from_excel.to_float** (nested_function, lines 24764–24770, 7 lines, risk `filesystem`): Handles to float for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.export_clients_template** (nested_function, lines 25512–25546, 35 lines, risk `support`): Export a blank Excel template for importing client details. Columns: Client Name | Area | Principal | Date Released | Due Date
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.export_range_template** (nested_function, lines 25548–25671, 124 lines, risk `ui_only`): Export an Excel template for payments over a chosen date range. Presets: This Month / This Year / Custom (YYYY-MM-DD).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.export_range_template.on_sel** (nested_function, lines 25583–25585, 3 lines, risk `ui_only`): Handles on sel for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.export_range_template._ok** (nested_function, lines 25591–25591, 1 lines, risk `support`): Handles ok for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.export_range_template._cancel** (nested_function, lines 25592–25592, 1 lines, risk `support`): Handles cancel for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.export_range_template.on_sel** (nested_function, lines 25583–25585, 3 lines, risk `ui_only`): Handles on sel for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.export_range_template._ok** (nested_function, lines 25591–25591, 1 lines, risk `support`): Handles ok for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.export_range_template._cancel** (nested_function, lines 25592–25592, 1 lines, risk `support`): Handles cancel for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.attach_direct_integration** (nested_function, lines 25673–26112, 440 lines, risk `database_write`): Minimal integration after removing undo/redo/backups. - Ensures a DB is attached - Wraps Excel import with a safe error dialog (if present) - Triggers initial UI refreshes (if methods exist)
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients._attempt_attach_on_run** (nested_function, lines 26115–26126, 12 lines, risk `reports`): Handles attempt attach on run for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.push** (nested_function, lines 26153–26162, 10 lines, risk `support`): Handles push for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.push.__init__** (nested_function, lines 26157–26158, 2 lines, risk `support`): Handles init for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.push.push** (nested_function, lines 26160–26162, 3 lines, risk `support`): Handles push for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients._attempt_attach_on_run** (nested_function, lines 26115–26126, 12 lines, risk `reports`): Handles attempt attach on run for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.push** (nested_function, lines 26153–26162, 10 lines, risk `support`): Handles push for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.push.__init__** (nested_function, lines 26157–26158, 2 lines, risk `support`): Handles init for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.push.push** (nested_function, lines 26160–26162, 3 lines, risk `support`): Handles push for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.attach_refresh_all** (nested_function, lines 26164–26189, 26 lines, risk `support`): Attach a refresh_all method to app_obj that calls common updating hooks if they exist.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.attach_refresh_all.refresh_all** (nested_function, lines 26166–26187, 22 lines, risk `reports`): Refreshes refresh all for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.attach_refresh_all.refresh_all** (nested_function, lines 26166–26187, 22 lines, risk `reports`): Refreshes refresh all for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.safe_excel_import** (nested_function, lines 26191–26224, 34 lines, risk `support`): import_fn should accept a file path and return a list of dicts or raise an error.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.safe_excel_import.wrapper** (nested_function, lines 26196–26222, 27 lines, risk `reports`): Handles wrapper for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.safe_excel_import.wrapper** (nested_function, lines 26196–26222, 27 lines, risk `reports`): Handles wrapper for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.auto_attach_enhancements** (nested_function, lines 26226–26247, 22 lines, risk `reports`): Search module globals for an App-like object and attach enhancements. Call this function at the bottom of the file or from interactive session once the app is created.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.export_range_template** (function, lines 26343–26521, 179 lines, risk `ui_only`): Export an Excel template for payments over a chosen date range. Presets: This Month / This Year / Custom (YYYY-MM-DD).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.export_range_template._today_parts** (nested_function, lines 26383–26385, 3 lines, risk `support`): Handles today parts for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.export_range_template._apply_preset_fields** (nested_function, lines 26387–26406, 20 lines, risk `ui_only`): Handles apply preset fields for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.export_range_template.on_ok** (nested_function, lines 26414–26428, 15 lines, risk `support`): Handles on ok for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.export_range_template.on_cancel** (nested_function, lines 26430–26431, 2 lines, risk `support`): Handles on cancel for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.export_range_template._today_parts** (nested_function, lines 26383–26385, 3 lines, risk `support`): Handles today parts for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.export_range_template._apply_preset_fields** (nested_function, lines 26387–26406, 20 lines, risk `ui_only`): Handles apply preset fields for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.export_range_template.on_ok** (nested_function, lines 26414–26428, 15 lines, risk `support`): Handles on ok for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.export_range_template.on_cancel** (nested_function, lines 26430–26431, 2 lines, risk `support`): Handles on cancel for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.import_from_excel_with_reasons** (function, lines 26527–26675, 149 lines, risk `support`): Import the Excel 'range template' where columns are: Client Name | 2025-10-01 | 2025-10-01 Reason | 2025-10-02 | 2025-10-02 Reason | ... Saves both Amount and Reason for each date.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.import_from_excel_with_reasons._write** (nested_function, lines 26608–26675, 68 lines, risk `database_write`): Handles write for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.import_from_excel_with_reasons._write** (nested_function, lines 26608–26675, 68 lines, risk `database_write`): Handles write for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._parse_adv_range_any** (function, lines 26689–26706, 18 lines, risk `support`): Handles parse adv range any for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._daterange_inclusive** (function, lines 26708–26712, 5 lines, risk `support`): Handles daterange inclusive for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._daterange_inclusive** (function, lines 26708–26712, 5 lines, risk `support`): Handles daterange inclusive for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._parse_reason_color_token** (function, lines 26732–26755, 24 lines, risk `support`): Extract a [RC:...] token (hex or a color-name) from the description. Returns: (color_hex or "", desc_without_token)
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._parse_reason_color_token_meta** (function, lines 26758–26831, 74 lines, risk `support`): Extract [RC:...] token plus optional window meta from the description. Supported token payloads (inside the brackets): - '#RRGGBB' - 'red' / 'green' / etc - '#RRGGBB;D:3' -> days=3 (inclusive, starting from the reason's date) - '#RRGGBB;UNTIL:YYYY-MM-DD' -> until (inclusive) - 'red;D:3' / 'red;UNTIL
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._strip_adv_tags** (function, lines 26835–26843, 9 lines, risk `support`): Remove [ADV:...] tags from a description string.
@@ -672,118 +672,118 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._normalize_client_name_for_lookup** (function, lines 26886–26908, 23 lines, risk `support`): Normalize a display name back to the DB name (Collector Route / PDFs). Some PDF layouts append markers like "(7x7)" to the displayed name to avoid duplicates. Those markers must be stripped before looking up transactions/reasons/ADV in SQLite. We also trim and normalize whitespace.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._get_reason_color_for_client_date** (function, lines 26910–27023, 114 lines, risk `filesystem`): Return the active reason color for this client on this day (Collector Route only). Behavior: - If the reason token has no window (no D/UNTIL), color applies ONLY on the reason's date. - If token has D:n, color applies for n days starting from the reason's date. - If token has UNTIL:YYYY-MM-DD, color
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collect_day_flags_for_month** (function, lines 27027–27171, 145 lines, risk `support`): txns: iterable of dicts/rows having keys: 'date'|'d', 'payment'|'amt', 'description'|'desc' Returns dict: day(date)-> {'adv':bool, 'adv_paid_on':set(str), 'reason':str or None, 'paid':float} Reporting rules: - ADV is marked ONLY on the COVERED days (NOT on the payment date). - Covered days also stor
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collect_day_flags_for_month._gv** (nested_function, lines 27036–27047, 12 lines, risk `support`): Handles gv for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collect_day_flags_for_month._row_date** (nested_function, lines 27049–27059, 11 lines, risk `support`): Handles row date for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collect_day_flags_for_month._gv** (nested_function, lines 27036–27047, 12 lines, risk `support`): Handles gv for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collect_day_flags_for_month._row_date** (nested_function, lines 27049–27059, 11 lines, risk `support`): Handles row date for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collect_day_flags_for_month._adv_ranges_from_desc** (nested_function, lines 27061–27092, 32 lines, risk `support`): Return list of (start_date, end_date) as date objects.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_record_report_generation** (function, lines 27182–27323, 142 lines, risk `filesystem`): Increment and return the daily Generate Report counter. Stored in: - data/report_generation_counts.json (summary counts) - data/report_generation_logs.csv (Excel-friendly full log) - data/report_generation_logs.jsonl (append-only full log) Counts: - total: all reports generated today - per client+lo
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf** (function, lines 27327–28511, 1185 lines, risk `financial_calculation`): Override: Client SOA PDF that expands ADV ranges to daily 'Adv' markers in the Payment column, and prints other reasons as text in Payment. Never prints long notes in the Date column. Layout: 3 columns per page, 11 rows per column.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._display_loan_type_label** (nested_function, lines 27346–27353, 8 lines, risk `support`): Handles display loan type label for the loans feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._gv** (nested_function, lines 27385–27392, 8 lines, risk `support`): Handles gv for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._gv** (nested_function, lines 27385–27392, 8 lines, risk `support`): Handles gv for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._per_day_effective_payments** (nested_function, lines 27467–27499, 33 lines, risk `support`): Return ordered list of (date, effective_payment) using the same rule as totals: last non-zero wins; 0 does not overwrite a prior non-zero; ignore ADV-only marker rows.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._safe** (nested_function, lines 27740–27763, 24 lines, risk `filesystem`): Handles safe for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._hdr_php** (nested_function, lines 27821–27825, 5 lines, risk `support`): Handles hdr php for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._draw_kv** (nested_function, lines 27876–27891, 16 lines, risk `support`): Handles draw kv for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._draw_pair** (nested_function, lines 27893–27898, 6 lines, risk `support`): Handles draw pair for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._safe** (nested_function, lines 27740–27763, 24 lines, risk `filesystem`): Handles safe for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._hdr_php** (nested_function, lines 27821–27825, 5 lines, risk `support`): Handles hdr php for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._draw_kv** (nested_function, lines 27876–27891, 16 lines, risk `support`): Handles draw kv for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._draw_pair** (nested_function, lines 27893–27898, 6 lines, risk `support`): Handles draw pair for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._draw_also_footer** (nested_function, lines 27957–27979, 23 lines, risk `backup`): Draw small footer note (subtle) on the current page.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._php** (nested_function, lines 27989–27993, 5 lines, risk `support`): Handles php for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._page_no_draw** (nested_function, lines 28121–28125, 5 lines, risk `support`): Handles page no draw for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._php** (nested_function, lines 27989–27993, 5 lines, risk `support`): Handles php for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._page_no_draw** (nested_function, lines 28121–28125, 5 lines, risk `support`): Handles page no draw for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._draw_official_report_footer** (nested_function, lines 28127–28177, 51 lines, risk `backup`): Draw a small, subtle official-version label and daily Generate Report counter at the bottom. This footer is intentionally NOT styled like the big notes section. It is only a quiet authenticity/count marker near the bottom of the page.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._payment_text_from_flag** (nested_function, lines 28206–28238, 33 lines, risk `support`): Handles payment text from flag for the payments feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._build_month_entries** (nested_function, lines 28240–28265, 26 lines, risk `support`): Builds build month entries for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._draw_month_block** (nested_function, lines 28267–28316, 50 lines, risk `support`): Handles draw month block for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._build_month_entries** (nested_function, lines 28240–28265, 26 lines, risk `support`): Builds build month entries for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._draw_month_block** (nested_function, lines 28267–28316, 50 lines, risk `support`): Handles draw month block for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._estimate_note_block_h** (nested_function, lines 28411–28434, 24 lines, risk `support`): Handles estimate note block h for the notes feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._ensure_prefs_file** (function, lines 28518–28527, 10 lines, risk `reports`): Handles ensure prefs file for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__norm_lt_value** (function, lines 28537–28545, 9 lines, risk `filesystem`): Handles app norm lt value for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__other_lt** (function, lines 28547–28549, 3 lines, risk `support`): Handles app other lt for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._ensure_prefs_file** (function, lines 28518–28527, 10 lines, risk `reports`): Handles ensure prefs file for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__norm_lt_value** (function, lines 28537–28545, 9 lines, risk `filesystem`): Handles app norm lt value for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__other_lt** (function, lines 28547–28549, 3 lines, risk `support`): Handles app other lt for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__get_selected_client_name** (function, lines 28551–28561, 11 lines, risk `support`): Handles app get selected client name for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form** (function, lines 28563–29211, 649 lines, risk `ui_only`): Handles app client form for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._flex_due_options** (nested_function, lines 28626–28683, 58 lines, risk `support`): Handles flex due options for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._flex_due_label_from_code** (nested_function, lines 28692–28701, 10 lines, risk `support`): Handles flex due label from code for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._flex_due_code_from_choice** (nested_function, lines 28709–28722, 14 lines, risk `support`): Handles flex due code from choice for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._current_anchor_for_form** (nested_function, lines 28736–28744, 9 lines, risk `support`): Handles current anchor for form for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._prime_due_defaults** (nested_function, lines 28746–28765, 20 lines, risk `support`): Handles prime due defaults for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form.row** (nested_function, lines 28774–28776, 3 lines, risk `ui_only`): Handles row for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._dom_seed_date** (nested_function, lines 28808–28823, 16 lines, risk `support`): Handles dom seed date for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._pick_dom** (nested_function, lines 28825–28837, 13 lines, risk `support`): Handles pick dom for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._toggle_new_until** (nested_function, lines 28914–28923, 10 lines, risk `ui_only`): Handles toggle new until for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._toggle_due_widgets** (nested_function, lines 28925–28945, 21 lines, risk `ui_only`): Handles toggle due widgets for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._toggle_paymode_other** (nested_function, lines 28947–28960, 14 lines, risk `ui_only`): Handles toggle paymode other for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._compute_dates** (nested_function, lines 28962–28987, 26 lines, risk `financial_calculation`): Handles compute dates for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._flex_due_options** (nested_function, lines 28626–28683, 58 lines, risk `support`): Handles flex due options for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._flex_due_label_from_code** (nested_function, lines 28692–28701, 10 lines, risk `support`): Handles flex due label from code for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._flex_due_code_from_choice** (nested_function, lines 28709–28722, 14 lines, risk `support`): Handles flex due code from choice for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._current_anchor_for_form** (nested_function, lines 28736–28744, 9 lines, risk `support`): Handles current anchor for form for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._prime_due_defaults** (nested_function, lines 28746–28765, 20 lines, risk `support`): Handles prime due defaults for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form.row** (nested_function, lines 28774–28776, 3 lines, risk `ui_only`): Handles row for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._dom_seed_date** (nested_function, lines 28808–28823, 16 lines, risk `support`): Handles dom seed date for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._pick_dom** (nested_function, lines 28825–28837, 13 lines, risk `support`): Handles pick dom for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._toggle_new_until** (nested_function, lines 28914–28923, 10 lines, risk `ui_only`): Handles toggle new until for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._toggle_due_widgets** (nested_function, lines 28925–28945, 21 lines, risk `ui_only`): Handles toggle due widgets for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._toggle_paymode_other** (nested_function, lines 28947–28960, 14 lines, risk `ui_only`): Handles toggle paymode other for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._compute_dates** (nested_function, lines 28962–28987, 26 lines, risk `financial_calculation`): Handles compute dates for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form._validate_date** (nested_function, lines 29011–29016, 6 lines, risk `support`): Validates validate date for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form.save** (nested_function, lines 29018–29122, 105 lines, risk `financial_calculation`): Handles save for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form.cancel** (nested_function, lines 29124–29129, 6 lines, risk `support`): Handles cancel for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form.save** (nested_function, lines 29018–29122, 105 lines, risk `financial_calculation`): Handles save for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__client_form.cancel** (nested_function, lines 29124–29129, 6 lines, risk `support`): Handles cancel for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_refresh_clients** (function, lines 29216–29365, 150 lines, risk `financial_calculation`): Handles app refresh clients for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_schedule_refresh_clients** (function, lines 29367–29391, 25 lines, risk `ui_only`): Debounce Clients search so refresh doesn't run on every keystroke.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_add_client_dialog** (function, lines 29393–29436, 44 lines, risk `reports`): Handles app add client dialog for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_on_client_edit** (function, lines 29438–29487, 50 lines, risk `reports`): Handles app on client edit for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_delete_client_selected** (function, lines 29489–29511, 23 lines, risk `backup`): Handles app delete client selected for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog** (function, lines 29513–30026, 514 lines, risk `ui_only`): Handles app open client history dialog for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._coerce_rows** (nested_function, lines 29538–29548, 11 lines, risk `support`): Handles coerce rows for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._ts_key** (nested_function, lines 29550–29551, 2 lines, risk `support`): Handles ts key for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._safe_json_load** (nested_function, lines 29553–29559, 7 lines, risk `support`): Handles safe json load for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._pretty** (nested_function, lines 29561–29576, 16 lines, risk `support`): Handles pretty for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._fmt_scalar** (nested_function, lines 29578–29585, 8 lines, risk `filesystem`): Handles fmt scalar for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._diff_pairs** (nested_function, lines 29587–29606, 20 lines, risk `support`): Handles diff pairs for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._diff_summary** (nested_function, lines 29608–29618, 11 lines, risk `support`): Handles diff summary for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._mk_ro_text** (nested_function, lines 29744–29755, 12 lines, risk `ui_only`): Handles mk ro text for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._set_ro** (nested_function, lines 29766–29770, 5 lines, risk `ui_only`): Updates set ro for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._render_tab1** (nested_function, lines 29772–29811, 40 lines, risk `ui_only`): Handles render tab1 for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._on_sel1** (nested_function, lines 29813–29830, 18 lines, risk `support`): Handles on sel1 for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._coerce_rows** (nested_function, lines 29538–29548, 11 lines, risk `support`): Handles coerce rows for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._ts_key** (nested_function, lines 29550–29551, 2 lines, risk `support`): Handles ts key for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._safe_json_load** (nested_function, lines 29553–29559, 7 lines, risk `support`): Handles safe json load for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._pretty** (nested_function, lines 29561–29576, 16 lines, risk `support`): Handles pretty for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._fmt_scalar** (nested_function, lines 29578–29585, 8 lines, risk `filesystem`): Handles fmt scalar for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._diff_pairs** (nested_function, lines 29587–29606, 20 lines, risk `support`): Handles diff pairs for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._diff_summary** (nested_function, lines 29608–29618, 11 lines, risk `support`): Handles diff summary for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._mk_ro_text** (nested_function, lines 29744–29755, 12 lines, risk `ui_only`): Handles mk ro text for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._set_ro** (nested_function, lines 29766–29770, 5 lines, risk `ui_only`): Updates set ro for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._render_tab1** (nested_function, lines 29772–29811, 40 lines, risk `ui_only`): Handles render tab1 for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._on_sel1** (nested_function, lines 29813–29830, 18 lines, risk `support`): Handles on sel1 for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._in_date_range** (nested_function, lines 29879–29889, 11 lines, risk `support`): Handles in date range for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._render_tab2** (nested_function, lines 29891–29917, 27 lines, risk `ui_only`): Handles render tab2 for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._render_tab3** (nested_function, lines 29979–30011, 33 lines, risk `ui_only`): Handles render tab3 for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._on_sel3** (nested_function, lines 30013–30022, 10 lines, risk `support`): Handles on sel3 for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._render_tab2** (nested_function, lines 29891–29917, 27 lines, risk `ui_only`): Handles render tab2 for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._render_tab3** (nested_function, lines 29979–30011, 33 lines, risk `ui_only`): Handles render tab3 for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_client_history_dialog._on_sel3** (nested_function, lines 30013–30022, 10 lines, risk `support`): Handles on sel3 for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client** (function, lines 30029–30150, 122 lines, risk `ui_only`): Handles app link selected client for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.refresh_list** (nested_function, lines 30084–30089, 6 lines, risk `support`): Refreshes refresh list for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.do_link** (nested_function, lines 30097–30139, 43 lines, risk `support`): Handles do link for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.refresh_list** (nested_function, lines 30084–30089, 6 lines, risk `support`): Refreshes refresh list for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.do_link** (nested_function, lines 30097–30139, 43 lines, risk `support`): Handles do link for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_unlink_selected_client** (function, lines 30152–30173, 22 lines, risk `support`): Handles app unlink selected client for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app__maybe_suggest_link_clients** (function, lines 30175–30236, 62 lines, risk `support`): Handles app maybe suggest link clients for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_export_clients_template** (function, lines 30238–30262, 25 lines, risk `support`): Handles app export clients template for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_import_clients_from_excel** (function, lines 30264–30377, 114 lines, risk `reports`): Handles app import clients from excel for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_import_clients_from_excel.col_idx** (nested_function, lines 30293–30297, 5 lines, risk `support`): Handles col idx for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_import_missing** (function, lines 30379–30390, 12 lines, risk `support`): Handles app import missing for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_import_clients_from_excel.col_idx** (nested_function, lines 30293–30297, 5 lines, risk `support`): Handles col idx for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_import_missing** (function, lines 30379–30390, 12 lines, risk `support`): Handles app import missing for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog** (class, lines 30393–30910, 518 lines, risk `container`): Renew (reloan) dialog. Auto-computes **Released Cash** using: released_cash = max(0, new_principal - remaining_due) remaining_due is based on the current cycle: Regular: remaining_due = max(0, total_to_pay - paid_total) 7x7: remaining_due = remaining_principal + unpaid_interest_arrears You can still
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog.__init__** (method, lines 30405–30414, 10 lines, risk `support`): Handles init for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog.__init__** (method, lines 30405–30414, 10 lines, risk `support`): Handles init for the loans feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._parse_float** (method, lines 30416–30427, 12 lines, risk `filesystem`): Handles parse float for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._valid_ymd** (method, lines 30429–30437, 9 lines, risk `support`): Handles valid ymd for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._valid_ymd** (method, lines 30429–30437, 9 lines, risk `support`): Handles valid ymd for the loans feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._compute_stats** (method, lines 30439–30697, 259 lines, risk `financial_calculation`): Return dict with paid/remaining/suggested released cash (best-effort). Regular: remaining_due = max(0, total_to_pay - paid_total) 7x7: remaining_due = remaining_principal + unpaid_interest_arrears (arrears must be cleared first). Uses the same rule as the SOA: - Daily interest = ceil(remaining_princ
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._set_manual_rc** (method, lines 30699–30705, 7 lines, risk `ui_only`): Updates set manual rc for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._set_auto_rc** (method, lines 30707–30714, 8 lines, risk `ui_only`): Updates set auto rc for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._recompute** (method, lines 30716–30747, 32 lines, risk `ui_only`): Handles recompute for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog.body** (method, lines 30749–30841, 93 lines, risk `financial_calculation`): Handles body for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog.body._row** (nested_function, lines 30754–30757, 4 lines, risk `ui_only`): Handles row for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._set_manual_rc** (method, lines 30699–30705, 7 lines, risk `ui_only`): Updates set manual rc for the loans feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._set_auto_rc** (method, lines 30707–30714, 8 lines, risk `ui_only`): Updates set auto rc for the loans feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._recompute** (method, lines 30716–30747, 32 lines, risk `ui_only`): Handles recompute for the loans feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog.body** (method, lines 30749–30841, 93 lines, risk `financial_calculation`): Handles body for the loans feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog.body._row** (nested_function, lines 30754–30757, 4 lines, risk `ui_only`): Handles row for the loans feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog.validate** (method, lines 30843–30881, 39 lines, risk `financial_calculation`): Handles validate for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog.apply** (method, lines 30883–30910, 28 lines, risk `financial_calculation`): Handles apply for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog.apply** (method, lines 30883–30910, 28 lines, risk `financial_calculation`): Handles apply for the loans feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_renew_client_selected** (function, lines 30913–30994, 82 lines, risk `financial_calculation`): Renew (reloan) the selected client and update the client row + report stats.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_archived_clients_dialog** (function, lines 30997–31113, 117 lines, risk `backup`): Handles app open archived clients dialog for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_archived_clients_dialog.load_list** (nested_function, lines 31046–31064, 19 lines, risk `backup`): Loads load list for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_archived_clients_dialog.load_list** (nested_function, lines 31046–31064, 19 lines, risk `backup`): Loads load list for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_open_archived_clients_dialog.restore_selected** (nested_function, lines 31066–31090, 25 lines, risk `backup`): Handles restore selected for the backup feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.main** (function, lines 31145–31155, 11 lines, risk `ui_only`): Handles main for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.main** (function, lines 31145–31155, 11 lines, risk `ui_only`): Handles main for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._schedule_collectors_refresh** (function, lines 31194–31211, 18 lines, risk `ui_only`): Debounce refresh_collectors while typing in Search.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._clear_collectors_search_filters** (function, lines 31214–31239, 26 lines, risk `support`): Clear search + quick filters for Collector's Route UI.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_collector_route_daily_ledger** (function, lines 31243–31440, 198 lines, risk `filesystem`): Print the SELECTED collector's route using the same 3-column Daily Collection Ledger layout as `print_full_daily_ledger`, but ONLY for that collector's areas (no 'arrange all areas' step). - Uses selection() first (more reliable than focus()). - Reads collectors.json in multiple historical schemas. 
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger** (function, lines 31444–34666, 3223 lines, risk `financial_calculation`): Print a 3-column DAILY COLLECTION LEDGER with a small UI to change: - Ledger Date - Paper size and orientation - Areas order (arrange ALL areas)
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._fetch_clients_for** (nested_function, lines 31481–31488, 8 lines, risk `support`): Loads fetch clients for for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._s** (nested_function, lines 31511–31511, 1 lines, risk `support`): Handles s for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._options_dialog** (nested_function, lines 31516–31577, 62 lines, risk `ui_only`): Handles options dialog for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._options_dialog._ok** (nested_function, lines 31555–31557, 3 lines, risk `support`): Handles ok for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._options_dialog._cancel** (nested_function, lines 31558–31560, 3 lines, risk `support`): Handles cancel for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog** (nested_function, lines 31580–31653, 74 lines, risk `reports`): Handles arrange areas dialog for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog._move** (nested_function, lines 31613–31626, 14 lines, risk `ui_only`): Handles move for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog._ok** (nested_function, lines 31635–31636, 2 lines, risk `support`): Handles ok for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog._cancel** (nested_function, lines 31637–31638, 2 lines, risk `support`): Handles cancel for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._wrap_text_to_width** (nested_function, lines 32738–32765, 28 lines, risk `support`): Handles wrap text to width for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._wrap_text_to_width._fits** (nested_function, lines 32743–32743, 1 lines, risk `support`): Handles fits for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_page_number** (nested_function, lines 32767–32773, 7 lines, risk `support`): Handles draw page number for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_final_footer** (nested_function, lines 32775–32790, 16 lines, risk `support`): Handles draw final footer for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_global_header** (nested_function, lines 32791–32836, 46 lines, risk `support`): Handles draw global header for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger.new_page_headers** (nested_function, lines 32855–32885, 31 lines, risk `support`): Handles new page headers for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger.ensure_space** (nested_function, lines 32891–32910, 20 lines, risk `support`): Handles ensure space for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._s** (nested_function, lines 31511–31511, 1 lines, risk `support`): Handles s for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._options_dialog** (nested_function, lines 31516–31577, 62 lines, risk `ui_only`): Handles options dialog for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._options_dialog._ok** (nested_function, lines 31555–31557, 3 lines, risk `support`): Handles ok for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._options_dialog._cancel** (nested_function, lines 31558–31560, 3 lines, risk `support`): Handles cancel for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog** (nested_function, lines 31580–31653, 74 lines, risk `reports`): Handles arrange areas dialog for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog._move** (nested_function, lines 31613–31626, 14 lines, risk `ui_only`): Handles move for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog._ok** (nested_function, lines 31635–31636, 2 lines, risk `support`): Handles ok for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog._cancel** (nested_function, lines 31637–31638, 2 lines, risk `support`): Handles cancel for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._wrap_text_to_width** (nested_function, lines 32738–32765, 28 lines, risk `support`): Handles wrap text to width for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._wrap_text_to_width._fits** (nested_function, lines 32743–32743, 1 lines, risk `support`): Handles fits for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_page_number** (nested_function, lines 32767–32773, 7 lines, risk `support`): Handles draw page number for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_final_footer** (nested_function, lines 32775–32790, 16 lines, risk `support`): Handles draw final footer for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_global_header** (nested_function, lines 32791–32836, 46 lines, risk `support`): Handles draw global header for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger.new_page_headers** (nested_function, lines 32855–32885, 31 lines, risk `support`): Handles new page headers for the reports feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger.ensure_space** (nested_function, lines 32891–32910, 20 lines, risk `support`): Handles ensure space for the reports feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_closed_route_payment_summary_page** (nested_function, lines 34444–34631, 188 lines, risk `support`): Append closed-route payment summaries on a separate page. This keeps the route pages in the normal collector format while still saving a complete area-by-area payment summary plus grand total.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_closed_route_payment_summary_page._fmt_summary_money** (nested_function, lines 34457–34467, 11 lines, risk `support`): Handles fmt summary money for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_closed_route_payment_summary_page._as_float** (nested_function, lines 34469–34473, 5 lines, risk `support`): Handles as float for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_closed_route_payment_summary_page._draw_summary_header** (nested_function, lines 34519–34561, 43 lines, risk `support`): Handles draw summary header for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_closed_route_payment_summary_page._draw_summary_row** (nested_function, lines 34563–34592, 30 lines, risk `backup`): Handles draw summary row for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_closed_route_payment_summary_page._fmt_summary_money** (nested_function, lines 34457–34467, 11 lines, risk `support`): Handles fmt summary money for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_closed_route_payment_summary_page._as_float** (nested_function, lines 34469–34473, 5 lines, risk `support`): Handles as float for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_closed_route_payment_summary_page._draw_summary_header** (nested_function, lines 34519–34561, 43 lines, risk `support`): Handles draw summary header for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_closed_route_payment_summary_page._draw_summary_row** (nested_function, lines 34563–34592, 30 lines, risk `backup`): Handles draw summary row for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_tree_wheel** (function, lines 34674–34694, 21 lines, risk `ui_only`): Ensure mousewheel scroll works on Collector Route list (Treeview).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._save_collector_notes** (function, lines 34696–34758, 63 lines, risk `support`): Update one collector's notes in collectors.json (atomic, normalized schema).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._save_selected_collector_notes** (function, lines 34760–34798, 39 lines, risk `support`): Save Notes from the right panel to collectors.json (atomic).
@@ -795,7 +795,7 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_areas_drag_motion** (function, lines 35064–35106, 43 lines, risk `ui_only`): Drag-to-reorder areas listbox (MOVE item) without index-shift bugs.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina__ensure_client_picture_column** (function, lines 35160–35172, 13 lines, risk `database_write`): Best-effort lazy migration for client_picture support.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina__client_pictures_dir** (function, lines 35175–35184, 10 lines, risk `support`): Handles spina client pictures dir for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina__resolve_app_path** (function, lines 35187–35204, 18 lines, risk `backup`): Handles spina resolve app path for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina__resolve_app_path** (function, lines 35187–35204, 18 lines, risk `backup`): Handles spina resolve app path for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina__store_client_picture_file** (function, lines 35207–35244, 38 lines, risk `filesystem`): Handles spina store client picture file for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina__delete_client_picture_file** (function, lines 35247–35259, 13 lines, risk `filesystem`): Handles spina delete client picture file for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._db_get_client_picture** (function, lines 35262–35271, 10 lines, risk `support`): Handles db get client picture for the clients feature.
@@ -807,33 +807,33 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_clear_selected_client_picture** (function, lines 35478–35503, 26 lines, risk `support`): Handles app clear selected client picture for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_install_clients_picture_ui** (function, lines 35506–35561, 56 lines, risk `ui_only`): Handles app install clients picture ui for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_ensure_indexes** (function, lines 35615–35657, 43 lines, risk `database_write`): Create helpful indexes for large datasets. Safe/idempotent.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_norm_lt** (function, lines 35660–35667, 8 lines, risk `filesystem`): Handles spina perf norm lt for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_norm_lt** (function, lines 35660–35667, 8 lines, risk `filesystem`): Handles spina perf norm lt for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_clients_rows** (function, lines 35673–35840, 168 lines, risk `database_read`): Bulk load rows for Clients tab in one/few queries, avoiding per-row get_client_info().
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_month_transactions** (function, lines 35843–35910, 68 lines, risk `database_read`): Return {(row_key, yyyy-mm-dd): payment} for visible clients in the month using one range query.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_month_transactions._chunks** (nested_function, lines 35867–35869, 3 lines, risk `support`): Handles chunks for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_month_transactions._chunks** (nested_function, lines 35867–35869, 3 lines, risk `support`): Handles chunks for the payments feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_refresh_clients** (function, lines 35913–36002, 90 lines, risk `ui_only`): Fast Clients tab refresh for large datasets.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_refresh_data_grid** (function, lines 36005–36209, 205 lines, risk `ui_only`): Fast Data Bank month grid refresh using bulk month transaction query.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_refresh_data_grid._yview** (nested_function, lines 36053–36057, 5 lines, risk `support`): Handles yview for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_refresh_data_grid._sync_selection** (nested_function, lines 36068–36080, 13 lines, risk `ui_only`): Handles sync selection for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_refresh_data_grid._yview** (nested_function, lines 36053–36057, 5 lines, risk `support`): Handles yview for the data bank feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_refresh_data_grid._sync_selection** (nested_function, lines 36068–36080, 13 lines, risk `ui_only`): Handles sync selection for the data bank feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_archive_row_to_dict** (function, lines 36231–36242, 12 lines, risk `backup`): Handles spina archive row to dict for the backup feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_archive_client** (function, lines 36245–36274, 30 lines, risk `database_write`): Soft-delete: hide the client while keeping transactions/history. Fix: after archiving, fetch the new row with include_archived=True so history can still see the archived row instead of getting an empty new_row.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_restore_client** (function, lines 36277–36317, 41 lines, risk `database_write`): Restore a previously archived client by name + loan type. Important fix: the old code called get_client_info() without include_archived=True. Because archived rows are hidden by default, restore failed with "Client not found".
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_restore_client_by_uid** (function, lines 36320–36340, 21 lines, risk `backup`): Restore archived client by UID, with name/type fallback support.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_open_archived_clients_dialog** (function, lines 36343–36478, 136 lines, risk `backup`): Archived clients restore dialog with UID fallback and refresh after restore.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_open_archived_clients_dialog.load_list** (nested_function, lines 36393–36419, 27 lines, risk `backup`): Loads load list for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_open_archived_clients_dialog.load_list** (nested_function, lines 36393–36419, 27 lines, risk `backup`): Loads load list for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_open_archived_clients_dialog.restore_selected** (nested_function, lines 36421–36461, 41 lines, risk `backup`): Handles restore selected for the backup feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_get_archived_clients_with_id** (function, lines 36501–36558, 58 lines, risk `backup`): List archived clients and include the internal row id for reliable restore.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_restore_client_by_id** (function, lines 36561–36598, 38 lines, risk `database_write`): Restore archived client by exact clients.id row.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_open_archived_clients_dialog_rowid** (function, lines 36601–36737, 137 lines, risk `backup`): Archived clients restore dialog that restores by clients.id first.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_open_archived_clients_dialog_rowid._rowid_from_iid** (nested_function, lines 36642–36655, 14 lines, risk `support`): Handles rowid from iid for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_open_archived_clients_dialog_rowid.load_list** (nested_function, lines 36657–36685, 29 lines, risk `backup`): Loads load list for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_open_archived_clients_dialog_rowid._rowid_from_iid** (nested_function, lines 36642–36655, 14 lines, risk `support`): Handles rowid from iid for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_open_archived_clients_dialog_rowid.load_list** (nested_function, lines 36657–36685, 29 lines, risk `backup`): Loads load list for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_open_archived_clients_dialog_rowid.restore_selected** (nested_function, lines 36687–36722, 36 lines, risk `backup`): Handles restore selected for the backup feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dash__norm_lt** (function, lines 36760–36765, 6 lines, risk `filesystem`): Handles spina dash norm lt for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dash__norm_lt** (function, lines 36760–36765, 6 lines, risk `filesystem`): Handles spina dash norm lt for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dashboard_fetch_rows** (function, lines 36786–37047, 262 lines, risk `financial_calculation`): Return active client completion rows using payments from latest released date only. Latest released date = max(clients.date_released, latest renewals.renew_date). Payment start = latest released date + clients.pay_start_offset_days (normalized to 0/1 day).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dashboard_fetch_rows._table_exists** (nested_function, lines 36801–36806, 6 lines, risk `database_read`): Handles table exists for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dashboard_fetch_rows._table_cols** (nested_function, lines 36808–36812, 5 lines, risk `database_read`): Handles table cols for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dashboard_fetch_rows._c** (nested_function, lines 36820–36821, 2 lines, risk `support`): Handles c for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dashboard_fetch_rows._rv** (nested_function, lines 36885–36892, 8 lines, risk `support`): Handles rv for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dashboard_fetch_rows._table_exists** (nested_function, lines 36801–36806, 6 lines, risk `database_read`): Handles table exists for the dashboard feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dashboard_fetch_rows._table_cols** (nested_function, lines 36808–36812, 5 lines, risk `database_read`): Handles table cols for the dashboard feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dashboard_fetch_rows._c** (nested_function, lines 36820–36821, 2 lines, risk `support`): Handles c for the dashboard feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dashboard_fetch_rows._rv** (nested_function, lines 36885–36892, 8 lines, risk `support`): Handles rv for the dashboard feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dashboard_summary_text** (function, lines 37050–37074, 25 lines, risk `support`): Handles spina dashboard summary text for the dashboard feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_configure_dashboard_tree_theme** (function, lines 37078–37140, 63 lines, risk `ui_only`): Keep Dashboard Treeview text readable in both Light and Dark mode. The Dashboard uses colored status tags. In Dark Mode, the app-level Treeview foreground is light; if the tag background is also light pastel, the text becomes hard to read. This function sets both background AND foreground for every 
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_build_dashboard_tab** (function, lines 37143–37248, 106 lines, risk `ui_only`): Handles spina build dashboard tab for the dashboard feature.
@@ -872,28 +872,28 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_route_notice_upsert** (function, lines 39133–39165, 33 lines, risk `support`): Handles spina route notice upsert for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_route_notice_for_client** (function, lines 39167–39211, 45 lines, risk `support`): Handles spina route notice for client for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_route_balance_like_generate_report** (function, lines 39217–39399, 183 lines, risk `financial_calculation`): Return the same Balance basis used by Generate Report PDF. Regular: total_to_pay (corrected to principal + interest when needed) minus effective current-cycle payments. 7x7: remaining principal after the Generate Report interest-first payment split. This intentionally matches the report header Balan
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_norm_lt** (function, lines 39407–39412, 6 lines, risk `filesystem`): Handles spina crc norm lt for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_clean_reason** (function, lines 39418–39431, 14 lines, risk `support`): Handles spina crc clean reason for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_norm_lt** (function, lines 39407–39412, 6 lines, risk `filesystem`): Handles spina crc norm lt for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_clean_reason** (function, lines 39418–39431, 14 lines, risk `support`): Handles spina crc clean reason for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_load_collectors** (function, lines 39434–39476, 43 lines, risk `filesystem`): Load collector route definitions from data/collectors.json in any supported schema.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_split_area** (function, lines 39479–39491, 13 lines, risk `support`): Handles spina crc split area for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_split_area** (function, lines 39479–39491, 13 lines, risk `support`): Handles spina crc split area for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_route_area_matches** (function, lines 39494–39518, 25 lines, risk `support`): Match route area to client area, including MAIN-only collector routes covering subareas.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_collector_for_area** (function, lines 39521–39529, 9 lines, risk `support`): Handles spina crc collector for area for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_key** (function, lines 39532–39536, 5 lines, risk `support`): Handles spina crc key for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_key** (function, lines 39532–39536, 5 lines, risk `support`): Handles spina crc key for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_fetch_close_rows** (function, lines 39539–39705, 167 lines, risk `database_read`): Build route rows with amount paid on the close date.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_fetch_close_rows._add_pay** (nested_function, lines 39585–39594, 10 lines, risk `support`): Handles add pay for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_wrap** (function, lines 39708–39730, 23 lines, risk `support`): Handles spina crc wrap for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_fetch_close_rows._add_pay** (nested_function, lines 39585–39594, 10 lines, risk `support`): Handles add pay for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_wrap** (function, lines 39708–39730, 23 lines, risk `support`): Handles spina crc wrap for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_copy_existing_route_pdfs** (function, lines 39733–39765, 33 lines, risk `filesystem`): Handles spina crc copy existing route pdfs for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy** (function, lines 39768–40048, 281 lines, risk `backup`): Save an audit copy of the Collector Route after Daily Close. The PDF contains the closed total/actual cash for the day and the amount paid by each client on that date. It is separate from Generate Report and from editable Data Bank rows.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy._rec_get** (nested_function, lines 39797–39804, 8 lines, risk `support`): Handles rec get for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy._new_page** (nested_function, lines 39879–39883, 5 lines, risk `support`): Handles new page for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy._ensure** (nested_function, lines 39885–39887, 3 lines, risk `support`): Handles ensure for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy._draw_header** (nested_function, lines 39889–39919, 31 lines, risk `support`): Handles draw header for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy._draw_table_header** (nested_function, lines 39921–39936, 16 lines, risk `backup`): Handles draw table header for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy._rec_get** (nested_function, lines 39797–39804, 8 lines, risk `support`): Handles rec get for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy._new_page** (nested_function, lines 39879–39883, 5 lines, risk `support`): Handles new page for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy._ensure** (nested_function, lines 39885–39887, 3 lines, risk `support`): Handles ensure for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy._draw_header** (nested_function, lines 39889–39919, 31 lines, risk `support`): Handles draw header for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy._draw_table_header** (nested_function, lines 39921–39936, 16 lines, risk `backup`): Handles draw table header for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_build_paid_cache_for_date** (function, lines 40063–40095, 33 lines, risk `database_read`): Return {(lower_name, lower_loan_type): paid_amount} for the closed date.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_active_filtered_areas_for_collector** (function, lines 40098–40150, 53 lines, risk `database_read`): Match the Collector Route screen filtering so blank/archived-only areas are skipped.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy_same_format** (function, lines 40153–40322, 170 lines, risk `filesystem`): Save final closed Collector Route copy using the SAME Collector Route PDF layout. Difference from normal print: the payment columns are filled with the actual amount paid on the closed date, and the PDF is saved silently under data/Closed_Collector_Routes.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy_same_format._safe_tag** (nested_function, lines 40188–40192, 5 lines, risk `filesystem`): Handles safe tag for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy_same_format._generate_one** (nested_function, lines 40194–40252, 59 lines, risk `filesystem`): Generates generate one for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy_same_format._safe_tag** (nested_function, lines 40188–40192, 5 lines, risk `filesystem`): Handles safe tag for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy_same_format._generate_one** (nested_function, lines 40194–40252, 59 lines, risk `filesystem`): Generates generate one for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg__reset_id_sequence** (function, lines 40346–40366, 21 lines, risk `database_read`): Move a PostgreSQL BIGSERIAL/SERIAL sequence after the current MAX(id).
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg__table_has_column** (function, lines 40369–40384, 16 lines, risk `database_read`): Handles spina pg table has column for the database feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_renew_client_direct** (function, lines 40387–40612, 226 lines, risk `financial_calculation`): PostgreSQL-safe renew/reloan implementation for the TEST build.
@@ -908,22 +908,22 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v20_draw_dashboard_charts** (function, lines 41801–41934, 134 lines, risk `financial_calculation`): Replace old progress/remaining charts with more useful active-client charts.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v20_populate_dashboard_tree** (function, lines 41937–41971, 35 lines, risk `ui_only`): Handles spina v20 populate dashboard tree for the dashboard feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v20_refresh_dashboard** (function, lines 41974–41992, 19 lines, risk `support`): Handles spina v20 refresh dashboard for the dashboard feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v21_cash_refresh** (function, lines 42047–42215, 169 lines, risk `financial_calculation`): Handles spina v21 cash refresh for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v21_cash_refresh** (function, lines 42047–42215, 169 lines, risk `financial_calculation`): Handles spina v21 cash refresh for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_loan_summary** (function, lines 42301–42357, 57 lines, risk `financial_calculation`): Handles spina v23 client loan summary for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form** (function, lines 42368–42824, 457 lines, risk `ui_only`): Handles spina v23 client form for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.norm_lt** (nested_function, lines 42372–42377, 6 lines, risk `filesystem`): Handles norm lt for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._on_content_config** (nested_function, lines 42448–42453, 6 lines, risk `ui_only`): Handles on content config for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._load_pic_preview** (nested_function, lines 42476–42503, 28 lines, risk `filesystem`): Loads load pic preview for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._choose_picture** (nested_function, lines 42505–42516, 12 lines, risk `ui_only`): Handles choose picture for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._clear_picture** (nested_function, lines 42518–42524, 7 lines, risk `ui_only`): Handles clear picture for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.section** (nested_function, lines 42546–42556, 11 lines, risk `ui_only`): Handles section for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.calc_row** (nested_function, lines 42618–42622, 5 lines, risk `ui_only`): Handles calc row for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.norm_lt** (nested_function, lines 42372–42377, 6 lines, risk `filesystem`): Handles norm lt for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._on_content_config** (nested_function, lines 42448–42453, 6 lines, risk `ui_only`): Handles on content config for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._load_pic_preview** (nested_function, lines 42476–42503, 28 lines, risk `filesystem`): Loads load pic preview for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._choose_picture** (nested_function, lines 42505–42516, 12 lines, risk `ui_only`): Handles choose picture for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._clear_picture** (nested_function, lines 42518–42524, 7 lines, risk `ui_only`): Handles clear picture for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.section** (nested_function, lines 42546–42556, 11 lines, risk `ui_only`): Handles section for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.calc_row** (nested_function, lines 42618–42622, 5 lines, risk `ui_only`): Handles calc row for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._parse_float_var** (nested_function, lines 42630–42635, 6 lines, risk `filesystem`): Handles parse float var for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._sync_dates_and_calc** (nested_function, lines 42637–42675, 39 lines, risk `support`): Handles sync dates and calc for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._sync_dates_and_calc** (nested_function, lines 42637–42675, 39 lines, risk `support`): Handles sync dates and calc for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._validate_date** (nested_function, lines 42690–42695, 6 lines, risk `support`): Validates validate date for the utilities feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._norm_dom** (nested_function, lines 42697–42709, 13 lines, risk `support`): Handles norm dom for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.save** (nested_function, lines 42711–42798, 88 lines, risk `support`): Handles save for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.cancel** (nested_function, lines 42800–42804, 5 lines, risk `support`): Handles cancel for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._norm_dom** (nested_function, lines 42697–42709, 13 lines, risk `support`): Handles norm dom for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.save** (nested_function, lines 42711–42798, 88 lines, risk `support`): Handles save for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.cancel** (nested_function, lines 42800–42804, 5 lines, risk `support`): Handles cancel for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_add_client_dialog** (function, lines 42827–42876, 50 lines, risk `reports`): Handles spina v23 add client dialog for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_on_client_edit** (function, lines 42879–42945, 67 lines, risk `reports`): Handles spina v23 on client edit for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_collector_button** (function, lines 43042–43070, 29 lines, risk `ui_only`): Handles spina v25 collector button for the collectors feature.
@@ -932,39 +932,39 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_build_collectors_tab** (function, lines 43561–43853, 293 lines, risk `ui_only`): Handles spina v27 build collectors tab for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_get_route_master_areas** (function, lines 43856–43887, 32 lines, risk `support`): Handles spina v27 get route master areas for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog** (function, lines 43890–44239, 350 lines, risk `ui_only`): Modern route editor: Available Areas vs Assigned Route Order.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._panel** (nested_function, lines 43959–43963, 5 lines, risk `ui_only`): Handles panel for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._assigned_keys** (nested_function, lines 44001–44002, 2 lines, risk `support`): Handles assigned keys for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._refresh_lists** (nested_function, lines 44004–44043, 40 lines, risk `ui_only`): Refreshes refresh lists for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._clean_assigned_display** (nested_function, lines 44045–44050, 6 lines, risk `support`): Handles clean assigned display for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._add_selected** (nested_function, lines 44052–44068, 17 lines, risk `support`): Handles add selected for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._remove_selected** (nested_function, lines 44070–44081, 12 lines, risk `support`): Removes remove selected for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._move_selected** (nested_function, lines 44083–44101, 19 lines, risk `support`): Handles move selected for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._move_top** (nested_function, lines 44103–44114, 12 lines, risk `support`): Handles move top for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._move_bottom** (nested_function, lines 44116–44127, 12 lines, risk `support`): Handles move bottom for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._add_all_visible** (nested_function, lines 44129–44137, 9 lines, risk `support`): Handles add all visible for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._clear_assigned** (nested_function, lines 44139–44148, 10 lines, risk `support`): Handles clear assigned for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._save** (nested_function, lines 44185–44213, 29 lines, risk `support`): Handles save for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._cancel** (nested_function, lines 44215–44221, 7 lines, risk `support`): Handles cancel for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._panel** (nested_function, lines 43959–43963, 5 lines, risk `ui_only`): Handles panel for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._assigned_keys** (nested_function, lines 44001–44002, 2 lines, risk `support`): Handles assigned keys for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._refresh_lists** (nested_function, lines 44004–44043, 40 lines, risk `ui_only`): Refreshes refresh lists for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._clean_assigned_display** (nested_function, lines 44045–44050, 6 lines, risk `support`): Handles clean assigned display for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._add_selected** (nested_function, lines 44052–44068, 17 lines, risk `support`): Handles add selected for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._remove_selected** (nested_function, lines 44070–44081, 12 lines, risk `support`): Removes remove selected for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._move_selected** (nested_function, lines 44083–44101, 19 lines, risk `support`): Handles move selected for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._move_top** (nested_function, lines 44103–44114, 12 lines, risk `support`): Handles move top for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._move_bottom** (nested_function, lines 44116–44127, 12 lines, risk `support`): Handles move bottom for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._add_all_visible** (nested_function, lines 44129–44137, 9 lines, risk `support`): Handles add all visible for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._clear_assigned** (nested_function, lines 44139–44148, 10 lines, risk `support`): Handles clear assigned for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._save** (nested_function, lines 44185–44213, 29 lines, risk `support`): Handles save for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._cancel** (nested_function, lines 44215–44221, 7 lines, risk `support`): Handles cancel for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button** (function, lines 44317–44344, 28 lines, risk `authentication`): Handles spina v32 login button for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_default_name** (function, lines 44347–44355, 9 lines, risk `support`): Handles spina v32 account default name for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_permission_text** (function, lines 44358–44368, 11 lines, risk `authentication`): Handles spina v32 account permission text for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_display_name** (function, lines 44371–44381, 11 lines, risk `authentication`): Handles spina v32 account display name for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role** (function, lines 44384–44394, 11 lines, risk `authentication`): Handles spina v32 account role for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices** (function, lines 44397–44425, 29 lines, risk `authentication`): Handles spina v32 account choices for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user** (function, lines 44428–44433, 6 lines, risk `support`): Handles spina v32 selected label for user for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user** (function, lines 44428–44433, 6 lines, risk `support`): Handles spina v32 selected label for user for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based** (function, lines 44436–44490, 55 lines, risk `authentication`): Add account display metadata while preserving existing usernames/passwords/access.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login** (function, lines 44493–44726, 234 lines, risk `authentication`): Modern account-based login dialog. Returns (username, internal_access_profile).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._toggle_show** (nested_function, lines 44586–44590, 5 lines, risk `ui_only`): Handles toggle show for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._toggle_show** (nested_function, lines 44586–44590, 5 lines, risk `ui_only`): Handles toggle show for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info** (nested_function, lines 44604–44615, 12 lines, risk `authentication`): Refreshes refresh account info for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok** (nested_function, lines 44617–44655, 39 lines, risk `authentication`): Handles ok for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel** (nested_function, lines 44657–44662, 6 lines, risk `support`): Handles cancel for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._enter** (nested_function, lines 44685–44686, 2 lines, risk `support`): Handles enter for the database feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header** (function, lines 44729–44742, 14 lines, risk `authentication`): Handles spina v32 refresh user header for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok** (nested_function, lines 44617–44655, 39 lines, risk `authentication`): Handles ok for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel** (nested_function, lines 44657–44662, 6 lines, risk `support`): Handles cancel for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._enter** (nested_function, lines 44685–44686, 2 lines, risk `support`): Handles enter for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header** (function, lines 44729–44742, 14 lines, risk `authentication`): Handles spina v32 refresh user header for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account** (function, lines 44745–44802, 58 lines, risk `authentication`): Handles spina v32 switch account for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role** (function, lines 44805–44808, 4 lines, risk `authentication`): Handles spina v32 prompt user role for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message** (function, lines 44851–44862, 12 lines, risk `reports`): Handles spina legacy client action removed message for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action** (function, lines 44865–44870, 6 lines, risk `filesystem`): Handles spina make removed legacy client action for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action** (nested_function, lines 44866–44868, 3 lines, risk `support`): Handles spina removed action for the database feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action** (nested_function, lines 44866–44868, 3 lines, risk `support`): Handles spina removed action for the clients feature.
 
 ## `spina_app/area_hierarchy.py`
 
@@ -1235,10 +1235,10 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/apply_client_area_uid_sync_phase2.py`
 
-- **tools.apply_client_area_uid_sync_phase2._state** (function, lines 19–28, 10 lines, risk `support`): Handles state for the clients feature.
-- **tools.apply_client_area_uid_sync_phase2.inspect** (function, lines 31–41, 11 lines, risk `filesystem`): Handles inspect for the clients feature.
-- **tools.apply_client_area_uid_sync_phase2.apply** (function, lines 44–57, 14 lines, risk `filesystem`): Handles apply for the clients feature.
-- **tools.apply_client_area_uid_sync_phase2.main** (function, lines 60–71, 12 lines, risk `reports`): Handles main for the clients feature.
+- **tools.apply_client_area_uid_sync_phase2._state** (function, lines 19–28, 10 lines, risk `support`): Handles state for the other feature.
+- **tools.apply_client_area_uid_sync_phase2.inspect** (function, lines 31–41, 11 lines, risk `filesystem`): Handles inspect for the other feature.
+- **tools.apply_client_area_uid_sync_phase2.apply** (function, lines 44–57, 14 lines, risk `filesystem`): Handles apply for the other feature.
+- **tools.apply_client_area_uid_sync_phase2.main** (function, lines 60–71, 12 lines, risk `reports`): Handles main for the other feature.
 
 ## `tools/apply_hierarchical_area_storage_phase1.py`
 
@@ -1284,17 +1284,17 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/audit_dynamic_sql_context.py`
 
-- **tools.audit_dynamic_sql_context.node_kind** (function, lines 31–48, 18 lines, risk `support`): Handles node kind for the database feature.
+- **tools.audit_dynamic_sql_context.node_kind** (function, lines 31–48, 18 lines, risk `support`): Handles node kind for the other feature.
 - **tools.audit_dynamic_sql_context.safe_unparse** (function, lines 51–57, 7 lines, risk `support`): Handles safe unparse for the utilities feature.
 - **tools.audit_dynamic_sql_context.is_plain_sql_literal** (function, lines 60–61, 2 lines, risk `support`): Handles is plain sql literal for the database feature.
-- **tools.audit_dynamic_sql_context.call_name** (function, lines 64–69, 6 lines, risk `support`): Handles call name for the database feature.
-- **tools.audit_dynamic_sql_context.enclosing_stack** (function, lines 72–109, 38 lines, risk `support`): Handles enclosing stack for the database feature.
-- **tools.audit_dynamic_sql_context.qualname** (function, lines 112–114, 3 lines, risk `support`): Handles qualname for the database feature.
-- **tools.audit_dynamic_sql_context.context** (function, lines 117–125, 9 lines, risk `support`): Handles context for the database feature.
-- **tools.audit_dynamic_sql_context.has_protected_context** (function, lines 128–134, 7 lines, risk `support`): Handles has protected context for the database feature.
-- **tools.audit_dynamic_sql_context.classify_risk** (function, lines 137–145, 9 lines, risk `support`): Handles classify risk for the database feature.
-- **tools.audit_dynamic_sql_context.audit** (function, lines 148–208, 61 lines, risk `filesystem`): Handles audit for the database feature.
-- **tools.audit_dynamic_sql_context.main** (function, lines 211–230, 20 lines, risk `filesystem`): Handles main for the database feature.
+- **tools.audit_dynamic_sql_context.call_name** (function, lines 64–69, 6 lines, risk `support`): Handles call name for the other feature.
+- **tools.audit_dynamic_sql_context.enclosing_stack** (function, lines 72–109, 38 lines, risk `support`): Handles enclosing stack for the other feature.
+- **tools.audit_dynamic_sql_context.qualname** (function, lines 112–114, 3 lines, risk `support`): Handles qualname for the other feature.
+- **tools.audit_dynamic_sql_context.context** (function, lines 117–125, 9 lines, risk `support`): Handles context for the other feature.
+- **tools.audit_dynamic_sql_context.has_protected_context** (function, lines 128–134, 7 lines, risk `support`): Handles has protected context for the other feature.
+- **tools.audit_dynamic_sql_context.classify_risk** (function, lines 137–145, 9 lines, risk `support`): Handles classify risk for the other feature.
+- **tools.audit_dynamic_sql_context.audit** (function, lines 148–208, 61 lines, risk `filesystem`): Handles audit for the other feature.
+- **tools.audit_dynamic_sql_context.main** (function, lines 211–230, 20 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/audit_legacy_callback_usage.py`
 
@@ -1311,14 +1311,14 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/audit_pass_only_exceptions.py`
 
-- **tools.audit_pass_only_exceptions._segment** (function, lines 23–24, 2 lines, risk `support`): Handles segment for the payments feature.
-- **tools.audit_pass_only_exceptions._scope_name** (function, lines 27–34, 8 lines, risk `support`): Handles scope name for the payments feature.
-- **tools.audit_pass_only_exceptions._handler_name** (function, lines 37–43, 7 lines, risk `support`): Handles handler name for the payments feature.
+- **tools.audit_pass_only_exceptions._segment** (function, lines 23–24, 2 lines, risk `support`): Handles segment for the other feature.
+- **tools.audit_pass_only_exceptions._scope_name** (function, lines 27–34, 8 lines, risk `support`): Handles scope name for the other feature.
+- **tools.audit_pass_only_exceptions._handler_name** (function, lines 37–43, 7 lines, risk `support`): Handles handler name for the other feature.
 - **tools.audit_pass_only_exceptions._is_pass_only** (function, lines 46–47, 2 lines, risk `support`): Handles is pass only for the payments feature.
-- **tools.audit_pass_only_exceptions._protected** (function, lines 50–52, 3 lines, risk `support`): Handles protected for the payments feature.
-- **tools.audit_pass_only_exceptions.audit** (function, lines 55–125, 71 lines, risk `filesystem`): Handles audit for the payments feature.
-- **tools.audit_pass_only_exceptions.audit.walk** (nested_function, lines 65–99, 35 lines, risk `support`): Handles walk for the payments feature.
-- **tools.audit_pass_only_exceptions.main** (function, lines 128–142, 15 lines, risk `filesystem`): Handles main for the payments feature.
+- **tools.audit_pass_only_exceptions._protected** (function, lines 50–52, 3 lines, risk `support`): Handles protected for the other feature.
+- **tools.audit_pass_only_exceptions.audit** (function, lines 55–125, 71 lines, risk `filesystem`): Handles audit for the other feature.
+- **tools.audit_pass_only_exceptions.audit.walk** (nested_function, lines 65–99, 35 lines, risk `support`): Handles walk for the other feature.
+- **tools.audit_pass_only_exceptions.main** (function, lines 128–142, 15 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/audit_patch_chains.py`
 
@@ -1334,35 +1334,35 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/audit_pg_backup_action_flow.py`
 
-- **tools.audit_pg_backup_action_flow.read_lines** (function, lines 34–35, 2 lines, risk `filesystem`): Handles read lines for the backup feature.
-- **tools.audit_pg_backup_action_flow.qualname** (function, lines 38–47, 10 lines, risk `support`): Handles qualname for the backup feature.
-- **tools.audit_pg_backup_action_flow.func_name_from_call** (function, lines 50–56, 7 lines, risk `support`): Handles func name from call for the backup feature.
-- **tools.audit_pg_backup_action_flow.call_text** (function, lines 59–64, 6 lines, risk `support`): Handles call text for the backup feature.
-- **tools.audit_pg_backup_action_flow.text_range** (function, lines 67–70, 4 lines, risk `support`): Handles text range for the backup feature.
-- **tools.audit_pg_backup_action_flow.has_call** (function, lines 73–79, 7 lines, risk `support`): Handles has call for the backup feature.
-- **tools.audit_pg_backup_action_flow.context** (function, lines 82–85, 4 lines, risk `support`): Handles context for the backup feature.
-- **tools.audit_pg_backup_action_flow.protected_context** (function, lines 88–90, 3 lines, risk `support`): Handles protected context for the backup feature.
-- **tools.audit_pg_backup_action_flow.Visitor** (class, lines 93–169, 77 lines, risk `container`): Groups Visitor for the backup feature.
-- **tools.audit_pg_backup_action_flow.Visitor.__init__** (method, lines 94–98, 5 lines, risk `support`): Handles init for the backup feature.
-- **tools.audit_pg_backup_action_flow.Visitor.visit_ClassDef** (method, lines 100–103, 4 lines, risk `support`): Handles visit ClassDef for the backup feature.
-- **tools.audit_pg_backup_action_flow.Visitor.visit_FunctionDef** (method, lines 105–106, 2 lines, risk `support`): Handles visit FunctionDef for the backup feature.
-- **tools.audit_pg_backup_action_flow.Visitor.visit_AsyncFunctionDef** (method, lines 108–109, 2 lines, risk `support`): Handles visit AsyncFunctionDef for the backup feature.
-- **tools.audit_pg_backup_action_flow.Visitor._visit_function** (method, lines 111–129, 19 lines, risk `support`): Handles visit function for the backup feature.
-- **tools.audit_pg_backup_action_flow.Visitor.visit_Call** (method, lines 131–161, 31 lines, risk `support`): Handles visit Call for the backup feature.
-- **tools.audit_pg_backup_action_flow.Visitor._is_inside_run_long_task_argument** (method, lines 163–169, 7 lines, risk `support`): Handles is inside run long task argument for the backup feature.
+- **tools.audit_pg_backup_action_flow.read_lines** (function, lines 34–35, 2 lines, risk `filesystem`): Handles read lines for the other feature.
+- **tools.audit_pg_backup_action_flow.qualname** (function, lines 38–47, 10 lines, risk `support`): Handles qualname for the other feature.
+- **tools.audit_pg_backup_action_flow.func_name_from_call** (function, lines 50–56, 7 lines, risk `support`): Handles func name from call for the other feature.
+- **tools.audit_pg_backup_action_flow.call_text** (function, lines 59–64, 6 lines, risk `support`): Handles call text for the other feature.
+- **tools.audit_pg_backup_action_flow.text_range** (function, lines 67–70, 4 lines, risk `support`): Handles text range for the other feature.
+- **tools.audit_pg_backup_action_flow.has_call** (function, lines 73–79, 7 lines, risk `support`): Handles has call for the other feature.
+- **tools.audit_pg_backup_action_flow.context** (function, lines 82–85, 4 lines, risk `support`): Handles context for the other feature.
+- **tools.audit_pg_backup_action_flow.protected_context** (function, lines 88–90, 3 lines, risk `support`): Handles protected context for the other feature.
+- **tools.audit_pg_backup_action_flow.Visitor** (class, lines 93–169, 77 lines, risk `container`): Groups Visitor for the other feature.
+- **tools.audit_pg_backup_action_flow.Visitor.__init__** (method, lines 94–98, 5 lines, risk `support`): Handles init for the other feature.
+- **tools.audit_pg_backup_action_flow.Visitor.visit_ClassDef** (method, lines 100–103, 4 lines, risk `support`): Handles visit ClassDef for the other feature.
+- **tools.audit_pg_backup_action_flow.Visitor.visit_FunctionDef** (method, lines 105–106, 2 lines, risk `support`): Handles visit FunctionDef for the other feature.
+- **tools.audit_pg_backup_action_flow.Visitor.visit_AsyncFunctionDef** (method, lines 108–109, 2 lines, risk `support`): Handles visit AsyncFunctionDef for the other feature.
+- **tools.audit_pg_backup_action_flow.Visitor._visit_function** (method, lines 111–129, 19 lines, risk `support`): Handles visit function for the other feature.
+- **tools.audit_pg_backup_action_flow.Visitor.visit_Call** (method, lines 131–161, 31 lines, risk `support`): Handles visit Call for the other feature.
+- **tools.audit_pg_backup_action_flow.Visitor._is_inside_run_long_task_argument** (method, lines 163–169, 7 lines, risk `support`): Handles is inside run long task argument for the other feature.
 - **tools.audit_pg_backup_action_flow.build_report** (function, lines 172–207, 36 lines, risk `reports`): Builds build report for the reports feature.
-- **tools.audit_pg_backup_action_flow.main** (function, lines 210–222, 13 lines, risk `filesystem`): Handles main for the backup feature.
+- **tools.audit_pg_backup_action_flow.main** (function, lines 210–222, 13 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/audit_pg_command_callers.py`
 
-- **tools.audit_pg_command_callers._call_name** (function, lines 44–54, 11 lines, risk `support`): Handles call name for the database feature.
-- **tools.audit_pg_command_callers._short_call_name** (function, lines 57–58, 2 lines, risk `support`): Handles short call name for the database feature.
-- **tools.audit_pg_command_callers._contains_name** (function, lines 61–68, 8 lines, risk `support`): Handles contains name for the database feature.
-- **tools.audit_pg_command_callers._context** (function, lines 71–77, 7 lines, risk `support`): Handles context for the database feature.
-- **tools.audit_pg_command_callers._protected_context** (function, lines 80–82, 3 lines, risk `support`): Handles protected context for the database feature.
-- **tools.audit_pg_command_callers._function_record** (function, lines 85–95, 11 lines, risk `support`): Handles function record for the database feature.
-- **tools.audit_pg_command_callers.audit** (function, lines 98–179, 82 lines, risk `filesystem`): Handles audit for the database feature.
-- **tools.audit_pg_command_callers.main** (function, lines 182–194, 13 lines, risk `filesystem`): Handles main for the database feature.
+- **tools.audit_pg_command_callers._call_name** (function, lines 44–54, 11 lines, risk `support`): Handles call name for the other feature.
+- **tools.audit_pg_command_callers._short_call_name** (function, lines 57–58, 2 lines, risk `support`): Handles short call name for the other feature.
+- **tools.audit_pg_command_callers._contains_name** (function, lines 61–68, 8 lines, risk `support`): Handles contains name for the other feature.
+- **tools.audit_pg_command_callers._context** (function, lines 71–77, 7 lines, risk `support`): Handles context for the other feature.
+- **tools.audit_pg_command_callers._protected_context** (function, lines 80–82, 3 lines, risk `support`): Handles protected context for the other feature.
+- **tools.audit_pg_command_callers._function_record** (function, lines 85–95, 11 lines, risk `support`): Handles function record for the other feature.
+- **tools.audit_pg_command_callers.audit** (function, lines 98–179, 82 lines, risk `filesystem`): Handles audit for the other feature.
+- **tools.audit_pg_command_callers.main** (function, lines 182–194, 13 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/audit_shadowed_definitions.py`
 
@@ -1389,40 +1389,40 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/cleanup_databank_export_callbacks.py`
 
-- **tools.cleanup_databank_export_callbacks._line_indent** (function, lines 45–46, 2 lines, risk `support`): Handles line indent for the data bank feature.
-- **tools.cleanup_databank_export_callbacks._is_decorator** (function, lines 49–50, 2 lines, risk `support`): Handles is decorator for the data bank feature.
+- **tools.cleanup_databank_export_callbacks._line_indent** (function, lines 45–46, 2 lines, risk `support`): Handles line indent for the other feature.
+- **tools.cleanup_databank_export_callbacks._is_decorator** (function, lines 49–50, 2 lines, risk `support`): Handles is decorator for the other feature.
 - **tools.cleanup_databank_export_callbacks._find_function_ranges** (function, lines 53–90, 38 lines, risk `support`): Return 0-based inclusive/exclusive ranges for a function definition. Each result is (start_index, end_index, indent).
-- **tools.cleanup_databank_export_callbacks._inside_any** (function, lines 93–94, 2 lines, risk `support`): Handles inside any for the data bank feature.
-- **tools.cleanup_databank_export_callbacks._looks_like_string_reference** (function, lines 97–108, 12 lines, risk `support`): Handles looks like string reference for the data bank feature.
+- **tools.cleanup_databank_export_callbacks._inside_any** (function, lines 93–94, 2 lines, risk `support`): Handles inside any for the other feature.
+- **tools.cleanup_databank_export_callbacks._looks_like_string_reference** (function, lines 97–108, 12 lines, risk `support`): Handles looks like string reference for the other feature.
 - **tools.cleanup_databank_export_callbacks._is_stale_cleanup_reference** (function, lines 111–119, 9 lines, risk `support`): Return True only for harmless generated cleanup/hide-block references.
-- **tools.cleanup_databank_export_callbacks._external_references** (function, lines 122–141, 20 lines, risk `support`): Handles external references for the data bank feature.
-- **tools.cleanup_databank_export_callbacks._remove_ranges** (function, lines 144–151, 8 lines, risk `support`): Removes remove ranges for the data bank feature.
-- **tools.cleanup_databank_export_callbacks.main** (function, lines 154–215, 62 lines, risk `filesystem`): Handles main for the data bank feature.
+- **tools.cleanup_databank_export_callbacks._external_references** (function, lines 122–141, 20 lines, risk `support`): Handles external references for the other feature.
+- **tools.cleanup_databank_export_callbacks._remove_ranges** (function, lines 144–151, 8 lines, risk `support`): Removes remove ranges for the other feature.
+- **tools.cleanup_databank_export_callbacks.main** (function, lines 154–215, 62 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/cleanup_databank_export_ui_source.py`
 
-- **tools.cleanup_databank_export_ui_source.remove_old_blocks** (function, lines 74–87, 14 lines, risk `support`): Removes remove old blocks for the data bank feature.
-- **tools.cleanup_databank_export_ui_source._has_any** (function, lines 90–92, 3 lines, risk `support`): Handles has any for the data bank feature.
+- **tools.cleanup_databank_export_ui_source.remove_old_blocks** (function, lines 74–87, 14 lines, risk `support`): Removes remove old blocks for the other feature.
+- **tools.cleanup_databank_export_ui_source._has_any** (function, lines 90–92, 3 lines, risk `support`): Handles has any for the other feature.
 - **tools.cleanup_databank_export_ui_source.is_confirmed_databank_export_ui_line** (function, lines 95–112, 18 lines, risk `support`): Handles is confirmed databank export ui line for the data bank feature.
-- **tools.cleanup_databank_export_ui_source.cleanup_source_lines** (function, lines 115–126, 12 lines, risk `support`): Handles cleanup source lines for the data bank feature.
-- **tools.cleanup_databank_export_ui_source.main** (function, lines 129–147, 19 lines, risk `filesystem`): Handles main for the data bank feature.
+- **tools.cleanup_databank_export_ui_source.cleanup_source_lines** (function, lines 115–126, 12 lines, risk `support`): Handles cleanup source lines for the other feature.
+- **tools.cleanup_databank_export_ui_source.main** (function, lines 129–147, 19 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/cleanup_logger_fallback_pass_only.py`
 
-- **tools.cleanup_logger_fallback_pass_only._line_text** (function, lines 33–36, 4 lines, risk `support`): Handles line text for the payments feature.
-- **tools.cleanup_logger_fallback_pass_only._find_top_level_function** (function, lines 39–54, 16 lines, risk `support`): Retrieves find top level function for the payments feature.
-- **tools.cleanup_logger_fallback_pass_only._locate_target** (function, lines 57–133, 77 lines, risk `support`): Handles locate target for the payments feature.
+- **tools.cleanup_logger_fallback_pass_only._line_text** (function, lines 33–36, 4 lines, risk `support`): Handles line text for the other feature.
+- **tools.cleanup_logger_fallback_pass_only._find_top_level_function** (function, lines 39–54, 16 lines, risk `support`): Retrieves find top level function for the other feature.
+- **tools.cleanup_logger_fallback_pass_only._locate_target** (function, lines 57–133, 77 lines, risk `support`): Handles locate target for the other feature.
 - **tools.cleanup_logger_fallback_pass_only.build_report** (function, lines 136–181, 46 lines, risk `filesystem`): Builds build report for the reports feature.
-- **tools.cleanup_logger_fallback_pass_only.main** (function, lines 184–195, 12 lines, risk `filesystem`): Handles main for the payments feature.
+- **tools.cleanup_logger_fallback_pass_only.main** (function, lines 184–195, 12 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/cleanup_modern_ui_pass_only.py`
 
-- **tools.cleanup_modern_ui_pass_only.context** (function, lines 49–52, 4 lines, risk `support`): Handles context for the payments feature.
-- **tools.cleanup_modern_ui_pass_only.has_protected_context** (function, lines 55–57, 3 lines, risk `support`): Handles has protected context for the payments feature.
-- **tools.cleanup_modern_ui_pass_only.inspect_target** (function, lines 60–100, 41 lines, risk `support`): Handles inspect target for the payments feature.
-- **tools.cleanup_modern_ui_pass_only.replacement_for** (function, lines 103–115, 13 lines, risk `support`): Handles replacement for for the payments feature.
+- **tools.cleanup_modern_ui_pass_only.context** (function, lines 49–52, 4 lines, risk `support`): Handles context for the other feature.
+- **tools.cleanup_modern_ui_pass_only.has_protected_context** (function, lines 55–57, 3 lines, risk `support`): Handles has protected context for the other feature.
+- **tools.cleanup_modern_ui_pass_only.inspect_target** (function, lines 60–100, 41 lines, risk `support`): Handles inspect target for the other feature.
+- **tools.cleanup_modern_ui_pass_only.replacement_for** (function, lines 103–115, 13 lines, risk `support`): Handles replacement for for the other feature.
 - **tools.cleanup_modern_ui_pass_only.build_report** (function, lines 118–159, 42 lines, risk `filesystem`): Builds build report for the reports feature.
-- **tools.cleanup_modern_ui_pass_only.main** (function, lines 162–175, 14 lines, risk `filesystem`): Handles main for the payments feature.
+- **tools.cleanup_modern_ui_pass_only.main** (function, lines 162–175, 14 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/cleanup_neutral_appclass_init_patch.py`
 
@@ -1434,57 +1434,57 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/cleanup_pg_json_read_dynamic_sql.py`
 
-- **tools.cleanup_pg_json_read_dynamic_sql._line_number** (function, lines 40–44, 5 lines, risk `support`): Handles line number for the database feature.
-- **tools.cleanup_pg_json_read_dynamic_sql._slice_context** (function, lines 47–52, 6 lines, risk `support`): Handles slice context for the database feature.
-- **tools.cleanup_pg_json_read_dynamic_sql._function_block** (function, lines 55–63, 9 lines, risk `support`): Handles function block for the database feature.
-- **tools.cleanup_pg_json_read_dynamic_sql.build_plan** (function, lines 66–139, 74 lines, risk `filesystem`): Builds build plan for the database feature.
-- **tools.cleanup_pg_json_read_dynamic_sql.main** (function, lines 142–158, 17 lines, risk `filesystem`): Handles main for the database feature.
+- **tools.cleanup_pg_json_read_dynamic_sql._line_number** (function, lines 40–44, 5 lines, risk `support`): Handles line number for the other feature.
+- **tools.cleanup_pg_json_read_dynamic_sql._slice_context** (function, lines 47–52, 6 lines, risk `support`): Handles slice context for the other feature.
+- **tools.cleanup_pg_json_read_dynamic_sql._function_block** (function, lines 55–63, 9 lines, risk `support`): Handles function block for the other feature.
+- **tools.cleanup_pg_json_read_dynamic_sql.build_plan** (function, lines 66–139, 74 lines, risk `filesystem`): Builds build plan for the other feature.
+- **tools.cleanup_pg_json_read_dynamic_sql.main** (function, lines 142–158, 17 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/cleanup_pure_login_dialog_ui_pass_only.py`
 
-- **tools.cleanup_pure_login_dialog_ui_pass_only.Target** (class, lines 22–28, 7 lines, risk `container`): Groups Target for the payments feature.
-- **tools.cleanup_pure_login_dialog_ui_pass_only.ParentSetter** (class, lines 92–96, 5 lines, risk `container`): Groups ParentSetter for the payments feature.
-- **tools.cleanup_pure_login_dialog_ui_pass_only.ParentSetter.visit** (method, lines 93–96, 4 lines, risk `support`): Handles visit for the payments feature.
-- **tools.cleanup_pure_login_dialog_ui_pass_only.node_name** (function, lines 99–102, 4 lines, risk `support`): Handles node name for the payments feature.
-- **tools.cleanup_pure_login_dialog_ui_pass_only.scope_for** (function, lines 105–114, 10 lines, risk `support`): Handles scope for for the payments feature.
-- **tools.cleanup_pure_login_dialog_ui_pass_only.is_exception_handler** (function, lines 117–124, 8 lines, risk `support`): Handles is exception handler for the payments feature.
+- **tools.cleanup_pure_login_dialog_ui_pass_only.Target** (class, lines 22–28, 7 lines, risk `container`): Groups Target for the other feature.
+- **tools.cleanup_pure_login_dialog_ui_pass_only.ParentSetter** (class, lines 92–96, 5 lines, risk `container`): Groups ParentSetter for the other feature.
+- **tools.cleanup_pure_login_dialog_ui_pass_only.ParentSetter.visit** (method, lines 93–96, 4 lines, risk `support`): Handles visit for the other feature.
+- **tools.cleanup_pure_login_dialog_ui_pass_only.node_name** (function, lines 99–102, 4 lines, risk `support`): Handles node name for the other feature.
+- **tools.cleanup_pure_login_dialog_ui_pass_only.scope_for** (function, lines 105–114, 10 lines, risk `support`): Handles scope for for the other feature.
+- **tools.cleanup_pure_login_dialog_ui_pass_only.is_exception_handler** (function, lines 117–124, 8 lines, risk `support`): Handles is exception handler for the other feature.
 - **tools.cleanup_pure_login_dialog_ui_pass_only.is_pass_only_handler** (function, lines 127–132, 6 lines, risk `support`): Handles is pass only handler for the payments feature.
-- **tools.cleanup_pure_login_dialog_ui_pass_only.get_context** (function, lines 135–138, 4 lines, risk `support`): Retrieves get context for the payments feature.
-- **tools.cleanup_pure_login_dialog_ui_pass_only.find_handlers** (function, lines 141–158, 18 lines, risk `support`): Retrieves find handlers for the payments feature.
-- **tools.cleanup_pure_login_dialog_ui_pass_only.replacement_lines** (function, lines 161–170, 10 lines, risk `support`): Handles replacement lines for the payments feature.
+- **tools.cleanup_pure_login_dialog_ui_pass_only.get_context** (function, lines 135–138, 4 lines, risk `support`): Retrieves get context for the other feature.
+- **tools.cleanup_pure_login_dialog_ui_pass_only.find_handlers** (function, lines 141–158, 18 lines, risk `support`): Retrieves find handlers for the other feature.
+- **tools.cleanup_pure_login_dialog_ui_pass_only.replacement_lines** (function, lines 161–170, 10 lines, risk `support`): Handles replacement lines for the other feature.
 - **tools.cleanup_pure_login_dialog_ui_pass_only.build_report** (function, lines 173–301, 129 lines, risk `filesystem`): Builds build report for the reports feature.
-- **tools.cleanup_pure_login_dialog_ui_pass_only.main** (function, lines 304–320, 17 lines, risk `filesystem`): Handles main for the payments feature.
+- **tools.cleanup_pure_login_dialog_ui_pass_only.main** (function, lines 304–320, 17 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/cleanup_stale_databank_generated_blocks.py`
 
-- **tools.cleanup_stale_databank_generated_blocks._line_indent** (function, lines 91–92, 2 lines, risk `support`): Handles line indent for the data bank feature.
-- **tools.cleanup_stale_databank_generated_blocks._find_callback_definitions** (function, lines 95–101, 7 lines, risk `support`): Retrieves find callback definitions for the data bank feature.
-- **tools.cleanup_stale_databank_generated_blocks._target_reference_lines** (function, lines 104–106, 3 lines, risk `support`): Handles target reference lines for the data bank feature.
-- **tools.cleanup_stale_databank_generated_blocks._has_marker** (function, lines 109–111, 3 lines, risk `support`): Handles has marker for the data bank feature.
-- **tools.cleanup_stale_databank_generated_blocks._has_expected_generated_code** (function, lines 114–116, 3 lines, risk `support`): Handles has expected generated code for the data bank feature.
-- **tools.cleanup_stale_databank_generated_blocks._protected_hits** (function, lines 119–121, 3 lines, risk `support`): Handles protected hits for the data bank feature.
+- **tools.cleanup_stale_databank_generated_blocks._line_indent** (function, lines 91–92, 2 lines, risk `support`): Handles line indent for the other feature.
+- **tools.cleanup_stale_databank_generated_blocks._find_callback_definitions** (function, lines 95–101, 7 lines, risk `support`): Retrieves find callback definitions for the other feature.
+- **tools.cleanup_stale_databank_generated_blocks._target_reference_lines** (function, lines 104–106, 3 lines, risk `support`): Handles target reference lines for the other feature.
+- **tools.cleanup_stale_databank_generated_blocks._has_marker** (function, lines 109–111, 3 lines, risk `support`): Handles has marker for the other feature.
+- **tools.cleanup_stale_databank_generated_blocks._has_expected_generated_code** (function, lines 114–116, 3 lines, risk `support`): Handles has expected generated code for the other feature.
+- **tools.cleanup_stale_databank_generated_blocks._protected_hits** (function, lines 119–121, 3 lines, risk `support`): Handles protected hits for the other feature.
 - **tools.cleanup_stale_databank_generated_blocks._split_comment_and_code_lines** (function, lines 124–139, 16 lines, risk `support`): Split Python source lines into comment-only lines and everything else. Protected terms in comments are safety notes, not executable lending/report logic. Protected terms in strings or executable code still count as code and keep the cleanup blocked.
-- **tools.cleanup_stale_databank_generated_blocks._protected_hits_in_code** (function, lines 142–144, 3 lines, risk `support`): Handles protected hits in code for the data bank feature.
-- **tools.cleanup_stale_databank_generated_blocks._protected_hits_in_comments** (function, lines 147–149, 3 lines, risk `support`): Handles protected hits in comments for the data bank feature.
+- **tools.cleanup_stale_databank_generated_blocks._protected_hits_in_code** (function, lines 142–144, 3 lines, risk `support`): Handles protected hits in code for the other feature.
+- **tools.cleanup_stale_databank_generated_blocks._protected_hits_in_comments** (function, lines 147–149, 3 lines, risk `support`): Handles protected hits in comments for the other feature.
 - **tools.cleanup_stale_databank_generated_blocks._looks_like_generated_databank_cleanup_block** (function, lines 152–180, 29 lines, risk `support`): Return True only for generated cleanup/hide block shapes.
-- **tools.cleanup_stale_databank_generated_blocks._is_possible_block_start** (function, lines 183–200, 18 lines, risk `support`): Handles is possible block start for the data bank feature.
-- **tools.cleanup_stale_databank_generated_blocks._is_possible_block_boundary** (function, lines 203–215, 13 lines, risk `support`): Handles is possible block boundary for the data bank feature.
-- **tools.cleanup_stale_databank_generated_blocks._next_boundary_after** (function, lines 218–228, 11 lines, risk `support`): Handles next boundary after for the data bank feature.
+- **tools.cleanup_stale_databank_generated_blocks._is_possible_block_start** (function, lines 183–200, 18 lines, risk `support`): Handles is possible block start for the other feature.
+- **tools.cleanup_stale_databank_generated_blocks._is_possible_block_boundary** (function, lines 203–215, 13 lines, risk `support`): Handles is possible block boundary for the other feature.
+- **tools.cleanup_stale_databank_generated_blocks._next_boundary_after** (function, lines 218–228, 11 lines, risk `support`): Handles next boundary after for the other feature.
 - **tools.cleanup_stale_databank_generated_blocks._candidate_range_for_reference** (function, lines 231–272, 42 lines, risk `support`): Return 0-based [start, end) candidate range for a stale generated block.
-- **tools.cleanup_stale_databank_generated_blocks._merge_ranges** (function, lines 275–286, 12 lines, risk `support`): Handles merge ranges for the data bank feature.
-- **tools.cleanup_stale_databank_generated_blocks._remove_ranges** (function, lines 289–294, 6 lines, risk `support`): Removes remove ranges for the data bank feature.
+- **tools.cleanup_stale_databank_generated_blocks._merge_ranges** (function, lines 275–286, 12 lines, risk `support`): Handles merge ranges for the other feature.
+- **tools.cleanup_stale_databank_generated_blocks._remove_ranges** (function, lines 289–294, 6 lines, risk `support`): Removes remove ranges for the other feature.
 - **tools.cleanup_stale_databank_generated_blocks._format_terms** (function, lines 297–298, 2 lines, risk `support`): Handles format terms for the utilities feature.
-- **tools.cleanup_stale_databank_generated_blocks._safety_check_range** (function, lines 301–334, 34 lines, risk `support`): Handles safety check range for the data bank feature.
-- **tools.cleanup_stale_databank_generated_blocks.main** (function, lines 337–437, 101 lines, risk `filesystem`): Handles main for the data bank feature.
+- **tools.cleanup_stale_databank_generated_blocks._safety_check_range** (function, lines 301–334, 34 lines, risk `support`): Handles safety check range for the other feature.
+- **tools.cleanup_stale_databank_generated_blocks.main** (function, lines 337–437, 101 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/disable_full_daily_ledger.py`
 
-- **tools.disable_full_daily_ledger._flush** (function, lines 349–350, 2 lines, risk `reports`): Handles flush for the reports feature.
-- **tools.disable_full_daily_ledger.remove_existing_blocks** (function, lines 353–368, 16 lines, risk `support`): Removes remove existing blocks for the reports feature.
-- **tools.disable_full_daily_ledger._contains_legacy_label** (function, lines 371–373, 3 lines, risk `support`): Handles contains legacy label for the reports feature.
-- **tools.disable_full_daily_ledger._looks_like_legacy_button_line** (function, lines 376–389, 14 lines, risk `ui_only`): Handles looks like legacy button line for the reports feature.
-- **tools.disable_full_daily_ledger.remove_static_legacy_button_lines** (function, lines 392–400, 9 lines, risk `support`): Removes remove static legacy button lines for the reports feature.
-- **tools.disable_full_daily_ledger.main** (function, lines 403–438, 36 lines, risk `filesystem`): Handles main for the reports feature.
+- **tools.disable_full_daily_ledger._flush** (function, lines 349–350, 2 lines, risk `reports`): Handles flush for the other feature.
+- **tools.disable_full_daily_ledger.remove_existing_blocks** (function, lines 353–368, 16 lines, risk `support`): Removes remove existing blocks for the other feature.
+- **tools.disable_full_daily_ledger._contains_legacy_label** (function, lines 371–373, 3 lines, risk `support`): Handles contains legacy label for the other feature.
+- **tools.disable_full_daily_ledger._looks_like_legacy_button_line** (function, lines 376–389, 14 lines, risk `ui_only`): Handles looks like legacy button line for the other feature.
+- **tools.disable_full_daily_ledger.remove_static_legacy_button_lines** (function, lines 392–400, 9 lines, risk `support`): Removes remove static legacy button lines for the other feature.
+- **tools.disable_full_daily_ledger.main** (function, lines 403–438, 36 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_append_unique_text.py`
 
@@ -1498,82 +1498,82 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/extract_cilog_action_label.py`
 
-- **tools.extract_cilog_action_label._local_names** (function, lines 20–31, 12 lines, risk `support`): Handles local names for the clients feature.
-- **tools.extract_cilog_action_label._find** (function, lines 34–35, 2 lines, risk `support`): Handles find for the clients feature.
-- **tools.extract_cilog_action_label._function_text** (function, lines 38–41, 4 lines, risk `support`): Handles function text for the clients feature.
-- **tools.extract_cilog_action_label._atomic_write** (function, lines 44–53, 10 lines, risk `filesystem`): Handles atomic write for the clients feature.
-- **tools.extract_cilog_action_label.build_plan** (function, lines 56–111, 56 lines, risk `filesystem`): Builds build plan for the clients feature.
-- **tools.extract_cilog_action_label.apply** (function, lines 114–123, 10 lines, risk `support`): Handles apply for the clients feature.
-- **tools.extract_cilog_action_label.main** (function, lines 126–142, 17 lines, risk `filesystem`): Handles main for the clients feature.
+- **tools.extract_cilog_action_label._local_names** (function, lines 20–31, 12 lines, risk `support`): Handles local names for the other feature.
+- **tools.extract_cilog_action_label._find** (function, lines 34–35, 2 lines, risk `support`): Handles find for the other feature.
+- **tools.extract_cilog_action_label._function_text** (function, lines 38–41, 4 lines, risk `support`): Handles function text for the other feature.
+- **tools.extract_cilog_action_label._atomic_write** (function, lines 44–53, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
+- **tools.extract_cilog_action_label.build_plan** (function, lines 56–111, 56 lines, risk `filesystem`): Builds build plan for the other feature.
+- **tools.extract_cilog_action_label.apply** (function, lines 114–123, 10 lines, risk `support`): Handles apply for the other feature.
+- **tools.extract_cilog_action_label.main** (function, lines 126–142, 17 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_cilog_diff_pairs.py`
 
-- **tools.extract_cilog_diff_pairs._atomic_write** (function, lines 21–30, 10 lines, risk `filesystem`): Handles atomic write for the clients feature.
-- **tools.extract_cilog_diff_pairs._function_matches** (function, lines 33–39, 7 lines, risk `support`): Handles function matches for the clients feature.
-- **tools.extract_cilog_diff_pairs._local_names** (function, lines 42–56, 15 lines, risk `support`): Handles local names for the clients feature.
+- **tools.extract_cilog_diff_pairs._atomic_write** (function, lines 21–30, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
+- **tools.extract_cilog_diff_pairs._function_matches** (function, lines 33–39, 7 lines, risk `support`): Handles function matches for the other feature.
+- **tools.extract_cilog_diff_pairs._local_names** (function, lines 42–56, 15 lines, risk `support`): Handles local names for the other feature.
 - **tools.extract_cilog_diff_pairs._validate_node** (function, lines 59–83, 25 lines, risk `support`): Validates validate node for the utilities feature.
-- **tools.extract_cilog_diff_pairs._caller_summary** (function, lines 86–105, 20 lines, risk `support`): Handles caller summary for the clients feature.
-- **tools.extract_cilog_diff_pairs.inspect_state** (function, lines 108–135, 28 lines, risk `filesystem`): Handles inspect state for the clients feature.
-- **tools.extract_cilog_diff_pairs.apply_extraction** (function, lines 138–184, 47 lines, risk `filesystem`): Handles apply extraction for the clients feature.
-- **tools.extract_cilog_diff_pairs.main** (function, lines 187–203, 17 lines, risk `filesystem`): Handles main for the clients feature.
+- **tools.extract_cilog_diff_pairs._caller_summary** (function, lines 86–105, 20 lines, risk `support`): Handles caller summary for the other feature.
+- **tools.extract_cilog_diff_pairs.inspect_state** (function, lines 108–135, 28 lines, risk `filesystem`): Handles inspect state for the other feature.
+- **tools.extract_cilog_diff_pairs.apply_extraction** (function, lines 138–184, 47 lines, risk `filesystem`): Handles apply extraction for the other feature.
+- **tools.extract_cilog_diff_pairs.main** (function, lines 187–203, 17 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_cilog_value_formatter.py`
 
-- **tools.extract_cilog_value_formatter._node_source** (function, lines 21–24, 4 lines, risk `support`): Handles node source for the clients feature.
-- **tools.extract_cilog_value_formatter._top_level_function** (function, lines 27–31, 5 lines, risk `support`): Handles top level function for the clients feature.
-- **tools.extract_cilog_value_formatter._local_names** (function, lines 34–45, 12 lines, risk `support`): Handles local names for the clients feature.
+- **tools.extract_cilog_value_formatter._node_source** (function, lines 21–24, 4 lines, risk `support`): Handles node source for the other feature.
+- **tools.extract_cilog_value_formatter._top_level_function** (function, lines 27–31, 5 lines, risk `support`): Handles top level function for the other feature.
+- **tools.extract_cilog_value_formatter._local_names** (function, lines 34–45, 12 lines, risk `support`): Handles local names for the other feature.
 - **tools.extract_cilog_value_formatter._validate** (function, lines 48–60, 13 lines, risk `support`): Handles validate for the utilities feature.
-- **tools.extract_cilog_value_formatter.build_plan** (function, lines 63–115, 53 lines, risk `filesystem`): Builds build plan for the clients feature.
-- **tools.extract_cilog_value_formatter._atomic_write** (function, lines 118–127, 10 lines, risk `filesystem`): Handles atomic write for the clients feature.
-- **tools.extract_cilog_value_formatter.apply_extraction** (function, lines 130–140, 11 lines, risk `support`): Handles apply extraction for the clients feature.
-- **tools.extract_cilog_value_formatter.main** (function, lines 143–161, 19 lines, risk `filesystem`): Handles main for the clients feature.
+- **tools.extract_cilog_value_formatter.build_plan** (function, lines 63–115, 53 lines, risk `filesystem`): Builds build plan for the other feature.
+- **tools.extract_cilog_value_formatter._atomic_write** (function, lines 118–127, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
+- **tools.extract_cilog_value_formatter.apply_extraction** (function, lines 130–140, 11 lines, risk `support`): Handles apply extraction for the other feature.
+- **tools.extract_cilog_value_formatter.main** (function, lines 143–161, 19 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_date_display_helpers.py`
 
-- **tools.extract_date_display_helpers._line_source** (function, lines 32–37, 6 lines, risk `support`): Handles line source for the utilities feature.
-- **tools.extract_date_display_helpers._top_level_functions** (function, lines 40–47, 8 lines, risk `support`): Handles top level functions for the utilities feature.
-- **tools.extract_date_display_helpers._local_names** (function, lines 50–68, 19 lines, risk `support`): Handles local names for the utilities feature.
-- **tools.extract_date_display_helpers._external_loaded_names** (function, lines 71–78, 8 lines, risk `support`): Handles external loaded names for the utilities feature.
+- **tools.extract_date_display_helpers._line_source** (function, lines 32–37, 6 lines, risk `support`): Handles line source for the other feature.
+- **tools.extract_date_display_helpers._top_level_functions** (function, lines 40–47, 8 lines, risk `support`): Handles top level functions for the other feature.
+- **tools.extract_date_display_helpers._local_names** (function, lines 50–68, 19 lines, risk `support`): Handles local names for the other feature.
+- **tools.extract_date_display_helpers._external_loaded_names** (function, lines 71–78, 8 lines, risk `support`): Handles external loaded names for the other feature.
 - **tools.extract_date_display_helpers._validate_signature** (function, lines 81–84, 4 lines, risk `support`): Validates validate signature for the utilities feature.
 - **tools.extract_date_display_helpers._validate_existing_module** (function, lines 87–105, 19 lines, risk `support`): Validates validate existing module for the utilities feature.
-- **tools.extract_date_display_helpers._append_module_source** (function, lines 108–114, 7 lines, risk `support`): Handles append module source for the utilities feature.
-- **tools.extract_date_display_helpers._patched_source** (function, lines 117–125, 9 lines, risk `support`): Handles patched source for the utilities feature.
-- **tools.extract_date_display_helpers._state** (function, lines 128–138, 11 lines, risk `support`): Handles state for the utilities feature.
-- **tools.extract_date_display_helpers.build_plan** (function, lines 141–208, 68 lines, risk `filesystem`): Builds build plan for the utilities feature.
-- **tools.extract_date_display_helpers._atomic_write** (function, lines 211–220, 10 lines, risk `filesystem`): Handles atomic write for the utilities feature.
-- **tools.extract_date_display_helpers.apply_extraction** (function, lines 223–233, 11 lines, risk `support`): Handles apply extraction for the utilities feature.
-- **tools.extract_date_display_helpers.main** (function, lines 236–253, 18 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.extract_date_display_helpers._append_module_source** (function, lines 108–114, 7 lines, risk `support`): Handles append module source for the other feature.
+- **tools.extract_date_display_helpers._patched_source** (function, lines 117–125, 9 lines, risk `support`): Handles patched source for the other feature.
+- **tools.extract_date_display_helpers._state** (function, lines 128–138, 11 lines, risk `support`): Handles state for the other feature.
+- **tools.extract_date_display_helpers.build_plan** (function, lines 141–208, 68 lines, risk `filesystem`): Builds build plan for the other feature.
+- **tools.extract_date_display_helpers._atomic_write** (function, lines 211–220, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
+- **tools.extract_date_display_helpers.apply_extraction** (function, lines 223–233, 11 lines, risk `support`): Handles apply extraction for the other feature.
+- **tools.extract_date_display_helpers.main** (function, lines 236–253, 18 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_date_helpers_module.py`
 
-- **tools.extract_date_helpers_module._line_source** (function, lines 34–41, 8 lines, risk `support`): Handles line source for the utilities feature.
-- **tools.extract_date_helpers_module._top_level_functions** (function, lines 44–51, 8 lines, risk `support`): Handles top level functions for the utilities feature.
-- **tools.extract_date_helpers_module._local_names** (function, lines 54–75, 22 lines, risk `support`): Handles local names for the utilities feature.
-- **tools.extract_date_helpers_module._external_loaded_names** (function, lines 78–85, 8 lines, risk `support`): Handles external loaded names for the utilities feature.
-- **tools.extract_date_helpers_module._import_bindings** (function, lines 88–101, 14 lines, risk `support`): Handles import bindings for the utilities feature.
-- **tools.extract_date_helpers_module._stdlib_roots** (function, lines 104–107, 4 lines, risk `support`): Handles stdlib roots for the utilities feature.
-- **tools.extract_date_helpers_module._required_import_nodes** (function, lines 110–146, 37 lines, risk `support`): Handles required import nodes for the utilities feature.
-- **tools.extract_date_helpers_module._module_source** (function, lines 149–169, 21 lines, risk `support`): Handles module source for the utilities feature.
-- **tools.extract_date_helpers_module._patched_source** (function, lines 172–180, 9 lines, risk `support`): Handles patched source for the utilities feature.
-- **tools.extract_date_helpers_module._state** (function, lines 183–193, 11 lines, risk `support`): Handles state for the utilities feature.
-- **tools.extract_date_helpers_module.build_plan** (function, lines 196–254, 59 lines, risk `filesystem`): Builds build plan for the utilities feature.
-- **tools.extract_date_helpers_module._atomic_write** (function, lines 257–266, 10 lines, risk `filesystem`): Handles atomic write for the utilities feature.
-- **tools.extract_date_helpers_module.apply_extraction** (function, lines 269–289, 21 lines, risk `support`): Handles apply extraction for the utilities feature.
-- **tools.extract_date_helpers_module.main** (function, lines 292–310, 19 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.extract_date_helpers_module._line_source** (function, lines 34–41, 8 lines, risk `support`): Handles line source for the other feature.
+- **tools.extract_date_helpers_module._top_level_functions** (function, lines 44–51, 8 lines, risk `support`): Handles top level functions for the other feature.
+- **tools.extract_date_helpers_module._local_names** (function, lines 54–75, 22 lines, risk `support`): Handles local names for the other feature.
+- **tools.extract_date_helpers_module._external_loaded_names** (function, lines 78–85, 8 lines, risk `support`): Handles external loaded names for the other feature.
+- **tools.extract_date_helpers_module._import_bindings** (function, lines 88–101, 14 lines, risk `support`): Handles import bindings for the other feature.
+- **tools.extract_date_helpers_module._stdlib_roots** (function, lines 104–107, 4 lines, risk `support`): Handles stdlib roots for the other feature.
+- **tools.extract_date_helpers_module._required_import_nodes** (function, lines 110–146, 37 lines, risk `support`): Handles required import nodes for the other feature.
+- **tools.extract_date_helpers_module._module_source** (function, lines 149–169, 21 lines, risk `support`): Handles module source for the other feature.
+- **tools.extract_date_helpers_module._patched_source** (function, lines 172–180, 9 lines, risk `support`): Handles patched source for the other feature.
+- **tools.extract_date_helpers_module._state** (function, lines 183–193, 11 lines, risk `support`): Handles state for the other feature.
+- **tools.extract_date_helpers_module.build_plan** (function, lines 196–254, 59 lines, risk `filesystem`): Builds build plan for the other feature.
+- **tools.extract_date_helpers_module._atomic_write** (function, lines 257–266, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
+- **tools.extract_date_helpers_module.apply_extraction** (function, lines 269–289, 21 lines, risk `support`): Handles apply extraction for the other feature.
+- **tools.extract_date_helpers_module.main** (function, lines 292–310, 19 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_display_formatters.py`
 
-- **tools.extract_display_formatters._node_source** (function, lines 31–36, 6 lines, risk `support`): Handles node source for the utilities feature.
-- **tools.extract_display_formatters._top_level_functions** (function, lines 39–46, 8 lines, risk `support`): Handles top level functions for the utilities feature.
-- **tools.extract_display_formatters._local_names** (function, lines 49–69, 21 lines, risk `support`): Handles local names for the utilities feature.
-- **tools.extract_display_formatters._external_loaded_names** (function, lines 72–79, 8 lines, risk `support`): Handles external loaded names for the utilities feature.
-- **tools.extract_display_formatters._module_target_counts** (function, lines 82–91, 10 lines, risk `support`): Handles module target counts for the utilities feature.
-- **tools.extract_display_formatters._state** (function, lines 94–104, 11 lines, risk `support`): Handles state for the utilities feature.
-- **tools.extract_display_formatters._patched_source** (function, lines 107–118, 12 lines, risk `support`): Handles patched source for the utilities feature.
-- **tools.extract_display_formatters._atomic_write** (function, lines 121–130, 10 lines, risk `filesystem`): Handles atomic write for the utilities feature.
-- **tools.extract_display_formatters.build_plan** (function, lines 133–203, 71 lines, risk `filesystem`): Builds build plan for the utilities feature.
-- **tools.extract_display_formatters.apply_extraction** (function, lines 206–216, 11 lines, risk `support`): Handles apply extraction for the utilities feature.
-- **tools.extract_display_formatters.main** (function, lines 219–236, 18 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.extract_display_formatters._node_source** (function, lines 31–36, 6 lines, risk `support`): Handles node source for the other feature.
+- **tools.extract_display_formatters._top_level_functions** (function, lines 39–46, 8 lines, risk `support`): Handles top level functions for the other feature.
+- **tools.extract_display_formatters._local_names** (function, lines 49–69, 21 lines, risk `support`): Handles local names for the other feature.
+- **tools.extract_display_formatters._external_loaded_names** (function, lines 72–79, 8 lines, risk `support`): Handles external loaded names for the other feature.
+- **tools.extract_display_formatters._module_target_counts** (function, lines 82–91, 10 lines, risk `support`): Handles module target counts for the other feature.
+- **tools.extract_display_formatters._state** (function, lines 94–104, 11 lines, risk `support`): Handles state for the other feature.
+- **tools.extract_display_formatters._patched_source** (function, lines 107–118, 12 lines, risk `support`): Handles patched source for the other feature.
+- **tools.extract_display_formatters._atomic_write** (function, lines 121–130, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
+- **tools.extract_display_formatters.build_plan** (function, lines 133–203, 71 lines, risk `filesystem`): Builds build plan for the other feature.
+- **tools.extract_display_formatters.apply_extraction** (function, lines 206–216, 11 lines, risk `support`): Handles apply extraction for the other feature.
+- **tools.extract_display_formatters.main** (function, lines 219–236, 18 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_fmt_currency_module.py`
 
@@ -1590,77 +1590,77 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/extract_log_serialization_helper.py`
 
-- **tools.extract_log_serialization_helper._source** (function, lines 20–23, 4 lines, risk `support`): Handles source for the utilities feature.
-- **tools.extract_log_serialization_helper._function** (function, lines 26–30, 5 lines, risk `support`): Handles function for the utilities feature.
-- **tools.extract_log_serialization_helper._local_names** (function, lines 33–44, 12 lines, risk `support`): Handles local names for the utilities feature.
+- **tools.extract_log_serialization_helper._source** (function, lines 20–23, 4 lines, risk `support`): Handles source for the other feature.
+- **tools.extract_log_serialization_helper._function** (function, lines 26–30, 5 lines, risk `support`): Handles function for the other feature.
+- **tools.extract_log_serialization_helper._local_names** (function, lines 33–44, 12 lines, risk `support`): Handles local names for the other feature.
 - **tools.extract_log_serialization_helper._validate** (function, lines 47–59, 13 lines, risk `support`): Handles validate for the utilities feature.
-- **tools.extract_log_serialization_helper.build_plan** (function, lines 62–102, 41 lines, risk `filesystem`): Builds build plan for the utilities feature.
-- **tools.extract_log_serialization_helper._write** (function, lines 105–114, 10 lines, risk `filesystem`): Handles write for the utilities feature.
-- **tools.extract_log_serialization_helper.apply** (function, lines 117–126, 10 lines, risk `support`): Handles apply for the utilities feature.
-- **tools.extract_log_serialization_helper.main** (function, lines 129–142, 14 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.extract_log_serialization_helper.build_plan** (function, lines 62–102, 41 lines, risk `filesystem`): Builds build plan for the other feature.
+- **tools.extract_log_serialization_helper._write** (function, lines 105–114, 10 lines, risk `filesystem`): Handles write for the other feature.
+- **tools.extract_log_serialization_helper.apply** (function, lines 117–126, 10 lines, risk `support`): Handles apply for the other feature.
+- **tools.extract_log_serialization_helper.main** (function, lines 129–142, 14 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_merge_note_dict.py`
 
-- **tools.extract_merge_note_dict.atomic_write** (function, lines 22–31, 10 lines, risk `filesystem`): Handles atomic write for the notes feature.
-- **tools.extract_merge_note_dict.top_level_functions** (function, lines 34–36, 3 lines, risk `support`): Handles top level functions for the notes feature.
-- **tools.extract_merge_note_dict.external_names** (function, lines 39–55, 17 lines, risk `support`): Handles external names for the notes feature.
-- **tools.extract_merge_note_dict.build_plan** (function, lines 58–94, 37 lines, risk `filesystem`): Builds build plan for the notes feature.
+- **tools.extract_merge_note_dict.atomic_write** (function, lines 22–31, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
+- **tools.extract_merge_note_dict.top_level_functions** (function, lines 34–36, 3 lines, risk `support`): Handles top level functions for the other feature.
+- **tools.extract_merge_note_dict.external_names** (function, lines 39–55, 17 lines, risk `support`): Handles external names for the other feature.
+- **tools.extract_merge_note_dict.build_plan** (function, lines 58–94, 37 lines, risk `filesystem`): Builds build plan for the other feature.
 - **tools.extract_merge_note_dict.validate_plan** (function, lines 97–107, 11 lines, risk `support`): Validates validate plan for the utilities feature.
-- **tools.extract_merge_note_dict.apply_extraction** (function, lines 110–140, 31 lines, risk `filesystem`): Handles apply extraction for the notes feature.
-- **tools.extract_merge_note_dict.main** (function, lines 143–156, 14 lines, risk `filesystem`): Handles main for the notes feature.
+- **tools.extract_merge_note_dict.apply_extraction** (function, lines 110–140, 31 lines, risk `filesystem`): Handles apply extraction for the other feature.
+- **tools.extract_merge_note_dict.main** (function, lines 143–156, 14 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_note_dict_helper.py`
 
-- **tools.extract_note_dict_helper.atomic_write** (function, lines 21–30, 10 lines, risk `filesystem`): Handles atomic write for the notes feature.
-- **tools.extract_note_dict_helper.top_level_functions** (function, lines 33–35, 3 lines, risk `support`): Handles top level functions for the notes feature.
-- **tools.extract_note_dict_helper.external_names** (function, lines 38–54, 17 lines, risk `support`): Handles external names for the notes feature.
-- **tools.extract_note_dict_helper.build_plan** (function, lines 57–95, 39 lines, risk `filesystem`): Builds build plan for the notes feature.
+- **tools.extract_note_dict_helper.atomic_write** (function, lines 21–30, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
+- **tools.extract_note_dict_helper.top_level_functions** (function, lines 33–35, 3 lines, risk `support`): Handles top level functions for the other feature.
+- **tools.extract_note_dict_helper.external_names** (function, lines 38–54, 17 lines, risk `support`): Handles external names for the other feature.
+- **tools.extract_note_dict_helper.build_plan** (function, lines 57–95, 39 lines, risk `filesystem`): Builds build plan for the other feature.
 - **tools.extract_note_dict_helper.validate_plan** (function, lines 98–109, 12 lines, risk `support`): Validates validate plan for the utilities feature.
-- **tools.extract_note_dict_helper.apply_extraction** (function, lines 112–141, 30 lines, risk `filesystem`): Handles apply extraction for the notes feature.
-- **tools.extract_note_dict_helper.main** (function, lines 144–157, 14 lines, risk `filesystem`): Handles main for the notes feature.
+- **tools.extract_note_dict_helper.apply_extraction** (function, lines 112–141, 30 lines, risk `filesystem`): Handles apply extraction for the other feature.
+- **tools.extract_note_dict_helper.main** (function, lines 144–157, 14 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_numeric_parsers.py`
 
-- **tools.extract_numeric_parsers._line_source** (function, lines 31–36, 6 lines, risk `support`): Handles line source for the utilities feature.
-- **tools.extract_numeric_parsers._top_level_functions** (function, lines 39–46, 8 lines, risk `support`): Handles top level functions for the utilities feature.
-- **tools.extract_numeric_parsers._local_names** (function, lines 49–69, 21 lines, risk `support`): Handles local names for the utilities feature.
-- **tools.extract_numeric_parsers._external_loaded_names** (function, lines 72–79, 8 lines, risk `support`): Handles external loaded names for the utilities feature.
+- **tools.extract_numeric_parsers._line_source** (function, lines 31–36, 6 lines, risk `support`): Handles line source for the other feature.
+- **tools.extract_numeric_parsers._top_level_functions** (function, lines 39–46, 8 lines, risk `support`): Handles top level functions for the other feature.
+- **tools.extract_numeric_parsers._local_names** (function, lines 49–69, 21 lines, risk `support`): Handles local names for the other feature.
+- **tools.extract_numeric_parsers._external_loaded_names** (function, lines 72–79, 8 lines, risk `support`): Handles external loaded names for the other feature.
 - **tools.extract_numeric_parsers._validate_function** (function, lines 82–94, 13 lines, risk `support`): Validates validate function for the utilities feature.
-- **tools.extract_numeric_parsers._module_source** (function, lines 97–116, 20 lines, risk `support`): Handles module source for the utilities feature.
-- **tools.extract_numeric_parsers._patched_source** (function, lines 119–127, 9 lines, risk `support`): Handles patched source for the utilities feature.
-- **tools.extract_numeric_parsers._state** (function, lines 130–140, 11 lines, risk `support`): Handles state for the utilities feature.
-- **tools.extract_numeric_parsers.build_plan** (function, lines 143–194, 52 lines, risk `filesystem`): Builds build plan for the utilities feature.
-- **tools.extract_numeric_parsers._atomic_write** (function, lines 197–206, 10 lines, risk `filesystem`): Handles atomic write for the utilities feature.
-- **tools.extract_numeric_parsers.apply_extraction** (function, lines 209–218, 10 lines, risk `support`): Handles apply extraction for the utilities feature.
-- **tools.extract_numeric_parsers.main** (function, lines 221–239, 19 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.extract_numeric_parsers._module_source** (function, lines 97–116, 20 lines, risk `support`): Handles module source for the other feature.
+- **tools.extract_numeric_parsers._patched_source** (function, lines 119–127, 9 lines, risk `support`): Handles patched source for the other feature.
+- **tools.extract_numeric_parsers._state** (function, lines 130–140, 11 lines, risk `support`): Handles state for the other feature.
+- **tools.extract_numeric_parsers.build_plan** (function, lines 143–194, 52 lines, risk `filesystem`): Builds build plan for the other feature.
+- **tools.extract_numeric_parsers._atomic_write** (function, lines 197–206, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
+- **tools.extract_numeric_parsers.apply_extraction** (function, lines 209–218, 10 lines, risk `support`): Handles apply extraction for the other feature.
+- **tools.extract_numeric_parsers.main** (function, lines 221–239, 19 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_pure_helper_batch.py`
 
-- **tools.extract_pure_helper_batch._load_manifest** (function, lines 22–28, 7 lines, risk `filesystem`): Loads load manifest for the utilities feature.
-- **tools.extract_pure_helper_batch._source_hash** (function, lines 31–32, 2 lines, risk `support`): Handles source hash for the utilities feature.
-- **tools.extract_pure_helper_batch._external_names** (function, lines 35–56, 22 lines, risk `support`): Handles external names for the utilities feature.
-- **tools.extract_pure_helper_batch._matching_imports** (function, lines 59–67, 9 lines, risk `support`): Handles matching imports for the utilities feature.
-- **tools.extract_pure_helper_batch._module_definitions** (function, lines 70–78, 9 lines, risk `filesystem`): Handles module definitions for the utilities feature.
-- **tools.extract_pure_helper_batch.inspect** (function, lines 81–197, 117 lines, risk `filesystem`): Handles inspect for the utilities feature.
-- **tools.extract_pure_helper_batch.apply** (function, lines 200–245, 46 lines, risk `filesystem`): Handles apply for the utilities feature.
-- **tools.extract_pure_helper_batch.main** (function, lines 248–260, 13 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.extract_pure_helper_batch._load_manifest** (function, lines 22–28, 7 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.extract_pure_helper_batch._source_hash** (function, lines 31–32, 2 lines, risk `support`): Handles source hash for the other feature.
+- **tools.extract_pure_helper_batch._external_names** (function, lines 35–56, 22 lines, risk `support`): Handles external names for the other feature.
+- **tools.extract_pure_helper_batch._matching_imports** (function, lines 59–67, 9 lines, risk `support`): Handles matching imports for the other feature.
+- **tools.extract_pure_helper_batch._module_definitions** (function, lines 70–78, 9 lines, risk `filesystem`): Handles module definitions for the other feature.
+- **tools.extract_pure_helper_batch.inspect** (function, lines 81–197, 117 lines, risk `filesystem`): Handles inspect for the other feature.
+- **tools.extract_pure_helper_batch.apply** (function, lines 200–245, 46 lines, risk `filesystem`): Handles apply for the other feature.
+- **tools.extract_pure_helper_batch.main** (function, lines 248–260, 13 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_text_normalizers.py`
 
-- **tools.extract_text_normalizers._line_source** (function, lines 34–39, 6 lines, risk `support`): Handles line source for the utilities feature.
-- **tools.extract_text_normalizers._top_level_functions** (function, lines 42–49, 8 lines, risk `support`): Handles top level functions for the utilities feature.
-- **tools.extract_text_normalizers._local_names** (function, lines 52–72, 21 lines, risk `support`): Handles local names for the utilities feature.
-- **tools.extract_text_normalizers._external_loaded_names** (function, lines 75–82, 8 lines, risk `support`): Handles external loaded names for the utilities feature.
-- **tools.extract_text_normalizers._import_bindings** (function, lines 85–96, 12 lines, risk `support`): Handles import bindings for the utilities feature.
-- **tools.extract_text_normalizers._stdlib_roots** (function, lines 99–102, 4 lines, risk `support`): Handles stdlib roots for the utilities feature.
-- **tools.extract_text_normalizers._required_import_nodes** (function, lines 105–141, 37 lines, risk `support`): Handles required import nodes for the utilities feature.
-- **tools.extract_text_normalizers._module_source** (function, lines 144–164, 21 lines, risk `support`): Handles module source for the utilities feature.
-- **tools.extract_text_normalizers._patched_source** (function, lines 167–178, 12 lines, risk `support`): Handles patched source for the utilities feature.
-- **tools.extract_text_normalizers._state** (function, lines 181–191, 11 lines, risk `support`): Handles state for the utilities feature.
-- **tools.extract_text_normalizers.build_plan** (function, lines 194–259, 66 lines, risk `filesystem`): Builds build plan for the utilities feature.
-- **tools.extract_text_normalizers._atomic_write** (function, lines 262–271, 10 lines, risk `filesystem`): Handles atomic write for the utilities feature.
-- **tools.extract_text_normalizers.apply_extraction** (function, lines 274–283, 10 lines, risk `support`): Handles apply extraction for the utilities feature.
-- **tools.extract_text_normalizers.main** (function, lines 286–304, 19 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.extract_text_normalizers._line_source** (function, lines 34–39, 6 lines, risk `support`): Handles line source for the other feature.
+- **tools.extract_text_normalizers._top_level_functions** (function, lines 42–49, 8 lines, risk `support`): Handles top level functions for the other feature.
+- **tools.extract_text_normalizers._local_names** (function, lines 52–72, 21 lines, risk `support`): Handles local names for the other feature.
+- **tools.extract_text_normalizers._external_loaded_names** (function, lines 75–82, 8 lines, risk `support`): Handles external loaded names for the other feature.
+- **tools.extract_text_normalizers._import_bindings** (function, lines 85–96, 12 lines, risk `support`): Handles import bindings for the other feature.
+- **tools.extract_text_normalizers._stdlib_roots** (function, lines 99–102, 4 lines, risk `support`): Handles stdlib roots for the other feature.
+- **tools.extract_text_normalizers._required_import_nodes** (function, lines 105–141, 37 lines, risk `support`): Handles required import nodes for the other feature.
+- **tools.extract_text_normalizers._module_source** (function, lines 144–164, 21 lines, risk `support`): Handles module source for the other feature.
+- **tools.extract_text_normalizers._patched_source** (function, lines 167–178, 12 lines, risk `support`): Handles patched source for the other feature.
+- **tools.extract_text_normalizers._state** (function, lines 181–191, 11 lines, risk `support`): Handles state for the other feature.
+- **tools.extract_text_normalizers.build_plan** (function, lines 194–259, 66 lines, risk `filesystem`): Builds build plan for the other feature.
+- **tools.extract_text_normalizers._atomic_write** (function, lines 262–271, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
+- **tools.extract_text_normalizers.apply_extraction** (function, lines 274–283, 10 lines, risk `support`): Handles apply extraction for the other feature.
+- **tools.extract_text_normalizers.main** (function, lines 286–304, 19 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/inject_critical_path_logging.py`
 
@@ -1669,8 +1669,8 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/inject_reports_pdf_logging.py`
 
-- **tools.inject_reports_pdf_logging.remove_existing_block** (function, lines 138–146, 9 lines, risk `support`): Removes remove existing block for the reports feature.
-- **tools.inject_reports_pdf_logging.main** (function, lines 149–171, 23 lines, risk `filesystem`): Handles main for the reports feature.
+- **tools.inject_reports_pdf_logging.remove_existing_block** (function, lines 138–146, 9 lines, risk `support`): Removes remove existing block for the other feature.
+- **tools.inject_reports_pdf_logging.main** (function, lines 149–171, 23 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/inject_silent_ui_logging.py`
 
@@ -1708,18 +1708,18 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/inspect_stale_databank_protected_context.py`
 
-- **tools.inspect_stale_databank_protected_context._load_cleanup_tool** (function, lines 22–28, 7 lines, risk `support`): Loads load cleanup tool for the data bank feature.
-- **tools.inspect_stale_databank_protected_context._matching_terms** (function, lines 31–33, 3 lines, risk `support`): Handles matching terms for the data bank feature.
-- **tools.inspect_stale_databank_protected_context.main** (function, lines 36–105, 70 lines, risk `filesystem`): Handles main for the data bank feature.
+- **tools.inspect_stale_databank_protected_context._load_cleanup_tool** (function, lines 22–28, 7 lines, risk `support`): Loads load cleanup tool for the other feature.
+- **tools.inspect_stale_databank_protected_context._matching_terms** (function, lines 31–33, 3 lines, risk `support`): Handles matching terms for the other feature.
+- **tools.inspect_stale_databank_protected_context.main** (function, lines 36–105, 70 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_app_lifecycle_window_pass_only.py`
 
-- **tools.plan_app_lifecycle_window_pass_only._name** (function, lines 48–59, 12 lines, risk `support`): Handles name for the payments feature.
+- **tools.plan_app_lifecycle_window_pass_only._name** (function, lines 48–59, 12 lines, risk `support`): Handles name for the other feature.
 - **tools.plan_app_lifecycle_window_pass_only._is_pass_only** (function, lines 62–63, 2 lines, risk `support`): Handles is pass only for the payments feature.
-- **tools.plan_app_lifecycle_window_pass_only._context** (function, lines 66–69, 4 lines, risk `support`): Handles context for the payments feature.
-- **tools.plan_app_lifecycle_window_pass_only._context_text** (function, lines 72–73, 2 lines, risk `support`): Handles context text for the payments feature.
-- **tools.plan_app_lifecycle_window_pass_only._protected** (function, lines 76–77, 2 lines, risk `support`): Handles protected for the payments feature.
-- **tools.plan_app_lifecycle_window_pass_only._classify** (function, lines 80–103, 24 lines, risk `support`): Handles classify for the payments feature.
+- **tools.plan_app_lifecycle_window_pass_only._context** (function, lines 66–69, 4 lines, risk `support`): Handles context for the other feature.
+- **tools.plan_app_lifecycle_window_pass_only._context_text** (function, lines 72–73, 2 lines, risk `support`): Handles context text for the other feature.
+- **tools.plan_app_lifecycle_window_pass_only._protected** (function, lines 76–77, 2 lines, risk `support`): Handles protected for the other feature.
+- **tools.plan_app_lifecycle_window_pass_only._classify** (function, lines 80–103, 24 lines, risk `support`): Handles classify for the other feature.
 - **tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor** (class, lines 106–157, 52 lines, risk `container`): Groups PassOnlyVisitor for the payments feature.
 - **tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.__init__** (method, lines 107–111, 5 lines, risk `support`): Handles init for the payments feature.
 - **tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor._scope** (method, lines 113–114, 2 lines, risk `support`): Handles scope for the payments feature.
@@ -1728,14 +1728,14 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_AsyncFunctionDef** (method, lines 126–129, 4 lines, risk `support`): Handles visit AsyncFunctionDef for the payments feature.
 - **tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_Try** (method, lines 131–157, 27 lines, risk `support`): Handles visit Try for the payments feature.
 - **tools.plan_app_lifecycle_window_pass_only.build_report** (function, lines 160–198, 39 lines, risk `filesystem`): Builds build report for the reports feature.
-- **tools.plan_app_lifecycle_window_pass_only.main** (function, lines 201–215, 15 lines, risk `filesystem`): Handles main for the payments feature.
+- **tools.plan_app_lifecycle_window_pass_only.main** (function, lines 201–215, 15 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_logger_fallback_pass_only.py`
 
-- **tools.plan_logger_fallback_pass_only._handler_name** (function, lines 54–64, 11 lines, risk `support`): Handles handler name for the payments feature.
+- **tools.plan_logger_fallback_pass_only._handler_name** (function, lines 54–64, 11 lines, risk `support`): Handles handler name for the other feature.
 - **tools.plan_logger_fallback_pass_only._is_pass_only** (function, lines 67–68, 2 lines, risk `support`): Handles is pass only for the payments feature.
-- **tools.plan_logger_fallback_pass_only._context** (function, lines 71–77, 7 lines, risk `support`): Handles context for the payments feature.
-- **tools.plan_logger_fallback_pass_only._scope_name** (function, lines 80–81, 2 lines, risk `support`): Handles scope name for the payments feature.
+- **tools.plan_logger_fallback_pass_only._context** (function, lines 71–77, 7 lines, risk `support`): Handles context for the other feature.
+- **tools.plan_logger_fallback_pass_only._scope_name** (function, lines 80–81, 2 lines, risk `support`): Handles scope name for the other feature.
 - **tools.plan_logger_fallback_pass_only.PassOnlyVisitor** (class, lines 84–133, 50 lines, risk `container`): Groups PassOnlyVisitor for the payments feature.
 - **tools.plan_logger_fallback_pass_only.PassOnlyVisitor.__init__** (method, lines 85–89, 5 lines, risk `support`): Handles init for the payments feature.
 - **tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_ClassDef** (method, lines 91–94, 4 lines, risk `support`): Handles visit ClassDef for the payments feature.
@@ -1743,16 +1743,16 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_AsyncFunctionDef** (method, lines 101–104, 4 lines, risk `support`): Handles visit AsyncFunctionDef for the payments feature.
 - **tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_Try** (method, lines 106–133, 28 lines, risk `support`): Handles visit Try for the payments feature.
 - **tools.plan_logger_fallback_pass_only.build_report** (function, lines 136–172, 37 lines, risk `filesystem`): Builds build report for the reports feature.
-- **tools.plan_logger_fallback_pass_only.main** (function, lines 175–187, 13 lines, risk `filesystem`): Handles main for the payments feature.
+- **tools.plan_logger_fallback_pass_only.main** (function, lines 175–187, 13 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_login_dialog_pass_only.py`
 
-- **tools.plan_login_dialog_pass_only._read_text** (function, lines 95–96, 2 lines, risk `filesystem`): Handles read text for the payments feature.
-- **tools.plan_login_dialog_pass_only._handler_name** (function, lines 99–105, 7 lines, risk `support`): Handles handler name for the payments feature.
+- **tools.plan_login_dialog_pass_only._read_text** (function, lines 95–96, 2 lines, risk `filesystem`): Handles read text for the other feature.
+- **tools.plan_login_dialog_pass_only._handler_name** (function, lines 99–105, 7 lines, risk `support`): Handles handler name for the other feature.
 - **tools.plan_login_dialog_pass_only._is_pass_only** (function, lines 108–109, 2 lines, risk `support`): Handles is pass only for the payments feature.
-- **tools.plan_login_dialog_pass_only._line_window** (function, lines 112–118, 7 lines, risk `support`): Handles line window for the payments feature.
-- **tools.plan_login_dialog_pass_only._context_text** (function, lines 121–122, 2 lines, risk `support`): Handles context text for the payments feature.
-- **tools.plan_login_dialog_pass_only._has_any** (function, lines 125–127, 3 lines, risk `support`): Handles has any for the payments feature.
+- **tools.plan_login_dialog_pass_only._line_window** (function, lines 112–118, 7 lines, risk `support`): Handles line window for the other feature.
+- **tools.plan_login_dialog_pass_only._context_text** (function, lines 121–122, 2 lines, risk `support`): Handles context text for the other feature.
+- **tools.plan_login_dialog_pass_only._has_any** (function, lines 125–127, 3 lines, risk `support`): Handles has any for the other feature.
 - **tools.plan_login_dialog_pass_only.PassOnlyVisitor** (class, lines 130–192, 63 lines, risk `container`): Groups PassOnlyVisitor for the payments feature.
 - **tools.plan_login_dialog_pass_only.PassOnlyVisitor.__init__** (method, lines 131–135, 5 lines, risk `support`): Handles init for the payments feature.
 - **tools.plan_login_dialog_pass_only.PassOnlyVisitor._scope** (method, lines 137–138, 2 lines, risk `support`): Handles scope for the payments feature.
@@ -1761,14 +1761,14 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **tools.plan_login_dialog_pass_only.PassOnlyVisitor.visit_ClassDef** (method, lines 150–153, 4 lines, risk `support`): Handles visit ClassDef for the payments feature.
 - **tools.plan_login_dialog_pass_only.PassOnlyVisitor.visit_ExceptHandler** (method, lines 155–192, 38 lines, risk `support`): Handles visit ExceptHandler for the payments feature.
 - **tools.plan_login_dialog_pass_only.build_report** (function, lines 195–240, 46 lines, risk `reports`): Builds build report for the reports feature.
-- **tools.plan_login_dialog_pass_only.main** (function, lines 243–263, 21 lines, risk `filesystem`): Handles main for the payments feature.
+- **tools.plan_login_dialog_pass_only.main** (function, lines 243–263, 21 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_modern_ui_pass_only_cleanup.py`
 
 - **tools.plan_modern_ui_pass_only_cleanup._is_pass_only** (function, lines 66–67, 2 lines, risk `support`): Handles is pass only for the payments feature.
-- **tools.plan_modern_ui_pass_only_cleanup._handler_name** (function, lines 70–85, 16 lines, risk `support`): Handles handler name for the payments feature.
-- **tools.plan_modern_ui_pass_only_cleanup._context** (function, lines 88–91, 4 lines, risk `support`): Handles context for the payments feature.
-- **tools.plan_modern_ui_pass_only_cleanup._protected_context** (function, lines 94–96, 3 lines, risk `support`): Handles protected context for the payments feature.
+- **tools.plan_modern_ui_pass_only_cleanup._handler_name** (function, lines 70–85, 16 lines, risk `support`): Handles handler name for the other feature.
+- **tools.plan_modern_ui_pass_only_cleanup._context** (function, lines 88–91, 4 lines, risk `support`): Handles context for the other feature.
+- **tools.plan_modern_ui_pass_only_cleanup._protected_context** (function, lines 94–96, 3 lines, risk `support`): Handles protected context for the other feature.
 - **tools.plan_modern_ui_pass_only_cleanup.PassOnlyVisitor** (class, lines 99–157, 59 lines, risk `container`): Groups PassOnlyVisitor for the payments feature.
 - **tools.plan_modern_ui_pass_only_cleanup.PassOnlyVisitor.__init__** (method, lines 100–105, 6 lines, risk `support`): Handles init for the payments feature.
 - **tools.plan_modern_ui_pass_only_cleanup.PassOnlyVisitor._scope** (method, lines 107–112, 6 lines, risk `support`): Handles scope for the payments feature.
@@ -1776,8 +1776,8 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **tools.plan_modern_ui_pass_only_cleanup.PassOnlyVisitor.visit_FunctionDef** (method, lines 119–122, 4 lines, risk `support`): Handles visit FunctionDef for the payments feature.
 - **tools.plan_modern_ui_pass_only_cleanup.PassOnlyVisitor.visit_AsyncFunctionDef** (method, lines 124–125, 2 lines, risk `support`): Handles visit AsyncFunctionDef for the payments feature.
 - **tools.plan_modern_ui_pass_only_cleanup.PassOnlyVisitor.visit_Try** (method, lines 127–157, 31 lines, risk `support`): Handles visit Try for the payments feature.
-- **tools.plan_modern_ui_pass_only_cleanup.build_plan** (function, lines 160–196, 37 lines, risk `filesystem`): Builds build plan for the payments feature.
-- **tools.plan_modern_ui_pass_only_cleanup.main** (function, lines 199–211, 13 lines, risk `filesystem`): Handles main for the payments feature.
+- **tools.plan_modern_ui_pass_only_cleanup.build_plan** (function, lines 160–196, 37 lines, risk `filesystem`): Builds build plan for the other feature.
+- **tools.plan_modern_ui_pass_only_cleanup.main** (function, lines 199–211, 13 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_module_separation.py`
 
@@ -1797,27 +1797,27 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/plan_pure_login_dialog_ui_pass_only.py`
 
-- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor** (class, lines 71–139, 69 lines, risk `container`): Groups HandlerVisitor for the payments feature.
-- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor.__init__** (method, lines 72–76, 5 lines, risk `support`): Handles init for the payments feature.
-- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor.visit_ClassDef** (method, lines 78–81, 4 lines, risk `support`): Handles visit ClassDef for the payments feature.
-- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor.visit_FunctionDef** (method, lines 83–86, 4 lines, risk `support`): Handles visit FunctionDef for the payments feature.
-- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor.visit_AsyncFunctionDef** (method, lines 88–91, 4 lines, risk `support`): Handles visit AsyncFunctionDef for the payments feature.
-- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor.visit_ExceptHandler** (method, lines 93–96, 4 lines, risk `support`): Handles visit ExceptHandler for the payments feature.
+- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor** (class, lines 71–139, 69 lines, risk `container`): Groups HandlerVisitor for the other feature.
+- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor.__init__** (method, lines 72–76, 5 lines, risk `support`): Handles init for the other feature.
+- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor.visit_ClassDef** (method, lines 78–81, 4 lines, risk `support`): Handles visit ClassDef for the other feature.
+- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor.visit_FunctionDef** (method, lines 83–86, 4 lines, risk `support`): Handles visit FunctionDef for the other feature.
+- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor.visit_AsyncFunctionDef** (method, lines 88–91, 4 lines, risk `support`): Handles visit AsyncFunctionDef for the other feature.
+- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor.visit_ExceptHandler** (method, lines 93–96, 4 lines, risk `support`): Handles visit ExceptHandler for the other feature.
 - **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor._is_exception_pass_only** (method, lines 98–103, 6 lines, risk `support`): Handles is exception pass only for the payments feature.
-- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor._scope** (method, lines 105–106, 2 lines, risk `support`): Handles scope for the payments feature.
-- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor._context** (method, lines 108–114, 7 lines, risk `support`): Handles context for the payments feature.
-- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor._site** (method, lines 116–139, 24 lines, risk `authentication`): Handles site for the payments feature.
+- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor._scope** (method, lines 105–106, 2 lines, risk `support`): Handles scope for the other feature.
+- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor._context** (method, lines 108–114, 7 lines, risk `support`): Handles context for the other feature.
+- **tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor._site** (method, lines 116–139, 24 lines, risk `authentication`): Handles site for the other feature.
 - **tools.plan_pure_login_dialog_ui_pass_only._classify_pure_login_dialog_ui** (function, lines 142–157, 16 lines, risk `authentication`): Handles classify pure login dialog ui for the authentication feature.
 - **tools.plan_pure_login_dialog_ui_pass_only._fallback_login_group** (function, lines 160–169, 10 lines, risk `authentication`): Handles fallback login group for the authentication feature.
 - **tools.plan_pure_login_dialog_ui_pass_only.build_report** (function, lines 172–224, 53 lines, risk `filesystem`): Builds build report for the reports feature.
-- **tools.plan_pure_login_dialog_ui_pass_only.main** (function, lines 227–240, 14 lines, risk `filesystem`): Handles main for the payments feature.
+- **tools.plan_pure_login_dialog_ui_pass_only.main** (function, lines 227–240, 14 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_queue_empty_pass_only.py`
 
-- **tools.plan_queue_empty_pass_only._handler_name** (function, lines 48–58, 11 lines, risk `support`): Handles handler name for the payments feature.
+- **tools.plan_queue_empty_pass_only._handler_name** (function, lines 48–58, 11 lines, risk `support`): Handles handler name for the other feature.
 - **tools.plan_queue_empty_pass_only._is_pass_only** (function, lines 61–62, 2 lines, risk `support`): Handles is pass only for the payments feature.
-- **tools.plan_queue_empty_pass_only._context** (function, lines 65–71, 7 lines, risk `support`): Handles context for the payments feature.
-- **tools.plan_queue_empty_pass_only._contains_protected_word** (function, lines 74–76, 3 lines, risk `support`): Handles contains protected word for the payments feature.
+- **tools.plan_queue_empty_pass_only._context** (function, lines 65–71, 7 lines, risk `support`): Handles context for the other feature.
+- **tools.plan_queue_empty_pass_only._contains_protected_word** (function, lines 74–76, 3 lines, risk `support`): Handles contains protected word for the other feature.
 - **tools.plan_queue_empty_pass_only.PassOnlyVisitor** (class, lines 79–136, 58 lines, risk `container`): Groups PassOnlyVisitor for the payments feature.
 - **tools.plan_queue_empty_pass_only.PassOnlyVisitor.__init__** (method, lines 80–84, 5 lines, risk `support`): Handles init for the payments feature.
 - **tools.plan_queue_empty_pass_only.PassOnlyVisitor._scope_name** (method, lines 86–87, 2 lines, risk `support`): Handles scope name for the payments feature.
@@ -1826,15 +1826,15 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **tools.plan_queue_empty_pass_only.PassOnlyVisitor.visit_AsyncFunctionDef** (method, lines 99–102, 4 lines, risk `support`): Handles visit AsyncFunctionDef for the payments feature.
 - **tools.plan_queue_empty_pass_only.PassOnlyVisitor.visit_ExceptHandler** (method, lines 104–136, 33 lines, risk `support`): Handles visit ExceptHandler for the payments feature.
 - **tools.plan_queue_empty_pass_only.build_report** (function, lines 139–180, 42 lines, risk `filesystem`): Builds build report for the reports feature.
-- **tools.plan_queue_empty_pass_only.main** (function, lines 183–196, 14 lines, risk `filesystem`): Handles main for the payments feature.
+- **tools.plan_queue_empty_pass_only.main** (function, lines 183–196, 14 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_remaining_pass_only_groups.py`
 
-- **tools.plan_remaining_pass_only_groups.handler_name** (function, lines 50–68, 19 lines, risk `support`): Handles handler name for the payments feature.
+- **tools.plan_remaining_pass_only_groups.handler_name** (function, lines 50–68, 19 lines, risk `support`): Handles handler name for the other feature.
 - **tools.plan_remaining_pass_only_groups.is_pass_only** (function, lines 71–72, 2 lines, risk `support`): Handles is pass only for the payments feature.
-- **tools.plan_remaining_pass_only_groups.context_for** (function, lines 75–78, 4 lines, risk `support`): Handles context for for the payments feature.
-- **tools.plan_remaining_pass_only_groups.has_protected_context** (function, lines 81–83, 3 lines, risk `support`): Handles has protected context for the payments feature.
-- **tools.plan_remaining_pass_only_groups.classify** (function, lines 86–105, 20 lines, risk `ui_only`): Handles classify for the payments feature.
+- **tools.plan_remaining_pass_only_groups.context_for** (function, lines 75–78, 4 lines, risk `support`): Handles context for for the other feature.
+- **tools.plan_remaining_pass_only_groups.has_protected_context** (function, lines 81–83, 3 lines, risk `support`): Handles has protected context for the other feature.
+- **tools.plan_remaining_pass_only_groups.classify** (function, lines 86–105, 20 lines, risk `ui_only`): Handles classify for the other feature.
 - **tools.plan_remaining_pass_only_groups.PassOnlyVisitor** (class, lines 108–149, 42 lines, risk `container`): Groups PassOnlyVisitor for the payments feature.
 - **tools.plan_remaining_pass_only_groups.PassOnlyVisitor.__init__** (method, lines 109–112, 4 lines, risk `support`): Handles init for the payments feature.
 - **tools.plan_remaining_pass_only_groups.PassOnlyVisitor.current_scope** (method, lines 114–115, 2 lines, risk `support`): Handles current scope for the payments feature.
@@ -1843,12 +1843,12 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **tools.plan_remaining_pass_only_groups.PassOnlyVisitor.visit_AsyncFunctionDef** (method, lines 127–128, 2 lines, risk `support`): Handles visit AsyncFunctionDef for the payments feature.
 - **tools.plan_remaining_pass_only_groups.PassOnlyVisitor.visit_ExceptHandler** (method, lines 130–149, 20 lines, risk `support`): Handles visit ExceptHandler for the payments feature.
 - **tools.plan_remaining_pass_only_groups.build_report** (function, lines 152–193, 42 lines, risk `filesystem`): Builds build report for the reports feature.
-- **tools.plan_remaining_pass_only_groups.main** (function, lines 196–209, 14 lines, risk `filesystem`): Handles main for the payments feature.
+- **tools.plan_remaining_pass_only_groups.main** (function, lines 196–209, 14 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_ui_compatibility_pass_only.py`
 
-- **tools.plan_ui_compatibility_pass_only.read_lines** (function, lines 113–114, 2 lines, risk `filesystem`): Handles read lines for the payments feature.
-- **tools.plan_ui_compatibility_pass_only.handler_name** (function, lines 117–131, 15 lines, risk `support`): Handles handler name for the payments feature.
+- **tools.plan_ui_compatibility_pass_only.read_lines** (function, lines 113–114, 2 lines, risk `filesystem`): Handles read lines for the other feature.
+- **tools.plan_ui_compatibility_pass_only.handler_name** (function, lines 117–131, 15 lines, risk `support`): Handles handler name for the other feature.
 - **tools.plan_ui_compatibility_pass_only.is_pass_only** (function, lines 134–135, 2 lines, risk `support`): Handles is pass only for the payments feature.
 - **tools.plan_ui_compatibility_pass_only.PassOnlyVisitor** (class, lines 138–161, 24 lines, risk `container`): Groups PassOnlyVisitor for the payments feature.
 - **tools.plan_ui_compatibility_pass_only.PassOnlyVisitor.__init__** (method, lines 139–141, 3 lines, risk `support`): Handles init for the payments feature.
@@ -1856,12 +1856,12 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 - **tools.plan_ui_compatibility_pass_only.PassOnlyVisitor.visit_FunctionDef** (method, lines 148–151, 4 lines, risk `support`): Handles visit FunctionDef for the payments feature.
 - **tools.plan_ui_compatibility_pass_only.PassOnlyVisitor.visit_AsyncFunctionDef** (method, lines 153–156, 4 lines, risk `support`): Handles visit AsyncFunctionDef for the payments feature.
 - **tools.plan_ui_compatibility_pass_only.PassOnlyVisitor.visit_ExceptHandler** (method, lines 158–161, 4 lines, risk `support`): Handles visit ExceptHandler for the payments feature.
-- **tools.plan_ui_compatibility_pass_only.line_window** (function, lines 164–167, 4 lines, risk `support`): Handles line window for the payments feature.
-- **tools.plan_ui_compatibility_pass_only.text_window** (function, lines 170–173, 4 lines, risk `support`): Handles text window for the payments feature.
-- **tools.plan_ui_compatibility_pass_only.contains_any** (function, lines 176–177, 2 lines, risk `support`): Handles contains any for the payments feature.
-- **tools.plan_ui_compatibility_pass_only.classify_ui_site** (function, lines 180–193, 14 lines, risk `support`): Handles classify ui site for the payments feature.
+- **tools.plan_ui_compatibility_pass_only.line_window** (function, lines 164–167, 4 lines, risk `support`): Handles line window for the other feature.
+- **tools.plan_ui_compatibility_pass_only.text_window** (function, lines 170–173, 4 lines, risk `support`): Handles text window for the other feature.
+- **tools.plan_ui_compatibility_pass_only.contains_any** (function, lines 176–177, 2 lines, risk `support`): Handles contains any for the other feature.
+- **tools.plan_ui_compatibility_pass_only.classify_ui_site** (function, lines 180–193, 14 lines, risk `support`): Handles classify ui site for the other feature.
 - **tools.plan_ui_compatibility_pass_only.build_report** (function, lines 196–264, 69 lines, risk `reports`): Builds build report for the reports feature.
-- **tools.plan_ui_compatibility_pass_only.main** (function, lines 267–280, 14 lines, risk `filesystem`): Handles main for the payments feature.
+- **tools.plan_ui_compatibility_pass_only.main** (function, lines 267–280, 14 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/redundancy_audit.py`
 
@@ -1872,11 +1872,11 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/remove_databank_export_controls.py`
 
-- **tools.remove_databank_export_controls.remove_existing_block** (function, lines 363–372, 10 lines, risk `support`): Removes remove existing block for the data bank feature.
-- **tools.remove_databank_export_controls._contains_static_label** (function, lines 375–377, 3 lines, risk `support`): Handles contains static label for the data bank feature.
-- **tools.remove_databank_export_controls._looks_like_ui_line** (function, lines 380–391, 12 lines, risk `ui_only`): Handles looks like ui line for the data bank feature.
-- **tools.remove_databank_export_controls.remove_static_export_lines** (function, lines 394–402, 9 lines, risk `support`): Removes remove static export lines for the data bank feature.
-- **tools.remove_databank_export_controls.main** (function, lines 405–433, 29 lines, risk `filesystem`): Handles main for the data bank feature.
+- **tools.remove_databank_export_controls.remove_existing_block** (function, lines 363–372, 10 lines, risk `support`): Removes remove existing block for the other feature.
+- **tools.remove_databank_export_controls._contains_static_label** (function, lines 375–377, 3 lines, risk `support`): Handles contains static label for the other feature.
+- **tools.remove_databank_export_controls._looks_like_ui_line** (function, lines 380–391, 12 lines, risk `ui_only`): Handles looks like ui line for the other feature.
+- **tools.remove_databank_export_controls.remove_static_export_lines** (function, lines 394–402, 9 lines, risk `support`): Removes remove static export lines for the other feature.
+- **tools.remove_databank_export_controls.main** (function, lines 405–433, 29 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/spina_quality_audit.py`
 
@@ -1910,75 +1910,75 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 ## `tools/test_architecture_map.py`
 
 - **tools.test_architecture_map.is_app** (function, lines 25–26, 2 lines, risk `support`): Handles is app for the other feature.
-- **tools.test_architecture_map.main** (function, lines 29–160, 132 lines, risk `filesystem`): Handles main for the other feature.
+- **tools.test_architecture_map.main** (function, lines 29–168, 140 lines, risk `filesystem`): Handles main for the other feature.
 - **tools.test_architecture_map.main.feature_for_suffix** (nested_function, lines 104–109, 6 lines, risk `support`): Handles feature for suffix for the other feature.
 
 ## `tools/test_base_theme_palette_batch_11.py`
 
-- **tools.test_base_theme_palette_batch_11.Holder** (class, lines 30–33, 4 lines, risk `container`): Groups Holder for the settings feature.
-- **tools.test_base_theme_palette_batch_11.Holder.__init__** (method, lines 31–33, 3 lines, risk `support`): Handles init for the settings feature.
-- **tools.test_base_theme_palette_batch_11.BadString** (class, lines 36–38, 3 lines, risk `container`): Groups BadString for the settings feature.
-- **tools.test_base_theme_palette_batch_11.BadString.__str__** (method, lines 37–38, 2 lines, risk `support`): Handles str for the settings feature.
-- **tools.test_base_theme_palette_batch_11._stable** (function, lines 41–48, 8 lines, risk `support`): Handles stable for the settings feature.
-- **tools.test_base_theme_palette_batch_11._type_name** (function, lines 51–53, 3 lines, risk `support`): Handles type name for the settings feature.
-- **tools.test_base_theme_palette_batch_11._load_manifest** (function, lines 56–57, 2 lines, risk `filesystem`): Loads load manifest for the settings feature.
-- **tools.test_base_theme_palette_batch_11._resolve_from_source** (function, lines 60–80, 21 lines, risk `filesystem`): Handles resolve from source for the settings feature.
-- **tools.test_base_theme_palette_batch_11._resolve_function** (function, lines 83–93, 11 lines, risk `support`): Handles resolve function for the settings feature.
-- **tools.test_base_theme_palette_batch_11._cases** (function, lines 96–109, 14 lines, risk `support`): Handles cases for the settings feature.
-- **tools.test_base_theme_palette_batch_11._capture_call** (function, lines 112–125, 14 lines, risk `support`): Handles capture call for the settings feature.
-- **tools.test_base_theme_palette_batch_11.capture_batch** (function, lines 128–148, 21 lines, risk `support`): Handles capture batch for the settings feature.
-- **tools.test_base_theme_palette_batch_11.main** (function, lines 151–190, 40 lines, risk `filesystem`): Handles main for the settings feature.
+- **tools.test_base_theme_palette_batch_11.Holder** (class, lines 30–33, 4 lines, risk `container`): Groups Holder for the other feature.
+- **tools.test_base_theme_palette_batch_11.Holder.__init__** (method, lines 31–33, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_base_theme_palette_batch_11.BadString** (class, lines 36–38, 3 lines, risk `container`): Groups BadString for the other feature.
+- **tools.test_base_theme_palette_batch_11.BadString.__str__** (method, lines 37–38, 2 lines, risk `support`): Handles str for the other feature.
+- **tools.test_base_theme_palette_batch_11._stable** (function, lines 41–48, 8 lines, risk `support`): Handles stable for the other feature.
+- **tools.test_base_theme_palette_batch_11._type_name** (function, lines 51–53, 3 lines, risk `support`): Handles type name for the other feature.
+- **tools.test_base_theme_palette_batch_11._load_manifest** (function, lines 56–57, 2 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.test_base_theme_palette_batch_11._resolve_from_source** (function, lines 60–80, 21 lines, risk `filesystem`): Handles resolve from source for the other feature.
+- **tools.test_base_theme_palette_batch_11._resolve_function** (function, lines 83–93, 11 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_base_theme_palette_batch_11._cases** (function, lines 96–109, 14 lines, risk `support`): Handles cases for the other feature.
+- **tools.test_base_theme_palette_batch_11._capture_call** (function, lines 112–125, 14 lines, risk `support`): Handles capture call for the other feature.
+- **tools.test_base_theme_palette_batch_11.capture_batch** (function, lines 128–148, 21 lines, risk `support`): Handles capture batch for the other feature.
+- **tools.test_base_theme_palette_batch_11.main** (function, lines 151–190, 40 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_cash_control_feature_wave_21.py`
 
-- **tools.test_cash_control_feature_wave_21.top_level_functions** (function, lines 21–27, 7 lines, risk `filesystem`): Handles top level functions for the cash control feature.
-- **tools.test_cash_control_feature_wave_21.FakeCanvas** (class, lines 30–50, 21 lines, risk `container`): Groups FakeCanvas for the cash control feature.
-- **tools.test_cash_control_feature_wave_21.FakeCanvas.__init__** (method, lines 31–34, 4 lines, risk `support`): Handles init for the cash control feature.
-- **tools.test_cash_control_feature_wave_21.FakeCanvas.delete** (method, lines 36–37, 2 lines, risk `support`): Handles delete for the cash control feature.
-- **tools.test_cash_control_feature_wave_21.FakeCanvas.configure** (method, lines 39–40, 2 lines, risk `support`): Handles configure for the cash control feature.
-- **tools.test_cash_control_feature_wave_21.FakeCanvas.winfo_width** (method, lines 42–43, 2 lines, risk `support`): Handles winfo width for the cash control feature.
-- **tools.test_cash_control_feature_wave_21.FakeCanvas.winfo_height** (method, lines 45–46, 2 lines, risk `support`): Handles winfo height for the cash control feature.
-- **tools.test_cash_control_feature_wave_21.FakeCanvas.create_text** (method, lines 48–50, 3 lines, risk `support`): Builds create text for the cash control feature.
-- **tools.test_cash_control_feature_wave_21.Dummy** (class, lines 53–59, 7 lines, risk `container`): Groups Dummy for the cash control feature.
-- **tools.test_cash_control_feature_wave_21.Dummy.__init__** (method, lines 56–59, 4 lines, risk `support`): Handles init for the cash control feature.
-- **tools.test_cash_control_feature_wave_21.main** (function, lines 62–117, 56 lines, risk `filesystem`): Handles main for the cash control feature.
-- **tools.test_cash_control_feature_wave_21.main.log_exc** (nested_function, lines 77–78, 2 lines, risk `support`): Handles log exc for the cash control feature.
-- **tools.test_cash_control_feature_wave_21.main.money_short** (nested_function, lines 80–81, 2 lines, risk `support`): Handles money short for the cash control feature.
-- **tools.test_cash_control_feature_wave_21.main.round_rect** (nested_function, lines 83–85, 3 lines, risk `support`): Handles round rect for the cash control feature.
+- **tools.test_cash_control_feature_wave_21.top_level_functions** (function, lines 21–27, 7 lines, risk `filesystem`): Handles top level functions for the other feature.
+- **tools.test_cash_control_feature_wave_21.FakeCanvas** (class, lines 30–50, 21 lines, risk `container`): Groups FakeCanvas for the other feature.
+- **tools.test_cash_control_feature_wave_21.FakeCanvas.__init__** (method, lines 31–34, 4 lines, risk `support`): Handles init for the other feature.
+- **tools.test_cash_control_feature_wave_21.FakeCanvas.delete** (method, lines 36–37, 2 lines, risk `support`): Handles delete for the other feature.
+- **tools.test_cash_control_feature_wave_21.FakeCanvas.configure** (method, lines 39–40, 2 lines, risk `support`): Handles configure for the other feature.
+- **tools.test_cash_control_feature_wave_21.FakeCanvas.winfo_width** (method, lines 42–43, 2 lines, risk `support`): Handles winfo width for the other feature.
+- **tools.test_cash_control_feature_wave_21.FakeCanvas.winfo_height** (method, lines 45–46, 2 lines, risk `support`): Handles winfo height for the other feature.
+- **tools.test_cash_control_feature_wave_21.FakeCanvas.create_text** (method, lines 48–50, 3 lines, risk `support`): Builds create text for the other feature.
+- **tools.test_cash_control_feature_wave_21.Dummy** (class, lines 53–59, 7 lines, risk `container`): Groups Dummy for the other feature.
+- **tools.test_cash_control_feature_wave_21.Dummy.__init__** (method, lines 56–59, 4 lines, risk `support`): Handles init for the other feature.
+- **tools.test_cash_control_feature_wave_21.main** (function, lines 62–117, 56 lines, risk `filesystem`): Handles main for the other feature.
+- **tools.test_cash_control_feature_wave_21.main.log_exc** (nested_function, lines 77–78, 2 lines, risk `support`): Handles log exc for the other feature.
+- **tools.test_cash_control_feature_wave_21.main.money_short** (nested_function, lines 80–81, 2 lines, risk `support`): Handles money short for the other feature.
+- **tools.test_cash_control_feature_wave_21.main.round_rect** (nested_function, lines 83–85, 3 lines, risk `support`): Handles round rect for the other feature.
 
 ## `tools/test_cash_control_input_normalizer_batch_07.py`
 
-- **tools.test_cash_control_input_normalizer_batch_07._load** (function, lines 56–57, 2 lines, risk `filesystem`): Handles load for the cash control feature.
-- **tools.test_cash_control_input_normalizer_batch_07._functions** (function, lines 60–83, 24 lines, risk `filesystem`): Handles functions for the cash control feature.
-- **tools.test_cash_control_input_normalizer_batch_07._capture** (function, lines 86–99, 14 lines, risk `support`): Handles capture for the cash control feature.
-- **tools.test_cash_control_input_normalizer_batch_07.capture** (function, lines 102–116, 15 lines, risk `support`): Handles capture for the cash control feature.
-- **tools.test_cash_control_input_normalizer_batch_07.main** (function, lines 119–136, 18 lines, risk `filesystem`): Handles main for the cash control feature.
+- **tools.test_cash_control_input_normalizer_batch_07._load** (function, lines 56–57, 2 lines, risk `filesystem`): Handles load for the other feature.
+- **tools.test_cash_control_input_normalizer_batch_07._functions** (function, lines 60–83, 24 lines, risk `filesystem`): Handles functions for the other feature.
+- **tools.test_cash_control_input_normalizer_batch_07._capture** (function, lines 86–99, 14 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_cash_control_input_normalizer_batch_07.capture** (function, lines 102–116, 15 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_cash_control_input_normalizer_batch_07.main** (function, lines 119–136, 18 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_cash_control_ui_controls_batch_09.py`
 
-- **tools.test_cash_control_ui_controls_batch_09.FakeWidget** (class, lines 34–45, 12 lines, risk `container`): Groups FakeWidget for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09.FakeWidget.__init__** (method, lines 35–42, 8 lines, risk `support`): Handles init for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09.FakeWidget.pack** (method, lines 44–45, 2 lines, risk `support`): Handles pack for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09._WidgetFactory** (class, lines 48–53, 6 lines, risk `container`): Groups WidgetFactory for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09._WidgetFactory.__init__** (method, lines 49–50, 2 lines, risk `support`): Handles init for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09._WidgetFactory.__call__** (method, lines 52–53, 2 lines, risk `support`): Handles call for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09.FakeTk** (class, lines 56–58, 3 lines, risk `container`): Groups FakeTk for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09.FakeStyle** (class, lines 61–70, 10 lines, risk `container`): Groups FakeStyle for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09.FakeStyle.__init__** (method, lines 62–64, 3 lines, risk `support`): Handles init for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09.FakeStyle.configure** (method, lines 66–67, 2 lines, risk `support`): Handles configure for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09.FakeStyle.map** (method, lines 69–70, 2 lines, risk `support`): Handles map for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09.FakeTtk** (class, lines 73–84, 12 lines, risk `container`): Groups FakeTtk for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09.FakeTtk.Style** (method, lines 79–84, 6 lines, risk `support`): Handles Style for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09._cash_palette** (function, lines 90–93, 4 lines, risk `support`): Handles cash palette for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09._reset_runtime** (function, lines 96–100, 5 lines, risk `ui_only`): Handles reset runtime for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09._load_manifest** (function, lines 103–104, 2 lines, risk `filesystem`): Loads load manifest for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09._source_function** (function, lines 107–127, 21 lines, risk `filesystem`): Handles source function for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09._resolve_function** (function, lines 130–144, 15 lines, risk `support`): Handles resolve function for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09._widget_summary** (function, lines 147–153, 7 lines, risk `support`): Handles widget summary for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09._capture_builder** (function, lines 156–185, 30 lines, risk `support`): Handles capture builder for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09._capture_style** (function, lines 188–213, 26 lines, risk `ui_only`): Handles capture style for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09.capture_batch** (function, lines 216–256, 41 lines, risk `support`): Handles capture batch for the cash control feature.
-- **tools.test_cash_control_ui_controls_batch_09.main** (function, lines 259–295, 37 lines, risk `filesystem`): Handles main for the cash control feature.
+- **tools.test_cash_control_ui_controls_batch_09.FakeWidget** (class, lines 34–45, 12 lines, risk `container`): Groups FakeWidget for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09.FakeWidget.__init__** (method, lines 35–42, 8 lines, risk `support`): Handles init for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09.FakeWidget.pack** (method, lines 44–45, 2 lines, risk `support`): Handles pack for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09._WidgetFactory** (class, lines 48–53, 6 lines, risk `container`): Groups WidgetFactory for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09._WidgetFactory.__init__** (method, lines 49–50, 2 lines, risk `support`): Handles init for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09._WidgetFactory.__call__** (method, lines 52–53, 2 lines, risk `support`): Handles call for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09.FakeTk** (class, lines 56–58, 3 lines, risk `container`): Groups FakeTk for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09.FakeStyle** (class, lines 61–70, 10 lines, risk `container`): Groups FakeStyle for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09.FakeStyle.__init__** (method, lines 62–64, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09.FakeStyle.configure** (method, lines 66–67, 2 lines, risk `support`): Handles configure for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09.FakeStyle.map** (method, lines 69–70, 2 lines, risk `support`): Handles map for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09.FakeTtk** (class, lines 73–84, 12 lines, risk `container`): Groups FakeTtk for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09.FakeTtk.Style** (method, lines 79–84, 6 lines, risk `support`): Handles Style for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09._cash_palette** (function, lines 90–93, 4 lines, risk `support`): Handles cash palette for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09._reset_runtime** (function, lines 96–100, 5 lines, risk `ui_only`): Handles reset runtime for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09._load_manifest** (function, lines 103–104, 2 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09._source_function** (function, lines 107–127, 21 lines, risk `filesystem`): Handles source function for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09._resolve_function** (function, lines 130–144, 15 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09._widget_summary** (function, lines 147–153, 7 lines, risk `support`): Handles widget summary for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09._capture_builder** (function, lines 156–185, 30 lines, risk `support`): Handles capture builder for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09._capture_style** (function, lines 188–213, 26 lines, risk `ui_only`): Handles capture style for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09.capture_batch** (function, lines 216–256, 41 lines, risk `support`): Handles capture batch for the other feature.
+- **tools.test_cash_control_ui_controls_batch_09.main** (function, lines 259–295, 37 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_ci_acceleration.py`
 
@@ -1987,300 +1987,300 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/test_cilog_action_label_extraction.py`
 
-- **tools.test_cilog_action_label_extraction._cases** (function, lines 20–34, 15 lines, risk `support`): Handles cases for the clients feature.
-- **tools.test_cilog_action_label_extraction._capture** (function, lines 37–50, 14 lines, risk `support`): Handles capture for the clients feature.
-- **tools.test_cilog_action_label_extraction._behavior** (function, lines 53–57, 5 lines, risk `support`): Handles behavior for the clients feature.
-- **tools.test_cilog_action_label_extraction._load** (function, lines 60–66, 7 lines, risk `support`): Handles load for the clients feature.
-- **tools.test_cilog_action_label_extraction._source_state** (function, lines 69–72, 4 lines, risk `support`): Handles source state for the clients feature.
-- **tools.test_cilog_action_label_extraction._write_fixture** (function, lines 75–89, 15 lines, risk `filesystem`): Saves write fixture for the clients feature.
-- **tools.test_cilog_action_label_extraction._original** (function, lines 92–122, 31 lines, risk `filesystem`): Handles original for the clients feature.
-- **tools.test_cilog_action_label_extraction._applied** (function, lines 125–136, 12 lines, risk `filesystem`): Handles applied for the clients feature.
-- **tools.test_cilog_action_label_extraction.main** (function, lines 139–157, 19 lines, risk `filesystem`): Handles main for the clients feature.
+- **tools.test_cilog_action_label_extraction._cases** (function, lines 20–34, 15 lines, risk `support`): Handles cases for the other feature.
+- **tools.test_cilog_action_label_extraction._capture** (function, lines 37–50, 14 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_cilog_action_label_extraction._behavior** (function, lines 53–57, 5 lines, risk `support`): Handles behavior for the other feature.
+- **tools.test_cilog_action_label_extraction._load** (function, lines 60–66, 7 lines, risk `support`): Handles load for the other feature.
+- **tools.test_cilog_action_label_extraction._source_state** (function, lines 69–72, 4 lines, risk `support`): Handles source state for the other feature.
+- **tools.test_cilog_action_label_extraction._write_fixture** (function, lines 75–89, 15 lines, risk `filesystem`): Saves write fixture for the other feature.
+- **tools.test_cilog_action_label_extraction._original** (function, lines 92–122, 31 lines, risk `filesystem`): Handles original for the other feature.
+- **tools.test_cilog_action_label_extraction._applied** (function, lines 125–136, 12 lines, risk `filesystem`): Handles applied for the other feature.
+- **tools.test_cilog_action_label_extraction.main** (function, lines 139–157, 19 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_cilog_diff_pairs_extraction.py`
 
-- **tools.test_cilog_diff_pairs_extraction._load_target** (function, lines 17–37, 21 lines, risk `filesystem`): Loads load target for the clients feature.
-- **tools.test_cilog_diff_pairs_extraction._cases** (function, lines 40–56, 17 lines, risk `support`): Handles cases for the clients feature.
-- **tools.test_cilog_diff_pairs_extraction._capture** (function, lines 59–79, 21 lines, risk `support`): Handles capture for the clients feature.
-- **tools.test_cilog_diff_pairs_extraction.main** (function, lines 82–105, 24 lines, risk `filesystem`): Handles main for the clients feature.
+- **tools.test_cilog_diff_pairs_extraction._load_target** (function, lines 17–37, 21 lines, risk `filesystem`): Loads load target for the other feature.
+- **tools.test_cilog_diff_pairs_extraction._cases** (function, lines 40–56, 17 lines, risk `support`): Handles cases for the other feature.
+- **tools.test_cilog_diff_pairs_extraction._capture** (function, lines 59–79, 21 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_cilog_diff_pairs_extraction.main** (function, lines 82–105, 24 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_cilog_money_formatter_extraction.py`
 
-- **tools.test_cilog_money_formatter_extraction._cases** (function, lines 20–34, 15 lines, risk `support`): Handles cases for the clients feature.
-- **tools.test_cilog_money_formatter_extraction._capture** (function, lines 37–50, 14 lines, risk `support`): Handles capture for the clients feature.
-- **tools.test_cilog_money_formatter_extraction._behavior** (function, lines 53–57, 5 lines, risk `support`): Handles behavior for the clients feature.
-- **tools.test_cilog_money_formatter_extraction._state** (function, lines 60–69, 10 lines, risk `support`): Handles state for the clients feature.
-- **tools.test_cilog_money_formatter_extraction._legacy_function** (function, lines 72–77, 6 lines, risk `support`): Handles legacy function for the clients feature.
-- **tools.test_cilog_money_formatter_extraction._module_function** (function, lines 80–86, 7 lines, risk `support`): Handles module function for the clients feature.
-- **tools.test_cilog_money_formatter_extraction._write_fixture** (function, lines 89–103, 15 lines, risk `filesystem`): Saves write fixture for the clients feature.
-- **tools.test_cilog_money_formatter_extraction.main** (function, lines 106–142, 37 lines, risk `filesystem`): Handles main for the clients feature.
+- **tools.test_cilog_money_formatter_extraction._cases** (function, lines 20–34, 15 lines, risk `support`): Handles cases for the other feature.
+- **tools.test_cilog_money_formatter_extraction._capture** (function, lines 37–50, 14 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_cilog_money_formatter_extraction._behavior** (function, lines 53–57, 5 lines, risk `support`): Handles behavior for the other feature.
+- **tools.test_cilog_money_formatter_extraction._state** (function, lines 60–69, 10 lines, risk `support`): Handles state for the other feature.
+- **tools.test_cilog_money_formatter_extraction._legacy_function** (function, lines 72–77, 6 lines, risk `support`): Handles legacy function for the other feature.
+- **tools.test_cilog_money_formatter_extraction._module_function** (function, lines 80–86, 7 lines, risk `support`): Handles module function for the other feature.
+- **tools.test_cilog_money_formatter_extraction._write_fixture** (function, lines 89–103, 15 lines, risk `filesystem`): Saves write fixture for the other feature.
+- **tools.test_cilog_money_formatter_extraction.main** (function, lines 106–142, 37 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_cilog_ui_controls_batch_10.py`
 
-- **tools.test_cilog_ui_controls_batch_10.FakeWidget** (class, lines 36–43, 8 lines, risk `container`): Groups FakeWidget for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10.FakeWidget.__init__** (method, lines 37–43, 7 lines, risk `support`): Handles init for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10._WidgetFactory** (class, lines 46–51, 6 lines, risk `container`): Groups WidgetFactory for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10._WidgetFactory.__init__** (method, lines 47–48, 2 lines, risk `support`): Handles init for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10._WidgetFactory.__call__** (method, lines 50–51, 2 lines, risk `support`): Handles call for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10.FakeTk** (class, lines 54–55, 2 lines, risk `container`): Groups FakeTk for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10.FakeStyle** (class, lines 58–67, 10 lines, risk `container`): Groups FakeStyle for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10.FakeStyle.__init__** (method, lines 59–61, 3 lines, risk `support`): Handles init for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10.FakeStyle.configure** (method, lines 63–64, 2 lines, risk `support`): Handles configure for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10.FakeStyle.map** (method, lines 66–67, 2 lines, risk `support`): Handles map for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10.FakeTtk** (class, lines 70–80, 11 lines, risk `container`): Groups FakeTtk for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10.FakeTtk.Style** (method, lines 75–80, 6 lines, risk `support`): Handles Style for the clients feature.
+- **tools.test_cilog_ui_controls_batch_10.FakeWidget** (class, lines 36–43, 8 lines, risk `container`): Groups FakeWidget for the other feature.
+- **tools.test_cilog_ui_controls_batch_10.FakeWidget.__init__** (method, lines 37–43, 7 lines, risk `support`): Handles init for the other feature.
+- **tools.test_cilog_ui_controls_batch_10._WidgetFactory** (class, lines 46–51, 6 lines, risk `container`): Groups WidgetFactory for the other feature.
+- **tools.test_cilog_ui_controls_batch_10._WidgetFactory.__init__** (method, lines 47–48, 2 lines, risk `support`): Handles init for the other feature.
+- **tools.test_cilog_ui_controls_batch_10._WidgetFactory.__call__** (method, lines 50–51, 2 lines, risk `support`): Handles call for the other feature.
+- **tools.test_cilog_ui_controls_batch_10.FakeTk** (class, lines 54–55, 2 lines, risk `container`): Groups FakeTk for the other feature.
+- **tools.test_cilog_ui_controls_batch_10.FakeStyle** (class, lines 58–67, 10 lines, risk `container`): Groups FakeStyle for the other feature.
+- **tools.test_cilog_ui_controls_batch_10.FakeStyle.__init__** (method, lines 59–61, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_cilog_ui_controls_batch_10.FakeStyle.configure** (method, lines 63–64, 2 lines, risk `support`): Handles configure for the other feature.
+- **tools.test_cilog_ui_controls_batch_10.FakeStyle.map** (method, lines 66–67, 2 lines, risk `support`): Handles map for the other feature.
+- **tools.test_cilog_ui_controls_batch_10.FakeTtk** (class, lines 70–80, 11 lines, risk `container`): Groups FakeTtk for the other feature.
+- **tools.test_cilog_ui_controls_batch_10.FakeTtk.Style** (method, lines 75–80, 6 lines, risk `support`): Handles Style for the other feature.
 - **tools.test_cilog_ui_controls_batch_10._cilog_palette** (function, lines 86–89, 4 lines, risk `support`): Handles cilog palette for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10._reset_runtime** (function, lines 92–96, 5 lines, risk `ui_only`): Handles reset runtime for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10._load_manifest** (function, lines 99–100, 2 lines, risk `filesystem`): Loads load manifest for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10._source_function** (function, lines 103–123, 21 lines, risk `filesystem`): Handles source function for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10._resolve_function** (function, lines 126–140, 15 lines, risk `support`): Handles resolve function for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10._widget_summary** (function, lines 143–148, 6 lines, risk `support`): Handles widget summary for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10._capture_button** (function, lines 151–173, 23 lines, risk `support`): Handles capture button for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10._capture_style** (function, lines 176–201, 26 lines, risk `ui_only`): Handles capture style for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10.capture_batch** (function, lines 204–243, 40 lines, risk `support`): Handles capture batch for the clients feature.
-- **tools.test_cilog_ui_controls_batch_10.main** (function, lines 246–282, 37 lines, risk `filesystem`): Handles main for the clients feature.
+- **tools.test_cilog_ui_controls_batch_10._reset_runtime** (function, lines 92–96, 5 lines, risk `ui_only`): Handles reset runtime for the other feature.
+- **tools.test_cilog_ui_controls_batch_10._load_manifest** (function, lines 99–100, 2 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.test_cilog_ui_controls_batch_10._source_function** (function, lines 103–123, 21 lines, risk `filesystem`): Handles source function for the other feature.
+- **tools.test_cilog_ui_controls_batch_10._resolve_function** (function, lines 126–140, 15 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_cilog_ui_controls_batch_10._widget_summary** (function, lines 143–148, 6 lines, risk `support`): Handles widget summary for the other feature.
+- **tools.test_cilog_ui_controls_batch_10._capture_button** (function, lines 151–173, 23 lines, risk `support`): Handles capture button for the other feature.
+- **tools.test_cilog_ui_controls_batch_10._capture_style** (function, lines 176–201, 26 lines, risk `ui_only`): Handles capture style for the other feature.
+- **tools.test_cilog_ui_controls_batch_10.capture_batch** (function, lines 204–243, 40 lines, risk `support`): Handles capture batch for the other feature.
+- **tools.test_cilog_ui_controls_batch_10.main** (function, lines 246–282, 37 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_cilog_value_formatter_extraction.py`
 
-- **tools.test_cilog_value_formatter_extraction._cases** (function, lines 28–47, 20 lines, risk `support`): Handles cases for the clients feature.
-- **tools.test_cilog_value_formatter_extraction._capture** (function, lines 50–63, 14 lines, risk `support`): Handles capture for the clients feature.
-- **tools.test_cilog_value_formatter_extraction._behavior** (function, lines 66–73, 8 lines, risk `support`): Handles behavior for the clients feature.
-- **tools.test_cilog_value_formatter_extraction._load_module** (function, lines 76–82, 7 lines, risk `support`): Loads load module for the clients feature.
-- **tools.test_cilog_value_formatter_extraction._source_state** (function, lines 85–92, 8 lines, risk `support`): Handles source state for the clients feature.
-- **tools.test_cilog_value_formatter_extraction._write_fixture** (function, lines 95–110, 16 lines, risk `filesystem`): Saves write fixture for the clients feature.
-- **tools.test_cilog_value_formatter_extraction._legacy_function** (function, lines 113–117, 5 lines, risk `support`): Handles legacy function for the clients feature.
-- **tools.test_cilog_value_formatter_extraction._test_original** (function, lines 120–148, 29 lines, risk `filesystem`): Handles test original for the clients feature.
-- **tools.test_cilog_value_formatter_extraction._test_applied** (function, lines 151–166, 16 lines, risk `filesystem`): Handles test applied for the clients feature.
-- **tools.test_cilog_value_formatter_extraction.main** (function, lines 169–190, 22 lines, risk `filesystem`): Handles main for the clients feature.
+- **tools.test_cilog_value_formatter_extraction._cases** (function, lines 28–47, 20 lines, risk `support`): Handles cases for the other feature.
+- **tools.test_cilog_value_formatter_extraction._capture** (function, lines 50–63, 14 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_cilog_value_formatter_extraction._behavior** (function, lines 66–73, 8 lines, risk `support`): Handles behavior for the other feature.
+- **tools.test_cilog_value_formatter_extraction._load_module** (function, lines 76–82, 7 lines, risk `support`): Loads load module for the other feature.
+- **tools.test_cilog_value_formatter_extraction._source_state** (function, lines 85–92, 8 lines, risk `support`): Handles source state for the other feature.
+- **tools.test_cilog_value_formatter_extraction._write_fixture** (function, lines 95–110, 16 lines, risk `filesystem`): Saves write fixture for the other feature.
+- **tools.test_cilog_value_formatter_extraction._legacy_function** (function, lines 113–117, 5 lines, risk `support`): Handles legacy function for the other feature.
+- **tools.test_cilog_value_formatter_extraction._test_original** (function, lines 120–148, 29 lines, risk `filesystem`): Handles test original for the other feature.
+- **tools.test_cilog_value_formatter_extraction._test_applied** (function, lines 151–166, 16 lines, risk `filesystem`): Handles test applied for the other feature.
+- **tools.test_cilog_value_formatter_extraction.main** (function, lines 169–190, 22 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_client_area_uid_sync_phase2.py`
 
-- **tools.test_client_area_uid_sync_phase2.main** (function, lines 9–78, 70 lines, risk `database_write`): Handles main for the clients feature.
+- **tools.test_client_area_uid_sync_phase2.main** (function, lines 9–78, 70 lines, risk `database_write`): Handles main for the other feature.
 
 ## `tools/test_client_info_logs_feature_wave_20.py`
 
-- **tools.test_client_info_logs_feature_wave_20.defs** (function, lines 15–23, 9 lines, risk `filesystem`): Handles defs for the clients feature.
-- **tools.test_client_info_logs_feature_wave_20.FakeVar** (class, lines 26–30, 5 lines, risk `container`): Groups FakeVar for the clients feature.
-- **tools.test_client_info_logs_feature_wave_20.FakeVar.__init__** (method, lines 27–28, 2 lines, risk `support`): Handles init for the clients feature.
-- **tools.test_client_info_logs_feature_wave_20.FakeVar.set** (method, lines 29–30, 2 lines, risk `support`): Handles set for the clients feature.
-- **tools.test_client_info_logs_feature_wave_20.FakeApp** (class, lines 33–40, 8 lines, risk `container`): Groups FakeApp for the clients feature.
-- **tools.test_client_info_logs_feature_wave_20.FakeApp.__init__** (method, lines 34–38, 5 lines, risk `support`): Handles init for the clients feature.
+- **tools.test_client_info_logs_feature_wave_20.defs** (function, lines 15–23, 9 lines, risk `filesystem`): Handles defs for the other feature.
+- **tools.test_client_info_logs_feature_wave_20.FakeVar** (class, lines 26–30, 5 lines, risk `container`): Groups FakeVar for the other feature.
+- **tools.test_client_info_logs_feature_wave_20.FakeVar.__init__** (method, lines 27–28, 2 lines, risk `support`): Handles init for the other feature.
+- **tools.test_client_info_logs_feature_wave_20.FakeVar.set** (method, lines 29–30, 2 lines, risk `support`): Handles set for the other feature.
+- **tools.test_client_info_logs_feature_wave_20.FakeApp** (class, lines 33–40, 8 lines, risk `container`): Groups FakeApp for the other feature.
+- **tools.test_client_info_logs_feature_wave_20.FakeApp.__init__** (method, lines 34–38, 5 lines, risk `support`): Handles init for the other feature.
 - **tools.test_client_info_logs_feature_wave_20.FakeApp.render_client_info_logs** (method, lines 39–40, 2 lines, risk `support`): Handles render client info logs for the clients feature.
-- **tools.test_client_info_logs_feature_wave_20.main** (function, lines 43–102, 60 lines, risk `filesystem`): Handles main for the clients feature.
+- **tools.test_client_info_logs_feature_wave_20.main** (function, lines 43–102, 60 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_client_route_tree_style_batch_12.py`
 
-- **tools.test_client_route_tree_style_batch_12.FakeStyle** (class, lines 39–48, 10 lines, risk `container`): Groups FakeStyle for the clients feature.
-- **tools.test_client_route_tree_style_batch_12.FakeStyle.__init__** (method, lines 40–42, 3 lines, risk `support`): Handles init for the clients feature.
-- **tools.test_client_route_tree_style_batch_12.FakeStyle.configure** (method, lines 44–45, 2 lines, risk `support`): Handles configure for the clients feature.
-- **tools.test_client_route_tree_style_batch_12.FakeStyle.map** (method, lines 47–48, 2 lines, risk `support`): Handles map for the clients feature.
-- **tools.test_client_route_tree_style_batch_12.FakeTtk** (class, lines 51–61, 11 lines, risk `container`): Groups FakeTtk for the clients feature.
-- **tools.test_client_route_tree_style_batch_12.FakeTtk.Style** (method, lines 56–61, 6 lines, risk `support`): Handles Style for the clients feature.
+- **tools.test_client_route_tree_style_batch_12.FakeStyle** (class, lines 39–48, 10 lines, risk `container`): Groups FakeStyle for the other feature.
+- **tools.test_client_route_tree_style_batch_12.FakeStyle.__init__** (method, lines 40–42, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_client_route_tree_style_batch_12.FakeStyle.configure** (method, lines 44–45, 2 lines, risk `support`): Handles configure for the other feature.
+- **tools.test_client_route_tree_style_batch_12.FakeStyle.map** (method, lines 47–48, 2 lines, risk `support`): Handles map for the other feature.
+- **tools.test_client_route_tree_style_batch_12.FakeTtk** (class, lines 51–61, 11 lines, risk `container`): Groups FakeTtk for the other feature.
+- **tools.test_client_route_tree_style_batch_12.FakeTtk.Style** (method, lines 56–61, 6 lines, risk `support`): Handles Style for the other feature.
 - **tools.test_client_route_tree_style_batch_12._clients_palette** (function, lines 68–71, 4 lines, risk `support`): Handles clients palette for the clients feature.
 - **tools.test_client_route_tree_style_batch_12._route_palette** (function, lines 74–77, 4 lines, risk `support`): Handles route palette for the collectors feature.
-- **tools.test_client_route_tree_style_batch_12._reset_runtime** (function, lines 80–90, 11 lines, risk `ui_only`): Handles reset runtime for the clients feature.
-- **tools.test_client_route_tree_style_batch_12._load_manifest** (function, lines 93–94, 2 lines, risk `filesystem`): Loads load manifest for the clients feature.
-- **tools.test_client_route_tree_style_batch_12._source_function** (function, lines 97–118, 22 lines, risk `filesystem`): Handles source function for the clients feature.
-- **tools.test_client_route_tree_style_batch_12._resolve_function** (function, lines 121–135, 15 lines, risk `support`): Handles resolve function for the clients feature.
-- **tools.test_client_route_tree_style_batch_12._capture_style** (function, lines 138–163, 26 lines, risk `ui_only`): Handles capture style for the clients feature.
-- **tools.test_client_route_tree_style_batch_12.capture_batch** (function, lines 166–201, 36 lines, risk `support`): Handles capture batch for the clients feature.
-- **tools.test_client_route_tree_style_batch_12.main** (function, lines 204–241, 38 lines, risk `filesystem`): Handles main for the clients feature.
+- **tools.test_client_route_tree_style_batch_12._reset_runtime** (function, lines 80–90, 11 lines, risk `ui_only`): Handles reset runtime for the other feature.
+- **tools.test_client_route_tree_style_batch_12._load_manifest** (function, lines 93–94, 2 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.test_client_route_tree_style_batch_12._source_function** (function, lines 97–118, 22 lines, risk `filesystem`): Handles source function for the other feature.
+- **tools.test_client_route_tree_style_batch_12._resolve_function** (function, lines 121–135, 15 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_client_route_tree_style_batch_12._capture_style** (function, lines 138–163, 26 lines, risk `ui_only`): Handles capture style for the other feature.
+- **tools.test_client_route_tree_style_batch_12.capture_batch** (function, lines 166–201, 36 lines, risk `support`): Handles capture batch for the other feature.
+- **tools.test_client_route_tree_style_batch_12.main** (function, lines 204–241, 38 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_clients_feature_wave_19.py`
 
-- **tools.test_clients_feature_wave_19.defs** (function, lines 14–22, 9 lines, risk `filesystem`): Handles defs for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeVar** (class, lines 25–31, 7 lines, risk `container`): Groups FakeVar for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeVar.__init__** (method, lines 26–27, 2 lines, risk `support`): Handles init for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeVar.get** (method, lines 28–29, 2 lines, risk `support`): Handles get for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeVar.set** (method, lines 30–31, 2 lines, risk `support`): Handles set for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeLabel** (class, lines 34–39, 6 lines, risk `container`): Groups FakeLabel for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeLabel.__init__** (method, lines 35–36, 2 lines, risk `support`): Handles init for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeLabel.configure** (method, lines 37–39, 3 lines, risk `support`): Handles configure for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeTree** (class, lines 42–54, 13 lines, risk `container`): Groups FakeTree for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeTree.__init__** (method, lines 43–44, 2 lines, risk `support`): Handles init for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeTree.selection** (method, lines 45–46, 2 lines, risk `support`): Handles selection for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeTree.item** (method, lines 47–52, 6 lines, risk `support`): Handles item for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeTree.get_children** (method, lines 53–54, 2 lines, risk `support`): Retrieves get children for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeDB** (class, lines 57–59, 3 lines, risk `container`): Groups FakeDB for the clients feature.
+- **tools.test_clients_feature_wave_19.defs** (function, lines 14–22, 9 lines, risk `filesystem`): Handles defs for the other feature.
+- **tools.test_clients_feature_wave_19.FakeVar** (class, lines 25–31, 7 lines, risk `container`): Groups FakeVar for the other feature.
+- **tools.test_clients_feature_wave_19.FakeVar.__init__** (method, lines 26–27, 2 lines, risk `support`): Handles init for the other feature.
+- **tools.test_clients_feature_wave_19.FakeVar.get** (method, lines 28–29, 2 lines, risk `support`): Handles get for the other feature.
+- **tools.test_clients_feature_wave_19.FakeVar.set** (method, lines 30–31, 2 lines, risk `support`): Handles set for the other feature.
+- **tools.test_clients_feature_wave_19.FakeLabel** (class, lines 34–39, 6 lines, risk `container`): Groups FakeLabel for the other feature.
+- **tools.test_clients_feature_wave_19.FakeLabel.__init__** (method, lines 35–36, 2 lines, risk `support`): Handles init for the other feature.
+- **tools.test_clients_feature_wave_19.FakeLabel.configure** (method, lines 37–39, 3 lines, risk `support`): Handles configure for the other feature.
+- **tools.test_clients_feature_wave_19.FakeTree** (class, lines 42–54, 13 lines, risk `container`): Groups FakeTree for the other feature.
+- **tools.test_clients_feature_wave_19.FakeTree.__init__** (method, lines 43–44, 2 lines, risk `support`): Handles init for the other feature.
+- **tools.test_clients_feature_wave_19.FakeTree.selection** (method, lines 45–46, 2 lines, risk `support`): Handles selection for the other feature.
+- **tools.test_clients_feature_wave_19.FakeTree.item** (method, lines 47–52, 6 lines, risk `support`): Handles item for the other feature.
+- **tools.test_clients_feature_wave_19.FakeTree.get_children** (method, lines 53–54, 2 lines, risk `support`): Retrieves get children for the other feature.
+- **tools.test_clients_feature_wave_19.FakeDB** (class, lines 57–59, 3 lines, risk `container`): Groups FakeDB for the other feature.
 - **tools.test_clients_feature_wave_19.FakeDB.get_client_info** (method, lines 58–59, 2 lines, risk `support`): Retrieves get client info for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeApp** (class, lines 62–71, 10 lines, risk `container`): Groups FakeApp for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeApp.__init__** (method, lines 63–69, 7 lines, risk `support`): Handles init for the clients feature.
-- **tools.test_clients_feature_wave_19.FakeApp._mode_filter** (method, lines 70–71, 2 lines, risk `support`): Handles mode filter for the clients feature.
-- **tools.test_clients_feature_wave_19.main** (function, lines 74–125, 52 lines, risk `filesystem`): Handles main for the clients feature.
+- **tools.test_clients_feature_wave_19.FakeApp** (class, lines 62–71, 10 lines, risk `container`): Groups FakeApp for the other feature.
+- **tools.test_clients_feature_wave_19.FakeApp.__init__** (method, lines 63–69, 7 lines, risk `support`): Handles init for the other feature.
+- **tools.test_clients_feature_wave_19.FakeApp._mode_filter** (method, lines 70–71, 2 lines, risk `support`): Handles mode filter for the other feature.
+- **tools.test_clients_feature_wave_19.main** (function, lines 74–125, 52 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_collector_route_card_batch_13.py`
 
-- **tools.test_collector_route_card_batch_13.FakeWidget** (class, lines 40–51, 12 lines, risk `container`): Groups FakeWidget for the collectors feature.
-- **tools.test_collector_route_card_batch_13.FakeWidget.__init__** (method, lines 41–48, 8 lines, risk `support`): Handles init for the collectors feature.
-- **tools.test_collector_route_card_batch_13.FakeWidget.pack** (method, lines 50–51, 2 lines, risk `support`): Handles pack for the collectors feature.
-- **tools.test_collector_route_card_batch_13._WidgetFactory** (class, lines 54–59, 6 lines, risk `container`): Groups WidgetFactory for the collectors feature.
-- **tools.test_collector_route_card_batch_13._WidgetFactory.__init__** (method, lines 55–56, 2 lines, risk `support`): Handles init for the collectors feature.
-- **tools.test_collector_route_card_batch_13._WidgetFactory.__call__** (method, lines 58–59, 2 lines, risk `support`): Handles call for the collectors feature.
-- **tools.test_collector_route_card_batch_13.FakeTk** (class, lines 62–64, 3 lines, risk `container`): Groups FakeTk for the collectors feature.
+- **tools.test_collector_route_card_batch_13.FakeWidget** (class, lines 40–51, 12 lines, risk `container`): Groups FakeWidget for the other feature.
+- **tools.test_collector_route_card_batch_13.FakeWidget.__init__** (method, lines 41–48, 8 lines, risk `support`): Handles init for the other feature.
+- **tools.test_collector_route_card_batch_13.FakeWidget.pack** (method, lines 50–51, 2 lines, risk `support`): Handles pack for the other feature.
+- **tools.test_collector_route_card_batch_13._WidgetFactory** (class, lines 54–59, 6 lines, risk `container`): Groups WidgetFactory for the other feature.
+- **tools.test_collector_route_card_batch_13._WidgetFactory.__init__** (method, lines 55–56, 2 lines, risk `support`): Handles init for the other feature.
+- **tools.test_collector_route_card_batch_13._WidgetFactory.__call__** (method, lines 58–59, 2 lines, risk `support`): Handles call for the other feature.
+- **tools.test_collector_route_card_batch_13.FakeTk** (class, lines 62–64, 3 lines, risk `container`): Groups FakeTk for the other feature.
 - **tools.test_collector_route_card_batch_13._route_palette** (function, lines 70–73, 4 lines, risk `support`): Handles route palette for the collectors feature.
-- **tools.test_collector_route_card_batch_13._load_manifest** (function, lines 76–77, 2 lines, risk `filesystem`): Loads load manifest for the collectors feature.
-- **tools.test_collector_route_card_batch_13._source_function** (function, lines 80–99, 20 lines, risk `filesystem`): Handles source function for the collectors feature.
-- **tools.test_collector_route_card_batch_13._resolve_function** (function, lines 102–115, 14 lines, risk `support`): Handles resolve function for the collectors feature.
-- **tools.test_collector_route_card_batch_13._widget_summary** (function, lines 118–124, 7 lines, risk `support`): Handles widget summary for the collectors feature.
-- **tools.test_collector_route_card_batch_13._capture** (function, lines 127–161, 35 lines, risk `support`): Handles capture for the collectors feature.
-- **tools.test_collector_route_card_batch_13.capture_batch** (function, lines 164–180, 17 lines, risk `support`): Handles capture batch for the collectors feature.
-- **tools.test_collector_route_card_batch_13.main** (function, lines 183–216, 34 lines, risk `filesystem`): Handles main for the collectors feature.
+- **tools.test_collector_route_card_batch_13._load_manifest** (function, lines 76–77, 2 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.test_collector_route_card_batch_13._source_function** (function, lines 80–99, 20 lines, risk `filesystem`): Handles source function for the other feature.
+- **tools.test_collector_route_card_batch_13._resolve_function** (function, lines 102–115, 14 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_collector_route_card_batch_13._widget_summary** (function, lines 118–124, 7 lines, risk `support`): Handles widget summary for the other feature.
+- **tools.test_collector_route_card_batch_13._capture** (function, lines 127–161, 35 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_collector_route_card_batch_13.capture_batch** (function, lines 164–180, 17 lines, risk `support`): Handles capture batch for the other feature.
+- **tools.test_collector_route_card_batch_13.main** (function, lines 183–216, 34 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_collector_route_presentation_wave_23.py`
 
-- **tools.test_collector_route_presentation_wave_23.source_for** (function, lines 24–25, 2 lines, risk `support`): Handles source for for the collectors feature.
-- **tools.test_collector_route_presentation_wave_23.main** (function, lines 28–80, 53 lines, risk `filesystem`): Handles main for the collectors feature.
+- **tools.test_collector_route_presentation_wave_23.source_for** (function, lines 24–25, 2 lines, risk `support`): Handles source for for the other feature.
+- **tools.test_collector_route_presentation_wave_23.main** (function, lines 28–80, 53 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_collectors_editor_wave_26.py`
 
-- **tools.test_collectors_editor_wave_26.sha256_text** (function, lines 19–20, 2 lines, risk `support`): Handles sha256 text for the collectors feature.
-- **tools.test_collectors_editor_wave_26.source_for** (function, lines 23–24, 2 lines, risk `support`): Handles source for for the collectors feature.
-- **tools.test_collectors_editor_wave_26.nodes** (function, lines 27–33, 7 lines, risk `support`): Handles nodes for the collectors feature.
-- **tools.test_collectors_editor_wave_26.Var** (class, lines 36–42, 7 lines, risk `container`): Groups Var for the collectors feature.
-- **tools.test_collectors_editor_wave_26.Var.__init__** (method, lines 37–38, 2 lines, risk `support`): Handles init for the collectors feature.
-- **tools.test_collectors_editor_wave_26.Var.get** (method, lines 39–40, 2 lines, risk `support`): Handles get for the collectors feature.
-- **tools.test_collectors_editor_wave_26.Var.set** (method, lines 41–42, 2 lines, risk `support`): Handles set for the collectors feature.
-- **tools.test_collectors_editor_wave_26.Widget** (class, lines 45–62, 18 lines, risk `container`): Groups Widget for the collectors feature.
-- **tools.test_collectors_editor_wave_26.Widget.__init__** (method, lines 46–48, 3 lines, risk `support`): Handles init for the collectors feature.
-- **tools.test_collectors_editor_wave_26.Widget.pack** (method, lines 49–51, 3 lines, risk `support`): Handles pack for the collectors feature.
-- **tools.test_collectors_editor_wave_26.Widget.pack_forget** (method, lines 52–53, 2 lines, risk `support`): Handles pack forget for the collectors feature.
-- **tools.test_collectors_editor_wave_26.Widget.grid** (method, lines 54–56, 3 lines, risk `support`): Handles grid for the collectors feature.
-- **tools.test_collectors_editor_wave_26.Widget.grid_remove** (method, lines 57–58, 2 lines, risk `support`): Handles grid remove for the collectors feature.
-- **tools.test_collectors_editor_wave_26.Widget.winfo_ismapped** (method, lines 59–60, 2 lines, risk `support`): Handles winfo ismapped for the collectors feature.
-- **tools.test_collectors_editor_wave_26.Widget.configure** (method, lines 61–62, 2 lines, risk `support`): Handles configure for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeTree** (class, lines 65–85, 21 lines, risk `container`): Groups FakeTree for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeTree.__init__** (method, lines 66–73, 8 lines, risk `support`): Handles init for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeTree.selection** (method, lines 74–75, 2 lines, risk `support`): Handles selection for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeTree.focus** (method, lines 76–77, 2 lines, risk `support`): Handles focus for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeTree.get_children** (method, lines 78–79, 2 lines, risk `support`): Retrieves get children for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeTree.item** (method, lines 80–85, 6 lines, risk `support`): Handles item for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeListbox** (class, lines 88–113, 26 lines, risk `container`): Groups FakeListbox for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeListbox.__init__** (method, lines 89–91, 3 lines, risk `support`): Handles init for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeListbox.size** (method, lines 92–93, 2 lines, risk `support`): Handles size for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeListbox.get** (method, lines 94–95, 2 lines, risk `support`): Handles get for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeListbox.insert** (method, lines 96–100, 5 lines, risk `support`): Handles insert for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeListbox.delete** (method, lines 101–107, 7 lines, risk `support`): Handles delete for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeListbox.curselection** (method, lines 108–109, 2 lines, risk `support`): Handles curselection for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeListbox.selection_clear** (method, lines 110–111, 2 lines, risk `support`): Handles selection clear for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeListbox.selection_set** (method, lines 112–113, 2 lines, risk `support`): Handles selection set for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeText** (class, lines 116–122, 7 lines, risk `container`): Groups FakeText for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeText.__init__** (method, lines 117–118, 2 lines, risk `support`): Handles init for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeText.delete** (method, lines 119–120, 2 lines, risk `support`): Handles delete for the collectors feature.
-- **tools.test_collectors_editor_wave_26.FakeText.insert** (method, lines 121–122, 2 lines, risk `support`): Handles insert for the collectors feature.
-- **tools.test_collectors_editor_wave_26.Dummy** (class, lines 125–126, 2 lines, risk `container`): Groups Dummy for the collectors feature.
-- **tools.test_collectors_editor_wave_26.bind** (function, lines 129–135, 7 lines, risk `support`): Handles bind for the collectors feature.
-- **tools.test_collectors_editor_wave_26.static_checks** (function, lines 138–166, 29 lines, risk `filesystem`): Handles static checks for the collectors feature.
-- **tools.test_collectors_editor_wave_26.behavior_checks** (function, lines 169–245, 77 lines, risk `ui_only`): Handles behavior checks for the collectors feature.
-- **tools.test_collectors_editor_wave_26.main** (function, lines 248–252, 5 lines, risk `reports`): Handles main for the collectors feature.
+- **tools.test_collectors_editor_wave_26.sha256_text** (function, lines 19–20, 2 lines, risk `support`): Handles sha256 text for the other feature.
+- **tools.test_collectors_editor_wave_26.source_for** (function, lines 23–24, 2 lines, risk `support`): Handles source for for the other feature.
+- **tools.test_collectors_editor_wave_26.nodes** (function, lines 27–33, 7 lines, risk `support`): Handles nodes for the other feature.
+- **tools.test_collectors_editor_wave_26.Var** (class, lines 36–42, 7 lines, risk `container`): Groups Var for the other feature.
+- **tools.test_collectors_editor_wave_26.Var.__init__** (method, lines 37–38, 2 lines, risk `support`): Handles init for the other feature.
+- **tools.test_collectors_editor_wave_26.Var.get** (method, lines 39–40, 2 lines, risk `support`): Handles get for the other feature.
+- **tools.test_collectors_editor_wave_26.Var.set** (method, lines 41–42, 2 lines, risk `support`): Handles set for the other feature.
+- **tools.test_collectors_editor_wave_26.Widget** (class, lines 45–62, 18 lines, risk `container`): Groups Widget for the other feature.
+- **tools.test_collectors_editor_wave_26.Widget.__init__** (method, lines 46–48, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_collectors_editor_wave_26.Widget.pack** (method, lines 49–51, 3 lines, risk `support`): Handles pack for the other feature.
+- **tools.test_collectors_editor_wave_26.Widget.pack_forget** (method, lines 52–53, 2 lines, risk `support`): Handles pack forget for the other feature.
+- **tools.test_collectors_editor_wave_26.Widget.grid** (method, lines 54–56, 3 lines, risk `support`): Handles grid for the other feature.
+- **tools.test_collectors_editor_wave_26.Widget.grid_remove** (method, lines 57–58, 2 lines, risk `support`): Handles grid remove for the other feature.
+- **tools.test_collectors_editor_wave_26.Widget.winfo_ismapped** (method, lines 59–60, 2 lines, risk `support`): Handles winfo ismapped for the other feature.
+- **tools.test_collectors_editor_wave_26.Widget.configure** (method, lines 61–62, 2 lines, risk `support`): Handles configure for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeTree** (class, lines 65–85, 21 lines, risk `container`): Groups FakeTree for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeTree.__init__** (method, lines 66–73, 8 lines, risk `support`): Handles init for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeTree.selection** (method, lines 74–75, 2 lines, risk `support`): Handles selection for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeTree.focus** (method, lines 76–77, 2 lines, risk `support`): Handles focus for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeTree.get_children** (method, lines 78–79, 2 lines, risk `support`): Retrieves get children for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeTree.item** (method, lines 80–85, 6 lines, risk `support`): Handles item for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeListbox** (class, lines 88–113, 26 lines, risk `container`): Groups FakeListbox for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeListbox.__init__** (method, lines 89–91, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeListbox.size** (method, lines 92–93, 2 lines, risk `support`): Handles size for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeListbox.get** (method, lines 94–95, 2 lines, risk `support`): Handles get for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeListbox.insert** (method, lines 96–100, 5 lines, risk `support`): Handles insert for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeListbox.delete** (method, lines 101–107, 7 lines, risk `support`): Handles delete for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeListbox.curselection** (method, lines 108–109, 2 lines, risk `support`): Handles curselection for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeListbox.selection_clear** (method, lines 110–111, 2 lines, risk `support`): Handles selection clear for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeListbox.selection_set** (method, lines 112–113, 2 lines, risk `support`): Handles selection set for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeText** (class, lines 116–122, 7 lines, risk `container`): Groups FakeText for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeText.__init__** (method, lines 117–118, 2 lines, risk `support`): Handles init for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeText.delete** (method, lines 119–120, 2 lines, risk `support`): Handles delete for the other feature.
+- **tools.test_collectors_editor_wave_26.FakeText.insert** (method, lines 121–122, 2 lines, risk `support`): Handles insert for the other feature.
+- **tools.test_collectors_editor_wave_26.Dummy** (class, lines 125–126, 2 lines, risk `container`): Groups Dummy for the other feature.
+- **tools.test_collectors_editor_wave_26.bind** (function, lines 129–135, 7 lines, risk `support`): Handles bind for the other feature.
+- **tools.test_collectors_editor_wave_26.static_checks** (function, lines 138–166, 29 lines, risk `filesystem`): Handles static checks for the other feature.
+- **tools.test_collectors_editor_wave_26.behavior_checks** (function, lines 169–245, 77 lines, risk `ui_only`): Handles behavior checks for the other feature.
+- **tools.test_collectors_editor_wave_26.main** (function, lines 248–252, 5 lines, risk `reports`): Handles main for the other feature.
 
 ## `tools/test_collectors_summary_wave_22.py`
 
-- **tools.test_collectors_summary_wave_22.source_for** (function, lines 19–20, 2 lines, risk `support`): Handles source for for the collectors feature.
-- **tools.test_collectors_summary_wave_22.main** (function, lines 23–61, 39 lines, risk `filesystem`): Handles main for the collectors feature.
+- **tools.test_collectors_summary_wave_22.source_for** (function, lines 19–20, 2 lines, risk `support`): Handles source for for the other feature.
+- **tools.test_collectors_summary_wave_22.main** (function, lines 23–61, 39 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_dashboard_feature_wave_17.py`
 
-- **tools.test_dashboard_feature_wave_17.Var** (class, lines 22–30, 9 lines, risk `container`): Groups Var for the dashboard feature.
-- **tools.test_dashboard_feature_wave_17.Var.__init__** (method, lines 23–24, 2 lines, risk `support`): Handles init for the dashboard feature.
-- **tools.test_dashboard_feature_wave_17.Var.get** (method, lines 26–27, 2 lines, risk `support`): Handles get for the dashboard feature.
-- **tools.test_dashboard_feature_wave_17.Var.set** (method, lines 29–30, 2 lines, risk `support`): Handles set for the dashboard feature.
-- **tools.test_dashboard_feature_wave_17._functions** (function, lines 33–40, 8 lines, risk `filesystem`): Handles functions for the dashboard feature.
-- **tools.test_dashboard_feature_wave_17.verify_static_extraction** (function, lines 43–70, 28 lines, risk `filesystem`): Handles verify static extraction for the dashboard feature.
-- **tools.test_dashboard_feature_wave_17.verify_visible_rows** (function, lines 73–97, 25 lines, risk `ui_only`): Handles verify visible rows for the dashboard feature.
-- **tools.test_dashboard_feature_wave_17.verify_refresh_bridge** (function, lines 100–125, 26 lines, risk `support`): Handles verify refresh bridge for the dashboard feature.
-- **tools.test_dashboard_feature_wave_17.main** (function, lines 128–134, 7 lines, risk `reports`): Handles main for the dashboard feature.
+- **tools.test_dashboard_feature_wave_17.Var** (class, lines 22–30, 9 lines, risk `container`): Groups Var for the other feature.
+- **tools.test_dashboard_feature_wave_17.Var.__init__** (method, lines 23–24, 2 lines, risk `support`): Handles init for the other feature.
+- **tools.test_dashboard_feature_wave_17.Var.get** (method, lines 26–27, 2 lines, risk `support`): Handles get for the other feature.
+- **tools.test_dashboard_feature_wave_17.Var.set** (method, lines 29–30, 2 lines, risk `support`): Handles set for the other feature.
+- **tools.test_dashboard_feature_wave_17._functions** (function, lines 33–40, 8 lines, risk `filesystem`): Handles functions for the other feature.
+- **tools.test_dashboard_feature_wave_17.verify_static_extraction** (function, lines 43–70, 28 lines, risk `filesystem`): Handles verify static extraction for the other feature.
+- **tools.test_dashboard_feature_wave_17.verify_visible_rows** (function, lines 73–97, 25 lines, risk `ui_only`): Handles verify visible rows for the other feature.
+- **tools.test_dashboard_feature_wave_17.verify_refresh_bridge** (function, lines 100–125, 26 lines, risk `support`): Handles verify refresh bridge for the other feature.
+- **tools.test_dashboard_feature_wave_17.main** (function, lines 128–134, 7 lines, risk `reports`): Handles main for the other feature.
 
 ## `tools/test_dashboard_visibility_wave_24.py`
 
-- **tools.test_dashboard_visibility_wave_24.source_for** (function, lines 17–18, 2 lines, risk `support`): Handles source for for the dashboard feature.
-- **tools.test_dashboard_visibility_wave_24.Var** (class, lines 21–26, 6 lines, risk `container`): Groups Var for the dashboard feature.
-- **tools.test_dashboard_visibility_wave_24.Var.__init__** (method, lines 22–23, 2 lines, risk `support`): Handles init for the dashboard feature.
-- **tools.test_dashboard_visibility_wave_24.Var.get** (method, lines 25–26, 2 lines, risk `support`): Handles get for the dashboard feature.
-- **tools.test_dashboard_visibility_wave_24.Dummy** (class, lines 29–30, 2 lines, risk `container`): Groups Dummy for the dashboard feature.
-- **tools.test_dashboard_visibility_wave_24.sample_rows** (function, lines 33–38, 6 lines, risk `support`): Handles sample rows for the dashboard feature.
-- **tools.test_dashboard_visibility_wave_24.make_dummy** (function, lines 41–47, 7 lines, risk `support`): Handles make dummy for the dashboard feature.
-- **tools.test_dashboard_visibility_wave_24.main** (function, lines 50–109, 60 lines, risk `filesystem`): Handles main for the dashboard feature.
+- **tools.test_dashboard_visibility_wave_24.source_for** (function, lines 17–18, 2 lines, risk `support`): Handles source for for the other feature.
+- **tools.test_dashboard_visibility_wave_24.Var** (class, lines 21–26, 6 lines, risk `container`): Groups Var for the other feature.
+- **tools.test_dashboard_visibility_wave_24.Var.__init__** (method, lines 22–23, 2 lines, risk `support`): Handles init for the other feature.
+- **tools.test_dashboard_visibility_wave_24.Var.get** (method, lines 25–26, 2 lines, risk `support`): Handles get for the other feature.
+- **tools.test_dashboard_visibility_wave_24.Dummy** (class, lines 29–30, 2 lines, risk `container`): Groups Dummy for the other feature.
+- **tools.test_dashboard_visibility_wave_24.sample_rows** (function, lines 33–38, 6 lines, risk `support`): Handles sample rows for the other feature.
+- **tools.test_dashboard_visibility_wave_24.make_dummy** (function, lines 41–47, 7 lines, risk `support`): Handles make dummy for the other feature.
+- **tools.test_dashboard_visibility_wave_24.main** (function, lines 50–109, 60 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_date_display_helper_extraction.py`
 
-- **tools.test_date_display_helper_extraction._cases** (function, lines 28–41, 14 lines, risk `support`): Handles cases for the utilities feature.
+- **tools.test_date_display_helper_extraction._cases** (function, lines 28–41, 14 lines, risk `support`): Handles cases for the other feature.
 - **tools.test_date_display_helper_extraction._validate_signature** (function, lines 44–57, 14 lines, risk `support`): Validates validate signature for the utilities feature.
-- **tools.test_date_display_helper_extraction._capture** (function, lines 60–73, 14 lines, risk `support`): Handles capture for the utilities feature.
-- **tools.test_date_display_helper_extraction._behavior** (function, lines 76–84, 9 lines, risk `support`): Handles behavior for the utilities feature.
-- **tools.test_date_display_helper_extraction._load_dates_module** (function, lines 87–93, 7 lines, risk `support`): Loads load dates module for the utilities feature.
-- **tools.test_date_display_helper_extraction._legacy_functions** (function, lines 96–103, 8 lines, risk `support`): Handles legacy functions for the utilities feature.
-- **tools.test_date_display_helper_extraction._generated_functions** (function, lines 106–108, 3 lines, risk `support`): Handles generated functions for the utilities feature.
-- **tools.test_date_display_helper_extraction._source_state** (function, lines 111–119, 9 lines, risk `support`): Handles source state for the utilities feature.
-- **tools.test_date_display_helper_extraction._write_fixture** (function, lines 122–129, 8 lines, risk `filesystem`): Saves write fixture for the utilities feature.
-- **tools.test_date_display_helper_extraction._copy_existing_package** (function, lines 132–145, 14 lines, risk `filesystem`): Handles copy existing package for the utilities feature.
-- **tools.test_date_display_helper_extraction._test_original_state** (function, lines 148–177, 30 lines, risk `filesystem`): Handles test original state for the utilities feature.
-- **tools.test_date_display_helper_extraction._test_applied_state** (function, lines 180–198, 19 lines, risk `filesystem`): Handles test applied state for the utilities feature.
-- **tools.test_date_display_helper_extraction.main** (function, lines 201–228, 28 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.test_date_display_helper_extraction._capture** (function, lines 60–73, 14 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_date_display_helper_extraction._behavior** (function, lines 76–84, 9 lines, risk `support`): Handles behavior for the other feature.
+- **tools.test_date_display_helper_extraction._load_dates_module** (function, lines 87–93, 7 lines, risk `support`): Loads load dates module for the other feature.
+- **tools.test_date_display_helper_extraction._legacy_functions** (function, lines 96–103, 8 lines, risk `support`): Handles legacy functions for the other feature.
+- **tools.test_date_display_helper_extraction._generated_functions** (function, lines 106–108, 3 lines, risk `support`): Handles generated functions for the other feature.
+- **tools.test_date_display_helper_extraction._source_state** (function, lines 111–119, 9 lines, risk `support`): Handles source state for the other feature.
+- **tools.test_date_display_helper_extraction._write_fixture** (function, lines 122–129, 8 lines, risk `filesystem`): Saves write fixture for the other feature.
+- **tools.test_date_display_helper_extraction._copy_existing_package** (function, lines 132–145, 14 lines, risk `filesystem`): Handles copy existing package for the other feature.
+- **tools.test_date_display_helper_extraction._test_original_state** (function, lines 148–177, 30 lines, risk `filesystem`): Handles test original state for the other feature.
+- **tools.test_date_display_helper_extraction._test_applied_state** (function, lines 180–198, 19 lines, risk `filesystem`): Handles test applied state for the other feature.
+- **tools.test_date_display_helper_extraction.main** (function, lines 201–228, 28 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_date_helpers_extraction.py`
 
-- **tools.test_date_helpers_extraction._cases** (function, lines 34–47, 14 lines, risk `support`): Handles cases for the utilities feature.
+- **tools.test_date_helpers_extraction._cases** (function, lines 34–47, 14 lines, risk `support`): Handles cases for the other feature.
 - **tools.test_date_helpers_extraction._validate_signature** (function, lines 50–70, 21 lines, risk `support`): Validates validate signature for the utilities feature.
-- **tools.test_date_helpers_extraction._capture** (function, lines 73–89, 17 lines, risk `support`): Handles capture for the utilities feature.
-- **tools.test_date_helpers_extraction._behavior** (function, lines 92–100, 9 lines, risk `support`): Handles behavior for the utilities feature.
-- **tools.test_date_helpers_extraction._functions_from_module_source** (function, lines 103–106, 4 lines, risk `support`): Handles functions from module source for the utilities feature.
-- **tools.test_date_helpers_extraction._load_generated_functions** (function, lines 109–115, 7 lines, risk `support`): Loads load generated functions for the utilities feature.
-- **tools.test_date_helpers_extraction._source_state** (function, lines 118–126, 9 lines, risk `support`): Handles source state for the utilities feature.
-- **tools.test_date_helpers_extraction._write_fixture** (function, lines 129–139, 11 lines, risk `filesystem`): Saves write fixture for the utilities feature.
-- **tools.test_date_helpers_extraction._test_original_state** (function, lines 142–171, 30 lines, risk `filesystem`): Handles test original state for the utilities feature.
-- **tools.test_date_helpers_extraction._test_applied_state** (function, lines 174–198, 25 lines, risk `filesystem`): Handles test applied state for the utilities feature.
-- **tools.test_date_helpers_extraction.main** (function, lines 201–233, 33 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.test_date_helpers_extraction._capture** (function, lines 73–89, 17 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_date_helpers_extraction._behavior** (function, lines 92–100, 9 lines, risk `support`): Handles behavior for the other feature.
+- **tools.test_date_helpers_extraction._functions_from_module_source** (function, lines 103–106, 4 lines, risk `support`): Handles functions from module source for the other feature.
+- **tools.test_date_helpers_extraction._load_generated_functions** (function, lines 109–115, 7 lines, risk `support`): Loads load generated functions for the other feature.
+- **tools.test_date_helpers_extraction._source_state** (function, lines 118–126, 9 lines, risk `support`): Handles source state for the other feature.
+- **tools.test_date_helpers_extraction._write_fixture** (function, lines 129–139, 11 lines, risk `filesystem`): Saves write fixture for the other feature.
+- **tools.test_date_helpers_extraction._test_original_state** (function, lines 142–171, 30 lines, risk `filesystem`): Handles test original state for the other feature.
+- **tools.test_date_helpers_extraction._test_applied_state** (function, lines 174–198, 25 lines, risk `filesystem`): Handles test applied state for the other feature.
+- **tools.test_date_helpers_extraction.main** (function, lines 201–233, 33 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_display_data_helper_batch.py`
 
-- **tools.test_display_data_helper_batch.PairRow** (class, lines 26–28, 3 lines, risk `container`): Groups PairRow for the utilities feature.
-- **tools.test_display_data_helper_batch.PairRow.__iter__** (method, lines 27–28, 2 lines, risk `support`): Handles iter for the utilities feature.
-- **tools.test_display_data_helper_batch.FlakyKeysRow** (class, lines 31–43, 13 lines, risk `container`): Groups FlakyKeysRow for the utilities feature.
-- **tools.test_display_data_helper_batch.FlakyKeysRow.__init__** (method, lines 32–34, 3 lines, risk `support`): Handles init for the utilities feature.
-- **tools.test_display_data_helper_batch.FlakyKeysRow.keys** (method, lines 36–40, 5 lines, risk `support`): Handles keys for the utilities feature.
-- **tools.test_display_data_helper_batch.FlakyKeysRow.__getitem__** (method, lines 42–43, 2 lines, risk `support`): Handles getitem for the utilities feature.
-- **tools.test_display_data_helper_batch.BadRow** (class, lines 46–54, 9 lines, risk `container`): Groups BadRow for the utilities feature.
-- **tools.test_display_data_helper_batch.BadRow.__iter__** (method, lines 47–48, 2 lines, risk `support`): Handles iter for the utilities feature.
-- **tools.test_display_data_helper_batch.BadRow.keys** (method, lines 50–51, 2 lines, risk `support`): Handles keys for the utilities feature.
-- **tools.test_display_data_helper_batch.BadRow.__getitem__** (method, lines 53–54, 2 lines, risk `support`): Handles getitem for the utilities feature.
-- **tools.test_display_data_helper_batch._load_manifest** (function, lines 114–115, 2 lines, risk `filesystem`): Loads load manifest for the utilities feature.
-- **tools.test_display_data_helper_batch._resolve_from_source** (function, lines 118–134, 17 lines, risk `filesystem`): Handles resolve from source for the utilities feature.
-- **tools.test_display_data_helper_batch._resolve_function** (function, lines 137–147, 11 lines, risk `support`): Handles resolve function for the utilities feature.
-- **tools.test_display_data_helper_batch._type_name** (function, lines 150–152, 3 lines, risk `support`): Handles type name for the utilities feature.
-- **tools.test_display_data_helper_batch._capture** (function, lines 155–168, 14 lines, risk `support`): Handles capture for the utilities feature.
-- **tools.test_display_data_helper_batch.capture_batch** (function, lines 171–193, 23 lines, risk `support`): Handles capture batch for the utilities feature.
-- **tools.test_display_data_helper_batch.main** (function, lines 196–232, 37 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.test_display_data_helper_batch.PairRow** (class, lines 26–28, 3 lines, risk `container`): Groups PairRow for the other feature.
+- **tools.test_display_data_helper_batch.PairRow.__iter__** (method, lines 27–28, 2 lines, risk `support`): Handles iter for the other feature.
+- **tools.test_display_data_helper_batch.FlakyKeysRow** (class, lines 31–43, 13 lines, risk `container`): Groups FlakyKeysRow for the other feature.
+- **tools.test_display_data_helper_batch.FlakyKeysRow.__init__** (method, lines 32–34, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_display_data_helper_batch.FlakyKeysRow.keys** (method, lines 36–40, 5 lines, risk `support`): Handles keys for the other feature.
+- **tools.test_display_data_helper_batch.FlakyKeysRow.__getitem__** (method, lines 42–43, 2 lines, risk `support`): Handles getitem for the other feature.
+- **tools.test_display_data_helper_batch.BadRow** (class, lines 46–54, 9 lines, risk `container`): Groups BadRow for the other feature.
+- **tools.test_display_data_helper_batch.BadRow.__iter__** (method, lines 47–48, 2 lines, risk `support`): Handles iter for the other feature.
+- **tools.test_display_data_helper_batch.BadRow.keys** (method, lines 50–51, 2 lines, risk `support`): Handles keys for the other feature.
+- **tools.test_display_data_helper_batch.BadRow.__getitem__** (method, lines 53–54, 2 lines, risk `support`): Handles getitem for the other feature.
+- **tools.test_display_data_helper_batch._load_manifest** (function, lines 114–115, 2 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.test_display_data_helper_batch._resolve_from_source** (function, lines 118–134, 17 lines, risk `filesystem`): Handles resolve from source for the other feature.
+- **tools.test_display_data_helper_batch._resolve_function** (function, lines 137–147, 11 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_display_data_helper_batch._type_name** (function, lines 150–152, 3 lines, risk `support`): Handles type name for the other feature.
+- **tools.test_display_data_helper_batch._capture** (function, lines 155–168, 14 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_display_data_helper_batch.capture_batch** (function, lines 171–193, 23 lines, risk `support`): Handles capture batch for the other feature.
+- **tools.test_display_data_helper_batch.main** (function, lines 196–232, 37 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_display_formatter_extraction.py`
 
-- **tools.test_display_formatter_extraction._cases** (function, lines 27–40, 14 lines, risk `support`): Handles cases for the utilities feature.
+- **tools.test_display_formatter_extraction._cases** (function, lines 27–40, 14 lines, risk `support`): Handles cases for the other feature.
 - **tools.test_display_formatter_extraction._validate_signature** (function, lines 43–61, 19 lines, risk `support`): Validates validate signature for the utilities feature.
-- **tools.test_display_formatter_extraction._capture** (function, lines 64–77, 14 lines, risk `support`): Handles capture for the utilities feature.
-- **tools.test_display_formatter_extraction._behavior** (function, lines 80–88, 9 lines, risk `support`): Handles behavior for the utilities feature.
-- **tools.test_display_formatter_extraction._functions_from_sources** (function, lines 91–95, 5 lines, risk `support`): Handles functions from sources for the utilities feature.
-- **tools.test_display_formatter_extraction._load_module_functions** (function, lines 98–104, 7 lines, risk `support`): Loads load module functions for the utilities feature.
-- **tools.test_display_formatter_extraction._source_state** (function, lines 107–115, 9 lines, risk `support`): Handles source state for the utilities feature.
-- **tools.test_display_formatter_extraction._write_fixture** (function, lines 118–125, 8 lines, risk `filesystem`): Saves write fixture for the utilities feature.
-- **tools.test_display_formatter_extraction._test_original** (function, lines 128–154, 27 lines, risk `filesystem`): Handles test original for the utilities feature.
-- **tools.test_display_formatter_extraction._test_applied** (function, lines 157–171, 15 lines, risk `filesystem`): Handles test applied for the utilities feature.
-- **tools.test_display_formatter_extraction.main** (function, lines 174–200, 27 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.test_display_formatter_extraction._capture** (function, lines 64–77, 14 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_display_formatter_extraction._behavior** (function, lines 80–88, 9 lines, risk `support`): Handles behavior for the other feature.
+- **tools.test_display_formatter_extraction._functions_from_sources** (function, lines 91–95, 5 lines, risk `support`): Handles functions from sources for the other feature.
+- **tools.test_display_formatter_extraction._load_module_functions** (function, lines 98–104, 7 lines, risk `support`): Loads load module functions for the other feature.
+- **tools.test_display_formatter_extraction._source_state** (function, lines 107–115, 9 lines, risk `support`): Handles source state for the other feature.
+- **tools.test_display_formatter_extraction._write_fixture** (function, lines 118–125, 8 lines, risk `filesystem`): Saves write fixture for the other feature.
+- **tools.test_display_formatter_extraction._test_original** (function, lines 128–154, 27 lines, risk `filesystem`): Handles test original for the other feature.
+- **tools.test_display_formatter_extraction._test_applied** (function, lines 157–171, 15 lines, risk `filesystem`): Handles test applied for the other feature.
+- **tools.test_display_formatter_extraction.main** (function, lines 174–200, 27 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_display_ui_helper_batch_04.py`
 
-- **tools.test_display_ui_helper_batch_04.FakeLabel** (class, lines 51–59, 9 lines, risk `container`): Groups FakeLabel for the utilities feature.
-- **tools.test_display_ui_helper_batch_04.FakeLabel.__init__** (method, lines 52–54, 3 lines, risk `support`): Handles init for the utilities feature.
-- **tools.test_display_ui_helper_batch_04.FakeLabel.configure** (method, lines 56–59, 4 lines, risk `support`): Handles configure for the utilities feature.
-- **tools.test_display_ui_helper_batch_04.Holder** (class, lines 62–63, 2 lines, risk `container`): Groups Holder for the utilities feature.
-- **tools.test_display_ui_helper_batch_04._stable** (function, lines 66–73, 8 lines, risk `support`): Handles stable for the utilities feature.
-- **tools.test_display_ui_helper_batch_04._type_name** (function, lines 76–78, 3 lines, risk `support`): Handles type name for the utilities feature.
-- **tools.test_display_ui_helper_batch_04._load_manifest** (function, lines 81–82, 2 lines, risk `filesystem`): Loads load manifest for the utilities feature.
-- **tools.test_display_ui_helper_batch_04._source_namespace** (function, lines 85–91, 7 lines, risk `support`): Handles source namespace for the utilities feature.
-- **tools.test_display_ui_helper_batch_04._resolve_from_source** (function, lines 94–110, 17 lines, risk `filesystem`): Handles resolve from source for the utilities feature.
-- **tools.test_display_ui_helper_batch_04._resolve_function** (function, lines 113–123, 11 lines, risk `support`): Handles resolve function for the utilities feature.
-- **tools.test_display_ui_helper_batch_04._capture_call** (function, lines 126–131, 6 lines, risk `support`): Handles capture call for the utilities feature.
-- **tools.test_display_ui_helper_batch_04._capture_card** (function, lines 134–175, 42 lines, risk `support`): Handles capture card for the utilities feature.
-- **tools.test_display_ui_helper_batch_04.capture_batch** (function, lines 178–217, 40 lines, risk `support`): Handles capture batch for the utilities feature.
-- **tools.test_display_ui_helper_batch_04.main** (function, lines 220–255, 36 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.test_display_ui_helper_batch_04.FakeLabel** (class, lines 51–59, 9 lines, risk `container`): Groups FakeLabel for the other feature.
+- **tools.test_display_ui_helper_batch_04.FakeLabel.__init__** (method, lines 52–54, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_display_ui_helper_batch_04.FakeLabel.configure** (method, lines 56–59, 4 lines, risk `support`): Handles configure for the other feature.
+- **tools.test_display_ui_helper_batch_04.Holder** (class, lines 62–63, 2 lines, risk `container`): Groups Holder for the other feature.
+- **tools.test_display_ui_helper_batch_04._stable** (function, lines 66–73, 8 lines, risk `support`): Handles stable for the other feature.
+- **tools.test_display_ui_helper_batch_04._type_name** (function, lines 76–78, 3 lines, risk `support`): Handles type name for the other feature.
+- **tools.test_display_ui_helper_batch_04._load_manifest** (function, lines 81–82, 2 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.test_display_ui_helper_batch_04._source_namespace** (function, lines 85–91, 7 lines, risk `support`): Handles source namespace for the other feature.
+- **tools.test_display_ui_helper_batch_04._resolve_from_source** (function, lines 94–110, 17 lines, risk `filesystem`): Handles resolve from source for the other feature.
+- **tools.test_display_ui_helper_batch_04._resolve_function** (function, lines 113–123, 11 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_display_ui_helper_batch_04._capture_call** (function, lines 126–131, 6 lines, risk `support`): Handles capture call for the other feature.
+- **tools.test_display_ui_helper_batch_04._capture_card** (function, lines 134–175, 42 lines, risk `support`): Handles capture card for the other feature.
+- **tools.test_display_ui_helper_batch_04.capture_batch** (function, lines 178–217, 40 lines, risk `support`): Handles capture batch for the other feature.
+- **tools.test_display_ui_helper_batch_04.main** (function, lines 220–255, 36 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_fmt_currency_extraction.py`
 
@@ -2306,89 +2306,89 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/test_legacy_dashboard_card_batch_16.py`
 
-- **tools.test_legacy_dashboard_card_batch_16.FakeWidget** (class, lines 40–55, 16 lines, risk `container`): Groups FakeWidget for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16.FakeWidget.__init__** (method, lines 41–49, 9 lines, risk `support`): Handles init for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16.FakeWidget.pack** (method, lines 51–52, 2 lines, risk `support`): Handles pack for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16.FakeWidget.grid_propagate** (method, lines 54–55, 2 lines, risk `support`): Handles grid propagate for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16._WidgetFactory** (class, lines 58–63, 6 lines, risk `container`): Groups WidgetFactory for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16._WidgetFactory.__init__** (method, lines 59–60, 2 lines, risk `support`): Handles init for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16._WidgetFactory.__call__** (method, lines 62–63, 2 lines, risk `support`): Handles call for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16.FakeTk** (class, lines 66–68, 3 lines, risk `container`): Groups FakeTk for the dashboard feature.
+- **tools.test_legacy_dashboard_card_batch_16.FakeWidget** (class, lines 40–55, 16 lines, risk `container`): Groups FakeWidget for the other feature.
+- **tools.test_legacy_dashboard_card_batch_16.FakeWidget.__init__** (method, lines 41–49, 9 lines, risk `support`): Handles init for the other feature.
+- **tools.test_legacy_dashboard_card_batch_16.FakeWidget.pack** (method, lines 51–52, 2 lines, risk `support`): Handles pack for the other feature.
+- **tools.test_legacy_dashboard_card_batch_16.FakeWidget.grid_propagate** (method, lines 54–55, 2 lines, risk `support`): Handles grid propagate for the other feature.
+- **tools.test_legacy_dashboard_card_batch_16._WidgetFactory** (class, lines 58–63, 6 lines, risk `container`): Groups WidgetFactory for the other feature.
+- **tools.test_legacy_dashboard_card_batch_16._WidgetFactory.__init__** (method, lines 59–60, 2 lines, risk `support`): Handles init for the other feature.
+- **tools.test_legacy_dashboard_card_batch_16._WidgetFactory.__call__** (method, lines 62–63, 2 lines, risk `support`): Handles call for the other feature.
+- **tools.test_legacy_dashboard_card_batch_16.FakeTk** (class, lines 66–68, 3 lines, risk `container`): Groups FakeTk for the other feature.
 - **tools.test_legacy_dashboard_card_batch_16._dashboard_palette** (function, lines 74–77, 4 lines, risk `support`): Handles dashboard palette for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16._load_manifest** (function, lines 80–81, 2 lines, risk `filesystem`): Loads load manifest for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16._source_function** (function, lines 84–104, 21 lines, risk `filesystem`): Handles source function for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16._resolve_function** (function, lines 107–120, 14 lines, risk `support`): Handles resolve function for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16._widget_summary** (function, lines 123–130, 8 lines, risk `support`): Handles widget summary for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16._capture** (function, lines 133–180, 48 lines, risk `support`): Handles capture for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16.capture_batch** (function, lines 183–199, 17 lines, risk `support`): Handles capture batch for the dashboard feature.
-- **tools.test_legacy_dashboard_card_batch_16.main** (function, lines 202–236, 35 lines, risk `filesystem`): Handles main for the dashboard feature.
+- **tools.test_legacy_dashboard_card_batch_16._load_manifest** (function, lines 80–81, 2 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.test_legacy_dashboard_card_batch_16._source_function** (function, lines 84–104, 21 lines, risk `filesystem`): Handles source function for the other feature.
+- **tools.test_legacy_dashboard_card_batch_16._resolve_function** (function, lines 107–120, 14 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_legacy_dashboard_card_batch_16._widget_summary** (function, lines 123–130, 8 lines, risk `support`): Handles widget summary for the other feature.
+- **tools.test_legacy_dashboard_card_batch_16._capture** (function, lines 133–180, 48 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_legacy_dashboard_card_batch_16.capture_batch** (function, lines 183–199, 17 lines, risk `support`): Handles capture batch for the other feature.
+- **tools.test_legacy_dashboard_card_batch_16.main** (function, lines 202–236, 35 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_legacy_dashboard_controls_batch_15.py`
 
-- **tools.test_legacy_dashboard_controls_batch_15.FakeStringVar** (class, lines 34–39, 6 lines, risk `container`): Groups FakeStringVar for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.FakeStringVar.__init__** (method, lines 35–36, 2 lines, risk `support`): Handles init for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.FakeStringVar.get** (method, lines 38–39, 2 lines, risk `support`): Handles get for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.FakeTk** (class, lines 42–51, 10 lines, risk `container`): Groups FakeTk for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.FakeTk.StringVar** (method, lines 47–51, 5 lines, risk `ui_only`): Handles StringVar for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.FakeButton** (class, lines 54–63, 10 lines, risk `container`): Groups FakeButton for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.FakeButton.__init__** (method, lines 55–58, 4 lines, risk `support`): Handles init for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.FakeButton.configure** (method, lines 60–63, 4 lines, risk `support`): Handles configure for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.FakeStyle** (class, lines 66–75, 10 lines, risk `container`): Groups FakeStyle for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.FakeStyle.__init__** (method, lines 67–69, 3 lines, risk `support`): Handles init for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.FakeStyle.configure** (method, lines 71–72, 2 lines, risk `support`): Handles configure for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.FakeStyle.map** (method, lines 74–75, 2 lines, risk `support`): Handles map for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.FakeTtk** (class, lines 78–88, 11 lines, risk `container`): Groups FakeTtk for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.FakeTtk.Style** (method, lines 83–88, 6 lines, risk `support`): Handles Style for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15._palette** (function, lines 94–97, 4 lines, risk `support`): Handles palette for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15._reset_runtime** (function, lines 100–111, 12 lines, risk `ui_only`): Handles reset runtime for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15._load_manifest** (function, lines 114–115, 2 lines, risk `filesystem`): Loads load manifest for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15._source_function** (function, lines 118–139, 22 lines, risk `filesystem`): Handles source function for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15._resolve_function** (function, lines 142–156, 15 lines, risk `support`): Handles resolve function for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15._capture_filter** (function, lines 159–193, 35 lines, risk `ui_only`): Handles capture filter for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15._capture_style** (function, lines 196–220, 25 lines, risk `ui_only`): Handles capture style for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.capture_batch** (function, lines 223–264, 42 lines, risk `support`): Handles capture batch for the dashboard feature.
-- **tools.test_legacy_dashboard_controls_batch_15.main** (function, lines 267–304, 38 lines, risk `filesystem`): Handles main for the dashboard feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeStringVar** (class, lines 34–39, 6 lines, risk `container`): Groups FakeStringVar for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeStringVar.__init__** (method, lines 35–36, 2 lines, risk `support`): Handles init for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeStringVar.get** (method, lines 38–39, 2 lines, risk `support`): Handles get for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeTk** (class, lines 42–51, 10 lines, risk `container`): Groups FakeTk for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeTk.StringVar** (method, lines 47–51, 5 lines, risk `ui_only`): Handles StringVar for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeButton** (class, lines 54–63, 10 lines, risk `container`): Groups FakeButton for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeButton.__init__** (method, lines 55–58, 4 lines, risk `support`): Handles init for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeButton.configure** (method, lines 60–63, 4 lines, risk `support`): Handles configure for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeStyle** (class, lines 66–75, 10 lines, risk `container`): Groups FakeStyle for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeStyle.__init__** (method, lines 67–69, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeStyle.configure** (method, lines 71–72, 2 lines, risk `support`): Handles configure for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeStyle.map** (method, lines 74–75, 2 lines, risk `support`): Handles map for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeTtk** (class, lines 78–88, 11 lines, risk `container`): Groups FakeTtk for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.FakeTtk.Style** (method, lines 83–88, 6 lines, risk `support`): Handles Style for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15._palette** (function, lines 94–97, 4 lines, risk `support`): Handles palette for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15._reset_runtime** (function, lines 100–111, 12 lines, risk `ui_only`): Handles reset runtime for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15._load_manifest** (function, lines 114–115, 2 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15._source_function** (function, lines 118–139, 22 lines, risk `filesystem`): Handles source function for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15._resolve_function** (function, lines 142–156, 15 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15._capture_filter** (function, lines 159–193, 35 lines, risk `ui_only`): Handles capture filter for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15._capture_style** (function, lines 196–220, 25 lines, risk `ui_only`): Handles capture style for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.capture_batch** (function, lines 223–264, 42 lines, risk `support`): Handles capture batch for the other feature.
+- **tools.test_legacy_dashboard_controls_batch_15.main** (function, lines 267–304, 38 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_legacy_dashboard_palette_batch_14.py`
 
-- **tools.test_legacy_dashboard_palette_batch_14.Holder** (class, lines 30–33, 4 lines, risk `container`): Groups Holder for the dashboard feature.
-- **tools.test_legacy_dashboard_palette_batch_14.Holder.__init__** (method, lines 31–33, 3 lines, risk `support`): Handles init for the dashboard feature.
-- **tools.test_legacy_dashboard_palette_batch_14.BadString** (class, lines 36–38, 3 lines, risk `container`): Groups BadString for the dashboard feature.
-- **tools.test_legacy_dashboard_palette_batch_14.BadString.__str__** (method, lines 37–38, 2 lines, risk `support`): Handles str for the dashboard feature.
-- **tools.test_legacy_dashboard_palette_batch_14._stable** (function, lines 41–48, 8 lines, risk `support`): Handles stable for the dashboard feature.
-- **tools.test_legacy_dashboard_palette_batch_14._type_name** (function, lines 51–53, 3 lines, risk `support`): Handles type name for the dashboard feature.
-- **tools.test_legacy_dashboard_palette_batch_14._load_manifest** (function, lines 56–57, 2 lines, risk `filesystem`): Loads load manifest for the dashboard feature.
-- **tools.test_legacy_dashboard_palette_batch_14._resolve_from_source** (function, lines 60–80, 21 lines, risk `filesystem`): Handles resolve from source for the dashboard feature.
-- **tools.test_legacy_dashboard_palette_batch_14._resolve_function** (function, lines 83–93, 11 lines, risk `support`): Handles resolve function for the dashboard feature.
-- **tools.test_legacy_dashboard_palette_batch_14._cases** (function, lines 96–109, 14 lines, risk `support`): Handles cases for the dashboard feature.
-- **tools.test_legacy_dashboard_palette_batch_14._capture_call** (function, lines 112–125, 14 lines, risk `support`): Handles capture call for the dashboard feature.
-- **tools.test_legacy_dashboard_palette_batch_14.capture_batch** (function, lines 128–148, 21 lines, risk `support`): Handles capture batch for the dashboard feature.
-- **tools.test_legacy_dashboard_palette_batch_14.main** (function, lines 151–190, 40 lines, risk `filesystem`): Handles main for the dashboard feature.
+- **tools.test_legacy_dashboard_palette_batch_14.Holder** (class, lines 30–33, 4 lines, risk `container`): Groups Holder for the other feature.
+- **tools.test_legacy_dashboard_palette_batch_14.Holder.__init__** (method, lines 31–33, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_legacy_dashboard_palette_batch_14.BadString** (class, lines 36–38, 3 lines, risk `container`): Groups BadString for the other feature.
+- **tools.test_legacy_dashboard_palette_batch_14.BadString.__str__** (method, lines 37–38, 2 lines, risk `support`): Handles str for the other feature.
+- **tools.test_legacy_dashboard_palette_batch_14._stable** (function, lines 41–48, 8 lines, risk `support`): Handles stable for the other feature.
+- **tools.test_legacy_dashboard_palette_batch_14._type_name** (function, lines 51–53, 3 lines, risk `support`): Handles type name for the other feature.
+- **tools.test_legacy_dashboard_palette_batch_14._load_manifest** (function, lines 56–57, 2 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.test_legacy_dashboard_palette_batch_14._resolve_from_source** (function, lines 60–80, 21 lines, risk `filesystem`): Handles resolve from source for the other feature.
+- **tools.test_legacy_dashboard_palette_batch_14._resolve_function** (function, lines 83–93, 11 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_legacy_dashboard_palette_batch_14._cases** (function, lines 96–109, 14 lines, risk `support`): Handles cases for the other feature.
+- **tools.test_legacy_dashboard_palette_batch_14._capture_call** (function, lines 112–125, 14 lines, risk `support`): Handles capture call for the other feature.
+- **tools.test_legacy_dashboard_palette_batch_14.capture_batch** (function, lines 128–148, 21 lines, risk `support`): Handles capture batch for the other feature.
+- **tools.test_legacy_dashboard_palette_batch_14.main** (function, lines 151–190, 40 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_log_serialization_helper_extraction.py`
 
-- **tools.test_log_serialization_helper_extraction._cases** (function, lines 20–33, 14 lines, risk `support`): Handles cases for the utilities feature.
-- **tools.test_log_serialization_helper_extraction._capture** (function, lines 36–49, 14 lines, risk `support`): Handles capture for the utilities feature.
-- **tools.test_log_serialization_helper_extraction._behavior** (function, lines 52–56, 5 lines, risk `support`): Handles behavior for the utilities feature.
-- **tools.test_log_serialization_helper_extraction._load_module** (function, lines 59–65, 7 lines, risk `support`): Loads load module for the utilities feature.
-- **tools.test_log_serialization_helper_extraction._source_state** (function, lines 68–72, 5 lines, risk `support`): Handles source state for the utilities feature.
-- **tools.test_log_serialization_helper_extraction._write_fixture** (function, lines 75–89, 15 lines, risk `filesystem`): Saves write fixture for the utilities feature.
-- **tools.test_log_serialization_helper_extraction._original** (function, lines 92–115, 24 lines, risk `filesystem`): Handles original for the utilities feature.
-- **tools.test_log_serialization_helper_extraction._applied** (function, lines 118–129, 12 lines, risk `filesystem`): Handles applied for the utilities feature.
-- **tools.test_log_serialization_helper_extraction.main** (function, lines 132–149, 18 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.test_log_serialization_helper_extraction._cases** (function, lines 20–33, 14 lines, risk `support`): Handles cases for the other feature.
+- **tools.test_log_serialization_helper_extraction._capture** (function, lines 36–49, 14 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_log_serialization_helper_extraction._behavior** (function, lines 52–56, 5 lines, risk `support`): Handles behavior for the other feature.
+- **tools.test_log_serialization_helper_extraction._load_module** (function, lines 59–65, 7 lines, risk `support`): Loads load module for the other feature.
+- **tools.test_log_serialization_helper_extraction._source_state** (function, lines 68–72, 5 lines, risk `support`): Handles source state for the other feature.
+- **tools.test_log_serialization_helper_extraction._write_fixture** (function, lines 75–89, 15 lines, risk `filesystem`): Saves write fixture for the other feature.
+- **tools.test_log_serialization_helper_extraction._original** (function, lines 92–115, 24 lines, risk `filesystem`): Handles original for the other feature.
+- **tools.test_log_serialization_helper_extraction._applied** (function, lines 118–129, 12 lines, risk `filesystem`): Handles applied for the other feature.
+- **tools.test_log_serialization_helper_extraction.main** (function, lines 132–149, 18 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_login_palette_wave_25.py`
 
-- **tools.test_login_palette_wave_25.source_for** (function, lines 19–20, 2 lines, risk `support`): Handles source for for the authentication feature.
-- **tools.test_login_palette_wave_25.main** (function, lines 23–92, 70 lines, risk `filesystem`): Handles main for the authentication feature.
+- **tools.test_login_palette_wave_25.source_for** (function, lines 19–20, 2 lines, risk `support`): Handles source for for the other feature.
+- **tools.test_login_palette_wave_25.main** (function, lines 23–92, 70 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_merge_note_dict_extraction.py`
 
 - **tools.test_merge_note_dict_extraction.load_notes_module** (function, lines 41–47, 7 lines, risk `support`): Loads load notes module for the notes feature.
 - **tools.test_merge_note_dict_extraction.load_helper** (function, lines 50–72, 23 lines, risk `filesystem`): Loads load helper for the utilities feature.
-- **tools.test_merge_note_dict_extraction.capture_behavior** (function, lines 75–105, 31 lines, risk `support`): Handles capture behavior for the notes feature.
+- **tools.test_merge_note_dict_extraction.capture_behavior** (function, lines 75–105, 31 lines, risk `support`): Handles capture behavior for the other feature.
 - **tools.test_merge_note_dict_extraction.validate_input_isolation** (function, lines 108–119, 12 lines, risk `support`): Validates validate input isolation for the utilities feature.
-- **tools.test_merge_note_dict_extraction.main** (function, lines 122–141, 20 lines, risk `filesystem`): Handles main for the notes feature.
+- **tools.test_merge_note_dict_extraction.main** (function, lines 122–141, 20 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_module_separation_planner.py`
 
@@ -2397,91 +2397,91 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 ## `tools/test_note_dict_helper_extraction.py`
 
 - **tools.test_note_dict_helper_extraction.load_helper** (function, lines 38–61, 24 lines, risk `filesystem`): Loads load helper for the utilities feature.
-- **tools.test_note_dict_helper_extraction.capture_behavior** (function, lines 64–84, 21 lines, risk `support`): Handles capture behavior for the notes feature.
+- **tools.test_note_dict_helper_extraction.capture_behavior** (function, lines 64–84, 21 lines, risk `support`): Handles capture behavior for the other feature.
 - **tools.test_note_dict_helper_extraction.validate_copy_semantics** (function, lines 87–99, 13 lines, risk `support`): Validates validate copy semantics for the utilities feature.
-- **tools.test_note_dict_helper_extraction.main** (function, lines 102–121, 20 lines, risk `filesystem`): Handles main for the notes feature.
+- **tools.test_note_dict_helper_extraction.main** (function, lines 102–121, 20 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_numeric_parser_extraction.py`
 
-- **tools.test_numeric_parser_extraction._cases** (function, lines 27–42, 16 lines, risk `support`): Handles cases for the utilities feature.
+- **tools.test_numeric_parser_extraction._cases** (function, lines 27–42, 16 lines, risk `support`): Handles cases for the other feature.
 - **tools.test_numeric_parser_extraction._validate_signature** (function, lines 45–63, 19 lines, risk `support`): Validates validate signature for the utilities feature.
-- **tools.test_numeric_parser_extraction._capture** (function, lines 66–79, 14 lines, risk `support`): Handles capture for the utilities feature.
-- **tools.test_numeric_parser_extraction._behavior** (function, lines 82–90, 9 lines, risk `support`): Handles behavior for the utilities feature.
-- **tools.test_numeric_parser_extraction._functions_from_module_source** (function, lines 93–96, 4 lines, risk `support`): Handles functions from module source for the utilities feature.
-- **tools.test_numeric_parser_extraction._load_generated_functions** (function, lines 99–105, 7 lines, risk `support`): Loads load generated functions for the utilities feature.
-- **tools.test_numeric_parser_extraction._source_state** (function, lines 108–116, 9 lines, risk `support`): Handles source state for the utilities feature.
-- **tools.test_numeric_parser_extraction._write_fixture** (function, lines 119–126, 8 lines, risk `filesystem`): Saves write fixture for the utilities feature.
-- **tools.test_numeric_parser_extraction._test_original_state** (function, lines 129–157, 29 lines, risk `filesystem`): Handles test original state for the utilities feature.
-- **tools.test_numeric_parser_extraction._test_applied_state** (function, lines 160–177, 18 lines, risk `filesystem`): Handles test applied state for the utilities feature.
-- **tools.test_numeric_parser_extraction.main** (function, lines 180–209, 30 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.test_numeric_parser_extraction._capture** (function, lines 66–79, 14 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_numeric_parser_extraction._behavior** (function, lines 82–90, 9 lines, risk `support`): Handles behavior for the other feature.
+- **tools.test_numeric_parser_extraction._functions_from_module_source** (function, lines 93–96, 4 lines, risk `support`): Handles functions from module source for the other feature.
+- **tools.test_numeric_parser_extraction._load_generated_functions** (function, lines 99–105, 7 lines, risk `support`): Loads load generated functions for the other feature.
+- **tools.test_numeric_parser_extraction._source_state** (function, lines 108–116, 9 lines, risk `support`): Handles source state for the other feature.
+- **tools.test_numeric_parser_extraction._write_fixture** (function, lines 119–126, 8 lines, risk `filesystem`): Saves write fixture for the other feature.
+- **tools.test_numeric_parser_extraction._test_original_state** (function, lines 129–157, 29 lines, risk `filesystem`): Handles test original state for the other feature.
+- **tools.test_numeric_parser_extraction._test_applied_state** (function, lines 160–177, 18 lines, risk `filesystem`): Handles test applied state for the other feature.
+- **tools.test_numeric_parser_extraction.main** (function, lines 180–209, 30 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_payment_schedule_normalizer_batch_06.py`
 
-- **tools.test_payment_schedule_normalizer_batch_06.BrokenText** (class, lines 26–28, 3 lines, risk `container`): Groups BrokenText for the payments feature.
-- **tools.test_payment_schedule_normalizer_batch_06.BrokenText.__str__** (method, lines 27–28, 2 lines, risk `support`): Handles str for the payments feature.
-- **tools.test_payment_schedule_normalizer_batch_06.MondayText** (class, lines 31–33, 3 lines, risk `container`): Groups MondayText for the payments feature.
-- **tools.test_payment_schedule_normalizer_batch_06.MondayText.__str__** (method, lines 32–33, 2 lines, risk `support`): Handles str for the payments feature.
-- **tools.test_payment_schedule_normalizer_batch_06._type_name** (function, lines 36–38, 3 lines, risk `support`): Handles type name for the payments feature.
-- **tools.test_payment_schedule_normalizer_batch_06._resolve_source_function** (function, lines 41–58, 18 lines, risk `filesystem`): Handles resolve source function for the payments feature.
-- **tools.test_payment_schedule_normalizer_batch_06._resolve_function** (function, lines 61–71, 11 lines, risk `support`): Handles resolve function for the payments feature.
-- **tools.test_payment_schedule_normalizer_batch_06._capture** (function, lines 74–87, 14 lines, risk `support`): Handles capture for the payments feature.
-- **tools.test_payment_schedule_normalizer_batch_06._weekday_cases** (function, lines 90–111, 22 lines, risk `support`): Handles weekday cases for the payments feature.
-- **tools.test_payment_schedule_normalizer_batch_06._day_of_month_cases** (function, lines 114–131, 18 lines, risk `support`): Handles day of month cases for the payments feature.
-- **tools.test_payment_schedule_normalizer_batch_06.capture_batch** (function, lines 134–156, 23 lines, risk `filesystem`): Handles capture batch for the payments feature.
-- **tools.test_payment_schedule_normalizer_batch_06.main** (function, lines 159–194, 36 lines, risk `filesystem`): Handles main for the payments feature.
+- **tools.test_payment_schedule_normalizer_batch_06.BrokenText** (class, lines 26–28, 3 lines, risk `container`): Groups BrokenText for the other feature.
+- **tools.test_payment_schedule_normalizer_batch_06.BrokenText.__str__** (method, lines 27–28, 2 lines, risk `support`): Handles str for the other feature.
+- **tools.test_payment_schedule_normalizer_batch_06.MondayText** (class, lines 31–33, 3 lines, risk `container`): Groups MondayText for the other feature.
+- **tools.test_payment_schedule_normalizer_batch_06.MondayText.__str__** (method, lines 32–33, 2 lines, risk `support`): Handles str for the other feature.
+- **tools.test_payment_schedule_normalizer_batch_06._type_name** (function, lines 36–38, 3 lines, risk `support`): Handles type name for the other feature.
+- **tools.test_payment_schedule_normalizer_batch_06._resolve_source_function** (function, lines 41–58, 18 lines, risk `filesystem`): Handles resolve source function for the other feature.
+- **tools.test_payment_schedule_normalizer_batch_06._resolve_function** (function, lines 61–71, 11 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_payment_schedule_normalizer_batch_06._capture** (function, lines 74–87, 14 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_payment_schedule_normalizer_batch_06._weekday_cases** (function, lines 90–111, 22 lines, risk `support`): Handles weekday cases for the other feature.
+- **tools.test_payment_schedule_normalizer_batch_06._day_of_month_cases** (function, lines 114–131, 18 lines, risk `support`): Handles day of month cases for the other feature.
+- **tools.test_payment_schedule_normalizer_batch_06.capture_batch** (function, lines 134–156, 23 lines, risk `filesystem`): Handles capture batch for the other feature.
+- **tools.test_payment_schedule_normalizer_batch_06.main** (function, lines 159–194, 36 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_pure_helper_batch.py`
 
-- **tools.test_pure_helper_batch._load_manifest** (function, lines 88–89, 2 lines, risk `filesystem`): Loads load manifest for the utilities feature.
-- **tools.test_pure_helper_batch._resolve_from_source** (function, lines 92–108, 17 lines, risk `filesystem`): Handles resolve from source for the utilities feature.
-- **tools.test_pure_helper_batch._resolve_function** (function, lines 111–121, 11 lines, risk `support`): Handles resolve function for the utilities feature.
-- **tools.test_pure_helper_batch._type_name** (function, lines 124–126, 3 lines, risk `support`): Handles type name for the utilities feature.
-- **tools.test_pure_helper_batch._capture** (function, lines 129–142, 14 lines, risk `support`): Handles capture for the utilities feature.
-- **tools.test_pure_helper_batch.capture_batch** (function, lines 145–167, 23 lines, risk `support`): Handles capture batch for the utilities feature.
-- **tools.test_pure_helper_batch.main** (function, lines 170–206, 37 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.test_pure_helper_batch._load_manifest** (function, lines 88–89, 2 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.test_pure_helper_batch._resolve_from_source** (function, lines 92–108, 17 lines, risk `filesystem`): Handles resolve from source for the other feature.
+- **tools.test_pure_helper_batch._resolve_function** (function, lines 111–121, 11 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_pure_helper_batch._type_name** (function, lines 124–126, 3 lines, risk `support`): Handles type name for the other feature.
+- **tools.test_pure_helper_batch._capture** (function, lines 129–142, 14 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_pure_helper_batch.capture_batch** (function, lines 145–167, 23 lines, risk `support`): Handles capture batch for the other feature.
+- **tools.test_pure_helper_batch.main** (function, lines 170–206, 37 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_reports_feature_wave_18.py`
 
-- **tools.test_reports_feature_wave_18._sha** (function, lines 28–29, 2 lines, risk `support`): Handles sha for the reports feature.
-- **tools.test_reports_feature_wave_18._sources** (function, lines 32–40, 9 lines, risk `filesystem`): Handles sources for the reports feature.
-- **tools.test_reports_feature_wave_18._assert_structure** (function, lines 43–64, 22 lines, risk `filesystem`): Handles assert structure for the reports feature.
-- **tools.test_reports_feature_wave_18._assert_dependency_bridge** (function, lines 67–79, 13 lines, risk `reports`): Handles assert dependency bridge for the reports feature.
-- **tools.test_reports_feature_wave_18._assert_card_refresh_behavior** (function, lines 82–115, 34 lines, risk `reports`): Handles assert card refresh behavior for the reports feature.
-- **tools.test_reports_feature_wave_18.main** (function, lines 118–122, 5 lines, risk `reports`): Handles main for the reports feature.
+- **tools.test_reports_feature_wave_18._sha** (function, lines 28–29, 2 lines, risk `support`): Handles sha for the other feature.
+- **tools.test_reports_feature_wave_18._sources** (function, lines 32–40, 9 lines, risk `filesystem`): Handles sources for the other feature.
+- **tools.test_reports_feature_wave_18._assert_structure** (function, lines 43–64, 22 lines, risk `filesystem`): Handles assert structure for the other feature.
+- **tools.test_reports_feature_wave_18._assert_dependency_bridge** (function, lines 67–79, 13 lines, risk `reports`): Handles assert dependency bridge for the other feature.
+- **tools.test_reports_feature_wave_18._assert_card_refresh_behavior** (function, lines 82–115, 34 lines, risk `reports`): Handles assert card refresh behavior for the other feature.
+- **tools.test_reports_feature_wave_18.main** (function, lines 118–122, 5 lines, risk `reports`): Handles main for the other feature.
 
 ## `tools/test_reports_notes_dialog_wiring.py`
 
-- **tools.test_reports_notes_dialog_wiring.main** (function, lines 13–52, 40 lines, risk `filesystem`): Handles main for the reports feature.
+- **tools.test_reports_notes_dialog_wiring.main** (function, lines 13–52, 40 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_text_normalizer_extraction.py`
 
-- **tools.test_text_normalizer_extraction._cases** (function, lines 27–41, 15 lines, risk `support`): Handles cases for the utilities feature.
+- **tools.test_text_normalizer_extraction._cases** (function, lines 27–41, 15 lines, risk `support`): Handles cases for the other feature.
 - **tools.test_text_normalizer_extraction._validate_signature** (function, lines 44–64, 21 lines, risk `support`): Validates validate signature for the utilities feature.
-- **tools.test_text_normalizer_extraction._capture** (function, lines 67–80, 14 lines, risk `support`): Handles capture for the utilities feature.
-- **tools.test_text_normalizer_extraction._behavior** (function, lines 83–91, 9 lines, risk `support`): Handles behavior for the utilities feature.
-- **tools.test_text_normalizer_extraction._functions_from_module_source** (function, lines 94–97, 4 lines, risk `support`): Handles functions from module source for the utilities feature.
-- **tools.test_text_normalizer_extraction._load_generated_functions** (function, lines 100–106, 7 lines, risk `support`): Loads load generated functions for the utilities feature.
-- **tools.test_text_normalizer_extraction._source_state** (function, lines 109–117, 9 lines, risk `support`): Handles source state for the utilities feature.
-- **tools.test_text_normalizer_extraction._write_fixture** (function, lines 120–130, 11 lines, risk `filesystem`): Saves write fixture for the utilities feature.
-- **tools.test_text_normalizer_extraction._test_original_state** (function, lines 133–162, 30 lines, risk `filesystem`): Handles test original state for the utilities feature.
-- **tools.test_text_normalizer_extraction._test_applied_state** (function, lines 165–182, 18 lines, risk `filesystem`): Handles test applied state for the utilities feature.
-- **tools.test_text_normalizer_extraction.main** (function, lines 185–217, 33 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.test_text_normalizer_extraction._capture** (function, lines 67–80, 14 lines, risk `support`): Handles capture for the other feature.
+- **tools.test_text_normalizer_extraction._behavior** (function, lines 83–91, 9 lines, risk `support`): Handles behavior for the other feature.
+- **tools.test_text_normalizer_extraction._functions_from_module_source** (function, lines 94–97, 4 lines, risk `support`): Handles functions from module source for the other feature.
+- **tools.test_text_normalizer_extraction._load_generated_functions** (function, lines 100–106, 7 lines, risk `support`): Loads load generated functions for the other feature.
+- **tools.test_text_normalizer_extraction._source_state** (function, lines 109–117, 9 lines, risk `support`): Handles source state for the other feature.
+- **tools.test_text_normalizer_extraction._write_fixture** (function, lines 120–130, 11 lines, risk `filesystem`): Saves write fixture for the other feature.
+- **tools.test_text_normalizer_extraction._test_original_state** (function, lines 133–162, 30 lines, risk `filesystem`): Handles test original state for the other feature.
+- **tools.test_text_normalizer_extraction._test_applied_state** (function, lines 165–182, 18 lines, risk `filesystem`): Handles test applied state for the other feature.
+- **tools.test_text_normalizer_extraction.main** (function, lines 185–217, 33 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_theme_palette_helper_batch_05.py`
 
-- **tools.test_theme_palette_helper_batch_05.Holder** (class, lines 31–34, 4 lines, risk `container`): Groups Holder for the settings feature.
-- **tools.test_theme_palette_helper_batch_05.Holder.__init__** (method, lines 32–34, 3 lines, risk `support`): Handles init for the settings feature.
-- **tools.test_theme_palette_helper_batch_05.BadString** (class, lines 37–39, 3 lines, risk `container`): Groups BadString for the settings feature.
-- **tools.test_theme_palette_helper_batch_05.BadString.__str__** (method, lines 38–39, 2 lines, risk `support`): Handles str for the settings feature.
-- **tools.test_theme_palette_helper_batch_05._stable** (function, lines 42–49, 8 lines, risk `support`): Handles stable for the settings feature.
-- **tools.test_theme_palette_helper_batch_05._type_name** (function, lines 52–54, 3 lines, risk `support`): Handles type name for the settings feature.
-- **tools.test_theme_palette_helper_batch_05._load_manifest** (function, lines 57–58, 2 lines, risk `filesystem`): Loads load manifest for the settings feature.
-- **tools.test_theme_palette_helper_batch_05._resolve_from_source** (function, lines 61–81, 21 lines, risk `filesystem`): Handles resolve from source for the settings feature.
-- **tools.test_theme_palette_helper_batch_05._resolve_function** (function, lines 84–94, 11 lines, risk `support`): Handles resolve function for the settings feature.
-- **tools.test_theme_palette_helper_batch_05._cases** (function, lines 97–110, 14 lines, risk `support`): Handles cases for the settings feature.
-- **tools.test_theme_palette_helper_batch_05._capture_call** (function, lines 113–126, 14 lines, risk `support`): Handles capture call for the settings feature.
-- **tools.test_theme_palette_helper_batch_05.capture_batch** (function, lines 129–149, 21 lines, risk `support`): Handles capture batch for the settings feature.
-- **tools.test_theme_palette_helper_batch_05.main** (function, lines 152–190, 39 lines, risk `filesystem`): Handles main for the settings feature.
+- **tools.test_theme_palette_helper_batch_05.Holder** (class, lines 31–34, 4 lines, risk `container`): Groups Holder for the other feature.
+- **tools.test_theme_palette_helper_batch_05.Holder.__init__** (method, lines 32–34, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_theme_palette_helper_batch_05.BadString** (class, lines 37–39, 3 lines, risk `container`): Groups BadString for the other feature.
+- **tools.test_theme_palette_helper_batch_05.BadString.__str__** (method, lines 38–39, 2 lines, risk `support`): Handles str for the other feature.
+- **tools.test_theme_palette_helper_batch_05._stable** (function, lines 42–49, 8 lines, risk `support`): Handles stable for the other feature.
+- **tools.test_theme_palette_helper_batch_05._type_name** (function, lines 52–54, 3 lines, risk `support`): Handles type name for the other feature.
+- **tools.test_theme_palette_helper_batch_05._load_manifest** (function, lines 57–58, 2 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.test_theme_palette_helper_batch_05._resolve_from_source** (function, lines 61–81, 21 lines, risk `filesystem`): Handles resolve from source for the other feature.
+- **tools.test_theme_palette_helper_batch_05._resolve_function** (function, lines 84–94, 11 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_theme_palette_helper_batch_05._cases** (function, lines 97–110, 14 lines, risk `support`): Handles cases for the other feature.
+- **tools.test_theme_palette_helper_batch_05._capture_call** (function, lines 113–126, 14 lines, risk `support`): Handles capture call for the other feature.
+- **tools.test_theme_palette_helper_batch_05.capture_batch** (function, lines 129–149, 21 lines, risk `support`): Handles capture batch for the other feature.
+- **tools.test_theme_palette_helper_batch_05.main** (function, lines 152–190, 39 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_ui_card_constructor_batch_08.py`
 
@@ -2504,24 +2504,24 @@ Scanned **131 Python files**, **70,885 lines**, and **2,149 symbols**.
 
 ## `tools/test_ui_display_helper_batch.py`
 
-- **tools.test_ui_display_helper_batch.FakeCanvas** (class, lines 36–57, 22 lines, risk `container`): Groups FakeCanvas for the utilities feature.
-- **tools.test_ui_display_helper_batch.FakeCanvas.__init__** (method, lines 37–39, 3 lines, risk `support`): Handles init for the utilities feature.
-- **tools.test_ui_display_helper_batch.FakeCanvas.create_polygon** (method, lines 41–49, 9 lines, risk `support`): Builds create polygon for the utilities feature.
-- **tools.test_ui_display_helper_batch.FakeCanvas.create_rectangle** (method, lines 51–57, 7 lines, risk `support`): Builds create rectangle for the utilities feature.
-- **tools.test_ui_display_helper_batch.FakeLabel** (class, lines 60–68, 9 lines, risk `container`): Groups FakeLabel for the utilities feature.
-- **tools.test_ui_display_helper_batch.FakeLabel.__init__** (method, lines 61–63, 3 lines, risk `support`): Handles init for the utilities feature.
-- **tools.test_ui_display_helper_batch.FakeLabel.configure** (method, lines 65–68, 4 lines, risk `support`): Handles configure for the utilities feature.
-- **tools.test_ui_display_helper_batch.Holder** (class, lines 71–72, 2 lines, risk `container`): Groups Holder for the utilities feature.
-- **tools.test_ui_display_helper_batch._stable** (function, lines 75–82, 8 lines, risk `support`): Handles stable for the utilities feature.
-- **tools.test_ui_display_helper_batch._type_name** (function, lines 85–87, 3 lines, risk `support`): Handles type name for the utilities feature.
-- **tools.test_ui_display_helper_batch._load_manifest** (function, lines 90–91, 2 lines, risk `filesystem`): Loads load manifest for the utilities feature.
-- **tools.test_ui_display_helper_batch._resolve_from_source** (function, lines 94–110, 17 lines, risk `filesystem`): Handles resolve from source for the utilities feature.
-- **tools.test_ui_display_helper_batch._resolve_function** (function, lines 113–123, 11 lines, risk `support`): Handles resolve function for the utilities feature.
-- **tools.test_ui_display_helper_batch._capture_round** (function, lines 126–156, 31 lines, risk `support`): Handles capture round for the utilities feature.
-- **tools.test_ui_display_helper_batch._card_state** (function, lines 159–163, 5 lines, risk `support`): Handles card state for the utilities feature.
-- **tools.test_ui_display_helper_batch._capture_card** (function, lines 166–210, 45 lines, risk `support`): Handles capture card for the utilities feature.
-- **tools.test_ui_display_helper_batch.capture_batch** (function, lines 213–245, 33 lines, risk `support`): Handles capture batch for the utilities feature.
-- **tools.test_ui_display_helper_batch.main** (function, lines 248–284, 37 lines, risk `filesystem`): Handles main for the utilities feature.
+- **tools.test_ui_display_helper_batch.FakeCanvas** (class, lines 36–57, 22 lines, risk `container`): Groups FakeCanvas for the other feature.
+- **tools.test_ui_display_helper_batch.FakeCanvas.__init__** (method, lines 37–39, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_ui_display_helper_batch.FakeCanvas.create_polygon** (method, lines 41–49, 9 lines, risk `support`): Builds create polygon for the other feature.
+- **tools.test_ui_display_helper_batch.FakeCanvas.create_rectangle** (method, lines 51–57, 7 lines, risk `support`): Builds create rectangle for the other feature.
+- **tools.test_ui_display_helper_batch.FakeLabel** (class, lines 60–68, 9 lines, risk `container`): Groups FakeLabel for the other feature.
+- **tools.test_ui_display_helper_batch.FakeLabel.__init__** (method, lines 61–63, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_ui_display_helper_batch.FakeLabel.configure** (method, lines 65–68, 4 lines, risk `support`): Handles configure for the other feature.
+- **tools.test_ui_display_helper_batch.Holder** (class, lines 71–72, 2 lines, risk `container`): Groups Holder for the other feature.
+- **tools.test_ui_display_helper_batch._stable** (function, lines 75–82, 8 lines, risk `support`): Handles stable for the other feature.
+- **tools.test_ui_display_helper_batch._type_name** (function, lines 85–87, 3 lines, risk `support`): Handles type name for the other feature.
+- **tools.test_ui_display_helper_batch._load_manifest** (function, lines 90–91, 2 lines, risk `filesystem`): Loads load manifest for the other feature.
+- **tools.test_ui_display_helper_batch._resolve_from_source** (function, lines 94–110, 17 lines, risk `filesystem`): Handles resolve from source for the other feature.
+- **tools.test_ui_display_helper_batch._resolve_function** (function, lines 113–123, 11 lines, risk `support`): Handles resolve function for the other feature.
+- **tools.test_ui_display_helper_batch._capture_round** (function, lines 126–156, 31 lines, risk `support`): Handles capture round for the other feature.
+- **tools.test_ui_display_helper_batch._card_state** (function, lines 159–163, 5 lines, risk `support`): Handles card state for the other feature.
+- **tools.test_ui_display_helper_batch._capture_card** (function, lines 166–210, 45 lines, risk `support`): Handles capture card for the other feature.
+- **tools.test_ui_display_helper_batch.capture_batch** (function, lines 213–245, 33 lines, risk `support`): Handles capture batch for the other feature.
+- **tools.test_ui_display_helper_batch.main** (function, lines 248–284, 37 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/ui_action_inventory.py`
 
