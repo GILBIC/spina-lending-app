@@ -28,5 +28,16 @@ old_sub = "updated, count = re.subn(pattern, replacement, text, count=1, flags=r
 new_sub = "updated, count = re.subn(pattern, lambda _match: replacement, text, count=1, flags=re.DOTALL)"
 assert text.count(old_sub) == 1, "Expected one direct re.sub replacement"
 text = text.replace(old_sub, new_sub, 1)
+
+lines = text.splitlines()
+matched = 0
+for index, line in enumerate(lines):
+    if "name = str(value).strip().strip(" in line:
+        indent = line[: len(line) - len(line.lstrip())]
+        lines[index] = indent + "name = str(value).strip().lower()"
+        matched += 1
+assert matched == 1, f"Expected one generated SQL identifier line, found {matched}"
+text = "\n".join(lines) + "\n"
+
 PATH.write_text(text, encoding="utf-8")
 print("Corrected temporary architecture review fixer.")
