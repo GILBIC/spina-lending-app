@@ -1,0 +1,76 @@
+name: Apply Cash Control feature Wave 21
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/cash-control-feature-wave-21'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - name: Check out Wave 21 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/cash-control-feature-wave-21
+          fetch-depth: 0
+
+      - name: Verify local Python
+        shell: cmd
+        run: |
+          where python
+          python --version
+
+      - name: Apply guarded Cash Control extraction
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools\apply_cash_control_feature_wave_21.py > artifacts\cash-control-wave-21-apply.log 2>&1
+
+      - name: Upload apply log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cash-control-wave-21-apply-log
+          path: artifacts/cash-control-wave-21-apply.log
+          if-no-files-found: ignore
+
+      - name: Compile extracted state
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\tabs\cash_control.py
+          python -m py_compile tools\test_cash_control_feature_wave_21.py
+
+      - name: Run Cash Control feature regression
+        shell: cmd
+        run: python -m tools.test_cash_control_feature_wave_21 > artifacts\cash-control-wave-21-regression.log 2>&1
+
+      - name: Upload regression log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cash-control-wave-21-regression-log
+          path: artifacts/cash-control-wave-21-regression.log
+          if-no-files-found: ignore
+
+      - name: Run redundancy audit
+        shell: cmd
+        run: python tools\redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json redundancy-report.json
+
+      - name: Run SPINA quality audit
+        shell: cmd
+        run: python tools\spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json quality-report.json
+
+      - name: Commit verified application files
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app\tabs\cash_control.py tools\fixtures\cash_control_feature_wave_21_manifest.json tools\test_cash_control_feature_wave_21.py
+          git diff --cached --quiet && exit /b 0
+          git commit -m "Extract Cash Control presentation shell [skip ci]"
+          git push origin HEAD:agent/cash-control-feature-wave-21
