@@ -37,7 +37,20 @@ jobs:
 
       - name: Run Reports regression
         shell: cmd
-        run: python tools\test_reports_feature_wave_18.py
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools\test_reports_feature_wave_18.py > artifacts\wave-18-reports-regression.log 2>&1
+          set TEST_EXIT=%ERRORLEVEL%
+          type artifacts\wave-18-reports-regression.log
+          exit /b %TEST_EXIT%
+
+      - name: Upload regression log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-18-reports-regression-log
+          path: artifacts/wave-18-reports-regression.log
+          if-no-files-found: ignore
 
       - name: Commit verified application files
         shell: cmd
