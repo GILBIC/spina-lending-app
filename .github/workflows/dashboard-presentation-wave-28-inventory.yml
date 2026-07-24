@@ -1,0 +1,34 @@
+name: Dashboard presentation Wave 28 inventory
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  inventory:
+    if: github.head_ref == 'agent/dashboard-presentation-wave-28' || github.ref == 'refs/heads/agent/dashboard-presentation-wave-28'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out Wave 28 branch
+        uses: actions/checkout@v4
+
+      - name: Verify Python
+        shell: cmd
+        run: |
+          python --version
+          python -m py_compile tools\inventory_dashboard_presentation_wave_28.py
+
+      - name: Inventory mapped Dashboard batch
+        shell: cmd
+        run: python -m tools.inventory_dashboard_presentation_wave_28
+
+      - name: Upload Dashboard inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-presentation-wave-28-inventory
+          path: |
+            artifacts/dashboard-presentation-wave-28-inventory.json
+            artifacts/dashboard-presentation-wave-28-inventory.md
+          if-no-files-found: error
