@@ -1,7 +1,7 @@
 name: Collector Route presentation Wave 23
 
 on:
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read

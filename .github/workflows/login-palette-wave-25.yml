@@ -1,7 +1,7 @@
 name: Login palette Wave 25
 
 on:
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
