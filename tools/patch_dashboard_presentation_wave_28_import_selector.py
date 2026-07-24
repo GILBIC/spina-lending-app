@@ -1,4 +1,4 @@
-"""Patch the temporary Wave 28 extractor for import and callback ordering."""
+"""Patch the temporary Wave 28 extractor for safe and efficient execution."""
 
 from pathlib import Path
 
@@ -53,6 +53,30 @@ assert text.count(needle) == 2, f"Expected two callback insertion coordinates, f
 text = text.replace(needle, "launch_guard.lineno - 1")
 print("Patched callback insertion coordinates")
 
+old_hash_loop = '''    assert not (set(TARGET_ORDER) & set(final_source_nodes))
+    assert set(TARGET_ORDER).issubset(final_module_nodes)
+    for name, old_hash in original_source_hashes.items():
+        if name not in TARGET_HASHES:
+            assert source_hashes(final_source_text)[name] == old_hash, f"Non-target source function changed: {name}"
+    for name, old_hash in original_module_hashes.items():
+        if name != "configure_legacy_dashboard_feature":
+            assert source_hashes(final_module_text)[name] == old_hash, f"Existing Dashboard function changed: {name}"
+'''
+new_hash_loop = '''    assert not (set(TARGET_ORDER) & set(final_source_nodes))
+    assert set(TARGET_ORDER).issubset(final_module_nodes)
+    final_source_hashes = source_hashes(final_source_text)
+    final_module_hashes = source_hashes(final_module_text)
+    for name, old_hash in original_source_hashes.items():
+        if name not in TARGET_HASHES:
+            assert final_source_hashes[name] == old_hash, f"Non-target source function changed: {name}"
+    for name, old_hash in original_module_hashes.items():
+        if name != "configure_legacy_dashboard_feature":
+            assert final_module_hashes[name] == old_hash, f"Existing Dashboard function changed: {name}"
+'''
+assert text.count(old_hash_loop) == 1, "Wave 28 protected function hash loop changed"
+text = text.replace(old_hash_loop, new_hash_loop)
+print("Optimized protected function verification")
+
 old_final = '''    final_tree = ast.parse(final_source_text)
     final_dashboard_import = next(
         node for node in ast.walk(final_tree)
@@ -78,4 +102,4 @@ text = text.replace(old_final, new_final)
 print("Patched final Dashboard import selector")
 
 PATH.write_text(text, encoding="utf-8")
-print("Wave 28 Dashboard import and callback-order patches applied")
+print("Wave 28 safe extractor patches applied")
