@@ -59,13 +59,32 @@ jobs:
           exit 1
 
       - name: Compile and test extracted Dashboard feature
+        id: validation
+        continue-on-error: true
         run: |
-          python -m py_compile \
-            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
-            spina_app/tabs/__init__.py \
-            spina_app/tabs/dashboard.py \
-            tools/test_dashboard_feature_wave_17.py
-          PYTHONPATH=. python tools/test_dashboard_feature_wave_17.py
+          set -o pipefail
+          {
+            python -m py_compile \
+              OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+              spina_app/tabs/__init__.py \
+              spina_app/tabs/dashboard.py \
+              tools/test_dashboard_feature_wave_17.py
+            PYTHONPATH=. python tools/test_dashboard_feature_wave_17.py
+          } 2>&1 | tee dashboard-wave-17-validation.log
+
+      - name: Upload complete validation log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-wave-17-validation-log
+          path: dashboard-wave-17-validation.log
+          if-no-files-found: error
+
+      - name: Stop after validation failure
+        if: steps.validation.outcome != 'success'
+        run: |
+          echo "Dashboard validation failed; inspect dashboard-wave-17-validation-log."
+          exit 1
 
       - name: Commit verified extraction and remove temporary workflows
         run: |
