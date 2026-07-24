@@ -1,0 +1,53 @@
+name: Reports feature Wave 18
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify local Python
+        shell: cmd
+        run: |
+          where python
+          python --version
+
+      - name: Compile application and Reports module
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\tabs\reports.py
+          python -m py_compile tools\test_reports_feature_wave_18.py
+          python -m compileall -q spina_app
+
+      - name: Run Reports feature regression
+        shell: cmd
+        run: python -m tools.test_reports_feature_wave_18
+
+      - name: Run redundancy audit
+        shell: cmd
+        run: python tools\redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json redundancy-report.json
+
+      - name: Run SPINA quality audit
+        shell: cmd
+        run: python tools\spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json quality-report.json
+
+      - name: Upload audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-wave-18-audit-reports
+          path: |
+            redundancy-report.json
+            quality-report.json
+          if-no-files-found: ignore
