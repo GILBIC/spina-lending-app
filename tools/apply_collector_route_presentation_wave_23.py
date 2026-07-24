@@ -26,9 +26,11 @@ PROTECTED = {
 EXPECTED_SOURCE_SHA = "8d56ff494c763bfec00df968173b548220af8f6a68ecb63b63fa1f2f83981e98"
 IMPORT_BLOCK = [
     "from spina_app.tabs.collector_route import (",
+    "    configure_collector_route_dependencies,",
     "    _spina_v27_update_route_cards,",
     "    _spina_v27_hidden_collector_widgets,",
     ")",
+    "configure_collector_route_dependencies(globals())",
 ]
 
 
@@ -97,9 +99,23 @@ from __future__ import annotations
 
 import tkinter as tk
 from tkinter import ttk
+from typing import Any, Mapping
 
-from spina_app.theme_palettes import _spina_v27_route_colors
 from spina_app.utilities.numbers import _spina_v27_count_from_text
+
+_REQUIRED_DEPENDENCIES = ("_spina_v27_route_colors",)
+
+
+def configure_collector_route_dependencies(namespace: Mapping[str, Any]) -> tuple[str, ...]:
+    """Bind the desktop-owned Collector Route palette helper."""
+    missing = []
+    for name in _REQUIRED_DEPENDENCIES:
+        value = namespace.get(name)
+        if value is None:
+            missing.append(name)
+            continue
+        globals()[name] = value
+    return tuple(missing)
 
 '''
     module_text += "\n\n\n".join(sources[name] for name in TARGETS) + "\n"
@@ -156,7 +172,9 @@ def main() -> None:
     for node in app_tree.body:
         if isinstance(node, ast.ImportFrom) and node.module == "spina_app.tabs.collector_route":
             imported.update(alias.name for alias in node.names)
-    assert imported == set(TARGETS), f"Collector Route imports differ: {sorted(imported)}"
+    assert set(TARGETS).issubset(imported), f"Collector Route imports differ: {sorted(imported)}"
+    assert "configure_collector_route_dependencies" in imported
+    assert "configure_collector_route_dependencies(globals())" in app_text
 
     for name, expected_hash in PROTECTED.items():
         node = app_nodes.get(name)
@@ -183,7 +201,11 @@ def main() -> None:
     for name in TARGETS:
         assert callable(getattr(module, name, None)), f"{name} is not callable after import"
 
-    assert hasattr(module, "_spina_v27_route_colors")
+    configure = getattr(module, "configure_collector_route_dependencies", None)
+    assert callable(configure)
+    sentinel = lambda _self=None: {"green": "#0", "orange": "#1", "panel": "#2", "fg": "#3"}
+    assert configure({"_spina_v27_route_colors": sentinel}) == ()
+    assert module._spina_v27_route_colors is sentinel
     assert hasattr(module, "_spina_v27_count_from_text")
     print("Collector Route presentation Wave 23 regression passed.")
 
