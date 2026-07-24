@@ -62,7 +62,19 @@ jobs:
 
       - name: Run focused Wave 29 regression
         shell: cmd
-        run: python -m tools.test_navigation_databank_shell_wave_29
+        run: |
+          python -m tools.test_navigation_databank_shell_wave_29 > artifacts\wave-29-regression.log 2>&1
+          set CODE=%ERRORLEVEL%
+          type artifacts\wave-29-regression.log
+          exit /b %CODE%
+
+      - name: Upload Wave 29 regression diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: navigation-databank-shell-wave-29-regression-diagnostic
+          path: artifacts/wave-29-regression.log
+          if-no-files-found: warn
 
       - name: Run redundancy audit
         shell: cmd
