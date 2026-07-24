@@ -1,8 +1,8 @@
 {
   "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-  "line_count": 45357,
-  "top_level_function_count": 626,
-  "unique_top_level_function_names": 536,
+  "line_count": 45268,
+  "top_level_function_count": 624,
+  "unique_top_level_function_names": 534,
   "duplicate_top_level_definitions": {
     "_adv_lbl": [
       23911,
@@ -26,8 +26,8 @@
       25897,
       31863,
       31942,
-      44661,
-      45141
+      44572,
+      45052
     ],
     "_clear_collectors_search_filters": [
       21260,
@@ -128,7 +128,7 @@
       25896,
       31860,
       31940,
-      45101
+      45012
     ],
     "_on_collectors_multi_toggle": [
       20603,
@@ -150,7 +150,7 @@
     "_on_search": [
       20454,
       43759,
-      44269
+      44180
     ],
     "_options_dialog": [
       22007,
@@ -171,7 +171,7 @@
     "_popup": [
       20323,
       43673,
-      44251
+      44162
     ],
     "_rec_get": [
       40115,
@@ -229,7 +229,7 @@
     "_set_sort": [
       20250,
       43605,
-      44180
+      44091
     ],
     "_sort_key": [
       22278,
@@ -449,7 +449,7 @@
     ],
     "App._build_collectors_tab": [
       43794,
-      44690
+      44601
     ],
     "App._dashboard_visible_rows": [
       41782,
@@ -457,7 +457,7 @@
     ],
     "App._on_collectors_select": [
       43852,
-      44723
+      44634
     ],
     "App._on_mode_change": [
       37731,
@@ -484,7 +484,7 @@
     "App.refresh_collectors": [
       35458,
       43808,
-      44702
+      44613
     ],
     "App.refresh_dashboard": [
       41780,
@@ -575,7 +575,7 @@
     },
     {
       "name": "_spina_v27_collector_editor_dialog",
-      "line": 44336,
+      "line": 44247,
       "lines": 350
     },
     {
@@ -610,7 +610,7 @@
     },
     {
       "name": "_spina_v27_build_collectors_tab",
-      "line": 44007,
+      "line": 43918,
       "lines": 293
     },
     {
@@ -659,17 +659,17 @@
       "lines": 258
     }
   ],
-  "broad_except_count": 3300,
-  "pass_only_except_count": 807,
+  "broad_except_count": 3295,
+  "pass_only_except_count": 803,
   "bare_except_count": 4,
-  "silent_broad_except_count": 2270,
+  "silent_broad_except_count": 2265,
   "broad_except_by_risk_area": {
     "backup/restore": 46,
     "excel/import-export": 124,
     "general": 1527,
     "login/accounts": 107,
     "payment/balance": 135,
-    "reports/pdf": 889,
+    "reports/pdf": 884,
     "startup/database": 472
   },
   "silent_broad_except_by_risk_area": {
@@ -678,7 +678,7 @@
     "general": 1035,
     "login/accounts": 61,
     "payment/balance": 89,
-    "reports/pdf": 699,
+    "reports/pdf": 694,
     "startup/database": 299
   },
   "broad_except_examples": [
