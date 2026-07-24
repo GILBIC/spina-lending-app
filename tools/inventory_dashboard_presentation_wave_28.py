@@ -49,7 +49,7 @@ def main() -> None:
         for item in suggestions
         if item["feature"] == "dashboard"
         and item["file"] == SOURCE_PATH.name
-        and set(item["risks"]).issubset({"support", "ui_only"})
+        and set(item["risk"]).issubset({"support", "ui_only"})
     ]
     assert candidates, "No low-risk Dashboard batch found in architecture-map.json"
     batch = max(candidates, key=lambda item: item["lines"])
