@@ -1,0 +1,57 @@
+name: Dashboard presentation Wave 28
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.head_ref == 'agent/dashboard-presentation-wave-28'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify local Python
+        shell: cmd
+        run: |
+          where python
+          python --version
+
+      - name: Compile application, Dashboard module, and test
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app	abs\dashboard.py
+          python -m py_compile tools	est_dashboard_presentation_wave_28.py
+          python -m compileall -q spina_app
+
+      - name: Run Dashboard presentation regression
+        shell: cmd
+        run: python -m tools.test_dashboard_presentation_wave_28
+
+      - name: Validate permanent architecture map
+        uses: ./.github/actions/architecture-map-check
+
+      - name: Run redundancy audit
+        shell: cmd
+        run: python toolsedundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json redundancy-report.json
+
+      - name: Run SPINA quality audit
+        shell: cmd
+        run: python tools\spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json quality-report.json
+
+      - name: Upload Wave 28 reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-presentation-wave-28-reports
+          path: |
+            redundancy-report.json
+            quality-report.json
+            architecture-map.json
+            docs/architecture
+          if-no-files-found: error

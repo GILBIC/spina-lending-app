@@ -37047,205 +37047,13 @@ def _spina_dashboard_fetch_rows(self):
     return rows
 
 
-def _spina_dashboard_summary_text(rows):
-    try:
-        active = len(rows or [])
-        finishing = sum(1 for r in rows if r.get('status') == 'Finishing Now')
-        near = sum(1 for r in rows if r.get('status') == 'Near Completion')
-        due_soon = sum(1 for r in rows if r.get('status') == 'Due Soon')
-        overdue = sum(1 for r in rows if r.get('status') == 'Overdue')
-        complete = sum(1 for r in rows if r.get('status') == 'Complete')
-        principal = sum(float(r.get('principal') or 0) for r in rows)
-        remaining = sum(float(r.get('remaining') or 0) for r in rows)
-        return (
-            'Active: {active}    Finishing Now: {finishing}    Near: {near}    Due Soon: {due_soon}    '
-            'Overdue: {overdue}    Complete: {complete}    Principal: {principal}    Remaining: {remaining}'
-        ).format(
-            active=active,
-            finishing=finishing,
-            near=near,
-            due_soon=due_soon,
-            overdue=overdue,
-            complete=complete,
-            principal=_spina_dash__fmt_money(principal),
-            remaining=_spina_dash__fmt_money(remaining),
-        )
-    except Exception:
-        return 'Dashboard summary unavailable.'
+# Dashboard presentation helpers extracted to spina_app/tabs/dashboard.py in Wave 28.
 
 
 
-def _spina_configure_dashboard_tree_theme(self):
-    """Keep Dashboard Treeview text readable in both Light and Dark mode.
-
-    The Dashboard uses colored status tags. In Dark Mode, the app-level Treeview
-    foreground is light; if the tag background is also light pastel, the text
-    becomes hard to read. This function sets both background AND foreground for
-    every Dashboard status tag and re-applies them after theme changes.
-    """
-    try:
-        tree = getattr(self, 'dashboard_tree', None)
-        if tree is None:
-            return
-        try:
-            p = getattr(self, '_ui_colors', None) or self._theme_palette()
-        except Exception:
-            p = {}
-        try:
-            is_dark = str(getattr(self, 'ui_theme', 'light')).lower().startswith('d')
-        except Exception:
-            is_dark = False
-
-        if is_dark:
-            # Dark-friendly status colors: dark backgrounds + light readable text.
-            status_tags = {
-                'finish':   ('#234b33', '#e9fff0'),
-                'near':     ('#4a3a16', '#fff2cc'),
-                'due':      ('#4a311c', '#ffe2c7'),
-                'overdue':  ('#4a2424', '#ffd6d6'),
-                'complete': ('#22394c', '#dcefff'),
-            }
-            base_bg = p.get('tree_bg', '#26262b')
-            base_fg = p.get('fg', '#e9e9ef')
-        else:
-            # Original light colors, but force dark text so rows are readable.
-            status_tags = {
-                'finish':   ('#d9ead3', '#1a1a1a'),
-                'near':     ('#fff2cc', '#1a1a1a'),
-                'due':      ('#fce5cd', '#1a1a1a'),
-                'overdue':  ('#f4cccc', '#1a1a1a'),
-                'complete': ('#d9eaf7', '#1a1a1a'),
-            }
-            base_bg = p.get('tree_bg', '#ffffff')
-            base_fg = p.get('fg', '#1a1a1a')
-
-        for tag, (bg, fg) in status_tags.items():
-            try:
-                tree.tag_configure(tag, background=bg, foreground=fg)
-            except Exception:
-                try:
-                    tree.tag_configure(tag, background=bg)
-                except Exception:
-                    pass
-
-        # Optional neutral tags, in case another theme helper applies them later.
-        try:
-            tree.tag_configure('dashboard_base', background=base_bg, foreground=base_fg)
-        except Exception:
-            pass
-    except Exception as e:
-        try:
-            _log_exc('dashboard.configure_theme', e)
-        except Exception:
-            pass
 
 
-def _spina_build_dashboard_tab(self):
-    try:
-        if not hasattr(self, 'nb') or self.nb is None:
-            return
-        if hasattr(self, 'tab_dashboard') and self.tab_dashboard is not None:
-            return
-        self.tab_dashboard = ttk.Frame(self.nb, padding=10)
-        try:
-            self.nb.insert(1, self.tab_dashboard, text='Dashboard')
-        except Exception:
-            self.nb.add(self.tab_dashboard, text='Dashboard')
 
-        outer = self.tab_dashboard
-        top = ttk.Frame(outer)
-        top.pack(fill='x', pady=(0, 8))
-        ttk.Label(top, text='Loan Completion Dashboard', font=('TkDefaultFont', 13, 'bold')).pack(side='left')
-        ttk.Button(top, text='Refresh', command=self.refresh_dashboard).pack(side='right')
-
-        controls = ttk.Frame(outer)
-        controls.pack(fill='x', pady=(0, 8))
-        ttk.Label(controls, text='Loan Type:').pack(side='left')
-        self.dashboard_loan_filter_var = tk.StringVar(value='All')
-        cb_loan = ttk.Combobox(controls, textvariable=self.dashboard_loan_filter_var, values=['All', 'Regular', '7x7'], state='readonly', width=10)
-        cb_loan.pack(side='left', padx=(4, 14))
-
-        ttk.Label(controls, text='Show:').pack(side='left')
-        self.dashboard_status_filter_var = tk.StringVar(value='Finishing Priority')
-        status_values = ['Finishing Priority', 'All Active', 'Finishing Now', 'Near Completion', 'Due Soon', 'Overdue', 'Complete']
-        cb_status = ttk.Combobox(controls, textvariable=self.dashboard_status_filter_var, values=status_values, state='readonly', width=20)
-        cb_status.pack(side='left', padx=(4, 14))
-
-        ttk.Label(controls, text='Search:').pack(side='left')
-        self.dashboard_search_var = tk.StringVar(value='')
-        ent = ttk.Entry(controls, textvariable=self.dashboard_search_var, width=26)
-        ent.pack(side='left', padx=(4, 14))
-
-        ttk.Label(controls, text='Finishing Priority = 75%+ paid, due soon, or overdue. Completion counts only payments after latest release.').pack(side='left')
-
-        self.dashboard_summary_var = tk.StringVar(value='Refresh to load dashboard.')
-        ttk.Label(outer, textvariable=self.dashboard_summary_var, anchor='w', justify='left').pack(fill='x', pady=(0, 8))
-
-        cols = ('status', 'name', 'loan_type', 'area', 'principal', 'latest_released', 'payment_start', 'due_date', 'total_to_pay', 'paid', 'completion', 'time_passed', 'remaining', 'days_left')
-        heads = {
-            'status': 'Status',
-            'name': 'Client',
-            'loan_type': 'Type',
-            'area': 'Area',
-            'principal': 'Principal',
-            'latest_released': 'Latest Released',
-            'payment_start': 'Payment Start',
-            'due_date': 'Due Date',
-            'total_to_pay': 'Total To Pay',
-            'paid': 'Paid Since Latest',
-            'completion': 'Completion',
-            'time_passed': 'Time Passed',
-            'remaining': 'Remaining',
-            'days_left': 'Days Left',
-        }
-        widths = {
-            'status': 120, 'name': 180, 'loan_type': 70, 'area': 160, 'principal': 105,
-            'latest_released': 105, 'payment_start': 105, 'due_date': 100, 'total_to_pay': 105,
-            'paid': 120, 'completion': 90, 'time_passed': 90, 'remaining': 105, 'days_left': 80,
-        }
-        frame = ttk.Frame(outer)
-        frame.pack(fill='both', expand=True)
-        yscroll = ttk.Scrollbar(frame, orient='vertical')
-        xscroll = ttk.Scrollbar(frame, orient='horizontal')
-        self.dashboard_tree = ttk.Treeview(frame, columns=cols, show='headings', yscrollcommand=yscroll.set, xscrollcommand=xscroll.set, height=18)
-        yscroll.config(command=self.dashboard_tree.yview)
-        xscroll.config(command=self.dashboard_tree.xview)
-        self.dashboard_tree.grid(row=0, column=0, sticky='nsew')
-        yscroll.grid(row=0, column=1, sticky='ns')
-        xscroll.grid(row=1, column=0, sticky='ew')
-        frame.rowconfigure(0, weight=1)
-        frame.columnconfigure(0, weight=1)
-
-        for col in cols:
-            self.dashboard_tree.heading(col, text=heads.get(col, col))
-            anchor = 'e' if col in ('principal', 'total_to_pay', 'paid', 'completion', 'time_passed', 'remaining', 'days_left') else 'w'
-            self.dashboard_tree.column(col, width=widths.get(col, 100), minwidth=60, anchor=anchor, stretch=True)
-
-        try:
-            _spina_configure_dashboard_tree_theme(self)
-        except Exception:
-            pass
-
-        def _bind_refresh(*_):
-            try:
-                self._populate_dashboard_tree()
-            except Exception:
-                pass
-        for var in (self.dashboard_loan_filter_var, self.dashboard_status_filter_var, self.dashboard_search_var):
-            try:
-                var.trace_add('write', _bind_refresh)
-            except Exception:
-                try:
-                    var.trace('w', _bind_refresh)
-                except Exception:
-                    pass
-
-        self.refresh_dashboard()
-    except Exception as e:
-        try:
-            _log_exc('build_dashboard_tab', e)
-        except Exception:
-            pass
 
 
 from spina_app.tabs.dashboard import (
@@ -37255,107 +37063,10 @@ from spina_app.tabs.dashboard import (
 )
 
 
-def _spina_populate_dashboard_tree(self):
-    try:
-        tree = getattr(self, 'dashboard_tree', None)
-        if tree is None:
-            return
-        try:
-            _spina_configure_dashboard_tree_theme(self)
-        except Exception:
-            pass
-        for iid in tree.get_children():
-            tree.delete(iid)
-        rows = _spina_dashboard_visible_rows(self)
-        for r in rows:
-            status = r.get('status') or ''
-            tag = ''
-            if status == 'Finishing Now':
-                tag = 'finish'
-            elif status == 'Near Completion':
-                tag = 'near'
-            elif status == 'Due Soon':
-                tag = 'due'
-            elif status == 'Overdue':
-                tag = 'overdue'
-            elif status == 'Complete':
-                tag = 'complete'
-            days_left = r.get('days_left')
-            values = (
-                status,
-                r.get('name') or '',
-                r.get('loan_type') or '',
-                r.get('area') or '',
-                _spina_dash__fmt_money(r.get('principal') or 0),
-                _spina_dash__date_text(r.get('latest_released')),
-                _spina_dash__date_text(r.get('payment_start')),
-                _spina_dash__date_text(r.get('due_date')),
-                _spina_dash__fmt_money(r.get('total_to_pay') or 0),
-                _spina_dash__fmt_money(r.get('paid') or 0),
-                _spina_dash__fmt_pct(r.get('completion_pct') or 0),
-                _spina_dash__fmt_pct(r.get('time_passed_pct') or 0),
-                _spina_dash__fmt_money(r.get('remaining') or 0),
-                '' if days_left is None else str(days_left),
-            )
-            tree.insert('', 'end', values=values, tags=(tag,) if tag else ())
-        try:
-            all_rows = getattr(self, '_dashboard_rows', []) or []
-            self.dashboard_summary_var.set(_spina_dashboard_summary_text(all_rows) + '    Showing: %s' % len(rows))
-        except Exception:
-            pass
-    except Exception as e:
-        try:
-            _log_exc('populate_dashboard_tree', e)
-        except Exception:
-            pass
 
 
-def _spina_refresh_dashboard(self):
-    try:
-        if not hasattr(self, 'dashboard_tree'):
-            return
-        self._dashboard_rows = _spina_dashboard_fetch_rows(self)
-        _spina_populate_dashboard_tree(self)
-        try:
-            self.status_var.set('Dashboard refreshed. Completion is based on latest released date.')
-        except Exception:
-            pass
-    except Exception as e:
-        try:
-            _log_exc('refresh_dashboard', e)
-        except Exception:
-            pass
-        try:
-            self.status_var.set('Dashboard refresh failed. See data/spina_app.log.')
-        except Exception:
-            pass
 
 
-def _spina_apply_dashboard_role(self):
-    try:
-        if not hasattr(self, 'nb') or not hasattr(self, 'tab_dashboard'):
-            return
-        role = (getattr(self, 'user_role', '') or 'Admin').strip()
-        if role == 'System':
-            try:
-                self.nb.hide(self.tab_dashboard)
-            except Exception:
-                pass
-            return
-        try:
-            tabs = list(self.nb.tabs())
-        except Exception:
-            tabs = []
-        if str(self.tab_dashboard) not in tabs:
-            try:
-                self.nb.insert(1, self.tab_dashboard, text='Dashboard')
-            except Exception:
-                try:
-                    self.nb.add(self.tab_dashboard, text='Dashboard')
-                except Exception:
-                    pass
-    except Exception:
-        pass
 
 
 try:
@@ -41427,6 +41138,19 @@ from spina_app.tabs.dashboard import (
     _spina_v17_draw_dashboard_charts,
     _spina_v17_populate_dashboard_tree,
     _spina_v17_refresh_dashboard,
+    _spina_dashboard_summary_text,
+    _spina_configure_dashboard_tree_theme,
+    _spina_build_dashboard_tab,
+    _spina_populate_dashboard_tree,
+    _spina_refresh_dashboard,
+    _spina_apply_dashboard_role,
+    _spina_v18_patch_dashboard_chart_cards,
+    _spina_v18_populate_dashboard_tree,
+    _spina_v18_refresh_dashboard,
+    _spina_v19_populate_dashboard_tree,
+    _spina_v19_refresh_dashboard,
+    _spina_v20_populate_dashboard_tree,
+    _spina_v20_refresh_dashboard,
 )
 
 _spina_v17_configure_feature(
@@ -41494,27 +41218,6 @@ from spina_app.theme_palettes import _spina_v18_dashboard_palette
 from spina_app.utilities.formatting import _spina_v18_fmt_money_compact
 
 
-def _spina_v18_patch_dashboard_chart_cards(self):
-    """Make chart cards consistent: light outer panel, dark readable chart area."""
-    try:
-        p = _spina_v18_dashboard_palette(self)
-        for cv in (
-            getattr(self, "dashboard_gauge_canvas", None),
-            getattr(self, "dashboard_status_canvas", None),
-            getattr(self, "dashboard_type_canvas", None),
-        ):
-            if cv is not None:
-                cv.configure(bg=p["chart"], highlightthickness=0, bd=0)
-                try:
-                    parent = cv.master
-                    parent.configure(bg=p["panel"], highlightbackground=p["border"])
-                    for child in parent.winfo_children():
-                        if isinstance(child, tk.Label):
-                            child.configure(bg=p["panel"], fg=p["fg"])
-                except Exception:
-                    pass
-    except Exception:
-        pass
 
 
 from spina_app.ui_helpers import _spina_v18_draw_round_rect
@@ -41634,45 +41337,8 @@ def _spina_v18_draw_dashboard_charts(self, rows):
             pass
 
 
-def _spina_v18_populate_dashboard_tree(self):
-    try:
-        # use v17 logic first, then redraw with the higher-contrast charts
-        _spina_v17_populate_dashboard_tree(self)
-        try:
-            rows = _spina_v17_visible_dashboard_rows(self)
-            root = getattr(self, "root", None) or getattr(self, "master", None)
-            if root is not None:
-                root.after(80, lambda: _spina_v18_draw_dashboard_charts(self, rows))
-            else:
-                _spina_v18_draw_dashboard_charts(self, rows)
-        except Exception:
-            pass
-    except Exception as e:
-        try:
-            _log_exc("v18.populate_dashboard_tree", e)
-        except Exception:
-            pass
 
 
-def _spina_v18_refresh_dashboard(self):
-    try:
-        if not hasattr(self, "tab_dashboard"):
-            return
-        self._dashboard_rows = _spina_dashboard_fetch_rows(self)
-        _spina_v18_populate_dashboard_tree(self)
-        try:
-            self.status_var.set("Dashboard refreshed.")
-        except Exception:
-            pass
-    except Exception as e:
-        try:
-            _log_exc("v18.refresh_dashboard", e)
-        except Exception:
-            pass
-        try:
-            self.status_var.set("Dashboard refresh failed. See data/spina_app.log.")
-        except Exception:
-            pass
 
 
 try:
@@ -41691,54 +41357,8 @@ except Exception as __spina_exc:
 # --- BEGIN: v19 Dashboard default to all active clients ---
 
 
-def _spina_v19_populate_dashboard_tree(self):
-    try:
-        _spina_v18_populate_dashboard_tree(self)
-
-        # Update the visible label so it is clear this includes all active clients.
-        try:
-            rows = _spina_v19_visible_dashboard_rows(self)
-            total_rows = list(getattr(self, "_dashboard_rows", []) or [])
-            status_filter = str(getattr(self, "dashboard_status_filter_var", tk.StringVar(value="All Active")).get() or "All Active")
-            if hasattr(self, "dashboard_summary_var"):
-                self.dashboard_summary_var.set(f"{status_filter}: showing {len(rows)} of {len(total_rows)} active loans")
-        except Exception:
-            pass
-
-    except Exception as e:
-        try:
-            _log_exc("v19.populate_dashboard_tree", e)
-        except Exception:
-            pass
 
 
-def _spina_v19_refresh_dashboard(self):
-    try:
-        if not hasattr(self, "tab_dashboard"):
-            return
-        self._dashboard_rows = _spina_dashboard_fetch_rows(self)
-
-        # Make sure newly opened dashboard starts with all active clients.
-        try:
-            if hasattr(self, "dashboard_status_filter_var") and not self.dashboard_status_filter_var.get():
-                self.dashboard_status_filter_var.set("All Active")
-        except Exception:
-            pass
-
-        _spina_v19_populate_dashboard_tree(self)
-        try:
-            self.status_var.set("Dashboard refreshed: all active clients included.")
-        except Exception:
-            pass
-    except Exception as e:
-        try:
-            _log_exc("v19.refresh_dashboard", e)
-        except Exception:
-            pass
-        try:
-            self.status_var.set("Dashboard refresh failed. See data/spina_app.log.")
-        except Exception:
-            pass
 
 
 try:
@@ -41934,62 +41554,8 @@ def _spina_v20_draw_dashboard_charts(self, rows):
             pass
 
 
-def _spina_v20_populate_dashboard_tree(self):
-    try:
-        # Keep v19 table/cards/filter behavior.
-        try:
-            _spina_v19_populate_dashboard_tree(self)
-        except Exception:
-            try:
-                _spina_v18_populate_dashboard_tree(self)
-            except Exception:
-                pass
-
-        rows = _spina_v20_visible_rows(self)
-
-        # Redraw v20 relevant charts after old chart patches.
-        try:
-            root = getattr(self, "root", None) or getattr(self, "master", None)
-            if root is not None:
-                root.after(120, lambda: _spina_v20_draw_dashboard_charts(self, rows))
-            else:
-                _spina_v20_draw_dashboard_charts(self, rows)
-        except Exception:
-            _spina_v20_draw_dashboard_charts(self, rows)
-
-        try:
-            total_rows = list(getattr(self, "_dashboard_rows", []) or [])
-            if hasattr(self, "dashboard_summary_var"):
-                self.dashboard_summary_var.set(f"All Active: showing {len(rows)} of {len(total_rows)} active loans")
-        except Exception:
-            pass
-
-    except Exception as e:
-        try:
-            _log_exc("v20.populate_dashboard_tree", e)
-        except Exception:
-            pass
 
 
-def _spina_v20_refresh_dashboard(self):
-    try:
-        if not hasattr(self, "tab_dashboard"):
-            return
-        self._dashboard_rows = _spina_dashboard_fetch_rows(self)
-        _spina_v20_populate_dashboard_tree(self)
-        try:
-            self.status_var.set("Dashboard refreshed: all active clients included.")
-        except Exception:
-            pass
-    except Exception as e:
-        try:
-            _log_exc("v20.refresh_dashboard", e)
-        except Exception:
-            pass
-        try:
-            self.status_var.set("Dashboard refresh failed. See data/spina_app.log.")
-        except Exception:
-            pass
 
 
 try:
@@ -44868,5 +44434,11 @@ def _spina_make_removed_legacy_client_action(label):
         return None
     _spina_removed_action.__name__ = "_spina_removed_" + str(label).lower().replace(" ", "_")
     return _spina_removed_action
+# Dashboard presentation callback bridge configured in Wave 28.
+_spina_v17_configure_feature(
+    draw_v18_charts=_spina_v18_draw_dashboard_charts,
+    draw_v20_charts=_spina_v20_draw_dashboard_charts,
+)
+
 if __name__ == '__main__':
     main()
