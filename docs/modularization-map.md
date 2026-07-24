@@ -3,20 +3,20 @@
 > Permanent source of truth for tracking the separation of the SPINA desktop application into smaller modules.
 >
 > **Last updated:** 2026-07-24  
-> **Tracked main state:** after merged PR #122  
+> **Tracked main state:** after merged PR #123  
 > **Primary desktop source:** `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py`
 
 ## Current status
 
 | Item | Status |
 |---|---:|
-| Functions extracted from the large desktop source | **78** |
+| Functions extracted from the large desktop source | **85** |
 | Focused helper modules receiving extracted functions | **13** |
-| Feature-level tab modules | **3** |
+| Feature-level tab modules | **4** |
 | Hierarchical Area production modules | **3** |
-| Accelerated modularization waves completed | **19** |
-| Latest completed extraction | **Wave 19 / PR #122** |
-| Next step | **Wave 20 feature inventory** |
+| Accelerated modularization waves completed | **20** |
+| Latest completed extraction | **Wave 20 / PR #123** |
+| Next step | **Wave 21 feature inventory** |
 
 The project has moved from isolated low-risk helper extraction to guarded feature-level modularization. Protected calculation, PostgreSQL write, authentication, report-total, renewal, and filesystem paths remain in their existing owners until focused tests justify moving them.
 
@@ -43,6 +43,7 @@ flowchart LR
     APP --> TABDASH[tabs/dashboard.py]
     APP --> TABREPORTS[tabs/reports.py]
     APP --> TABCLIENTS[tabs/clients.py]
+    APP --> TABCILOG[tabs/client_info_logs.py]
 
     UIC --> PAL
     UICTL --> PAL
@@ -53,6 +54,11 @@ flowchart LR
     TABREPORTS --> PAL
     TABCLIENTS --> UICTL
     TABCLIENTS --> FMT
+    TABCILOG --> PAL
+    TABCILOG --> UIC
+    TABCILOG --> UICTL
+    TABCILOG --> UIH
+    TABCILOG --> DATE
 
     APP --> AUI[area_hierarchy_ui.py]
     AUI --> AOPS[area_hierarchy_ops.py]
@@ -87,8 +93,9 @@ flowchart LR
 | `spina_app/tabs/dashboard.py` | Legacy Dashboard construction, filtering, charts, table population, and refresh orchestration | 5 | 462 |
 | `spina_app/tabs/reports.py` | Modern Reports construction, controls, cards, table styling, selection status, and display refresh | 6 | 500 |
 | `spina_app/tabs/clients.py` | Modern Clients construction, controls, cards, selection/profile display, and card refresh | 7 | 387 |
+| `spina_app/tabs/client_info_logs.py` | Client Information Log construction, filters, charts, cards, table/detail rendering, and refresh orchestration | 7 | 516 |
 
-The Dashboard, Reports, and Clients modules keep the original function names. The desktop entry module imports them back and supplies application-owned dependencies through late-bound bridges, avoiding circular imports while preserving existing App patching and callbacks.
+The Dashboard, Reports, Clients, and Client Information Log modules keep the original function names. The desktop entry module imports them back and supplies application-owned dependencies through late-bound bridges, avoiding circular imports while preserving existing App patching and callbacks.
 
 ### Hierarchical Area modules
 
@@ -214,6 +221,16 @@ The Dashboard, Reports, and Clients modules keep the original function names. Th
 - `_spina_v23_entry` — PR #122
 - `_spina_v23_update_client_cards` — PR #122
 
+### `spina_app/tabs/client_info_logs.py`
+
+- `_spina_v24_cilog_action_color` — PR #123
+- `_spina_v24_cilog_stats` — PR #123
+- `_spina_v24_cilog_draw_charts` — PR #123
+- `_spina_v24_cilog_update_cards` — PR #123
+- `_spina_v24_build_client_info_logs_tab` — PR #123
+- `_spina_v24_render_client_info_logs` — PR #123
+- `_spina_v24_refresh_client_info_logs` — PR #123
+
 ## Modularization timeline
 
 ### Foundation and safety work
@@ -272,6 +289,7 @@ PR #67 was a paused note-helper attempt and closed without merging. PR #68 was a
 | 17 | #118 inventory and working PR | #118 | `tabs/dashboard.py` | Complete legacy Dashboard presentation/orchestration group: 5 functions, 462 lines | ✅ Passed and merged |
 | 18 | #121 inventory and working PR | #121 | `tabs/reports.py` | Modern Reports presentation group: 6 functions, 500 lines | ✅ Passed and merged |
 | 19 | #122 inventory and working PR | #122 | `tabs/clients.py` | Modern Clients presentation group: 7 functions, 387 lines | ✅ Passed and merged |
+| 20 | #123 inventory and working PR | #123 | `tabs/client_info_logs.py` | Client Information Log presentation group: 7 functions, 516 lines | ✅ Passed and merged |
 
 Temporary inspection/apply PRs are deliberately closed without merging and are not counted as completed production waves.
 
@@ -340,7 +358,8 @@ A deferred item becomes eligible only after focused behavior or calculation test
 | 17 | #118 | #118 | `tabs/dashboard.py` | 5 Dashboard feature functions; 462 lines moved | ✅ | ✅ | ✅ | Passed Windows smoke test |
 | 18 | #121 | #121 | `tabs/reports.py` | 6 Reports feature functions; 500 lines moved | ✅ | ✅ | ✅ | Passed Windows smoke test and self-hosted audits |
 | 19 | #122 | #122 | `tabs/clients.py` | 7 Clients feature functions; 387 lines moved | ✅ | ✅ | ✅ | Passed Windows smoke test and self-hosted audits |
-| 20 | Pending | Pending | Pending | Select through current-main feature inventory | ⬜ | ⬜ | ⬜ | Not started |
+| 20 | #123 | #123 | `tabs/client_info_logs.py` | 7 CILog feature functions; 516 lines moved | ✅ | ✅ | ✅ | Passed Windows smoke test and self-hosted audits |
+| 21 | Pending | Pending | Pending | Select through current-main feature inventory | ⬜ | ⬜ | ⬜ | Not started |
 
 Status legend:
 
