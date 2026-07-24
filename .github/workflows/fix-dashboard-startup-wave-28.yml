@@ -31,8 +31,21 @@ jobs:
       - name: Apply guarded Dashboard startup repair
         shell: cmd
         run: |
-          python -m py_compile tools/fix_dashboard_startup_wave_28.py
-          python -m tools.fix_dashboard_startup_wave_28
+          if not exist artifacts mkdir artifacts
+          python -m py_compile tools/fix_dashboard_startup_wave_28.py > artifacts\dashboard-startup-repair.log 2>&1
+          if errorlevel 1 type artifacts\dashboard-startup-repair.log & exit /b 1
+          python -m tools.fix_dashboard_startup_wave_28 >> artifacts\dashboard-startup-repair.log 2>&1
+          set CODE=%ERRORLEVEL%
+          type artifacts\dashboard-startup-repair.log
+          exit /b %CODE%
+
+      - name: Upload Dashboard repair diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-startup-wave-28-diagnostic
+          path: artifacts/dashboard-startup-repair.log
+          if-no-files-found: warn
 
       - name: Compile repaired application and focused test
         shell: cmd
