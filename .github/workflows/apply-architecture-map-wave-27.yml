@@ -21,24 +21,45 @@ jobs:
 
       - name: Verify Python and compile mapper
         run: |
-          python --version
-          python -m py_compile tools/generate_architecture_map.py
-          python -m py_compile tools/test_architecture_map.py
+          set -o pipefail
+          {
+            python --version
+            python -m py_compile tools/generate_architecture_map.py
+            python -m py_compile tools/test_architecture_map.py
+          } 2>&1 | tee architecture-map-compile.log
 
       - name: Generate complete SPINA architecture map
-        run: python -m tools.generate_architecture_map
+        run: |
+          set -o pipefail
+          python -m tools.generate_architecture_map 2>&1 | tee architecture-map-generation.log
 
       - name: Validate generated map and documents
-        run: python -m tools.test_architecture_map
+        run: |
+          set -o pipefail
+          python -m tools.test_architecture_map 2>&1 | tee architecture-map-validation.log
 
       - name: Show architecture summary
         run: |
-          python - <<'PY'
+          python - <<'PY' | tee architecture-map-summary.log
           import json
           data = json.load(open('architecture-map.json', encoding='utf-8'))
           print(json.dumps(data['summary'], indent=2))
           print('Suggested batches:', len(data['indexes']['modularization_suggestions']))
           PY
+
+      - name: Upload diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-map-wave-27-diagnostics
+          path: |
+            architecture-map-compile.log
+            architecture-map-generation.log
+            architecture-map-validation.log
+            architecture-map-summary.log
+            architecture-map.json
+            docs/architecture
+          if-no-files-found: ignore
 
       - name: Commit permanent maps and remove temporary workflow
         run: |
