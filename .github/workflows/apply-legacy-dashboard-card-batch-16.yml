@@ -1,0 +1,78 @@
+name: Apply legacy Dashboard card batch 16
+
+on:
+  push:
+    branches: [agent/legacy-dashboard-card-batch-16]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out extraction branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/legacy-dashboard-card-batch-16
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile guarded extraction inputs
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/theme_palettes.py \
+            spina_app/ui_cards.py \
+            tools/extract_pure_helper_batch.py \
+            tools/test_legacy_dashboard_card_batch_16.py
+
+      - name: Verify exact original source state
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/legacy_dashboard_card_batch_16_manifest.json
+
+      - name: Capture original behavior
+        run: |
+          PYTHONPATH=. python tools/test_legacy_dashboard_card_batch_16.py \
+            --manifest tools/fixtures/legacy_dashboard_card_batch_16_manifest.json \
+            --fixture tools/fixtures/legacy_dashboard_card_batch_16_behavior.json \
+            --write-fixture
+
+      - name: Apply guarded extraction
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/legacy_dashboard_card_batch_16_manifest.json \
+            --apply
+
+      - name: Verify extracted behavior and compilation
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/theme_palettes.py \
+            spina_app/ui_cards.py \
+            tools/extract_pure_helper_batch.py \
+            tools/test_legacy_dashboard_card_batch_16.py
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/legacy_dashboard_card_batch_16_manifest.json
+          PYTHONPATH=. python tools/test_legacy_dashboard_card_batch_16.py \
+            --manifest tools/fixtures/legacy_dashboard_card_batch_16_manifest.json \
+            --fixture tools/fixtures/legacy_dashboard_card_batch_16_behavior.json
+
+      - name: Commit verified extraction and remove write workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/apply-legacy-dashboard-card-batch-16.yml
+          git add \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/ui_cards.py \
+            tools/fixtures/legacy_dashboard_card_batch_16_behavior.json \
+            tools/fixtures/legacy_dashboard_card_batch_16_manifest.json \
+            tools/test_legacy_dashboard_card_batch_16.py
+          git commit -m "Extract legacy Dashboard summary card"
+          git push origin HEAD:agent/legacy-dashboard-card-batch-16
