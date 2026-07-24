@@ -1,6 +1,7 @@
 """Read-only broad inventory for SPINA modularization Wave 24.
 
 This tool scans the current desktop entry source for remaining low-risk presentation helpers.
+It also includes two levels of low-risk direct callers so wrapper chains can be reviewed.
 It does not modify application code.
 """
 
@@ -32,7 +33,7 @@ UI_PATTERN = re.compile(
     r"\b(tk\.|ttk\.|Treeview|Canvas|Label|Button|Frame|Entry|Combobox|Listbox|Text|Scrollbar|Panedwindow|Notebook|StringVar|BooleanVar|IntVar|DoubleVar|Style)\b"
 )
 UI_NAME_HINT = re.compile(
-    r"(card|style|color|palette|button|widget|layout|display|render|view|tab|panel|header|footer|status|summary|filter|toggle|theme|tree|chart|label|dialog|form|toolbar)",
+    r"(card|style|color|palette|button|widget|layout|display|render|view|visible|tab|panel|header|footer|status|summary|filter|toggle|theme|tree|chart|label|dialog|form|toolbar)",
     re.I,
 )
 
@@ -129,8 +130,8 @@ def main() -> None:
             if called in top_functions and called != caller_name:
                 direct_callers[called].add(caller_name)
 
-    entries: list[dict[str, object]] = []
-    group_counts: Counter[str] = Counter()
+    facts: dict[str, dict[str, object]] = {}
+    initial_names: set[str] = set()
     for name, node in top_functions.items():
         source = _function_source(lines, node)
         start, end, span = _line_span(node)
@@ -139,29 +140,59 @@ def main() -> None:
         hinted = bool(UI_NAME_HINT.search(name))
         presentation_only = has_ui and not protected
         support_candidate = hinted and not protected and span <= 220
-        if not (presentation_only or support_candidate):
-            continue
-        if span > 500:
-            continue
+        facts[name] = {
+            "source": source,
+            "start": start,
+            "end": end,
+            "span": span,
+            "protected": protected,
+            "has_ui": has_ui,
+            "hinted": hinted,
+            "presentation_only": presentation_only,
+            "support_candidate": support_candidate,
+        }
+        if span <= 500 and (presentation_only or support_candidate):
+            initial_names.add(name)
 
+    selected_names = set(initial_names)
+    frontier = set(initial_names)
+    for _depth in range(2):
+        next_frontier: set[str] = set()
+        for name in frontier:
+            for caller in direct_callers.get(name, set()):
+                fact = facts[caller]
+                if fact["protected"] or int(fact["span"]) > 220:
+                    continue
+                if caller not in selected_names:
+                    selected_names.add(caller)
+                    next_frontier.add(caller)
+        frontier = next_frontier
+
+    entries: list[dict[str, object]] = []
+    group_counts: Counter[str] = Counter()
+    for name in selected_names:
+        node = top_functions[name]
+        fact = facts[name]
+        source = str(fact["source"])
         group = _group_name(name)
         group_counts[group] += 1
         entries.append(
             {
                 "name": name,
                 "group": group,
-                "start_line": start,
-                "end_line": end,
-                "lines": span,
+                "start_line": int(fact["start"]),
+                "end_line": int(fact["end"]),
+                "lines": int(fact["span"]),
                 "sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
                 "direct_callers": sorted(direct_callers.get(name, set())),
                 "called_names": _called_names(node),
                 "global_dependencies": _loaded_globals(node),
-                "protected_tags": protected,
-                "has_ui": has_ui,
-                "name_hint": hinted,
-                "presentation_only_candidate": presentation_only,
-                "support_candidate": support_candidate,
+                "protected_tags": list(fact["protected"]),
+                "has_ui": bool(fact["has_ui"]),
+                "name_hint": bool(fact["hinted"]),
+                "presentation_only_candidate": bool(fact["presentation_only"]),
+                "support_candidate": bool(fact["support_candidate"]),
+                "included_as_caller": name not in initial_names,
                 "source": source,
             }
         )
@@ -176,6 +207,7 @@ def main() -> None:
             "source_lines": sum(int(item["lines"]) for item in members),
             "presentation_candidates": [item["name"] for item in members if item["presentation_only_candidate"]],
             "support_candidates": [item["name"] for item in members if item["support_candidate"]],
+            "caller_chain": [item["name"] for item in members if item["included_as_caller"]],
         }
 
     payload = {
@@ -195,6 +227,7 @@ def main() -> None:
         key=lambda item: (
             -len(item[1]["presentation_candidates"]),
             -len(item[1]["support_candidates"]),
+            -len(item[1]["caller_chain"]),
             int(item[1]["source_lines"]),
             item[0],
         ),
