@@ -96,9 +96,19 @@ FILE_CALLS = {
 
 
 def git_sha() -> str:
+    """Return the latest commit that changed scanned Python source.
+
+    The generator itself is excluded from the map, so committing generated maps does
+    not change this marker. That keeps regeneration deterministic for CI.
+    """
     try:
         return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+            [
+                "git", "log", "-1", "--format=%H", "--",
+                "*.py", ":(exclude)tools/generate_architecture_map.py",
+            ],
+            cwd=ROOT,
+            text=True,
         ).strip()
     except Exception:
         return "unknown"
