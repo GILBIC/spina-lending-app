@@ -67,19 +67,28 @@ FILE_LITERAL_RE = re.compile(
 IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 FEATURE_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("authentication", ("login", "password", "account", "permission", "role", "session", "user")),
-    ("dashboard", ("dashboard", "kpi", "summary", "cash_control", "cashcontrol")),
-    ("clients", ("client", "borrower", "loan_application", "application_form")),
+    ("dashboard", ("dashboard", "kpi", "summary_card")),
+    ("cash_control", ("cash_control", "cashcontrol", "cashctl")),
+    ("clients", ("client", "borrower", "application_form", "client_info", "cilog")),
     ("collectors", ("collector", "route", "area_assignment")),
-    ("data_bank", ("data_bank", "databank", "data_grid", "payment_grid", "monthly_grid")),
+    ("data_bank", (
+        "data_bank", "databank", "data_grid", "payment_grid", "monthly_grid",
+        "system_data", "delete_day", "close_day", "databank_day",
+    )),
     ("payments", ("payment", "transaction", "advance", "pass", "allocation")),
     ("loans", ("loan", "principal", "interest", "renew", "offset", "7x7", "x7")),
     ("reports", ("report", "statement", "receipt", "pdf", "ledger", "print")),
     ("payroll", ("payroll", "employee", "salary", "payslip", "sss", "pagibig", "philhealth")),
-    ("backup", ("backup", "restore", "dump", "archive")),
+    ("backup", ("backup", "restore", "pg_dump", "archive")),
     ("settings", ("setting", "maintenance", "theme", "appearance", "preference")),
+    ("database", ("postgres", "postgresql", "pg_", "sql", "database", "loandb", "cursor", "connection")),
+    ("notes", ("note_editor", "noteeditor", "client_notes", "collector_notes", "notes", "note")),
     ("web_portal", ("fastapi", "router", "portal", "endpoint", "api")),
-    ("utilities", ("util", "helper", "format", "parse", "normalize", "validate")),
+    ("utilities", ("util", "helper", "format", "parse", "normalize", "validate", "date_range", "open_path")),
+    ("authentication", (
+        "login", "password", "account", "permission", "role_access", "apply_role",
+        "session", "users_db", "user_role", "switch_account", "account_based", "role",
+    )),
 )
 
 AUTH_TERMS = (
@@ -169,11 +178,30 @@ def clean_doc(text: str | None) -> str:
 
 
 def infer_feature(name: str, file_path: str, source: str) -> str:
-    hay = f"{name} {file_path} {source[:2000]}".lower()
-    for feature, terms in FEATURE_RULES:
-        if any(term in hay for term in terms):
-            return feature
-    return "other"
+    """Infer feature ownership from symbol identity, not implementation-body text.
+
+    Leaf function names receive the strongest weight, module paths receive medium
+    weight, and parent qualified names provide context for nested/generic helpers.
+    Rule order resolves ties in favor of domain features before authentication.
+    """
+    full = name.lower()
+    leaf = full.rsplit(".", 1)[-1]
+    parent = full.rsplit(".", 1)[0] if "." in full else ""
+    path = file_path.lower()
+    ranked: list[tuple[int, int, str]] = []
+    for order, (feature, terms) in enumerate(FEATURE_RULES):
+        score = 0
+        for term in terms:
+            if term in leaf:
+                score = max(score, 12)
+            elif term in parent:
+                score = max(score, 4)
+            if term in path:
+                score = max(score, 8)
+        if score:
+            ranked.append((score, -order, feature))
+    return max(ranked)[2] if ranked else "other"
+
 
 
 def explain_symbol(kind: str, name: str, doc: str, feature: str, calls: list[str]) -> str:
@@ -522,7 +550,7 @@ def collect_symbols(path: Path, tree: ast.Module, text: str) -> tuple[list[Symbo
         )
         globals_written = sorted(name for name in scanner.stores if name in module_globals)
         imports_used = sorted(imports[name] for name in scanner.loads if name in imports)
-        feature = infer_feature(node.name, file_path, src)
+        feature = infer_feature(qual, file_path, "")
         risk, flags = risk_for(
             node.name,
             src,
@@ -574,7 +602,7 @@ def collect_symbols(path: Path, tree: ast.Module, text: str) -> tuple[list[Symbo
             add_function(node, None, None, False)
         elif isinstance(node, ast.ClassDef):
             class_src = source_segment(lines, node)
-            feature = infer_feature(node.name, file_path, "")
+            feature = infer_feature(f"{module}.{node.name}", file_path, "")
             risk, flags = "container", []
             class_id = f"{file_path}:{node.lineno}:{module}.{node.name}"
             symbols.append(Symbol(

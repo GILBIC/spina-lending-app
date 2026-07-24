@@ -101,6 +101,34 @@ def main() -> None:
     selected_name = [symbol for symbol in symbols if symbol["name"] == "_collectors_name_from_values"]
     assert selected_name and all(symbol["risk"] != "database_read" for symbol in selected_name)
 
+    def feature_for_suffix(suffix: str) -> str:
+        matches = [symbol for symbol in symbols if symbol["qualified_name"].endswith(suffix)]
+        assert matches, f"Missing reviewed symbol: {suffix}"
+        features = {symbol["feature"] for symbol in matches}
+        assert len(features) == 1, f"Conflicting feature labels for {suffix}: {features}"
+        return next(iter(features))
+
+    expected_features = {
+        "._open_path": "utilities",
+        ".LoanDB.add_client": "clients",
+        ".LoanDB.delete_transaction": "payments",
+        ".App._postgres_cfg": "database",
+        ".NoteEditorDialog._save_note": "notes",
+        "._spina_apply_dashboard_role": "dashboard",
+        "._spina_v32_prompt_login": "authentication",
+        ".App.open_settings_dialog": "settings",
+        "._spina_cashctl_apply_role": "cash_control",
+    }
+    for suffix, expected in expected_features.items():
+        actual = feature_for_suffix(suffix)
+        assert actual == expected, f"Feature mismatch for {suffix}: {actual} != {expected}"
+
+    for suggestion in indexes["modularization_suggestions"]:
+        assert all(
+            by_id[sid]["feature"] == suggestion["feature"]
+            for sid in suggestion["functions"]
+        ), f"Mixed feature batch: {suggestion}"
+
     source_commit = data["generated_from_commit"]
     assert len(source_commit) == 40 and all(c in "0123456789abcdef" for c in source_commit.lower())
 
