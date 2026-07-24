@@ -44,7 +44,7 @@ jobs:
           set -o pipefail
           python /tmp/dashboard_wave_17_apply.py 2>&1 | tee dashboard-wave-17-extraction.log
 
-      - name: Normalize generated regression-test indentation
+      - name: Normalize generated regression test
         if: steps.extraction.outcome == 'success'
         run: |
           python - <<'PY'
@@ -59,7 +59,13 @@ jobs:
               ('            ' + line[2:]) if line.startswith('  ') and not line.startswith('    ') else line
               for line in lines
           ]
-          path.write_text('\n'.join(fixed) + '\n', encoding='utf-8')
+          text = '\n'.join(fixed) + '\n'
+          marker = 'def verify_visible_rows(module):\n    rows = ['
+          replacement = 'def verify_visible_rows(module):\n    module.tk.StringVar = Var\n    rows = ['
+          if text.count(marker) != 1:
+              raise RuntimeError('Could not locate visible-row regression setup')
+          text = text.replace(marker, replacement, 1)
+          path.write_text(text, encoding='utf-8')
           PY
 
       - name: Upload complete extraction log
