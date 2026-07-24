@@ -1,0 +1,58 @@
+{
+  "wave": 18,
+  "feature": "modern_reports_presentation",
+  "destination": "spina_app/tabs/reports.py",
+  "function_count": 6,
+  "moved_source_lines": 500,
+  "dependencies_kept_in_desktop": [
+    "_load_ledger_prefs",
+    "_save_ledger_prefs",
+    "_log_exc",
+    "pick_date",
+    "pick_date_range"
+  ],
+  "functions": [
+    {
+      "name": "_spina_v22_style_reports_tree",
+      "start_line": 42981,
+      "end_line": 43003,
+      "source_lines": 23,
+      "sha256": "7806005950aed1a63d0441c255481debf90a2e2b163882c28d63ed7ae37212e8"
+    },
+    {
+      "name": "_spina_v22_button",
+      "start_line": 43006,
+      "end_line": 43035,
+      "source_lines": 30,
+      "sha256": "1b32428737c758fddbe7478872c58f79b0e3178b311f345831e1e04a10ac377f"
+    },
+    {
+      "name": "_spina_v22_report_card",
+      "start_line": 43038,
+      "end_line": 43048,
+      "source_lines": 11,
+      "sha256": "a096f81b7379b2927bb039eee9b61140a201c17fd2506e1be8fba0adc9fc3903"
+    },
+    {
+      "name": "_spina_v22_build_reports_tab",
+      "start_line": 43051,
+      "end_line": 43421,
+      "source_lines": 371,
+      "sha256": "e36f0feed87ada871f0123b6a0140154782fd2fe78a1bfe086d7a50611ad5e13"
+    },
+    {
+      "name": "_spina_v22_reports_selection_status",
+      "start_line": 43424,
+      "end_line": 43433,
+      "source_lines": 10,
+      "sha256": "60718c64e7c9fb25f6fb1e29ee565e69bdade7fc7e1e50150c265ca13da8527f"
+    },
+    {
+      "name": "_spina_v22_update_report_cards",
+      "start_line": 43436,
+      "end_line": 43490,
+      "source_lines": 55,
+      "sha256": "f45eb96e79ffd28794a5b30eec462a6e0d72183ad4455430e6e61bd352a2eff1"
+    }
+  ]
+}
