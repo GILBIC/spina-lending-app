@@ -22,13 +22,20 @@ jobs:
 
       - name: Inventory mapped Dashboard batch
         shell: cmd
-        run: python -m tools.inventory_dashboard_presentation_wave_28
+        run: |
+          if not exist artifacts mkdir artifacts
+          python -m tools.inventory_dashboard_presentation_wave_28 > artifacts\dashboard-presentation-wave-28-inventory.log 2>&1
+          set CODE=%ERRORLEVEL%
+          type artifacts\dashboard-presentation-wave-28-inventory.log
+          exit /b %CODE%
 
       - name: Upload Dashboard inventory
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dashboard-presentation-wave-28-inventory
           path: |
             artifacts/dashboard-presentation-wave-28-inventory.json
             artifacts/dashboard-presentation-wave-28-inventory.md
+            artifacts/dashboard-presentation-wave-28-inventory.log
           if-no-files-found: error
