@@ -7,16 +7,7 @@ import subprocess
 from pathlib import Path
 
 WORKFLOWS = Path(".github/workflows")
-MANUAL_ONLY = {
-    WORKFLOWS / "reports-feature-wave-18.yml",
-    WORKFLOWS / "clients-feature-wave-19.yml",
-}
-ALLOWED_CHANGED = {
-    ".github/workflows/reports-feature-wave-18.yml",
-    ".github/workflows/clients-feature-wave-19.yml",
-    ".github/workflows/ci-acceleration.yml",
-    "tools/test_ci_acceleration.py",
-}
+ACTIVE_PR_WORKFLOW = WORKFLOWS / "ci-acceleration.yml"
 
 
 def exact_head_guard(text: str) -> bool:
@@ -27,20 +18,23 @@ def exact_head_guard(text: str) -> bool:
 
 
 def main() -> None:
-    for path in MANUAL_ONLY:
-        text = path.read_text(encoding="utf-8")
-        assert re.search(r"(?m)^\s*workflow_dispatch\s*:", text), f"{path} is not manual-only"
-        assert not re.search(r"(?m)^\s*pull_request\s*:", text), f"{path} still triggers on pull requests"
-        assert not re.search(r"(?m)^\s*push\s*:", text), f"{path} still triggers on pushes"
-
-    unguarded: list[str] = []
+    automatic: list[str] = []
     for path in sorted([*WORKFLOWS.glob("*.yml"), *WORKFLOWS.glob("*.yaml")]):
         text = path.read_text(encoding="utf-8")
+        rel = str(path).replace("\\", "/")
         pull_request = bool(re.search(r"(?m)^\s*pull_request\s*:", text))
-        self_hosted = "self-hosted" in text
-        if pull_request and self_hosted and not exact_head_guard(text):
-            unguarded.append(str(path).replace("\\", "/"))
-    assert not unguarded, f"Unguarded self-hosted PR workflows remain: {unguarded}"
+        push = bool(re.search(r"(?m)^\s*push\s*:", text))
+
+        if path == ACTIVE_PR_WORKFLOW:
+            assert pull_request, "CI acceleration validation must run on its own PR"
+            assert exact_head_guard(text), "CI acceleration validation must have an exact head guard"
+            continue
+
+        assert re.search(r"(?m)^\s*workflow_dispatch\s*:", text), f"{rel} is not manual-only"
+        if pull_request or push:
+            automatic.append(rel)
+
+    assert not automatic, f"Completed workflows still trigger automatically: {automatic}"
 
     result = subprocess.run(
         ["git", "diff", "--name-only", "origin/main...HEAD"],
@@ -49,10 +43,13 @@ def main() -> None:
         text=True,
     )
     changed = {line.strip().replace("\\", "/") for line in result.stdout.splitlines() if line.strip()}
-    unexpected = changed - ALLOWED_CHANGED
-    assert not unexpected, f"Unexpected non-CI files changed: {sorted(unexpected)}"
+    unexpected = [
+        path for path in sorted(changed)
+        if not path.startswith(".github/workflows/") and path != "tools/test_ci_acceleration.py"
+    ]
+    assert not unexpected, f"Unexpected non-CI files changed: {unexpected}"
 
-    print("CI acceleration checks passed: zero unguarded self-hosted PR workflows.")
+    print("CI acceleration checks passed: completed workflows are manual-only.")
 
 
 if __name__ == "__main__":
