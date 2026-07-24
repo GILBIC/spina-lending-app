@@ -1,0 +1,41 @@
+{
+  "wave": 17,
+  "feature": "legacy_dashboard",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "module": "spina_app.tabs.dashboard",
+  "module_path": "spina_app/tabs/dashboard.py",
+  "helper_count": 5,
+  "moved_source_lines": 462,
+  "helpers": [
+    {
+      "name": "_spina_v17_visible_dashboard_rows",
+      "signature": "self",
+      "sha256": "c703482167fa2b3e98a48b3522dfbcc3d0a91afe6503627ebd687038eb1cc0ac",
+      "line_count": 26
+    },
+    {
+      "name": "_spina_v17_build_dashboard_tab",
+      "signature": "self",
+      "sha256": "d3afc06e49618191532f3312c4cc69fa180faf203b9866122785bc6ce5c81513",
+      "line_count": 247
+    },
+    {
+      "name": "_spina_v17_draw_dashboard_charts",
+      "signature": "self, rows",
+      "sha256": "27038d3180e39517991e53759a57d1b23668c7ecea35625404178975158698aa",
+      "line_count": 87
+    },
+    {
+      "name": "_spina_v17_populate_dashboard_tree",
+      "signature": "self",
+      "sha256": "a3ef5f6e519ec0cbf25d9524d4d3f047b2221bfd2e0aa1d1bed88f4a2afa5341",
+      "line_count": 83
+    },
+    {
+      "name": "_spina_v17_refresh_dashboard",
+      "signature": "self",
+      "sha256": "cfd3440ef7171e1b5988d34bf56bce68176545dce2846c5e9f4e55388442ae58",
+      "line_count": 19
+    }
+  ]
+}
