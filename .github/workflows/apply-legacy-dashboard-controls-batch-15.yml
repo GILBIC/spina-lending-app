@@ -1,0 +1,81 @@
+name: Apply legacy Dashboard controls batch 15
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/legacy-dashboard-controls-batch-15'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out extraction branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile guarded extraction inputs
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/theme_palettes.py \
+            spina_app/ui_controls.py \
+            tools/extract_pure_helper_batch.py \
+            tools/test_legacy_dashboard_controls_batch_15.py
+
+      - name: Verify exact original source state
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/legacy_dashboard_controls_batch_15_manifest.json \
+            --json wave-15-before.json
+          python - <<'PY'
+          import json
+          report = json.load(open('wave-15-before.json', encoding='utf-8'))
+          if report.get('state') != 'source':
+              raise SystemExit(f"Expected source state, got {report.get('state')!r}")
+          PY
+
+      - name: Capture original behavior
+        run: |
+          PYTHONPATH=. python tools/test_legacy_dashboard_controls_batch_15.py \
+            --manifest tools/fixtures/legacy_dashboard_controls_batch_15_manifest.json \
+            --fixture tools/fixtures/legacy_dashboard_controls_batch_15_behavior.json \
+            --write-fixture
+
+      - name: Apply guarded extraction
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/legacy_dashboard_controls_batch_15_manifest.json \
+            --apply \
+            --json wave-15-after.json
+
+      - name: Verify extracted behavior and compilation
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/theme_palettes.py \
+            spina_app/ui_controls.py \
+            tools/extract_pure_helper_batch.py \
+            tools/test_legacy_dashboard_controls_batch_15.py
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/legacy_dashboard_controls_batch_15_manifest.json
+          PYTHONPATH=. python tools/test_legacy_dashboard_controls_batch_15.py \
+            --manifest tools/fixtures/legacy_dashboard_controls_batch_15_manifest.json \
+            --fixture tools/fixtures/legacy_dashboard_controls_batch_15_behavior.json
+
+      - name: Commit verified extraction and remove write workflow
+        run: |
+          rm .github/workflows/apply-legacy-dashboard-controls-batch-15.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Extract legacy Dashboard controls"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
