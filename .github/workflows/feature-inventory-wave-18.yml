@@ -1,0 +1,25 @@
+name: Feature inventory Wave 18
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile inventory tool
+        run: python -m py_compile tools/inventory_feature_wave_18.py
+      - name: Generate feature inventory
+        run: python tools/inventory_feature_wave_18.py
+      - name: Upload inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-18-feature-inventory
+          path: artifacts/wave-18-feature-inventory.json
