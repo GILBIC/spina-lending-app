@@ -1,0 +1,64 @@
+name: Dashboard feature Wave 17 visible runner
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    if: github.head_ref == 'agent/dashboard-feature-module-wave-17'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/dashboard-feature-module-wave-17
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Recover and run the reviewed extraction script
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          workflow = Path('.github/workflows/dashboard-feature-wave-17-apply.yml')
+          lines = workflow.read_text(encoding='utf-8').splitlines()
+          start = next(i for i, line in enumerate(lines) if line.strip() == "python - <<'PY'") + 1
+          end = next(i for i in range(start, len(lines)) if lines[i].strip() == 'PY')
+          code = textwrap.dedent('\n'.join(lines[start:end])) + '\n'
+          Path('/tmp/dashboard_wave_17_apply.py').write_text(code, encoding='utf-8')
+          PY
+          python /tmp/dashboard_wave_17_apply.py
+
+      - name: Compile and test extracted Dashboard feature
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/tabs/__init__.py \
+            spina_app/tabs/dashboard.py \
+            tools/test_dashboard_feature_wave_17.py
+          PYTHONPATH=. python tools/test_dashboard_feature_wave_17.py
+
+      - name: Commit verified extraction and remove temporary workflows
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/dashboard-feature-wave-17-apply.yml
+          git rm .github/workflows/dashboard-feature-wave-17-inventory.yml
+          git rm .github/workflows/dashboard-feature-wave-17-pr-runner.yml
+          git add \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/tabs/__init__.py \
+            spina_app/tabs/dashboard.py \
+            tools/fixtures/dashboard_feature_wave_17_manifest.json \
+            tools/test_dashboard_feature_wave_17.py \
+            .github/workflows/dashboard-feature-wave-17.yml
+          git commit -m "Extract legacy Dashboard feature module"
+          git push origin HEAD:agent/dashboard-feature-module-wave-17
