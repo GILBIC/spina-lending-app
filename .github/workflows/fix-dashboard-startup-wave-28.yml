@@ -32,7 +32,9 @@ jobs:
         shell: cmd
         run: |
           if not exist artifacts mkdir artifacts
-          python -m py_compile tools/fix_dashboard_startup_wave_28.py > artifacts\dashboard-startup-repair.log 2>&1
+          python -m tools.patch_dashboard_startup_repair_guard > artifacts\dashboard-startup-repair.log 2>&1
+          if errorlevel 1 type artifacts\dashboard-startup-repair.log & exit /b 1
+          python -m py_compile tools/fix_dashboard_startup_wave_28.py >> artifacts\dashboard-startup-repair.log 2>&1
           if errorlevel 1 type artifacts\dashboard-startup-repair.log & exit /b 1
           python -m tools.fix_dashboard_startup_wave_28 >> artifacts\dashboard-startup-repair.log 2>&1
           set CODE=%ERRORLEVEL%
@@ -71,6 +73,7 @@ jobs:
         shell: cmd
         run: |
           del tools\fix_dashboard_startup_wave_28.py
+          del tools\patch_dashboard_startup_repair_guard.py
           del .github\workflows\fix-dashboard-startup-wave-28.yml
 
       - name: Commit Dashboard startup repair locally
