@@ -1,0 +1,69 @@
+name: Update modularization map for Wave 16
+
+on:
+  push:
+    branches: [agent/legacy-dashboard-card-batch-16]
+
+permissions:
+  contents: write
+
+jobs:
+  update-map:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out extraction branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/legacy-dashboard-card-batch-16
+          fetch-depth: 0
+
+      - name: Apply verified Wave 16 map replacements
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/modularization-map.md")
+          text = path.read_text(encoding="utf-8")
+
+          replacements = [
+              ("> **Tracked main state:** after merged PR #115  ", "> **Tracked main state:** after merged PR #117  "),
+              ("| Focused helper functions extracted from the large desktop source | **59** |", "| Focused helper functions extracted from the large desktop source | **60** |"),
+              ("| Accelerated modularization waves completed | **15** |", "| Accelerated modularization waves completed | **16** |"),
+              ("| Latest completed extraction | **Wave 15 / PR #115** |", "| Latest completed extraction | **Wave 16 / PR #117** |"),
+              ("| Next step | **Wave 16 read-only inspection** |", "| Next step | **Wave 17 read-only inspection** |"),
+              ("| `spina_app/ui_cards.py` | Cash Control, Client Information Log, and Collector Route card constructors | 3 |", "| `spina_app/ui_cards.py` | Cash Control, Client Information Log, Collector Route, and legacy Dashboard card constructors | 4 |"),
+              ("| **Total** |  | **59** |", "| **Total** |  | **60** |"),
+              ("  - `_spina_v27_route_card` — PR #111\n", "  - `_spina_v27_route_card` — PR #111\n  - `_spina_v17_make_card` — PR #117\n"),
+              ("| 16 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |", "| 16 | #116 inspection | #117 | `ui_cards.py` | Legacy Dashboard summary-card constructor | ✅ Passed and merged |\n| 17 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |"),
+              ("| 16 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |", "| 16 | #116 | #117 | `ui_cards.py` | Legacy Dashboard summary-card constructor | ✅ | ✅ | ✅ | Passed Windows smoke test |\n| 17 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |"),
+          ]
+
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"Expected exactly one map occurrence for {old!r}, found {count}")
+              text = text.replace(old, new, 1)
+
+          required = [
+              "**60**",
+              "**Wave 16 / PR #117**",
+              "**Wave 17 read-only inspection**",
+              "_spina_v17_make_card` — PR #117",
+              "| 16 | #116 inspection | #117 | `ui_cards.py`",
+              "| 17 | Not started |",
+          ]
+          for marker in required:
+              if marker not in text:
+                  raise RuntimeError(f"Missing updated map marker: {marker}")
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Commit updated map and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/update-modularization-map-wave-16.yml
+          git add docs/modularization-map.md
+          git commit -m "Document modularization Wave 16"
+          git push origin HEAD:agent/legacy-dashboard-card-batch-16
