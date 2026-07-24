@@ -3,20 +3,20 @@
 > Permanent source of truth for tracking the separation of the SPINA desktop application into smaller modules.
 >
 > **Last updated:** 2026-07-24  
-> **Tracked main state:** after merged PR #118  
+> **Tracked main state:** after merged PR #121  
 > **Primary desktop source:** `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py`
 
 ## Current status
 
 | Item | Status |
 |---|---:|
-| Functions extracted from the large desktop source | **65** |
+| Functions extracted from the large desktop source | **71** |
 | Focused helper modules receiving extracted functions | **13** |
-| Feature-level tab modules | **1** |
+| Feature-level tab modules | **2** |
 | Hierarchical Area production modules | **3** |
-| Accelerated modularization waves completed | **17** |
-| Latest completed extraction | **Wave 17 / PR #118** |
-| Next step | **Wave 18 feature inventory** |
+| Accelerated modularization waves completed | **18** |
+| Latest completed extraction | **Wave 18 / PR #121** |
+| Next step | **Wave 19 feature inventory** |
 
 The project has moved from isolated low-risk helper extraction to guarded feature-level modularization. Protected calculation, PostgreSQL write, authentication, report-total, renewal, and filesystem paths remain in their existing owners until focused tests justify moving them.
 
@@ -41,6 +41,7 @@ flowchart LR
     APP --> UIC[ui_cards.py]
     APP --> UICTL[ui_controls.py]
     APP --> TABDASH[tabs/dashboard.py]
+    APP --> TABREPORTS[tabs/reports.py]
 
     UIC --> PAL
     UICTL --> PAL
@@ -48,6 +49,7 @@ flowchart LR
     TABDASH --> UIC
     TABDASH --> UICTL
     TABDASH --> UIH
+    TABREPORTS --> PAL
 
     APP --> AUI[area_hierarchy_ui.py]
     AUI --> AOPS[area_hierarchy_ops.py]
@@ -80,8 +82,9 @@ flowchart LR
 | Module | Extracted ownership | Function count | Moved source lines |
 |---|---|---:|---:|
 | `spina_app/tabs/dashboard.py` | Legacy Dashboard construction, filtering, charts, table population, and refresh orchestration | 5 | 462 |
+| `spina_app/tabs/reports.py` | Modern Reports construction, controls, cards, table styling, selection status, and display refresh | 6 | 500 |
 
-The Dashboard module keeps the original function names. The desktop entry module imports them back and supplies database-row loading and logging through a late-bound bridge, avoiding circular imports while preserving existing App patching and callbacks.
+The Dashboard and Reports modules keep the original function names. The desktop entry module imports them back and supplies application-owned dependencies through late-bound bridges, avoiding circular imports while preserving existing App patching and callbacks.
 
 ### Hierarchical Area modules
 
@@ -188,6 +191,15 @@ The Dashboard module keeps the original function names. The desktop entry module
 - `_spina_v17_populate_dashboard_tree` — PR #118
 - `_spina_v17_refresh_dashboard` — PR #118
 
+### `spina_app/tabs/reports.py`
+
+- `_spina_v22_style_reports_tree` — PR #121
+- `_spina_v22_button` — PR #121
+- `_spina_v22_report_card` — PR #121
+- `_spina_v22_build_reports_tab` — PR #121
+- `_spina_v22_reports_selection_status` — PR #121
+- `_spina_v22_update_report_cards` — PR #121
+
 ## Modularization timeline
 
 ### Foundation and safety work
@@ -244,6 +256,7 @@ PR #67 was a paused note-helper attempt and closed without merging. PR #68 was a
 | 15 | #114 inspection | #115 | `ui_controls.py` | Legacy Dashboard filter-button and Treeview styling helpers | ✅ Passed and merged |
 | 16 | #116 inspection | #117 | `ui_cards.py` | Legacy Dashboard summary-card constructor | ✅ Passed and merged |
 | 17 | #118 inventory and working PR | #118 | `tabs/dashboard.py` | Complete legacy Dashboard presentation/orchestration group: 5 functions, 462 lines | ✅ Passed and merged |
+| 18 | #121 inventory and working PR | #121 | `tabs/reports.py` | Modern Reports presentation group: 6 functions, 500 lines | ✅ Passed and merged |
 
 Temporary inspection/apply PRs are deliberately closed without merging and are not counted as completed production waves.
 
@@ -310,7 +323,8 @@ A deferred item becomes eligible only after focused behavior or calculation test
 | 15 | #114 | #115 | `ui_controls.py` | Legacy Dashboard filter-button and Treeview style helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
 | 16 | #116 | #117 | `ui_cards.py` | Legacy Dashboard summary-card constructor | ✅ | ✅ | ✅ | Passed Windows smoke test |
 | 17 | #118 | #118 | `tabs/dashboard.py` | 5 Dashboard feature functions; 462 lines moved | ✅ | ✅ | ✅ | Passed Windows smoke test |
-| 18 | Pending | Pending | Pending | Select through current-main feature inventory | ⬜ | ⬜ | ⬜ | Not started |
+| 18 | #121 | #121 | `tabs/reports.py` | 6 Reports feature functions; 500 lines moved | ✅ | ✅ | ✅ | Passed Windows smoke test and self-hosted audits |
+| 19 | Pending | Pending | Pending | Select through current-main feature inventory | ⬜ | ⬜ | ⬜ | Not started |
 
 Status legend:
 
