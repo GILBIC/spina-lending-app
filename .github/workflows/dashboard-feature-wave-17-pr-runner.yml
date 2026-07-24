@@ -124,19 +124,15 @@ jobs:
           echo "Dashboard validation failed; inspect dashboard-wave-17-validation-log."
           exit 1
 
-      - name: Commit verified extraction and remove temporary workflows
+      - name: Commit verified application extraction
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/dashboard-feature-wave-17-apply.yml
-          git rm .github/workflows/dashboard-feature-wave-17-inventory.yml
-          git rm .github/workflows/dashboard-feature-wave-17-pr-runner.yml
           git add \
             OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
             spina_app/tabs/__init__.py \
             spina_app/tabs/dashboard.py \
             tools/fixtures/dashboard_feature_wave_17_manifest.json \
-            tools/test_dashboard_feature_wave_17.py \
-            .github/workflows/dashboard-feature-wave-17.yml
-          git commit -m "Extract legacy Dashboard feature module"
+            tools/test_dashboard_feature_wave_17.py
+          git commit -m "Extract legacy Dashboard feature module [skip ci]"
           git push origin HEAD:agent/dashboard-feature-module-wave-17
