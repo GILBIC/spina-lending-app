@@ -37069,6 +37069,23 @@ from spina_app.tabs.dashboard import (
 
 
 
+# Wave 28 Dashboard helpers must be imported before App monkey-patch wiring.
+from spina_app.tabs.dashboard import (
+    _spina_dashboard_summary_text,
+    _spina_configure_dashboard_tree_theme,
+    _spina_build_dashboard_tab,
+    _spina_populate_dashboard_tree,
+    _spina_refresh_dashboard,
+    _spina_apply_dashboard_role,
+    _spina_v18_patch_dashboard_chart_cards,
+    _spina_v18_populate_dashboard_tree,
+    _spina_v18_refresh_dashboard,
+    _spina_v19_populate_dashboard_tree,
+    _spina_v19_refresh_dashboard,
+    _spina_v20_populate_dashboard_tree,
+    _spina_v20_refresh_dashboard,
+)
+
 try:
     if 'App' in globals():
         setattr(App, '_build_dashboard_tab', _spina_build_dashboard_tab)
@@ -41138,19 +41155,6 @@ from spina_app.tabs.dashboard import (
     _spina_v17_draw_dashboard_charts,
     _spina_v17_populate_dashboard_tree,
     _spina_v17_refresh_dashboard,
-    _spina_dashboard_summary_text,
-    _spina_configure_dashboard_tree_theme,
-    _spina_build_dashboard_tab,
-    _spina_populate_dashboard_tree,
-    _spina_refresh_dashboard,
-    _spina_apply_dashboard_role,
-    _spina_v18_patch_dashboard_chart_cards,
-    _spina_v18_populate_dashboard_tree,
-    _spina_v18_refresh_dashboard,
-    _spina_v19_populate_dashboard_tree,
-    _spina_v19_refresh_dashboard,
-    _spina_v20_populate_dashboard_tree,
-    _spina_v20_refresh_dashboard,
 )
 
 _spina_v17_configure_feature(

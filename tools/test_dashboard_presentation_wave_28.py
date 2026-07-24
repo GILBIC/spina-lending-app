@@ -29,6 +29,81 @@ def functions(path: Path):
     return result
 
 
+
+def assert_dashboard_startup_wiring() -> None:
+    source_text = SOURCE.read_text(encoding="utf-8")
+    tree = ast.parse(source_text, filename=str(SOURCE))
+    target_names = set(EXPECTED_HASHES)
+
+    complete_imports = []
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom) and node.module == "spina_app.tabs.dashboard":
+            names = {alias.asname or alias.name for alias in node.names}
+            if target_names.issubset(names):
+                complete_imports.append(node)
+    assert len(complete_imports) == 1, "Expected one complete Wave 28 Dashboard import"
+    import_line = complete_imports[0].lineno
+
+    runtime_uses = []
+    for statement in tree.body:
+        if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Import, ast.ImportFrom)):
+            continue
+        names = {
+            node.id
+            for node in ast.walk(statement)
+            if isinstance(node, ast.Name)
+            and isinstance(node.ctx, ast.Load)
+            and node.id in target_names
+        }
+        if names:
+            runtime_uses.append((statement.lineno, names))
+    assert runtime_uses, "No Dashboard App wiring use found"
+    first_use_line = min(line for line, _ in runtime_uses)
+    assert import_line < first_use_line, (import_line, first_use_line, runtime_uses[:3])
+
+
+class FakeNotebook:
+    def __init__(self):
+        self.visible = [".!data"]
+        self.hidden = []
+
+    def tabs(self):
+        return tuple(self.visible)
+
+    def insert(self, index, tab, text=""):
+        value = str(tab)
+        if value not in self.visible:
+            self.visible.insert(min(int(index), len(self.visible)), value)
+
+    def add(self, tab, text=""):
+        value = str(tab)
+        if value not in self.visible:
+            self.visible.append(value)
+
+    def hide(self, tab):
+        value = str(tab)
+        self.hidden.append(value)
+        if value in self.visible:
+            self.visible.remove(value)
+
+
+def assert_dashboard_role_visibility() -> None:
+    class RoleApp:
+        pass
+
+    app = RoleApp()
+    app.nb = FakeNotebook()
+    app.tab_dashboard = ".!dashboard"
+    app.user_role = "Admin"
+    dashboard._spina_apply_dashboard_role(app)
+    assert str(app.tab_dashboard) in app.nb.tabs(), "Admin Dashboard was not inserted"
+
+    app.user_role = "System"
+    dashboard._spina_apply_dashboard_role(app)
+    assert str(app.tab_dashboard) not in app.nb.tabs(), "System Dashboard was not hidden"
+    assert str(app.tab_dashboard) in app.nb.hidden
+
+
 def main() -> None:
     source_functions = functions(SOURCE)
     module_functions = functions(MODULE)
@@ -64,6 +139,9 @@ def main() -> None:
     # Defensive UI helpers must stay no-throw when optional widgets are absent.
     dashboard._spina_configure_dashboard_tree_theme(EmptyApp())
     dashboard._spina_apply_dashboard_role(EmptyApp())
+
+    assert_dashboard_startup_wiring()
+    assert_dashboard_role_visibility()
 
     print("Dashboard presentation Wave 28 regression passed:", len(EXPECTED_HASHES), "functions,", total_lines, "lines")
 
