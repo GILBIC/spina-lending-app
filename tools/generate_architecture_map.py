@@ -313,11 +313,14 @@ class FunctionScanner(ast.NodeVisitor):
         value = dotted(node.value)
         for target in node.targets:
             target_name = dotted(target)
+            base = target_name.split(".", 1)[0]
             if (
                 value
                 and isinstance(target, ast.Attribute)
                 and IDENT.match(target.attr)
                 and "." in target_name
+                and base not in {"self", "cls"}
+                and base not in self.local_names
             ):
                 self.monkey_patches.append({
                     "target": target_name,
@@ -380,6 +383,23 @@ def collect_symbols(path: Path, tree: ast.Module, text: str) -> tuple[list[Symbo
             base = "." * stmt.level + (stmt.module or "")
             for alias in stmt.names:
                 imports[alias.asname or alias.name] = f"{base}.{alias.name}".strip(".")
+
+    module_monkey_patches: list[dict[str, Any]] = []
+    for stmt in tree.body:
+        if not isinstance(stmt, (ast.Assign, ast.AnnAssign)):
+            continue
+        value_node = stmt.value
+        value = dotted(value_node)
+        targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
+        for target in targets:
+            target_name = dotted(target)
+            if value and isinstance(target, ast.Attribute) and "." in target_name:
+                module_monkey_patches.append({
+                    "owner": f"{file_path}:module",
+                    "target": target_name,
+                    "source": value,
+                    "line": getattr(stmt, "lineno", 0),
+                })
 
     symbols: list[Symbol] = []
     duplicate_counter: Counter[str] = Counter()
@@ -482,6 +502,7 @@ def collect_symbols(path: Path, tree: ast.Module, text: str) -> tuple[list[Symbo
         "module_globals": sorted(module_globals),
         "syntax_ok": True,
         "application_file": file_path.startswith(APP_PREFIXES),
+        "monkey_patches": module_monkey_patches,
     }
     return symbols, module_record
 
@@ -569,6 +590,9 @@ def scan_repository() -> dict[str, Any]:
             monkey_patches.append({"owner": s.id, **patch})
         for callback in s.callbacks:
             callbacks.append({"owner": s.id, **callback})
+
+    for module in modules:
+        monkey_patches.extend(module.get("monkey_patches", []))
 
     duplicates = {
         name: ids for name, ids in sorted(duplicate_names.items())
