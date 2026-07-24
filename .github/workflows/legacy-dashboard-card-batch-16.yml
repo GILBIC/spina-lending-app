@@ -1,0 +1,43 @@
+name: Legacy Dashboard card batch 16
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile app, module, and tests
+        run: |
+          python -m py_compile \
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py \
+            spina_app/theme_palettes.py \
+            spina_app/ui_cards.py \
+            tools/extract_pure_helper_batch.py \
+            tools/test_legacy_dashboard_card_batch_16.py
+
+      - name: Verify exact extracted state
+        run: |
+          python tools/extract_pure_helper_batch.py \
+            --manifest tools/fixtures/legacy_dashboard_card_batch_16_manifest.json
+
+      - name: Verify preserved legacy Dashboard card behavior
+        run: |
+          PYTHONPATH=. python tools/test_legacy_dashboard_card_batch_16.py \
+            --manifest tools/fixtures/legacy_dashboard_card_batch_16_manifest.json \
+            --fixture tools/fixtures/legacy_dashboard_card_batch_16_behavior.json
+
+# Final Wave 16 verification before switching to feature-level modularization.
