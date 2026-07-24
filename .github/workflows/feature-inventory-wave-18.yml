@@ -8,16 +8,26 @@ permissions:
 
 jobs:
   inventory:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify local Python
+        shell: powershell
+        run: |
+          where.exe python
+          python --version
+
       - name: Compile inventory tool
+        shell: powershell
         run: python -m py_compile tools/inventory_feature_wave_18.py
+
       - name: Generate feature inventory
+        shell: powershell
         run: python tools/inventory_feature_wave_18.py
+
       - name: Upload inventory
         uses: actions/upload-artifact@v4
         with:
