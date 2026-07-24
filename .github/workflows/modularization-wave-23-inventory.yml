@@ -1,0 +1,36 @@
+name: Modularization Wave 23 inventory
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    if: github.head_ref == 'agent/modularization-wave-23-inventory'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify local Python
+        shell: cmd
+        run: |
+          where python
+          python --version
+
+      - name: Compile inventory tool
+        shell: cmd
+        run: python -m py_compile tools\inventory_collector_route_wave_23.py
+
+      - name: Inspect Collector Route presentation targets
+        shell: cmd
+        run: python -m tools.inventory_collector_route_wave_23
+
+      - name: Upload inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: modularization-wave-23-inventory
+          path: wave-23-inventory.json
