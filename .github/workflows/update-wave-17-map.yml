@@ -3,12 +3,14 @@ name: Update Wave 17 modularization map
 on:
   push:
     branches: [agent/dashboard-feature-module-wave-17]
+  pull_request:
 
 permissions:
   contents: write
 
 jobs:
   update:
+    if: github.head_ref == 'agent/dashboard-feature-module-wave-17' || github.ref == 'refs/heads/agent/dashboard-feature-module-wave-17'
     runs-on: ubuntu-latest
     steps:
       - name: Check out feature branch
