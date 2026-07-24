@@ -5,8 +5,8 @@ text = PATH.read_text(encoding="utf-8")
 
 replacements = [
     (
-        'DEPENDENCIES = (\n    "_app__norm_lt_value",',
-        'DEPENDENCIES = (\n    "_spina_v23_clients_colors",\n    "_app__norm_lt_value",',
+        '\n\nDEPENDENCIES = (\n    "_app__norm_lt_value",',
+        '\n\nDEPENDENCIES = (\n    "_spina_v23_clients_colors",\n    "_app__norm_lt_value",',
     ),
     (
         'from spina_app.theme_palettes import _spina_v23_clients_colors\nfrom spina_app.ui_controls import _spina_v23_style_clients_tree',
@@ -33,7 +33,8 @@ for old, new in replacements:
     text = text.replace(old, new, 1)
 
 required = [
-    '"_spina_v23_clients_colors",',
+    'DEPENDENCIES = (\n    "_spina_v23_clients_colors",',
+    '_REQUIRED_DEPENDENCIES = (\n    "_spina_v23_clients_colors",',
     'from spina_app.ui_controls import _spina_v23_style_clients_tree',
     '"_spina_v23_clients_colors": lambda app=None: {},',
 ]
