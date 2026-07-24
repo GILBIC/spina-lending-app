@@ -26,13 +26,14 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import textwrap
 
           workflow = Path('.github/workflows/dashboard-feature-wave-17-apply.yml')
           lines = workflow.read_text(encoding='utf-8').splitlines()
           start = next(i for i, line in enumerate(lines) if line.strip() == "python - <<'PY'") + 1
           end = next(i for i in range(start, len(lines)) if lines[i].strip() == 'PY')
-          code = textwrap.dedent('\n'.join(lines[start:end])) + '\n'
+          prefix = '          '
+          recovered = [line[len(prefix):] if line.startswith(prefix) else line for line in lines[start:end]]
+          code = '\n'.join(recovered) + '\n'
           Path('/tmp/dashboard_wave_17_apply.py').write_text(code, encoding='utf-8')
           PY
 
