@@ -1,0 +1,65 @@
+name: Apply login palette Wave 25
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/login-palette-wave-25'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - name: Check out production branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/login-palette-wave-25
+          fetch-depth: 0
+
+      - name: Verify local Python and GitHub CLI
+        shell: cmd
+        run: |
+          where python
+          python --version
+          where gh
+          gh --version
+          gh auth status
+
+      - name: Apply guarded extraction
+        shell: cmd
+        run: |
+          python -m py_compile tools\apply_login_palette_wave_25.py
+          python -m tools.apply_login_palette_wave_25
+
+      - name: Compile extracted state
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\theme_palettes.py
+          python -m py_compile tools\test_login_palette_wave_25.py
+
+      - name: Run focused regression
+        shell: cmd
+        run: python -m tools.test_login_palette_wave_25
+
+      - name: Run redundancy audit
+        shell: cmd
+        run: python tools\redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json redundancy-report.json
+
+      - name: Run SPINA quality audit
+        shell: cmd
+        run: python tools\spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json quality-report.json
+
+      - name: Commit and push extracted production state
+        shell: cmd
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader 2>nul || ver >nul
+          gh auth setup-git
+          git config user.name "GILBIC"
+          git config user.email "267608671+GILBIC@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit /b 0
+          git commit -m "Modularize login color palette"
+          git push origin HEAD:agent/login-palette-wave-25
