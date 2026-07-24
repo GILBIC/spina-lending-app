@@ -37,7 +37,7 @@ def main() -> None:
     assert not automatic, f"Completed workflows still trigger automatically: {automatic}"
 
     result = subprocess.run(
-        ["git", "diff", "--name-only", "origin/main...HEAD"],
+        ["git", "diff", "--name-only", "origin/main"],
         check=True,
         capture_output=True,
         text=True,
