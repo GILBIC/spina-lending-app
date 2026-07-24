@@ -1,8 +1,8 @@
 {
   "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-  "line_count": 47924,
-  "top_level_function_count": 685,
-  "unique_top_level_function_names": 592,
+  "line_count": 45357,
+  "top_level_function_count": 626,
+  "unique_top_level_function_names": 536,
   "duplicate_top_level_definitions": {
     "_adv_lbl": [
       23911,
@@ -26,8 +26,8 @@
       25897,
       31863,
       31942,
-      47228,
-      47708
+      44661,
+      45141
     ],
     "_clear_collectors_search_filters": [
       21260,
@@ -89,10 +89,6 @@
       23699,
       33758
     ],
-    "_filter_trigger": [
-      38864,
-      45642
-    ],
     "_fits": [
       23158,
       33048
@@ -132,7 +128,7 @@
       25896,
       31860,
       31940,
-      47668
+      45101
     ],
     "_on_collectors_multi_toggle": [
       20603,
@@ -153,12 +149,8 @@
     ],
     "_on_search": [
       20454,
-      46294,
-      46836
-    ],
-    "_on_select": [
-      38845,
-      45617
+      43759,
+      44269
     ],
     "_options_dialog": [
       22007,
@@ -178,8 +170,8 @@
     ],
     "_popup": [
       20323,
-      46208,
-      46818
+      43673,
+      44251
     ],
     "_rec_get": [
       40115,
@@ -236,8 +228,8 @@
     ],
     "_set_sort": [
       20250,
-      46140,
-      46747
+      43605,
+      44180
     ],
     "_sort_key": [
       22278,
@@ -253,7 +245,7 @@
     ],
     "_validate_date": [
       29316,
-      44925
+      43047
     ],
     "_wrap_text_to_width": [
       23153,
@@ -266,11 +258,7 @@
     "cancel": [
       24853,
       29429,
-      45035
-    ],
-    "chart_box": [
-      43154,
-      45547
+      43157
     ],
     "do_link": [
       24807,
@@ -312,7 +300,7 @@
     ],
     "save": [
       29323,
-      44946
+      43068
     ],
     "stringWidth": [
       2183,
@@ -457,30 +445,30 @@
     ],
     "App._build_clients_tab": [
       35896,
-      45217
+      43309
     ],
     "App._build_collectors_tab": [
-      46329,
-      47257
+      43794,
+      44690
     ],
     "App._dashboard_visible_rows": [
-      42319,
-      42678
+      41782,
+      42094
     ],
     "App._on_collectors_select": [
-      46387,
-      47290
+      43852,
+      44723
     ],
     "App._on_mode_change": [
       37731,
       38450,
-      42335
+      41798
     ],
     "App._populate_dashboard_tree": [
-      42318,
-      42583,
-      42679,
-      42938
+      41781,
+      41999,
+      42095,
+      42354
     ],
     "App.apply_role_access": [
       31478,
@@ -491,18 +479,18 @@
     "App.refresh_clients": [
       35908,
       38980,
-      45231
+      43323
     ],
     "App.refresh_collectors": [
       35458,
-      46343,
-      47269
+      43808,
+      44702
     ],
     "App.refresh_dashboard": [
-      42317,
-      42582,
-      42680,
-      42939
+      41780,
+      41998,
+      42096,
+      42355
     ],
     "App.refresh_data_grid": [
       41662,
@@ -567,7 +555,7 @@
     },
     {
       "name": "_spina_v23_client_form",
-      "line": 44603,
+      "line": 42725,
       "lines": 457
     },
     {
@@ -586,13 +574,8 @@
       "lines": 397
     },
     {
-      "name": "_spina_v22_build_reports_tab",
-      "line": 43674,
-      "lines": 371
-    },
-    {
       "name": "_spina_v27_collector_editor_dialog",
-      "line": 46903,
+      "line": 44336,
       "lines": 350
     },
     {
@@ -602,7 +585,7 @@
     },
     {
       "name": "_spina_v25_build_collectors_tab",
-      "line": 45979,
+      "line": 43444,
       "lines": 346
     },
     {
@@ -627,7 +610,7 @@
     },
     {
       "name": "_spina_v27_build_collectors_tab",
-      "line": 46574,
+      "line": 44007,
       "lines": 293
     },
     {
@@ -644,11 +627,6 @@
       "name": "_spina_save_closed_collector_route_copy",
       "line": 40086,
       "lines": 281
-    },
-    {
-      "name": "_spina_v21_cash_build_tab",
-      "line": 42970,
-      "lines": 277
     },
     {
       "name": "App._run_long_task",
@@ -679,33 +657,28 @@
       "name": "App.generate_pdf_selected",
       "line": 17888,
       "lines": 258
-    },
-    {
-      "name": "_spina_v24_build_client_info_logs_tab",
-      "line": 45431,
-      "lines": 250
     }
   ],
-  "broad_except_count": 3419,
-  "pass_only_except_count": 894,
+  "broad_except_count": 3300,
+  "pass_only_except_count": 807,
   "bare_except_count": 4,
-  "silent_broad_except_count": 2385,
+  "silent_broad_except_count": 2270,
   "broad_except_by_risk_area": {
     "backup/restore": 46,
     "excel/import-export": 124,
-    "general": 1606,
+    "general": 1527,
     "login/accounts": 107,
     "payment/balance": 135,
-    "reports/pdf": 929,
+    "reports/pdf": 889,
     "startup/database": 472
   },
   "silent_broad_except_by_risk_area": {
     "backup/restore": 34,
     "excel/import-export": 53,
-    "general": 1112,
+    "general": 1035,
     "login/accounts": 61,
     "payment/balance": 89,
-    "reports/pdf": 737,
+    "reports/pdf": 699,
     "startup/database": 299
   },
   "broad_except_examples": [
