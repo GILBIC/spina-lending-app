@@ -1,0 +1,52 @@
+name: Apply Architecture Source Marker Review
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/architecture-map-wave-27'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out architecture branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/architecture-map-wave-27
+          fetch-depth: 0
+
+      - name: Apply guarded application source marker correction
+        shell: cmd
+        run: |
+          python -m py_compile tools\fix_architecture_source_marker.py
+          python -m tools.fix_architecture_source_marker
+
+      - name: Remove temporary marker fixer before mapping
+        shell: cmd
+        run: |
+          del tools\fix_architecture_source_marker.py
+          del .github\workflows\apply-architecture-source-marker-review.yml
+
+      - name: Regenerate and validate deterministic map
+        shell: cmd
+        run: |
+          python -m py_compile tools\generate_architecture_map.py
+          python -m py_compile tools\test_architecture_map.py
+          python -m tools.generate_architecture_map
+          python -m tools.test_architecture_map
+
+      - name: Commit and push deterministic reviewed map
+        shell: cmd
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader 2>nul || ver >nul
+          gh auth setup-git
+          git config user.name "GILBIC"
+          git config user.email "267608671+GILBIC@users.noreply.github.com"
+          git add tools\generate_architecture_map.py architecture-map.json docs\architecture tools\fix_architecture_source_marker.py .github\workflows\apply-architecture-source-marker-review.yml
+          git diff --cached --quiet && exit /b 0
+          git commit -m "Make architecture source marker application-specific"
+          git push origin HEAD:agent/architecture-map-wave-27
