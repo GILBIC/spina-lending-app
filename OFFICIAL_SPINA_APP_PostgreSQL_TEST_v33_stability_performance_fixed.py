@@ -41766,21 +41766,7 @@ def _spina_v17_visible_dashboard_rows(self):
         return list(getattr(self, "_dashboard_rows", []) or [])
 
 
-def _spina_v17_make_card(parent, title, value="—", subtitle=""):
-    c = _spina_v17_dash_colors()
-    frame = tk.Frame(parent, bg=c["card"], highlightbackground=c["border"], highlightthickness=1, bd=0)
-    frame.grid_propagate(False)
-
-    lbl_title = tk.Label(frame, text=title, bg=c["card"], fg=c["muted"], font=("Segoe UI", 9, "bold"), anchor="w")
-    lbl_title.pack(fill="x", padx=14, pady=(12, 0))
-
-    lbl_value = tk.Label(frame, text=value, bg=c["card"], fg=c["fg"], font=("Segoe UI", 18, "bold"), anchor="w")
-    lbl_value.pack(fill="x", padx=14, pady=(4, 0))
-
-    lbl_sub = tk.Label(frame, text=subtitle, bg=c["card"], fg=c["muted"], font=("Segoe UI", 9), anchor="w")
-    lbl_sub.pack(fill="x", padx=14, pady=(2, 10))
-
-    return frame, lbl_value, lbl_sub
+from spina_app.ui_cards import _spina_v17_make_card
 
 
 from spina_app.ui_controls import _spina_v17_style_dashboard_table
