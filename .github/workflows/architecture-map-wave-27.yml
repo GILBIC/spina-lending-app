@@ -1,0 +1,38 @@
+name: Architecture Map Wave 27
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'agent/architecture-map-wave-27'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify local Python
+        shell: cmd
+        run: |
+          where python
+          python --version
+
+      - name: Run reusable architecture map check
+        uses: ./.github/actions/architecture-map-check
+
+      - name: Upload current architecture maps
+        uses: actions/upload-artifact@v4
+        with:
+          name: spina-architecture-map-wave-27
+          path: |
+            architecture-map.json
+            docs/architecture
+          if-no-files-found: error
