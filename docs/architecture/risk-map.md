@@ -1,8 +1,8 @@
 # SPINA Application Risk and Modularization Map
 
-Generated from commit `53820d97b6176ee525c227be10dfe2779aad1fac`.
+Generated from commit `11f7648ec71c6e24b6e743a95a7c41547ff6ef60`.
 
-Scanned **133 Python files**, **71,032 lines**, and **2,151 symbols**.
+Scanned **131 Python files**, **70,857 lines**, and **2,148 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 

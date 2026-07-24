@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `53820d97b6176ee525c227be10dfe2779aad1fac`.
+Generated from commit `11f7648ec71c6e24b6e743a95a7c41547ff6ef60`.
 
-Scanned **133 Python files**, **71,032 lines**, and **2,151 symbols**.
+Scanned **131 Python files**, **70,857 lines**, and **2,148 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1661,12 +1661,6 @@ Scanned **133 Python files**, **71,032 lines**, and **2,151 symbols**.
 - **tools.extract_text_normalizers._atomic_write** (function, lines 262–271, 10 lines, risk `filesystem`): Handles atomic write for the utilities feature.
 - **tools.extract_text_normalizers.apply_extraction** (function, lines 274–283, 10 lines, risk `support`): Handles apply extraction for the utilities feature.
 - **tools.extract_text_normalizers.main** (function, lines 286–304, 19 lines, risk `filesystem`): Handles main for the reports feature.
-
-## `tools/fix_architecture_map_review.py`
-
-- **tools.fix_architecture_map_review.git_blob_sha** (function, lines 22–25, 4 lines, risk `filesystem`): Handles git blob sha for the other feature.
-- **tools.fix_architecture_map_review.sub_once** (function, lines 28–31, 4 lines, risk `support`): Handles sub once for the other feature.
-- **tools.fix_architecture_map_review.main** (function, lines 34–130, 97 lines, risk `filesystem`): Handles main for the authentication feature.
 
 ## `tools/inject_critical_path_logging.py`
 
