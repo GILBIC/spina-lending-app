@@ -1,0 +1,22 @@
+{
+  "wave": 19,
+  "feature": "clients_presentation",
+  "destination": "spina_app/tabs/clients.py",
+  "selected_functions": [
+    "_spina_v23_button",
+    "_spina_v23_card",
+    "_spina_v23_selected_name_lt",
+    "_spina_v23_refresh_client_profile",
+    "_spina_v23_build_clients_tab",
+    "_spina_v23_entry",
+    "_spina_v23_update_client_cards"
+  ],
+  "protected_functions_kept_in_desktop": [
+    "_spina_v23_client_loan_summary",
+    "_spina_v23_client_form",
+    "_spina_v23_add_client_dialog",
+    "_spina_v23_on_client_edit",
+    "_spina_v23_refresh_clients"
+  ],
+  "status": "inventory_selected"
+}
