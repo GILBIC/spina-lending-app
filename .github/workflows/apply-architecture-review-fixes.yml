@@ -29,24 +29,10 @@ jobs:
           gh auth status
 
       - name: Correct temporary guard hash format
-        shell: powershell
+        shell: cmd
         run: |
-          $path = 'tools\fix_architecture_map_review.py'
-          $text = Get-Content $path -Raw
-          $old = @'
-          def sha256(path: Path) -> str:
-              return hashlib.sha256(path.read_bytes()).hexdigest()
-          '@
-          $new = @'
-          def git_blob_sha(path: Path) -> str:
-              data = path.read_bytes()
-              header = f"blob {len(data)}\0".encode("utf-8")
-              return hashlib.sha1(header + data).hexdigest()
-          '@
-          $text = $text.Replace($old.Trim(), $new.Trim())
-          $text = $text.Replace('assert sha256(GENERATOR) == EXPECTED_GENERATOR_SHA', 'assert git_blob_sha(GENERATOR) == EXPECTED_GENERATOR_SHA')
-          $text = $text.Replace('assert sha256(TEST) == EXPECTED_TEST_SHA', 'assert git_blob_sha(TEST) == EXPECTED_TEST_SHA')
-          Set-Content -Path $path -Value $text -Encoding utf8 -NoNewline
+          python -m py_compile tools\patch_architecture_review_guard.py
+          python -m tools.patch_architecture_review_guard
 
       - name: Apply guarded review fixes
         shell: cmd
@@ -72,10 +58,11 @@ jobs:
             if ($db.Contains("### ``$bad``")) { throw "False table remains: $bad" }
           }
 
-      - name: Remove temporary review fixer
+      - name: Remove temporary review fixers
         shell: cmd
         run: |
           del tools\fix_architecture_map_review.py
+          del tools\patch_architecture_review_guard.py
           del .github\workflows\apply-architecture-review-fixes.yml
 
       - name: Commit and push corrected architecture maps
@@ -85,7 +72,7 @@ jobs:
           gh auth setup-git
           git config user.name "GILBIC"
           git config user.email "267608671+GILBIC@users.noreply.github.com"
-          git add tools\generate_architecture_map.py tools\test_architecture_map.py architecture-map.json docs\architecture tools\fix_architecture_map_review.py .github\workflows\apply-architecture-review-fixes.yml
+          git add tools\generate_architecture_map.py tools\test_architecture_map.py architecture-map.json docs\architecture tools\fix_architecture_map_review.py tools\patch_architecture_review_guard.py .github\workflows\apply-architecture-review-fixes.yml
           git diff --cached --quiet && exit /b 0
           git commit -m "Correct architecture map accuracy after review"
           git push origin HEAD:agent/architecture-map-wave-27
