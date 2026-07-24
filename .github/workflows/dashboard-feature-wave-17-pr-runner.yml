@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Recover and run the reviewed extraction script
+      - name: Recover reviewed extraction script
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -35,7 +35,27 @@ jobs:
           code = textwrap.dedent('\n'.join(lines[start:end])) + '\n'
           Path('/tmp/dashboard_wave_17_apply.py').write_text(code, encoding='utf-8')
           PY
-          python /tmp/dashboard_wave_17_apply.py
+
+      - name: Run extraction with captured log
+        id: extraction
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python /tmp/dashboard_wave_17_apply.py 2>&1 | tee dashboard-wave-17-extraction.log
+
+      - name: Upload complete extraction log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-wave-17-extraction-log
+          path: dashboard-wave-17-extraction.log
+          if-no-files-found: error
+
+      - name: Stop after extraction failure
+        if: steps.extraction.outcome != 'success'
+        run: |
+          echo "Dashboard extraction failed; inspect dashboard-wave-17-extraction-log."
+          exit 1
 
       - name: Compile and test extracted Dashboard feature
         run: |
