@@ -1,0 +1,36 @@
+name: CI acceleration inventory
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    if: github.head_ref == 'agent/ci-acceleration-inventory'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify local Python
+        shell: cmd
+        run: |
+          where python
+          python --version
+
+      - name: Inventory workflow runner usage
+        shell: cmd
+        run: |
+          python -m py_compile tools\inventory_ci_acceleration.py
+          python -m tools.inventory_ci_acceleration
+
+      - name: Upload inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-acceleration-inventory
+          path: ci-acceleration-inventory.json
