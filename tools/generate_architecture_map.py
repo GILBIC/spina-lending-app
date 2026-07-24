@@ -140,24 +140,25 @@ FILE_CALLS = {
 
 
 def git_sha() -> str:
-    """Return the latest commit that changed non-architecture Python source.
+    """Return the latest commit that changed SPINA application Python source.
 
-    The generator and its validator are excluded from this marker, keeping generated
-    documentation deterministic when architecture tooling itself is improved.
+    Architecture tools and generated documents are intentionally excluded. This keeps
+    the marker deterministic while still identifying the desktop/module code version
+    represented by the map.
     """
     try:
         return subprocess.check_output(
             [
                 "git", "log", "-1", "--format=%H", "--",
-                "*.py",
-                ":(exclude)tools/generate_architecture_map.py",
-                ":(exclude)tools/test_architecture_map.py",
+                ":(glob)OFFICIAL_SPINA_APP_*.py",
+                ":(glob)spina_app/**/*.py",
             ],
             cwd=ROOT,
             text=True,
         ).strip()
     except Exception:
         return "unknown"
+
 
 
 def rel(path: Path) -> str:

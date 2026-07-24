@@ -1,6 +1,6 @@
 # SPINA Application Risk and Modularization Map
 
-Generated from commit `501bd162b80d6ab968beae2eb35c324a55d31432`.
+Generated from commit `a6438f533e397c9da267d2dd508d0231c53e48f8`.
 
 Scanned **131 Python files**, **70,893 lines**, and **2,149 symbols**.
 
