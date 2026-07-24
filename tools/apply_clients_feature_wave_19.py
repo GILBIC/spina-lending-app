@@ -38,6 +38,7 @@ PROTECTED = [
 ]
 
 DEPENDENCIES = (
+    "_spina_v23_clients_colors",
     "_app__norm_lt_value",
     "_spina_v23_client_loan_summary",
     "_log_exc",
@@ -107,11 +108,11 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any, Mapping
 
-from spina_app.theme_palettes import _spina_v23_clients_colors
 from spina_app.ui_controls import _spina_v23_style_clients_tree
 from spina_app.utilities.formatting import _spina_v23_money, _spina_v23_percent
 
 _REQUIRED_DEPENDENCIES = (
+    "_spina_v23_clients_colors",
     "_app__norm_lt_value",
     "_spina_v23_client_loan_summary",
     "_log_exc",
@@ -287,6 +288,7 @@ def main():
     clients = importlib.import_module("spina_app.tabs.clients")
     missing = clients.configure_clients_dependencies({})
     assert set(missing) == {
+        "_spina_v23_clients_colors",
         "_app__norm_lt_value",
         "_spina_v23_client_loan_summary",
         "_log_exc",
@@ -294,6 +296,7 @@ def main():
 
     clients.configure_clients_dependencies(
         {
+            "_spina_v23_clients_colors": lambda app=None: {},
             "_app__norm_lt_value": lambda app, value: str(value or "Regular"),
             "_spina_v23_client_loan_summary": lambda app, info: {"balance": 321.0},
             "_log_exc": lambda *args, **kwargs: None,
