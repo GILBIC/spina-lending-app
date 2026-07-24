@@ -1,0 +1,38 @@
+{
+  "batch": "legacy_dashboard_controls_batch_15",
+  "manifest": "tools/fixtures/legacy_dashboard_controls_batch_15_manifest.json",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "state": "extracted",
+  "helper_count": 2,
+  "helpers": [
+    {
+      "name": "_spina_v17_update_filter_buttons",
+      "module": "spina_app.ui_controls",
+      "module_path": "spina_app/ui_controls.py",
+      "state": "extracted",
+      "signature": "self",
+      "external_names": [
+        "_spina_v17_dash_colors",
+        "tk"
+      ],
+      "import_line": 42038,
+      "source": "def _spina_v17_update_filter_buttons(self):\n    try:\n        colors = _spina_v17_dash_colors(self)\n        cur = str(getattr(self, \"dashboard_loan_filter_var\", tk.StringVar(value=\"All\")).get() or \"All\")\n        for key, btn in (getattr(self, \"_dash_filter_buttons\", {}) or {}).items():\n            if key == cur:\n                btn.configure(bg=colors[\"accent\"], fg=\"#ffffff\", activebackground=colors[\"accent\"], activeforeground=\"#ffffff\")\n            else:\n                btn.configure(bg=colors[\"card2\"], fg=colors[\"fg\"], activebackground=colors[\"soft\"], activeforeground=colors[\"fg\"])\n    except Exception:\n        pass",
+      "source_sha256": "a2db92cf027a63217f0d4593f157095311658e1182d97c7c9904ccfc6e849859"
+    },
+    {
+      "name": "_spina_v17_style_dashboard_table",
+      "module": "spina_app.ui_controls",
+      "module_path": "spina_app/ui_controls.py",
+      "state": "extracted",
+      "signature": "self",
+      "external_names": [
+        "_spina_v17_dash_colors",
+        "ttk"
+      ],
+      "import_line": 41786,
+      "source": "def _spina_v17_style_dashboard_table(self):\n    try:\n        st = ttk.Style()\n        family = \"Segoe UI\"\n        colors = _spina_v17_dash_colors(self)\n        st.configure(\n            \"ModernDash.Treeview\",\n            rowheight=30,\n            font=(family, 10),\n            background=colors[\"panel\"],\n            fieldbackground=colors[\"panel\"],\n            foreground=colors[\"fg\"],\n            borderwidth=0,\n        )\n        st.configure(\n            \"ModernDash.Treeview.Heading\",\n            font=(family, 10, \"bold\"),\n            background=colors[\"card2\"],\n            foreground=colors[\"fg\"],\n            relief=\"flat\",\n        )\n        st.map(\"ModernDash.Treeview\", background=[(\"selected\", colors[\"accent\"])])\n    except Exception:\n        pass",
+      "source_sha256": "0904c581262efa1de42c7a151852e4b6eb7380fce0fba04089ba7f312ab109cc"
+    }
+  ],
+  "changed": true
+}

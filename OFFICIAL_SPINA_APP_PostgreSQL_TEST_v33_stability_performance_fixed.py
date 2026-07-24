@@ -41783,30 +41783,7 @@ def _spina_v17_make_card(parent, title, value="—", subtitle=""):
     return frame, lbl_value, lbl_sub
 
 
-def _spina_v17_style_dashboard_table(self):
-    try:
-        st = ttk.Style()
-        family = "Segoe UI"
-        colors = _spina_v17_dash_colors(self)
-        st.configure(
-            "ModernDash.Treeview",
-            rowheight=30,
-            font=(family, 10),
-            background=colors["panel"],
-            fieldbackground=colors["panel"],
-            foreground=colors["fg"],
-            borderwidth=0,
-        )
-        st.configure(
-            "ModernDash.Treeview.Heading",
-            font=(family, 10, "bold"),
-            background=colors["card2"],
-            foreground=colors["fg"],
-            relief="flat",
-        )
-        st.map("ModernDash.Treeview", background=[("selected", colors["accent"])])
-    except Exception:
-        pass
+from spina_app.ui_controls import _spina_v17_style_dashboard_table
 
 
 def _spina_v17_build_dashboard_tab(self):
@@ -42058,17 +42035,7 @@ def _spina_v17_build_dashboard_tab(self):
             pass
 
 
-def _spina_v17_update_filter_buttons(self):
-    try:
-        colors = _spina_v17_dash_colors(self)
-        cur = str(getattr(self, "dashboard_loan_filter_var", tk.StringVar(value="All")).get() or "All")
-        for key, btn in (getattr(self, "_dash_filter_buttons", {}) or {}).items():
-            if key == cur:
-                btn.configure(bg=colors["accent"], fg="#ffffff", activebackground=colors["accent"], activeforeground="#ffffff")
-            else:
-                btn.configure(bg=colors["card2"], fg=colors["fg"], activebackground=colors["soft"], activeforeground=colors["fg"])
-    except Exception:
-        pass
+from spina_app.ui_controls import _spina_v17_update_filter_buttons
 
 
 from spina_app.ui_helpers import _spina_v17_set_card

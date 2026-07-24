@@ -1,0 +1,273 @@
+{
+  "batch": "legacy_dashboard_controls_batch_15",
+  "helper_names": [
+    "_spina_v17_update_filter_buttons",
+    "_spina_v17_style_dashboard_table"
+  ],
+  "behavior": {
+    "_spina_v17_update_filter_buttons": {
+      "regular_selected": {
+        "kind": "return",
+        "result": null,
+        "stringvar_calls": [
+          {
+            "value": "All"
+          }
+        ],
+        "buttons": {
+          "All": [
+            {
+              "bg": "dash-card2",
+              "fg": "dash-fg",
+              "activebackground": "dash-soft",
+              "activeforeground": "dash-fg"
+            }
+          ],
+          "REG": [
+            {
+              "bg": "dash-accent",
+              "fg": "#ffffff",
+              "activebackground": "dash-accent",
+              "activeforeground": "#ffffff"
+            }
+          ],
+          "7x7": [
+            {
+              "bg": "dash-card2",
+              "fg": "dash-fg",
+              "activebackground": "dash-soft",
+              "activeforeground": "dash-fg"
+            }
+          ]
+        }
+      },
+      "all_selected": {
+        "kind": "return",
+        "result": null,
+        "stringvar_calls": [
+          {
+            "value": "All"
+          }
+        ],
+        "buttons": {
+          "All": [
+            {
+              "bg": "dash-accent",
+              "fg": "#ffffff",
+              "activebackground": "dash-accent",
+              "activeforeground": "#ffffff"
+            }
+          ],
+          "REG": [
+            {
+              "bg": "dash-card2",
+              "fg": "dash-fg",
+              "activebackground": "dash-soft",
+              "activeforeground": "dash-fg"
+            }
+          ],
+          "7x7": [
+            {
+              "bg": "dash-card2",
+              "fg": "dash-fg",
+              "activebackground": "dash-soft",
+              "activeforeground": "dash-fg"
+            }
+          ]
+        }
+      },
+      "blank_defaults_all": {
+        "kind": "return",
+        "result": null,
+        "stringvar_calls": [
+          {
+            "value": "All"
+          }
+        ],
+        "buttons": {
+          "All": [
+            {
+              "bg": "dash-accent",
+              "fg": "#ffffff",
+              "activebackground": "dash-accent",
+              "activeforeground": "#ffffff"
+            }
+          ],
+          "REG": [
+            {
+              "bg": "dash-card2",
+              "fg": "dash-fg",
+              "activebackground": "dash-soft",
+              "activeforeground": "dash-fg"
+            }
+          ],
+          "7x7": [
+            {
+              "bg": "dash-card2",
+              "fg": "dash-fg",
+              "activebackground": "dash-soft",
+              "activeforeground": "dash-fg"
+            }
+          ]
+        }
+      },
+      "missing_var_defaults_all": {
+        "kind": "return",
+        "result": null,
+        "stringvar_calls": [
+          {
+            "value": "All"
+          }
+        ],
+        "buttons": {
+          "All": [
+            {
+              "bg": "dash-accent",
+              "fg": "#ffffff",
+              "activebackground": "dash-accent",
+              "activeforeground": "#ffffff"
+            }
+          ],
+          "REG": [
+            {
+              "bg": "dash-card2",
+              "fg": "dash-fg",
+              "activebackground": "dash-soft",
+              "activeforeground": "dash-fg"
+            }
+          ],
+          "7x7": [
+            {
+              "bg": "dash-card2",
+              "fg": "dash-fg",
+              "activebackground": "dash-soft",
+              "activeforeground": "dash-fg"
+            }
+          ]
+        }
+      },
+      "missing_buttons": {
+        "kind": "return",
+        "result": null,
+        "stringvar_calls": [
+          {
+            "value": "All"
+          }
+        ],
+        "buttons": {}
+      },
+      "palette_failure": {
+        "kind": "return",
+        "result": null,
+        "stringvar_calls": [],
+        "buttons": {
+          "All": [],
+          "REG": [],
+          "7x7": []
+        }
+      },
+      "stringvar_failure": {
+        "kind": "return",
+        "result": null,
+        "stringvar_calls": [
+          {
+            "value": "All"
+          }
+        ],
+        "buttons": {
+          "All": [],
+          "REG": [],
+          "7x7": []
+        }
+      },
+      "button_failure": {
+        "kind": "return",
+        "result": null,
+        "stringvar_calls": [
+          {
+            "value": "All"
+          }
+        ],
+        "buttons": {
+          "All": [
+            {
+              "bg": "dash-card2",
+              "fg": "dash-fg",
+              "activebackground": "dash-soft",
+              "activeforeground": "dash-fg"
+            }
+          ],
+          "REG": [],
+          "7x7": []
+        }
+      }
+    },
+    "_spina_v17_style_dashboard_table": {
+      "normal": {
+        "kind": "return",
+        "result": null,
+        "styles": [
+          {
+            "configure_calls": [
+              {
+                "style": "ModernDash.Treeview",
+                "kwargs": {
+                  "rowheight": 30,
+                  "font": [
+                    "Segoe UI",
+                    10
+                  ],
+                  "background": "dash-panel",
+                  "fieldbackground": "dash-panel",
+                  "foreground": "dash-fg",
+                  "borderwidth": 0
+                }
+              },
+              {
+                "style": "ModernDash.Treeview.Heading",
+                "kwargs": {
+                  "font": [
+                    "Segoe UI",
+                    10,
+                    "bold"
+                  ],
+                  "background": "dash-card2",
+                  "foreground": "dash-fg",
+                  "relief": "flat"
+                }
+              }
+            ],
+            "map_calls": [
+              {
+                "style": "ModernDash.Treeview",
+                "kwargs": {
+                  "background": [
+                    [
+                      "selected",
+                      "dash-accent"
+                    ]
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "palette_failure": {
+        "kind": "return",
+        "result": null,
+        "styles": [
+          {
+            "configure_calls": [],
+            "map_calls": []
+          }
+        ]
+      },
+      "style_failure": {
+        "kind": "return",
+        "result": null,
+        "styles": []
+      }
+    }
+  }
+}
