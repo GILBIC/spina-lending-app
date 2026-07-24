@@ -1,8 +1,8 @@
 {
   "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-  "line_count": 45216,
-  "function_definitions": 282,
-  "unique_function_names": 275,
+  "line_count": 45178,
+  "function_definitions": 281,
+  "unique_function_names": 274,
   "duplicate_top_level_definitions": {
     "_collectors_areas_drag_motion": [
       21199,
