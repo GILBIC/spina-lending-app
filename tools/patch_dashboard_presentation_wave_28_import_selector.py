@@ -27,6 +27,7 @@ new_selector = '''    dashboard_imports = [
 '''
 assert text.count(old_selector) == 1, "Wave 28 initial Dashboard import selector changed"
 text = text.replace(old_selector, new_selector)
+print("Patched Dashboard import selector")
 
 old_ordering = '''    main_node = source_nodes.get("main")
     assert main_node is not None, "Desktop main() function is missing"
@@ -45,17 +46,12 @@ new_ordering = '''    launch_guards = [
 '''
 assert text.count(old_ordering) == 1, "Wave 28 callback ordering guard changed"
 text = text.replace(old_ordering, new_ordering)
+print("Patched callback ordering guard")
 
-old_insertion = '''            main_node.lineno - 1,
-            main_node.lineno - 1,
-            f"# Dashboard presentation callback bridge configured in Wave 28.\n{configure_alias}(\n    draw_v18_charts=_spina_v18_draw_dashboard_charts,\n    draw_v20_charts=_spina_v20_draw_dashboard_charts,\n)\n\n",
-'''
-new_insertion = '''            launch_guard.lineno - 1,
-            launch_guard.lineno - 1,
-            f"# Dashboard presentation callback bridge configured in Wave 28.\n{configure_alias}(\n    draw_v18_charts=_spina_v18_draw_dashboard_charts,\n    draw_v20_charts=_spina_v20_draw_dashboard_charts,\n)\n\n",
-'''
-assert text.count(old_insertion) == 1, "Wave 28 callback insertion point changed"
-text = text.replace(old_insertion, new_insertion)
+needle = "main_node.lineno - 1"
+assert text.count(needle) == 2, f"Expected two callback insertion coordinates, found {text.count(needle)}"
+text = text.replace(needle, "launch_guard.lineno - 1")
+print("Patched callback insertion coordinates")
 
 old_final = '''    final_tree = ast.parse(final_source_text)
     final_dashboard_import = next(
@@ -79,6 +75,7 @@ new_final = '''    final_tree = ast.parse(final_source_text)
 '''
 assert text.count(old_final) == 1, "Wave 28 final Dashboard import selector changed"
 text = text.replace(old_final, new_final)
+print("Patched final Dashboard import selector")
 
 PATH.write_text(text, encoding="utf-8")
 print("Wave 28 Dashboard import and callback-order patches applied")
