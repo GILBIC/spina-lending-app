@@ -1,0 +1,44 @@
+name: Apply Reviewed Architecture Marker Refresh
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.head_ref == 'agent/architecture-map-wave-27'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out architecture branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/architecture-map-wave-27
+          fetch-depth: 0
+
+      - name: Regenerate reviewed maps from committed Python state
+        shell: cmd
+        run: |
+          python -m py_compile tools\generate_architecture_map.py
+          python -m py_compile tools\test_architecture_map.py
+          python -m tools.generate_architecture_map
+          python -m tools.test_architecture_map
+
+      - name: Remove temporary marker refresh
+        shell: cmd
+        run: del .github\workflows\apply-reviewed-map-marker-refresh.yml
+
+      - name: Commit and push map-only refresh
+        shell: cmd
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader 2>nul || ver >nul
+          gh auth setup-git
+          git config user.name "GILBIC"
+          git config user.email "267608671+GILBIC@users.noreply.github.com"
+          git add architecture-map.json docs\architecture .github\workflows\apply-reviewed-map-marker-refresh.yml
+          git diff --cached --quiet && exit /b 0
+          git commit -m "Refresh reviewed architecture source marker"
+          git push origin HEAD:agent/architecture-map-wave-27
