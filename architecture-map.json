@@ -12786,7 +12786,7 @@
         "tools/spina_startup_diagnostics.py:82:tools.spina_startup_diagnostics.main",
         "tools/test_append_unique_text_extraction.py:62:tools.test_append_unique_text_extraction.capture_behavior",
         "tools/test_append_unique_text_extraction.py:85:tools.test_append_unique_text_extraction.main",
-        "tools/test_architecture_map.py:104:tools.test_architecture_map.main.feature_for_suffix",
+        "tools/test_architecture_map.py:106:tools.test_architecture_map.main.feature_for_suffix",
         "tools/test_architecture_map.py:25:tools.test_architecture_map.is_app",
         "tools/test_architecture_map.py:29:tools.test_architecture_map.main",
         "tools/test_base_theme_palette_batch_11.py:112:tools.test_base_theme_palette_batch_11._capture_call",
@@ -16831,7 +16831,7 @@
         "tools/spina_startup_diagnostics.py:23:tools.spina_startup_diagnostics._env",
         "tools/spina_startup_diagnostics.py:46:tools.spina_startup_diagnostics.check_psycopg",
         "tools/test_append_unique_text_extraction.py:62:tools.test_append_unique_text_extraction.capture_behavior",
-        "tools/test_architecture_map.py:104:tools.test_architecture_map.main.feature_for_suffix",
+        "tools/test_architecture_map.py:106:tools.test_architecture_map.main.feature_for_suffix",
         "tools/test_architecture_map.py:25:tools.test_architecture_map.is_app",
         "tools/test_base_theme_palette_batch_11.py:112:tools.test_base_theme_palette_batch_11._capture_call",
         "tools/test_base_theme_palette_batch_11.py:128:tools.test_base_theme_palette_batch_11.capture_batch",
@@ -19523,7 +19523,7 @@
         "annotations": "__future__.annotations",
         "json": "json"
       },
-      "lines": 172,
+      "lines": 174,
       "module": "tools.test_architecture_map",
       "module_globals": [
         "APP_PREFIXES",
@@ -19533,7 +19533,7 @@
         "ROOT"
       ],
       "monkey_patches": [],
-      "sha256": "a81e4e94edd09fedb96ffd54eab2d179ba83eb101a95ef4213675626d8ae87b7",
+      "sha256": "09eab4c7756805ebf40890ab5c1b05953e2a17a0db9145269d962e0066f90c42",
       "syntax_ok": true
     },
     {
@@ -20813,7 +20813,7 @@
     "repository_possible_orphans": 227,
     "resolved_call_edges": 3696,
     "symbols": 2192,
-    "total_python_lines": 71555,
+    "total_python_lines": 71557,
     "ui_callback_edges": 499
   },
   "symbols": [
@@ -106299,13 +106299,13 @@
         "symbol.strip"
       ],
       "calls_resolved": [
-        "tools/test_architecture_map.py:104:tools.test_architecture_map.main.feature_for_suffix",
+        "tools/test_architecture_map.py:106:tools.test_architecture_map.main.feature_for_suffix",
         "tools/test_architecture_map.py:25:tools.test_architecture_map.is_app"
       ],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 168,
+      "end_line": 170,
       "feature": "other",
       "file": "tools/test_architecture_map.py",
       "file_paths": [],
@@ -106321,7 +106321,7 @@
       ],
       "kind": "function",
       "line": 29,
-      "lines": 140,
+      "lines": 142,
       "monkey_patches": [],
       "name": "main",
       "parent": null,
@@ -106332,7 +106332,7 @@
         "filesystem",
         "reports"
       ],
-      "source_sha256": "70f8ea023f15af39280e56a14f086ae03bbe2d312a2ead04f6ce45c7c1b7e299"
+      "source_sha256": "05c4e296b126fd86d195a6c6a1b28af3ea50fa6ef93d7de40f49f3e28ca6f518"
     },
     {
       "args": [
@@ -106352,16 +106352,16 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 109,
+      "end_line": 111,
       "feature": "other",
       "file": "tools/test_architecture_map.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "tools/test_architecture_map.py:104:tools.test_architecture_map.main.feature_for_suffix",
+      "id": "tools/test_architecture_map.py:106:tools.test_architecture_map.main.feature_for_suffix",
       "imports_used": [],
       "kind": "nested_function",
-      "line": 104,
+      "line": 106,
       "lines": 6,
       "monkey_patches": [],
       "name": "feature_for_suffix",

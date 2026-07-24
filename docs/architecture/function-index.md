@@ -2,7 +2,7 @@
 
 Generated from commit `48f2288e4690592c094ced3be0e5cc141f964866`.
 
-Scanned **135 Python files**, **71,555 lines**, and **2,192 symbols**.
+Scanned **135 Python files**, **71,557 lines**, and **2,192 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1923,8 +1923,8 @@ Scanned **135 Python files**, **71,555 lines**, and **2,192 symbols**.
 ## `tools/test_architecture_map.py`
 
 - **tools.test_architecture_map.is_app** (function, lines 25–26, 2 lines, risk `support`): Handles is app for the other feature.
-- **tools.test_architecture_map.main** (function, lines 29–168, 140 lines, risk `filesystem`): Handles main for the other feature.
-- **tools.test_architecture_map.main.feature_for_suffix** (nested_function, lines 104–109, 6 lines, risk `support`): Handles feature for suffix for the other feature.
+- **tools.test_architecture_map.main** (function, lines 29–170, 142 lines, risk `filesystem`): Handles main for the other feature.
+- **tools.test_architecture_map.main.feature_for_suffix** (nested_function, lines 106–111, 6 lines, risk `support`): Handles feature for suffix for the other feature.
 
 ## `tools/test_base_theme_palette_batch_11.py`
 
