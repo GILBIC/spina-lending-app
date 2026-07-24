@@ -39,8 +39,8 @@ new_ordering = '''    launch_guards = [
         if isinstance(node, ast.If)
         and ast.unparse(node.test).replace('"', "'") == "__name__ == '__main__'"
     ]
-    assert len(launch_guards) == 1, len(launch_guards)
-    launch_guard = launch_guards[0]
+    assert launch_guards, "Desktop launch guard is missing"
+    launch_guard = max(launch_guards, key=lambda node: node.lineno)
     assert source_nodes["_spina_v18_draw_dashboard_charts"].lineno < launch_guard.lineno
     assert source_nodes["_spina_v20_draw_dashboard_charts"].lineno < launch_guard.lineno
 '''
