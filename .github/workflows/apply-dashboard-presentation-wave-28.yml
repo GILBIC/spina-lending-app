@@ -34,7 +34,20 @@ jobs:
 
       - name: Apply guarded 449-line extraction
         shell: cmd
-        run: python -m tools.apply_dashboard_presentation_wave_28
+        run: |
+          if not exist artifacts mkdir artifacts
+          python -m tools.apply_dashboard_presentation_wave_28 > artifacts\dashboard-presentation-wave-28-apply.log 2>&1
+          set CODE=%ERRORLEVEL%
+          type artifacts\dashboard-presentation-wave-28-apply.log
+          exit /b %CODE%
+
+      - name: Upload extractor diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-presentation-wave-28-apply-diagnostic
+          path: artifacts/dashboard-presentation-wave-28-apply.log
+          if-no-files-found: error
 
       - name: Compile application, Dashboard module, and focused test
         shell: cmd
