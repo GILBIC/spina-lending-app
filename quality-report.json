@@ -1,306 +1,306 @@
 {
   "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-  "line_count": 45178,
-  "top_level_function_count": 620,
-  "unique_top_level_function_names": 530,
+  "line_count": 44873,
+  "top_level_function_count": 608,
+  "unique_top_level_function_names": 518,
   "duplicate_top_level_definitions": {
     "_adv_lbl": [
-      23911,
-      34060
+      23606,
+      33755
     ],
     "_adv_txt": [
-      23905,
-      34054
+      23600,
+      33749
     ],
     "_append_notice": [
-      23706,
-      33778
+      23401,
+      33473
     ],
     "_arrange_areas_dialog": [
-      22071,
-      31885
+      21766,
+      31580
     ],
     "_cancel": [
-      22049,
-      22128,
-      25897,
-      31863,
-      31942,
-      44520,
-      44962
+      21744,
+      21823,
+      25592,
+      31558,
+      31637,
+      44215,
+      44657
     ],
     "_clear_collectors_search_filters": [
-      21260,
-      31519
+      20955,
+      31214
     ],
     "_closed_paid_amt_for": [
-      22807,
-      32695
+      22502,
+      32390
     ],
     "_collectors_areas_drag_motion": [
-      21199,
-      35369
+      20894,
+      35064
     ],
     "_dash_fmt_money_short": [
-      22952,
-      32845
+      22647,
+      32540
     ],
     "_dash_norm_lt": [
-      22945,
-      32838
+      22640,
+      32533
     ],
     "_dash_norm_name": [
-      22939,
-      32832
+      22634,
+      32527
     ],
     "_dash_put": [
-      22976,
-      32869
+      22671,
+      32564
     ],
     "_draw_final_footer": [
-      23190,
-      33080
+      22885,
+      32775
     ],
     "_draw_global_header": [
-      23206,
-      33096
+      22901,
+      32791
     ],
     "_draw_page_number": [
-      23182,
-      33072
+      22877,
+      32767
     ],
     "_expand_range_inclusive": [
       2153,
       3609
     ],
     "_expected_amt_for": [
-      22727,
-      32615
+      22422,
+      32310
     ],
     "_f": [
       1419,
-      39557
+      39252
     ],
     "_fetch_clients_for": [
-      21972,
-      31786
+      21667,
+      31481
     ],
     "_fetch_route_notice": [
-      23699,
-      33758
+      23394,
+      33453
     ],
     "_fits": [
-      23158,
-      33048
+      22853,
+      32743
     ],
     "_fmt_pay_amount": [
-      23469,
-      33391
+      23164,
+      33086
     ],
     "_fmt_total_money": [
-      23416,
-      33323
+      23111,
+      33018
     ],
     "_gv": [
-      27341,
-      27690,
-      39609
+      27036,
+      27385,
+      39304
     ],
     "_iter_rows": [
-      22210,
-      32024
+      21905,
+      31719
     ],
     "_move": [
-      22104,
-      31918
+      21799,
+      31613
     ],
     "_n": [
-      22298,
-      32112
+      21993,
+      31807
     ],
     "_notice_norm": [
-      23693,
-      33637
+      23388,
+      33332
     ],
     "_ok": [
-      22046,
-      22126,
-      25896,
-      31860,
-      31940,
-      44922
+      21741,
+      21821,
+      25591,
+      31555,
+      31635,
+      44617
     ],
     "_on_collectors_multi_toggle": [
-      20603,
-      35158
+      20539,
+      34853
     ],
     "_on_collectors_select": [
-      21287,
-      38548
+      20982,
+      38243
     ],
     "_on_collectors_tree_click": [
-      20667,
-      35216
+      20565,
+      34911
     ],
     "_on_collectors_tree_wheel": [
-      21224,
-      34979,
-      35180
+      20919,
+      34674,
+      34875
     ],
     "_on_search": [
       20454,
-      43707,
-      44128
+      43402,
+      43823
     ],
     "_options_dialog": [
-      22007,
-      31821
+      21702,
+      31516
     ],
     "_parse_any_adv_range": [
       2139,
       3590
     ],
     "_pay_meta_for": [
-      23498,
-      33410
+      23193,
+      33105
     ],
     "_populate_collector_details": [
-      21345,
-      38451
+      21040,
+      38146
     ],
     "_popup": [
       20323,
-      43621,
-      44110
+      43316,
+      43805
     ],
     "_rec_get": [
-      40102,
-      40599
+      39797,
+      40294
     ],
     "_resolve_closed_paid_pair": [
-      22849,
-      32741
+      22544,
+      32436
     ],
     "_resolve_expected_pair": [
-      22746,
-      32634
+      22441,
+      32329
     ],
     "_route_aliases": [
-      22688,
-      32571
+      22383,
+      32266
     ],
     "_route_dash_add": [
-      23621,
-      33569
+      23316,
+      33264
     ],
     "_route_dash_lookup": [
-      23609,
-      33557
+      23304,
+      33252
     ],
     "_route_dash_norm_lt": [
-      23602,
-      33550
+      23297,
+      33245
     ],
     "_route_dash_norm_name": [
-      23596,
-      33544
+      23291,
+      33239
     ],
     "_route_norm": [
-      21815,
-      31635,
-      40406
+      21510,
+      31330,
+      40101
     ],
     "_s": [
-      22002,
-      31816
+      21697,
+      31511
     ],
     "_save_collector_notes": [
-      21476,
-      35001
+      21171,
+      34696
     ],
     "_save_selected_collector_notes": [
-      21446,
-      35065
+      21141,
+      34760
     ],
     "_schedule_collectors_refresh": [
-      21241,
-      31499
+      20936,
+      31194
     ],
     "_set_sort": [
       20250,
-      43553,
-      44039
+      43248,
+      43734
     ],
     "_sort_key": [
-      22278,
-      32092
+      21973,
+      31787
     ],
     "_spina__client_due_meta": [
-      24318,
-      39371
+      24013,
+      39066
     ],
     "_spina_route_adv_marker_for": [
       8554,
-      40932
+      40627
     ],
     "_validate_date": [
-      29316,
-      42995
+      29011,
+      42690
     ],
     "_wrap_text_to_width": [
-      23153,
-      33043
+      22848,
+      32738
     ],
     "_x7_daily_interest_for_balance": [
-      27824,
-      39655
+      27519,
+      39350
     ],
     "cancel": [
-      24853,
-      29429,
-      43105
+      24548,
+      29124,
+      42800
     ],
     "do_link": [
-      24807,
-      30402
+      24502,
+      30097
     ],
     "ensure_space": [
-      23306,
-      33196
+      23001,
+      32891
     ],
     "export_range_template": [
-      25853,
-      26648
+      25548,
+      26343
     ],
     "load_list": [
-      31351,
-      36698,
-      36962
+      31046,
+      36393,
+      36657
     ],
     "new_page_headers": [
-      23270,
-      33160
+      22965,
+      32855
     ],
     "print_collector_route_daily_ledger": [
-      21715,
-      31548
+      21410,
+      31243
     ],
     "print_full_daily_ledger": [
-      21927,
-      31749
+      21622,
+      31444
     ],
     "push": [
-      26458,
-      26465
+      26153,
+      26160
     ],
     "restore_selected": [
-      31371,
-      36726,
-      36992
+      31066,
+      36421,
+      36687
     ],
     "save": [
-      29323,
-      43016
+      29018,
+      42711
     ],
     "stringWidth": [
       2183,
@@ -396,24 +396,24 @@
     },
     "RenewDialog": {
       "__init__": [
-        25665,
-        30710
+        25360,
+        30405
       ],
       "_row": [
-        25674,
-        31059
+        25369,
+        30754
       ],
       "apply": [
-        25765,
-        31188
+        25460,
+        30883
       ],
       "body": [
-        25670,
-        31054
+        25365,
+        30749
       ],
       "validate": [
-        25733,
-        31148
+        25428,
+        30843
       ]
     },
     "_LockedConnection": {
@@ -432,95 +432,95 @@
   },
   "repeated_patch_targets": {
     "App.__init__": [
-      37696,
-      38415,
-      38956,
-      39190,
-      41349
+      37391,
+      38110,
+      38651,
+      38885,
+      41044
     ],
     "App._apply_ui_theme": [
-      37683,
-      41336,
-      41675
+      37378,
+      41031,
+      41370
     ],
     "App._build_clients_tab": [
-      35896,
-      43257
+      35591,
+      42952
     ],
     "App._build_collectors_tab": [
-      43742,
-      44549
+      43437,
+      44244
     ],
     "App._dashboard_visible_rows": [
-      41769,
-      42051
+      41464,
+      41746
     ],
     "App._on_collectors_select": [
-      43800,
-      44582
+      43495,
+      44277
     ],
     "App._on_mode_change": [
-      37718,
-      38437,
-      41785
+      37413,
+      38132,
+      41480
     ],
     "App._populate_dashboard_tree": [
-      41768,
-      41986,
-      42052,
-      42302
+      41463,
+      41681,
+      41747,
+      41997
     ],
     "App.apply_role_access": [
-      31478,
-      37707,
-      38426,
-      41364
+      31173,
+      37402,
+      38121,
+      41059
     ],
     "App.refresh_clients": [
-      35908,
-      38967,
-      43271
+      35603,
+      38662,
+      42966
     ],
     "App.refresh_collectors": [
-      35458,
-      43756,
-      44561
+      35153,
+      43451,
+      44256
     ],
     "App.refresh_dashboard": [
-      41767,
-      41985,
-      42053,
-      42303
+      41462,
+      41680,
+      41748,
+      41998
     ],
     "App.refresh_data_grid": [
-      41649,
-      41715
+      41344,
+      41410
     ]
   },
   "large_functions": [
     {
       "name": "print_full_daily_ledger",
-      "line": 31749,
+      "line": 31444,
       "lines": 3223
     },
     {
       "name": "_on_collectors_select",
-      "line": 21287,
+      "line": 20982,
       "lines": 3005
     },
     {
       "name": "print_full_daily_ledger",
-      "line": 21927,
+      "line": 21622,
       "lines": 2365
     },
     {
       "name": "_maybe_suggest_link_clients",
-      "line": 24652,
+      "line": 24347,
       "lines": 1988
     },
     {
       "name": "generate_client_pdf",
-      "line": 27632,
+      "line": 27327,
       "lines": 1185
     },
     {
@@ -535,7 +535,7 @@
     },
     {
       "name": "_app__client_form",
-      "line": 28868,
+      "line": 28563,
       "lines": 649
     },
     {
@@ -545,7 +545,7 @@
     },
     {
       "name": "_app_open_client_history_dialog",
-      "line": 29818,
+      "line": 29513,
       "lines": 514
     },
     {
@@ -555,12 +555,12 @@
     },
     {
       "name": "_spina_v23_client_form",
-      "line": 42673,
+      "line": 42368,
       "lines": 457
     },
     {
       "name": "attach_direct_integration",
-      "line": 25978,
+      "line": 25673,
       "lines": 440
     },
     {
@@ -575,7 +575,7 @@
     },
     {
       "name": "_spina_v27_collector_editor_dialog",
-      "line": 44195,
+      "line": 43890,
       "lines": 350
     },
     {
@@ -585,7 +585,7 @@
     },
     {
       "name": "_spina_v25_build_collectors_tab",
-      "line": 43392,
+      "line": 43087,
       "lines": 346
     },
     {
@@ -600,7 +600,7 @@
     },
     {
       "name": "import_clients_from_excel",
-      "line": 25019,
+      "line": 24714,
       "lines": 315
     },
     {
@@ -610,7 +610,7 @@
     },
     {
       "name": "_spina_v27_build_collectors_tab",
-      "line": 43866,
+      "line": 43561,
       "lines": 293
     },
     {
@@ -625,7 +625,7 @@
     },
     {
       "name": "_spina_save_closed_collector_route_copy",
-      "line": 40073,
+      "line": 39768,
       "lines": 281
     },
     {
@@ -640,17 +640,17 @@
     },
     {
       "name": "refresh_clients",
-      "line": 24384,
+      "line": 24079,
       "lines": 263
     },
     {
       "name": "_spina_dashboard_fetch_rows",
-      "line": 37091,
+      "line": 36786,
       "lines": 262
     },
     {
       "name": "RenewDialog._compute_stats",
-      "line": 30744,
+      "line": 30439,
       "lines": 259
     },
     {
@@ -659,17 +659,17 @@
       "lines": 258
     }
   ],
-  "broad_except_count": 3290,
-  "pass_only_except_count": 803,
+  "broad_except_count": 3248,
+  "pass_only_except_count": 770,
   "bare_except_count": 4,
-  "silent_broad_except_count": 2260,
+  "silent_broad_except_count": 2218,
   "broad_except_by_risk_area": {
     "backup/restore": 46,
     "excel/import-export": 124,
     "general": 1523,
     "login/accounts": 106,
     "payment/balance": 135,
-    "reports/pdf": 884,
+    "reports/pdf": 842,
     "startup/database": 472
   },
   "silent_broad_except_by_risk_area": {
@@ -678,7 +678,7 @@
     "general": 1031,
     "login/accounts": 60,
     "payment/balance": 89,
-    "reports/pdf": 694,
+    "reports/pdf": 652,
     "startup/database": 299
   },
   "broad_except_examples": [
@@ -1582,31 +1582,31 @@
       "kind": "f-string"
     },
     {
-      "line": 32254,
+      "line": 31949,
       "kind": "f-string"
     },
     {
-      "line": 32269,
+      "line": 31964,
       "kind": "f-string"
     },
     {
-      "line": 32542,
+      "line": 32237,
       "kind": "f-string"
     },
     {
-      "line": 37115,
+      "line": 36810,
       "kind": "% formatting"
     },
     {
-      "line": 37145,
+      "line": 36840,
       "kind": "% formatting"
     },
     {
-      "line": 37151,
+      "line": 36846,
       "kind": "% formatting"
     },
     {
-      "line": 40662,
+      "line": 40357,
       "kind": "f-string"
     }
   ],

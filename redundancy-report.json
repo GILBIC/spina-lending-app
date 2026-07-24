@@ -1,104 +1,104 @@
 {
   "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-  "line_count": 45178,
-  "function_definitions": 281,
-  "unique_function_names": 274,
+  "line_count": 44873,
+  "function_definitions": 269,
+  "unique_function_names": 262,
   "duplicate_top_level_definitions": {
     "_collectors_areas_drag_motion": [
-      21199,
-      35369
+      20894,
+      35064
     ],
     "_on_collectors_multi_toggle": [
-      20603,
-      35158
+      20539,
+      34853
     ],
     "_on_collectors_select": [
-      21287,
-      38548
+      20982,
+      38243
     ],
     "_on_collectors_tree_click": [
-      20667,
-      35216
+      20565,
+      34911
     ],
     "_on_collectors_tree_wheel": [
-      34979,
-      35180
+      34674,
+      34875
     ],
     "_spina__client_due_meta": [
-      24318,
-      39371
+      24013,
+      39066
     ],
     "_spina_route_adv_marker_for": [
       8554,
-      40932
+      40627
     ]
   },
   "duplicate_class_methods": {},
   "repeated_monkey_patch_assignments": {
     "App.__init__": [
-      38956,
-      39190,
-      37696,
-      38415,
-      41349
+      38651,
+      38885,
+      37391,
+      38110,
+      41044
     ],
     "App._apply_ui_theme": [
-      37683,
-      41336,
-      41675
+      37378,
+      41031,
+      41370
     ],
     "App._build_clients_tab": [
-      43257,
-      35896
+      42952,
+      35591
     ],
     "App._build_collectors_tab": [
-      43742,
-      44549
+      43437,
+      44244
     ],
     "App._dashboard_visible_rows": [
-      41769,
-      42051
+      41464,
+      41746
     ],
     "App._on_collectors_select": [
-      43800,
-      44582
+      43495,
+      44277
     ],
     "App._on_mode_change": [
-      37718,
-      38437,
-      41785
+      37413,
+      38132,
+      41480
     ],
     "App._populate_dashboard_tree": [
-      41768,
-      41986,
-      42052,
-      42302
+      41463,
+      41681,
+      41747,
+      41997
     ],
     "App.apply_role_access": [
-      31478,
-      37707,
-      38426,
-      41364
+      31173,
+      37402,
+      38121,
+      41059
     ],
     "App.refresh_clients": [
-      38967,
-      35908,
-      43271
+      38662,
+      35603,
+      42966
     ],
     "App.refresh_collectors": [
-      35458,
-      43756,
-      44561
+      35153,
+      43451,
+      44256
     ],
     "App.refresh_dashboard": [
-      41767,
-      41985,
-      42053,
-      42303
+      41462,
+      41680,
+      41748,
+      41998
     ],
     "App.refresh_data_grid": [
-      41649,
-      41715
+      41344,
+      41410
     ]
   },
   "exact_duplicate_top_level_bodies": []
