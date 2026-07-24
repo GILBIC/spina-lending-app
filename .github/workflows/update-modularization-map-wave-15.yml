@@ -1,0 +1,70 @@
+name: Update modularization map for Wave 15
+
+on:
+  push:
+    branches: [agent/legacy-dashboard-controls-batch-15]
+
+permissions:
+  contents: write
+
+jobs:
+  update-map:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out extraction branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/legacy-dashboard-controls-batch-15
+          fetch-depth: 0
+
+      - name: Apply verified Wave 15 map replacements
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/modularization-map.md")
+          text = path.read_text(encoding="utf-8")
+
+          replacements = [
+              ("> **Tracked main state:** after merged PR #113  ", "> **Tracked main state:** after merged PR #115  "),
+              ("| Focused helper functions extracted from the large desktop source | **57** |", "| Focused helper functions extracted from the large desktop source | **59** |"),
+              ("| Accelerated modularization waves completed | **14** |", "| Accelerated modularization waves completed | **15** |"),
+              ("| Latest completed extraction | **Wave 14 / PR #113** |", "| Latest completed extraction | **Wave 15 / PR #115** |"),
+              ("| Next step | **Wave 15 read-only inspection** |", "| Next step | **Wave 16 read-only inspection** |"),
+              ("| `spina_app/ui_controls.py` | Cash Control labeled entries and Treeview styling; Client Information Log buttons and Treeview styling; Clients and Collector Route Treeview styling | 6 |", "| `spina_app/ui_controls.py` | Cash Control labeled entries and Treeview styling; Client Information Log buttons and Treeview styling; Clients and Collector Route Treeview styling; legacy Dashboard filter buttons and Treeview styling | 8 |"),
+              ("| **Total** |  | **57** |", "| **Total** |  | **59** |"),
+              ("  - `_spina_v27_style_route_trees` — PR #109\n", "  - `_spina_v27_style_route_trees` — PR #109\n  - `_spina_v17_update_filter_buttons` — PR #115\n  - `_spina_v17_style_dashboard_table` — PR #115\n"),
+              ("| 15 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |", "| 15 | #114 inspection | #115 | `ui_controls.py` | Legacy Dashboard filter-button and Treeview styling helpers | ✅ Passed and merged |\n| 16 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |"),
+              ("| 15 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |", "| 15 | #114 | #115 | `ui_controls.py` | Legacy Dashboard filter-button and Treeview style helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |\n| 16 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |"),
+          ]
+
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"Expected exactly one map occurrence for {old!r}, found {count}")
+              text = text.replace(old, new, 1)
+
+          required = [
+              "**59**",
+              "**Wave 15 / PR #115**",
+              "**Wave 16 read-only inspection**",
+              "_spina_v17_update_filter_buttons` — PR #115",
+              "_spina_v17_style_dashboard_table` — PR #115",
+              "| 15 | #114 inspection | #115 | `ui_controls.py`",
+              "| 16 | Not started |",
+          ]
+          for marker in required:
+              if marker not in text:
+                  raise RuntimeError(f"Missing updated map marker: {marker}")
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Commit updated map and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/update-modularization-map-wave-15.yml
+          git add docs/modularization-map.md
+          git commit -m "Document modularization Wave 15"
+          git push origin HEAD:agent/legacy-dashboard-controls-batch-15
