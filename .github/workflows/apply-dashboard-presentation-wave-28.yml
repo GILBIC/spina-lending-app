@@ -28,6 +28,10 @@ jobs:
           gh --version
           gh auth status
 
+      - name: Correct Dashboard import selector
+        shell: cmd
+        run: python -m tools.patch_dashboard_presentation_wave_28_import_selector
+
       - name: Compile guarded extractor
         shell: cmd
         run: python -m py_compile tools\apply_dashboard_presentation_wave_28.py
@@ -74,6 +78,7 @@ jobs:
         run: |
           del tools\apply_dashboard_presentation_wave_28.py
           del tools\inventory_dashboard_presentation_wave_28.py
+          del tools\patch_dashboard_presentation_wave_28_import_selector.py
           del .github\workflows\apply-dashboard-presentation-wave-28.yml
           del .github\workflows\dashboard-presentation-wave-28-inventory.yml
 
