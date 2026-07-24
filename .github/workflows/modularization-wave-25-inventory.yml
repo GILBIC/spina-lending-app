@@ -1,0 +1,38 @@
+name: Modularization Wave 25 inventory
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    if: github.head_ref == 'agent/modularization-wave-25-inventory'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify local Python
+        shell: cmd
+        run: |
+          where python
+          python --version
+
+      - name: Compile inventory tool
+        shell: cmd
+        run: python -m py_compile tools\inventory_login_presentation_wave_25.py
+
+      - name: Inspect login presentation candidates
+        shell: cmd
+        run: python -m tools.inventory_login_presentation_wave_25
+
+      - name: Upload inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: modularization-wave-25-inventory
+          path: wave-25-inventory.json
