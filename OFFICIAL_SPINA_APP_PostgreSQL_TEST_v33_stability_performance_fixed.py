@@ -9928,35 +9928,6 @@ class App:
         # Preview removed; keep as no-op for backward compatibility
         return
 
-    def _update_data_toolbar(self, *args, **kwargs):
-        try:
-            var = getattr(self, '_db_close_info_var', None)
-            if not var:
-                return
-            ds = self._get_databank_focus_date()
-            if not ds:
-                var.set('')
-                return
-            rec = None
-            try:
-                rec = self.db.get_databank_day_close(ds) if hasattr(self, 'db') else None
-            except Exception:
-                rec = None
-            if rec:
-                try:
-                    variance = float(rec.get('variance') or 0.0)
-                except Exception:
-                    variance = 0.0
-                lock_txt = 'CLOSED' if bool(int(rec.get('is_closed') or 0)) else 'OPEN'
-                stat_txt = (rec.get('variance_status') or 'Balanced').strip() or 'Balanced'
-                var_txt = fmt_currency(abs(variance)) if abs(variance) >= 0.005 else fmt_currency(0)
-                wf_txt = (rec.get('variance_workflow_status') or 'Open').strip() or 'Open'
-                var.set(f"{ds} · Combined · {lock_txt} · {wf_txt} · {stat_txt} {var_txt}")
-            else:
-                var.set(f"{ds} · Combined · not closed")
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_dayclose_toolbar', 'suppressed exception excpass_dayclose_toolbar', __spina_exc)
-            pass
 
     def _get_databank_focus_date(self):
         from datetime import date as _date
@@ -13190,100 +13161,8 @@ class App:
         except Exception:
             return
 
-    def _looks_like_data_grid(self, tv):
-        """Heuristic: columns contain 'client' + 'area' and many day columns (d1..d31 or numeric headings)."""
-        try:
-            cols = list(tv["columns"])
-        except Exception as __spina_exc:
-            __spina_logger = globals().get('_log_suppressed_once')
-            if callable(__spina_logger):
-                __spina_logger('silent_ui_13176__looks_like_data_grid', 'suppressed UI/startup exception at line 13176', __spina_exc)
-            return False
-        cols_l = [str(c).lower() for c in cols]
-        if not cols:
-            return False
-        # Must have at least two non-day columns
-        has_client = any("client" in c for c in cols_l)
-        has_area   = any("area" in c for c in cols_l)
-        # Count day-like columns
-        day_like = 0
-        for c in cols:
-            cl = str(c).lower()
-            if cl.startswith("d") and cl[1:].isdigit():
-                day_like += 1
-        # If headings are numeric, the column names might be generic: check heading text
-        if day_like < 10:
-            try:
-                for i, c in enumerate(cols, start=1):
-                    try:
-                        txt = str(tv.heading(c).get("text", "")).strip()
-                        if txt.isdigit():
-                            day_like += 1
-                    except Exception:
-                        continue
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0245', 'suppressed exception excpass_0245', __spina_exc)
-                pass
-        return has_client and has_area and day_like >= 10
 
-    def _locate_data_tree(self):
-        """Find and memoize the actual Treeview used by the Data grid."""
-        try:
-            import tkinter.ttk as ttk
-            # If already valid and exists, return it
-            tv = getattr(self, "days_tree", None)
-            if tv and str(tv.winfo_class()).lower() == "treeview":
-                try:
-                    tv["columns"]
-                    return tv
-                except Exception as __spina_exc:
-                    _log_suppressed_once('excpass_0246', 'suppressed exception excpass_0246', __spina_exc)
-                    pass
-            # Walk the UI starting at root to find a matching Treeview
-            for w in self._walk_widgets(self.root):
-                try:
-                    if str(w.winfo_class()).lower() == "treeview":
-                        if self._looks_like_data_grid(w):
-                            self.days_tree = w
-                            return w
-                except Exception:
-                    continue
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0247', 'suppressed exception excpass_0247', __spina_exc)
-            pass
-        return None
 
-    def _ensure_databank_edit_bindings(self):
-        """Bind double-click/F2 editing for Data grid (auto-detected) only once per Treeview instance."""
-        tv = self._locate_data_tree()
-        if tv is None:
-            return
-        # Use a per-instance flag on the widget itself to avoid rebinding
-        try:
-            if getattr(tv, "_edit_bindings_done", False):
-                return
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0248', 'suppressed exception excpass_0248', __spina_exc)
-            pass
-        try:
-            tv.bind('<Double-1>', self._begin_cell_edit)
-            tv.bind('<F2>', self._begin_cell_edit, add='+')
-            tv.bind('<Button-1>', self._remember_cell_click, add='+')
-            tv.bind('<Delete>', self.delete_selected_cell, add='+')
-            try:
-                tv.bind('<MouseWheel>', self._on_mousewheel_sync, add='+')
-                tv.bind('<Button-4>', self._on_mousewheel_sync, add='+')
-                tv.bind('<Button-5>', self._on_mousewheel_sync, add='+')
-            except Exception as e:
-                _log_ignored("ui.bind failed", e, key="ui.bind_failed")
-            try:
-                setattr(tv, "_edit_bindings_done", True)
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0249', 'suppressed exception excpass_0249', __spina_exc)
-                pass
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0250', 'suppressed exception excpass_0250', __spina_exc)
-            pass
 
 
     def _begin_cell_edit(self, event=None):
@@ -13842,22 +13721,7 @@ class App:
         messagebox.showinfo("Delete a Day", f"Deleted {deleted} Data Bank transaction row(s) for {ds}.{extra}")
 
 
-    def _show_audit_tab(self):
-        try:
-            self.nb.add(self.tab_audit, text='Audit')
-        except Exception:
-            try:
-                self.nb.tab(self.tab_audit, text='Audit')
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_audit_tab_show', 'suppressed exception excpass_audit_tab_show', __spina_exc)
-                pass
 
-    def _hide_audit_tab(self):
-        try:
-            self.nb.hide(self.tab_audit)
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_audit_tab_hide', 'suppressed exception excpass_audit_tab_hide', __spina_exc)
-            pass
 
     def _audit_money_text(self, value):
         try:
@@ -15854,38 +15718,6 @@ class App:
 
 
     # ---------------- Modern Sidebar Navigation ----------------
-    def _side_nav_items(self):
-        """Return visible main tabs as (tab_widget, title, icon)."""
-        specs = [
-            (getattr(self, 'tab_data', None), 'Data Bank', '▦'),
-            (getattr(self, 'tab_reports', None), 'Reports', '▤'),
-            (getattr(self, 'tab_clients', None), 'Clients', '◉'),
-            (getattr(self, 'tab_collectors', None), "Collector's Route", '⌁'),
-            (getattr(self, 'tab_audit', None), 'Audit', '✓'),
-            (getattr(self, 'tab_system_data', None), 'Data', '⚙'),
-        ]
-        items = []
-        try:
-            tabs = set(str(t) for t in self.nb.tabs())
-        except Exception:
-            tabs = set()
-        for tab, title, icon in specs:
-            if tab is None:
-                continue
-            try:
-                tid = str(tab)
-                if tid not in tabs:
-                    continue
-                state = str(self.nb.tab(tab, 'state') or 'normal')
-                if state == 'hidden':
-                    continue
-                items.append((tab, title, icon))
-            except Exception as __spina_exc:
-                __spina_logger = globals().get('_log_suppressed_once')
-                if callable(__spina_logger):
-                    __spina_logger('silent_ui_15857__side_nav_items', 'suppressed UI/startup exception at line 15857', __spina_exc)
-                continue
-        return items
 
     def _select_side_tab(self, tab):
         try:
@@ -15902,146 +15734,7 @@ class App:
             _log_suppressed_once('modern_ui_pass_15891', 'modern UI sidebar selection refresh skipped', __spina_exc)
             pass
 
-    def _rebuild_side_nav(self):
-        """Rebuild the modern left-side navigation from the currently visible notebook tabs."""
-        frame = getattr(self, 'sidebar_frame', None)
-        if frame is None:
-            return
-        try:
-            for child in frame.winfo_children():
-                child.destroy()
-        except Exception as __spina_exc:
-            _log_suppressed_once('modern_ui_pass_15902', 'modern UI sidebar child cleanup skipped', __spina_exc)
-            pass
 
-        try:
-            p = getattr(self, '_ui_colors', None) or self._theme_palette()
-        except Exception:
-            p = {'bg': '#f7f7fb', 'panel': '#ffffff', 'fg': '#1a1a1a', 'muted': '#666666', 'accent': '#ffd1e6', 'border': '#dddddd'}
-
-        try:
-            frame.configure(width=190)
-            frame.pack_propagate(False)
-        except Exception as __spina_exc:
-            _log_suppressed_once('modern_ui_pass_15913', 'modern UI sidebar frame layout skipped', __spina_exc)
-            pass
-
-        # App label inside sidebar
-        try:
-            title = tk.Label(
-                frame,
-                text='SPINA',
-                anchor='w',
-                bg=p.get('panel', '#ffffff'),
-                fg=p.get('fg', '#1a1a1a'),
-                font=('Segoe UI' if os.name == 'nt' else 'TkDefaultFont', 15, 'bold'),
-                padx=8,
-                pady=4,
-            )
-            title.pack(fill='x', pady=(0, 2))
-            self._side_nav_labels.append(title)
-        except Exception:
-            pass
-
-        try:
-            subtitle = tk.Label(
-                frame,
-                text='PostgreSQL Edition',
-                anchor='w',
-                bg=p.get('panel', '#ffffff'),
-                fg=p.get('muted', '#666666'),
-                font=('Segoe UI' if os.name == 'nt' else 'TkDefaultFont', 9),
-                padx=8,
-                pady=0,
-            )
-            subtitle.pack(fill='x', pady=(0, 12))
-            self._side_nav_labels.append(subtitle)
-        except Exception as __spina_exc:
-            _log_suppressed_once('modern_ui_pass_15946', 'modern UI sidebar subtitle build skipped', __spina_exc)
-            pass
-
-        self._side_nav_buttons = {}
-        family = 'Segoe UI' if os.name == 'nt' else 'TkDefaultFont'
-        for tab, title, icon in self._side_nav_items():
-            try:
-                btn = tk.Button(
-                    frame,
-                    text=f'  {icon}  {title}',
-                    anchor='w',
-                    relief='flat',
-                    bd=0,
-                    padx=10,
-                    pady=10,
-                    cursor='hand2',
-                    font=(family, 10, 'bold'),
-                    command=lambda t=tab: self._select_side_tab(t),
-                )
-                btn.pack(fill='x', pady=3)
-                self._side_nav_buttons[str(tab)] = btn
-            except Exception as e:
-                try:
-                    _log_suppressed_once('side_nav_btn', 'sidebar button failed', e)
-                except Exception as __spina_exc:
-                    _log_suppressed_once('modern_ui_pass_15970', 'modern UI sidebar button logging fallback skipped', __spina_exc)
-                    pass
-
-        try:
-            bottom = ttk.Frame(frame, style='Sidebar.TFrame')
-            bottom.pack(side='bottom', fill='x', pady=(12, 0))
-            role_text = f"{getattr(self, 'user_name', '')} • {getattr(self, 'user_role', '')}"
-            lbl = tk.Label(
-                bottom,
-                text=role_text,
-                anchor='w',
-                bg=p.get('panel', '#ffffff'),
-                fg=p.get('muted', '#666666'),
-                font=(family, 8),
-                padx=8,
-                pady=4,
-                wraplength=160,
-            )
-            lbl.pack(fill='x')
-            self._side_nav_labels.append(lbl)
-        except Exception as __spina_exc:
-            _log_suppressed_once('modern_ui_pass_15990', 'modern UI sidebar user label build skipped', __spina_exc)
-            pass
-
-        self._refresh_side_nav_selection()
-
-    def _refresh_side_nav_selection(self):
-        """Update sidebar button colors to match the selected notebook tab."""
-        buttons = getattr(self, '_side_nav_buttons', {}) or {}
-        if not buttons:
-            return
-        try:
-            selected = str(self.nb.select())
-        except Exception:
-            selected = ''
-        try:
-            p = getattr(self, '_ui_colors', None) or self._theme_palette()
-        except Exception:
-            p = {'panel': '#ffffff', 'fg': '#1a1a1a', 'muted': '#666666', 'accent': '#ffd1e6', 'button_active': '#f3e6eb'}
-        is_dark = str(getattr(self, 'ui_theme', 'light')).lower().startswith('d')
-        normal_bg = p.get('panel', '#ffffff')
-        normal_fg = p.get('fg', '#1a1a1a')
-        selected_bg = '#3a3d46' if is_dark else p.get('accent', '#ffd1e6')
-        selected_fg = '#ffffff' if is_dark else '#1a1a1a'
-        hover_bg = p.get('button_active', selected_bg)
-        for tid, btn in list(buttons.items()):
-            try:
-                active = (tid == selected)
-                bg = selected_bg if active else normal_bg
-                fg = selected_fg if active else normal_fg
-                btn.configure(
-                    bg=bg,
-                    fg=fg,
-                    activebackground=hover_bg,
-                    activeforeground=fg,
-                    highlightthickness=0,
-                )
-            except Exception as __spina_exc:
-                _log_suppressed_once('modern_ui_pass_16026', 'modern UI sidebar button selection style skipped', __spina_exc)
-                pass
 
     def _refresh_modern_shell_theme(self):
         """Apply theme colors to the modern sidebar shell and rebuild nav labels/buttons."""
@@ -16066,49 +15759,6 @@ class App:
                 pass
 
     # ---------------- Modern top bar + quick loan-type switch ----------------
-    def _header_palette(self):
-        """Compact color palette for the modern top header."""
-        try:
-            base = getattr(self, '_ui_colors', None) or self._theme_palette()
-        except Exception:
-            base = {}
-        try:
-            dark = str(getattr(self, 'ui_theme', 'dark')).lower().startswith('d')
-        except Exception:
-            dark = True
-        if dark:
-            return {
-                'bg': '#15161c',
-                'panel': '#1f2028',
-                'panel2': '#272936',
-                'fg': '#f4f5f7',
-                'muted': '#aeb3c2',
-                'border': '#333746',
-                'accent': '#ff7ab6',
-                'accent2': '#22c55e',
-                'chip': '#2b2e3b',
-                'chip_active': '#ff7ab6',
-                'chip_active_fg': '#1b0f16',
-                'button': '#242734',
-                'button_hover': '#313545',
-                'danger': '#f87171',
-            }
-        return {
-            'bg': '#f7f8fb',
-            'panel': '#ffffff',
-            'panel2': '#f1f5f9',
-            'fg': '#111827',
-            'muted': '#64748b',
-            'border': '#d8dee9',
-            'accent': '#ec4899',
-            'accent2': '#16a34a',
-            'chip': '#eef2f7',
-            'chip_active': '#ec4899',
-            'chip_active_fg': '#ffffff',
-            'button': '#ffffff',
-            'button_hover': '#f3f4f6',
-            'danger': '#dc2626',
-        }
 
     def _tk_button_hover(self, widget, normal_bg=None, hover_bg=None):
         """Small hover helper for plain tk buttons/labels."""
@@ -16123,33 +15773,6 @@ class App:
             _log_suppressed_once('modern_ui_pass_16103', 'modern UI button hover binding skipped', __spina_exc)
             pass
 
-    def _make_header_button(self, master, text, command, *, primary=False, danger=False, width=None):
-        """Create a flatter, modern top-bar button using tk.Button for better dark-mode control."""
-        hp = self._header_palette()
-        family = 'Segoe UI' if os.name == 'nt' else 'TkDefaultFont'
-        bg = hp['accent'] if primary else (hp['danger'] if danger else hp['button'])
-        fg = hp['chip_active_fg'] if primary else hp['fg']
-        hover = '#f472b6' if primary else hp['button_hover']
-        btn = tk.Button(
-            master,
-            text=text,
-            command=command,
-            relief='flat',
-            bd=0,
-            padx=12,
-            pady=7,
-            width=width or 0,
-            cursor='hand2',
-            bg=bg,
-            fg=fg,
-            activebackground=hover,
-            activeforeground=fg,
-            font=(family, 9, 'bold'),
-            highlightthickness=1,
-            highlightbackground=hp['border'],
-        )
-        self._tk_button_hover(btn, bg, hover)
-        return btn
 
     def _set_mode(self, mode):
         """Fast switch between Regular and 7x7 from the modern segmented control."""
@@ -16175,38 +15798,6 @@ class App:
             except Exception:
                 pass
 
-    def _refresh_mode_toggle(self):
-        """Update the Regular/7x7 segmented buttons after a mode change or theme change."""
-        hp = self._header_palette()
-        try:
-            cur = '7x7' if self._mode_filter() == '7x7' else 'Regular'
-        except Exception:
-            cur = 'Regular'
-        for key, btn in list((getattr(self, '_mode_buttons', {}) or {}).items()):
-            try:
-                active = (key == cur)
-                bg = hp['chip_active'] if active else hp['chip']
-                fg = hp['chip_active_fg'] if active else hp['fg']
-                btn.configure(
-                    bg=bg,
-                    fg=fg,
-                    activebackground=bg,
-                    activeforeground=fg,
-                    highlightbackground=hp['accent'] if active else hp['border'],
-                )
-            except Exception as __spina_exc:
-                _log_suppressed_once('modern_ui_pass_16176', 'modern UI mode button style skipped', __spina_exc)
-                pass
-        try:
-            if getattr(self, 'mode_status_label', None) is not None:
-                self.mode_status_label.configure(
-                    text=f"Current view: {cur}",
-                    bg=hp['panel'],
-                    fg=hp['muted'],
-                )
-        except Exception as __spina_exc:
-            _log_suppressed_once('modern_ui_pass_16185', 'modern UI mode status label refresh skipped', __spina_exc)
-            pass
 
     def _refresh_header_theme(self):
         """Apply the current theme colors to the modern top header."""
@@ -16845,16 +16436,7 @@ class App:
             _log_suppressed_once('excpass_0358', 'suppressed exception excpass_0358', __spina_exc)
             pass
 
-    def _vscroll(self, *args):
-        try:
-            self.name_tree.yview(*args)
-            if self.days_tree: self.days_tree.yview(*args)
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0368', 'suppressed exception excpass_0368', __spina_exc)
-            pass
 
-    def _month_label(self):
-        return f"{calendar.month_name[self.grid_month]} {self.grid_year}"
     def goto_current_month(self):
         today = date.today()
         self.grid_year = today.year
@@ -16870,127 +16452,7 @@ class App:
         self.month_lbl.config(text=self._month_label()); self.refresh_data_grid()
 
     
-    def _on_mousewheel_sync(self, event):
-        """Mouse wheel scroll should move both name_tree (left) and days_tree (right) together."""
-        try:
-            delta = 0
-            # Windows uses event.delta; on Linux it's often Button-4/5
-            if hasattr(event, 'delta') and event.delta:
-                delta = -1 if event.delta > 0 else 1
-            elif getattr(event, 'num', None) in (4, 5):
-                delta = -1 if event.num == 4 else 1
-    
-            name_tv = getattr(self, 'name_tree', None)
-            days_tv = getattr(self, 'days_tree', None)
-    
-            if delta:
-                if name_tv:
-                    try:
-                        name_tv.yview_scroll(delta, 'units')
-                    except Exception as __spina_exc:
-                        _log_suppressed_once('excpass_0369', 'suppressed exception excpass_0369', __spina_exc)
-                        pass
-                if days_tv:
-                    try:
-                        days_tv.yview_scroll(delta, 'units')
-                    except Exception as __spina_exc:
-                        _log_suppressed_once('excpass_0370', 'suppressed exception excpass_0370', __spina_exc)
-                        pass
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0371', 'suppressed exception excpass_0371', __spina_exc)
-            pass
-        return 'break'
 
-    def _resize_databank_columns(self, *_):
-        """Resize Data Bank columns responsively.
-
-        Supports 'freeze panes' layout:
-        - name_tree shows Client + Area (fixed, no horizontal scroll)
-        - days_tree shows day columns with horizontal scroll
-        """
-        try:
-            name_tv = getattr(self, "name_tree", None)
-            days_tv = getattr(self, "days_tree", None)
-            if not days_tv:
-                return
-
-            # Determine days list from columns (prefer explicit day cols)
-            cols = list(getattr(days_tv, "cget", lambda k: ())("columns") or days_tv["columns"])
-            day_cols = [c for c in cols if str(c).lower().startswith("d") and str(c)[1:].isdigit()]
-
-            # Basic guards
-            if not day_cols:
-                return
-
-            # Available width inside container
-            try:
-                total_w = max(400, int(self.inner.winfo_width()))
-            except Exception:
-                total_w = 900
-
-            # Left pane widths (Client + Area)
-            client_w = 280
-            area_w = 150
-
-            # Auto-fit area a little based on content (from name_tv if available, else days_tv)
-            try:
-                import tkinter.font as tkfont
-                f = tkfont.nametofont("TkDefaultFont")
-                sample = []
-                tv_for_area = name_tv if name_tv else days_tv
-                for iid in tv_for_area.get_children()[:200]:
-                    try:
-                        sample.append(str(tv_for_area.set(iid, "area")))
-                    except Exception as __spina_exc:
-                        _log_suppressed_once('excpass_0372', 'suppressed exception excpass_0372', __spina_exc)
-                        pass
-                if sample:
-                    m = max(sample, key=len)
-                    area_w = min(240, max(110, f.measure(m) + 34))
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0373', 'suppressed exception excpass_0373', __spina_exc)
-                pass
-
-            if name_tv:
-                try:
-                    name_tv.column("client", width=client_w, minwidth=160, stretch=False, anchor="w")
-                except Exception as __spina_exc:
-                    _log_suppressed_once('excpass_0374', 'suppressed exception excpass_0374', __spina_exc)
-                    pass
-                try:
-                    name_tv.column("area", width=area_w, minwidth=110, stretch=False, anchor="w")
-                except Exception as __spina_exc:
-                    _log_suppressed_once('excpass_0375', 'suppressed exception excpass_0375', __spina_exc)
-                    pass
-
-            # Keep client/area hidden in the right pane (still present for logic, but 0-width)
-            try:
-                days_tv.column("client", width=0, minwidth=0, stretch=False)
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0376', 'suppressed exception excpass_0376', __spina_exc)
-                pass
-            try:
-                days_tv.column("area", width=0, minwidth=0, stretch=False)
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0377', 'suppressed exception excpass_0377', __spina_exc)
-                pass
-
-            # Day column width calculation for the right pane
-            # Reserve left pane + scrollbar gutter
-            reserve = client_w + area_w + 26  # scrollbar + padding
-            avail_days_w = max(200, total_w - reserve)
-            day_min = 64
-            per = max(day_min, int(avail_days_w / max(1, len(day_cols))))
-
-            for c in day_cols:
-                try:
-                    days_tv.column(c, width=per, minwidth=day_min, stretch=False, anchor="center")
-                except Exception as __spina_exc:
-                    _log_suppressed_once('excpass_0378', 'suppressed exception excpass_0378', __spina_exc)
-                    pass
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0379', 'suppressed exception excpass_0379', __spina_exc)
-            pass
     def refresh_data_grid(self):
 
         # View-only reminder
@@ -19876,14 +19338,6 @@ class App:
             _log_suppressed_once('excpass_0449', 'suppressed exception excpass_0449', __spina_exc)
             pass
 
-    def _update_toolbar_states(self):
-        try:
-            if hasattr(self, "_del_client_btn"):
-                has_sel = bool(self.clients_tree.selection())
-                self._del_client_btn.config(state=("normal" if has_sel else "disabled"))
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0450', 'suppressed exception excpass_0450', __spina_exc)
-            pass
         
 
     # ---------------- Areas master / validation ----------------
@@ -20121,6 +19575,58 @@ class App:
         self.refresh_reports()
         self.refresh_data_grid()
         messagebox.showinfo('Done', f'Updated area for {updated} client(s).')
+
+# Navigation + Data Bank shell helpers extracted in Wave 29.
+from spina_app.navigation import (
+    configure_navigation_dependencies as _wave29_configure_navigation,
+    _update_data_toolbar as _wave29_nav_update_data_toolbar,
+    _side_nav_items as _wave29_nav_side_nav_items,
+    _rebuild_side_nav as _wave29_nav_rebuild_side_nav,
+    _refresh_side_nav_selection as _wave29_nav_refresh_side_nav_selection,
+    _header_palette as _wave29_nav_header_palette,
+    _make_header_button as _wave29_nav_make_header_button,
+    _refresh_mode_toggle as _wave29_nav_refresh_mode_toggle,
+    _vscroll as _wave29_nav_vscroll,
+    _month_label as _wave29_nav_month_label,
+    _on_mousewheel_sync as _wave29_nav_on_mousewheel_sync,
+    _update_toolbar_states as _wave29_nav_update_toolbar_states,
+)
+from spina_app.tabs.data_bank_shell import (
+    configure_data_bank_shell_dependencies as _wave29_configure_data_bank_shell,
+    _looks_like_data_grid as _wave29_dbshell_looks_like_data_grid,
+    _locate_data_tree as _wave29_dbshell_locate_data_tree,
+    _ensure_databank_edit_bindings as _wave29_dbshell_ensure_databank_edit_bindings,
+    _show_audit_tab as _wave29_dbshell_show_audit_tab,
+    _hide_audit_tab as _wave29_dbshell_hide_audit_tab,
+    _resize_databank_columns as _wave29_dbshell_resize_databank_columns,
+)
+
+_wave29_configure_navigation(
+    log_suppressed_once=_log_suppressed_once,
+    fmt_currency_callback=fmt_currency,
+)
+_wave29_configure_data_bank_shell(
+    log_suppressed_once=_log_suppressed_once,
+    log_ignored=_log_ignored,
+)
+
+App._update_data_toolbar = _wave29_nav_update_data_toolbar
+App._side_nav_items = _wave29_nav_side_nav_items
+App._rebuild_side_nav = _wave29_nav_rebuild_side_nav
+App._refresh_side_nav_selection = _wave29_nav_refresh_side_nav_selection
+App._header_palette = _wave29_nav_header_palette
+App._make_header_button = _wave29_nav_make_header_button
+App._refresh_mode_toggle = _wave29_nav_refresh_mode_toggle
+App._vscroll = _wave29_nav_vscroll
+App._month_label = _wave29_nav_month_label
+App._on_mousewheel_sync = _wave29_nav_on_mousewheel_sync
+App._update_toolbar_states = _wave29_nav_update_toolbar_states
+App._looks_like_data_grid = _wave29_dbshell_looks_like_data_grid
+App._locate_data_tree = _wave29_dbshell_locate_data_tree
+App._ensure_databank_edit_bindings = _wave29_dbshell_ensure_databank_edit_bindings
+App._show_audit_tab = _wave29_dbshell_show_audit_tab
+App._hide_audit_tab = _wave29_dbshell_hide_audit_tab
+App._resize_databank_columns = _wave29_dbshell_resize_databank_columns
 
 
 def _build_collectors_tab(self):
