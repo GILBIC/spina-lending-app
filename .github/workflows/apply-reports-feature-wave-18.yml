@@ -1,0 +1,50 @@
+name: Apply Reports feature Wave 18
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/feature-module-wave-18'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - name: Check out Wave 18 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/feature-module-wave-18
+          fetch-depth: 0
+
+      - name: Verify local Python
+        shell: cmd
+        run: |
+          where python
+          python --version
+
+      - name: Apply guarded Reports extraction
+        shell: cmd
+        run: python tools\apply_reports_feature_wave_18.py
+
+      - name: Compile extracted state
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\tabs\reports.py
+          python -m py_compile tools\test_reports_feature_wave_18.py
+
+      - name: Run Reports regression
+        shell: cmd
+        run: python tools\test_reports_feature_wave_18.py
+
+      - name: Commit verified application files
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app\tabs\reports.py tools\fixtures\reports_feature_wave_18_manifest.json tools\test_reports_feature_wave_18.py
+          git diff --cached --quiet && exit /b 0
+          git commit -m "Extract Reports feature module [skip ci]"
+          git push origin HEAD:agent/feature-module-wave-18
