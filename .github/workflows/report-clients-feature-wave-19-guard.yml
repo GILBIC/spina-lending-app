@@ -1,0 +1,28 @@
+name: Report Clients feature Wave 19 guard
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    if: github.head_ref == 'agent/clients-feature-module-wave-19'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 10
+    steps:
+      - name: Check out Wave 19 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/clients-feature-module-wave-19
+
+      - name: Generate current Clients source guard report
+        shell: cmd
+        run: python tools\report_clients_feature_wave_19_guard.py
+
+      - name: Upload guard report
+        uses: actions/upload-artifact@v4
+        with:
+          name: clients-wave-19-guard
+          path: artifacts/clients-wave-19-guard.json
