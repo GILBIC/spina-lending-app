@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from spina_app.theme_palettes import (
+    _spina_v17_dash_colors,
     _spina_v21_cash_colors,
     _spina_v22_reports_colors as _spina_v23_clients_colors,
     _spina_v24_cilog_colors,
