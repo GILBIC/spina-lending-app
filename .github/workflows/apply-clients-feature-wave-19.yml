@@ -47,7 +47,15 @@ jobs:
 
       - name: Run Clients regression
         shell: cmd
-        run: python -m tools.test_clients_feature_wave_19
+        run: python -m tools.test_clients_feature_wave_19 > artifacts\clients-wave-19-regression.log 2>&1
+
+      - name: Upload regression traceback
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clients-wave-19-regression-log
+          path: artifacts/clients-wave-19-regression.log
+          if-no-files-found: ignore
 
       - name: Run redundancy audit
         shell: cmd
