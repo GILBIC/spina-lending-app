@@ -1,0 +1,33 @@
+name: Patch Clients feature Wave 19 guard
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.head_ref == 'agent/clients-feature-module-wave-19'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 10
+    steps:
+      - name: Check out Wave 19 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/clients-feature-module-wave-19
+          fetch-depth: 0
+
+      - name: Remove obsolete guard entry
+        shell: cmd
+        run: python tools\patch_clients_feature_wave_19_guard.py
+
+      - name: Commit guard correction
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools\apply_clients_feature_wave_19.py tools\fixtures\clients_feature_wave_19_manifest.json
+          git diff --cached --quiet && exit /b 0
+          git commit -m "Correct Clients Wave 19 guard [skip ci]"
+          git push origin HEAD:agent/clients-feature-module-wave-19
