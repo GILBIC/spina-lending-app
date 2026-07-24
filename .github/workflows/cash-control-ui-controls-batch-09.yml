@@ -1,9 +1,7 @@
 name: Cash Control UI controls batch 09
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read

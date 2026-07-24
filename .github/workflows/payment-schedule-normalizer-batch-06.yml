@@ -1,9 +1,7 @@
 name: Payment schedule normalizer batch 06
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read

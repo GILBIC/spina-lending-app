@@ -1,9 +1,7 @@
 name: Client and route tree style batch 12
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read

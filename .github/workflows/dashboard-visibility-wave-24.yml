@@ -1,7 +1,7 @@
 name: Dashboard visibility Wave 24
 
 on:
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
