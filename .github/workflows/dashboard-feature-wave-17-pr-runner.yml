@@ -52,6 +52,20 @@ jobs:
           path: dashboard-wave-17-extraction.log
           if-no-files-found: error
 
+      - name: Upload generated Dashboard files
+        if: steps.extraction.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-wave-17-generated-files
+          path: |
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+            spina_app/tabs/__init__.py
+            spina_app/tabs/dashboard.py
+            tools/fixtures/dashboard_feature_wave_17_manifest.json
+            tools/test_dashboard_feature_wave_17.py
+            .github/workflows/dashboard-feature-wave-17.yml
+          if-no-files-found: error
+
       - name: Stop after extraction failure
         if: steps.extraction.outcome != 'success'
         run: |
