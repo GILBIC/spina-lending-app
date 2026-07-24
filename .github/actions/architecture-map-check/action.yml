@@ -1,0 +1,23 @@
+name: SPINA Architecture Map Check
+description: Regenerate and validate the permanent SPINA architecture map inside the current job.
+
+runs:
+  using: composite
+  steps:
+    - name: Compile architecture mapper
+      shell: cmd
+      run: |
+        python -m py_compile tools\generate_architecture_map.py
+        python -m py_compile tools\test_architecture_map.py
+
+    - name: Regenerate architecture map
+      shell: cmd
+      run: python -m tools.generate_architecture_map
+
+    - name: Validate architecture map
+      shell: cmd
+      run: python -m tools.test_architecture_map
+
+    - name: Confirm committed maps are current
+      shell: cmd
+      run: git diff --exit-code -- architecture-map.json docs\architecture
