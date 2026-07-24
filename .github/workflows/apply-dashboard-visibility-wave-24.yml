@@ -27,9 +27,11 @@ jobs:
           gh --version
           gh auth status
 
-      - name: Apply guarded extraction
+      - name: Patch headless regression and apply guarded extraction
         shell: cmd
         run: |
+          python -m py_compile tools\patch_dashboard_visibility_wave_24_test.py
+          python -m tools.patch_dashboard_visibility_wave_24_test
           python -m py_compile tools\apply_dashboard_visibility_wave_24.py
           python -m tools.apply_dashboard_visibility_wave_24
 
