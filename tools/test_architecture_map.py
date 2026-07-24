@@ -62,6 +62,8 @@ def main() -> None:
     module_files = {module["file"] for module in data["modules"]}
     assert any(name.startswith("OFFICIAL_SPINA_APP_") for name in module_files)
     assert "spina_app/tabs/collectors.py" in module_files
+    assert "spina_app/navigation.py" in module_files
+    assert "spina_app/tabs/data_bank_shell.py" in module_files
 
     indexes = data["indexes"]
     for key in (
@@ -113,12 +115,12 @@ def main() -> None:
         ".LoanDB.add_client": "clients",
         ".LoanDB.delete_transaction": "payments",
         ".App._postgres_cfg": "database",
-        ".App._side_nav_items": "navigation",
+        "._side_nav_items": "navigation",
         ".App._build_data_tab": "data_bank",
         "._adv_paid_on_dates_covering": "payments",
         ".App._access_prefs_path": "authentication",
         ".App._show_conflicts": "collectors",
-        ".App._locate_data_tree": "data_bank",
+        "._locate_data_tree": "data_bank",
         ".App._walk_widgets": "utilities",
         ".NoteEditorDialog._save_note": "notes",
         "._spina_apply_dashboard_role": "dashboard",
