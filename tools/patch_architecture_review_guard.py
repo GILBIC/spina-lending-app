@@ -1,4 +1,4 @@
-"""Temporarily correct the review fixer's Git blob hash guard."""
+"""Temporarily correct the architecture review fixer before execution."""
 
 from pathlib import Path
 
@@ -24,5 +24,9 @@ text = text.replace(
     "assert git_blob_sha(TEST) == EXPECTED_TEST_SHA",
     1,
 )
+old_sub = "updated, count = re.subn(pattern, replacement, text, count=1, flags=re.DOTALL)"
+new_sub = "updated, count = re.subn(pattern, lambda _match: replacement, text, count=1, flags=re.DOTALL)"
+assert text.count(old_sub) == 1, "Expected one direct re.sub replacement"
+text = text.replace(old_sub, new_sub, 1)
 PATH.write_text(text, encoding="utf-8")
-print("Corrected temporary architecture review guard.")
+print("Corrected temporary architecture review fixer.")
