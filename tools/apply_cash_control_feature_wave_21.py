@@ -49,14 +49,30 @@ def main() -> None:
     lines = text.splitlines()
     functions = functions_for(text)
 
-    missing = [name for name in TARGETS + PROTECTED + BRIDGED if name not in functions]
+    missing = [name for name in TARGETS + PROTECTED if name not in functions]
     if missing:
         raise RuntimeError(f"Missing expected current-main functions: {missing}")
 
     first_line = min(functions[name].lineno for name in TARGETS)
+    binding_lines = {name: node.lineno for name, node in functions.items()}
+    tree = ast.parse(text)
+    for node in tree.body:
+        if isinstance(node, (ast.Assign, ast.AnnAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            for target in targets:
+                for item in ast.walk(target):
+                    if isinstance(item, ast.Name) and isinstance(item.ctx, ast.Store):
+                        binding_lines.setdefault(item.id, node.lineno)
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            for alias in node.names:
+                binding_lines.setdefault(alias.asname or alias.name.split(".")[0], node.lineno)
+
+    missing_bindings = [name for name in BRIDGED if name not in binding_lines]
+    if missing_bindings:
+        raise RuntimeError(f"Missing application-owned dependency bindings: {missing_bindings}")
     for name in BRIDGED:
-        if functions[name].lineno >= first_line:
-            raise RuntimeError(f"Dependency {name} is not defined before extraction point")
+        if binding_lines[name] >= first_line:
+            raise RuntimeError(f"Dependency {name} is not bound before extraction point")
 
     sources: dict[str, str] = {}
     manifest_functions = []
