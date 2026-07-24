@@ -3,19 +3,19 @@
 > Permanent source of truth for tracking the separation of the SPINA desktop application into smaller modules.
 >
 > **Last updated:** 2026-07-24  
-> **Tracked main state:** after merged PR #113  
+> **Tracked main state:** after merged PR #115  
 > **Primary desktop source:** `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py`
 
 ## Current status
 
 | Item | Status |
 |---|---:|
-| Focused helper functions extracted from the large desktop source | **57** |
+| Focused helper functions extracted from the large desktop source | **59** |
 | Focused helper modules receiving extracted functions | **13** |
 | Hierarchical Area production modules | **3** |
-| Accelerated modularization waves completed | **14** |
-| Latest completed extraction | **Wave 14 / PR #113** |
-| Next step | **Wave 15 read-only inspection** |
+| Accelerated modularization waves completed | **15** |
+| Latest completed extraction | **Wave 15 / PR #115** |
+| Next step | **Wave 16 read-only inspection** |
 
 The current approach intentionally starts with low-risk, behavior-preserving helpers. Payment allocation, balances, principal, interest, 7x7 calculations, renewal formulas, report totals, PDF mathematics, authentication, roles, and critical PostgreSQL write paths remain protected until focused tests exist.
 
@@ -65,8 +65,8 @@ flowchart LR
 | `spina_app/ui_helpers.py` | Rounded canvas drawing and summary-card value updates | 6 |
 | `spina_app/theme_palettes.py` | Modern and legacy Dashboard, Cash Control, Client Information Log, Reports/Clients, and Collector/Collector Route light/dark palettes | 7 |
 | `spina_app/ui_cards.py` | Cash Control, Client Information Log, and Collector Route card constructors | 3 |
-| `spina_app/ui_controls.py` | Cash Control labeled entries and Treeview styling; Client Information Log buttons and Treeview styling; Clients and Collector Route Treeview styling | 6 |
-| **Total** |  | **57** |
+| `spina_app/ui_controls.py` | Cash Control labeled entries and Treeview styling; Client Information Log buttons and Treeview styling; Clients and Collector Route Treeview styling; legacy Dashboard filter buttons and Treeview styling | 8 |
+| **Total** |  | **59** |
 
 ### Hierarchical Area modules
 
@@ -161,6 +161,8 @@ flowchart LR
   - `_spina_v24_cilog_style_tree` — PR #105
   - `_spina_v23_style_clients_tree` — PR #109
   - `_spina_v27_style_route_trees` — PR #109
+  - `_spina_v17_update_filter_buttons` — PR #115
+  - `_spina_v17_style_dashboard_table` — PR #115
 
 ## Modularization timeline
 
@@ -215,7 +217,8 @@ PR #67 was a paused note-helper attempt and closed without merging. PR #68 was a
 | 12 | #108 inspection | #109 | `ui_controls.py` | Clients and Collector Route Treeview styling | ✅ Passed and merged |
 | 13 | #110 inspection | #111 | `ui_cards.py` | Collector Route summary-card constructor | ✅ Passed and merged |
 | 14 | #112 inspection | #113 | `theme_palettes.py` | Legacy Dashboard light/dark palette helpers | ✅ Passed and merged |
-| 15 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |
+| 15 | #114 inspection | #115 | `ui_controls.py` | Legacy Dashboard filter-button and Treeview styling helpers | ✅ Passed and merged |
+| 16 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |
 
 Temporary inspection/apply PRs are deliberately closed without merging and are not counted as completed production waves.
 
@@ -281,7 +284,8 @@ A deferred item becomes eligible only after focused behavior or calculation test
 | 12 | #108 | #109 | `ui_controls.py` | Clients and Collector Route Treeview style helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
 | 13 | #110 | #111 | `ui_cards.py` | Collector Route summary-card constructor | ✅ | ✅ | ✅ | Passed Windows smoke test |
 | 14 | #112 | #113 | `theme_palettes.py` | Two legacy Dashboard palette helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
-| 15 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |
+| 15 | #114 | #115 | `ui_controls.py` | Legacy Dashboard filter-button and Treeview style helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
+| 16 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |
 
 Status legend:
 
