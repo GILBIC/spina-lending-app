@@ -32,7 +32,11 @@ jobs:
         shell: cmd
         run: |
           if not exist artifacts mkdir artifacts
-          python -m py_compile tools/apply_navigation_databank_shell_wave_29.py > artifacts\wave-29-apply.log 2>&1
+          python -m py_compile tools/patch_wave29_override_guard.py > artifacts\wave-29-apply.log 2>&1
+          if errorlevel 1 type artifacts\wave-29-apply.log & exit /b 1
+          python -m tools.patch_wave29_override_guard >> artifacts\wave-29-apply.log 2>&1
+          if errorlevel 1 type artifacts\wave-29-apply.log & exit /b 1
+          python -m py_compile tools/apply_navigation_databank_shell_wave_29.py >> artifacts\wave-29-apply.log 2>&1
           if errorlevel 1 type artifacts\wave-29-apply.log & exit /b 1
           python -m tools.apply_navigation_databank_shell_wave_29 >> artifacts\wave-29-apply.log 2>&1
           set CODE=%ERRORLEVEL%
@@ -74,6 +78,7 @@ jobs:
           del tools\inventory_navigation_databank_shell_wave_29.py
           del tools\inspect_navigation_databank_shell_wave_29_sources.py
           del tools\apply_navigation_databank_shell_wave_29.py
+          del tools\patch_wave29_override_guard.py
           del .github\workflows\navigation-databank-shell-wave-29-inventory.yml
           del .github\workflows\apply-navigation-databank-shell-wave-29.yml
           rmdir /S /Q artifacts
