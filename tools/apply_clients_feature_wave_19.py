@@ -35,7 +35,6 @@ PROTECTED = [
     "_spina_v23_client_form",
     "_spina_v23_add_client_dialog",
     "_spina_v23_on_client_edit",
-    "_spina_v23_refresh_clients",
 ]
 
 DEPENDENCIES = (
