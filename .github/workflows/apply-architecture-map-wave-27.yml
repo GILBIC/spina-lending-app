@@ -1,0 +1,51 @@
+name: Apply Architecture Map Wave 27
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/architecture-map-wave-27'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out architecture branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/architecture-map-wave-27
+          fetch-depth: 0
+
+      - name: Verify Python and compile mapper
+        run: |
+          python --version
+          python -m py_compile tools/generate_architecture_map.py
+          python -m py_compile tools/test_architecture_map.py
+
+      - name: Generate complete SPINA architecture map
+        run: python -m tools.generate_architecture_map
+
+      - name: Validate generated map and documents
+        run: python -m tools.test_architecture_map
+
+      - name: Show architecture summary
+        run: |
+          python - <<'PY'
+          import json
+          data = json.load(open('architecture-map.json', encoding='utf-8'))
+          print(json.dumps(data['summary'], indent=2))
+          print('Suggested batches:', len(data['indexes']['modularization_suggestions']))
+          PY
+
+      - name: Commit permanent maps and remove temporary workflow
+        run: |
+          rm .github/workflows/apply-architecture-map-wave-27.yml
+          git config user.name "GILBIC"
+          git config user.email "267608671+GILBIC@users.noreply.github.com"
+          git add architecture-map.json docs/architecture .github/workflows/apply-architecture-map-wave-27.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "Generate complete SPINA architecture maps Wave 27"
+          git push origin HEAD:agent/architecture-map-wave-27
