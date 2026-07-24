@@ -1,0 +1,183 @@
+name: Dashboard feature Wave 17 inventory
+
+on:
+  push:
+    branches: [agent/dashboard-feature-module-wave-17]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile current application
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+
+      - name: Build Dashboard feature inventory
+        run: |
+          python - <<'PY'
+          import ast
+          import hashlib
+          import json
+          from pathlib import Path
+
+          app = Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py")
+          source = app.read_text(encoding="utf-8")
+          tree = ast.parse(source, filename=str(app))
+          lines = source.splitlines()
+
+          functions = {
+              node.name: node
+              for node in tree.body
+              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+          }
+          targets = {
+              name: node for name, node in functions.items()
+              if name.startswith("_spina_v17_")
+          }
+
+          builtin_names = set(dir(__builtins__))
+          module_defs = set(functions)
+          module_imports = set()
+          module_assignments = set()
+          for node in tree.body:
+              if isinstance(node, ast.Import):
+                  for alias in node.names:
+                      module_imports.add(alias.asname or alias.name.split(".")[0])
+              elif isinstance(node, ast.ImportFrom):
+                  for alias in node.names:
+                      module_imports.add(alias.asname or alias.name)
+              elif isinstance(node, (ast.Assign, ast.AnnAssign)):
+                  candidates = node.targets if isinstance(node, ast.Assign) else [node.target]
+                  for target in candidates:
+                      for child in ast.walk(target):
+                          if isinstance(child, ast.Name):
+                              module_assignments.add(child.id)
+
+          def bound_names(node):
+              names = set()
+              for arg in list(node.args.posonlyargs) + list(node.args.args) + list(node.args.kwonlyargs):
+                  names.add(arg.arg)
+              if node.args.vararg:
+                  names.add(node.args.vararg.arg)
+              if node.args.kwarg:
+                  names.add(node.args.kwarg.arg)
+              for child in ast.walk(node):
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Param)):
+                      names.add(child.id)
+                  elif isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Import, ast.ImportFrom)) and child is not node:
+                      if hasattr(child, "name"):
+                          names.add(child.name)
+              return names
+
+          callers = {name: [] for name in targets}
+          for caller_name, caller_node in functions.items():
+              called = {
+                  child.func.id
+                  for child in ast.walk(caller_node)
+                  if isinstance(child, ast.Call) and isinstance(child.func, ast.Name)
+              }
+              for target in targets:
+                  if target in called:
+                      callers[target].append(caller_name)
+
+          risk_words = {
+              "db", "sql", "query", "cursor", "commit", "rollback", "delete", "insert", "update",
+              "payment", "balance", "principal", "interest", "renew", "offset", "7x7", "pdf",
+              "report", "file", "path", "picture", "image", "backup", "restore", "auth", "role"
+          }
+
+          report = []
+          for name, node in sorted(targets.items(), key=lambda item: item[1].lineno):
+              segment = ast.get_source_segment(source, node) or "\n".join(lines[node.lineno - 1:node.end_lineno])
+              bound = bound_names(node)
+              loaded = {
+                  child.id for child in ast.walk(node)
+                  if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load)
+              }
+              calls = []
+              attr_calls = []
+              for child in ast.walk(node):
+                  if isinstance(child, ast.Call):
+                      if isinstance(child.func, ast.Name):
+                          calls.append(child.func.id)
+                      elif isinstance(child.func, ast.Attribute):
+                          parts = []
+                          cur = child.func
+                          while isinstance(cur, ast.Attribute):
+                              parts.append(cur.attr)
+                              cur = cur.value
+                          if isinstance(cur, ast.Name):
+                              parts.append(cur.id)
+                          attr_calls.append(".".join(reversed(parts)))
+              external = sorted(
+                  loaded - bound - builtin_names - {name}
+              )
+              text_lower = segment.lower()
+              risk_hits = sorted(word for word in risk_words if word in text_lower)
+              report.append({
+                  "name": name,
+                  "signature": ast.unparse(node.args),
+                  "lineno": node.lineno,
+                  "end_lineno": node.end_lineno,
+                  "line_count": node.end_lineno - node.lineno + 1,
+                  "sha256": hashlib.sha256(segment.encode("utf-8")).hexdigest(),
+                  "external_names": external,
+                  "calls": sorted(set(calls)),
+                  "attribute_calls": sorted(set(attr_calls)),
+                  "callers": sorted(callers[name]),
+                  "risk_hits": risk_hits,
+                  "source": segment,
+              })
+
+          summary = {
+              "app": str(app),
+              "prefix": "_spina_v17_",
+              "function_count": len(report),
+              "total_lines": sum(item["line_count"] for item in report),
+              "functions": report,
+          }
+          out = Path("dashboard-wave-17-inventory")
+          out.mkdir(exist_ok=True)
+          (out / "inventory.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+          md = [
+              "# Dashboard Wave 17 feature inventory",
+              "",
+              f"Functions: **{summary['function_count']}**",
+              f"Combined source lines: **{summary['total_lines']}**",
+              "",
+              "| Function | Lines | Callers | Risk words | External names |",
+              "|---|---:|---|---|---|",
+          ]
+          for item in report:
+              md.append(
+                  "| `{}` | {} | {} | {} | {} |".format(
+                      item["name"],
+                      item["line_count"],
+                      ", ".join(f"`{x}`" for x in item["callers"]) or "—",
+                      ", ".join(item["risk_hits"]) or "—",
+                      ", ".join(f"`{x}`" for x in item["external_names"]) or "—",
+                  )
+              )
+          (out / "inventory.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+          print(json.dumps({"function_count": len(report), "total_lines": summary["total_lines"]}, indent=2))
+          PY
+
+      - name: Upload Dashboard inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-wave-17-inventory
+          path: dashboard-wave-17-inventory/
+          if-no-files-found: error
