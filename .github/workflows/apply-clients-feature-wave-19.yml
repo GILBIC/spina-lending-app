@@ -74,3 +74,5 @@ jobs:
           git diff --cached --quiet && exit /b 0
           git commit -m "Extract Clients presentation module [skip ci]"
           git push origin HEAD:agent/clients-feature-module-wave-19
+
+# Normal-user trigger after the verified Clients palette bridge correction.
