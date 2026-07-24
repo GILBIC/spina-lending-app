@@ -1,8 +1,8 @@
 {
   "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-  "line_count": 45216,
-  "top_level_function_count": 621,
-  "unique_top_level_function_names": 531,
+  "line_count": 45178,
+  "top_level_function_count": 620,
+  "unique_top_level_function_names": 530,
   "duplicate_top_level_definitions": {
     "_adv_lbl": [
       23911,
@@ -27,7 +27,7 @@
       31863,
       31942,
       44520,
-      45000
+      44962
     ],
     "_clear_collectors_search_filters": [
       21260,
@@ -128,7 +128,7 @@
       25896,
       31860,
       31940,
-      44960
+      44922
     ],
     "_on_collectors_multi_toggle": [
       20603,
@@ -659,15 +659,15 @@
       "lines": 258
     }
   ],
-  "broad_except_count": 3291,
+  "broad_except_count": 3290,
   "pass_only_except_count": 803,
   "bare_except_count": 4,
-  "silent_broad_except_count": 2261,
+  "silent_broad_except_count": 2260,
   "broad_except_by_risk_area": {
     "backup/restore": 46,
     "excel/import-export": 124,
     "general": 1523,
-    "login/accounts": 107,
+    "login/accounts": 106,
     "payment/balance": 135,
     "reports/pdf": 884,
     "startup/database": 472
@@ -676,7 +676,7 @@
     "backup/restore": 34,
     "excel/import-export": 53,
     "general": 1031,
-    "login/accounts": 61,
+    "login/accounts": 60,
     "payment/balance": 89,
     "reports/pdf": 694,
     "startup/database": 299

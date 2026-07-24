@@ -324,3 +324,46 @@ def _spina_v18_dashboard_palette(self=None):
         "purple": "#a78bfa",
         "cyan": "#22d3ee",
     }
+
+# Login color palette extracted in Wave 25.
+
+def _spina_v32_login_colors(self=None):
+    try:
+        theme = str(getattr(self, "ui_theme", "dark") or "dark").lower()
+    except Exception:
+        theme = "dark"
+
+    if theme.startswith("l"):
+        return {
+            "bg": "#f3f6fb",
+            "left": "#111827",
+            "panel": "#ffffff",
+            "card": "#ffffff",
+            "card2": "#f8fafc",
+            "border": "#d6dde8",
+            "fg": "#111827",
+            "muted": "#64748b",
+            "left_fg": "#ffffff",
+            "left_muted": "#cbd5e1",
+            "blue": "#2563eb",
+            "green": "#16a34a",
+            "red": "#dc2626",
+            "soft": "#e8eef7",
+        }
+
+    return {
+        "bg": "#0f1117",
+        "left": "#111827",
+        "panel": "#171a23",
+        "card": "#20232d",
+        "card2": "#262a36",
+        "border": "#343b4d",
+        "fg": "#f8fafc",
+        "muted": "#aab3c2",
+        "left_fg": "#ffffff",
+        "left_muted": "#cbd5e1",
+        "blue": "#60a5fa",
+        "green": "#22c55e",
+        "red": "#fb7185",
+        "soft": "#252b38",
+    }
