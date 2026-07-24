@@ -519,3 +519,67 @@ def _spina_v17_refresh_dashboard(self):
             self.status_var.set("Dashboard refresh failed. See data/spina_app.log.")
         except Exception:
             pass
+
+# Dashboard visibility filters extracted in Wave 24.
+
+def _spina_dashboard_visible_rows(self):
+    try:
+        rows = list(getattr(self, '_dashboard_rows', []) or [])
+        loan_filter = str(getattr(self, 'dashboard_loan_filter_var', tk.StringVar(value='All')).get() or 'All')
+        status_filter = str(getattr(self, 'dashboard_status_filter_var', tk.StringVar(value='Finishing Priority')).get() or 'Finishing Priority')
+        search = str(getattr(self, 'dashboard_search_var', tk.StringVar(value='')).get() or '').strip().lower()
+
+        if loan_filter != 'All':
+            rows = [r for r in rows if r.get('loan_type') == loan_filter]
+        if status_filter == 'Finishing Priority':
+            rows = [r for r in rows if r.get('status') in ('Finishing Now', 'Near Completion', 'Due Soon', 'Overdue')]
+        elif status_filter != 'All Active':
+            rows = [r for r in rows if r.get('status') == status_filter]
+        if search:
+            rows = [r for r in rows if search in str(r.get('name') or '').lower() or search in str(r.get('area') or '').lower()]
+        return rows
+    except Exception:
+        return list(getattr(self, '_dashboard_rows', []) or [])
+
+
+def _spina_v19_visible_dashboard_rows(self):
+    """Dashboard should show all active clients by default, not only priority clients."""
+    try:
+        rows = list(getattr(self, "_dashboard_rows", []) or [])
+
+        loan_filter = str(getattr(self, "dashboard_loan_filter_var", tk.StringVar(value="All")).get() or "All")
+        status_filter = str(getattr(self, "dashboard_status_filter_var", tk.StringVar(value="All Active")).get() or "All Active")
+        search = str(getattr(self, "dashboard_search_var", tk.StringVar(value="")).get() or "").strip().lower()
+
+        if loan_filter != "All":
+            rows = [r for r in rows if str(r.get("loan_type") or "") == loan_filter]
+
+        # All Active / All = keep every active row loaded by _spina_dashboard_fetch_rows().
+        # Priority = filter only clients that need attention.
+        if status_filter == "Priority":
+            rows = [r for r in rows if r.get("status") in ("Finishing Now", "Near Completion", "Due Soon", "Overdue")]
+        elif status_filter not in ("All", "All Active", "All Clients"):
+            rows = [r for r in rows if str(r.get("status") or "") == status_filter]
+
+        if search:
+            rows = [
+                r for r in rows
+                if search in str(r.get("name") or "").lower()
+                or search in str(r.get("area") or "").lower()
+                or search in str(r.get("status") or "").lower()
+            ]
+
+        return rows
+    except Exception:
+        return list(getattr(self, "_dashboard_rows", []) or [])
+
+
+def _spina_v20_visible_rows(self):
+    try:
+        # Use v19 default behavior: All Active by default.
+        return _spina_v19_visible_dashboard_rows(self)
+    except Exception:
+        try:
+            return list(getattr(self, "_dashboard_rows", []) or [])
+        except Exception:
+            return []

@@ -1,8 +1,8 @@
 {
   "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-  "line_count": 45268,
-  "top_level_function_count": 624,
-  "unique_top_level_function_names": 534,
+  "line_count": 45216,
+  "top_level_function_count": 621,
+  "unique_top_level_function_names": 531,
   "duplicate_top_level_definitions": {
     "_adv_lbl": [
       23911,
@@ -26,8 +26,8 @@
       25897,
       31863,
       31942,
-      44572,
-      45052
+      44520,
+      45000
     ],
     "_clear_collectors_search_filters": [
       21260,
@@ -79,7 +79,7 @@
     ],
     "_f": [
       1419,
-      39570
+      39557
     ],
     "_fetch_clients_for": [
       21972,
@@ -104,7 +104,7 @@
     "_gv": [
       27341,
       27690,
-      39622
+      39609
     ],
     "_iter_rows": [
       22210,
@@ -128,7 +128,7 @@
       25896,
       31860,
       31940,
-      45012
+      44960
     ],
     "_on_collectors_multi_toggle": [
       20603,
@@ -136,7 +136,7 @@
     ],
     "_on_collectors_select": [
       21287,
-      38561
+      38548
     ],
     "_on_collectors_tree_click": [
       20667,
@@ -149,8 +149,8 @@
     ],
     "_on_search": [
       20454,
-      43759,
-      44180
+      43707,
+      44128
     ],
     "_options_dialog": [
       22007,
@@ -166,16 +166,16 @@
     ],
     "_populate_collector_details": [
       21345,
-      38464
+      38451
     ],
     "_popup": [
       20323,
-      43673,
-      44162
+      43621,
+      44110
     ],
     "_rec_get": [
-      40115,
-      40612
+      40102,
+      40599
     ],
     "_resolve_closed_paid_pair": [
       22849,
@@ -208,7 +208,7 @@
     "_route_norm": [
       21815,
       31635,
-      40419
+      40406
     ],
     "_s": [
       22002,
@@ -228,8 +228,8 @@
     ],
     "_set_sort": [
       20250,
-      43605,
-      44091
+      43553,
+      44039
     ],
     "_sort_key": [
       22278,
@@ -237,15 +237,15 @@
     ],
     "_spina__client_due_meta": [
       24318,
-      39384
+      39371
     ],
     "_spina_route_adv_marker_for": [
       8554,
-      40945
+      40932
     ],
     "_validate_date": [
       29316,
-      43047
+      42995
     ],
     "_wrap_text_to_width": [
       23153,
@@ -253,12 +253,12 @@
     ],
     "_x7_daily_interest_for_balance": [
       27824,
-      39668
+      39655
     ],
     "cancel": [
       24853,
       29429,
-      43157
+      43105
     ],
     "do_link": [
       24807,
@@ -300,7 +300,7 @@
     ],
     "save": [
       29323,
-      43068
+      43016
     ],
     "stringWidth": [
       2183,
@@ -432,69 +432,69 @@
   },
   "repeated_patch_targets": {
     "App.__init__": [
-      37709,
-      38428,
-      38969,
-      39203,
-      41362
+      37696,
+      38415,
+      38956,
+      39190,
+      41349
     ],
     "App._apply_ui_theme": [
-      37696,
-      41349,
-      41688
+      37683,
+      41336,
+      41675
     ],
     "App._build_clients_tab": [
       35896,
-      43309
+      43257
     ],
     "App._build_collectors_tab": [
-      43794,
-      44601
+      43742,
+      44549
     ],
     "App._dashboard_visible_rows": [
-      41782,
-      42094
+      41769,
+      42051
     ],
     "App._on_collectors_select": [
-      43852,
-      44634
+      43800,
+      44582
     ],
     "App._on_mode_change": [
-      37731,
-      38450,
-      41798
+      37718,
+      38437,
+      41785
     ],
     "App._populate_dashboard_tree": [
-      41781,
-      41999,
-      42095,
-      42354
+      41768,
+      41986,
+      42052,
+      42302
     ],
     "App.apply_role_access": [
       31478,
-      37720,
-      38439,
-      41377
+      37707,
+      38426,
+      41364
     ],
     "App.refresh_clients": [
       35908,
-      38980,
-      43323
+      38967,
+      43271
     ],
     "App.refresh_collectors": [
       35458,
-      43808,
-      44613
+      43756,
+      44561
     ],
     "App.refresh_dashboard": [
-      41780,
-      41998,
-      42096,
-      42355
+      41767,
+      41985,
+      42053,
+      42303
     ],
     "App.refresh_data_grid": [
-      41662,
-      41728
+      41649,
+      41715
     ]
   },
   "large_functions": [
@@ -555,7 +555,7 @@
     },
     {
       "name": "_spina_v23_client_form",
-      "line": 42725,
+      "line": 42673,
       "lines": 457
     },
     {
@@ -575,7 +575,7 @@
     },
     {
       "name": "_spina_v27_collector_editor_dialog",
-      "line": 44247,
+      "line": 44195,
       "lines": 350
     },
     {
@@ -585,7 +585,7 @@
     },
     {
       "name": "_spina_v25_build_collectors_tab",
-      "line": 43444,
+      "line": 43392,
       "lines": 346
     },
     {
@@ -610,7 +610,7 @@
     },
     {
       "name": "_spina_v27_build_collectors_tab",
-      "line": 43918,
+      "line": 43866,
       "lines": 293
     },
     {
@@ -625,7 +625,7 @@
     },
     {
       "name": "_spina_save_closed_collector_route_copy",
-      "line": 40086,
+      "line": 40073,
       "lines": 281
     },
     {
@@ -659,14 +659,14 @@
       "lines": 258
     }
   ],
-  "broad_except_count": 3295,
+  "broad_except_count": 3291,
   "pass_only_except_count": 803,
   "bare_except_count": 4,
-  "silent_broad_except_count": 2265,
+  "silent_broad_except_count": 2261,
   "broad_except_by_risk_area": {
     "backup/restore": 46,
     "excel/import-export": 124,
-    "general": 1527,
+    "general": 1523,
     "login/accounts": 107,
     "payment/balance": 135,
     "reports/pdf": 884,
@@ -675,7 +675,7 @@
   "silent_broad_except_by_risk_area": {
     "backup/restore": 34,
     "excel/import-export": 53,
-    "general": 1035,
+    "general": 1031,
     "login/accounts": 61,
     "payment/balance": 89,
     "reports/pdf": 694,
@@ -1606,7 +1606,7 @@
       "kind": "% formatting"
     },
     {
-      "line": 40675,
+      "line": 40662,
       "kind": "f-string"
     }
   ],
