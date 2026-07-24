@@ -1,0 +1,71 @@
+name: Apply Architecture Review Fixes
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/architecture-map-wave-27'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out architecture branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/architecture-map-wave-27
+          fetch-depth: 0
+
+      - name: Verify Python and GitHub CLI
+        shell: cmd
+        run: |
+          where python
+          python --version
+          where gh
+          gh --version
+          gh auth status
+
+      - name: Apply guarded review fixes
+        shell: cmd
+        run: |
+          python -m py_compile tools\fix_architecture_map_review.py
+          python -m tools.fix_architecture_map_review
+
+      - name: Regenerate corrected maps
+        shell: cmd
+        run: |
+          python -m py_compile tools\generate_architecture_map.py
+          python -m py_compile tools\test_architecture_map.py
+          python -m tools.generate_architecture_map
+          python -m tools.test_architecture_map
+
+      - name: Confirm review blockers are gone
+        shell: powershell
+        run: |
+          $risk = Get-Content docs\architecture\risk-map.md -Raw
+          $db = Get-Content docs\architecture\database-access-map.md -Raw
+          if ($risk -match 'Suggested larger application modularization batches[\s\S]*tools/test_') { throw 'Tooling remains in application modularization batches' }
+          foreach ($bad in @('Data','Excel','IF','SET','a','an')) {
+            if ($db.Contains("### ``$bad``")) { throw "False table remains: $bad" }
+          }
+
+      - name: Remove temporary review fixer
+        shell: cmd
+        run: |
+          del tools\fix_architecture_map_review.py
+          del .github\workflows\apply-architecture-review-fixes.yml
+
+      - name: Commit and push corrected architecture maps
+        shell: cmd
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader 2>nul || ver >nul
+          gh auth setup-git
+          git config user.name "GILBIC"
+          git config user.email "267608671+GILBIC@users.noreply.github.com"
+          git add tools\generate_architecture_map.py tools\test_architecture_map.py architecture-map.json docs\architecture tools\fix_architecture_map_review.py .github\workflows\apply-architecture-review-fixes.yml
+          git diff --cached --quiet && exit /b 0
+          git commit -m "Correct architecture map accuracy after review"
+          git push origin HEAD:agent/architecture-map-wave-27
