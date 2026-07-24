@@ -35,8 +35,6 @@ jobs:
           python -m tools.patch_architecture_review_guard
 
       - name: Apply guarded review fixes
-        id: apply_review_fix
-        continue-on-error: true
         shell: cmd
         run: |
           python -m py_compile tools\fix_architecture_map_review.py > architecture-review-fix.log 2>&1
@@ -50,13 +48,6 @@ jobs:
           name: architecture-review-fix-diagnostic
           path: architecture-review-fix.log
           if-no-files-found: error
-
-      - name: Stop after review fix failure
-        if: steps.apply_review_fix.outcome != 'success'
-        shell: cmd
-        run: |
-          type architecture-review-fix.log
-          exit /b 1
 
       - name: Regenerate corrected maps
         shell: cmd
