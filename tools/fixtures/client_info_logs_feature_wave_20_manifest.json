@@ -1,0 +1,66 @@
+{
+  "wave": 20,
+  "feature": "client_information_log_presentation",
+  "destination": "spina_app/tabs/client_info_logs.py",
+  "function_count": 7,
+  "moved_source_lines": 516,
+  "dependencies_kept_in_desktop": [
+    "_log_exc",
+    "_spina_cilog_fetch_rows"
+  ],
+  "protected_functions_kept_in_desktop": [
+    "_spina_cilog_fetch_rows"
+  ],
+  "functions": [
+    {
+      "name": "_spina_v24_cilog_action_color",
+      "start_line": 43741,
+      "end_line": 43757,
+      "source_lines": 17,
+      "sha256": "fa180fe725a7d21bc2483a2bd6103ebd8f3a8985572a17fe3a4fad4cdf4aebc2"
+    },
+    {
+      "name": "_spina_v24_cilog_stats",
+      "start_line": 43760,
+      "end_line": 43783,
+      "source_lines": 24,
+      "sha256": "b79e70845eb5faa7981d329f4197652392898f1c368b3ec5a543e85d91b9e16e"
+    },
+    {
+      "name": "_spina_v24_cilog_draw_charts",
+      "start_line": 43786,
+      "end_line": 43879,
+      "source_lines": 94,
+      "sha256": "fe3b6488edbf484013b13a1af858ee6308d8d9fbc1b6c56b85eb3d5aac21e033"
+    },
+    {
+      "name": "_spina_v24_cilog_update_cards",
+      "start_line": 43885,
+      "end_line": 43909,
+      "source_lines": 25,
+      "sha256": "e0f5702652a4c8a00973231bc9378c7600c4715d93163d9e2a313669fc3d5a6f"
+    },
+    {
+      "name": "_spina_v24_build_client_info_logs_tab",
+      "start_line": 43912,
+      "end_line": 44161,
+      "source_lines": 250,
+      "sha256": "2fb6156b4e72e6a5c17b9a788405d4b007e72ccaae64419bb4a18f6c25f5ac91"
+    },
+    {
+      "name": "_spina_v24_render_client_info_logs",
+      "start_line": 44164,
+      "end_line": 44246,
+      "source_lines": 83,
+      "sha256": "c4837132333d1bc760f8b3f3c39b898248e86d7dcd85af1e9067340f6a533f77"
+    },
+    {
+      "name": "_spina_v24_refresh_client_info_logs",
+      "start_line": 44249,
+      "end_line": 44271,
+      "source_lines": 23,
+      "sha256": "7458df955bed836d9ddb2c2d114b8da4bbf787f25f594da8fbbb1169a9578cdc"
+    }
+  ],
+  "status": "extracted"
+}
