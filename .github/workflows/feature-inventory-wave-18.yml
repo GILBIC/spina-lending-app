@@ -10,23 +10,23 @@ jobs:
   inventory:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 20
+    defaults:
+      run:
+        shell: cmd
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
       - name: Verify local Python
-        shell: powershell
         run: |
-          where.exe python
+          where python
           python --version
 
       - name: Compile inventory tool
-        shell: powershell
-        run: python -m py_compile tools/inventory_feature_wave_18.py
+        run: python -m py_compile tools\inventory_feature_wave_18.py
 
       - name: Generate feature inventory
-        shell: powershell
-        run: python tools/inventory_feature_wave_18.py
+        run: python tools\inventory_feature_wave_18.py
 
       - name: Upload inventory
         uses: actions/upload-artifact@v4
