@@ -32,10 +32,33 @@ APP_PREFIXES = (
     "spina_app/",
     "OFFICIAL_SPINA_APP_",
 )
-SQL_RE = re.compile(
-    r"\b(?:FROM|JOIN|INTO|UPDATE|TABLE|DELETE\s+FROM)\s+[\"'`\[]?([A-Za-z_][A-Za-z0-9_]*)",
+SQL_TABLE_PATTERNS = (
+    re.compile(
+        r"\b(?:FROM|JOIN|INTO|UPDATE)\s+[\"'`\[]?([A-Za-z_][A-Za-z0-9_]*)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bDELETE\s+FROM\s+[\"'`\[]?([A-Za-z_][A-Za-z0-9_]*)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(?:CREATE|ALTER|DROP)\s+TABLE"
+        r"(?:\s+IF\s+(?:NOT\s+)?EXISTS)?\s+"
+        r"[\"'`\[]?([A-Za-z_][A-Za-z0-9_]*)",
+        re.IGNORECASE,
+    ),
+)
+SQL_READ_RE = re.compile(r"\b(?:SELECT|WITH|FROM|JOIN)\b", re.IGNORECASE)
+SQL_WRITE_RE = re.compile(
+    r"\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|"
+    r"ALTER\s+TABLE|DROP\s+TABLE)\b",
     re.IGNORECASE,
 )
+SQL_STOPWORDS = {
+    "a", "an", "all", "any", "client", "data", "excel", "generate", "if",
+    "postgresql", "reports", "routes", "row", "set", "spina", "sqlite",
+    "variance", "workflow",
+}
 FILE_LITERAL_RE = re.compile(
     r"""(?ix)
     ["']([^"'\n]+\.(?:json|db|sqlite|sqlite3|xlsx|xls|csv|pdf|docx|txt|log|png|jpg|jpeg|ini|toml|yaml|yml))["']
@@ -59,29 +82,25 @@ FEATURE_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("utilities", ("util", "helper", "format", "parse", "normalize", "validate")),
 )
 
-RISK_TERMS: dict[str, tuple[str, ...]] = {
-    "authentication": ("password", "login", "auth", "permission", "role", "session", "account"),
-    "financial_calculation": (
-        "balance", "principal", "interest", "allocation", "renew", "offset",
-        "7x7", "x7", "amort", "due_amount",
-    ),
-    "database_write": (
-        "insert", "update", "delete", "execute", "executemany", "commit", "rollback",
-        "save_", "_save", "create table", "alter table", "drop table",
-    ),
-    "database_read": ("select", "fetch", "query", "cursor", "load_", "_load"),
-    "filesystem": (
-        "open(", "write_text", "write_bytes", "unlink", "rename", "replace(",
-        "mkdir", "rmdir", "shutil", "pathlib",
-    ),
-    "reports": ("report", "pdf", "receipt", "statement", "ledger", "print"),
-    "backup": ("backup", "restore", "pg_dump", "archive"),
-    "network": ("requests.", "urlopen", "httpx", "urllib", "socket"),
-    "ui_only": (
-        "tk.", "ttk.", ".pack(", ".grid(", ".place(", ".configure(",
-        ".config(", ".bind(", "stringvar", "booleanvar", "treeview",
-    ),
+AUTH_TERMS = (
+    "password", "login", "authenticate", "authentication", "permission",
+    "role_access", "apply_role", "session", "users_db", "user_role",
+    "switch_account", "account_based",
+)
+FINANCIAL_TERMS = (
+    "balance", "principal", "interest", "allocation", "renew", "offset",
+    "7x7", "x7", "amort", "due_amount",
+)
+REPORT_TERMS = ("report", "pdf", "receipt", "statement", "ledger", "print")
+BACKUP_TERMS = ("backup", "restore", "pg_dump", "archive")
+NETWORK_TERMS = ("requests", "urlopen", "httpx", "urllib", "socket")
+UI_CALL_SUFFIXES = {
+    "pack", "grid", "place", "configure", "config", "bind", "bind_all",
+    "protocol", "after", "after_idle", "heading", "column", "tag_configure",
+    "selection_set", "selection_remove", "focus", "focus_set", "see",
 }
+DB_READ_SUFFIXES = {"fetchone", "fetchall", "fetchmany", "cursor"}
+DB_WRITE_SUFFIXES = {"commit", "rollback", "executemany"}
 
 CALLBACK_KEYWORDS = {
     "command", "validatecommand", "invalidcommand", "postcommand",
@@ -183,38 +202,59 @@ def explain_symbol(kind: str, name: str, doc: str, feature: str, calls: list[str
         elif name.startswith(("validate_", "_validate_")):
             action = "Validates"
     elif kind == "class":
-        action = "Represents"
-    detail = f"{action} {words or name} for the {feature.replace('_', ' ')} feature."
-    if calls:
-        detail += f" Main detected dependency: {calls[0]}."
-    return detail
+        action = "Groups"
+    return f"{action} {words or name} for the {feature.replace('_', ' ')} feature."
 
 
-def risk_for(name: str, source: str, calls: Iterable[str], tables: set[str]) -> tuple[str, list[str]]:
-    hay = f"{name}\n{source}".lower()
-    call_text = " ".join(calls).lower()
+
+def _signature_has(signature: str, terms: Iterable[str]) -> bool:
+    return any(term in signature for term in terms)
+
+
+def risk_for(
+    name: str,
+    source: str,
+    calls: Iterable[str],
+    tables: set[str],
+    *,
+    sql_read: bool = False,
+    sql_write: bool = False,
+) -> tuple[str, list[str]]:
+    call_list = list(calls)
+    signature = f"{name} {' '.join(call_list)}".lower()
+    suffixes = {call.rsplit(".", 1)[-1].lower() for call in call_list}
     hits: list[str] = []
-    for risk, terms in RISK_TERMS.items():
-        if any(term in hay or term in call_text for term in terms):
-            hits.append(risk)
-    if tables and "database_read" not in hits and "database_write" not in hits:
+
+    if _signature_has(signature, AUTH_TERMS):
+        hits.append("authentication")
+    if _signature_has(signature, FINANCIAL_TERMS):
+        hits.append("financial_calculation")
+    if sql_write or suffixes & DB_WRITE_SUFFIXES:
+        hits.append("database_write")
+    elif sql_read or tables or suffixes & DB_READ_SUFFIXES or "execute" in suffixes:
         hits.append("database_read")
+    if suffixes & FILE_CALLS or _signature_has(signature, ("pathlib", "shutil")):
+        hits.append("filesystem")
+    if _signature_has(signature, REPORT_TERMS):
+        hits.append("reports")
+    if _signature_has(signature, BACKUP_TERMS):
+        hits.append("backup")
+    if _signature_has(signature, NETWORK_TERMS):
+        hits.append("network")
+
+    ui_detected = bool(suffixes & UI_CALL_SUFFIXES) or any(
+        token in source for token in ("tk.", "ttk.", "StringVar", "BooleanVar", "Treeview")
+    )
+    if ui_detected:
+        hits.append("ui_only")
+
     ordered = [
         "authentication", "financial_calculation", "database_write", "backup",
         "filesystem", "network", "reports", "database_read", "ui_only",
     ]
-    level = "support"
-    for item in ordered:
-        if item in hits:
-            level = item
-            break
-    if level == "ui_only" and any(
-        item in hits for item in ("database_read", "database_write", "filesystem", "financial_calculation")
-    ):
-        level = next(
-            item for item in ordered if item in hits and item != "ui_only"
-        )
+    level = next((item for item in ordered if item in hits), "support")
     return level, sorted(set(hits))
+
 
 
 def discover_python_files() -> list[Path]:
@@ -261,6 +301,40 @@ class Symbol:
     source_sha256: str = ""
 
 
+def static_string(node: ast.AST | None) -> str:
+    if node is None:
+        return ""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.JoinedStr):
+        parts: list[str] = []
+        for value in node.values:
+            if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                parts.append(value.value)
+            else:
+                parts.append("{}")
+        return "".join(parts)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = static_string(node.left)
+        right = static_string(node.right)
+        return left + right if left or right else ""
+    return ""
+
+
+def extract_sql_tables(text: str) -> set[str]:
+    tables: set[str] = set()
+    for pattern in SQL_TABLE_PATTERNS:
+        for value in pattern.findall(text):
+            name = str(value).strip().lower()
+            if len(name) > 1 and name not in SQL_STOPWORDS:
+                tables.add(name)
+    cte_names = {
+        value.lower()
+        for value in re.findall(r"\b(?:WITH|,)\s*([A-Za-z_][A-Za-z0-9_]*)\s+AS\s*\(", text, re.IGNORECASE)
+    }
+    return tables - cte_names
+
+
 class FunctionScanner(ast.NodeVisitor):
     def __init__(self, module: str, qualname: str, local_names: set[str]) -> None:
         self.module = module
@@ -273,6 +347,17 @@ class FunctionScanner(ast.NodeVisitor):
         self.stores: set[str] = set()
         self.tables: set[str] = set()
         self.files: set[str] = set()
+        self.sql_read = False
+        self.sql_write = False
+
+    def record_sql(self, text: str) -> None:
+        if not text:
+            return
+        self.tables.update(extract_sql_tables(text))
+        if SQL_READ_RE.search(text):
+            self.sql_read = True
+        if SQL_WRITE_RE.search(text):
+            self.sql_write = True
 
     def visit_Name(self, node: ast.Name) -> Any:
         if isinstance(node.ctx, ast.Load):
@@ -282,6 +367,7 @@ class FunctionScanner(ast.NodeVisitor):
 
     def visit_Call(self, node: ast.Call) -> Any:
         call = dotted(node.func)
+        suffix = call.rsplit(".", 1)[-1] if call else ""
         if call:
             self.calls.add(call)
         for kw in node.keywords:
@@ -293,29 +379,34 @@ class FunctionScanner(ast.NodeVisitor):
                         "target": target,
                         "line": getattr(node, "lineno", 0),
                     })
-        if call.rsplit(".", 1)[-1] in BIND_METHODS and node.args:
+        if suffix in BIND_METHODS and node.args:
             target_node = node.args[-1]
             target = dotted(target_node)
             if target:
                 self.callbacks.append({
-                    "kind": call.rsplit(".", 1)[-1],
+                    "kind": suffix,
                     "target": target,
                     "line": getattr(node, "lineno", 0),
                     "event": unparse(node.args[0]) if len(node.args) > 1 else "",
                 })
+        if suffix in {"execute", "executemany"} and node.args:
+            self.record_sql(static_string(node.args[0]))
         for arg in [*node.args, *(kw.value for kw in node.keywords)]:
-            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                self.tables.update(SQL_RE.findall(arg.value))
-                self.files.update(FILE_LITERAL_RE.findall(repr(arg.value)))
+            value = static_string(arg)
+            if value:
+                self.files.update(FILE_LITERAL_RE.findall(repr(value)))
         self.generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign) -> Any:
-        value = dotted(node.value)
+        value_name = dotted(node.value)
+        value_text = static_string(node.value)
         for target in node.targets:
             target_name = dotted(target)
             base = target_name.split(".", 1)[0]
+            if value_text and any(term in target_name.lower() for term in ("sql", "query", "statement")):
+                self.record_sql(value_text)
             if (
-                value
+                value_name
                 and isinstance(target, ast.Attribute)
                 and IDENT.match(target.attr)
                 and "." in target_name
@@ -324,15 +415,22 @@ class FunctionScanner(ast.NodeVisitor):
             ):
                 self.monkey_patches.append({
                     "target": target_name,
-                    "source": value,
+                    "source": value_name,
                     "line": getattr(node, "lineno", 0),
                 })
         self.generic_visit(node)
 
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> Any:
+        target_name = dotted(node.target)
+        value_text = static_string(node.value)
+        if value_text and any(term in target_name.lower() for term in ("sql", "query", "statement")):
+            self.record_sql(value_text)
+        self.generic_visit(node)
+
     def visit_Constant(self, node: ast.Constant) -> Any:
         if isinstance(node.value, str):
-            self.tables.update(SQL_RE.findall(node.value))
             self.files.update(FILE_LITERAL_RE.findall(repr(node.value)))
+
 
 
 def module_name(path: Path) -> str:
@@ -414,7 +512,10 @@ def collect_symbols(path: Path, tree: ast.Module, text: str) -> tuple[list[Symbo
         kind = "method" if class_name and not nested else ("nested_function" if nested else "function")
         src = source_segment(lines, node)
         scanner = FunctionScanner(module, qual, set(function_args(node)))
-        scanner.visit(node)
+        for statement in node.body:
+            if isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                continue
+            scanner.visit(statement)
         globals_read = sorted(
             name for name in scanner.loads
             if name in module_globals and name not in scanner.stores
@@ -422,7 +523,14 @@ def collect_symbols(path: Path, tree: ast.Module, text: str) -> tuple[list[Symbo
         globals_written = sorted(name for name in scanner.stores if name in module_globals)
         imports_used = sorted(imports[name] for name in scanner.loads if name in imports)
         feature = infer_feature(node.name, file_path, src)
-        risk, flags = risk_for(node.name, src, scanner.calls, scanner.tables)
+        risk, flags = risk_for(
+            node.name,
+            src,
+            scanner.calls,
+            scanner.tables,
+            sql_read=scanner.sql_read,
+            sql_write=scanner.sql_write,
+        )
         symbol_id = f"{file_path}:{node.lineno}:{qual}"
         duplicate_counter[f"{class_name or ''}.{node.name}"] += 1
         symbol = Symbol(
@@ -466,8 +574,8 @@ def collect_symbols(path: Path, tree: ast.Module, text: str) -> tuple[list[Symbo
             add_function(node, None, None, False)
         elif isinstance(node, ast.ClassDef):
             class_src = source_segment(lines, node)
-            feature = infer_feature(node.name, file_path, class_src)
-            risk, flags = risk_for(node.name, class_src, [], set())
+            feature = infer_feature(node.name, file_path, "")
+            risk, flags = "container", []
             class_id = f"{file_path}:{node.lineno}:{module}.{node.name}"
             symbols.append(Symbol(
                 id=class_id,
@@ -541,6 +649,18 @@ def resolve_dependencies(symbols: list[Symbol]) -> None:
         symbol.callers = sorted(set(symbol.callers))
 
 
+def is_application_file(file_path: str) -> bool:
+    return file_path.startswith(APP_PREFIXES)
+
+
+def owner_is_application(owner: str, by_id: dict[str, dict[str, Any]]) -> bool:
+    symbol = by_id.get(owner)
+    if symbol:
+        return is_application_file(symbol["file"])
+    file_path = owner.split(":", 1)[0]
+    return is_application_file(file_path)
+
+
 def scan_repository() -> dict[str, Any]:
     symbols: list[Symbol] = []
     modules: list[dict[str, Any]] = []
@@ -561,7 +681,7 @@ def scan_repository() -> dict[str, Any]:
                 "lines": len(text.splitlines()),
                 "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
                 "syntax_ok": False,
-                "application_file": rel(path).startswith(APP_PREFIXES),
+                "application_file": is_application_file(rel(path)),
             })
             continue
         found, module_record = collect_symbols(path, tree, text)
@@ -575,6 +695,11 @@ def scan_repository() -> dict[str, Any]:
     duplicate_names: dict[str, list[str]] = defaultdict(list)
     table_users: dict[str, list[str]] = defaultdict(list)
     file_users: dict[str, list[str]] = defaultdict(list)
+    app_by_feature: dict[str, list[str]] = defaultdict(list)
+    app_by_risk: dict[str, list[str]] = defaultdict(list)
+    app_duplicate_names: dict[str, list[str]] = defaultdict(list)
+    app_table_users: dict[str, list[str]] = defaultdict(list)
+    app_file_users: dict[str, list[str]] = defaultdict(list)
     monkey_patches: list[dict[str, Any]] = []
     callbacks: list[dict[str, Any]] = []
 
@@ -591,6 +716,15 @@ def scan_repository() -> dict[str, Any]:
         for callback in s.callbacks:
             callbacks.append({"owner": s.id, **callback})
 
+        if is_application_file(s.file):
+            app_by_feature[s.feature].append(s.id)
+            app_by_risk[s.risk].append(s.id)
+            app_duplicate_names[s.name].append(s.id)
+            for table in s.database_tables:
+                app_table_users[table].append(s.id)
+            for file_path in s.file_paths:
+                app_file_users[file_path].append(s.id)
+
     for module in modules:
         monkey_patches.extend(module.get("monkey_patches", []))
 
@@ -598,27 +732,37 @@ def scan_repository() -> dict[str, Any]:
         name: ids for name, ids in sorted(duplicate_names.items())
         if len(ids) > 1
     }
-    orphans = [
-        s.id for s in symbols
-        if s.kind in {"function", "method"}
-        and not s.callers
-        and not any(cb.get("target", "").endswith(s.name) for cb in callbacks)
-        and not any(p.get("source", "").endswith(s.name) for p in monkey_patches)
-        and s.name not in {"main", "__init__"}
-    ]
+    app_duplicates = {
+        name: ids for name, ids in sorted(app_duplicate_names.items())
+        if len(ids) > 1
+    }
+
+    def possible_orphans(items: Iterable[Symbol]) -> list[str]:
+        return sorted(
+            s.id for s in items
+            if s.kind in {"function", "method"}
+            and not s.callers
+            and not any(cb.get("target", "").endswith(s.name) for cb in callbacks)
+            and not any(p.get("source", "").endswith(s.name) for p in monkey_patches)
+            and s.name not in {"main", "__init__"}
+        )
+
+    orphans = possible_orphans(symbols)
+    app_symbols = [s for s in symbols if is_application_file(s.file)]
+    app_orphans = possible_orphans(app_symbols)
 
     suggestions: list[dict[str, Any]] = []
-    by_feature_symbols: dict[str, list[Symbol]] = defaultdict(list)
-    for s in symbols:
+    by_feature_file: dict[tuple[str, str], list[Symbol]] = defaultdict(list)
+    for s in app_symbols:
         if s.kind in {"function", "method"}:
-            by_feature_symbols[s.feature].append(s)
-    for feature, items in sorted(by_feature_symbols.items()):
+            by_feature_file[(s.feature, s.file)].append(s)
+    for (feature, file_path), items in sorted(by_feature_file.items()):
         safe = [
             s for s in items
             if s.risk in {"ui_only", "support", "database_read"}
             and s.lines <= 300
         ]
-        safe.sort(key=lambda s: (s.file, s.line))
+        safe.sort(key=lambda s: s.line)
         batch: list[Symbol] = []
         total = 0
         for s in safe:
@@ -626,6 +770,7 @@ def scan_repository() -> dict[str, Any]:
                 if total >= 150:
                     suggestions.append({
                         "feature": feature,
+                        "file": file_path,
                         "risk": sorted({x.risk for x in batch}),
                         "lines": total,
                         "functions": [x.id for x in batch],
@@ -636,30 +781,47 @@ def scan_repository() -> dict[str, Any]:
         if batch and total >= 150:
             suggestions.append({
                 "feature": feature,
+                "file": file_path,
                 "risk": sorted({x.risk for x in batch}),
                 "lines": total,
                 "functions": [x.id for x in batch],
             })
-    suggestions.sort(key=lambda item: (-item["lines"], item["feature"]))
+    suggestions.sort(key=lambda item: (-item["lines"], item["feature"], item["file"]))
+
+    app_callbacks = [
+        item for item in callbacks
+        if owner_is_application(item["owner"], {s.id: s.__dict__ for s in symbols})
+    ]
+    app_monkey_patches = [
+        item for item in monkey_patches
+        if owner_is_application(item["owner"], {s.id: s.__dict__ for s in symbols})
+    ]
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_from_commit": git_sha(),
         "summary": {
             "python_files": len(modules),
             "application_python_files": sum(1 for m in modules if m.get("application_file")),
             "total_python_lines": sum(m.get("lines", 0) for m in modules),
             "symbols": len(symbols),
+            "application_symbols": len(app_symbols),
             "classes": sum(1 for s in symbols if s.kind == "class"),
             "functions": sum(1 for s in symbols if s.kind == "function"),
             "methods": sum(1 for s in symbols if s.kind == "method"),
             "nested_functions": sum(1 for s in symbols if s.kind == "nested_function"),
             "resolved_call_edges": sum(len(s.calls_resolved) for s in symbols),
+            "application_resolved_call_edges": sum(len(s.calls_resolved) for s in app_symbols),
             "ui_callback_edges": len(callbacks),
+            "application_ui_callback_edges": len(app_callbacks),
             "monkey_patches": len(monkey_patches),
-            "database_tables": len(table_users),
-            "duplicate_names": len(duplicates),
-            "possible_orphans": len(orphans),
+            "application_monkey_patches": len(app_monkey_patches),
+            "database_tables": len(app_table_users),
+            "repository_database_tables": len(table_users),
+            "duplicate_names": len(app_duplicates),
+            "repository_duplicate_names": len(duplicates),
+            "possible_orphans": len(app_orphans),
+            "repository_possible_orphans": len(orphans),
             "parse_errors": len(parse_errors),
         },
         "modules": modules,
@@ -670,20 +832,30 @@ def scan_repository() -> dict[str, Any]:
             "duplicates": duplicates,
             "database_tables": {k: sorted(v) for k, v in sorted(table_users.items())},
             "file_paths": {k: sorted(v) for k, v in sorted(file_users.items())},
+            "application_features": {k: sorted(v) for k, v in sorted(app_by_feature.items())},
+            "application_risks": {k: sorted(v) for k, v in sorted(app_by_risk.items())},
+            "application_duplicates": app_duplicates,
+            "application_database_tables": {k: sorted(v) for k, v in sorted(app_table_users.items())},
+            "application_file_paths": {k: sorted(v) for k, v in sorted(app_file_users.items())},
             "callbacks": callbacks,
+            "application_callbacks": app_callbacks,
             "monkey_patches": monkey_patches,
-            "possible_orphans": sorted(orphans),
+            "application_monkey_patches": app_monkey_patches,
+            "possible_orphans": orphans,
+            "application_possible_orphans": app_orphans,
             "modularization_suggestions": suggestions,
         },
         "parse_errors": parse_errors,
         "limitations": [
             "Dynamic imports and runtime-generated attribute names may not resolve.",
             "Callback and monkey-patch detection is static and may include false positives.",
-            "SQL assembled from many runtime fragments may not reveal every table.",
+            "SQL assembled from runtime fragments may not reveal every table.",
             "Possible orphan symbols may still be called by reflection, Tkinter, plugins, or external code.",
+            "Risk labels are conservative planning hints, not proof of runtime behavior.",
             "Desktop smoke testing remains required before merging modularization changes.",
         ],
     }
+
 
 
 def symbol_label(symbol: dict[str, Any]) -> str:
@@ -708,13 +880,17 @@ def md_header(title: str, data: dict[str, Any]) -> list[str]:
 
 
 def render_feature_map(data: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> str:
-    out = md_header("SPINA Feature Map", data)
-    for feature, ids in data["indexes"]["features"].items():
+    out = md_header("SPINA Application Feature Map", data)
+    out += [
+        "> Primary sections below include only the desktop application and `spina_app/` modules. Tooling remains indexed in `function-index.md` and `architecture-map.json`.",
+        "",
+    ]
+    for feature, ids in data["indexes"]["application_features"].items():
         symbols = [by_id[i] for i in ids]
         out += [
             f"## {feature.replace('_', ' ').title()}",
             "",
-            f"**{len(symbols)} symbols · {sum(s['lines'] for s in symbols):,} source lines**",
+            f"**{len(symbols)} symbols · {sum(s['lines'] for s in symbols if s['kind'] != 'class'):,} non-overlapping function lines**",
             "",
         ]
         files = Counter(s["file"] for s in symbols)
@@ -723,9 +899,10 @@ def render_feature_map(data: dict[str, Any], by_id: dict[str, dict[str, Any]]) -
         for s in sorted(symbols, key=lambda x: (-x["lines"], x["file"], x["line"]))[:20]:
             out.append(f"- {symbol_label(s)} — {s['purpose']} Risk: **{s['risk']}**.")
         if len(symbols) > 20:
-            out.append(f"- …and {len(symbols) - 20} more symbols in `architecture-map.json`.")
+            out.append(f"- …and {len(symbols) - 20} more application symbols in `architecture-map.json`.")
         out.append("")
     return "\n".join(out).rstrip() + "\n"
+
 
 
 def render_function_index(data: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> str:
@@ -743,52 +920,67 @@ def render_function_index(data: dict[str, Any], by_id: dict[str, dict[str, Any]]
 
 
 def render_dependency_map(data: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> str:
-    out = md_header("SPINA Dependency Map", data)
-    out += ["## Resolved call connections", ""]
-    connected = [s for s in data["symbols"] if s["calls_resolved"] or s["callers"]]
+    out = md_header("SPINA Application Dependency Map", data)
+    out += [
+        "> Connections shown here are limited to SPINA application files. The complete repository graph remains in `architecture-map.json`.",
+        "",
+        "## Resolved call connections",
+        "",
+    ]
+    app_ids = {sid for ids in data["indexes"]["application_features"].values() for sid in ids}
+    connected = [
+        s for s in data["symbols"]
+        if s["id"] in app_ids and (s["calls_resolved"] or s["callers"])
+    ]
     for s in sorted(connected, key=lambda x: (-len(x["callers"]) - len(x["calls_resolved"]), x["qualified_name"]))[:300]:
-        calls = [by_id[i]["qualified_name"] for i in s["calls_resolved"][:8] if i in by_id]
-        callers = [by_id[i]["qualified_name"] for i in s["callers"][:8] if i in by_id]
+        calls = [by_id[i]["qualified_name"] for i in s["calls_resolved"][:8] if i in app_ids]
+        callers = [by_id[i]["qualified_name"] for i in s["callers"][:8] if i in app_ids]
         out.append(f"### `{s['qualified_name']}`")
         out.append("")
-        out.append("Calls: " + (", ".join(f"`{x}`" for x in calls) if calls else "none resolved"))
+        out.append("Calls: " + (", ".join(f"`{x}`" for x in calls) if calls else "none resolved in application files"))
         out.append("")
-        out.append("Called by: " + (", ".join(f"`{x}`" for x in callers) if callers else "none resolved"))
+        out.append("Called by: " + (", ".join(f"`{x}`" for x in callers) if callers else "none resolved in application files"))
         out.append("")
     out += ["## Tkinter and callback connections", ""]
-    for item in data["indexes"]["callbacks"][:300]:
+    for item in data["indexes"]["application_callbacks"][:300]:
         owner = by_id.get(item["owner"], {})
         out.append(
             f"- `{owner.get('qualified_name', item['owner'])}` → `{item['target']}` "
             f"through **{item['kind']}** at line {item['line']}."
         )
     out += ["", "## Monkey-patch and runtime assignment connections", ""]
-    for item in data["indexes"]["monkey_patches"][:300]:
+    for item in data["indexes"]["application_monkey_patches"][:300]:
         owner = by_id.get(item["owner"], {})
         out.append(
             f"- `{owner.get('qualified_name', item['owner'])}` assigns `{item['source']}` "
             f"to `{item['target']}` at line {item['line']}."
         )
-    out += ["", "## Possible unreferenced symbols", ""]
-    for sid in data["indexes"]["possible_orphans"][:300]:
+    out += ["", "## Possible unreferenced application symbols", ""]
+    for sid in data["indexes"]["application_possible_orphans"][:300]:
         if sid in by_id:
             out.append(f"- {symbol_label(by_id[sid])}")
     out.append("")
     return "\n".join(out).rstrip() + "\n"
 
 
+
 def render_database_map(data: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> str:
-    out = md_header("SPINA Database and File Access Map", data)
-    out += ["## Detected database tables", ""]
-    for table, ids in data["indexes"]["database_tables"].items():
+    out = md_header("SPINA Application Database and File Access Map", data)
+    out += [
+        "> SQL tables are detected only from strings used by `execute`/`executemany` or variables named like SQL/query statements. Ordinary prose is excluded.",
+        "",
+        "## Detected application database tables",
+        "",
+    ]
+    for table, ids in data["indexes"]["application_database_tables"].items():
         out += [f"### `{table}`", ""]
         for sid in ids:
             s = by_id.get(sid)
             if s:
                 out.append(f"- {symbol_label(s)} — risk `{s['risk']}`.")
         out.append("")
-    out += ["## Detected file paths and file types", ""]
-    for file_path, ids in data["indexes"]["file_paths"].items():
+    out += ["## Detected application file paths and file types", ""]
+    for file_path, ids in data["indexes"]["application_file_paths"].items():
         out += [f"### `{file_path}`", ""]
         for sid in ids[:40]:
             s = by_id.get(sid)
@@ -798,15 +990,23 @@ def render_database_map(data: dict[str, Any], by_id: dict[str, dict[str, Any]]) 
     return "\n".join(out).rstrip() + "\n"
 
 
+
 def render_risk_map(data: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> str:
-    out = md_header("SPINA Risk and Modularization Map", data)
-    out += ["## Risk groups", ""]
-    for risk, ids in data["indexes"]["risks"].items():
-        symbols = [by_id[i] for i in ids if i in by_id]
+    out = md_header("SPINA Application Risk and Modularization Map", data)
+    out += [
+        "> Risk groups and batches below include only application functions and methods. Container classes are excluded from line totals so method lines are not counted twice.",
+        "",
+        "## Application risk groups",
+        "",
+    ]
+    for risk, ids in data["indexes"]["application_risks"].items():
+        symbols = [by_id[i] for i in ids if i in by_id and by_id[i]["kind"] != "class"]
+        if not symbols:
+            continue
         out += [
             f"### {risk.replace('_', ' ').title()}",
             "",
-            f"**{len(symbols)} symbols · {sum(s['lines'] for s in symbols):,} lines**",
+            f"**{len(symbols)} symbols · {sum(s['lines'] for s in symbols):,} function lines**",
             "",
         ]
         for s in sorted(symbols, key=lambda x: (-x["lines"], x["file"], x["line"]))[:40]:
@@ -814,12 +1014,14 @@ def render_risk_map(data: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> s
         if len(symbols) > 40:
             out.append(f"- …and {len(symbols) - 40} more.")
         out.append("")
-    out += ["## Suggested larger modularization batches", ""]
+    out += ["## Suggested larger application modularization batches", ""]
     for index, item in enumerate(data["indexes"]["modularization_suggestions"][:40], start=1):
         out.append(
             f"### Batch {index}: {item['feature'].replace('_', ' ').title()} "
             f"({item['lines']} lines)"
         )
+        out.append("")
+        out.append(f"Source file: `{item['file']}`")
         out.append("")
         out.append("Risk mix: " + ", ".join(f"`{r}`" for r in item["risk"]))
         out.append("")
@@ -828,13 +1030,14 @@ def render_risk_map(data: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> s
             if s:
                 out.append(f"- {symbol_label(s)} — {s['purpose']}")
         out.append("")
-    out += ["## Duplicate symbol names", ""]
-    for name, ids in list(data["indexes"]["duplicates"].items())[:300]:
+    out += ["## Duplicate application symbol names", ""]
+    for name, ids in list(data["indexes"]["application_duplicates"].items())[:300]:
         out.append(f"- `{name}`: " + ", ".join(f"`{by_id[i]['file']}:{by_id[i]['line']}`" for i in ids if i in by_id))
     out += ["", "## Static-analysis limitations", ""]
     out.extend(f"- {item}" for item in data["limitations"])
     out.append("")
     return "\n".join(out).rstrip() + "\n"
+
 
 
 def write_outputs(data: dict[str, Any]) -> None:
