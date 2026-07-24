@@ -1,0 +1,35 @@
+{
+  "wave": 21,
+  "feature": "cash_control_presentation_shell",
+  "destination": "spina_app/tabs/cash_control.py",
+  "function_count": 2,
+  "moved_source_lines": 400,
+  "dependencies_kept_in_desktop": [
+    "_log_exc",
+    "_spina_v21_cash_money_short",
+    "_spina_v21_cash_round_rect"
+  ],
+  "protected_functions_kept_in_desktop": [
+    "_spina_v21_cash_refresh",
+    "_spina_cashctl_get_average_collection",
+    "_spina_cashctl_get_collection_totals",
+    "_spina_cashctl_reserve_rows"
+  ],
+  "functions": [
+    {
+      "name": "_spina_v21_cash_build_tab",
+      "start_line": 42386,
+      "end_line": 42662,
+      "source_lines": 277,
+      "sha256": "193bcec0ceea15620e063b61b5e9e5685b04e511663396f621ace808592e965e"
+    },
+    {
+      "name": "_spina_v21_cash_draw_charts",
+      "start_line": 42668,
+      "end_line": 42790,
+      "source_lines": 123,
+      "sha256": "a6081d06e9aa1ae2865817743a6d55011d928cb38c5a54b5e162860b78bc54f0"
+    }
+  ],
+  "status": "extracted"
+}
