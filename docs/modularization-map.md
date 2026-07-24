@@ -3,21 +3,22 @@
 > Permanent source of truth for tracking the separation of the SPINA desktop application into smaller modules.
 >
 > **Last updated:** 2026-07-24  
-> **Tracked main state:** after merged PR #117  
+> **Tracked main state:** after merged PR #118  
 > **Primary desktop source:** `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py`
 
 ## Current status
 
 | Item | Status |
 |---|---:|
-| Focused helper functions extracted from the large desktop source | **60** |
+| Functions extracted from the large desktop source | **65** |
 | Focused helper modules receiving extracted functions | **13** |
+| Feature-level tab modules | **1** |
 | Hierarchical Area production modules | **3** |
-| Accelerated modularization waves completed | **16** |
-| Latest completed extraction | **Wave 16 / PR #117** |
-| Next step | **Wave 17 read-only inspection** |
+| Accelerated modularization waves completed | **17** |
+| Latest completed extraction | **Wave 17 / PR #118** |
+| Next step | **Wave 18 feature inventory** |
 
-The current approach intentionally starts with low-risk, behavior-preserving helpers. Payment allocation, balances, principal, interest, 7x7 calculations, renewal formulas, report totals, PDF mathematics, authentication, roles, and critical PostgreSQL write paths remain protected until focused tests exist.
+The project has moved from isolated low-risk helper extraction to guarded feature-level modularization. Protected calculation, PostgreSQL write, authentication, report-total, renewal, and filesystem paths remain in their existing owners until focused tests justify moving them.
 
 ## Architecture map
 
@@ -32,15 +33,21 @@ flowchart LR
     APP --> SER[utilities/serialization.py]
     APP --> DIFF[utilities/diffs.py]
     APP --> NOTES[utilities/notes.py]
-    APP --> DASH[utilities/dashboard.py]
+    APP --> DASHU[utilities/dashboard.py]
     APP --> REC[utilities/records.py]
 
     APP --> UIH[ui_helpers.py]
     APP --> PAL[theme_palettes.py]
     APP --> UIC[ui_cards.py]
     APP --> UICTL[ui_controls.py]
+    APP --> TABDASH[tabs/dashboard.py]
+
     UIC --> PAL
     UICTL --> PAL
+    TABDASH --> PAL
+    TABDASH --> UIC
+    TABDASH --> UICTL
+    TABDASH --> UIH
 
     APP --> AUI[area_hierarchy_ui.py]
     AUI --> AOPS[area_hierarchy_ops.py]
@@ -49,12 +56,12 @@ flowchart LR
 
 ## Production module inventory
 
-### Extracted helper modules
+### Focused helper modules
 
 | Module | Extracted ownership | Helper count |
 |---|---|---:|
 | `spina_app/utilities/formatting.py` | Currency, money, percentage, compact-money, Collector Close, Dashboard, Cash Control, and Client Information Log formatting | 12 |
-| `spina_app/utilities/dates.py` | Date validation/parsing/display and payment-schedule field normalization | 7 |
+| `spina_app/utilities/dates.py` | Date validation, parsing, display, and payment-schedule field normalization | 7 |
 | `spina_app/utilities/text.py` | Area/name normalization and Client Information Log action labels | 4 |
 | `spina_app/utilities/numbers.py` | Numeric parsing, count parsing, Cash Control amount parsing, and integer-range clamping | 5 |
 | `spina_app/utilities/serialization.py` | Safe Client Information Log JSON decoding | 1 |
@@ -63,10 +70,18 @@ flowchart LR
 | `spina_app/utilities/dashboard.py` | Dashboard status selection | 1 |
 | `spina_app/utilities/records.py` | Database-row-to-dictionary conversion | 1 |
 | `spina_app/ui_helpers.py` | Rounded canvas drawing and summary-card value updates | 6 |
-| `spina_app/theme_palettes.py` | Modern and legacy Dashboard, Cash Control, Client Information Log, Reports/Clients, and Collector/Collector Route light/dark palettes | 7 |
+| `spina_app/theme_palettes.py` | Modern and legacy Dashboard, Cash Control, Client Information Log, Reports/Clients, and Collector/Collector Route palettes | 7 |
 | `spina_app/ui_cards.py` | Cash Control, Client Information Log, Collector Route, and legacy Dashboard card constructors | 4 |
-| `spina_app/ui_controls.py` | Cash Control labeled entries and Treeview styling; Client Information Log buttons and Treeview styling; Clients and Collector Route Treeview styling; legacy Dashboard filter buttons and Treeview styling | 8 |
-| **Total** |  | **60** |
+| `spina_app/ui_controls.py` | Cash Control, Client Information Log, Clients, Collector Route, and legacy Dashboard controls and Treeview styling | 8 |
+| **Helper total** |  | **60** |
+
+### Feature-level tab modules
+
+| Module | Extracted ownership | Function count | Moved source lines |
+|---|---|---:|---:|
+| `spina_app/tabs/dashboard.py` | Legacy Dashboard construction, filtering, charts, table population, and refresh orchestration | 5 | 462 |
+
+The Dashboard module keeps the original function names. The desktop entry module imports them back and supplies database-row loading and logging through a late-bound bridge, avoiding circular imports while preserving existing App patching and callbacks.
 
 ### Hierarchical Area modules
 
@@ -76,7 +91,7 @@ flowchart LR
 | `spina_app/area_hierarchy_ops.py` | Rename, move, ordering, activation/deactivation, subtree/client safeguards, legacy synchronization, and stale-UID repair | #93 |
 | `spina_app/area_hierarchy_ui.py` | Folder-style Area Manager, expand/collapse tree, modal ownership, managed Area selectors, and client-form integration | #93 |
 
-## Exact extracted-helper ownership
+## Exact extracted ownership
 
 ### `spina_app/utilities/formatting.py`
 
@@ -133,7 +148,7 @@ flowchart LR
 - `spina_app/utilities/records.py`
   - `_spina_perf_dict_rows` — PR #80
 
-### UI modules
+### UI helper modules
 
 - `spina_app/ui_helpers.py`
   - `_spina_v20_round_rect` — PR #74
@@ -164,6 +179,14 @@ flowchart LR
   - `_spina_v27_style_route_trees` — PR #109
   - `_spina_v17_update_filter_buttons` — PR #115
   - `_spina_v17_style_dashboard_table` — PR #115
+
+### `spina_app/tabs/dashboard.py`
+
+- `_spina_v17_visible_dashboard_rows` — PR #118
+- `_spina_v17_build_dashboard_tab` — PR #118
+- `_spina_v17_draw_dashboard_charts` — PR #118
+- `_spina_v17_populate_dashboard_tree` — PR #118
+- `_spina_v17_refresh_dashboard` — PR #118
 
 ## Modularization timeline
 
@@ -220,13 +243,13 @@ PR #67 was a paused note-helper attempt and closed without merging. PR #68 was a
 | 14 | #112 inspection | #113 | `theme_palettes.py` | Legacy Dashboard light/dark palette helpers | ✅ Passed and merged |
 | 15 | #114 inspection | #115 | `ui_controls.py` | Legacy Dashboard filter-button and Treeview styling helpers | ✅ Passed and merged |
 | 16 | #116 inspection | #117 | `ui_cards.py` | Legacy Dashboard summary-card constructor | ✅ Passed and merged |
-| 17 | Not started | — | — | Candidate must be selected by a fresh read-only inspection | ⏭ Next |
+| 17 | #118 inventory and working PR | #118 | `tabs/dashboard.py` | Complete legacy Dashboard presentation/orchestration group: 5 functions, 462 lines | ✅ Passed and merged |
 
 Temporary inspection/apply PRs are deliberately closed without merging and are not counted as completed production waves.
 
 ## Area-system modularization
 
-The unlimited Area work is tracked separately because it introduced a complete feature module set rather than moving a few pure helpers.
+The unlimited Area work is tracked separately because it introduced a complete feature module set rather than moving a few helpers.
 
 | Phase | PR | Result | Status |
 |---|---:|---|---|
@@ -242,20 +265,18 @@ PR #89 attempted a fixed two-level Area model and was closed because it did not 
 Every new extraction must follow this sequence:
 
 1. Start from the latest `main` commit.
-2. Open a **read-only inspection PR** that does not modify production code.
-3. Review exact source, signature, dependencies, callers, risk area, and occurrences.
-4. Select one cohesive, low-risk group.
-5. Open a fresh guarded extraction branch.
-6. Capture original behavior before moving code.
-7. Replace original definitions with same-name imports and preserve callers.
-8. Compile the application and destination modules.
-9. Compare original and extracted behavior exactly.
-10. Run Python, redundancy, and SPINA quality audits.
-11. Remove all temporary write-enabled workflows.
-12. Add permanent read-only regression CI.
-13. Perform a Windows desktop smoke test.
-14. Merge only after the desktop test passes.
-15. Update this map in the same wave.
+2. Begin with a read-only inventory of exact source, signatures, dependencies, callers, risk areas, and occurrences.
+3. A narrow helper wave may use separate inspection and extraction PRs; a cohesive feature-level wave may use one working PR whose first commit is inventory-only.
+4. Select one cohesive group and capture original behavior before moving code.
+5. Replace original definitions with same-name imports and preserve callers.
+6. Keep protected database, calculation, authentication, and filesystem services in their existing owners unless focused tests justify moving them.
+7. Compile the application and destination modules and compare preserved behavior.
+8. Run Python, redundancy, feature regression, and SPINA quality audits.
+9. Remove all temporary write-enabled workflows.
+10. Add permanent read-only regression CI.
+11. Perform a Windows desktop smoke test.
+12. Merge production code only after the desktop test passes.
+13. Update this map in the same wave or through a documentation-only follow-up PR.
 
 ## Protected and deferred areas
 
@@ -272,13 +293,13 @@ These require stronger domain tests before modularization:
 - backup/restore and filesystem operations
 - client picture/file handling
 - startup lifecycle, global logging, and broad application infrastructure
-- large Tkinter tab/build/refresh functions without deterministic UI tests
+- large Tkinter tab/build/refresh groups without deterministic feature tests
 
 A deferred item becomes eligible only after focused behavior or calculation tests exist and its dependencies are understood.
 
 ## Future-wave tracker
 
-| Wave | Inspection PR | Extraction PR | Module | Helpers/Classes | CI | Desktop test | Merge | Notes |
+| Wave | Inventory/inspection PR | Extraction PR | Module | Helpers/Classes | CI | Desktop test | Merge | Notes |
 |---:|---:|---:|---|---|---|---|---|---|
 | 9 | #102 | #103 | `spina_app/ui_controls.py` | 2 Cash Control UI helpers | ✅ | ✅ | ✅ | Completed |
 | 10 | #104 | #105 | `ui_controls.py` | CILog button and Treeview style helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
@@ -288,12 +309,13 @@ A deferred item becomes eligible only after focused behavior or calculation test
 | 14 | #112 | #113 | `theme_palettes.py` | Two legacy Dashboard palette helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
 | 15 | #114 | #115 | `ui_controls.py` | Legacy Dashboard filter-button and Treeview style helpers | ✅ | ✅ | ✅ | Passed Windows smoke test |
 | 16 | #116 | #117 | `ui_cards.py` | Legacy Dashboard summary-card constructor | ✅ | ✅ | ✅ | Passed Windows smoke test |
-| 17 | Pending | Pending | Pending | Pending | ⬜ | ⬜ | ⬜ | Start with current-main inspection |
+| 17 | #118 | #118 | `tabs/dashboard.py` | 5 Dashboard feature functions; 462 lines moved | ✅ | ✅ | ✅ | Passed Windows smoke test |
+| 18 | Pending | Pending | Pending | Select through current-main feature inventory | ⬜ | ⬜ | ⬜ | Not started |
 
 Status legend:
 
 - ✅ completed and merged
-- 🔎 inspection or review in progress
+- 🔎 inventory, inspection, or review in progress
 - 🧪 extraction or testing in progress
 - ⏸ deferred or protected
 - ❌ closed or superseded without merge
@@ -302,16 +324,16 @@ Status legend:
 ## Branch and PR hygiene
 
 - `main` is the stable source of truth.
-- Create every inspection and extraction branch from current `main`.
+- Create every inventory, inspection, and extraction branch from current `main`.
 - Do not continue old closed temporary branches.
 - Do not merge inspection-only PRs.
-- Do not keep a write-enabled GitHub Actions workflow in a final extraction PR.
+- Do not keep a write-enabled GitHub Actions workflow in a final production or documentation PR.
 - Use the tested head SHA when merging.
 - PR #3 remains an old review branch and is not part of the current modularization mainline.
 
 ## Completion checklist
 
-Before marking a wave complete, confirm:
+Before marking a production wave complete, confirm:
 
 - [ ] Same-name imports replace the original definitions.
 - [ ] Destination functions contain the preserved bodies.
@@ -320,9 +342,10 @@ Before marking a wave complete, confirm:
 - [ ] Application and destination modules compile.
 - [ ] Python audit passes.
 - [ ] Redundancy audit passes.
+- [ ] Focused feature or helper regression CI passes.
 - [ ] SPINA quality audit passes.
 - [ ] Permanent read-only regression CI exists.
 - [ ] Temporary inspection/write workflows are removed.
 - [ ] Windows desktop smoke test passes.
-- [ ] PR is merged into `main`.
+- [ ] Production PR is merged into `main`.
 - [ ] This map is updated.
