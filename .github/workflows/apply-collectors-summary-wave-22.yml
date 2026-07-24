@@ -1,0 +1,60 @@
+name: Apply Collectors summary Wave 22
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/collectors-summary-wave-22'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - name: Check out production branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/collectors-summary-wave-22
+          fetch-depth: 0
+
+      - name: Verify local Python
+        shell: cmd
+        run: |
+          where python
+          python --version
+
+      - name: Apply guarded extraction
+        shell: cmd
+        run: |
+          python -m py_compile tools\apply_collectors_summary_wave_22.py
+          python -m tools.apply_collectors_summary_wave_22
+
+      - name: Compile extracted state
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\tabs\collectors.py
+          python -m py_compile tools\test_collectors_summary_wave_22.py
+
+      - name: Run focused regression
+        shell: cmd
+        run: python -m tools.test_collectors_summary_wave_22
+
+      - name: Run redundancy audit
+        shell: cmd
+        run: python tools\redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json redundancy-report.json
+
+      - name: Run SPINA quality audit
+        shell: cmd
+        run: python tools\spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json quality-report.json
+
+      - name: Commit extracted production state
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit /b 0
+          git commit -m "Modularize Collectors summary presentation"
+          git push origin HEAD:agent/collectors-summary-wave-22
