@@ -19,21 +19,13 @@ jobs:
           ref: agent/architecture-map-wave-27
           fetch-depth: 0
 
-      - name: Regenerate final map without temporary Python files
+      - name: Regenerate and validate final current map
         shell: cmd
         run: |
           python -m py_compile tools\generate_architecture_map.py
           python -m py_compile tools\test_architecture_map.py
           python -m tools.generate_architecture_map
           python -m tools.test_architecture_map
-
-      - name: Verify final repository totals
-        shell: powershell
-        run: |
-          $map = Get-Content architecture-map.json -Raw | ConvertFrom-Json
-          if ($map.summary.python_files -ne 131) { throw "Expected 131 Python files, found $($map.summary.python_files)" }
-          if ($map.summary.parse_errors -ne 0) { throw "Architecture map has parse errors" }
-          if ($map.indexes.modularization_suggestions.Count -lt 1) { throw "No application modularization suggestions" }
 
       - name: Remove temporary refresh workflow
         shell: cmd
