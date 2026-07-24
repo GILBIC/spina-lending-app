@@ -1,8 +1,8 @@
 {
   "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-  "line_count": 47924,
-  "function_definitions": 327,
-  "unique_function_names": 320,
+  "line_count": 45357,
+  "function_definitions": 287,
+  "unique_function_names": 280,
   "duplicate_top_level_definitions": {
     "_collectors_areas_drag_motion": [
       21199,
@@ -48,31 +48,31 @@
       41688
     ],
     "App._build_clients_tab": [
-      45217,
+      43309,
       35896
     ],
     "App._build_collectors_tab": [
-      46329,
-      47257
+      43794,
+      44690
     ],
     "App._dashboard_visible_rows": [
-      42319,
-      42678
+      41782,
+      42094
     ],
     "App._on_collectors_select": [
-      46387,
-      47290
+      43852,
+      44723
     ],
     "App._on_mode_change": [
       37731,
       38450,
-      42335
+      41798
     ],
     "App._populate_dashboard_tree": [
-      42318,
-      42583,
-      42679,
-      42938
+      41781,
+      41999,
+      42095,
+      42354
     ],
     "App.apply_role_access": [
       31478,
@@ -83,18 +83,18 @@
     "App.refresh_clients": [
       38980,
       35908,
-      45231
+      43323
     ],
     "App.refresh_collectors": [
       35458,
-      46343,
-      47269
+      43808,
+      44702
     ],
     "App.refresh_dashboard": [
-      42317,
-      42582,
-      42680,
-      42939
+      41780,
+      41998,
+      42096,
+      42355
     ],
     "App.refresh_data_grid": [
       41662,
