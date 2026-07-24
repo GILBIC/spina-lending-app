@@ -1,0 +1,22 @@
+{
+  "batch": "legacy_dashboard_controls_batch_15",
+  "app": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "helpers": [
+    {
+      "name": "_spina_v17_update_filter_buttons",
+      "signature": "self",
+      "module": "spina_app.ui_controls",
+      "module_path": "spina_app/ui_controls.py",
+      "expected_source_sha256": "a2db92cf027a63217f0d4593f157095311658e1182d97c7c9904ccfc6e849859",
+      "allowed_external_names": ["_spina_v17_dash_colors", "tk"]
+    },
+    {
+      "name": "_spina_v17_style_dashboard_table",
+      "signature": "self",
+      "module": "spina_app.ui_controls",
+      "module_path": "spina_app/ui_controls.py",
+      "expected_source_sha256": "0904c581262efa1de42c7a151852e4b6eb7380fce0fba04089ba7f312ab109cc",
+      "allowed_external_names": ["_spina_v17_dash_colors", "ttk"]
+    }
+  ]
+}
