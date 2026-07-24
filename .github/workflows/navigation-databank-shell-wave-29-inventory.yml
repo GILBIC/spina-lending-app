@@ -29,11 +29,15 @@ jobs:
         shell: cmd
         run: |
           python -m py_compile tools/inventory_navigation_databank_shell_wave_29.py
+          python -m py_compile tools/inspect_navigation_databank_shell_wave_29_sources.py
           python -m tools.inventory_navigation_databank_shell_wave_29
+          python -m tools.inspect_navigation_databank_shell_wave_29_sources
 
       - name: Upload Wave 29 inventory
         uses: actions/upload-artifact@v4
         with:
           name: navigation-databank-shell-wave-29-inventory
-          path: artifacts/navigation-databank-shell-wave-29-inventory.json
+          path: |
+            artifacts/navigation-databank-shell-wave-29-inventory.json
+            artifacts/navigation-databank-shell-wave-29-sources.json
           if-no-files-found: error
