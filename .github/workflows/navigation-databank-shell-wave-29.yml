@@ -41,25 +41,11 @@ jobs:
       - name: Validate permanent architecture map
         uses: ./.github/actions/architecture-map-check
 
-      - name: Capture architecture-map diff
-        if: always()
+      - name: Run redundancy audit
         shell: cmd
         run: |
           if not exist artifacts mkdir artifacts
-          git status --short > artifacts\wave-29-architecture-diff.txt
-          git diff -- architecture-map.json docs\architecture >> artifacts\wave-29-architecture-diff.txt
-
-      - name: Upload architecture-map diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: navigation-databank-shell-wave-29-architecture-diagnostic
-          path: artifacts/wave-29-architecture-diff.txt
-          if-no-files-found: warn
-
-      - name: Run redundancy audit
-        shell: cmd
-        run: python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-29-redundancy.json
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-29-redundancy.json
 
       - name: Run SPINA quality audit
         shell: cmd
