@@ -1,0 +1,76 @@
+name: Apply Client Information Log feature Wave 20
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/feature-module-wave-20'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - name: Check out Wave 20 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/feature-module-wave-20
+          fetch-depth: 0
+
+      - name: Verify local Python
+        shell: cmd
+        run: |
+          where python
+          python --version
+
+      - name: Apply guarded CILog extraction
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools\apply_client_info_logs_feature_wave_20.py > artifacts\client-info-logs-wave-20-apply.log 2>&1
+
+      - name: Upload apply log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-info-logs-wave-20-apply-log
+          path: artifacts/client-info-logs-wave-20-apply.log
+          if-no-files-found: ignore
+
+      - name: Compile extracted state
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\tabs\client_info_logs.py
+          python -m py_compile tools\test_client_info_logs_feature_wave_20.py
+
+      - name: Run CILog feature regression
+        shell: cmd
+        run: python -m tools.test_client_info_logs_feature_wave_20 > artifacts\client-info-logs-wave-20-regression.log 2>&1
+
+      - name: Upload regression log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-info-logs-wave-20-regression-log
+          path: artifacts/client-info-logs-wave-20-regression.log
+          if-no-files-found: ignore
+
+      - name: Run redundancy audit
+        shell: cmd
+        run: python tools\redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json redundancy-report.json
+
+      - name: Run SPINA quality audit
+        shell: cmd
+        run: python tools\spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json quality-report.json
+
+      - name: Commit verified application files
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app\tabs\client_info_logs.py tools\fixtures\client_info_logs_feature_wave_20_manifest.json tools\test_client_info_logs_feature_wave_20.py
+          git diff --cached --quiet && exit /b 0
+          git commit -m "Extract Client Information Log presentation module [skip ci]"
+          git push origin HEAD:agent/feature-module-wave-20
