@@ -118,3 +118,5 @@ jobs:
           git add docs/modularization-map.md
           git commit -m "Document modularization Wave 17"
           git push origin HEAD:agent/wave-17-map-docs
+
+# Trigger after PR creation so GitHub evaluates this workflow.
