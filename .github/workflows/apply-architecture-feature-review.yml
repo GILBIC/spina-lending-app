@@ -1,0 +1,52 @@
+name: Apply Architecture Feature Review
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/architecture-map-wave-27'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out architecture branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/architecture-map-wave-27
+          fetch-depth: 0
+
+      - name: Apply guarded feature classification correction
+        shell: cmd
+        run: |
+          python -m py_compile tools\fix_architecture_feature_classification.py
+          python -m tools.fix_architecture_feature_classification
+
+      - name: Remove temporary feature fixer before mapping
+        shell: cmd
+        run: |
+          del tools\fix_architecture_feature_classification.py
+          del .github\workflows\apply-architecture-feature-review.yml
+
+      - name: Regenerate and validate final reviewed map
+        shell: cmd
+        run: |
+          python -m py_compile tools\generate_architecture_map.py
+          python -m py_compile tools\test_architecture_map.py
+          python -m tools.generate_architecture_map
+          python -m tools.test_architecture_map
+
+      - name: Commit and push reviewed feature map
+        shell: cmd
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader 2>nul || ver >nul
+          gh auth setup-git
+          git config user.name "GILBIC"
+          git config user.email "267608671+GILBIC@users.noreply.github.com"
+          git add tools\generate_architecture_map.py tools\test_architecture_map.py architecture-map.json docs\architecture tools\fix_architecture_feature_classification.py .github\workflows\apply-architecture-feature-review.yml
+          git diff --cached --quiet && exit /b 0
+          git commit -m "Correct architecture feature ownership after review"
+          git push origin HEAD:agent/architecture-map-wave-27
