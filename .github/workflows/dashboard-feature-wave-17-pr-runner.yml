@@ -44,6 +44,24 @@ jobs:
           set -o pipefail
           python /tmp/dashboard_wave_17_apply.py 2>&1 | tee dashboard-wave-17-extraction.log
 
+      - name: Normalize generated regression-test indentation
+        if: steps.extraction.outcome == 'success'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('tools/test_dashboard_feature_wave_17.py')
+          lines = path.read_text(encoding='utf-8').splitlines()
+          malformed = [i + 1 for i, line in enumerate(lines) if line.startswith('  ') and not line.startswith('    ')]
+          if malformed != [53, 56, 59, 62, 64, 106, 107, 116]:
+              raise RuntimeError(f'Unexpected malformed indentation lines: {malformed}')
+          fixed = [
+              ('            ' + line[2:]) if line.startswith('  ') and not line.startswith('    ') else line
+              for line in lines
+          ]
+          path.write_text('\n'.join(fixed) + '\n', encoding='utf-8')
+          PY
+
       - name: Upload complete extraction log
         if: always()
         uses: actions/upload-artifact@v4
