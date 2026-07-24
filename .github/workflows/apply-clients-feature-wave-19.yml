@@ -26,7 +26,17 @@ jobs:
 
       - name: Apply guarded Clients extraction
         shell: cmd
-        run: python tools\apply_clients_feature_wave_19.py
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools\apply_clients_feature_wave_19.py > artifacts\clients-wave-19-apply.log 2>&1
+
+      - name: Upload apply traceback
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clients-wave-19-apply-log
+          path: artifacts/clients-wave-19-apply.log
+          if-no-files-found: ignore
 
       - name: Compile extracted state
         shell: cmd
