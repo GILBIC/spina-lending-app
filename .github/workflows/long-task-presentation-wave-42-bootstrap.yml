@@ -1,0 +1,60 @@
+name: Bootstrap long task presentation Wave 42
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: write
+jobs:
+  extract:
+    if: github.head_ref == 'agent/presentation-wave-42'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Extract guarded long-task presentation
+        shell: cmd
+        run: python .github/scripts/extract_long_task_presentation_wave_42.py
+      - name: Compile and run exact Wave 42 regression
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app/long_task_presentation.py
+          python -m py_compile tools/test_long_task_presentation_wave_42.py
+          python -m compileall -q spina_app
+          python tools/test_long_task_presentation_wave_42.py
+      - name: Run repository audits before commit
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-42-bootstrap-redundancy.json
+          python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-42-bootstrap-quality.json
+      - name: Commit extracted long-task presentation
+        shell: cmd
+        run: |
+          git config user.name "SPINA Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          git add spina_app/long_task_presentation.py
+          git add tools/test_long_task_presentation_wave_42.py
+          git add .github/workflows/long-task-presentation-wave-42.yml
+          git status --short
+          git diff --cached --stat
+          git commit -m "Extract long-task presentation Wave 42"
+      - name: Refresh and commit architecture map
+        shell: cmd
+        run: |
+          python -m tools.generate_architecture_map
+          python -m tools.test_architecture_map
+          git add architecture-map.json docs/architecture
+          git diff --cached --quiet || git commit -m "Refresh architecture map after Wave 42"
+      - name: Configure runner GitHub authentication
+        shell: cmd
+        run: gh auth setup-git
+      - name: Push generated Wave 42 commits
+        shell: cmd
+        run: git push origin HEAD:refs/heads/${{ github.head_ref }}
