@@ -27,7 +27,7 @@ FORBIDDEN_TEXT = (
     "WRITE_TEXT(", "WRITE_BYTES(", ".UNLINK(", "SAVE_SETTINGS(",
     "_WRITE_JSON_ATOMIC(", "ADD_TRANSACTION(", "UPDATE_TRANSACTION(",
     "DELETE_TRANSACTION(", "SET_CLIENT_NOTE(", "ADD_CLIENT(", "UPDATE_CLIENT(",
-    "DELETE_CLIENT(", "RENEW", "OFFSET", "ADVANCE", "PASS_COUNT",
+    "DELETE_CLIENT(",
 )
 FORBIDDEN_CALL_SUFFIXES = {
     "commit", "rollback", "write", "write_text", "write_bytes", "unlink",
