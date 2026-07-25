@@ -84,5 +84,11 @@ if text.count(old_test_asserts) != 1:
     raise SystemExit(f'Expected one test assertion block, found {text.count(old_test_asserts)}')
 text = text.replace(old_test_asserts, new_test_asserts)
 
+old_report_print = "    print(json.dumps(report, indent=2))"
+new_report_print = "    print(f'Wave 44 extracted {report[\"source_lines\"]} lines with hash {report[\"source_sha256\"]}.')"
+if text.count(old_report_print) != 1:
+    raise SystemExit(f'Expected one verbose report print, found {text.count(old_report_print)}')
+text = text.replace(old_report_print, new_report_print)
+
 path.write_text(text, encoding='utf-8')
 print(f'Wave 44 source and bindings verified: {line_count} lines, {inspection_hash}, {bindings}.')
