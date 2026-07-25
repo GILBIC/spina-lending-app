@@ -3,17 +3,23 @@ on:
   push:
     branches:
       - agent/account-header-presentation-wave-46
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - tools/inspect_account_header_wave_46.py
+      - .github/workflows/inspect-account-header-wave-46.yml
 permissions:
   contents: read
 jobs:
   inspect:
+    if: github.head_ref == '' || github.head_ref == 'agent/account-header-presentation-wave-46'
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 30
     steps:
       - name: Check out exact branch head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Compile inspector
         shell: cmd
         run: python -m py_compile tools/inspect_account_header_wave_46.py
