@@ -19,14 +19,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
       - name: Narrow SQL mutation detection to real statements
-        shell: powershell
-        run: |
-          $path = '.github/scripts/extract_collector_tab_presentation_wave_44.py'
-          $text = Get-Content -Raw $path
-          $old = "re.compile(r'\b(?:INSERT|UPDATE|DELETE|REPLACE|ALTER|DROP|CREATE)\b', re.I)"
-          $new = "re.compile(r'\b(?:INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|REPLACE\s+INTO|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE)\b', re.I)"
-          $text = $text.Replace($old, $new)
-          Set-Content -Path $path -Value $text -Encoding utf8
+        shell: cmd
+        run: python .github/scripts/patch_collector_tab_wave_44_detector.py
       - name: Extract guarded collector-tab presentation
         shell: cmd
         run: python .github/scripts/extract_collector_tab_presentation_wave_44.py
@@ -45,20 +39,18 @@ jobs:
           python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-44-bootstrap-redundancy.json
           python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-44-bootstrap-quality.json
       - name: Commit permanent extraction and clean architecture maps
-        shell: powershell
+        shell: cmd
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app/collector_tab_presentation.py tools/test_collector_tab_presentation_wave_44.py .github/workflows/collector-tab-presentation-wave-44.yml
-          if (-not (git diff --cached --quiet)) {
-            git commit -m 'Extract active collector tab presentation Wave 44'
-          }
-          git rm .github/scripts/extract_collector_tab_presentation_wave_44.py .github/workflows/bootstrap-collector-tab-presentation-wave-44.yml
+          git diff --cached --quiet || git commit -m "Extract active collector tab presentation Wave 44"
+          git rm .github/scripts/extract_collector_tab_presentation_wave_44.py .github/scripts/patch_collector_tab_wave_44_detector.py .github/workflows/bootstrap-collector-tab-presentation-wave-44.yml
           python -m tools.generate_architecture_map
           python -m tools.test_architecture_map
           git add architecture-map.json docs/architecture
-          git commit -m 'Refresh architecture maps for Wave 44'
+          git diff --cached --quiet || git commit -m "Refresh architecture maps for Wave 44"
           gh auth setup-git
-          git push origin "HEAD:${{ github.head_ref }}"
+          git push origin HEAD:${{ github.head_ref }}
