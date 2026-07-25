@@ -32,6 +32,13 @@ def parent_function(node: ast.AST, parents: dict[ast.AST, ast.AST]) -> str | Non
     return None
 
 
+def numbered_range(lines: list[str], start: int, end: int) -> list[dict[str, object]]:
+    return [
+        {"line": line_no, "source": source_line(lines, line_no)}
+        for line_no in range(start, min(end, len(lines)) + 1)
+    ]
+
+
 def main() -> None:
     text = DESKTOP.read_text(encoding="utf-8")
     lines = text.splitlines()
@@ -89,19 +96,30 @@ def main() -> None:
         if pattern.search(line):
             raw_matches.append({"line": index, "source": line.rstrip()})
 
+    lifecycle_ranges = {
+        "app_init_and_login_exit": numbered_range(lines, 11155, 11245),
+        "ui_queue_pump": numbered_range(lines, 11330, 11382),
+        "theme_setup": numbered_range(lines, 11505, 11562),
+        "main_entry": numbered_range(lines, 26080, 26100),
+        "account_switch": numbered_range(lines, 37810, 37880),
+    }
+
     report = {
         "desktop_lines": len(lines),
         "functions": sorted(functions, key=lambda row: row["line"]),
         "calls": sorted(calls, key=lambda row: row["line"]),
         "strings": sorted(strings, key=lambda row: row["line"]),
         "raw_matches": raw_matches,
+        "lifecycle_ranges": lifecycle_ranges,
     }
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     print(f"functions={len(functions)} calls={len(calls)} raw_matches={len(raw_matches)}")
-    for row in raw_matches:
-        print(f"{row['line']}: {row['source']}")
+    for name, rows in lifecycle_ranges.items():
+        print(f"\n--- {name} ---")
+        for row in rows:
+            print(f"{row['line']}: {row['source']}")
 
 
 if __name__ == "__main__":
