@@ -19,11 +19,14 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-      - name: Verify local Python
+      - name: Verify local Python and GitHub CLI
         shell: cmd
         run: |
           where python
           python --version
+          where gh
+          gh --version
+          gh auth status
 
       - name: Apply guarded extraction
         shell: cmd
@@ -44,8 +47,8 @@ jobs:
       - name: Commit application extraction
         shell: cmd
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "GILBIC"
+          git config user.email "267608671+GILBIC@users.noreply.github.com"
           git add -A
           git commit -m "Extract read-only client queries Wave 31"
 
@@ -70,4 +73,7 @@ jobs:
 
       - name: Push completed Wave 31 branch
         shell: cmd
-        run: git push origin HEAD:agent/client-read-queries-wave-31
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader 2>nul || ver >nul
+          gh auth setup-git
+          git push origin HEAD:agent/client-read-queries-wave-31
