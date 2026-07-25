@@ -1,7 +1,7 @@
 name: Collector tab presentation Wave 44
 on: [pull_request]
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: collector-tab-presentation-wave-44-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -30,6 +30,16 @@ jobs:
       - name: Run Collector Route Tkinter widget smoke test
         shell: cmd
         run: python tools/test_collector_tab_widget_smoke_wave_44.py
+      - name: Refresh architecture maps if needed
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python -m tools.generate_architecture_map
+          python -m tools.test_architecture_map
+          git add architecture-map.json docs/architecture
+          git diff --cached --quiet || git commit -m "Refresh architecture maps for Wave 44 widget smoke test"
+          git push origin HEAD:${{ github.head_ref }}
       - name: Validate permanent architecture map
         uses: ./.github/actions/architecture-map-check
       - name: Run repository audits
