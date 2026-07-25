@@ -19,7 +19,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
       - name: Narrow SQL mutation detection to real statements
-        shell: pwsh
+        shell: powershell
         run: |
           $path = '.github/scripts/extract_collector_tab_presentation_wave_44.py'
           $text = Get-Content -Raw $path
@@ -45,7 +45,7 @@ jobs:
           python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-44-bootstrap-redundancy.json
           python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-44-bootstrap-quality.json
       - name: Commit permanent extraction and clean architecture maps
-        shell: pwsh
+        shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
