@@ -5,20 +5,25 @@ on:
       - agent/modularization-wave-45
     paths:
       - tools/test_login_dialog_widget_smoke_wave_45.py
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - tools/test_login_dialog_widget_smoke_wave_45.py
 permissions:
   contents: write
 concurrency:
-  group: refresh-wave-45-smoke-maps
+  group: refresh-wave-45-smoke-maps-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 jobs:
   refresh:
+    if: github.head_ref == '' || github.head_ref == 'agent/modularization-wave-45'
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 45
     steps:
       - name: Check out exact branch head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
       - name: Compile and run login dialog smoke test
         shell: cmd
