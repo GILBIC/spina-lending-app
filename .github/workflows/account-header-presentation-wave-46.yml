@@ -27,33 +27,52 @@ jobs:
         run: |
           $desktopPath = "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
           $desktop = [System.IO.File]::ReadAllText($desktopPath)
-          $premature = "_wave46_configure_account_header_dependencies(globals())`r`n_spina_v32_refresh_user_header = _wave46_spina_v32_refresh_user_header`r`n_spina_v32_build_header = _wave46_spina_v32_build_header`r`n"
-          $prematureLf = $premature -replace "`r`n", "`n"
-          $clean = "_spina_v32_refresh_user_header = _wave46_spina_v32_refresh_user_header`r`n_spina_v32_build_header = _wave46_spina_v32_build_header`r`n"
-          $cleanLf = $clean -replace "`r`n", "`n"
-          if ($desktop.Contains($premature)) {
-            $desktop = $desktop.Replace($premature, $clean)
-          } elseif ($desktop.Contains($prematureLf)) {
-            $desktop = $desktop.Replace($prematureLf, $cleanLf)
-          }
-
-          $oldOrder = "        _spina_v32_orig_build_header = getattr(App, `"_build_header`", None)`r`n        if callable(_spina_v32_orig_build_header):`r`n            App._build_header = _spina_v32_build_header`r`n"
-          $oldOrderLf = $oldOrder -replace "`r`n", "`n"
-          $newOrder = "        _spina_v32_orig_build_header = getattr(App, `"_build_header`", None)`r`n        if callable(_spina_v32_orig_build_header):`r`n            _wave46_configure_account_header_dependencies(globals())`r`n            App._build_header = _spina_v32_build_header`r`n"
-          $newOrderLf = $newOrder -replace "`r`n", "`n"
-          if ($desktop.Contains($oldOrder)) {
-            $desktop = $desktop.Replace($oldOrder, $newOrder)
-          } elseif ($desktop.Contains($oldOrderLf)) {
-            $desktop = $desktop.Replace($oldOrderLf, $newOrderLf)
-          }
+          $newline = if ($desktop.Contains("`r`n")) { "`r`n" } else { "`n" }
+          $lines = New-Object 'System.Collections.Generic.List[string]'
+          [System.Text.RegularExpressions.Regex]::Split($desktop, "\r?\n") | ForEach-Object { [void]$lines.Add($_) }
 
           $configureMarker = "_wave46_configure_account_header_dependencies(globals())"
-          $originalMarker = "_spina_v32_orig_build_header = getattr(App, `"_build_header`", None)"
+          $originalMarker = '_spina_v32_orig_build_header = getattr(App, "_build_header", None)'
           $bindingMarker = "App._build_header = _spina_v32_build_header"
-          if (($desktop.Split($configureMarker).Count - 1) -ne 1) { throw "Expected one Wave 46 dependency configuration call" }
-          if ($desktop.IndexOf($originalMarker) -ge $desktop.IndexOf($configureMarker)) { throw "Dependency configuration still occurs before original header capture" }
-          if ($desktop.IndexOf($configureMarker) -ge $desktop.IndexOf($bindingMarker)) { throw "Dependency configuration must occur before App._build_header binding" }
-          [System.IO.File]::WriteAllText($desktopPath, $desktop, (New-Object System.Text.UTF8Encoding($false)))
+
+          for ($i = $lines.Count - 1; $i -ge 0; $i--) {
+            if ($lines[$i].Trim() -eq $configureMarker) {
+              $lines.RemoveAt($i)
+            }
+          }
+
+          $originalIndex = -1
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i].Trim() -eq $originalMarker) {
+              $originalIndex = $i
+              break
+            }
+          }
+          if ($originalIndex -lt 0) { throw "Original header capture was not found" }
+
+          $bindingIndex = -1
+          for ($i = $originalIndex + 1; $i -lt $lines.Count; $i++) {
+            if ($lines[$i].Trim() -eq $bindingMarker) {
+              $bindingIndex = $i
+              break
+            }
+          }
+          if ($bindingIndex -lt 0) { throw "Final App._build_header binding was not found after original capture" }
+
+          $bindingLine = $lines[$bindingIndex]
+          $indentLength = $bindingLine.Length - $bindingLine.TrimStart().Length
+          $indent = $bindingLine.Substring(0, $indentLength)
+          $lines.Insert($bindingIndex, $indent + $configureMarker)
+
+          $repaired = [string]::Join($newline, $lines)
+          $configurePosition = $repaired.IndexOf($configureMarker)
+          $originalPosition = $repaired.IndexOf($originalMarker)
+          $bindingPosition = $repaired.IndexOf($bindingMarker)
+          if (($repaired.Split($configureMarker).Count - 1) -ne 1) { throw "Expected exactly one Wave 46 dependency configuration call" }
+          if (-not ($originalPosition -lt $configurePosition -and $configurePosition -lt $bindingPosition)) {
+            throw "Wave 46 dependency order is still invalid"
+          }
+          [System.IO.File]::WriteAllText($desktopPath, $repaired, (New-Object System.Text.UTF8Encoding($false)))
       - name: Compile and run repaired Wave 46 tests
         shell: cmd
         run: |
