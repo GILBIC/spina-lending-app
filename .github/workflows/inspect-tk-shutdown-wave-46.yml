@@ -1,0 +1,33 @@
+name: Inspect Tk shutdown Wave 46
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "tools/inspect_tk_shutdown_wave_46.py"
+      - ".github/workflows/inspect-tk-shutdown-wave-46.yml"
+permissions:
+  contents: read
+jobs:
+  inspect:
+    if: github.head_ref == 'agent/account-header-presentation-wave-46'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Compile inspector
+        shell: cmd
+        run: python -m py_compile tools/inspect_tk_shutdown_wave_46.py
+      - name: Inspect Tk shutdown callbacks
+        shell: cmd
+        run: |
+          set PYTHONIOENCODING=utf-8
+          python tools/inspect_tk_shutdown_wave_46.py
+      - name: Upload shutdown inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-46-tk-shutdown-inspection
+          path: artifacts/wave-46-tk-shutdown-inspection.json
