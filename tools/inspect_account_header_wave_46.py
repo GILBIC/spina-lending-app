@@ -78,6 +78,60 @@ def runtime_bindings(tree: ast.Module) -> list[dict[str, object]]:
     return sorted(rows, key=lambda row: int(row["line"]))
 
 
+def symbol_resolutions(tree: ast.Module, lines: list[str]) -> dict[str, list[dict[str, object]]]:
+    rows: dict[str, list[dict[str, object]]] = {name: [] for name in TARGETS}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name in rows:
+            rows[node.name].append(
+                {
+                    "kind": "function",
+                    "line": node.lineno,
+                    "end": node.end_lineno,
+                    "source": "\n".join(lines[node.lineno - 1 : node.end_lineno]),
+                }
+            )
+        elif isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id in rows:
+                    rows[target.id].append(
+                        {
+                            "kind": "assignment",
+                            "line": node.lineno,
+                            "value": ast.unparse(node.value),
+                            "source": "\n".join(lines[node.lineno - 1 : node.end_lineno]),
+                        }
+                    )
+        elif isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                bound = alias.asname or alias.name
+                if bound in rows:
+                    rows[bound].append(
+                        {
+                            "kind": "import",
+                            "line": node.lineno,
+                            "module": node.module,
+                            "name": alias.name,
+                            "asname": alias.asname,
+                            "source": "\n".join(lines[node.lineno - 1 : node.end_lineno]),
+                        }
+                    )
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                bound = alias.asname or alias.name.split(".")[0]
+                if bound in rows:
+                    rows[bound].append(
+                        {
+                            "kind": "import",
+                            "line": node.lineno,
+                            "module": alias.name,
+                            "name": alias.name,
+                            "asname": alias.asname,
+                            "source": "\n".join(lines[node.lineno - 1 : node.end_lineno]),
+                        }
+                    )
+    return rows
+
+
 def inspect_function(fn: ast.FunctionDef, lines: list[str]) -> dict[str, object]:
     source = "\n".join(lines[fn.lineno - 1 : fn.end_lineno])
     calls = sorted({dotted(node.func) for node in ast.walk(fn) if isinstance(node, ast.Call) and dotted(node.func)})
@@ -152,26 +206,35 @@ def main() -> None:
     text = DESKTOP.read_text(encoding="utf-8")
     lines = text.splitlines()
     tree = ast.parse(text)
-    top_functions = {
-        node.name: node
-        for node in tree.body
-        if isinstance(node, ast.FunctionDef) and node.name in TARGETS
-    }
-    missing = [name for name in TARGETS if name not in top_functions]
-    if missing:
-        raise AssertionError(f"Missing Wave 46 targets: {missing}")
+    resolutions = symbol_resolutions(tree, lines)
+    functions_by_name: dict[str, list[ast.FunctionDef]] = {name: [] for name in TARGETS}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name in functions_by_name:
+            functions_by_name[node.name].append(node)
+
+    unresolved = [name for name, rows in resolutions.items() if not rows]
+    if unresolved:
+        raise AssertionError(f"Unresolved Wave 46 targets: {unresolved}")
+
+    function_rows: list[dict[str, object]] = []
+    for name in TARGETS:
+        for fn in sorted(functions_by_name[name], key=lambda node: node.lineno):
+            function_rows.append(inspect_function(fn, lines))
 
     report = {
         "desktop_lines": len(lines),
         "desktop_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
-        "functions": [inspect_function(top_functions[name], lines) for name in TARGETS],
+        "functions": function_rows,
+        "symbol_resolutions": resolutions,
         "runtime_bindings": runtime_bindings(tree),
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     print(f"DESKTOP lines={report['desktop_lines']} sha256={report['desktop_sha256']}")
-    for item in report["functions"]:
+    for name in TARGETS:
+        print(f"RESOLVE {name}: {resolutions[name]}")
+    for item in function_rows:
         print(
             f"TARGET {item['name']} lines={item['lines']} range={item['start']}-{item['end']} "
             f"hash={item['sha256']} callbacks={item['nested_callbacks']} "
