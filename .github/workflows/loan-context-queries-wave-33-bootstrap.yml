@@ -1,0 +1,47 @@
+name: Loan context queries Wave 33 bootstrap
+on: [pull_request]
+permissions:
+  contents: write
+jobs:
+  extract-and-validate:
+    if: github.head_ref == 'agent/loan-context-queries-wave-33'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - shell: cmd
+        run: |
+          where python
+          python --version
+          where gh
+          gh auth status
+      - shell: cmd
+        run: python tools/apply_loan_context_queries_wave_33.py
+      - shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\loan_context_queries.py
+          python -m py_compile tools\test_loan_context_queries_wave_33.py
+          python -m compileall -q spina_app
+          python -m tools.test_loan_context_queries_wave_33
+      - shell: cmd
+        run: |
+          git config user.name "GILBIC"
+          git config user.email "267608671+GILBIC@users.noreply.github.com"
+          git add -A
+          git commit -m "Extract LoanDB context queries Wave 33"
+          python tools/generate_architecture_map.py
+          python -m tools.test_architecture_map
+          if not exist artifacts mkdir artifacts
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-33-redundancy.json
+          python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-33-quality.json
+          git add architecture-map.json docs/architecture
+          git commit -m "Refresh architecture map after Wave 33"
+      - shell: cmd
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader 2>nul || ver >nul
+          gh auth setup-git
+          git push origin HEAD:agent/loan-context-queries-wave-33
