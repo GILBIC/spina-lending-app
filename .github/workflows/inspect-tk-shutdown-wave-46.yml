@@ -4,6 +4,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "tools/adjust_tk_shutdown_guard_wave_46.py"
       - "tools/fix_tk_shutdown_wave_46.py"
       - "tools/inspect_tk_shutdown_wave_46.py"
       - ".github/workflows/inspect-tk-shutdown-wave-46.yml"
@@ -20,9 +21,12 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-      - name: Compile guarded shutdown repair
+      - name: Narrow and compile guarded shutdown repair
         shell: cmd
-        run: python -m py_compile tools/fix_tk_shutdown_wave_46.py
+        run: |
+          python -m py_compile tools/adjust_tk_shutdown_guard_wave_46.py
+          python tools/adjust_tk_shutdown_guard_wave_46.py
+          python -m py_compile tools/fix_tk_shutdown_wave_46.py
       - name: Apply guarded shutdown repair
         shell: cmd
         run: python tools/fix_tk_shutdown_wave_46.py
@@ -60,7 +64,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm tools/fix_tk_shutdown_wave_46.py tools/inspect_tk_shutdown_wave_46.py
+          git rm tools/adjust_tk_shutdown_guard_wave_46.py tools/fix_tk_shutdown_wave_46.py tools/inspect_tk_shutdown_wave_46.py
           git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py tools/test_tk_shutdown_wave_46.py architecture-map.json docs/architecture
           git commit -m "Fix Wave 46 Tk shutdown callbacks"
           git push origin HEAD:${{ github.head_ref }}
