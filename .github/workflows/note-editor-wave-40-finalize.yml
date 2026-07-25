@@ -1,0 +1,36 @@
+name: Finalize note editor presentation Wave 40
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: write
+jobs:
+  finalize:
+    if: github.head_ref == 'agent/note-editor-presentation-wave-40'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Regenerate clean architecture maps
+        shell: cmd
+        run: |
+          python -m tools.generate_architecture_map
+          python -m tools.test_architecture_map
+      - name: Commit refreshed architecture maps
+        shell: cmd
+        run: |
+          git config user.name "SPINA Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add architecture-map.json docs\architecture
+          git diff --cached --quiet || git commit -m "Refresh architecture map after Wave 40 cleanup"
+      - name: Configure runner GitHub authentication
+        shell: cmd
+        run: gh auth setup-git
+      - name: Push refreshed architecture maps
+        shell: cmd
+        run: git push origin HEAD:refs/heads/${{ github.head_ref }}
