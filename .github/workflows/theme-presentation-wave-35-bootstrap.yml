@@ -1,0 +1,64 @@
+name: Theme presentation Wave 35 bootstrap
+on: [pull_request]
+permissions:
+  contents: write
+jobs:
+  extract-and-validate:
+    if: github.head_ref == 'agent/theme-presentation-wave-35'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 45
+    steps:
+      - name: Check out Wave 35 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Verify local Python and GitHub CLI
+        shell: cmd
+        run: |
+          where python
+          python --version
+          where gh
+          gh auth status
+      - name: Apply guarded high-volume theme extraction
+        shell: cmd
+        run: python tools\apply_theme_presentation_wave_35.py
+      - name: Compile application, module, and test
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\theme_presentation.py
+          python -m py_compile tools\test_theme_presentation_wave_35.py
+          python -m compileall -q spina_app
+      - name: Run high-volume theme regression
+        shell: cmd
+        run: python tools\test_theme_presentation_wave_35.py
+      - name: Commit application extraction
+        shell: cmd
+        run: |
+          git config user.name "GILBIC"
+          git config user.email "267608671+GILBIC@users.noreply.github.com"
+          git add -A
+          git commit -m "Extract theme presentation Wave 35"
+      - name: Regenerate architecture map
+        shell: cmd
+        run: |
+          python tools\generate_architecture_map.py
+          python tools\test_architecture_map.py
+      - name: Run repository audits
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools\redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-35-redundancy.json
+          python tools\spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-35-quality.json
+      - name: Commit architecture refresh
+        shell: cmd
+        run: |
+          git add architecture-map.json docs/architecture
+          git commit -m "Refresh architecture map after Wave 35"
+      - name: Push completed Wave 35 branch
+        shell: cmd
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader 2>nul || ver >nul
+          gh auth setup-git
+          git push origin HEAD:agent/theme-presentation-wave-35
