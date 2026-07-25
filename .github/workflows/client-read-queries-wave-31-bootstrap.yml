@@ -1,0 +1,73 @@
+name: Client read queries Wave 31 bootstrap
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  extract-and-validate:
+    if: github.head_ref == 'agent/client-read-queries-wave-31'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out Wave 31 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Verify local Python
+        shell: cmd
+        run: |
+          where python
+          python --version
+
+      - name: Apply guarded extraction
+        shell: cmd
+        run: python tools/apply_client_read_queries_wave_31.py
+
+      - name: Compile extracted application
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app/client_queries.py
+          python -m py_compile tools/test_client_read_queries_wave_31.py
+          python -m compileall -q spina_app
+
+      - name: Run focused regression
+        shell: cmd
+        run: python -m tools.test_client_read_queries_wave_31
+
+      - name: Commit application extraction
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Extract read-only client queries Wave 31"
+
+      - name: Regenerate architecture map
+        shell: cmd
+        run: |
+          python tools/generate_architecture_map.py
+          python -m tools.test_architecture_map
+
+      - name: Run repository audits
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-31-redundancy.json
+          python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-31-quality.json
+
+      - name: Commit architecture refresh
+        shell: cmd
+        run: |
+          git add architecture-map.json docs/architecture
+          git commit -m "Refresh architecture map after Wave 31"
+
+      - name: Push completed Wave 31 branch
+        shell: cmd
+        run: git push origin HEAD:agent/client-read-queries-wave-31
