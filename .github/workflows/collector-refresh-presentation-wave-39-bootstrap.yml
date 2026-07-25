@@ -55,6 +55,9 @@ jobs:
         run: |
           git add architecture-map.json docs/architecture
           git commit -m "Refresh architecture map after Wave 39"
-      - name: Push completed Wave 39 branch with exact-head lease
+      - name: Push completed Wave 39 branch with GitHub CLI auth
         shell: cmd
-        run: git push --force-with-lease=refs/heads/agent/collector-refresh-presentation-wave-39:${{ github.event.pull_request.head.sha }} origin HEAD:agent/collector-refresh-presentation-wave-39
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader
+          gh auth setup-git
+          git push --force-with-lease=refs/heads/agent/collector-refresh-presentation-wave-39:${{ github.event.pull_request.head.sha }} origin HEAD:agent/collector-refresh-presentation-wave-39
