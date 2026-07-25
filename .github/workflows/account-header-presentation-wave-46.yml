@@ -6,44 +6,12 @@ on:
       - "spina_app/account_header_presentation.py"
       - "tools/test_account_header_presentation_wave_46.py"
       - "tools/test_account_header_widget_smoke_wave_46.py"
-      - "tools/fix_account_header_dependency_order_wave_46.py"
       - "architecture-map.json"
       - "docs/architecture/**"
       - ".github/workflows/account-header-presentation-wave-46.yml"
 permissions:
-  contents: write
+  contents: read
 jobs:
-  repair_dependency_order:
-    if: github.head_ref == 'agent/account-header-presentation-wave-46'
-    runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 45
-    steps:
-      - name: Check out exact PR head
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-      - name: Repair Wave 46 startup dependency order
-        shell: cmd
-        run: python tools/fix_account_header_dependency_order_wave_46.py
-      - name: Compile and run repaired Wave 46 tests
-        shell: cmd
-        run: |
-          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
-          python -m py_compile spina_app/account_header_presentation.py
-          python -m py_compile tools/test_account_header_presentation_wave_46.py
-          python -m py_compile tools/test_account_header_widget_smoke_wave_46.py
-          python tools/test_account_header_presentation_wave_46.py
-          python tools/test_account_header_widget_smoke_wave_46.py
-      - name: Commit repaired startup wiring
-        shell: cmd
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm tools/fix_account_header_dependency_order_wave_46.py
-          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
-          git commit -m "Fix Wave 46 account header dependency order"
-          git push origin HEAD:${{ github.head_ref }}
   validate:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 45
