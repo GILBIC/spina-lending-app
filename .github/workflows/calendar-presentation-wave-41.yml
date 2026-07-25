@@ -17,20 +17,20 @@ jobs:
         shell: cmd
         run: |
           python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
-          python -m py_compile spina_app\calendar_presentation.py
-          python -m py_compile tools	est_calendar_presentation_wave_41.py
+          python -m py_compile spina_app/calendar_presentation.py
+          python -m py_compile tools/test_calendar_presentation_wave_41.py
           python -m compileall -q spina_app
       - name: Run exact calendar-presentation regression
         shell: cmd
-        run: python tools	est_calendar_presentation_wave_41.py
+        run: python tools/test_calendar_presentation_wave_41.py
       - name: Validate permanent architecture map
         uses: ./.github/actions/architecture-map-check
       - name: Run repository audits
         shell: cmd
         run: |
           if not exist artifacts mkdir artifacts
-          python toolsedundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts\wave-41-redundancy.json
-          python tools\spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts\wave-41-quality.json
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-41-redundancy.json
+          python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-41-quality.json
       - name: Upload Wave 41 reports
         uses: actions/upload-artifact@v4
         with:
