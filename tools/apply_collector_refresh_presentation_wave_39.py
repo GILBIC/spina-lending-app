@@ -85,7 +85,7 @@ def validate_read_refresh(node: ast.AST, source: str) -> list[str]:
             chain = call_chain(item)
             if len(chain) >= 2 and chain[:2] == ["self", "db"]:
                 full = ".".join(chain)
-                if not any(full == allowed or full.startswith(allowed + ".") for allowed in EXPECTED_DB_CALLS):
+                if not any(full == allowed or full.startswith(allowed + ".") or allowed.startswith(full + ".") for allowed in EXPECTED_DB_CALLS):
                     raise SystemExit(f"Unexpected database attribute in {TARGET}: {full}")
 
         if not isinstance(item, ast.Call):
