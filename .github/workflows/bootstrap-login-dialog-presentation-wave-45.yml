@@ -66,8 +66,4 @@ jobs:
           git diff --cached --quiet || git commit -m "Refresh architecture maps for Wave 45"
       - name: Push permanent Wave 45 branch
         shell: cmd
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh auth setup-git
-          git push origin HEAD:${{ github.head_ref }}
+        run: git push origin HEAD:${{ github.head_ref }}
