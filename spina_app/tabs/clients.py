@@ -19,6 +19,19 @@ _REQUIRED_DEPENDENCIES = (
     "_app__norm_lt_value",
     "_spina_v23_client_loan_summary",
     "_log_exc",
+    "_spina__ensure_client_picture_column",
+    "_spina_perf_dict_rows",
+    "_spina_perf_ensure_indexes",
+    "_spina_perf_norm_lt",
+    "_app_refresh_clients",
+    "_log_suppressed_once",
+    "_spina__fmt_client_money",
+    "_spina__parse_flexible_due_rule",
+    "_spina__client_due_meta_base",
+    "_spina_route_notice_key",
+    "_spina_route_notice_load",
+    "_spina_route_notice_norm_lt",
+    "_spina_route_notice_norm_name",
 )
 
 
@@ -427,3 +440,416 @@ def _spina_v23_update_client_cards(self):
                 pass
     except Exception:
         pass
+
+
+def _db_get_client_picture(self, name, loan_type=None, include_archived=True):
+    try:
+        _spina__ensure_client_picture_column(self)
+    except Exception:
+        pass
+    try:
+        info = self.get_client_info(name, loan_type=loan_type, include_archived=include_archived) or {}
+    except Exception:
+        info = {}
+    return str(info.get('client_picture') or '').strip()
+
+def _app__selected_client_name_and_lt(self):
+    try:
+        sel = self.clients_tree.selection()
+    except Exception:
+        sel = ()
+    if not sel:
+        return ('', _app__norm_lt_value(self, self._mode_filter()))
+    iid = sel[0]
+    try:
+        vals = self.clients_tree.item(iid, 'values') or ()
+    except Exception:
+        vals = ()
+    name = str(vals[0] if vals else '').strip()
+    lt = _app__norm_lt_value(self, self._mode_filter())
+    try:
+        tags = self.clients_tree.item(iid, 'tags') or ()
+        for t in tags:
+            if str(t).startswith('lt:'):
+                lt = _app__norm_lt_value(self, str(t).split(':', 1)[1])
+                break
+    except Exception:
+        pass
+    return (name, lt)
+
+def _app_install_clients_picture_ui(self):
+    if getattr(self, '_clients_picture_ui_ready', False):
+        try:
+            self.refresh_client_picture_panel()
+        except Exception:
+            pass
+        return
+
+    try:
+        box = ttk.LabelFrame(self.tab_clients, text='Client Picture')
+        box.pack(fill='x', padx=8, pady=(0, 8))
+    except Exception:
+        return
+
+    top = ttk.Frame(box)
+    top.pack(fill='x', padx=8, pady=8)
+
+    preview = ttk.Label(top, text='No picture selected', anchor='center', width=22)
+    try:
+        preview.configure(relief='solid', padding=8)
+    except Exception:
+        pass
+    preview.pack(side='left', padx=(0, 12), pady=2)
+
+    right = ttk.Frame(top)
+    right.pack(side='left', fill='x', expand=True)
+
+    info_var = tk.StringVar(value='Select a client to view picture.')
+    path_var = tk.StringVar(value='')
+    ttk.Label(right, textvariable=info_var, font=('TkDefaultFont', 10, 'bold')).pack(anchor='w')
+    ttk.Label(right, textvariable=path_var, foreground='#666', wraplength=520, justify='left').pack(anchor='w', pady=(4, 8))
+
+    btns = ttk.Frame(right)
+    btns.pack(anchor='w')
+    ttk.Button(btns, text='Set Picture', command=lambda: self.set_selected_client_picture()).pack(side='left', padx=(0, 6))
+    ttk.Button(btns, text='Clear Picture', command=lambda: self.clear_selected_client_picture()).pack(side='left')
+
+    self.clients_picture_box = box
+    self.clients_picture_preview = preview
+    self.clients_picture_info_var = info_var
+    self.clients_picture_path_var = path_var
+    self._clients_picture_img = None
+    self._clients_picture_ui_ready = True
+
+    try:
+        self.clients_tree.bind('<<TreeviewSelect>>', lambda e: self.refresh_client_picture_panel(), add='+')
+    except Exception:
+        try:
+            self.clients_tree.bind('<<TreeviewSelect>>', lambda e: self.refresh_client_picture_panel())
+        except Exception:
+            pass
+
+    try:
+        self.refresh_client_picture_panel()
+    except Exception:
+        pass
+
+def _spina_perf_clients_rows(db, loan_type="Regular", search=None, search_by="all", include_extra_7x7=True):
+    """Bulk load rows for Clients tab in one/few queries, avoiding per-row get_client_info()."""
+    _spina_perf_ensure_indexes(db)
+    lt = _spina_perf_norm_lt(loan_type)
+    term = (search or "").strip()
+    sb = (search_by or "all").strip().lower()
+    cur = db.conn.cursor()
+
+    # Map search mode aliases
+    try:
+        if sb.startswith("cli"):
+            sb = "client"
+        elif sb.startswith("are"):
+            sb = "area"
+        elif sb.startswith("link"):
+            sb = "linked"
+        elif sb.startswith("unl"):
+            sb = "unlinked"
+        elif sb.startswith("sug"):
+            sb = "suggested"
+        elif sb.startswith("blank"):
+            sb = "blanks"
+        elif sb.startswith("pri"):
+            sb = "principal"
+        elif sb.startswith("rel"):
+            sb = "released"
+        elif sb.startswith("sta"):
+            sb = "start_date"
+        elif sb.startswith("due"):
+            sb = "due_date"
+        else:
+            sb = "all"
+    except Exception:
+        sb = "all"
+
+    where = ["IFNULL(c.loan_type,'Regular') = ?", "COALESCE(c.is_archived,0)=0"]
+    params = [lt]
+    like = f"%{term}%"
+
+    # Special typed commands in All search
+    tlow = term.lower()
+    if sb == "all" and tlow in ("blanks", "blank", "missing", "incomplete"):
+        sb, term = "blanks", ""
+    elif sb == "all" and tlow in ("linked", "link"):
+        sb, term = "linked", ""
+    elif sb == "all" and tlow in ("unlinked", "not linked", "notlinked"):
+        sb, term = "unlinked", ""
+    elif sb == "all" and tlow in ("suggested", "suggest", "suggestion", "suggested link", "suggestedlink"):
+        sb, term = "suggested", ""
+
+    if sb == "blanks":
+        where.append("(IFNULL(c.area,'')='' OR IFNULL(c.date_released,'')='' OR IFNULL(c.due_date,'')='' OR IFNULL(c.principal,0)=0)")
+    elif sb == "linked":
+        where.append("TRIM(IFNULL(c.person_uid,'')) <> ''")
+        where.append("EXISTS(SELECT 1 FROM clients c2 WHERE c2.person_uid=c.person_uid AND c2.id<>c.id AND IFNULL(c2.loan_type,'Regular')<>IFNULL(c.loan_type,'Regular') AND COALESCE(c2.is_archived,0)=0)")
+    elif sb == "suggested":
+        where.append("TRIM(IFNULL(c.person_uid,'')) = ''")
+        where.append("EXISTS(SELECT 1 FROM clients c2 WHERE c2.name=c.name AND c2.id<>c.id AND IFNULL(c2.loan_type,'Regular')<>IFNULL(c.loan_type,'Regular') AND COALESCE(c2.is_archived,0)=0)")
+        if term:
+            where.append("c.name LIKE ?")
+            params.append(like)
+    elif sb == "unlinked":
+        where.append("TRIM(IFNULL(c.person_uid,'')) = ''")
+        where.append("(EXISTS(SELECT 1 FROM clients c2 WHERE c2.name=c.name AND c2.id<>c.id AND IFNULL(c2.loan_type,'Regular')<>IFNULL(c.loan_type,'Regular') AND COALESCE(c2.is_archived,0)=0) OR (IFNULL(c.loan_type,'Regular')='7x7' AND NOT EXISTS(SELECT 1 FROM clients c2 WHERE c2.name=c.name AND IFNULL(c2.loan_type,'Regular')='Regular' AND COALESCE(c2.is_archived,0)=0)))")
+        if term:
+            where.append("c.name LIKE ?")
+            params.append(like)
+    elif term:
+        if sb == "client":
+            where.append("c.name LIKE ?"); params.append(like)
+        elif sb == "area":
+            where.append("IFNULL(c.area,'') LIKE ?"); params.append(like)
+        elif sb == "principal":
+            where.append("CAST(IFNULL(c.principal,0) AS TEXT) LIKE ?"); params.append(like)
+        elif sb == "released":
+            where.append("IFNULL(c.date_released,'') LIKE ?"); params.append(like)
+        elif sb == "due_date":
+            where.append("IFNULL(c.due_date,'') LIKE ?"); params.append(like)
+        elif sb == "start_date":
+            where.append("IFNULL(date(c.date_released, '+' || IFNULL(c.pay_start_offset_days,0) || ' day'),'') LIKE ?"); params.append(like)
+        else:
+            where.append("""(
+                c.name LIKE ?
+                OR IFNULL(c.area,'') LIKE ?
+                OR CAST(IFNULL(c.principal,0) AS TEXT) LIKE ?
+                OR IFNULL(c.date_released,'') LIKE ?
+                OR IFNULL(c.due_date,'') LIKE ?
+                OR IFNULL(date(c.date_released, '+' || IFNULL(c.pay_start_offset_days,0) || ' day'),'') LIKE ?
+                OR IFNULL(c.person_uid,'') LIKE ?
+            )""")
+            params.extend([like, like, like, like, like, like, like])
+
+    sql = "SELECT c.* FROM clients c WHERE " + " AND ".join(where) + " ORDER BY c.name COLLATE NOCASE"
+    rows = _spina_perf_dict_rows(cur.execute(sql, params).fetchall())
+
+    # Build fast lookup sets for link labels, no per-row DB calls.
+    try:
+        active = _spina_perf_dict_rows(cur.execute(
+            "SELECT name, loan_type, person_uid FROM clients WHERE COALESCE(is_archived,0)=0"
+        ).fetchall())
+    except Exception:
+        active = []
+
+    other_by_name = set()
+    pu_types = {}
+    for r in active:
+        nm = str(r.get("name") or "").strip().lower()
+        rlt = _spina_perf_norm_lt(r.get("loan_type"))
+        pu = str(r.get("person_uid") or "").strip()
+        if rlt != lt and nm:
+            other_by_name.add(nm)
+        if pu:
+            pu_types.setdefault(pu, set()).add(rlt)
+
+    other_lt = "7x7" if lt == "Regular" else "Regular"
+    final = []
+    seen = set()
+    for r in rows:
+        nm_key = str(r.get("name") or "").strip().lower()
+        pu = str(r.get("person_uid") or "").strip()
+        link_label = ""
+        if pu and len(pu_types.get(pu, set())) > 1:
+            link_label = f"{other_lt}✓"
+        elif pu:
+            link_label = "Linked✓"
+        elif nm_key in other_by_name:
+            link_label = other_lt
+        r["_spina_link_label"] = link_label
+        r["_spina_row_lt"] = lt
+        r["_spina_extra7x7"] = False
+        final.append(r)
+        seen.add(nm_key)
+
+    # In Regular view, append unpaired 7x7 clients using one SQL query.
+    if lt == "Regular" and include_extra_7x7 and sb not in ("linked", "suggested"):
+        extra_where = [
+            "IFNULL(c.loan_type,'Regular')='7x7'",
+            "COALESCE(c.is_archived,0)=0",
+            "TRIM(IFNULL(c.person_uid,''))=''",
+            "NOT EXISTS(SELECT 1 FROM clients r WHERE r.name=c.name AND IFNULL(r.loan_type,'Regular')='Regular' AND COALESCE(r.is_archived,0)=0)"
+        ]
+        extra_params = []
+        if term:
+            if sb == "area":
+                extra_where.append("IFNULL(c.area,'') LIKE ?"); extra_params.append(like)
+            elif sb == "principal":
+                extra_where.append("CAST(IFNULL(c.principal,0) AS TEXT) LIKE ?"); extra_params.append(like)
+            elif sb == "released":
+                extra_where.append("IFNULL(c.date_released,'') LIKE ?"); extra_params.append(like)
+            elif sb == "due_date":
+                extra_where.append("IFNULL(c.due_date,'') LIKE ?"); extra_params.append(like)
+            elif sb == "start_date":
+                extra_where.append("IFNULL(date(c.date_released, '+' || IFNULL(c.pay_start_offset_days,0) || ' day'),'') LIKE ?"); extra_params.append(like)
+            else:
+                extra_where.append("(c.name LIKE ? OR IFNULL(c.area,'') LIKE ?)")
+                extra_params.extend([like, like])
+        extra_sql = "SELECT c.* FROM clients c WHERE " + " AND ".join(extra_where) + " ORDER BY c.name COLLATE NOCASE"
+        for r in _spina_perf_dict_rows(cur.execute(extra_sql, extra_params).fetchall()):
+            nm_key = str(r.get("name") or "").strip().lower()
+            if nm_key in seen:
+                continue
+            r["_spina_link_label"] = "7x7 ONLY"
+            r["_spina_row_lt"] = "7x7"
+            r["_spina_extra7x7"] = True
+            final.append(r)
+            seen.add(nm_key)
+
+    return final
+
+def _spina_perf_refresh_clients(self):
+    """Fast Clients tab refresh for large datasets."""
+    try:
+        term = (getattr(self, "search_clients_var", tk.StringVar()).get() or "").strip()
+    except Exception:
+        term = ""
+    try:
+        lt = _app__norm_lt_value(self, self._mode_filter())
+    except Exception:
+        lt = "Regular"
+    try:
+        mode = (getattr(self, "clients_search_mode_var", tk.StringVar(value="All")).get() or "Both").strip().lower()
+    except Exception:
+        mode = "both"
+
+    try:
+        tree = self.clients_tree
+        try:
+            tree.delete(*tree.get_children())
+        except Exception:
+            for rid in tree.get_children():
+                tree.delete(rid)
+    except Exception:
+        return
+
+    try:
+        rows = _spina_perf_clients_rows(self.db, loan_type=lt, search=term if term else None, search_by=mode, include_extra_7x7=True)
+    except Exception as e:
+        try:
+            _log_exc("perf_refresh_clients: bulk load failed; using old loader", e)
+        except Exception:
+            pass
+        try:
+            return _app_refresh_clients(self)
+        except Exception:
+            return
+
+    for idx, info in enumerate(rows or []):
+        try:
+            row_lt = _spina_perf_norm_lt(info.get("_spina_row_lt") or info.get("loan_type") or lt)
+            is_extra_7x7 = bool(info.get("_spina_extra7x7"))
+            _day_due, _due_today = _spina__client_due_meta(info)
+            tags = [f"lt:{row_lt}", "even" if (idx % 2 == 0) else "odd"]
+            if is_extra_7x7:
+                tags.append("extra7x7")
+            iid = (str(info.get("client_uid") or "").strip() or None)
+            row_values = (
+                info.get("name", ""),
+                info.get("area", ""),
+                info.get("payment_term", ""),
+                _day_due,
+                _spina__fmt_client_money(info.get("payment_amount", 0)),
+                info.get("payment_mode", "Cash"),
+                info.get("_spina_link_label", ""),
+                info.get("contact_number", ""),
+                _spina__fmt_client_money(info.get("principal", 0)),
+                _spina__fmt_client_money(info.get("interest_amount", 0)),
+                _spina__fmt_client_money(info.get("total_to_pay", 0)),
+                info.get("date_released", ""),
+                info.get("due_date", ""),
+            )
+            try:
+                tree.insert("", "end", iid=iid, tags=tuple(tags), values=row_values)
+            except Exception:
+                tree.insert("", "end", tags=tuple(tags), values=row_values)
+        except Exception as e:
+            try:
+                _log_suppressed_once("perf_client_row_insert", "client row insert skipped", e)
+            except Exception:
+                pass
+
+    try:
+        if hasattr(self, "clients_count_var"):
+            self.clients_count_var.set(f"Rows: {len(tree.get_children())}")
+    except Exception:
+        pass
+    try:
+        self._update_toolbar_states()
+    except Exception:
+        pass
+    if not term:
+        try:
+            self._refresh_area_dropdowns()
+        except Exception:
+            pass
+    try:
+        if hasattr(self, "refresh_client_picture_panel"):
+            self.refresh_client_picture_panel()
+    except Exception:
+        pass
+
+def _spina__client_due_meta(info: dict | None, as_of=None) -> tuple[str, bool]:
+    try:
+        flex = _spina__parse_flexible_due_rule(info or {}, target=as_of)
+        if flex is not None:
+            return flex
+    except Exception:
+        pass
+    try:
+        if callable(_spina__client_due_meta_base):
+            return _spina__client_due_meta_base(info, as_of=as_of)
+    except Exception:
+        pass
+    return ('', False)
+
+def _spina_route_notice_for_client(db, client: str, loan_type: str, day_iso: str) -> str:
+    try:
+        day_iso = str(day_iso or "").strip()[:10]
+        if not day_iso:
+            return ""
+        lt = _spina_route_notice_norm_lt(loan_type)
+        client = str(client or "").strip()
+        data = _spina_route_notice_load()
+        bucket = data.get(day_iso)
+        if not isinstance(bucket, dict):
+            return ""
+
+        # Try stable client_uid first if available.
+        uid = ""
+        try:
+            if db is not None and hasattr(db, "get_client_uid"):
+                uid = str(db.get_client_uid(client, loan_type=lt) or "").strip()
+        except Exception:
+            uid = ""
+        if uid:
+            rec = bucket.get(_spina_route_notice_key(client, lt, uid))
+            if isinstance(rec, dict) and str(rec.get("notice") or "").strip():
+                return str(rec.get("notice") or "").strip()
+
+        # Fallback by normalized name and loan type.
+        n_client = _spina_route_notice_norm_name(client)
+        rec = bucket.get(_spina_route_notice_key(client, lt, ""))
+        if isinstance(rec, dict) and str(rec.get("notice") or "").strip():
+            return str(rec.get("notice") or "").strip()
+
+        for _k, rec in bucket.items():
+            try:
+                if not isinstance(rec, dict):
+                    continue
+                if _spina_route_notice_norm_lt(rec.get("loan_type")) != lt:
+                    continue
+                if str(rec.get("client_uid") or "").strip() and uid and str(rec.get("client_uid") or "").strip() == uid:
+                    return str(rec.get("notice") or "").strip()
+                if _spina_route_notice_norm_name(rec.get("client") or rec.get("client_norm")) == n_client:
+                    return str(rec.get("notice") or "").strip()
+            except Exception:
+                continue
+        return ""
+    except Exception:
+        return ""

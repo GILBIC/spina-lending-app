@@ -557,3 +557,203 @@ def _spina_v24_refresh_client_info_logs(self):
             _log_exc("v24.client_info_logs.refresh", e)
         except Exception:
             pass
+
+
+def _spina_build_client_info_logs_tab(self):
+    try:
+        if getattr(self, '_spina_client_info_logs_built', False):
+            return
+        self._spina_client_info_logs_built = True
+
+        self.tab_client_info_logs = ttk.Frame(self.nb, padding=10)
+        # Put near Clients if possible, otherwise append.
+        try:
+            tabs = list(self.nb.tabs())
+            insert_at = len(tabs)
+            for idx, tid in enumerate(tabs):
+                try:
+                    if self.nb.tab(tid, 'text') == 'Clients':
+                        insert_at = idx + 1
+                        break
+                except Exception:
+                    pass
+            self.nb.insert(insert_at, self.tab_client_info_logs, text='Client Info Logs')
+        except Exception:
+            self.nb.add(self.tab_client_info_logs, text='Client Info Logs')
+
+        frm = self.tab_client_info_logs
+        top = ttk.Frame(frm)
+        top.pack(fill='x', pady=(0, 8))
+        ttk.Label(top, text='Client Info Logs', style='Section.TLabel').pack(side='left', padx=(0, 12))
+        ttk.Label(top, text='Search:').pack(side='left')
+        self.cilog_search_var = tk.StringVar(value='')
+        ttk.Entry(top, textvariable=self.cilog_search_var, width=30).pack(side='left', padx=(6, 12))
+        ttk.Label(top, text='Action:').pack(side='left')
+        self.cilog_action_var = tk.StringVar(value='All')
+        self.cilog_action_cb = ttk.Combobox(top, textvariable=self.cilog_action_var, values=('All','ADD','EDIT','RENEW','LINK','AREA UPDATE','PICTURE','ARCHIVE','RESTORE','DELETE','SNAPSHOT'), width=14, state='readonly')
+        self.cilog_action_cb.pack(side='left', padx=(6, 12))
+        ttk.Label(top, text='Loan:').pack(side='left')
+        self.cilog_loan_var = tk.StringVar(value='All')
+        ttk.Combobox(top, textvariable=self.cilog_loan_var, values=('All','Regular','7x7'), width=10, state='readonly').pack(side='left', padx=(6, 12))
+        ttk.Button(top, text='Refresh', command=self.refresh_client_info_logs).pack(side='right')
+
+        self.cilog_count_var = tk.StringVar(value='Rows: 0')
+        ttk.Label(frm, textvariable=self.cilog_count_var).pack(anchor='w', pady=(0, 4))
+
+        body = ttk.Frame(frm)
+        body.pack(fill='both', expand=True)
+        cols = ('when','client','loan','action','field','before','after','note')
+        self.cilog_tree = ttk.Treeview(body, columns=cols, show='headings', height=20)
+        headings = {
+            'when': ('When', 150, 'w'),
+            'client': ('Client', 220, 'w'),
+            'loan': ('Loan', 75, 'center'),
+            'action': ('Action', 105, 'w'),
+            'field': ('Changed Field', 150, 'w'),
+            'before': ('Before', 180, 'w'),
+            'after': ('After', 180, 'w'),
+            'note': ('Note / Source', 240, 'w'),
+        }
+        for c in cols:
+            label, width, anchor = headings[c]
+            self.cilog_tree.heading(c, text=label)
+            self.cilog_tree.column(c, width=width, anchor=anchor, stretch=(c in ('client','before','after','note')))
+        y = ttk.Scrollbar(body, orient='vertical', command=self.cilog_tree.yview)
+        x = ttk.Scrollbar(body, orient='horizontal', command=self.cilog_tree.xview)
+        self.cilog_tree.configure(yscrollcommand=y.set, xscrollcommand=x.set)
+        self.cilog_tree.grid(row=0, column=0, sticky='nsew')
+        y.grid(row=0, column=1, sticky='ns')
+        x.grid(row=1, column=0, sticky='ew')
+        body.grid_rowconfigure(0, weight=1)
+        body.grid_columnconfigure(0, weight=1)
+
+        details = ttk.LabelFrame(frm, text='Selected Change Details', padding=8)
+        details.pack(fill='x', pady=(8, 0))
+        self.cilog_detail_var = tk.StringVar(value='Select a row to see the exact change.')
+        ttk.Label(details, textvariable=self.cilog_detail_var, wraplength=1120, justify='left').pack(fill='x')
+
+        for tag, opts in {
+            'ADD': {'foreground': '#1f7a1f'},
+            'EDIT': {'foreground': '#0b5fa5'},
+            'RENEW': {'foreground': '#8a4b00'},
+            'LINK': {'foreground': '#6a3dad'},
+            'AREA UPDATE': {'foreground': '#0b5fa5'},
+            'PICTURE': {'foreground': '#0b5fa5'},
+            'ARCHIVE': {'foreground': '#7a3f00'},
+            'RESTORE': {'foreground': '#2f6f3e'},
+            'DELETE': {'foreground': '#a11a1a'},
+            'SNAPSHOT': {'foreground': '#666666'},
+        }.items():
+            try:
+                self.cilog_tree.tag_configure(tag, **opts)
+            except Exception:
+                pass
+
+        self._spina_cilog_all_rows = []
+        self._spina_cilog_view_rows = []
+
+        def _on_select(_=None):
+            try:
+                sel = self.cilog_tree.selection()
+                if not sel:
+                    return
+                idx = int(sel[0])
+                rows = getattr(self, '_spina_cilog_view_rows', []) or []
+                if idx < 0 or idx >= len(rows):
+                    return
+                r = rows[idx]
+                self.cilog_detail_var.set(
+                    f"{r.get('when','')}  |  {r.get('client','')} ({r.get('loan_type','')})  |  "
+                    f"{r.get('action','')}  |  {r.get('field','')} changed from "
+                    f"'{r.get('before','')}' to '{r.get('after','')}'."
+                )
+            except Exception:
+                pass
+        self.cilog_tree.bind('<<TreeviewSelect>>', _on_select)
+
+        def _filter_trigger(*_):
+            try:
+                self.render_client_info_logs()
+            except Exception:
+                pass
+        self.cilog_search_var.trace_add('write', _filter_trigger)
+        self.cilog_action_var.trace_add('write', _filter_trigger)
+        self.cilog_loan_var.trace_add('write', _filter_trigger)
+
+        try:
+            self.nb.bind('<<NotebookTabChanged>>', lambda e: self.refresh_client_info_logs() if self.nb.select() == str(self.tab_client_info_logs) else None, add='+')
+        except Exception:
+            pass
+
+        self.refresh_client_info_logs()
+    except Exception as e:
+        try:
+            _log_exc('client_info_logs:build', e)
+        except Exception:
+            pass
+
+def _spina_render_client_info_logs(self):
+    try:
+        tree = getattr(self, 'cilog_tree', None)
+        if tree is None:
+            return
+        q = (getattr(self, 'cilog_search_var', tk.StringVar(value='')).get() or '').strip().lower()
+        act = (getattr(self, 'cilog_action_var', tk.StringVar(value='All')).get() or 'All').strip().upper()
+        loan = (getattr(self, 'cilog_loan_var', tk.StringVar(value='All')).get() or 'All').strip()
+        all_rows = getattr(self, '_spina_cilog_all_rows', []) or []
+        view = []
+        for r in all_rows:
+            if act != 'ALL' and str(r.get('action') or '').upper() != act:
+                continue
+            if loan != 'All' and str(r.get('loan_type') or '') != loan:
+                continue
+            hay = ' '.join(str(r.get(k) or '') for k in ('when','client','loan_type','action','field','before','after','source','note')).lower()
+            if q and q not in hay:
+                continue
+            view.append(r)
+        self._spina_cilog_view_rows = view
+        tree.delete(*tree.get_children())
+        for i, r in enumerate(view):
+            note_source = ' / '.join([x for x in [r.get('note') or '', r.get('source') or ''] if x])
+            tree.insert('', 'end', iid=str(i), values=(
+                r.get('when') or '',
+                r.get('client') or '',
+                r.get('loan_type') or '',
+                r.get('action') or '',
+                r.get('field') or '',
+                r.get('before') or '',
+                r.get('after') or '',
+                note_source,
+            ), tags=(str(r.get('action') or ''),))
+        try:
+            self.cilog_count_var.set(f"Rows: {len(view):,} shown / {len(all_rows):,} total field changes")
+        except Exception:
+            pass
+        if view:
+            try:
+                tree.selection_set('0')
+                tree.focus('0')
+            except Exception:
+                pass
+        else:
+            try:
+                self.cilog_detail_var.set('No matching client info changes.')
+            except Exception:
+                pass
+    except Exception as e:
+        try:
+            _log_exc('client_info_logs:render', e)
+        except Exception:
+            pass
+
+def _spina_refresh_client_info_logs(self):
+    try:
+        if not getattr(self, '_spina_client_info_logs_built', False):
+            return
+        self._spina_cilog_all_rows = _spina_cilog_fetch_rows(self.db, limit=4000)
+        self.render_client_info_logs()
+    except Exception as e:
+        try:
+            _log_exc('client_info_logs:refresh', e)
+        except Exception:
+            pass

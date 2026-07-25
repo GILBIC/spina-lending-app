@@ -34765,16 +34765,14 @@ def _spina__delete_client_picture_file(stored_path):
         pass
 
 
-def _db_get_client_picture(self, name, loan_type=None, include_archived=True):
-    try:
-        _spina__ensure_client_picture_column(self)
-    except Exception:
-        pass
-    try:
-        info = self.get_client_info(name, loan_type=loan_type, include_archived=include_archived) or {}
-    except Exception:
-        info = {}
-    return str(info.get('client_picture') or '').strip()
+# Wave 30: read-only Clients picture and selection helpers.
+from spina_app.tabs.clients import (
+    configure_clients_dependencies as _configure_clients_wave30_dependencies,
+    _db_get_client_picture,
+    _app__selected_client_name_and_lt,
+    _app_install_clients_picture_ui,
+)
+_configure_clients_wave30_dependencies(globals())
 
 
 def _db_set_client_picture(self, name, picture_source_path, loan_type=None, source='clients:picture'):
@@ -34843,29 +34841,6 @@ def _db_clear_client_picture(self, name, loan_type=None, source='clients:picture
     return True
 
 
-def _app__selected_client_name_and_lt(self):
-    try:
-        sel = self.clients_tree.selection()
-    except Exception:
-        sel = ()
-    if not sel:
-        return ('', _app__norm_lt_value(self, self._mode_filter()))
-    iid = sel[0]
-    try:
-        vals = self.clients_tree.item(iid, 'values') or ()
-    except Exception:
-        vals = ()
-    name = str(vals[0] if vals else '').strip()
-    lt = _app__norm_lt_value(self, self._mode_filter())
-    try:
-        tags = self.clients_tree.item(iid, 'tags') or ()
-        for t in tags:
-            if str(t).startswith('lt:'):
-                lt = _app__norm_lt_value(self, str(t).split(':', 1)[1])
-                break
-    except Exception:
-        pass
-    return (name, lt)
 
 
 def _app_refresh_client_picture_panel(self):
@@ -35009,62 +34984,6 @@ def _app_clear_selected_client_picture(self):
         pass
 
 
-def _app_install_clients_picture_ui(self):
-    if getattr(self, '_clients_picture_ui_ready', False):
-        try:
-            self.refresh_client_picture_panel()
-        except Exception:
-            pass
-        return
-
-    try:
-        box = ttk.LabelFrame(self.tab_clients, text='Client Picture')
-        box.pack(fill='x', padx=8, pady=(0, 8))
-    except Exception:
-        return
-
-    top = ttk.Frame(box)
-    top.pack(fill='x', padx=8, pady=8)
-
-    preview = ttk.Label(top, text='No picture selected', anchor='center', width=22)
-    try:
-        preview.configure(relief='solid', padding=8)
-    except Exception:
-        pass
-    preview.pack(side='left', padx=(0, 12), pady=2)
-
-    right = ttk.Frame(top)
-    right.pack(side='left', fill='x', expand=True)
-
-    info_var = tk.StringVar(value='Select a client to view picture.')
-    path_var = tk.StringVar(value='')
-    ttk.Label(right, textvariable=info_var, font=('TkDefaultFont', 10, 'bold')).pack(anchor='w')
-    ttk.Label(right, textvariable=path_var, foreground='#666', wraplength=520, justify='left').pack(anchor='w', pady=(4, 8))
-
-    btns = ttk.Frame(right)
-    btns.pack(anchor='w')
-    ttk.Button(btns, text='Set Picture', command=lambda: self.set_selected_client_picture()).pack(side='left', padx=(0, 6))
-    ttk.Button(btns, text='Clear Picture', command=lambda: self.clear_selected_client_picture()).pack(side='left')
-
-    self.clients_picture_box = box
-    self.clients_picture_preview = preview
-    self.clients_picture_info_var = info_var
-    self.clients_picture_path_var = path_var
-    self._clients_picture_img = None
-    self._clients_picture_ui_ready = True
-
-    try:
-        self.clients_tree.bind('<<TreeviewSelect>>', lambda e: self.refresh_client_picture_panel(), add='+')
-    except Exception:
-        try:
-            self.clients_tree.bind('<<TreeviewSelect>>', lambda e: self.refresh_client_picture_panel())
-        except Exception:
-            pass
-
-    try:
-        self.refresh_client_picture_panel()
-    except Exception:
-        pass
 
 
 try:
@@ -35176,174 +35095,12 @@ def _spina_perf_norm_lt(v):
 from spina_app.utilities.records import _spina_perf_dict_rows
 
 
-def _spina_perf_clients_rows(db, loan_type="Regular", search=None, search_by="all", include_extra_7x7=True):
-    """Bulk load rows for Clients tab in one/few queries, avoiding per-row get_client_info()."""
-    _spina_perf_ensure_indexes(db)
-    lt = _spina_perf_norm_lt(loan_type)
-    term = (search or "").strip()
-    sb = (search_by or "all").strip().lower()
-    cur = db.conn.cursor()
-
-    # Map search mode aliases
-    try:
-        if sb.startswith("cli"):
-            sb = "client"
-        elif sb.startswith("are"):
-            sb = "area"
-        elif sb.startswith("link"):
-            sb = "linked"
-        elif sb.startswith("unl"):
-            sb = "unlinked"
-        elif sb.startswith("sug"):
-            sb = "suggested"
-        elif sb.startswith("blank"):
-            sb = "blanks"
-        elif sb.startswith("pri"):
-            sb = "principal"
-        elif sb.startswith("rel"):
-            sb = "released"
-        elif sb.startswith("sta"):
-            sb = "start_date"
-        elif sb.startswith("due"):
-            sb = "due_date"
-        else:
-            sb = "all"
-    except Exception:
-        sb = "all"
-
-    where = ["IFNULL(c.loan_type,'Regular') = ?", "COALESCE(c.is_archived,0)=0"]
-    params = [lt]
-    like = f"%{term}%"
-
-    # Special typed commands in All search
-    tlow = term.lower()
-    if sb == "all" and tlow in ("blanks", "blank", "missing", "incomplete"):
-        sb, term = "blanks", ""
-    elif sb == "all" and tlow in ("linked", "link"):
-        sb, term = "linked", ""
-    elif sb == "all" and tlow in ("unlinked", "not linked", "notlinked"):
-        sb, term = "unlinked", ""
-    elif sb == "all" and tlow in ("suggested", "suggest", "suggestion", "suggested link", "suggestedlink"):
-        sb, term = "suggested", ""
-
-    if sb == "blanks":
-        where.append("(IFNULL(c.area,'')='' OR IFNULL(c.date_released,'')='' OR IFNULL(c.due_date,'')='' OR IFNULL(c.principal,0)=0)")
-    elif sb == "linked":
-        where.append("TRIM(IFNULL(c.person_uid,'')) <> ''")
-        where.append("EXISTS(SELECT 1 FROM clients c2 WHERE c2.person_uid=c.person_uid AND c2.id<>c.id AND IFNULL(c2.loan_type,'Regular')<>IFNULL(c.loan_type,'Regular') AND COALESCE(c2.is_archived,0)=0)")
-    elif sb == "suggested":
-        where.append("TRIM(IFNULL(c.person_uid,'')) = ''")
-        where.append("EXISTS(SELECT 1 FROM clients c2 WHERE c2.name=c.name AND c2.id<>c.id AND IFNULL(c2.loan_type,'Regular')<>IFNULL(c.loan_type,'Regular') AND COALESCE(c2.is_archived,0)=0)")
-        if term:
-            where.append("c.name LIKE ?")
-            params.append(like)
-    elif sb == "unlinked":
-        where.append("TRIM(IFNULL(c.person_uid,'')) = ''")
-        where.append("(EXISTS(SELECT 1 FROM clients c2 WHERE c2.name=c.name AND c2.id<>c.id AND IFNULL(c2.loan_type,'Regular')<>IFNULL(c.loan_type,'Regular') AND COALESCE(c2.is_archived,0)=0) OR (IFNULL(c.loan_type,'Regular')='7x7' AND NOT EXISTS(SELECT 1 FROM clients c2 WHERE c2.name=c.name AND IFNULL(c2.loan_type,'Regular')='Regular' AND COALESCE(c2.is_archived,0)=0)))")
-        if term:
-            where.append("c.name LIKE ?")
-            params.append(like)
-    elif term:
-        if sb == "client":
-            where.append("c.name LIKE ?"); params.append(like)
-        elif sb == "area":
-            where.append("IFNULL(c.area,'') LIKE ?"); params.append(like)
-        elif sb == "principal":
-            where.append("CAST(IFNULL(c.principal,0) AS TEXT) LIKE ?"); params.append(like)
-        elif sb == "released":
-            where.append("IFNULL(c.date_released,'') LIKE ?"); params.append(like)
-        elif sb == "due_date":
-            where.append("IFNULL(c.due_date,'') LIKE ?"); params.append(like)
-        elif sb == "start_date":
-            where.append("IFNULL(date(c.date_released, '+' || IFNULL(c.pay_start_offset_days,0) || ' day'),'') LIKE ?"); params.append(like)
-        else:
-            where.append("""(
-                c.name LIKE ?
-                OR IFNULL(c.area,'') LIKE ?
-                OR CAST(IFNULL(c.principal,0) AS TEXT) LIKE ?
-                OR IFNULL(c.date_released,'') LIKE ?
-                OR IFNULL(c.due_date,'') LIKE ?
-                OR IFNULL(date(c.date_released, '+' || IFNULL(c.pay_start_offset_days,0) || ' day'),'') LIKE ?
-                OR IFNULL(c.person_uid,'') LIKE ?
-            )""")
-            params.extend([like, like, like, like, like, like, like])
-
-    sql = "SELECT c.* FROM clients c WHERE " + " AND ".join(where) + " ORDER BY c.name COLLATE NOCASE"
-    rows = _spina_perf_dict_rows(cur.execute(sql, params).fetchall())
-
-    # Build fast lookup sets for link labels, no per-row DB calls.
-    try:
-        active = _spina_perf_dict_rows(cur.execute(
-            "SELECT name, loan_type, person_uid FROM clients WHERE COALESCE(is_archived,0)=0"
-        ).fetchall())
-    except Exception:
-        active = []
-
-    other_by_name = set()
-    pu_types = {}
-    for r in active:
-        nm = str(r.get("name") or "").strip().lower()
-        rlt = _spina_perf_norm_lt(r.get("loan_type"))
-        pu = str(r.get("person_uid") or "").strip()
-        if rlt != lt and nm:
-            other_by_name.add(nm)
-        if pu:
-            pu_types.setdefault(pu, set()).add(rlt)
-
-    other_lt = "7x7" if lt == "Regular" else "Regular"
-    final = []
-    seen = set()
-    for r in rows:
-        nm_key = str(r.get("name") or "").strip().lower()
-        pu = str(r.get("person_uid") or "").strip()
-        link_label = ""
-        if pu and len(pu_types.get(pu, set())) > 1:
-            link_label = f"{other_lt}✓"
-        elif pu:
-            link_label = "Linked✓"
-        elif nm_key in other_by_name:
-            link_label = other_lt
-        r["_spina_link_label"] = link_label
-        r["_spina_row_lt"] = lt
-        r["_spina_extra7x7"] = False
-        final.append(r)
-        seen.add(nm_key)
-
-    # In Regular view, append unpaired 7x7 clients using one SQL query.
-    if lt == "Regular" and include_extra_7x7 and sb not in ("linked", "suggested"):
-        extra_where = [
-            "IFNULL(c.loan_type,'Regular')='7x7'",
-            "COALESCE(c.is_archived,0)=0",
-            "TRIM(IFNULL(c.person_uid,''))=''",
-            "NOT EXISTS(SELECT 1 FROM clients r WHERE r.name=c.name AND IFNULL(r.loan_type,'Regular')='Regular' AND COALESCE(r.is_archived,0)=0)"
-        ]
-        extra_params = []
-        if term:
-            if sb == "area":
-                extra_where.append("IFNULL(c.area,'') LIKE ?"); extra_params.append(like)
-            elif sb == "principal":
-                extra_where.append("CAST(IFNULL(c.principal,0) AS TEXT) LIKE ?"); extra_params.append(like)
-            elif sb == "released":
-                extra_where.append("IFNULL(c.date_released,'') LIKE ?"); extra_params.append(like)
-            elif sb == "due_date":
-                extra_where.append("IFNULL(c.due_date,'') LIKE ?"); extra_params.append(like)
-            elif sb == "start_date":
-                extra_where.append("IFNULL(date(c.date_released, '+' || IFNULL(c.pay_start_offset_days,0) || ' day'),'') LIKE ?"); extra_params.append(like)
-            else:
-                extra_where.append("(c.name LIKE ? OR IFNULL(c.area,'') LIKE ?)")
-                extra_params.extend([like, like])
-        extra_sql = "SELECT c.* FROM clients c WHERE " + " AND ".join(extra_where) + " ORDER BY c.name COLLATE NOCASE"
-        for r in _spina_perf_dict_rows(cur.execute(extra_sql, extra_params).fetchall()):
-            nm_key = str(r.get("name") or "").strip().lower()
-            if nm_key in seen:
-                continue
-            r["_spina_link_label"] = "7x7 ONLY"
-            r["_spina_row_lt"] = "7x7"
-            r["_spina_extra7x7"] = True
-            final.append(r)
-            seen.add(nm_key)
-
-    return final
+# Wave 30: bulk Clients read and refresh presentation helpers.
+from spina_app.tabs.clients import (
+    _spina_perf_clients_rows,
+    _spina_perf_refresh_clients,
+)
+_configure_clients_wave30_dependencies(globals())
 
 
 def _spina_perf_month_transactions(db, client_rows, start_date, end_date, loan_type):
@@ -35416,96 +35173,6 @@ def _spina_perf_month_transactions(db, client_rows, start_date, end_date, loan_t
     return pay
 
 
-def _spina_perf_refresh_clients(self):
-    """Fast Clients tab refresh for large datasets."""
-    try:
-        term = (getattr(self, "search_clients_var", tk.StringVar()).get() or "").strip()
-    except Exception:
-        term = ""
-    try:
-        lt = _app__norm_lt_value(self, self._mode_filter())
-    except Exception:
-        lt = "Regular"
-    try:
-        mode = (getattr(self, "clients_search_mode_var", tk.StringVar(value="All")).get() or "Both").strip().lower()
-    except Exception:
-        mode = "both"
-
-    try:
-        tree = self.clients_tree
-        try:
-            tree.delete(*tree.get_children())
-        except Exception:
-            for rid in tree.get_children():
-                tree.delete(rid)
-    except Exception:
-        return
-
-    try:
-        rows = _spina_perf_clients_rows(self.db, loan_type=lt, search=term if term else None, search_by=mode, include_extra_7x7=True)
-    except Exception as e:
-        try:
-            _log_exc("perf_refresh_clients: bulk load failed; using old loader", e)
-        except Exception:
-            pass
-        try:
-            return _app_refresh_clients(self)
-        except Exception:
-            return
-
-    for idx, info in enumerate(rows or []):
-        try:
-            row_lt = _spina_perf_norm_lt(info.get("_spina_row_lt") or info.get("loan_type") or lt)
-            is_extra_7x7 = bool(info.get("_spina_extra7x7"))
-            _day_due, _due_today = _spina__client_due_meta(info)
-            tags = [f"lt:{row_lt}", "even" if (idx % 2 == 0) else "odd"]
-            if is_extra_7x7:
-                tags.append("extra7x7")
-            iid = (str(info.get("client_uid") or "").strip() or None)
-            row_values = (
-                info.get("name", ""),
-                info.get("area", ""),
-                info.get("payment_term", ""),
-                _day_due,
-                _spina__fmt_client_money(info.get("payment_amount", 0)),
-                info.get("payment_mode", "Cash"),
-                info.get("_spina_link_label", ""),
-                info.get("contact_number", ""),
-                _spina__fmt_client_money(info.get("principal", 0)),
-                _spina__fmt_client_money(info.get("interest_amount", 0)),
-                _spina__fmt_client_money(info.get("total_to_pay", 0)),
-                info.get("date_released", ""),
-                info.get("due_date", ""),
-            )
-            try:
-                tree.insert("", "end", iid=iid, tags=tuple(tags), values=row_values)
-            except Exception:
-                tree.insert("", "end", tags=tuple(tags), values=row_values)
-        except Exception as e:
-            try:
-                _log_suppressed_once("perf_client_row_insert", "client row insert skipped", e)
-            except Exception:
-                pass
-
-    try:
-        if hasattr(self, "clients_count_var"):
-            self.clients_count_var.set(f"Rows: {len(tree.get_children())}")
-    except Exception:
-        pass
-    try:
-        self._update_toolbar_states()
-    except Exception:
-        pass
-    if not term:
-        try:
-            self._refresh_area_dropdowns()
-        except Exception:
-            pass
-    try:
-        if hasattr(self, "refresh_client_picture_panel"):
-            self.refresh_client_picture_panel()
-    except Exception:
-        pass
 
 
 def _spina_perf_refresh_data_grid(self):
@@ -37665,206 +37332,18 @@ def _spina_cilog_fetch_rows(db, limit=3000):
     return rows_out
 
 
-def _spina_build_client_info_logs_tab(self):
-    try:
-        if getattr(self, '_spina_client_info_logs_built', False):
-            return
-        self._spina_client_info_logs_built = True
-
-        self.tab_client_info_logs = ttk.Frame(self.nb, padding=10)
-        # Put near Clients if possible, otherwise append.
-        try:
-            tabs = list(self.nb.tabs())
-            insert_at = len(tabs)
-            for idx, tid in enumerate(tabs):
-                try:
-                    if self.nb.tab(tid, 'text') == 'Clients':
-                        insert_at = idx + 1
-                        break
-                except Exception:
-                    pass
-            self.nb.insert(insert_at, self.tab_client_info_logs, text='Client Info Logs')
-        except Exception:
-            self.nb.add(self.tab_client_info_logs, text='Client Info Logs')
-
-        frm = self.tab_client_info_logs
-        top = ttk.Frame(frm)
-        top.pack(fill='x', pady=(0, 8))
-        ttk.Label(top, text='Client Info Logs', style='Section.TLabel').pack(side='left', padx=(0, 12))
-        ttk.Label(top, text='Search:').pack(side='left')
-        self.cilog_search_var = tk.StringVar(value='')
-        ttk.Entry(top, textvariable=self.cilog_search_var, width=30).pack(side='left', padx=(6, 12))
-        ttk.Label(top, text='Action:').pack(side='left')
-        self.cilog_action_var = tk.StringVar(value='All')
-        self.cilog_action_cb = ttk.Combobox(top, textvariable=self.cilog_action_var, values=('All','ADD','EDIT','RENEW','LINK','AREA UPDATE','PICTURE','ARCHIVE','RESTORE','DELETE','SNAPSHOT'), width=14, state='readonly')
-        self.cilog_action_cb.pack(side='left', padx=(6, 12))
-        ttk.Label(top, text='Loan:').pack(side='left')
-        self.cilog_loan_var = tk.StringVar(value='All')
-        ttk.Combobox(top, textvariable=self.cilog_loan_var, values=('All','Regular','7x7'), width=10, state='readonly').pack(side='left', padx=(6, 12))
-        ttk.Button(top, text='Refresh', command=self.refresh_client_info_logs).pack(side='right')
-
-        self.cilog_count_var = tk.StringVar(value='Rows: 0')
-        ttk.Label(frm, textvariable=self.cilog_count_var).pack(anchor='w', pady=(0, 4))
-
-        body = ttk.Frame(frm)
-        body.pack(fill='both', expand=True)
-        cols = ('when','client','loan','action','field','before','after','note')
-        self.cilog_tree = ttk.Treeview(body, columns=cols, show='headings', height=20)
-        headings = {
-            'when': ('When', 150, 'w'),
-            'client': ('Client', 220, 'w'),
-            'loan': ('Loan', 75, 'center'),
-            'action': ('Action', 105, 'w'),
-            'field': ('Changed Field', 150, 'w'),
-            'before': ('Before', 180, 'w'),
-            'after': ('After', 180, 'w'),
-            'note': ('Note / Source', 240, 'w'),
-        }
-        for c in cols:
-            label, width, anchor = headings[c]
-            self.cilog_tree.heading(c, text=label)
-            self.cilog_tree.column(c, width=width, anchor=anchor, stretch=(c in ('client','before','after','note')))
-        y = ttk.Scrollbar(body, orient='vertical', command=self.cilog_tree.yview)
-        x = ttk.Scrollbar(body, orient='horizontal', command=self.cilog_tree.xview)
-        self.cilog_tree.configure(yscrollcommand=y.set, xscrollcommand=x.set)
-        self.cilog_tree.grid(row=0, column=0, sticky='nsew')
-        y.grid(row=0, column=1, sticky='ns')
-        x.grid(row=1, column=0, sticky='ew')
-        body.grid_rowconfigure(0, weight=1)
-        body.grid_columnconfigure(0, weight=1)
-
-        details = ttk.LabelFrame(frm, text='Selected Change Details', padding=8)
-        details.pack(fill='x', pady=(8, 0))
-        self.cilog_detail_var = tk.StringVar(value='Select a row to see the exact change.')
-        ttk.Label(details, textvariable=self.cilog_detail_var, wraplength=1120, justify='left').pack(fill='x')
-
-        for tag, opts in {
-            'ADD': {'foreground': '#1f7a1f'},
-            'EDIT': {'foreground': '#0b5fa5'},
-            'RENEW': {'foreground': '#8a4b00'},
-            'LINK': {'foreground': '#6a3dad'},
-            'AREA UPDATE': {'foreground': '#0b5fa5'},
-            'PICTURE': {'foreground': '#0b5fa5'},
-            'ARCHIVE': {'foreground': '#7a3f00'},
-            'RESTORE': {'foreground': '#2f6f3e'},
-            'DELETE': {'foreground': '#a11a1a'},
-            'SNAPSHOT': {'foreground': '#666666'},
-        }.items():
-            try:
-                self.cilog_tree.tag_configure(tag, **opts)
-            except Exception:
-                pass
-
-        self._spina_cilog_all_rows = []
-        self._spina_cilog_view_rows = []
-
-        def _on_select(_=None):
-            try:
-                sel = self.cilog_tree.selection()
-                if not sel:
-                    return
-                idx = int(sel[0])
-                rows = getattr(self, '_spina_cilog_view_rows', []) or []
-                if idx < 0 or idx >= len(rows):
-                    return
-                r = rows[idx]
-                self.cilog_detail_var.set(
-                    f"{r.get('when','')}  |  {r.get('client','')} ({r.get('loan_type','')})  |  "
-                    f"{r.get('action','')}  |  {r.get('field','')} changed from "
-                    f"'{r.get('before','')}' to '{r.get('after','')}'."
-                )
-            except Exception:
-                pass
-        self.cilog_tree.bind('<<TreeviewSelect>>', _on_select)
-
-        def _filter_trigger(*_):
-            try:
-                self.render_client_info_logs()
-            except Exception:
-                pass
-        self.cilog_search_var.trace_add('write', _filter_trigger)
-        self.cilog_action_var.trace_add('write', _filter_trigger)
-        self.cilog_loan_var.trace_add('write', _filter_trigger)
-
-        try:
-            self.nb.bind('<<NotebookTabChanged>>', lambda e: self.refresh_client_info_logs() if self.nb.select() == str(self.tab_client_info_logs) else None, add='+')
-        except Exception:
-            pass
-
-        self.refresh_client_info_logs()
-    except Exception as e:
-        try:
-            _log_exc('client_info_logs:build', e)
-        except Exception:
-            pass
+# Wave 30: legacy Client Info Logs presentation wrappers.
+from spina_app.tabs.client_info_logs import (
+    configure_client_info_logs_dependencies as _configure_cilog_wave30_dependencies,
+    _spina_build_client_info_logs_tab,
+    _spina_render_client_info_logs,
+    _spina_refresh_client_info_logs,
+)
+_configure_cilog_wave30_dependencies(globals())
 
 
-def _spina_render_client_info_logs(self):
-    try:
-        tree = getattr(self, 'cilog_tree', None)
-        if tree is None:
-            return
-        q = (getattr(self, 'cilog_search_var', tk.StringVar(value='')).get() or '').strip().lower()
-        act = (getattr(self, 'cilog_action_var', tk.StringVar(value='All')).get() or 'All').strip().upper()
-        loan = (getattr(self, 'cilog_loan_var', tk.StringVar(value='All')).get() or 'All').strip()
-        all_rows = getattr(self, '_spina_cilog_all_rows', []) or []
-        view = []
-        for r in all_rows:
-            if act != 'ALL' and str(r.get('action') or '').upper() != act:
-                continue
-            if loan != 'All' and str(r.get('loan_type') or '') != loan:
-                continue
-            hay = ' '.join(str(r.get(k) or '') for k in ('when','client','loan_type','action','field','before','after','source','note')).lower()
-            if q and q not in hay:
-                continue
-            view.append(r)
-        self._spina_cilog_view_rows = view
-        tree.delete(*tree.get_children())
-        for i, r in enumerate(view):
-            note_source = ' / '.join([x for x in [r.get('note') or '', r.get('source') or ''] if x])
-            tree.insert('', 'end', iid=str(i), values=(
-                r.get('when') or '',
-                r.get('client') or '',
-                r.get('loan_type') or '',
-                r.get('action') or '',
-                r.get('field') or '',
-                r.get('before') or '',
-                r.get('after') or '',
-                note_source,
-            ), tags=(str(r.get('action') or ''),))
-        try:
-            self.cilog_count_var.set(f"Rows: {len(view):,} shown / {len(all_rows):,} total field changes")
-        except Exception:
-            pass
-        if view:
-            try:
-                tree.selection_set('0')
-                tree.focus('0')
-            except Exception:
-                pass
-        else:
-            try:
-                self.cilog_detail_var.set('No matching client info changes.')
-            except Exception:
-                pass
-    except Exception as e:
-        try:
-            _log_exc('client_info_logs:render', e)
-        except Exception:
-            pass
 
 
-def _spina_refresh_client_info_logs(self):
-    try:
-        if not getattr(self, '_spina_client_info_logs_built', False):
-            return
-        self._spina_cilog_all_rows = _spina_cilog_fetch_rows(self.db, limit=4000)
-        self.render_client_info_logs()
-    except Exception as e:
-        try:
-            _log_exc('client_info_logs:refresh', e)
-        except Exception:
-            pass
 
 
 try:
@@ -38297,19 +37776,9 @@ try:
 except Exception:
     _spina__client_due_meta_base = None
 
-def _spina__client_due_meta(info: dict | None, as_of=None) -> tuple[str, bool]:
-    try:
-        flex = _spina__parse_flexible_due_rule(info or {}, target=as_of)
-        if flex is not None:
-            return flex
-    except Exception:
-        pass
-    try:
-        if callable(_spina__client_due_meta_base):
-            return _spina__client_due_meta_base(info, as_of=as_of)
-    except Exception:
-        pass
-    return ('', False)
+# Wave 30: flexible due display wrapper imported only after base capture.
+from spina_app.tabs.clients import _spina__client_due_meta
+_configure_clients_wave30_dependencies(globals())
 # --- END: Flexible Due Schedule rules ---
 
 
@@ -38398,51 +37867,9 @@ def _spina_route_notice_upsert(day_iso: str, client: str, loan_type: str, notice
             pass
         return False
 
-def _spina_route_notice_for_client(db, client: str, loan_type: str, day_iso: str) -> str:
-    try:
-        day_iso = str(day_iso or "").strip()[:10]
-        if not day_iso:
-            return ""
-        lt = _spina_route_notice_norm_lt(loan_type)
-        client = str(client or "").strip()
-        data = _spina_route_notice_load()
-        bucket = data.get(day_iso)
-        if not isinstance(bucket, dict):
-            return ""
-
-        # Try stable client_uid first if available.
-        uid = ""
-        try:
-            if db is not None and hasattr(db, "get_client_uid"):
-                uid = str(db.get_client_uid(client, loan_type=lt) or "").strip()
-        except Exception:
-            uid = ""
-        if uid:
-            rec = bucket.get(_spina_route_notice_key(client, lt, uid))
-            if isinstance(rec, dict) and str(rec.get("notice") or "").strip():
-                return str(rec.get("notice") or "").strip()
-
-        # Fallback by normalized name and loan type.
-        n_client = _spina_route_notice_norm_name(client)
-        rec = bucket.get(_spina_route_notice_key(client, lt, ""))
-        if isinstance(rec, dict) and str(rec.get("notice") or "").strip():
-            return str(rec.get("notice") or "").strip()
-
-        for _k, rec in bucket.items():
-            try:
-                if not isinstance(rec, dict):
-                    continue
-                if _spina_route_notice_norm_lt(rec.get("loan_type")) != lt:
-                    continue
-                if str(rec.get("client_uid") or "").strip() and uid and str(rec.get("client_uid") or "").strip() == uid:
-                    return str(rec.get("notice") or "").strip()
-                if _spina_route_notice_norm_name(rec.get("client") or rec.get("client_norm")) == n_client:
-                    return str(rec.get("notice") or "").strip()
-            except Exception:
-                continue
-        return ""
-    except Exception:
-        return ""
+# Wave 30: read-only Collector Route notice lookup for Clients.
+from spina_app.tabs.clients import _spina_route_notice_for_client
+_configure_clients_wave30_dependencies(globals())
 # --- END: Encoder next-day route notices ---
 
 
