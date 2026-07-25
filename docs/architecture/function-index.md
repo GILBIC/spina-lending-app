@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `8118ac4c9067e3a81d679e7a59bd8950f3497298`.
+Generated from commit `82f7c6ed6e9f91c4a01d12aeaf21c3fb16f34ec2`.
 
-Scanned **160 Python files**, **73,421 lines**, and **2,250 symbols**.
+Scanned **162 Python files**, **73,581 lines**, and **2,256 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -738,40 +738,26 @@ Scanned **160 Python files**, **73,421 lines**, and **2,250 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_route_button** (function, lines 37446–37475, 30 lines, risk `ui_only`): Handles spina v27 route button for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_build_collectors_tab** (function, lines 37497–37789, 293 lines, risk `ui_only`): Handles spina v27 build collectors tab for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_get_route_master_areas** (function, lines 37792–37823, 32 lines, risk `support`): Handles spina v27 get route master areas for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog** (function, lines 37826–38175, 350 lines, risk `ui_only`): Modern route editor: Available Areas vs Assigned Route Order.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._panel** (nested_function, lines 37895–37899, 5 lines, risk `ui_only`): Handles panel for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._assigned_keys** (nested_function, lines 37937–37938, 2 lines, risk `support`): Handles assigned keys for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._refresh_lists** (nested_function, lines 37940–37979, 40 lines, risk `ui_only`): Refreshes refresh lists for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._clean_assigned_display** (nested_function, lines 37981–37986, 6 lines, risk `support`): Handles clean assigned display for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._add_selected** (nested_function, lines 37988–38004, 17 lines, risk `support`): Handles add selected for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._remove_selected** (nested_function, lines 38006–38017, 12 lines, risk `support`): Removes remove selected for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._move_selected** (nested_function, lines 38019–38037, 19 lines, risk `support`): Handles move selected for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._move_top** (nested_function, lines 38039–38050, 12 lines, risk `support`): Handles move top for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._move_bottom** (nested_function, lines 38052–38063, 12 lines, risk `support`): Handles move bottom for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._add_all_visible** (nested_function, lines 38065–38073, 9 lines, risk `support`): Handles add all visible for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._clear_assigned** (nested_function, lines 38075–38084, 10 lines, risk `support`): Handles clear assigned for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._save** (nested_function, lines 38121–38149, 29 lines, risk `support`): Handles save for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._cancel** (nested_function, lines 38151–38157, 7 lines, risk `support`): Handles cancel for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button** (function, lines 38253–38280, 28 lines, risk `authentication`): Handles spina v32 login button for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_default_name** (function, lines 38283–38291, 9 lines, risk `support`): Handles spina v32 account default name for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_permission_text** (function, lines 38294–38304, 11 lines, risk `authentication`): Handles spina v32 account permission text for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_display_name** (function, lines 38307–38317, 11 lines, risk `authentication`): Handles spina v32 account display name for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role** (function, lines 38320–38330, 11 lines, risk `authentication`): Handles spina v32 account role for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices** (function, lines 38333–38361, 29 lines, risk `authentication`): Handles spina v32 account choices for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user** (function, lines 38364–38369, 6 lines, risk `support`): Handles spina v32 selected label for user for the other feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based** (function, lines 38372–38426, 55 lines, risk `authentication`): Add account display metadata while preserving existing usernames/passwords/access.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login** (function, lines 38429–38662, 234 lines, risk `authentication`): Modern account-based login dialog. Returns (username, internal_access_profile).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._toggle_show** (nested_function, lines 38522–38526, 5 lines, risk `ui_only`): Handles toggle show for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info** (nested_function, lines 38540–38551, 12 lines, risk `authentication`): Refreshes refresh account info for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok** (nested_function, lines 38553–38591, 39 lines, risk `authentication`): Handles ok for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel** (nested_function, lines 38593–38598, 6 lines, risk `support`): Handles cancel for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._enter** (nested_function, lines 38621–38622, 2 lines, risk `support`): Handles enter for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header** (function, lines 38665–38678, 14 lines, risk `authentication`): Handles spina v32 refresh user header for the other feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account** (function, lines 38681–38738, 58 lines, risk `authentication`): Handles spina v32 switch account for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role** (function, lines 38741–38744, 4 lines, risk `authentication`): Handles spina v32 prompt user role for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message** (function, lines 38787–38798, 12 lines, risk `reports`): Handles spina legacy client action removed message for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action** (function, lines 38801–38806, 6 lines, risk `filesystem`): Handles spina make removed legacy client action for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action** (nested_function, lines 38802–38804, 3 lines, risk `support`): Handles spina removed action for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button** (function, lines 37909–37936, 28 lines, risk `authentication`): Handles spina v32 login button for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_default_name** (function, lines 37939–37947, 9 lines, risk `support`): Handles spina v32 account default name for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_permission_text** (function, lines 37950–37960, 11 lines, risk `authentication`): Handles spina v32 account permission text for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_display_name** (function, lines 37963–37973, 11 lines, risk `authentication`): Handles spina v32 account display name for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role** (function, lines 37976–37986, 11 lines, risk `authentication`): Handles spina v32 account role for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices** (function, lines 37989–38017, 29 lines, risk `authentication`): Handles spina v32 account choices for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user** (function, lines 38020–38025, 6 lines, risk `support`): Handles spina v32 selected label for user for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based** (function, lines 38028–38082, 55 lines, risk `authentication`): Add account display metadata while preserving existing usernames/passwords/access.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login** (function, lines 38085–38318, 234 lines, risk `authentication`): Modern account-based login dialog. Returns (username, internal_access_profile).
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._toggle_show** (nested_function, lines 38178–38182, 5 lines, risk `ui_only`): Handles toggle show for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info** (nested_function, lines 38196–38207, 12 lines, risk `authentication`): Refreshes refresh account info for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok** (nested_function, lines 38209–38247, 39 lines, risk `authentication`): Handles ok for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel** (nested_function, lines 38249–38254, 6 lines, risk `support`): Handles cancel for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._enter** (nested_function, lines 38277–38278, 2 lines, risk `support`): Handles enter for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header** (function, lines 38321–38334, 14 lines, risk `authentication`): Handles spina v32 refresh user header for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account** (function, lines 38337–38394, 58 lines, risk `authentication`): Handles spina v32 switch account for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role** (function, lines 38397–38400, 4 lines, risk `authentication`): Handles spina v32 prompt user role for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message** (function, lines 38443–38454, 12 lines, risk `reports`): Handles spina legacy client action removed message for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action** (function, lines 38457–38462, 6 lines, risk `filesystem`): Handles spina make removed legacy client action for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action** (nested_function, lines 38458–38460, 3 lines, risk `support`): Handles spina removed action for the clients feature.
 
 ## `spina_app/area_hierarchy.py`
 
@@ -964,6 +950,24 @@ Scanned **160 Python files**, **73,421 lines**, and **2,250 symbols**.
 - **spina_app.client_queries.get_client_by_uid** (function, lines 401–410, 10 lines, risk `database_read`): Retrieves get client by uid for the clients feature.
 - **spina_app.client_queries.get_client_history** (function, lines 412–462, 51 lines, risk `database_read`): Return audit history rows (most recent first). Prefer client_uid. Normalizes key names for UI: ts -> changed_at before_json -> old_json after_json -> new_json
 - **spina_app.client_queries.get_person_uid_for_client_uid** (function, lines 464–478, 15 lines, risk `database_read`): Retrieves get person uid for client uid for the clients feature.
+
+## `spina_app/collector_dialog_presentation.py`
+
+- **spina_app.collector_dialog_presentation.configure_collector_dialog_dependencies** (function, lines 21–26, 6 lines, risk `support`): Handles configure collector dialog dependencies for the collectors feature.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog** (function, lines 36–385, 350 lines, risk `ui_only`): Modern route editor: Available Areas vs Assigned Route Order.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._panel** (nested_function, lines 105–109, 5 lines, risk `ui_only`): Handles panel for the collectors feature.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._assigned_keys** (nested_function, lines 147–148, 2 lines, risk `support`): Handles assigned keys for the collectors feature.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._refresh_lists** (nested_function, lines 150–189, 40 lines, risk `ui_only`): Refreshes refresh lists for the collectors feature.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._clean_assigned_display** (nested_function, lines 191–196, 6 lines, risk `support`): Handles clean assigned display for the collectors feature.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._add_selected** (nested_function, lines 198–214, 17 lines, risk `support`): Handles add selected for the collectors feature.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._remove_selected** (nested_function, lines 216–227, 12 lines, risk `support`): Removes remove selected for the collectors feature.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._move_selected** (nested_function, lines 229–247, 19 lines, risk `support`): Handles move selected for the collectors feature.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._move_top** (nested_function, lines 249–260, 12 lines, risk `support`): Handles move top for the collectors feature.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._move_bottom** (nested_function, lines 262–273, 12 lines, risk `support`): Handles move bottom for the collectors feature.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._add_all_visible** (nested_function, lines 275–283, 9 lines, risk `support`): Handles add all visible for the collectors feature.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._clear_assigned** (nested_function, lines 285–294, 10 lines, risk `support`): Handles clear assigned for the collectors feature.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._save** (nested_function, lines 331–359, 29 lines, risk `support`): Handles save for the collectors feature.
+- **spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._cancel** (nested_function, lines 361–367, 7 lines, risk `support`): Handles cancel for the collectors feature.
 
 ## `spina_app/collector_refresh_presentation.py`
 
@@ -2212,6 +2216,14 @@ Scanned **160 Python files**, **73,421 lines**, and **2,250 symbols**.
 - **tools.test_clients_read_presentation_wave_30.assert_runtime_wiring_order** (function, lines 111–139, 29 lines, risk `filesystem`): Handles assert runtime wiring order for the other feature.
 - **tools.test_clients_read_presentation_wave_30.assert_focused_behavior** (function, lines 142–194, 53 lines, risk `support`): Handles assert focused behavior for the other feature.
 - **tools.test_clients_read_presentation_wave_30.main** (function, lines 197–201, 5 lines, risk `reports`): Handles main for the other feature.
+
+## `tools/test_collector_dialog_presentation_wave_43.py`
+
+- **tools.test_collector_dialog_presentation_wave_43.normalized** (function, lines 25–26, 2 lines, risk `support`): Handles normalized for the utilities feature.
+- **tools.test_collector_dialog_presentation_wave_43.chain** (function, lines 29–36, 8 lines, risk `support`): Handles chain for the other feature.
+- **tools.test_collector_dialog_presentation_wave_43.call_name** (function, lines 39–40, 2 lines, risk `support`): Handles call name for the other feature.
+- **tools.test_collector_dialog_presentation_wave_43.source_for** (function, lines 43–44, 2 lines, risk `support`): Handles source for for the other feature.
+- **tools.test_collector_dialog_presentation_wave_43.main** (function, lines 47–115, 69 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_collector_refresh_presentation_wave_39.py`
 
