@@ -37,6 +37,10 @@ FILE_WRITE_CALLS = {
     "write", "write_text", "write_bytes", "unlink", "remove", "rename",
     "replace", "mkdir", "rmdir", "copy", "copy2", "move", "save",
 }
+DB_WRITE_PREFIXES = (
+    "set_", "clear_", "update_", "delete_", "add_", "insert_", "save_",
+    "link_", "unlink_", "archive_", "restore_",
+)
 
 
 def git_blob(path: Path) -> str:
@@ -96,6 +100,7 @@ def string_literals(node: ast.AST) -> list[str]:
 def mutation_report(node: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, object]:
     sql_hits: set[str] = set()
     file_hits: set[str] = set()
+    db_write_hits: set[str] = set()
     open_write_modes: set[str] = set()
     state_writes: set[str] = set()
 
@@ -111,6 +116,8 @@ def mutation_report(node: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, o
             leaf = call.rsplit(".", 1)[-1]
             if leaf in FILE_WRITE_CALLS:
                 file_hits.add(call)
+            if call.startswith("self.db.") and leaf.startswith(DB_WRITE_PREFIXES):
+                db_write_hits.add(call)
             if leaf == "open":
                 mode = None
                 if len(item.args) >= 2 and isinstance(item.args[1], ast.Constant):
@@ -130,35 +137,51 @@ def mutation_report(node: ast.FunctionDef | ast.AsyncFunctionDef) -> dict[str, o
 
     return {
         "sql_write_hits": sorted(sql_hits),
+        "database_mutation_calls": sorted(db_write_hits),
         "file_mutation_calls": sorted(file_hits),
         "open_write_modes": sorted(open_write_modes),
         "attribute_or_subscript_writes": sorted(state_writes),
     }
 
 
-def app_assignments(tree: ast.Module) -> dict[str, list[dict[str, object]]]:
+def runtime_wiring(tree: ast.Module, lines: list[str]) -> dict[str, list[dict[str, object]]]:
+    """Capture top-level assignments, setattr calls, and dynamic statements using targets."""
     result: dict[str, list[dict[str, object]]] = defaultdict(list)
     target_set = set(TARGETS)
-    for node in ast.walk(tree):
-        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+    ignored = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Import, ast.ImportFrom)
+
+    for statement in tree.body:
+        if isinstance(statement, ignored):
             continue
-        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-        value = node.value
-        for target in targets:
-            if (
-                isinstance(target, ast.Attribute)
-                and isinstance(target.value, ast.Name)
-                and target.value.id == "App"
-            ):
-                value_name = dotted(value)
-                if target.attr in target_set or value_name in target_set:
-                    result[target.attr].append(
-                        {
-                            "line": node.lineno,
-                            "value": value_name,
-                            "target": f"App.{target.attr}",
-                        }
-                    )
+        statement_source = source_segment(lines, statement)
+        names = {
+            item.id
+            for item in ast.walk(statement)
+            if isinstance(item, ast.Name) and item.id in target_set
+        }
+        for item in ast.walk(statement):
+            if isinstance(item, ast.Constant) and isinstance(item.value, str) and item.value in target_set:
+                names.add(item.value)
+        if not names:
+            continue
+
+        kind = type(statement).__name__
+        for item in ast.walk(statement):
+            if isinstance(item, (ast.Assign, ast.AnnAssign)):
+                kind = "assignment"
+                break
+            if isinstance(item, ast.Call) and dotted(item.func) == "setattr":
+                kind = "setattr"
+                break
+
+        record = {
+            "line": statement.lineno,
+            "end_line": statement.end_lineno,
+            "kind": kind,
+            "source": statement_source,
+        }
+        for name in sorted(names):
+            result[name].append(record)
     return result
 
 
@@ -187,7 +210,7 @@ def main() -> None:
     missing = [name for name in TARGETS if name not in definitions]
     assert not missing, f"Missing Wave 30 candidates: {missing}"
 
-    assignments = app_assignments(tree)
+    wiring = runtime_wiring(tree, lines)
     map_records = architecture_records()
     report: dict[str, object] = {
         "source": SOURCE.name,
@@ -233,6 +256,7 @@ def main() -> None:
                 total_effective_lines += line_count
                 if (
                     mutations["sql_write_hits"]
+                    or mutations["database_mutation_calls"]
                     or mutations["file_mutation_calls"]
                     or mutations["open_write_modes"]
                 ):
@@ -261,12 +285,7 @@ def main() -> None:
         report["candidates"][name] = {
             "definition_count": len(nodes),
             "definitions": rows,
-            "app_assignments": [
-                item
-                for values in assignments.values()
-                for item in values
-                if item["value"] == name or item["target"] == f"App.{name}"
-            ],
+            "runtime_wiring": wiring.get(name, []),
             "map_records": [
                 {
                     "id": record.get("id"),
