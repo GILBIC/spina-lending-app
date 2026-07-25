@@ -270,58 +270,37 @@ def _spina_pg_write_json(path, data):
         return False
 
 
-def _spina_pg_sha256(data: bytes) -> str:
-    import hashlib
-    return hashlib.sha256(data).hexdigest()
+# Wave 34: pure PostgreSQL compatibility helpers.
+from spina_app.postgres_compat import (
+    configure_postgres_compat_dependencies as _configure_wave34_postgres_compat,
+    _spina_pg_sha256 as _wave34_spina_pg_sha256,
+    _spina_pg_guess_file_type as _wave34_spina_pg_guess_file_type,
+    _spina_pg_guess_report_date as _wave34_spina_pg_guess_report_date,
+    _spina_pg_guess_collector as _wave34_spina_pg_guess_collector,
+    _spina_pg_normalize_value as _wave34_spina_pg_normalize_value,
+    _spina_pg_replace_qmarks as _wave34_spina_pg_replace_qmarks,
+    _spina_pg_escape_literal_percents as _wave34_spina_pg_escape_literal_percents,
+)
+_configure_wave34_postgres_compat(globals())
+_spina_pg_sha256 = _wave34_spina_pg_sha256
+_spina_pg_guess_file_type = _wave34_spina_pg_guess_file_type
+_spina_pg_guess_report_date = _wave34_spina_pg_guess_report_date
+_spina_pg_guess_collector = _wave34_spina_pg_guess_collector
+_spina_pg_normalize_value = _wave34_spina_pg_normalize_value
+_spina_pg_replace_qmarks = _wave34_spina_pg_replace_qmarks
+_spina_pg_escape_literal_percents = _wave34_spina_pg_escape_literal_percents
 
 
-def _spina_pg_guess_file_type(path):
-    try:
-        rp = _spina_pg_relpath(path).lower()
-        name = os.path.basename(str(path or '')).lower()
-        ext = os.path.splitext(name)[1].lower()
-        if ext == '.pdf':
-            if 'closed_collector_routes' in rp or 'closed collector routes' in rp:
-                return 'closed_collector_route_pdf'
-            if 'collectorroute' in name or 'collector route' in name:
-                return 'collector_route_pdf'
-            if 'audit' in rp or 'audit' in name:
-                return 'audit_pdf'
-            if 'renew' in rp or 'renew' in name:
-                return 'renewal_pdf'
-            return 'client_report_pdf'
-        if ext in ('.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif'):
-            if name.startswith('logo'):
-                return 'logo_image'
-            return 'client_picture_or_image'
-        return 'other'
-    except Exception:
-        return 'other'
 
 
-def _spina_pg_guess_report_date(path):
-    try:
-        import re
-        from datetime import date as _date
-        name = os.path.basename(str(path or ''))
-        m = re.search(r'(20\d{2})[-_](\d{2})[-_](\d{2})', name)
-        if not m:
-            return None
-        return _date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-    except Exception:
-        return None
 
 
-def _spina_pg_guess_collector(path):
-    try:
-        import re
-        name = os.path.basename(str(path or ''))
-        m = re.search(r'CollectorRoute[_\s-]+(.+?)[_\s-]+20\d{2}[-_]\d{2}[-_]\d{2}', name, re.I)
-        if not m:
-            return None
-        return m.group(1).replace('_', ' ').strip() or None
-    except Exception:
-        return None
+
+
+
+
+
+
 
 
 def _spina_pg_store_file_to_db(path, file_type=None, client_uid=None, person_uid=None, loan_type=None, collector=None, report_date=None):
@@ -541,14 +520,7 @@ def _spina_pg_patch_reportlab_canvas_save(canvas_module):
 
 
 
-def _spina_pg_normalize_value(v):
-    """Convert PostgreSQL-returned values into SQLite-like values."""
-    try:
-        if isinstance(v, _spina_decimal.Decimal):
-            return float(v)
-    except Exception:
-        pass
-    return v
+
 
 
 class _PgCompatRow(dict):
@@ -573,60 +545,10 @@ class _PgCompatRow(dict):
         return list(self._columns)
 
 
-def _spina_pg_replace_qmarks(sql: str) -> str:
-    """Replace SQLite ? parameters with psycopg %s outside quoted strings."""
-    out = []
-    in_single = False
-    in_double = False
-    i = 0
-    while i < len(sql):
-        ch = sql[i]
-        if ch == "'" and not in_double:
-            out.append(ch)
-            # SQL escaped single quote: ''
-            if in_single and i + 1 < len(sql) and sql[i + 1] == "'":
-                i += 1
-                out.append(sql[i])
-            else:
-                in_single = not in_single
-        elif ch == '"' and not in_single:
-            out.append(ch)
-            in_double = not in_double
-        elif ch == "?" and not in_single and not in_double:
-            out.append("%s")
-        else:
-            out.append(ch)
-        i += 1
-    return "".join(out)
 
 
-def _spina_pg_escape_literal_percents(sql: str) -> str:
-    """Escape literal percent signs for psycopg while preserving %s/%b/%t placeholders.
 
-    Old SQLite queries commonly contain LIKE '%ADV%' or LIKE '%[RC:%'.
-    Psycopg uses %s-style placeholders, so a literal % in the SQL text must be
-    doubled as %%. Without this, ADV/reason queries can fail silently inside the
-    app's broad try/except blocks.
-    """
-    try:
-        s = str(sql or "")
-    except Exception:
-        return sql
-    out = []
-    i = 0
-    while i < len(s):
-        ch = s[i]
-        if ch == "%":
-            nxt = s[i + 1] if i + 1 < len(s) else ""
-            # Keep psycopg placeholders and existing escaped percent signs.
-            if nxt in ("s", "b", "t", "%"):
-                out.append("%")
-            else:
-                out.append("%%")
-        else:
-            out.append(ch)
-        i += 1
-    return "".join(out)
+
 
 
 def _spina_pg_sql(sql):
