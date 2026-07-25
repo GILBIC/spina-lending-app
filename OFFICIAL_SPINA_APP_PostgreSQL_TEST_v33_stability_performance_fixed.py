@@ -37809,7 +37809,6 @@ from spina_app.account_header_presentation import (
     _spina_v32_refresh_user_header as _wave46_spina_v32_refresh_user_header,
     _spina_v32_build_header as _wave46_spina_v32_build_header,
 )
-_wave46_configure_account_header_dependencies(globals())
 _spina_v32_refresh_user_header = _wave46_spina_v32_refresh_user_header
 _spina_v32_build_header = _wave46_spina_v32_build_header
 
@@ -37893,6 +37892,7 @@ try:
 
         _spina_v32_orig_build_header = getattr(App, "_build_header", None)
         if callable(_spina_v32_orig_build_header):
+            _wave46_configure_account_header_dependencies(globals())
             App._build_header = _spina_v32_build_header
 except Exception as __spina_exc:
     try:
