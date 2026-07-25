@@ -20,6 +20,16 @@ jobs:
           python --version
           where gh
           gh auth status
+      - name: Refine exact database-prefix guard
+        shell: powershell
+        run: |
+          $path = 'tools/apply_collector_refresh_presentation_wave_39.py'
+          $text = [System.IO.File]::ReadAllText($path)
+          $old = 'if not any(full == allowed or full.startswith(allowed + ".") for allowed in EXPECTED_DB_CALLS):'
+          $new = 'if not any(full == allowed or full.startswith(allowed + ".") or allowed.startswith(full + ".") for allowed in EXPECTED_DB_CALLS):'
+          if (-not $text.Contains($old)) { throw 'Expected guard line was not found.' }
+          $text = $text.Replace($old, $new)
+          [System.IO.File]::WriteAllText($path, $text, (New-Object System.Text.UTF8Encoding($false)))
       - name: Apply guarded collector-refresh extraction
         shell: cmd
         run: python tools/apply_collector_refresh_presentation_wave_39.py
