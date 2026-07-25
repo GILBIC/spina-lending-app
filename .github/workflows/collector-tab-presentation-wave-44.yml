@@ -1,0 +1,46 @@
+name: Collector tab presentation Wave 44
+on: [pull_request]
+permissions:
+  contents: read
+concurrency:
+  group: collector-tab-presentation-wave-44-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    if: github.head_ref == 'agent/collector-tab-presentation-wave-44'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Compile application, module, and test
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app/collector_tab_presentation.py
+          python -m py_compile tools/test_collector_tab_presentation_wave_44.py
+          python -m compileall -q spina_app
+      - name: Run exact collector-tab regression
+        shell: cmd
+        run: python tools/test_collector_tab_presentation_wave_44.py
+      - name: Validate permanent architecture map
+        uses: ./.github/actions/architecture-map-check
+      - name: Run repository audits
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-44-redundancy.json
+          python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-44-quality.json
+      - name: Upload Wave 44 reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: collector-tab-presentation-wave-44-reports
+          path: |
+            artifacts/wave-44-redundancy.json
+            artifacts/wave-44-quality.json
+            architecture-map.json
+            docs/architecture
+          if-no-files-found: error
