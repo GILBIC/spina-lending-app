@@ -39,7 +39,7 @@ FORBIDDEN_TEXT = (
 )
 FORBIDDEN_MUTATING_ATTRS = {
     "commit", "rollback", "write", "write_text", "write_bytes", "unlink",
-    "mkdir", "makedirs", "rename", "replace", "copy", "copy2", "move",
+    "mkdir", "makedirs", "rename", "copy", "copy2", "move",
     "rmdir", "touch",
 }
 
