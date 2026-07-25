@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import sys
 import tkinter as tk
+from pathlib import Path
 from tkinter import ttk
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from spina_app import collector_tab_presentation as presentation
 
