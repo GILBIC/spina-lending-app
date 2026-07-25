@@ -1,0 +1,27 @@
+name: Cancel obsolete Wave 42 validations
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  actions: write
+  contents: read
+jobs:
+  cancel:
+    if: github.head_ref == 'agent/presentation-wave-42'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Cancel superseded long-task workflow runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_HEAD: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/workflows/long-task-presentation-wave-42.yml/runs?event=pull_request&per_page=100" \
+            --jq '.workflow_runs[] | [.id, .head_sha, .status] | @tsv' |
+          while IFS=$'\t' read -r run_id head_sha status; do
+            if [[ "$head_sha" != "$CURRENT_HEAD" && ( "$status" == "queued" || "$status" == "in_progress" ) ]]; then
+              echo "Cancelling obsolete run $run_id at $head_sha ($status)"
+              gh api -X POST "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" || true
+            fi
+          done
