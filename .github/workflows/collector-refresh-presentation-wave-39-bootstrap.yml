@@ -21,28 +21,9 @@ jobs:
           where gh
           gh auth status
       - name: Apply guarded collector-refresh extraction
-        id: extractor
-        continue-on-error: true
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          & python tools/apply_collector_refresh_presentation_wave_39.py *> artifacts/wave-39-extractor.log
-          $code = $LASTEXITCODE
-          Get-Content artifacts/wave-39-extractor.log
-          exit $code
-      - name: Upload extractor diagnostic
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: collector-refresh-wave-39-extractor-diagnostic
-          path: artifacts/wave-39-extractor.log
-          if-no-files-found: error
-      - name: Stop after extractor failure
-        if: steps.extractor.outcome == 'failure'
         shell: cmd
-        run: exit /b 1
+        run: python tools/apply_collector_refresh_presentation_wave_39.py
       - name: Compile application, module, and test
-        if: steps.extractor.outcome == 'success'
         shell: cmd
         run: |
           python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
@@ -50,11 +31,9 @@ jobs:
           python -m py_compile tools/test_collector_refresh_presentation_wave_39.py
           python -m compileall -q spina_app
       - name: Run exact collector-refresh regression
-        if: steps.extractor.outcome == 'success'
         shell: cmd
         run: python tools/test_collector_refresh_presentation_wave_39.py
       - name: Commit application extraction
-        if: steps.extractor.outcome == 'success'
         shell: cmd
         run: |
           git config user.name "SPINA Automation"
@@ -62,11 +41,9 @@ jobs:
           git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app/collector_refresh_presentation.py tools/test_collector_refresh_presentation_wave_39.py .github/workflows/collector-refresh-presentation-wave-39.yml
           git commit -m "Extract collector refresh presentation Wave 39"
       - name: Regenerate architecture map
-        if: steps.extractor.outcome == 'success'
         shell: cmd
         run: python -m tools.generate_architecture_map
       - name: Run repository audits
-        if: steps.extractor.outcome == 'success'
         shell: cmd
         run: |
           if not exist artifacts mkdir artifacts
@@ -74,12 +51,10 @@ jobs:
           python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-39-redundancy.json
           python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-39-quality.json
       - name: Commit architecture refresh
-        if: steps.extractor.outcome == 'success'
         shell: cmd
         run: |
           git add architecture-map.json docs/architecture
           git commit -m "Refresh architecture map after Wave 39"
       - name: Push completed Wave 39 branch
-        if: steps.extractor.outcome == 'success'
         shell: cmd
         run: git push origin HEAD:agent/collector-refresh-presentation-wave-39
