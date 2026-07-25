@@ -5,10 +5,15 @@ import ast
 import hashlib
 import importlib
 import re
+import sys
 from pathlib import Path
 
-DESKTOP = Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
-MODULE_PATH = Path('spina_app/collector_tab_presentation.py')
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+DESKTOP = ROOT / 'OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py'
+MODULE_PATH = ROOT / 'spina_app/collector_tab_presentation.py'
 TARGET = '_spina_v27_build_collectors_tab'
 EXPECTED_LINES = 293
 EXPECTED_SHA256 = '5ce718e8f43404331b044d2f3f43b81dc34b0782a15d45a317121e61da6701cb'
