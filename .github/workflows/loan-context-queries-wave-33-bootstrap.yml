@@ -23,12 +23,6 @@ jobs:
       - name: Apply guarded extraction
         shell: cmd
         run: python tools/apply_loan_context_queries_wave_33.py
-      - name: Install permanent compile-only check
-        shell: powershell
-        run: |
-          $path = '.github/workflows/loan-context-queries-wave-33.yml'
-          $lines = Get-Content $path
-          $lines | Where-Object { $_ -notmatch 'python -m tools.test_loan_context_queries_wave_33' } | Set-Content $path
       - name: Compile extracted application
         shell: cmd
         run: |
