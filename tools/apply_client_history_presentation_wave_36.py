@@ -18,7 +18,7 @@ SELF = ROOT / "tools" / "apply_client_history_presentation_wave_36.py"
 EXPECTED_BASE = "b5aad49922bc31ea8166031c04fb4a336c904525"
 TARGET = "_app_open_client_history_dialog"
 EXPECTED_LINES = 514
-EXPECTED_SHA256 = "5ec3d3efd779486382b849922a303aa39e5fa14c65b79141b6f975131210e3a2"
+EXPECTED_SHA256 = "570a2e0946cd702bfcdcbc1d3433b72ab9aed73fd61fba56be70e1ebb53555b8"
 ALLOWED_INITIAL = {
     ".github/workflows/client-history-presentation-wave-36-bootstrap.yml",
     "tools/apply_client_history_presentation_wave_36.py",
