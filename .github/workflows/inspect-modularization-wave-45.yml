@@ -1,0 +1,27 @@
+name: Inspect modularization Wave 45
+on:
+  push:
+    branches:
+      - agent/modularization-wave-45
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact branch head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Compile candidate inspector
+        shell: cmd
+        run: python -m py_compile tools/inspect_modularization_wave_45.py
+      - name: Rank guarded presentation candidates
+        shell: cmd
+        run: python tools/inspect_modularization_wave_45.py
+      - name: Upload candidate report
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-45-candidates
+          path: artifacts/wave-45-candidates.json
