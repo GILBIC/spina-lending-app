@@ -10,8 +10,100 @@ on:
       - "docs/architecture/**"
       - ".github/workflows/account-header-presentation-wave-46.yml"
 permissions:
-  contents: read
+  contents: write
 jobs:
+  repair_dependency_order:
+    if: github.head_ref == 'agent/account-header-presentation-wave-46'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Repair Wave 46 startup dependency order
+        shell: powershell
+        run: |
+          $desktopPath = "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+          $desktop = [System.IO.File]::ReadAllText($desktopPath)
+          $premature = "_wave46_configure_account_header_dependencies(globals())`r`n_spina_v32_refresh_user_header = _wave46_spina_v32_refresh_user_header`r`n_spina_v32_build_header = _wave46_spina_v32_build_header`r`n"
+          $prematureLf = $premature -replace "`r`n", "`n"
+          $clean = "_spina_v32_refresh_user_header = _wave46_spina_v32_refresh_user_header`r`n_spina_v32_build_header = _wave46_spina_v32_build_header`r`n"
+          $cleanLf = $clean -replace "`r`n", "`n"
+          if ($desktop.Contains($premature)) {
+            $desktop = $desktop.Replace($premature, $clean)
+          } elseif ($desktop.Contains($prematureLf)) {
+            $desktop = $desktop.Replace($prematureLf, $cleanLf)
+          }
+
+          $oldOrder = "        _spina_v32_orig_build_header = getattr(App, `"_build_header`", None)`r`n        if callable(_spina_v32_orig_build_header):`r`n            App._build_header = _spina_v32_build_header`r`n"
+          $oldOrderLf = $oldOrder -replace "`r`n", "`n"
+          $newOrder = "        _spina_v32_orig_build_header = getattr(App, `"_build_header`", None)`r`n        if callable(_spina_v32_orig_build_header):`r`n            _wave46_configure_account_header_dependencies(globals())`r`n            App._build_header = _spina_v32_build_header`r`n"
+          $newOrderLf = $newOrder -replace "`r`n", "`n"
+          if ($desktop.Contains($oldOrder)) {
+            $desktop = $desktop.Replace($oldOrder, $newOrder)
+          } elseif ($desktop.Contains($oldOrderLf)) {
+            $desktop = $desktop.Replace($oldOrderLf, $newOrderLf)
+          }
+
+          $configureMarker = "_wave46_configure_account_header_dependencies(globals())"
+          $originalMarker = "_spina_v32_orig_build_header = getattr(App, `"_build_header`", None)"
+          $bindingMarker = "App._build_header = _spina_v32_build_header"
+          if (($desktop.Split($configureMarker).Count - 1) -ne 1) { throw "Expected one Wave 46 dependency configuration call" }
+          if ($desktop.IndexOf($originalMarker) -ge $desktop.IndexOf($configureMarker)) { throw "Dependency configuration still occurs before original header capture" }
+          if ($desktop.IndexOf($configureMarker) -ge $desktop.IndexOf($bindingMarker)) { throw "Dependency configuration must occur before App._build_header binding" }
+          [System.IO.File]::WriteAllText($desktopPath, $desktop, (New-Object System.Text.UTF8Encoding($false)))
+
+          $testPath = "tools/test_account_header_presentation_wave_46.py"
+          $test = [System.IO.File]::ReadAllText($testPath)
+          $guardMarker = "Wave 46 dependencies must be configured after capturing the original header"
+          if (-not $test.Contains($guardMarker)) {
+            $needle = "    assert (BUILD, `"_wave46_spina_v32_build_header`") in aliases`r`n`r`n    symbol_rebinds = []`r`n"
+            $needleLf = $needle -replace "`r`n", "`n"
+            $replacement = @'
+    assert (BUILD, "_wave46_spina_v32_build_header") in aliases
+
+    configure_marker = "_wave46_configure_account_header_dependencies(globals())"
+    original_marker = '_spina_v32_orig_build_header = getattr(App, "_build_header", None)'
+    build_binding_marker = "App._build_header = _spina_v32_build_header"
+    assert desktop_text.count(configure_marker) == 1
+    assert desktop_text.count(original_marker) == 1
+    assert desktop_text.count(build_binding_marker) == 1
+    assert (
+        desktop_text.index(original_marker)
+        < desktop_text.index(configure_marker)
+        < desktop_text.index(build_binding_marker)
+    ), "Wave 46 dependencies must be configured after capturing the original header"
+
+    symbol_rebinds = []
+'@
+            if ($test.Contains($needle)) {
+              $test = $test.Replace($needle, ($replacement -replace "`n", "`r`n"))
+            } elseif ($test.Contains($needleLf)) {
+              $test = $test.Replace($needleLf, $replacement)
+            } else {
+              throw "Could not locate Wave 46 regression insertion point"
+            }
+            [System.IO.File]::WriteAllText($testPath, $test, (New-Object System.Text.UTF8Encoding($false)))
+          }
+      - name: Compile and run repaired Wave 46 tests
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app/account_header_presentation.py
+          python -m py_compile tools/test_account_header_presentation_wave_46.py
+          python -m py_compile tools/test_account_header_widget_smoke_wave_46.py
+          python tools/test_account_header_presentation_wave_46.py
+          python tools/test_account_header_widget_smoke_wave_46.py
+      - name: Commit repaired startup wiring
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py tools/test_account_header_presentation_wave_46.py
+          git diff --cached --quiet || git commit -m "Fix Wave 46 account header dependency order"
+          git push origin HEAD:${{ github.head_ref }}
   validate:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 45
