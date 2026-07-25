@@ -16,15 +16,18 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Guard exact remote head
+      - name: Guard exact checked-out head
         shell: pwsh
         run: |
           $branch = "${{ github.head_ref }}"
           $expected = "${{ github.event.pull_request.head.sha }}"
-          git fetch origin "refs/heads/$branch`:refs/remotes/origin/$branch"
-          $actual = (git rev-parse "refs/remotes/origin/$branch").Trim()
-          if ($actual -ne $expected) {
-            throw "Wave 40 head changed before bootstrap. Expected $expected, found $actual."
+          $checkedOut = (git rev-parse HEAD).Trim()
+          $remote = (git rev-parse "refs/remotes/origin/$branch").Trim()
+          if ($checkedOut -ne $expected) {
+            throw "Wave 40 checkout mismatch. Expected $expected, found $checkedOut."
+          }
+          if ($remote -ne $expected) {
+            throw "Wave 40 remote-head mismatch. Expected $expected, found $remote."
           }
       - name: Extract guarded note editor module
         shell: cmd
