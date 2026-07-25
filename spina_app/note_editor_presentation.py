@@ -1,6 +1,9 @@
 """Client-note editor presentation extracted in Wave 40."""
 from __future__ import annotations
 
+import tkinter as tk
+from tkinter import messagebox, ttk
+
 _NOTE_EDITOR_DEPENDENCIES = {}
 _PROTECTED_GLOBALS = {
     "__builtins__", "__cached__", "__doc__", "__file__", "__loader__",

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import importlib.util
 import textwrap
 from pathlib import Path
 
@@ -31,6 +32,14 @@ def call_chain(node):
 
 
 def main():
+    spec = importlib.util.spec_from_file_location(
+        "wave40_note_editor_import_smoke", MODULE
+    )
+    assert spec is not None and spec.loader is not None
+    imported = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(imported)
+    assert issubclass(imported.NoteEditorDialog, imported.tk.Toplevel)
+
     module_text = MODULE.read_text(encoding="utf-8")
     mtree = ast.parse(module_text)
     classes = [n for n in mtree.body if isinstance(n, ast.ClassDef) and n.name == TARGET]
