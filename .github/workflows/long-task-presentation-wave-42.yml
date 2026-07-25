@@ -2,6 +2,9 @@ name: Long task presentation Wave 42
 on: [pull_request]
 permissions:
   contents: read
+concurrency:
+  group: long-task-wave-42-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 jobs:
   validate:
     if: github.head_ref == 'agent/presentation-wave-42'
