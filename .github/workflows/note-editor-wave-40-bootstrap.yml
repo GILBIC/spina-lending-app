@@ -36,12 +36,13 @@ jobs:
       - name: Commit extracted code and remove bootstrap files
         shell: pwsh
         run: |
-          if (Test-Path artifacts) { Remove-Item -Recurse -Force artifacts }
-          git rm .github/workflows/note-editor-wave-40-bootstrap.yml
-          git rm tools/extract_note_editor_presentation_wave_40.py
           git config user.name "SPINA Automation"
           git config user.email "actions@users.noreply.github.com"
+          if (Test-Path artifacts) { Remove-Item -Recurse -Force artifacts }
+          Remove-Item -Force .github/workflows/note-editor-wave-40-bootstrap.yml
+          Remove-Item -Force tools/extract_note_editor_presentation_wave_40.py
           git add -A
+          git status --short
           git commit -m "Extract note editor presentation Wave 40"
       - name: Refresh and commit architecture map
         shell: cmd
