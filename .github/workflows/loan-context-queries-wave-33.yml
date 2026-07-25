@@ -1,0 +1,37 @@
+name: Loan context queries Wave 33
+on: [pull_request]
+permissions:
+  contents: read
+jobs:
+  validate:
+    if: github.head_ref == 'agent/loan-context-queries-wave-33'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\loan_context_queries.py
+          python -m py_compile tools\test_loan_context_queries_wave_33.py
+          python -m compileall -q spina_app
+      - shell: cmd
+        run: python -m tools.test_loan_context_queries_wave_33
+      - uses: ./.github/actions/architecture-map-check
+      - shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools\redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-33-redundancy.json
+          python tools\spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-33-quality.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: loan-context-queries-wave-33-reports
+          path: |
+            artifacts/wave-33-redundancy.json
+            artifacts/wave-33-quality.json
+            architecture-map.json
+            docs/architecture
+          if-no-files-found: error
