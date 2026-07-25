@@ -1,0 +1,46 @@
+name: Long task presentation Wave 42
+on: [pull_request]
+permissions:
+  contents: read
+concurrency:
+  group: long-task-wave-42-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    if: github.head_ref == 'agent/presentation-wave-42'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Compile application, module, and test
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app/long_task_presentation.py
+          python -m py_compile tools/test_long_task_presentation_wave_42.py
+          python -m compileall -q spina_app
+      - name: Run exact long-task regression
+        shell: cmd
+        run: python tools/test_long_task_presentation_wave_42.py
+      - name: Validate permanent architecture map
+        uses: ./.github/actions/architecture-map-check
+      - name: Run repository audits
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-42-redundancy.json
+          python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-42-quality.json
+      - name: Upload Wave 42 reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: long-task-presentation-wave-42-reports
+          path: |
+            artifacts/wave-42-redundancy.json
+            artifacts/wave-42-quality.json
+            architecture-map.json
+            docs/architecture
+          if-no-files-found: error
