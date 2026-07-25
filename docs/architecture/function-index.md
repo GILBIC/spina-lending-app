@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `5996bff0f62421d4e6e27d6bd2863003bed50a93`.
+Generated from commit `cd281e0a9e0a6026b66f8fde1f8b6bb8e9d0ea5b`.
 
-Scanned **165 Python files**, **73,964 lines**, and **2,284 symbols**.
+Scanned **167 Python files**, **74,132 lines**, and **2,291 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -745,18 +745,12 @@ Scanned **165 Python files**, **73,964 lines**, and **2,284 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices** (function, lines 37703–37731, 29 lines, risk `authentication`): Handles spina v32 account choices for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user** (function, lines 37734–37739, 6 lines, risk `support`): Handles spina v32 selected label for user for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based** (function, lines 37742–37796, 55 lines, risk `authentication`): Add account display metadata while preserving existing usernames/passwords/access.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login** (function, lines 37799–38032, 234 lines, risk `authentication`): Modern account-based login dialog. Returns (username, internal_access_profile).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._toggle_show** (nested_function, lines 37892–37896, 5 lines, risk `ui_only`): Handles toggle show for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info** (nested_function, lines 37910–37921, 12 lines, risk `authentication`): Refreshes refresh account info for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok** (nested_function, lines 37923–37961, 39 lines, risk `authentication`): Handles ok for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel** (nested_function, lines 37963–37968, 6 lines, risk `support`): Handles cancel for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._enter** (nested_function, lines 37991–37992, 2 lines, risk `support`): Handles enter for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header** (function, lines 38035–38048, 14 lines, risk `authentication`): Handles spina v32 refresh user header for the other feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account** (function, lines 38051–38108, 58 lines, risk `authentication`): Handles spina v32 switch account for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role** (function, lines 38111–38114, 4 lines, risk `authentication`): Handles spina v32 prompt user role for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message** (function, lines 38157–38168, 12 lines, risk `reports`): Handles spina legacy client action removed message for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action** (function, lines 38171–38176, 6 lines, risk `filesystem`): Handles spina make removed legacy client action for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action** (nested_function, lines 38172–38174, 3 lines, risk `support`): Handles spina removed action for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header** (function, lines 37807–37820, 14 lines, risk `authentication`): Handles spina v32 refresh user header for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account** (function, lines 37823–37880, 58 lines, risk `authentication`): Handles spina v32 switch account for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role** (function, lines 37883–37886, 4 lines, risk `authentication`): Handles spina v32 prompt user role for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message** (function, lines 37929–37940, 12 lines, risk `reports`): Handles spina legacy client action removed message for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action** (function, lines 37943–37948, 6 lines, risk `filesystem`): Handles spina make removed legacy client action for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action** (nested_function, lines 37944–37946, 3 lines, risk `support`): Handles spina removed action for the clients feature.
 
 ## `spina_app/area_hierarchy.py`
 
@@ -1001,6 +995,16 @@ Scanned **165 Python files**, **73,964 lines**, and **2,284 symbols**.
 - **spina_app.loan_context_queries._effective_lt** (function, lines 40–43, 4 lines, risk `support`): Handles effective lt for the loans feature.
 - **spina_app.loan_context_queries.get_audit_new_loan_rows** (function, lines 45–107, 63 lines, risk `database_read`): Return append-only ADD audit rows for new loans.
 - **spina_app.loan_context_queries.get_all_areas** (function, lines 109–144, 36 lines, risk `database_read`): Return area master list for UI dropdowns. Hides areas that are used only by archived clients, but keeps: - areas with at least one active client - areas with no clients yet (manually-added / still-unused)
+
+## `spina_app/login_dialog_presentation.py`
+
+- **spina_app.login_dialog_presentation.configure_login_dialog_dependencies** (function, lines 10–15, 6 lines, risk `authentication`): Handles configure login dialog dependencies for the authentication feature.
+- **spina_app.login_dialog_presentation._spina_v32_prompt_login** (function, lines 24–257, 234 lines, risk `authentication`): Modern account-based login dialog. Returns (username, internal_access_profile).
+- **spina_app.login_dialog_presentation._spina_v32_prompt_login._toggle_show** (nested_function, lines 117–121, 5 lines, risk `ui_only`): Handles toggle show for the authentication feature.
+- **spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info** (nested_function, lines 135–146, 12 lines, risk `authentication`): Refreshes refresh account info for the authentication feature.
+- **spina_app.login_dialog_presentation._spina_v32_prompt_login._ok** (nested_function, lines 148–186, 39 lines, risk `authentication`): Handles ok for the authentication feature.
+- **spina_app.login_dialog_presentation._spina_v32_prompt_login._cancel** (nested_function, lines 188–193, 6 lines, risk `support`): Handles cancel for the authentication feature.
+- **spina_app.login_dialog_presentation._spina_v32_prompt_login._enter** (nested_function, lines 216–217, 2 lines, risk `support`): Handles enter for the authentication feature.
 
 ## `spina_app/long_task_presentation.py`
 
@@ -2560,6 +2564,15 @@ Scanned **165 Python files**, **73,964 lines**, and **2,284 symbols**.
 - **tools.test_log_serialization_helper_extraction._original** (function, lines 92–115, 24 lines, risk `filesystem`): Handles original for the other feature.
 - **tools.test_log_serialization_helper_extraction._applied** (function, lines 118–129, 12 lines, risk `filesystem`): Handles applied for the other feature.
 - **tools.test_log_serialization_helper_extraction.main** (function, lines 132–149, 18 lines, risk `filesystem`): Handles main for the other feature.
+
+## `tools/test_login_dialog_presentation_wave_45.py`
+
+- **tools.test_login_dialog_presentation_wave_45.normalized** (function, lines 28–29, 2 lines, risk `support`): Handles normalized for the utilities feature.
+- **tools.test_login_dialog_presentation_wave_45.dotted** (function, lines 32–38, 7 lines, risk `support`): Handles dotted for the other feature.
+- **tools.test_login_dialog_presentation_wave_45.source_for** (function, lines 41–42, 2 lines, risk `support`): Handles source for for the other feature.
+- **tools.test_login_dialog_presentation_wave_45.top_functions** (function, lines 45–46, 2 lines, risk `support`): Handles top functions for the other feature.
+- **tools.test_login_dialog_presentation_wave_45.app_method** (function, lines 49–53, 5 lines, risk `support`): Handles app method for the other feature.
+- **tools.test_login_dialog_presentation_wave_45.main** (function, lines 56–135, 80 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_login_palette_wave_25.py`
 

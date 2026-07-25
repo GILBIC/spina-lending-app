@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "5996bff0f62421d4e6e27d6bd2863003bed50a93",
+  "generated_from_commit": "cd281e0a9e0a6026b66f8fde1f8b6bb8e9d0ea5b",
   "indexes": {
     "application_callbacks": [
       {
@@ -1869,38 +1869,6 @@
       },
       {
         "kind": "command",
-        "line": 37899,
-        "owner": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "target": "_toggle_show"
-      },
-      {
-        "kind": "command",
-        "line": 37970,
-        "owner": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "target": "_ok"
-      },
-      {
-        "kind": "command",
-        "line": 37971,
-        "owner": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "target": "_cancel"
-      },
-      {
-        "event": "'<Return>'",
-        "kind": "bind",
-        "line": 37995,
-        "owner": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "target": "_enter"
-      },
-      {
-        "event": "'<Return>'",
-        "kind": "bind",
-        "line": 37996,
-        "owner": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "target": "_enter"
-      },
-      {
-        "kind": "command",
         "line": 218,
         "owner": "spina_app/area_hierarchy_ui.py:163:spina_app.area_hierarchy_ui.select_area_node",
         "target": "tree.yview"
@@ -2525,6 +2493,38 @@
         "line": 293,
         "owner": "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab",
         "target": "_popup"
+      },
+      {
+        "kind": "command",
+        "line": 124,
+        "owner": "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
+        "target": "_toggle_show"
+      },
+      {
+        "kind": "command",
+        "line": 195,
+        "owner": "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
+        "target": "_ok"
+      },
+      {
+        "kind": "command",
+        "line": 196,
+        "owner": "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
+        "target": "_cancel"
+      },
+      {
+        "event": "'<Return>'",
+        "kind": "bind",
+        "line": 220,
+        "owner": "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
+        "target": "_enter"
+      },
+      {
+        "event": "'<Return>'",
+        "kind": "bind",
+        "line": 221,
+        "owner": "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
+        "target": "_enter"
       },
       {
         "event": "'WM_DELETE_WINDOW'",
@@ -3338,8 +3338,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:21679:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.export_range_template._cancel",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26497:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._options_dialog._cancel",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26576:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog._cancel",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37963:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel",
-        "spina_app/collector_dialog_presentation.py:361:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._cancel"
+        "spina_app/collector_dialog_presentation.py:361:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._cancel",
+        "spina_app/login_dialog_presentation.py:188:spina_app.login_dialog_presentation._spina_v32_prompt_login._cancel"
       ],
       "_clear": [
         "spina_app/calendar_presentation.py:151:spina_app.calendar_presentation._CalendarPopup._clear",
@@ -3459,7 +3459,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:21678:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.export_range_template._ok",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26494:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._options_dialog._ok",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26574:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog._ok",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37923:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok"
+        "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok"
       ],
       "_on_collectors_multi_toggle": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16626:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_multi_toggle",
@@ -3723,14 +3723,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37703:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37892:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._toggle_show",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37910:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37923:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37963:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37991:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._enter",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38111:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7097:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._access_prefs_path",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7102:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7116:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_user_role",
@@ -3748,6 +3742,13 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7759:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role._cancel",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7794:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._remove_role_overlays",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7869:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.apply_role_access",
+        "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
+        "spina_app/login_dialog_presentation.py:117:spina_app.login_dialog_presentation._spina_v32_prompt_login._toggle_show",
+        "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
+        "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok",
+        "spina_app/login_dialog_presentation.py:188:spina_app.login_dialog_presentation._spina_v32_prompt_login._cancel",
+        "spina_app/login_dialog_presentation.py:216:spina_app.login_dialog_presentation._spina_v32_prompt_login._enter",
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
         "spina_app/theme_palettes.py:330:spina_app.theme_palettes._spina_v32_login_colors"
       ],
       "backup": [
@@ -3908,10 +3909,10 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36763:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_add_client_dialog",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36815:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_on_client_edit",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:377:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_store_client_picture_to_db",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37929:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3802:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._active_client_name_exists",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38157:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38171:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38172:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3833:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3900:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_term",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3930:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_weekday",
@@ -4601,7 +4602,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35761:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v20_fix_chart_titles",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35983:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v21_cash_refresh",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37734:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38035:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:526:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:530:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:536:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__getitem__",
@@ -5498,11 +5499,10 @@
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37023:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38035:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38111:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38171:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:495:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_patch_reportlab_canvas_save",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:541:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__iter__",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:630:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatCursor.connection",
@@ -5524,6 +5524,8 @@
       "spina_app/collector_refresh_presentation.py:14:spina_app.collector_refresh_presentation.configure_collector_refresh_dependencies",
       "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
       "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
+      "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
+      "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
       "spina_app/long_task_presentation.py:21:spina_app.long_task_presentation.configure_long_task_dependencies",
       "spina_app/navigation.py:11:spina_app.navigation._noop_log",
       "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
@@ -5563,12 +5565,9 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37703:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37910:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37923:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38035:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38111:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7102:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7116:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7147:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._users_db_path",
@@ -5591,6 +5590,10 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9291:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._close_day",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9352:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._reopen_day",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9381:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._update_workflow",
+        "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
+        "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
+        "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok",
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
         "spina_app/theme_palettes.py:330:spina_app.theme_palettes._spina_v32_login_colors"
       ],
       "backup": [
@@ -5848,8 +5851,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36308:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.norm_lt",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36412:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._load_pic_preview",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36566:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._parse_float_var",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3802:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._active_client_name_exists",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38171:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3900:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_term",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4092:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_term",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4814:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.fetch_all_clients",
@@ -5954,7 +5957,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2879:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_pdf_header",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36763:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_add_client_dialog",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36815:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_on_client_edit",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38157:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37929:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:495:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_patch_reportlab_canvas_save",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7066:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._on_mode_change",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8007:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._is_client_new",
@@ -6212,9 +6215,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37506:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_get_route_master_areas",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37653:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_default_name",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37734:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37963:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37991:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._enter",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38172:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3930:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_weekday",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_dom",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4132:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_weekday",
@@ -6426,6 +6427,8 @@
         "spina_app/loan_context_queries.py:33:spina_app.loan_context_queries.set_default_loan_type",
         "spina_app/loan_context_queries.py:40:spina_app.loan_context_queries._effective_lt",
         "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
+        "spina_app/login_dialog_presentation.py:188:spina_app.login_dialog_presentation._spina_v32_prompt_login._cancel",
+        "spina_app/login_dialog_presentation.py:216:spina_app.login_dialog_presentation._spina_v32_prompt_login._enter",
         "spina_app/long_task_presentation.py:21:spina_app.long_task_presentation.configure_long_task_dependencies",
         "spina_app/long_task_presentation.py:255:spina_app.long_task_presentation._run_long_task._call_work_fn",
         "spina_app/long_task_presentation.py:61:spina_app.long_task_presentation._run_long_task._cleanup_dialog",
@@ -6621,7 +6624,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36978:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_collector_button",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37023:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37446:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_route_button",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37892:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._toggle_show",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7829:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._make_import_only_overlay",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7849:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._make_close_only_overlay",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8330:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_system_data_tab",
@@ -6665,6 +6667,7 @@
         "spina_app/collector_dialog_presentation.py:150:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._refresh_lists",
         "spina_app/collector_dialog_presentation.py:36:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog",
         "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab",
+        "spina_app/login_dialog_presentation.py:117:spina_app.login_dialog_presentation._spina_v32_prompt_login._toggle_show",
         "spina_app/long_task_presentation.py:131:spina_app.long_task_presentation._run_long_task._request_cancel",
         "spina_app/long_task_presentation.py:157:spina_app.long_task_presentation._run_long_task._watchdog",
         "spina_app/long_task_presentation.py:279:spina_app.long_task_presentation._run_long_task._worker",
@@ -8609,38 +8612,6 @@
       },
       {
         "kind": "command",
-        "line": 37899,
-        "owner": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "target": "_toggle_show"
-      },
-      {
-        "kind": "command",
-        "line": 37970,
-        "owner": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "target": "_ok"
-      },
-      {
-        "kind": "command",
-        "line": 37971,
-        "owner": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "target": "_cancel"
-      },
-      {
-        "event": "'<Return>'",
-        "kind": "bind",
-        "line": 37995,
-        "owner": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "target": "_enter"
-      },
-      {
-        "event": "'<Return>'",
-        "kind": "bind",
-        "line": 37996,
-        "owner": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "target": "_enter"
-      },
-      {
-        "kind": "command",
         "line": 218,
         "owner": "spina_app/area_hierarchy_ui.py:163:spina_app.area_hierarchy_ui.select_area_node",
         "target": "tree.yview"
@@ -9265,6 +9236,38 @@
         "line": 293,
         "owner": "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab",
         "target": "_popup"
+      },
+      {
+        "kind": "command",
+        "line": 124,
+        "owner": "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
+        "target": "_toggle_show"
+      },
+      {
+        "kind": "command",
+        "line": 195,
+        "owner": "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
+        "target": "_ok"
+      },
+      {
+        "kind": "command",
+        "line": 196,
+        "owner": "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
+        "target": "_cancel"
+      },
+      {
+        "event": "'<Return>'",
+        "kind": "bind",
+        "line": 220,
+        "owner": "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
+        "target": "_enter"
+      },
+      {
+        "event": "'<Return>'",
+        "kind": "bind",
+        "line": 221,
+        "owner": "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
+        "target": "_enter"
       },
       {
         "event": "'WM_DELETE_WINDOW'",
@@ -10318,8 +10321,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:21679:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.export_range_template._cancel",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26497:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._options_dialog._cancel",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26576:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog._cancel",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37963:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel",
-        "spina_app/collector_dialog_presentation.py:361:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._cancel"
+        "spina_app/collector_dialog_presentation.py:361:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._cancel",
+        "spina_app/login_dialog_presentation.py:188:spina_app.login_dialog_presentation._spina_v32_prompt_login._cancel"
       ],
       "_capture": [
         "tools/test_cash_control_input_normalizer_batch_07.py:86:tools.test_cash_control_input_normalizer_batch_07._capture",
@@ -10660,7 +10663,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:21678:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.export_range_template._ok",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26494:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._options_dialog._ok",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26574:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog._ok",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37923:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok"
+        "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok"
       ],
       "_on_collectors_multi_toggle": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16626:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_multi_toggle",
@@ -11169,6 +11172,10 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:20589:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.link_selected_client.do_link",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:25036:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.do_link"
       ],
+      "dotted": [
+        "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted",
+        "tools/test_login_dialog_presentation_wave_45.py:32:tools.test_login_dialog_presentation_wave_45.dotted"
+      ],
       "ensure_space": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:19088:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger.ensure_space",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:27830:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger.ensure_space"
@@ -11387,6 +11394,7 @@
         "tools/test_linked_client_queries_wave_32.py:32:tools.test_linked_client_queries_wave_32.main",
         "tools/test_loan_context_queries_wave_33.py:8:tools.test_loan_context_queries_wave_33.main",
         "tools/test_log_serialization_helper_extraction.py:132:tools.test_log_serialization_helper_extraction.main",
+        "tools/test_login_dialog_presentation_wave_45.py:56:tools.test_login_dialog_presentation_wave_45.main",
         "tools/test_login_palette_wave_25.py:23:tools.test_login_palette_wave_25.main",
         "tools/test_long_task_presentation_wave_42.py:38:tools.test_long_task_presentation_wave_42.main",
         "tools/test_merge_note_dict_extraction.py:122:tools.test_merge_note_dict_extraction.main",
@@ -11429,6 +11437,7 @@
         "tools/test_collector_dialog_presentation_wave_43.py:25:tools.test_collector_dialog_presentation_wave_43.normalized",
         "tools/test_collector_refresh_presentation_wave_39.py:21:tools.test_collector_refresh_presentation_wave_39.normalized",
         "tools/test_collector_tab_presentation_wave_44.py:24:tools.test_collector_tab_presentation_wave_44.normalized",
+        "tools/test_login_dialog_presentation_wave_45.py:28:tools.test_login_dialog_presentation_wave_45.normalized",
         "tools/test_long_task_presentation_wave_42.py:24:tools.test_long_task_presentation_wave_42.normalized",
         "tools/test_note_editor_presentation_wave_40.py:20:tools.test_note_editor_presentation_wave_40.normalized",
         "tools/test_theme_presentation_wave_35.py:18:tools.test_theme_presentation_wave_35.normalized"
@@ -11544,6 +11553,7 @@
         "tools/test_collectors_editor_wave_26.py:23:tools.test_collectors_editor_wave_26.source_for",
         "tools/test_collectors_summary_wave_22.py:19:tools.test_collectors_summary_wave_22.source_for",
         "tools/test_dashboard_visibility_wave_24.py:17:tools.test_dashboard_visibility_wave_24.source_for",
+        "tools/test_login_dialog_presentation_wave_45.py:41:tools.test_login_dialog_presentation_wave_45.source_for",
         "tools/test_login_palette_wave_25.py:19:tools.test_login_palette_wave_25.source_for"
       ],
       "source_hash": [
@@ -11555,6 +11565,10 @@
       "tabs": [
         "tools/test_dashboard_presentation_wave_28.py:70:tools.test_dashboard_presentation_wave_28.FakeNotebook.tabs",
         "tools/test_navigation_databank_shell_wave_29.py:141:tools.test_navigation_databank_shell_wave_29.FakeNotebook.tabs"
+      ],
+      "top_functions": [
+        "tools/test_collector_tab_presentation_wave_44.py:37:tools.test_collector_tab_presentation_wave_44.top_functions",
+        "tools/test_login_dialog_presentation_wave_45.py:45:tools.test_login_dialog_presentation_wave_45.top_functions"
       ],
       "top_level_functions": [
         "tools/extract_append_unique_text.py:33:tools.extract_append_unique_text.top_level_functions",
@@ -11647,14 +11661,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37703:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37892:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._toggle_show",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37910:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37923:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37963:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37991:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._enter",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38111:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7097:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._access_prefs_path",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7102:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7116:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_user_role",
@@ -11672,6 +11680,13 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7759:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role._cancel",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7794:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._remove_role_overlays",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7869:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.apply_role_access",
+        "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
+        "spina_app/login_dialog_presentation.py:117:spina_app.login_dialog_presentation._spina_v32_prompt_login._toggle_show",
+        "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
+        "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok",
+        "spina_app/login_dialog_presentation.py:188:spina_app.login_dialog_presentation._spina_v32_prompt_login._cancel",
+        "spina_app/login_dialog_presentation.py:216:spina_app.login_dialog_presentation._spina_v32_prompt_login._enter",
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
         "spina_app/theme_palettes.py:330:spina_app.theme_palettes._spina_v32_login_colors",
         "tools/plan_pure_login_dialog_ui_pass_only.py:142:tools.plan_pure_login_dialog_ui_pass_only._classify_pure_login_dialog_ui",
         "tools/plan_pure_login_dialog_ui_pass_only.py:160:tools.plan_pure_login_dialog_ui_pass_only._fallback_login_group",
@@ -11835,10 +11850,10 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36763:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_add_client_dialog",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36815:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_on_client_edit",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:377:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_store_client_picture_to_db",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37929:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3802:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._active_client_name_exists",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38157:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38171:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38172:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3833:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3900:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_term",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3930:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_weekday",
@@ -12575,7 +12590,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35761:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v20_fix_chart_titles",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35983:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v21_cash_refresh",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37734:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38035:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:526:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:530:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:536:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__getitem__",
@@ -13527,6 +13542,11 @@
         "tools/test_log_serialization_helper_extraction.py:68:tools.test_log_serialization_helper_extraction._source_state",
         "tools/test_log_serialization_helper_extraction.py:75:tools.test_log_serialization_helper_extraction._write_fixture",
         "tools/test_log_serialization_helper_extraction.py:92:tools.test_log_serialization_helper_extraction._original",
+        "tools/test_login_dialog_presentation_wave_45.py:32:tools.test_login_dialog_presentation_wave_45.dotted",
+        "tools/test_login_dialog_presentation_wave_45.py:41:tools.test_login_dialog_presentation_wave_45.source_for",
+        "tools/test_login_dialog_presentation_wave_45.py:45:tools.test_login_dialog_presentation_wave_45.top_functions",
+        "tools/test_login_dialog_presentation_wave_45.py:49:tools.test_login_dialog_presentation_wave_45.app_method",
+        "tools/test_login_dialog_presentation_wave_45.py:56:tools.test_login_dialog_presentation_wave_45.main",
         "tools/test_login_palette_wave_25.py:19:tools.test_login_palette_wave_25.source_for",
         "tools/test_login_palette_wave_25.py:23:tools.test_login_palette_wave_25.main",
         "tools/test_long_task_presentation_wave_42.py:28:tools.test_long_task_presentation_wave_42.call_chain",
@@ -13942,6 +13962,7 @@
         "tools/test_date_helpers_extraction.py:50:tools.test_date_helpers_extraction._validate_signature",
         "tools/test_display_formatter_extraction.py:43:tools.test_display_formatter_extraction._validate_signature",
         "tools/test_linked_client_queries_wave_32.py:16:tools.test_linked_client_queries_wave_32.normalized_source",
+        "tools/test_login_dialog_presentation_wave_45.py:28:tools.test_login_dialog_presentation_wave_45.normalized",
         "tools/test_long_task_presentation_wave_42.py:24:tools.test_long_task_presentation_wave_42.normalized",
         "tools/test_merge_note_dict_extraction.py:108:tools.test_merge_note_dict_extraction.validate_input_isolation",
         "tools/test_merge_note_dict_extraction.py:50:tools.test_merge_note_dict_extraction.load_helper",
@@ -14128,6 +14149,7 @@
         "tools/test_calendar_presentation_wave_41.py:34:tools.test_calendar_presentation_wave_41.main",
         "tools/test_collector_dialog_presentation_wave_43.py:47:tools.test_collector_dialog_presentation_wave_43.main",
         "tools/test_collector_tab_presentation_wave_44.py:54:tools.test_collector_tab_presentation_wave_44.main",
+        "tools/test_login_dialog_presentation_wave_45.py:56:tools.test_login_dialog_presentation_wave_45.main",
         "tools/test_long_task_presentation_wave_42.py:38:tools.test_long_task_presentation_wave_42.main",
         "tools/test_note_editor_presentation_wave_40.py:34:tools.test_note_editor_presentation_wave_40.main"
       ],
@@ -15567,11 +15589,10 @@
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37023:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38035:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38111:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38171:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:495:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_patch_reportlab_canvas_save",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:541:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__iter__",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:630:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatCursor.connection",
@@ -15593,6 +15614,8 @@
       "spina_app/collector_refresh_presentation.py:14:spina_app.collector_refresh_presentation.configure_collector_refresh_dependencies",
       "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
       "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
+      "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
+      "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
       "spina_app/long_task_presentation.py:21:spina_app.long_task_presentation.configure_long_task_dependencies",
       "spina_app/navigation.py:11:spina_app.navigation._noop_log",
       "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
@@ -15754,12 +15777,9 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37703:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37910:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37923:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38035:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38111:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7102:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7116:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7147:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._users_db_path",
@@ -15782,6 +15802,10 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9291:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._close_day",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9352:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._reopen_day",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9381:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._update_workflow",
+        "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
+        "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
+        "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok",
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
         "spina_app/theme_palettes.py:330:spina_app.theme_palettes._spina_v32_login_colors",
         "tools/plan_pure_login_dialog_ui_pass_only.py:116:tools.plan_pure_login_dialog_ui_pass_only.HandlerVisitor._site",
         "tools/plan_pure_login_dialog_ui_pass_only.py:142:tools.plan_pure_login_dialog_ui_pass_only._classify_pure_login_dialog_ui",
@@ -16131,8 +16155,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36308:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.norm_lt",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36412:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._load_pic_preview",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36566:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._parse_float_var",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3802:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._active_client_name_exists",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38171:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3900:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_term",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4092:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_term",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4814:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.fetch_all_clients",
@@ -16370,6 +16394,7 @@
         "tools/test_log_serialization_helper_extraction.py:132:tools.test_log_serialization_helper_extraction.main",
         "tools/test_log_serialization_helper_extraction.py:75:tools.test_log_serialization_helper_extraction._write_fixture",
         "tools/test_log_serialization_helper_extraction.py:92:tools.test_log_serialization_helper_extraction._original",
+        "tools/test_login_dialog_presentation_wave_45.py:56:tools.test_login_dialog_presentation_wave_45.main",
         "tools/test_login_palette_wave_25.py:23:tools.test_login_palette_wave_25.main",
         "tools/test_long_task_presentation_wave_42.py:38:tools.test_long_task_presentation_wave_42.main",
         "tools/test_merge_note_dict_extraction.py:122:tools.test_merge_note_dict_extraction.main",
@@ -16493,7 +16518,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2879:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_pdf_header",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36763:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_add_client_dialog",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36815:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_on_client_edit",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38157:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37929:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:495:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_patch_reportlab_canvas_save",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7066:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._on_mode_change",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8007:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._is_client_new",
@@ -16782,9 +16807,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37506:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_get_route_master_areas",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37653:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_default_name",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37734:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37963:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37991:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._enter",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38172:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3930:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_weekday",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_dom",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4132:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_weekday",
@@ -16996,6 +17019,8 @@
         "spina_app/loan_context_queries.py:33:spina_app.loan_context_queries.set_default_loan_type",
         "spina_app/loan_context_queries.py:40:spina_app.loan_context_queries._effective_lt",
         "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
+        "spina_app/login_dialog_presentation.py:188:spina_app.login_dialog_presentation._spina_v32_prompt_login._cancel",
+        "spina_app/login_dialog_presentation.py:216:spina_app.login_dialog_presentation._spina_v32_prompt_login._enter",
         "spina_app/long_task_presentation.py:21:spina_app.long_task_presentation.configure_long_task_dependencies",
         "spina_app/long_task_presentation.py:255:spina_app.long_task_presentation._run_long_task._call_work_fn",
         "spina_app/long_task_presentation.py:61:spina_app.long_task_presentation._run_long_task._cleanup_dialog",
@@ -17739,6 +17764,11 @@
         "tools/test_log_serialization_helper_extraction.py:52:tools.test_log_serialization_helper_extraction._behavior",
         "tools/test_log_serialization_helper_extraction.py:59:tools.test_log_serialization_helper_extraction._load_module",
         "tools/test_log_serialization_helper_extraction.py:68:tools.test_log_serialization_helper_extraction._source_state",
+        "tools/test_login_dialog_presentation_wave_45.py:28:tools.test_login_dialog_presentation_wave_45.normalized",
+        "tools/test_login_dialog_presentation_wave_45.py:32:tools.test_login_dialog_presentation_wave_45.dotted",
+        "tools/test_login_dialog_presentation_wave_45.py:41:tools.test_login_dialog_presentation_wave_45.source_for",
+        "tools/test_login_dialog_presentation_wave_45.py:45:tools.test_login_dialog_presentation_wave_45.top_functions",
+        "tools/test_login_dialog_presentation_wave_45.py:49:tools.test_login_dialog_presentation_wave_45.app_method",
         "tools/test_login_palette_wave_25.py:19:tools.test_login_palette_wave_25.source_for",
         "tools/test_long_task_presentation_wave_42.py:24:tools.test_long_task_presentation_wave_42.normalized",
         "tools/test_long_task_presentation_wave_42.py:28:tools.test_long_task_presentation_wave_42.call_chain",
@@ -17905,7 +17935,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36978:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_collector_button",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37023:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37446:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_route_button",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37892:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._toggle_show",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7829:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._make_import_only_overlay",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7849:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._make_close_only_overlay",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8330:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_system_data_tab",
@@ -17949,6 +17978,7 @@
         "spina_app/collector_dialog_presentation.py:150:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog._refresh_lists",
         "spina_app/collector_dialog_presentation.py:36:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog",
         "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab",
+        "spina_app/login_dialog_presentation.py:117:spina_app.login_dialog_presentation._spina_v32_prompt_login._toggle_show",
         "spina_app/long_task_presentation.py:131:spina_app.long_task_presentation._run_long_task._request_cancel",
         "spina_app/long_task_presentation.py:157:spina_app.long_task_presentation._run_long_task._watchdog",
         "spina_app/long_task_presentation.py:279:spina_app.long_task_presentation._run_long_task._worker",
@@ -18282,11 +18312,13 @@
         "_wave42_run_long_task": "spina_app.long_task_presentation._run_long_task",
         "_wave43_collector_editor_dialog": "spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog",
         "_wave44_spina_v27_build_collectors_tab": "spina_app.collector_tab_presentation._spina_v27_build_collectors_tab",
+        "_wave45_spina_v32_prompt_login": "spina_app.login_dialog_presentation._spina_v32_prompt_login",
         "calendar": "calendar",
         "configure_cash_control_dependencies": "spina_app.tabs.cash_control.configure_cash_control_dependencies",
         "configure_client_info_logs_dependencies": "spina_app.tabs.client_info_logs.configure_client_info_logs_dependencies",
         "configure_clients_dependencies": "spina_app.tabs.clients.configure_clients_dependencies",
         "configure_collector_route_dependencies": "spina_app.tabs.collector_route.configure_collector_route_dependencies",
+        "configure_login_dialog_dependencies": "spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
         "date": "datetime.date",
         "datetime": "datetime.datetime",
         "filedialog": "tkinter.filedialog",
@@ -18307,7 +18339,7 @@
         "ttk": "tkinter.ttk",
         "warnings": "warnings"
       },
-      "lines": 38184,
+      "lines": 37956,
       "module": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed",
       "module_globals": [
         "APP_DIR",
@@ -18362,6 +18394,7 @@
         "_spina_v27_build_collectors_tab",
         "_spina_v27_collector_editor_dialog",
         "_spina_v27_route_colors",
+        "_spina_v32_prompt_login",
         "pick_date",
         "pick_date_range"
       ],
@@ -18649,7 +18682,7 @@
           "target": "App.open_areas_manager"
         }
       ],
-      "sha256": "28050ea752a812ba53a40c1ae2d3c0c6f16e053fcb9074a8e6ef42b8cf2a3bab",
+      "sha256": "a00da4e041de4908d3625ede7735a3a61fbafc7327091e08e80665f692875fc9",
       "syntax_ok": true
     },
     {
@@ -18937,6 +18970,31 @@
       ],
       "monkey_patches": [],
       "sha256": "e1ce4762e9216fa64c21f1b2870c78c7fa86598631922f3375a68f128e7f5b5a",
+      "syntax_ok": true
+    },
+    {
+      "application_file": true,
+      "file": "spina_app/login_dialog_presentation.py",
+      "imports": {
+        "annotations": "__future__.annotations",
+        "messagebox": "tkinter.messagebox",
+        "tk": "tkinter",
+        "ttk": "tkinter.ttk"
+      },
+      "lines": 257,
+      "module": "spina_app.login_dialog_presentation",
+      "module_globals": [
+        "LOGIN_DIALOG_CALLS",
+        "LOGIN_DIALOG_NESTED_CALLBACKS",
+        "LOGIN_DIALOG_SIGNATURE",
+        "LOGIN_DIALOG_SOURCE_LINES",
+        "LOGIN_DIALOG_SOURCE_SHA256",
+        "LOGIN_DIALOG_TARGET",
+        "_LOGIN_DIALOG_DEPENDENCIES",
+        "_PROTECTED_GLOBALS"
+      ],
+      "monkey_patches": [],
+      "sha256": "47f98180ce1b8f0bb394e546035d0738193ba00877ba46c5ee5571b9df9a13c6",
       "syntax_ok": true
     },
     {
@@ -21966,6 +22024,39 @@
     },
     {
       "application_file": false,
+      "file": "tools/test_login_dialog_presentation_wave_45.py",
+      "imports": {
+        "Path": "pathlib.Path",
+        "annotations": "__future__.annotations",
+        "ast": "ast",
+        "hashlib": "hashlib",
+        "importlib": "importlib",
+        "re": "re",
+        "sys": "sys",
+        "textwrap": "textwrap"
+      },
+      "lines": 139,
+      "module": "tools.test_login_dialog_presentation_wave_45",
+      "module_globals": [
+        "DESKTOP",
+        "EXPECTED_LINES",
+        "EXPECTED_NESTED",
+        "EXPECTED_OLD_LINES",
+        "EXPECTED_OLD_SHA256",
+        "EXPECTED_SHA256",
+        "EXPECTED_SIGNATURE",
+        "FILESYSTEM_MUTATORS",
+        "MODULE_PATH",
+        "ROOT",
+        "SQL_WRITE_RE",
+        "TARGET"
+      ],
+      "monkey_patches": [],
+      "sha256": "3dbeeaf53c2b9b2cb7710275f550309a1e97f17335b4e215e6cab58b28d745e5",
+      "syntax_ok": true
+    },
+    {
+      "application_file": false,
       "file": "tools/test_login_palette_wave_25.py",
       "imports": {
         "Path": "pathlib.Path",
@@ -22464,26 +22555,26 @@
   "schema_version": 2,
   "summary": {
     "application_monkey_patches": 56,
-    "application_python_files": 43,
-    "application_resolved_call_edges": 2694,
-    "application_symbols": 1171,
+    "application_python_files": 44,
+    "application_resolved_call_edges": 2695,
+    "application_symbols": 1172,
     "application_ui_callback_edges": 498,
     "classes": 92,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1308,
+    "functions": 1315,
     "methods": 503,
     "monkey_patches": 130,
     "nested_functions": 381,
     "parse_errors": 0,
-    "possible_orphans": 121,
-    "python_files": 165,
+    "possible_orphans": 122,
+    "python_files": 167,
     "repository_database_tables": 19,
-    "repository_duplicate_names": 243,
-    "repository_possible_orphans": 243,
-    "resolved_call_edges": 3705,
-    "symbols": 2284,
-    "total_python_lines": 73964,
+    "repository_duplicate_names": 245,
+    "repository_possible_orphans": 244,
+    "resolved_call_edges": 3712,
+    "symbols": 2291,
+    "total_python_lines": 74132,
     "ui_callback_edges": 500
   },
   "symbols": [
@@ -25314,8 +25405,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35791:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v20_draw_dashboard_charts",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35983:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v21_cash_refresh",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37023:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37923:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4017:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4320:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.renew_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:5421:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._append_databank_day_close_history",
@@ -25550,8 +25640,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:34157:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_build_paid_cache_for_date",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:34247:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy_same_format",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:34721:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_route_adv_marker_for",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38035:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3833:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4017:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4320:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.renew_client",
@@ -25641,6 +25730,7 @@
         "spina_app/linked_client_queries.py:114:spina_app.linked_client_queries.get_transactions_for_client_uids",
         "spina_app/linked_client_queries.py:47:spina_app.linked_client_queries.get_linked_client_uids",
         "spina_app/linked_client_queries.py:83:spina_app.linked_client_queries.get_transaction_history_for_client_uids",
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
         "spina_app/long_task_presentation.py:131:spina_app.long_task_presentation._run_long_task._request_cancel",
         "spina_app/long_task_presentation.py:157:spina_app.long_task_presentation._run_long_task._watchdog",
         "spina_app/long_task_presentation.py:279:spina_app.long_task_presentation._run_long_task._worker",
@@ -32716,7 +32806,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11180:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
       ],
       "calls_raw": [
         "IOError",
@@ -33036,8 +33126,8 @@
       ],
       "callbacks": [],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37923:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7631:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7631:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok",
+        "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok"
       ],
       "calls_raw": [
         "bool",
@@ -33174,8 +33264,8 @@
         }
       ],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37923:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7631:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7631:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok",
+        "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok"
       ],
       "calls_raw": [
         "_log_ignored",
@@ -33433,11 +33523,11 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37703:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7232:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._must_change_password",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7259:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._set_user_password",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7502:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7582:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7582:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login",
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -33503,9 +33593,9 @@
       ],
       "callbacks": [],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37923:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7631:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8377:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_current_password"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8377:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_current_password",
+        "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok"
       ],
       "calls_raw": [
         "_log_exc",
@@ -33608,7 +33698,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11180:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
       ],
       "calls_raw": [
         "IOError",
@@ -33683,7 +33773,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11180:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
       ],
       "calls_raw": [
         "_log_ignored",
@@ -34252,7 +34342,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11180:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -40753,7 +40843,7 @@
       "callbacks": [],
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -63060,7 +63150,7 @@
         }
       ],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login"
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login"
       ],
       "calls_raw": [
         "_spina_v32_login_colors",
@@ -63145,7 +63235,7 @@
       "callbacks": [],
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37910:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info"
+        "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info"
       ],
       "calls_raw": [
         "str",
@@ -63184,8 +63274,8 @@
       ],
       "callbacks": [],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38035:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
       ],
       "calls_raw": [
         "_spina_v32_account_default_name",
@@ -63275,7 +63365,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login"
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login"
       ],
       "calls_raw": [
         "_spina_v32_account_default_name",
@@ -63334,7 +63424,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login"
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login"
       ],
       "calls_raw": [
         "label_to_user.get",
@@ -63420,336 +63510,6 @@
     },
     {
       "args": [
-        "self",
-        "default_user"
-      ],
-      "callbacks": [
-        {
-          "kind": "command",
-          "line": 37899,
-          "target": "_toggle_show"
-        },
-        {
-          "kind": "command",
-          "line": 37970,
-          "target": "_ok"
-        },
-        {
-          "kind": "command",
-          "line": 37971,
-          "target": "_cancel"
-        },
-        {
-          "event": "'<Return>'",
-          "kind": "bind",
-          "line": 37995,
-          "target": "_enter"
-        },
-        {
-          "event": "'<Return>'",
-          "kind": "bind",
-          "line": 37996,
-          "target": "_enter"
-        }
-      ],
-      "callers": [],
-      "calls_raw": [
-        "_log_suppressed_once",
-        "_refresh_account_info",
-        "_spina_v32_account_choices",
-        "_spina_v32_login_button",
-        "_spina_v32_login_button.pack",
-        "_spina_v32_login_colors",
-        "_spina_v32_selected_label_for_user",
-        "account_cb.bind",
-        "account_cb.pack",
-        "account_var.trace_add",
-        "btns.pack",
-        "card.pack",
-        "db.get",
-        "dlg.configure",
-        "dlg.geometry",
-        "dlg.grab_set",
-        "dlg.resizable",
-        "dlg.title",
-        "dlg.transient",
-        "dlg.update_idletasks",
-        "dlg.winfo_screenheight",
-        "dlg.winfo_screenwidth",
-        "form.pack",
-        "left.pack",
-        "left.pack_propagate",
-        "max",
-        "min",
-        "msg_lbl.pack",
-        "pw_entry.bind",
-        "pw_entry.focus_set",
-        "pw_entry.pack",
-        "result.get",
-        "right.pack",
-        "right.pack_propagate",
-        "self._load_users_db",
-        "self.root.wait_window",
-        "self.root.winfo_height",
-        "self.root.winfo_rootx",
-        "self.root.winfo_rooty",
-        "self.root.winfo_width",
-        "shell.pack",
-        "tk.BooleanVar",
-        "tk.Frame",
-        "tk.Frame.pack",
-        "tk.Label",
-        "tk.Label.pack",
-        "tk.StringVar",
-        "tk.Toplevel",
-        "ttk.Checkbutton",
-        "ttk.Checkbutton.pack",
-        "ttk.Combobox",
-        "ttk.Entry"
-      ],
-      "calls_resolved": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37623:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37703:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37734:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37910:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7430:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_users_db",
-        "spina_app/theme_palettes.py:330:spina_app.theme_palettes._spina_v32_login_colors",
-        "tools/test_cash_control_feature_wave_21.py:42:tools.test_cash_control_feature_wave_21.FakeCanvas.winfo_width",
-        "tools/test_cash_control_feature_wave_21.py:45:tools.test_cash_control_feature_wave_21.FakeCanvas.winfo_height",
-        "tools/test_legacy_dashboard_controls_batch_15.py:47:tools.test_legacy_dashboard_controls_batch_15.FakeTk.StringVar"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "Modern account-based login dialog. Returns (username, internal_access_profile).",
-      "end_line": 38032,
-      "feature": "authentication",
-      "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-      "imports_used": [
-        "os",
-        "spina_app.theme_palettes._spina_v32_login_colors",
-        "tkinter",
-        "tkinter.ttk"
-      ],
-      "kind": "function",
-      "line": 37799,
-      "lines": 234,
-      "monkey_patches": [],
-      "name": "_spina_v32_prompt_login",
-      "parent": null,
-      "purpose": "Modern account-based login dialog. Returns (username, internal_access_profile).",
-      "qualified_name": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
-      "risk": "authentication",
-      "risk_flags": [
-        "authentication",
-        "ui_only"
-      ],
-      "source_sha256": "e0535b50f1296c0db8ff5b1f1540464f28f9e674c3eeae7954894823b01e6735"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "pw_entry.configure",
-        "show_var.get"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 37896,
-      "feature": "authentication",
-      "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37892:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._toggle_show",
-      "imports_used": [],
-      "kind": "nested_function",
-      "line": 37892,
-      "lines": 5,
-      "monkey_patches": [],
-      "name": "_toggle_show",
-      "parent": "_spina_v32_prompt_login",
-      "purpose": "Handles toggle show for the authentication feature.",
-      "qualified_name": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._toggle_show",
-      "risk": "ui_only",
-      "risk_flags": [
-        "ui_only"
-      ],
-      "source_sha256": "112ae806676d6d31c88b8c03524cdc0892ae4ac500d3c75040007e26ff120ffa"
-    },
-    {
-      "args": [
-        "*_"
-      ],
-      "callbacks": [],
-      "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login"
-      ],
-      "calls_raw": [
-        "_spina_v32_account_permission_text",
-        "account_info_var.set",
-        "account_var.get",
-        "get",
-        "label_to_user.get",
-        "rec.get",
-        "str",
-        "str.strip"
-      ],
-      "calls_resolved": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37664:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_permission_text"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 37921,
-      "feature": "authentication",
-      "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37910:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info",
-      "imports_used": [],
-      "kind": "nested_function",
-      "line": 37910,
-      "lines": 12,
-      "monkey_patches": [],
-      "name": "_refresh_account_info",
-      "parent": "_spina_v32_prompt_login",
-      "purpose": "Refreshes refresh account info for the authentication feature.",
-      "qualified_name": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info",
-      "risk": "authentication",
-      "risk_flags": [
-        "authentication"
-      ],
-      "source_sha256": "da8b54ef555ebfc9bea3f3b71ad775c0ed488d788c02310d9831a5805339248a"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "_log_exc",
-        "account_var.get",
-        "dlg.destroy",
-        "dlg.grab_release",
-        "label_to_user.get",
-        "msg_var.set",
-        "pw_entry.focus_set",
-        "pw_entry.selection_range",
-        "pw_var.get",
-        "self._force_change_password_dialog",
-        "self._must_change_password",
-        "self._verify_login",
-        "str",
-        "str.strip",
-        "strip"
-      ],
-      "calls_resolved": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1191:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_exc",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7232:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._must_change_password",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7287:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7502:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 37961,
-      "feature": "authentication",
-      "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37923:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok",
-      "imports_used": [],
-      "kind": "nested_function",
-      "line": 37923,
-      "lines": 39,
-      "monkey_patches": [],
-      "name": "_ok",
-      "parent": "_spina_v32_prompt_login",
-      "purpose": "Handles ok for the authentication feature.",
-      "qualified_name": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok",
-      "risk": "authentication",
-      "risk_flags": [
-        "authentication",
-        "ui_only"
-      ],
-      "source_sha256": "8dc9f818e75bd734dc0a471513767f23b164f08c7a18b016dd00dc512bd11038"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "dlg.destroy",
-        "dlg.grab_release"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 37968,
-      "feature": "authentication",
-      "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37963:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel",
-      "imports_used": [],
-      "kind": "nested_function",
-      "line": 37963,
-      "lines": 6,
-      "monkey_patches": [],
-      "name": "_cancel",
-      "parent": "_spina_v32_prompt_login",
-      "purpose": "Handles cancel for the authentication feature.",
-      "qualified_name": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "a8db25e7194315601a1cfaf18744786739c52177790216dd2a01a481a203c7ff"
-    },
-    {
-      "args": [
-        "_"
-      ],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "_ok"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 37992,
-      "feature": "authentication",
-      "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37991:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._enter",
-      "imports_used": [],
-      "kind": "nested_function",
-      "line": 37991,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "_enter",
-      "parent": "_spina_v32_prompt_login",
-      "purpose": "Handles enter for the authentication feature.",
-      "qualified_name": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._enter",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "4c57377c32a0fed17a20e334dd01d06d740e5f7c9996011a6b49ddd1956bd475"
-    },
-    {
-      "args": [
         "self"
       ],
       "callbacks": [],
@@ -63770,16 +63530,16 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 38048,
+      "end_line": 37820,
       "feature": "other",
       "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38035:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
+      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
       "imports_used": [],
       "kind": "function",
-      "line": 38035,
+      "line": 37807,
       "lines": 14,
       "monkey_patches": [],
       "name": "_spina_v32_refresh_user_header",
@@ -63826,18 +63586,18 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 38108,
+      "end_line": 37880,
       "feature": "authentication",
       "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
       "imports_used": [
         "tkinter.messagebox"
       ],
       "kind": "function",
-      "line": 38051,
+      "line": 37823,
       "lines": 58,
       "monkey_patches": [],
       "name": "_spina_v32_switch_account",
@@ -63865,16 +63625,16 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 38114,
+      "end_line": 37886,
       "feature": "authentication",
       "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38111:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
       "imports_used": [],
       "kind": "function",
-      "line": 38111,
+      "line": 37883,
       "lines": 4,
       "monkey_patches": [],
       "name": "_spina_v32_prompt_user_role",
@@ -63893,7 +63653,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38172:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action"
       ],
       "calls_raw": [
         "globals",
@@ -63905,18 +63665,18 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 38168,
+      "end_line": 37940,
       "feature": "clients",
       "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38157:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
+      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37929:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
       "imports_used": [
         "tkinter.messagebox"
       ],
       "kind": "function",
-      "line": 38157,
+      "line": 37929,
       "lines": 12,
       "monkey_patches": [],
       "name": "_spina_legacy_client_action_removed_message",
@@ -63944,16 +63704,16 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 38176,
+      "end_line": 37948,
       "feature": "clients",
       "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38171:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
+      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
       "imports_used": [],
       "kind": "function",
-      "line": 38171,
+      "line": 37943,
       "lines": 6,
       "monkey_patches": [],
       "name": "_spina_make_removed_legacy_client_action",
@@ -63977,21 +63737,21 @@
         "_spina_legacy_client_action_removed_message"
       ],
       "calls_resolved": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38157:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37929:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message"
       ],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 38174,
+      "end_line": 37946,
       "feature": "clients",
       "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38172:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
+      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
       "imports_used": [],
       "kind": "nested_function",
-      "line": 38172,
+      "line": 37944,
       "lines": 3,
       "monkey_patches": [],
       "name": "_spina_removed_action",
@@ -66685,6 +66445,7 @@
         "spina_app/collector_tab_presentation.py:20:spina_app.collector_tab_presentation.configure_collector_tab_dependencies",
         "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
         "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
+        "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
         "spina_app/long_task_presentation.py:21:spina_app.long_task_presentation.configure_long_task_dependencies",
         "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
         "spina_app/postgres_compat.py:13:spina_app.postgres_compat.configure_postgres_compat_dependencies",
@@ -74675,6 +74436,380 @@
       "callbacks": [],
       "callers": [],
       "calls_raw": [
+        "_LOGIN_DIALOG_DEPENDENCIES.clear",
+        "_LOGIN_DIALOG_DEPENDENCIES.update",
+        "globals",
+        "namespace.items"
+      ],
+      "calls_resolved": [
+        "spina_app/area_hierarchy_ui.py:255:spina_app.area_hierarchy_ui.select_area_node.clear"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 15,
+      "feature": "authentication",
+      "file": "spina_app/login_dialog_presentation.py",
+      "file_paths": [],
+      "globals_read": [
+        "_LOGIN_DIALOG_DEPENDENCIES",
+        "_PROTECTED_GLOBALS"
+      ],
+      "globals_written": [],
+      "id": "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
+      "imports_used": [],
+      "kind": "function",
+      "line": 10,
+      "lines": 6,
+      "monkey_patches": [],
+      "name": "configure_login_dialog_dependencies",
+      "parent": null,
+      "purpose": "Handles configure login dialog dependencies for the authentication feature.",
+      "qualified_name": "spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication"
+      ],
+      "source_sha256": "97eedf292d6ca07cf7abac1f81c97e26d6c9dbe48eb2c0e2b0e8f5169e03df22"
+    },
+    {
+      "args": [
+        "self",
+        "default_user"
+      ],
+      "callbacks": [
+        {
+          "kind": "command",
+          "line": 124,
+          "target": "_toggle_show"
+        },
+        {
+          "kind": "command",
+          "line": 195,
+          "target": "_ok"
+        },
+        {
+          "kind": "command",
+          "line": 196,
+          "target": "_cancel"
+        },
+        {
+          "event": "'<Return>'",
+          "kind": "bind",
+          "line": 220,
+          "target": "_enter"
+        },
+        {
+          "event": "'<Return>'",
+          "kind": "bind",
+          "line": 221,
+          "target": "_enter"
+        }
+      ],
+      "callers": [],
+      "calls_raw": [
+        "_log_suppressed_once",
+        "_refresh_account_info",
+        "_spina_v32_account_choices",
+        "_spina_v32_login_button",
+        "_spina_v32_login_button.pack",
+        "_spina_v32_login_colors",
+        "_spina_v32_selected_label_for_user",
+        "account_cb.bind",
+        "account_cb.pack",
+        "account_var.trace_add",
+        "btns.pack",
+        "card.pack",
+        "db.get",
+        "dlg.configure",
+        "dlg.geometry",
+        "dlg.grab_set",
+        "dlg.resizable",
+        "dlg.title",
+        "dlg.transient",
+        "dlg.update_idletasks",
+        "dlg.winfo_screenheight",
+        "dlg.winfo_screenwidth",
+        "form.pack",
+        "left.pack",
+        "left.pack_propagate",
+        "max",
+        "min",
+        "msg_lbl.pack",
+        "pw_entry.bind",
+        "pw_entry.focus_set",
+        "pw_entry.pack",
+        "result.get",
+        "right.pack",
+        "right.pack_propagate",
+        "self._load_users_db",
+        "self.root.wait_window",
+        "self.root.winfo_height",
+        "self.root.winfo_rootx",
+        "self.root.winfo_rooty",
+        "self.root.winfo_width",
+        "shell.pack",
+        "tk.BooleanVar",
+        "tk.Frame",
+        "tk.Frame.pack",
+        "tk.Label",
+        "tk.Label.pack",
+        "tk.StringVar",
+        "tk.Toplevel",
+        "ttk.Checkbutton",
+        "ttk.Checkbutton.pack",
+        "ttk.Combobox",
+        "ttk.Entry"
+      ],
+      "calls_resolved": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37623:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37703:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37734:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7430:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_users_db",
+        "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
+        "spina_app/theme_palettes.py:330:spina_app.theme_palettes._spina_v32_login_colors",
+        "tools/test_cash_control_feature_wave_21.py:42:tools.test_cash_control_feature_wave_21.FakeCanvas.winfo_width",
+        "tools/test_cash_control_feature_wave_21.py:45:tools.test_cash_control_feature_wave_21.FakeCanvas.winfo_height",
+        "tools/test_legacy_dashboard_controls_batch_15.py:47:tools.test_legacy_dashboard_controls_batch_15.FakeTk.StringVar"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "Modern account-based login dialog. Returns (username, internal_access_profile).",
+      "end_line": 257,
+      "feature": "authentication",
+      "file": "spina_app/login_dialog_presentation.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
+      "imports_used": [
+        "tkinter",
+        "tkinter.ttk"
+      ],
+      "kind": "function",
+      "line": 24,
+      "lines": 234,
+      "monkey_patches": [],
+      "name": "_spina_v32_prompt_login",
+      "parent": null,
+      "purpose": "Modern account-based login dialog. Returns (username, internal_access_profile).",
+      "qualified_name": "spina_app.login_dialog_presentation._spina_v32_prompt_login",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication",
+        "ui_only"
+      ],
+      "source_sha256": "e0535b50f1296c0db8ff5b1f1540464f28f9e674c3eeae7954894823b01e6735"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "pw_entry.configure",
+        "show_var.get"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 121,
+      "feature": "authentication",
+      "file": "spina_app/login_dialog_presentation.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "spina_app/login_dialog_presentation.py:117:spina_app.login_dialog_presentation._spina_v32_prompt_login._toggle_show",
+      "imports_used": [],
+      "kind": "nested_function",
+      "line": 117,
+      "lines": 5,
+      "monkey_patches": [],
+      "name": "_toggle_show",
+      "parent": "_spina_v32_prompt_login",
+      "purpose": "Handles toggle show for the authentication feature.",
+      "qualified_name": "spina_app.login_dialog_presentation._spina_v32_prompt_login._toggle_show",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "112ae806676d6d31c88b8c03524cdc0892ae4ac500d3c75040007e26ff120ffa"
+    },
+    {
+      "args": [
+        "*_"
+      ],
+      "callbacks": [],
+      "callers": [
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login"
+      ],
+      "calls_raw": [
+        "_spina_v32_account_permission_text",
+        "account_info_var.set",
+        "account_var.get",
+        "get",
+        "label_to_user.get",
+        "rec.get",
+        "str",
+        "str.strip"
+      ],
+      "calls_resolved": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37664:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_permission_text"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 146,
+      "feature": "authentication",
+      "file": "spina_app/login_dialog_presentation.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
+      "imports_used": [],
+      "kind": "nested_function",
+      "line": 135,
+      "lines": 12,
+      "monkey_patches": [],
+      "name": "_refresh_account_info",
+      "parent": "_spina_v32_prompt_login",
+      "purpose": "Refreshes refresh account info for the authentication feature.",
+      "qualified_name": "spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication"
+      ],
+      "source_sha256": "da8b54ef555ebfc9bea3f3b71ad775c0ed488d788c02310d9831a5805339248a"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [
+        "spina_app/login_dialog_presentation.py:216:spina_app.login_dialog_presentation._spina_v32_prompt_login._enter"
+      ],
+      "calls_raw": [
+        "_log_exc",
+        "account_var.get",
+        "dlg.destroy",
+        "dlg.grab_release",
+        "label_to_user.get",
+        "msg_var.set",
+        "pw_entry.focus_set",
+        "pw_entry.selection_range",
+        "pw_var.get",
+        "self._force_change_password_dialog",
+        "self._must_change_password",
+        "self._verify_login",
+        "str",
+        "str.strip",
+        "strip"
+      ],
+      "calls_resolved": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7232:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._must_change_password",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7287:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7502:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 186,
+      "feature": "authentication",
+      "file": "spina_app/login_dialog_presentation.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok",
+      "imports_used": [],
+      "kind": "nested_function",
+      "line": 148,
+      "lines": 39,
+      "monkey_patches": [],
+      "name": "_ok",
+      "parent": "_spina_v32_prompt_login",
+      "purpose": "Handles ok for the authentication feature.",
+      "qualified_name": "spina_app.login_dialog_presentation._spina_v32_prompt_login._ok",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication",
+        "ui_only"
+      ],
+      "source_sha256": "8dc9f818e75bd734dc0a471513767f23b164f08c7a18b016dd00dc512bd11038"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "dlg.destroy",
+        "dlg.grab_release"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 193,
+      "feature": "authentication",
+      "file": "spina_app/login_dialog_presentation.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "spina_app/login_dialog_presentation.py:188:spina_app.login_dialog_presentation._spina_v32_prompt_login._cancel",
+      "imports_used": [],
+      "kind": "nested_function",
+      "line": 188,
+      "lines": 6,
+      "monkey_patches": [],
+      "name": "_cancel",
+      "parent": "_spina_v32_prompt_login",
+      "purpose": "Handles cancel for the authentication feature.",
+      "qualified_name": "spina_app.login_dialog_presentation._spina_v32_prompt_login._cancel",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "a8db25e7194315601a1cfaf18744786739c52177790216dd2a01a481a203c7ff"
+    },
+    {
+      "args": [
+        "_"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "_ok"
+      ],
+      "calls_resolved": [
+        "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 217,
+      "feature": "authentication",
+      "file": "spina_app/login_dialog_presentation.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "spina_app/login_dialog_presentation.py:216:spina_app.login_dialog_presentation._spina_v32_prompt_login._enter",
+      "imports_used": [],
+      "kind": "nested_function",
+      "line": 216,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_enter",
+      "parent": "_spina_v32_prompt_login",
+      "purpose": "Handles enter for the authentication feature.",
+      "qualified_name": "spina_app.login_dialog_presentation._spina_v32_prompt_login._enter",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "4c57377c32a0fed17a20e334dd01d06d740e5f7c9996011a6b49ddd1956bd475"
+    },
+    {
+      "args": [
+        "namespace"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
         "_LONG_TASK_DEPENDENCIES.clear",
         "_LONG_TASK_DEPENDENCIES.update",
         "globals",
@@ -75310,7 +75445,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11180:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
         "spina_app/theme_presentation.py:281:spina_app.theme_presentation._refresh_modern_shell_theme"
       ],
       "calls_raw": [
@@ -83187,7 +83322,7 @@
       "callbacks": [],
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37623:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login"
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login"
       ],
       "calls_raw": [
         "getattr",
@@ -83509,7 +83644,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11636:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.set_theme",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12556:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._refresh_user_header",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38035:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -109513,7 +109648,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35791:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v20_draw_dashboard_charts",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36304:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36384:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._on_content_config",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7287:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7582:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7710:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role",
@@ -109524,6 +109658,7 @@
         "spina_app/calendar_presentation.py:34:spina_app.calendar_presentation._CalendarPopup.__init__",
         "spina_app/client_form_presentation.py:24:spina_app.client_form_presentation._app__client_form",
         "spina_app/collector_dialog_presentation.py:36:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog",
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
         "spina_app/long_task_presentation.py:36:spina_app.long_task_presentation._run_long_task",
         "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
         "spina_app/tabs/cash_control.py:316:spina_app.tabs.cash_control._spina_v21_cash_draw_charts",
@@ -109571,7 +109706,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35596:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v18_draw_dashboard_charts",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35791:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v20_draw_dashboard_charts",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36304:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7287:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7582:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7710:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role",
@@ -109582,6 +109716,7 @@
         "spina_app/calendar_presentation.py:34:spina_app.calendar_presentation._CalendarPopup.__init__",
         "spina_app/client_form_presentation.py:24:spina_app.client_form_presentation._app__client_form",
         "spina_app/collector_dialog_presentation.py:36:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog",
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
         "spina_app/long_task_presentation.py:36:spina_app.long_task_presentation._run_long_task",
         "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
         "spina_app/tabs/cash_control.py:316:spina_app.tabs.cash_control._spina_v21_cash_draw_charts",
@@ -125265,7 +125400,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35983:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v21_cash_refresh",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36304:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37023:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7287:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7582:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7710:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role",
@@ -125281,6 +125415,7 @@
         "spina_app/client_history_presentation.py:24:spina_app.client_history_presentation._app_open_client_history_dialog",
         "spina_app/collector_dialog_presentation.py:36:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog",
         "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab",
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
         "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
         "spina_app/tabs/cash_control.py:37:spina_app.tabs.cash_control._spina_v21_cash_build_tab",
         "spina_app/tabs/client_info_logs.py:202:spina_app.tabs.client_info_logs._spina_v24_build_client_info_logs_tab",
@@ -127284,6 +127419,286 @@
     },
     {
       "args": [
+        "text"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_login_dialog_presentation_wave_45.py:56:tools.test_login_dialog_presentation_wave_45.main"
+      ],
+      "calls_raw": [
+        "textwrap.dedent",
+        "textwrap.dedent.strip"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 29,
+      "feature": "utilities",
+      "file": "tools/test_login_dialog_presentation_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_presentation_wave_45.py:28:tools.test_login_dialog_presentation_wave_45.normalized",
+      "imports_used": [
+        "textwrap"
+      ],
+      "kind": "function",
+      "line": 28,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "normalized",
+      "parent": null,
+      "purpose": "Handles normalized for the utilities feature.",
+      "qualified_name": "tools.test_login_dialog_presentation_wave_45.normalized",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "5ab93c8330a5314129445e71c533d66bfe6573ec1c0c49f9afaa869054e719be"
+    },
+    {
+      "args": [
+        "node"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_login_dialog_presentation_wave_45.py:32:tools.test_login_dialog_presentation_wave_45.dotted",
+        "tools/test_login_dialog_presentation_wave_45.py:56:tools.test_login_dialog_presentation_wave_45.main"
+      ],
+      "calls_raw": [
+        "dotted",
+        "isinstance"
+      ],
+      "calls_resolved": [
+        "tools/test_login_dialog_presentation_wave_45.py:32:tools.test_login_dialog_presentation_wave_45.dotted"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 38,
+      "feature": "other",
+      "file": "tools/test_login_dialog_presentation_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_presentation_wave_45.py:32:tools.test_login_dialog_presentation_wave_45.dotted",
+      "imports_used": [
+        "ast"
+      ],
+      "kind": "function",
+      "line": 32,
+      "lines": 7,
+      "monkey_patches": [],
+      "name": "dotted",
+      "parent": null,
+      "purpose": "Handles dotted for the other feature.",
+      "qualified_name": "tools.test_login_dialog_presentation_wave_45.dotted",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "2a733f095eb1d3e1c88599d56fcec48d4da92732519a24a7e0ecc5f05a56886d"
+    },
+    {
+      "args": [
+        "lines",
+        "node"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_login_dialog_presentation_wave_45.py:56:tools.test_login_dialog_presentation_wave_45.main"
+      ],
+      "calls_raw": [
+        "join"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 42,
+      "feature": "other",
+      "file": "tools/test_login_dialog_presentation_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_presentation_wave_45.py:41:tools.test_login_dialog_presentation_wave_45.source_for",
+      "imports_used": [],
+      "kind": "function",
+      "line": 41,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "source_for",
+      "parent": null,
+      "purpose": "Handles source for for the other feature.",
+      "qualified_name": "tools.test_login_dialog_presentation_wave_45.source_for",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "010f717b8ae963f7ee52dfa97026d934c555051f8e121977bebf53446b3acc22"
+    },
+    {
+      "args": [
+        "tree",
+        "name"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_login_dialog_presentation_wave_45.py:56:tools.test_login_dialog_presentation_wave_45.main"
+      ],
+      "calls_raw": [
+        "isinstance"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 46,
+      "feature": "other",
+      "file": "tools/test_login_dialog_presentation_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_presentation_wave_45.py:45:tools.test_login_dialog_presentation_wave_45.top_functions",
+      "imports_used": [
+        "ast"
+      ],
+      "kind": "function",
+      "line": 45,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "top_functions",
+      "parent": null,
+      "purpose": "Handles top functions for the other feature.",
+      "qualified_name": "tools.test_login_dialog_presentation_wave_45.top_functions",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "f0de6e5a191083f8a73e9a2f895ecbc6148630549d030188a3d3201350440e55"
+    },
+    {
+      "args": [
+        "tree",
+        "name"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_login_dialog_presentation_wave_45.py:56:tools.test_login_dialog_presentation_wave_45.main"
+      ],
+      "calls_raw": [
+        "isinstance",
+        "len",
+        "next"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 53,
+      "feature": "other",
+      "file": "tools/test_login_dialog_presentation_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_presentation_wave_45.py:49:tools.test_login_dialog_presentation_wave_45.app_method",
+      "imports_used": [
+        "ast"
+      ],
+      "kind": "function",
+      "line": 49,
+      "lines": 5,
+      "monkey_patches": [],
+      "name": "app_method",
+      "parent": null,
+      "purpose": "Handles app method for the other feature.",
+      "qualified_name": "tools.test_login_dialog_presentation_wave_45.app_method",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "101f2414f0c40dbbb698cfad2e2d816d125280a2461a61f6d0b768f16b04f5ba"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "DESKTOP.read_text",
+        "MODULE_PATH.read_text",
+        "SQL_WRITE_RE.search",
+        "app_method",
+        "ast.parse",
+        "ast.unparse",
+        "ast.walk",
+        "desktop_text.splitlines",
+        "dotted",
+        "dotted.split",
+        "dotted.split.lower",
+        "dotted.startswith",
+        "hashlib.sha256",
+        "hashlib.sha256.hexdigest",
+        "importlib.import_module",
+        "isinstance",
+        "len",
+        "module_text.splitlines",
+        "normalized",
+        "normalized.encode",
+        "print",
+        "prompt_bindings.append",
+        "prompt_bindings.sort",
+        "rebinds.append",
+        "rebinds.sort",
+        "role_bindings.append",
+        "role_bindings.sort",
+        "sorted",
+        "source_for",
+        "top_functions"
+      ],
+      "calls_resolved": [
+        "tools/test_login_dialog_presentation_wave_45.py:28:tools.test_login_dialog_presentation_wave_45.normalized",
+        "tools/test_login_dialog_presentation_wave_45.py:32:tools.test_login_dialog_presentation_wave_45.dotted",
+        "tools/test_login_dialog_presentation_wave_45.py:41:tools.test_login_dialog_presentation_wave_45.source_for",
+        "tools/test_login_dialog_presentation_wave_45.py:45:tools.test_login_dialog_presentation_wave_45.top_functions",
+        "tools/test_login_dialog_presentation_wave_45.py:49:tools.test_login_dialog_presentation_wave_45.app_method"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 135,
+      "feature": "other",
+      "file": "tools/test_login_dialog_presentation_wave_45.py",
+      "file_paths": [
+        "self.db"
+      ],
+      "globals_read": [
+        "DESKTOP",
+        "EXPECTED_LINES",
+        "EXPECTED_NESTED",
+        "EXPECTED_OLD_LINES",
+        "EXPECTED_OLD_SHA256",
+        "EXPECTED_SHA256",
+        "EXPECTED_SIGNATURE",
+        "FILESYSTEM_MUTATORS",
+        "MODULE_PATH",
+        "SQL_WRITE_RE",
+        "TARGET"
+      ],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_presentation_wave_45.py:56:tools.test_login_dialog_presentation_wave_45.main",
+      "imports_used": [
+        "ast",
+        "hashlib",
+        "importlib"
+      ],
+      "kind": "function",
+      "line": 56,
+      "lines": 80,
+      "monkey_patches": [],
+      "name": "main",
+      "parent": null,
+      "purpose": "Handles main for the other feature.",
+      "qualified_name": "tools.test_login_dialog_presentation_wave_45.main",
+      "risk": "filesystem",
+      "risk_flags": [
+        "filesystem",
+        "reports"
+      ],
+      "source_sha256": "64bb2eec956ca72470fd66ca30367fb6facc207d8b6f40f96fadd62c9b36aa3a"
+    },
+    {
+      "args": [
         "lines",
         "node"
       ],
@@ -128698,7 +129113,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:25646:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._set_auto_rc",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:25655:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._recompute",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26519:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38035:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
         "spina_app/client_form_presentation.py:24:spina_app.client_form_presentation._app__client_form",
         "spina_app/client_form_presentation.py:375:spina_app.client_form_presentation._app__client_form._toggle_new_until",
         "spina_app/client_form_presentation.py:386:spina_app.client_form_presentation._app__client_form._toggle_due_widgets",

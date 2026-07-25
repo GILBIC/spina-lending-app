@@ -1,8 +1,8 @@
 # SPINA Application Dependency Map
 
-Generated from commit `5996bff0f62421d4e6e27d6bd2863003bed50a93`.
+Generated from commit `cd281e0a9e0a6026b66f8fde1f8b6bb8e9d0ea5b`.
 
-Scanned **165 Python files**, **73,964 lines**, and **2,284 symbols**.
+Scanned **167 Python files**, **74,132 lines**, and **2,291 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -130,6 +130,12 @@ Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spin
 
 Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_entry_worker`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.set_area_for_selected_clients`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.refresh_clients.on_client_edit`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.import_clients_from_excel`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_on_client_edit`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_import_clients_from_excel`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_on_client_edit`
 
+### `spina_app.area_hierarchy_ui.select_area_node.clear`
+
+Calls: none resolved in application files
+
+Called by: `spina_app.area_picker_presentation.configure_area_picker_dependencies`, `spina_app.area_picker_presentation._area_picker_dialog._refresh_tree`, `spina_app.calendar_presentation.configure_calendar_dependencies`, `spina_app.client_form_presentation.configure_client_form_dependencies`, `spina_app.client_history_presentation.configure_client_history_dependencies`, `spina_app.client_queries.configure_client_queries_dependencies`, `spina_app.collector_dialog_presentation.configure_collector_dialog_dependencies`, `spina_app.collector_refresh_presentation.configure_collector_refresh_dependencies`
+
 ### `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._log_client_history`
 
 Calls: none resolved in application files
@@ -159,12 +165,6 @@ Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.A
 Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._open_path`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._safe_filename_component`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_norm_lt`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_load_collectors`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_fetch_close_rows`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_wrap`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_copy_existing_route_pdfs`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy._rec_get`
 
 Called by: none resolved in application files
-
-### `spina_app.area_hierarchy_ui.select_area_node.clear`
-
-Calls: none resolved in application files
-
-Called by: `spina_app.area_picker_presentation.configure_area_picker_dependencies`, `spina_app.area_picker_presentation._area_picker_dialog._refresh_tree`, `spina_app.calendar_presentation.configure_calendar_dependencies`, `spina_app.client_form_presentation.configure_client_form_dependencies`, `spina_app.client_history_presentation.configure_client_history_dependencies`, `spina_app.client_queries.configure_client_queries_dependencies`, `spina_app.collector_dialog_presentation.configure_collector_dialog_dependencies`, `spina_app.collector_refresh_presentation.configure_collector_refresh_dependencies`
 
 ### `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._load`
 
@@ -206,7 +206,7 @@ Called by: `spina_app.note_editor_presentation.NoteEditorDialog.__init__`
 
 Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._users_db_path`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._hash_password`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._make_salt`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._is_default_password_rec`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_users_db`
 
-Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_display_name`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._must_change_password`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._set_user_password`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login`
+Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_display_name`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._must_change_password`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._set_user_password`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login`
 
 ### `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_audit_tab`
 
@@ -490,12 +490,6 @@ Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spin
 
 Called by: none resolved in application files
 
-### `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login`
-
-Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_users_db`, `spina_app.theme_palettes._spina_v32_login_colors`
-
-Called by: none resolved in application files
-
 ### `spina_app.area_hierarchy.ensure_area_hierarchy_ready`
 
 Calls: `spina_app.area_hierarchy.ensure_area_hierarchy_schema`
@@ -517,6 +511,12 @@ Called by: `spina_app.area_hierarchy_ui.select_area_for_variable`
 ### `spina_app.collector_refresh_presentation.refresh_collectors`
 
 Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.split_area_main_sub`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path`, `spina_app.collector_refresh_presentation.refresh_collectors._norm_area`, `spina_app.collector_refresh_presentation.refresh_collectors._lt_key`, `spina_app.collector_refresh_presentation.refresh_collectors._expand_route_area_to_master_norms`, `spina_app.loan_context_queries.get_all_areas`, `spina_app.tabs.collectors._collectors_apply_markers`
+
+Called by: none resolved in application files
+
+### `spina_app.login_dialog_presentation._spina_v32_prompt_login`
+
+Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_users_db`, `spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info`, `spina_app.theme_palettes._spina_v32_login_colors`
 
 Called by: none resolved in application files
 
@@ -698,7 +698,7 @@ Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.A
 
 Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_ignored`
 
-Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok`
+Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok`, `spina_app.login_dialog_presentation._spina_v32_prompt_login._ok`
 
 ### `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason`
 
@@ -722,7 +722,7 @@ Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._
 
 Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_exc`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._hash_password`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._make_salt`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_users_db`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_users_db`
 
-Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_current_password`
+Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_current_password`, `spina_app.login_dialog_presentation._spina_v32_prompt_login._ok`
 
 ### `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.generate_pdf_selected`
 
@@ -1238,7 +1238,7 @@ Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.A
 
 Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._default_password_for`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._is_default_password_rec`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_users_db`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_users_db`
 
-Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok`
+Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok`, `spina_app.login_dialog_presentation._spina_v32_prompt_login._ok`
 
 ### `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._open_note_dialog`
 
@@ -2111,7 +2111,7 @@ Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab` → `_popup` through **bind** at line 37270.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_route_button` → `command` through **command** at line 37460.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button` → `command` through **command** at line 37635.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login` → `_toggle_show` through **command** at line 37899.
+- `spina_app.area_hierarchy_ui.select_area_node` → `tree.yview` through **command** at line 218.
 
 ## Monkey-patch and runtime assignment connections
 
@@ -2246,11 +2246,10 @@ Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37023
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37799
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38035
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38051
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38111
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38171
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_patch_reportlab_canvas_save` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:495
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__iter__` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:541
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatCursor.connection` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:630
@@ -2272,6 +2271,8 @@ Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._
 - `spina_app.collector_refresh_presentation.configure_collector_refresh_dependencies` — spina_app/collector_refresh_presentation.py:14
 - `spina_app.linked_client_queries.configure_linked_client_query_dependencies` — spina_app/linked_client_queries.py:27
 - `spina_app.loan_context_queries.configure_loan_context_dependencies` — spina_app/loan_context_queries.py:5
+- `spina_app.login_dialog_presentation.configure_login_dialog_dependencies` — spina_app/login_dialog_presentation.py:10
+- `spina_app.login_dialog_presentation._spina_v32_prompt_login` — spina_app/login_dialog_presentation.py:24
 - `spina_app.long_task_presentation.configure_long_task_dependencies` — spina_app/long_task_presentation.py:21
 - `spina_app.navigation._noop_log` — spina_app/navigation.py:11
 - `spina_app.note_editor_presentation.configure_note_editor_dependencies` — spina_app/note_editor_presentation.py:17
