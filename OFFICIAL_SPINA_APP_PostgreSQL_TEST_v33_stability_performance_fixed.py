@@ -11182,6 +11182,12 @@ class App:
         # threading/UI marshaling support (keeps Tk responsive during long tasks)
         self._main_thread_id = threading.get_ident()
         self._ui_queue = queue.Queue()
+        self._tk_shutdown_started = False
+        self._ui_queue_after_id = None
+        try:
+            root.protocol("WM_DELETE_WINDOW", self._destroy_root_safely)
+        except Exception as __spina_exc:
+            _log_suppressed_once('tk_shutdown_protocol', 'Tk shutdown protocol setup failed', __spina_exc)
         self._start_ui_queue_pump()
         self._patch_messagebox_threadsafe()
         root.title(APP_TITLE)
@@ -11225,7 +11231,7 @@ class App:
             u, r = self._prompt_login(default_user=self.user_name)
             if not u or not r:
                 try:
-                    root.destroy()
+                    self._destroy_root_safely()
                 except Exception as __spina_exc:
                     _log_suppressed_once('excpass_0271', 'suppressed exception excpass_0271', __spina_exc)
                     pass
@@ -11333,13 +11339,54 @@ class App:
 
     # ---------------- Background / Threading Helpers ----------------
 
-    def _start_ui_queue_pump(self):
-        """Process UI-call requests from worker threads.
+    def _prepare_tk_shutdown(self):
+        """Cancel recurring Tk callbacks before the root interpreter is destroyed."""
+        if getattr(self, "_tk_shutdown_started", False):
+            return
+        self._tk_shutdown_started = True
 
-        This keeps Tk operations on the main thread. Any unexpected errors in the pump
-        are logged (instead of silently swallowed) to avoid "stuck UI" mysteries.
-        """
+        after_id = getattr(self, "_ui_queue_after_id", None)
+        self._ui_queue_after_id = None
+        if after_id:
+            try:
+                self.root.after_cancel(after_id)
+            except Exception:
+                pass
+
+        try:
+            if self.root.winfo_exists():
+                self.root.update_idletasks()
+        except Exception:
+            pass
+
+    def _destroy_root_safely(self):
+        """Finish pending ttk idle work, cancel timers, then destroy the root once."""
+        self._prepare_tk_shutdown()
+        try:
+            if self.root.winfo_exists():
+                self.root.destroy()
+        except Exception:
+            pass
+
+    def _start_ui_queue_pump(self):
+        """Process UI-call requests from worker threads on the Tk main thread."""
+        def _schedule_next():
+            if getattr(self, "_tk_shutdown_started", False):
+                self._ui_queue_after_id = None
+                return
+            try:
+                if self.root.winfo_exists():
+                    self._ui_queue_after_id = self.root.after(50, _pump)
+                else:
+                    self._ui_queue_after_id = None
+            except Exception as __spina_exc:
+                self._ui_queue_after_id = None
+                _log_suppressed_once('ui_queue_pump_schedule', 'UI queue pump scheduling stopped', __spina_exc)
+
         def _pump():
+            self._ui_queue_after_id = None
+            if getattr(self, "_tk_shutdown_started", False):
+                return
             try:
                 while True:
                     func, args, kwargs, ev, out = self._ui_queue.get_nowait()
@@ -11352,28 +11399,16 @@ class App:
                             ev.set()
                         except Exception as __spina_exc:
                             _log_suppressed_once('excpass_0275', 'suppressed exception excpass_0275', __spina_exc)
-                            pass
             except queue.Empty:
-                # nothing pending
                 pass
             except Exception as e:
                 try:
                     _log_exc("ui_queue_pump", e)
                 except Exception as __spina_exc:
                     _log_suppressed_once('excpass_0276', 'suppressed exception excpass_0276', __spina_exc)
-                    pass
-            try:
-                if self.root.winfo_exists():
-                    self.root.after(50, _pump)
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0277', 'suppressed exception excpass_0277', __spina_exc)
-                pass
+            _schedule_next()
 
-        try:
-            self.root.after(50, _pump)
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0278', 'suppressed exception excpass_0278', __spina_exc)
-            pass
+        _schedule_next()
 
     def _ui_call(self, func, *args, **kwargs):
         """Call a UI function from any thread and wait for completion.
