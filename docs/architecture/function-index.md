@@ -2,7 +2,7 @@
 
 Generated from commit `d42bf000e599c40eb62af008994b5ea9bda416e3`.
 
-Scanned **164 Python files**, **73,745 lines**, and **2,263 symbols**.
+Scanned **165 Python files**, **73,944 lines**, and **2,284 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -2266,6 +2266,30 @@ Scanned **164 Python files**, **73,745 lines**, and **2,263 symbols**.
 - **tools.test_collector_tab_presentation_wave_44.source_for** (function, lines 40–41, 2 lines, risk `support`): Handles source for for the other feature.
 - **tools.test_collector_tab_presentation_wave_44.signature_text** (function, lines 44–50, 7 lines, risk `support`): Handles signature text for the other feature.
 - **tools.test_collector_tab_presentation_wave_44.main** (function, lines 53–119, 67 lines, risk `filesystem`): Handles main for the other feature.
+
+## `tools/test_collector_tab_widget_smoke_wave_44.py`
+
+- **tools.test_collector_tab_widget_smoke_wave_44._route_colors** (function, lines 32–33, 2 lines, risk `support`): Handles route colors for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44._route_button** (function, lines 36–38, 3 lines, risk `ui_only`): Handles route button for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44._route_card** (function, lines 41–50, 10 lines, risk `ui_only`): Handles route card for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44._style_route_trees** (function, lines 53–55, 3 lines, risk `ui_only`): Handles style route trees for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44._hidden_widgets** (function, lines 58–61, 4 lines, risk `ui_only`): Handles hidden widgets for the other feature.
+- **tools.test_collector_tab_widget_smoke_wave_44._update_cards** (function, lines 64–74, 11 lines, risk `ui_only`): Updates update cards for the other feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp** (class, lines 77–130, 54 lines, risk `container`): Groups FakeCollectorApp for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.__init__** (method, lines 78–82, 5 lines, risk `ui_only`): Handles init for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record** (method, lines 84–85, 2 lines, risk `support`): Handles record for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.print_collector_route_daily_ledger** (method, lines 87–88, 2 lines, risk `reports`): Generates print collector route daily ledger for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._edit_selected_collector** (method, lines 90–91, 2 lines, risk `support`): Handles edit selected collector for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._add_collector** (method, lines 93–94, 2 lines, risk `support`): Handles add collector for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._clear_collectors_search_filters** (method, lines 96–99, 4 lines, risk `support`): Handles clear collectors search filters for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_unassigned_areas** (method, lines 101–102, 2 lines, risk `support`): Handles show unassigned areas for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_no_area_clients** (method, lines 104–105, 2 lines, risk `support`): Handles show no area clients for the clients feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_conflicts** (method, lines 107–108, 2 lines, risk `support`): Handles show conflicts for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._delete_selected_collector** (method, lines 110–111, 2 lines, risk `support`): Removes delete selected collector for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._collectors_name_from_values** (method, lines 113–114, 2 lines, risk `support`): Handles collectors name from values for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._schedule_collectors_refresh** (method, lines 116–117, 2 lines, risk `support`): Handles schedule collectors refresh for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.refresh_collectors** (method, lines 119–130, 12 lines, risk `support`): Refreshes refresh collectors for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.main** (function, lines 133–195, 63 lines, risk `reports`): Handles main for the other feature.
 
 ## `tools/test_collectors_editor_wave_26.py`
 

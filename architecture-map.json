@@ -5523,7 +5523,6 @@
       "spina_app/collector_dialog_presentation.py:36:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog",
       "spina_app/collector_refresh_presentation.py:14:spina_app.collector_refresh_presentation.configure_collector_refresh_dependencies",
       "spina_app/collector_tab_presentation.py:20:spina_app.collector_tab_presentation.configure_collector_tab_dependencies",
-      "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab",
       "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
       "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
       "spina_app/long_task_presentation.py:21:spina_app.long_task_presentation.configure_long_task_dependencies",
@@ -9842,6 +9841,12 @@
         "target": "command"
       },
       {
+        "kind": "command",
+        "line": 38,
+        "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:36:tools.test_collector_tab_widget_smoke_wave_44._route_button",
+        "target": "command"
+      },
+      {
         "event": "obj",
         "kind": "bind",
         "line": 171,
@@ -10220,6 +10225,7 @@
         "tools/test_clients_feature_wave_19.py:63:tools.test_clients_feature_wave_19.FakeApp.__init__",
         "tools/test_collector_route_card_batch_13.py:41:tools.test_collector_route_card_batch_13.FakeWidget.__init__",
         "tools/test_collector_route_card_batch_13.py:55:tools.test_collector_route_card_batch_13._WidgetFactory.__init__",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:78:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.__init__",
         "tools/test_collectors_editor_wave_26.py:37:tools.test_collectors_editor_wave_26.Var.__init__",
         "tools/test_collectors_editor_wave_26.py:46:tools.test_collectors_editor_wave_26.Widget.__init__",
         "tools/test_collectors_editor_wave_26.py:66:tools.test_collectors_editor_wave_26.FakeTree.__init__",
@@ -10259,6 +10265,10 @@
         "tools/test_payment_schedule_normalizer_batch_06.py:27:tools.test_payment_schedule_normalizer_batch_06.BrokenText.__str__",
         "tools/test_payment_schedule_normalizer_batch_06.py:32:tools.test_payment_schedule_normalizer_batch_06.MondayText.__str__",
         "tools/test_theme_palette_helper_batch_05.py:38:tools.test_theme_palette_helper_batch_05.BadString.__str__"
+      ],
+      "_add_collector": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10219:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._add_collector",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:93:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._add_collector"
       ],
       "_applied": [
         "tools/test_cilog_action_label_extraction.py:125:tools.test_cilog_action_label_extraction._applied",
@@ -10381,7 +10391,8 @@
       ],
       "_clear_collectors_search_filters": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17042:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_areas_drag_end._clear_collectors_search_filters",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26153:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._clear_collectors_search_filters"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26153:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._clear_collectors_search_filters",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:96:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._clear_collectors_search_filters"
       ],
       "_close": [
         "spina_app/calendar_presentation.py:155:spina_app.calendar_presentation._CalendarPopup._close",
@@ -10395,6 +10406,10 @@
       "_collectors_areas_drag_motion": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16981:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_areas_drag_motion",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:30003:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_areas_drag_motion"
+      ],
+      "_collectors_name_from_values": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16563:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_name_from_values",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:113:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._collectors_name_from_values"
       ],
       "_context": [
         "tools/audit_patch_chains.py:66:tools.audit_patch_chains._context",
@@ -10414,7 +10429,8 @@
       ],
       "_delete_selected_collector": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9921:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._delete_selected_collector",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:29953:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._delete_selected_collector"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:29953:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._delete_selected_collector",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:110:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._delete_selected_collector"
       ],
       "_display_loan_type_label": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:13781:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_reports._display_loan_type_label",
@@ -10434,7 +10450,8 @@
       ],
       "_edit_selected_collector": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10126:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._edit_selected_collector",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:29986:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._edit_selected_collector"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:29986:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._edit_selected_collector",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:90:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._edit_selected_collector"
       ],
       "_external_loaded_names": [
         "tools/extract_date_display_helpers.py:71:tools.extract_date_display_helpers._external_loaded_names",
@@ -10782,7 +10799,8 @@
       ],
       "_schedule_collectors_refresh": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17023:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_areas_drag_end._schedule_collectors_refresh",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26133:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._schedule_collectors_refresh"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26133:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._schedule_collectors_refresh",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:116:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._schedule_collectors_refresh"
       ],
       "_scope": [
         "tools/plan_app_lifecycle_window_pass_only.py:113:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor._scope",
@@ -10796,6 +10814,18 @@
         "tools/inspect_blocking_ui_context.py:93:tools.inspect_blocking_ui_context.BlockingContextVisitor._scope_name",
         "tools/plan_logger_fallback_pass_only.py:80:tools.plan_logger_fallback_pass_only._scope_name",
         "tools/plan_queue_empty_pass_only.py:86:tools.plan_queue_empty_pass_only.PassOnlyVisitor._scope_name"
+      ],
+      "_show_conflicts": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9839:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_conflicts",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:107:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_conflicts"
+      ],
+      "_show_no_area_clients": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9894:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_no_area_clients",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:104:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_no_area_clients"
+      ],
+      "_show_unassigned_areas": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9865:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_unassigned_areas",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:101:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_unassigned_areas"
       ],
       "_source_function": [
         "tools/test_cash_control_ui_controls_batch_09.py:107:tools.test_cash_control_ui_controls_batch_09._source_function",
@@ -11337,6 +11367,7 @@
         "tools/test_collector_route_card_batch_13.py:183:tools.test_collector_route_card_batch_13.main",
         "tools/test_collector_route_presentation_wave_23.py:28:tools.test_collector_route_presentation_wave_23.main",
         "tools/test_collector_tab_presentation_wave_44.py:53:tools.test_collector_tab_presentation_wave_44.main",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
         "tools/test_collectors_editor_wave_26.py:248:tools.test_collectors_editor_wave_26.main",
         "tools/test_collectors_summary_wave_22.py:23:tools.test_collectors_summary_wave_22.main",
         "tools/test_dashboard_feature_wave_17.py:128:tools.test_dashboard_feature_wave_17.main",
@@ -11429,7 +11460,8 @@
       ],
       "print_collector_route_daily_ledger": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17497:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_collector_route_daily_ledger",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26182:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_collector_route_daily_ledger"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26182:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_collector_route_daily_ledger",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:87:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.print_collector_route_daily_ledger"
       ],
       "print_full_daily_ledger": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17709:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger",
@@ -11459,6 +11491,10 @@
       "read_lines": [
         "tools/audit_pg_backup_action_flow.py:34:tools.audit_pg_backup_action_flow.read_lines",
         "tools/plan_ui_compatibility_pass_only.py:113:tools.plan_ui_compatibility_pass_only.read_lines"
+      ],
+      "refresh_collectors": [
+        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:119:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.refresh_collectors"
       ],
       "remove_existing_block": [
         "tools/add_optional_performance_logs.py:117:tools.add_optional_performance_logs.remove_existing_block",
@@ -11927,6 +11963,7 @@
         "tools/test_client_info_logs_feature_wave_20.py:39:tools.test_client_info_logs_feature_wave_20.FakeApp.render_client_info_logs",
         "tools/test_client_route_tree_style_batch_12.py:68:tools.test_client_route_tree_style_batch_12._clients_palette",
         "tools/test_clients_feature_wave_19.py:58:tools.test_clients_feature_wave_19.FakeDB.get_client_info",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:104:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_no_area_clients",
         "tools/test_ui_card_constructor_batch_08.py:85:tools.test_ui_card_constructor_batch_08._cilog_palette"
       ],
       "collectors": [
@@ -12081,7 +12118,24 @@
         "spina_app/ui_controls.py:132:spina_app.ui_controls._spina_v27_style_route_trees",
         "spina_app/utilities/text.py:16:spina_app.utilities.text._spina_route_notice_norm_name",
         "tools/test_client_route_tree_style_batch_12.py:74:tools.test_client_route_tree_style_batch_12._route_palette",
-        "tools/test_collector_route_card_batch_13.py:70:tools.test_collector_route_card_batch_13._route_palette"
+        "tools/test_collector_route_card_batch_13.py:70:tools.test_collector_route_card_batch_13._route_palette",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:101:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_unassigned_areas",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:107:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_conflicts",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:110:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._delete_selected_collector",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:113:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._collectors_name_from_values",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:116:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._schedule_collectors_refresh",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:119:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.refresh_collectors",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:32:tools.test_collector_tab_widget_smoke_wave_44._route_colors",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:36:tools.test_collector_tab_widget_smoke_wave_44._route_button",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:41:tools.test_collector_tab_widget_smoke_wave_44._route_card",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:53:tools.test_collector_tab_widget_smoke_wave_44._style_route_trees",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:77:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:78:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.__init__",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:84:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:87:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.print_collector_route_daily_ledger",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:90:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._edit_selected_collector",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:93:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._add_collector",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:96:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._clear_collectors_search_filters"
       ],
       "dashboard": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:31392:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dashboard_fetch_rows",
@@ -13274,6 +13328,9 @@
         "tools/test_collector_tab_presentation_wave_44.py:40:tools.test_collector_tab_presentation_wave_44.source_for",
         "tools/test_collector_tab_presentation_wave_44.py:44:tools.test_collector_tab_presentation_wave_44.signature_text",
         "tools/test_collector_tab_presentation_wave_44.py:53:tools.test_collector_tab_presentation_wave_44.main",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:58:tools.test_collector_tab_widget_smoke_wave_44._hidden_widgets",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:64:tools.test_collector_tab_widget_smoke_wave_44._update_cards",
         "tools/test_collectors_editor_wave_26.py:101:tools.test_collectors_editor_wave_26.FakeListbox.delete",
         "tools/test_collectors_editor_wave_26.py:108:tools.test_collectors_editor_wave_26.FakeListbox.curselection",
         "tools/test_collectors_editor_wave_26.py:110:tools.test_collectors_editor_wave_26.FakeListbox.selection_clear",
@@ -14808,6 +14865,42 @@
         "target": "module._spina_v27_route_colors"
       },
       {
+        "line": 139,
+        "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
+        "source": "_route_colors",
+        "target": "presentation._spina_v27_route_colors"
+      },
+      {
+        "line": 140,
+        "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
+        "source": "_route_button",
+        "target": "presentation._spina_v27_route_button"
+      },
+      {
+        "line": 141,
+        "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
+        "source": "_route_card",
+        "target": "presentation._spina_v27_route_card"
+      },
+      {
+        "line": 142,
+        "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
+        "source": "_style_route_trees",
+        "target": "presentation._spina_v27_style_route_trees"
+      },
+      {
+        "line": 143,
+        "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
+        "source": "_hidden_widgets",
+        "target": "presentation._spina_v27_hidden_collector_widgets"
+      },
+      {
+        "line": 144,
+        "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
+        "source": "_update_cards",
+        "target": "presentation._spina_v27_update_route_cards"
+      },
+      {
         "line": 172,
         "owner": "tools/test_collectors_editor_wave_26.py:169:tools.test_collectors_editor_wave_26.behavior_checks",
         "source": "FakeTree",
@@ -15536,7 +15629,6 @@
       "spina_app/collector_dialog_presentation.py:36:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog",
       "spina_app/collector_refresh_presentation.py:14:spina_app.collector_refresh_presentation.configure_collector_refresh_dependencies",
       "spina_app/collector_tab_presentation.py:20:spina_app.collector_tab_presentation.configure_collector_tab_dependencies",
-      "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab",
       "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
       "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
       "spina_app/long_task_presentation.py:21:spina_app.long_task_presentation.configure_long_task_dependencies",
@@ -15639,6 +15731,8 @@
       "tools/test_clients_feature_wave_19.py:70:tools.test_clients_feature_wave_19.FakeApp._mode_filter",
       "tools/test_collector_route_card_batch_13.py:50:tools.test_collector_route_card_batch_13.FakeWidget.pack",
       "tools/test_collector_route_card_batch_13.py:58:tools.test_collector_route_card_batch_13._WidgetFactory.__call__",
+      "tools/test_collector_tab_widget_smoke_wave_44.py:113:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._collectors_name_from_values",
+      "tools/test_collector_tab_widget_smoke_wave_44.py:116:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._schedule_collectors_refresh",
       "tools/test_collectors_editor_wave_26.py:101:tools.test_collectors_editor_wave_26.FakeListbox.delete",
       "tools/test_collectors_editor_wave_26.py:119:tools.test_collectors_editor_wave_26.FakeText.delete",
       "tools/test_collectors_editor_wave_26.py:121:tools.test_collectors_editor_wave_26.FakeText.insert",
@@ -15818,6 +15912,7 @@
         "tools/test_collector_route_card_batch_13.py:40:tools.test_collector_route_card_batch_13.FakeWidget",
         "tools/test_collector_route_card_batch_13.py:54:tools.test_collector_route_card_batch_13._WidgetFactory",
         "tools/test_collector_route_card_batch_13.py:62:tools.test_collector_route_card_batch_13.FakeTk",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:77:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp",
         "tools/test_collectors_editor_wave_26.py:116:tools.test_collectors_editor_wave_26.FakeText",
         "tools/test_collectors_editor_wave_26.py:125:tools.test_collectors_editor_wave_26.Dummy",
         "tools/test_collectors_editor_wave_26.py:36:tools.test_collectors_editor_wave_26.Var",
@@ -16467,6 +16562,8 @@
         "tools/redundancy_audit.py:108:tools.redundancy_audit.print_report",
         "tools/spina_quality_audit.py:271:tools.spina_quality_audit.print_report",
         "tools/test_clients_read_presentation_wave_30.py:197:tools.test_clients_read_presentation_wave_30.main",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:87:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.print_collector_route_daily_ledger",
         "tools/test_collectors_editor_wave_26.py:248:tools.test_collectors_editor_wave_26.main",
         "tools/test_dashboard_feature_wave_17.py:128:tools.test_dashboard_feature_wave_17.main",
         "tools/test_dashboard_presentation_wave_28.py:107:tools.test_dashboard_presentation_wave_28.main",
@@ -17535,6 +17632,18 @@
         "tools/test_collector_tab_presentation_wave_44.py:36:tools.test_collector_tab_presentation_wave_44.top_functions",
         "tools/test_collector_tab_presentation_wave_44.py:40:tools.test_collector_tab_presentation_wave_44.source_for",
         "tools/test_collector_tab_presentation_wave_44.py:44:tools.test_collector_tab_presentation_wave_44.signature_text",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:101:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_unassigned_areas",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:104:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_no_area_clients",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:107:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_conflicts",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:110:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._delete_selected_collector",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:113:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._collectors_name_from_values",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:116:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._schedule_collectors_refresh",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:119:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.refresh_collectors",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:32:tools.test_collector_tab_widget_smoke_wave_44._route_colors",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:84:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:90:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._edit_selected_collector",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:93:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._add_collector",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:96:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._clear_collectors_search_filters",
         "tools/test_collectors_editor_wave_26.py:101:tools.test_collectors_editor_wave_26.FakeListbox.delete",
         "tools/test_collectors_editor_wave_26.py:108:tools.test_collectors_editor_wave_26.FakeListbox.curselection",
         "tools/test_collectors_editor_wave_26.py:110:tools.test_collectors_editor_wave_26.FakeListbox.selection_clear",
@@ -17955,6 +18064,12 @@
         "tools/test_cilog_ui_controls_batch_10.py:92:tools.test_cilog_ui_controls_batch_10._reset_runtime",
         "tools/test_client_route_tree_style_batch_12.py:138:tools.test_client_route_tree_style_batch_12._capture_style",
         "tools/test_client_route_tree_style_batch_12.py:80:tools.test_client_route_tree_style_batch_12._reset_runtime",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:36:tools.test_collector_tab_widget_smoke_wave_44._route_button",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:41:tools.test_collector_tab_widget_smoke_wave_44._route_card",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:53:tools.test_collector_tab_widget_smoke_wave_44._style_route_trees",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:58:tools.test_collector_tab_widget_smoke_wave_44._hidden_widgets",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:64:tools.test_collector_tab_widget_smoke_wave_44._update_cards",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:78:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.__init__",
         "tools/test_collectors_editor_wave_26.py:169:tools.test_collectors_editor_wave_26.behavior_checks",
         "tools/test_dashboard_feature_wave_17.py:73:tools.test_dashboard_feature_wave_17.verify_visible_rows",
         "tools/test_legacy_dashboard_controls_batch_15.py:100:tools.test_legacy_dashboard_controls_batch_15._reset_runtime",
@@ -21349,6 +21464,27 @@
     },
     {
       "application_file": false,
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "imports": {
+        "Path": "pathlib.Path",
+        "annotations": "__future__.annotations",
+        "presentation": "spina_app.collector_tab_presentation",
+        "sys": "sys",
+        "tk": "tkinter",
+        "ttk": "tkinter.ttk"
+      },
+      "lines": 199,
+      "module": "tools.test_collector_tab_widget_smoke_wave_44",
+      "module_globals": [
+        "COLORS",
+        "ROOT"
+      ],
+      "monkey_patches": [],
+      "sha256": "181b894edc9b1359780a54d638fd840b86f9dff9029e0b8e5ec2b866de8c94fd",
+      "syntax_ok": true
+    },
+    {
+      "application_file": false,
       "file": "tools/test_collectors_editor_wave_26.py",
       "imports": {
         "Path": "pathlib.Path",
@@ -22360,26 +22496,26 @@
   "summary": {
     "application_monkey_patches": 56,
     "application_python_files": 43,
-    "application_resolved_call_edges": 2721,
+    "application_resolved_call_edges": 2694,
     "application_symbols": 1171,
     "application_ui_callback_edges": 498,
-    "classes": 91,
+    "classes": 92,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1301,
-    "methods": 490,
-    "monkey_patches": 130,
+    "functions": 1308,
+    "methods": 503,
+    "monkey_patches": 136,
     "nested_functions": 381,
     "parse_errors": 0,
-    "possible_orphans": 123,
-    "python_files": 164,
+    "possible_orphans": 122,
+    "python_files": 165,
     "repository_database_tables": 19,
-    "repository_duplicate_names": 237,
-    "repository_possible_orphans": 237,
-    "resolved_call_edges": 3717,
-    "symbols": 2263,
-    "total_python_lines": 73745,
-    "ui_callback_edges": 499
+    "repository_duplicate_names": 243,
+    "repository_possible_orphans": 238,
+    "resolved_call_edges": 3704,
+    "symbols": 2284,
+    "total_python_lines": 73944,
+    "ui_callback_edges": 500
   },
   "symbols": [
     {
@@ -37308,8 +37444,7 @@
       ],
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:544:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.keys",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:544:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.keys"
       ],
       "class_name": "App",
       "database_tables": [],
@@ -37351,8 +37486,7 @@
         "self.refresh_collectors"
       ],
       "calls_resolved": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once"
       ],
       "class_name": "App",
       "database_tables": [],
@@ -37459,7 +37593,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16563:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_name_from_values",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:880:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._write_json_atomic",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:972:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
         "tools/test_collectors_editor_wave_26.py:76:tools.test_collectors_editor_wave_26.FakeTree.focus"
       ],
       "class_name": "App",
@@ -37802,7 +37935,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:880:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._write_json_atomic",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:972:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9989:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._collector_editor_dialog",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
         "tools/test_collectors_editor_wave_26.py:76:tools.test_collectors_editor_wave_26.FakeTree.focus"
       ],
       "class_name": "App",
@@ -37871,8 +38003,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:880:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._write_json_atomic",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:972:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9989:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._collector_editor_dialog",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9989:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._collector_editor_dialog"
       ],
       "class_name": "App",
       "database_tables": [],
@@ -46118,7 +46249,6 @@
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11701:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._configure_tree_stripes",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16337:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._build_collectors_tab._set_sort",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
         "spina_app/tabs/collectors.py:232:spina_app.tabs.collectors._collectors_start_inline_edit",
         "spina_app/tabs/collectors.py:425:spina_app.tabs.collectors._collectors_move_area",
         "tools/test_collectors_editor_wave_26.py:52:tools.test_collectors_editor_wave_26.Widget.pack_forget",
@@ -46170,9 +46300,7 @@
         "getattr",
         "self.refresh_collectors"
       ],
-      "calls_resolved": [
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors"
-      ],
+      "calls_resolved": [],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
@@ -46289,10 +46417,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26182:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_collector_route_daily_ledger",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:29850:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_tree_click",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:32577:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9921:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._delete_selected_collector",
-        "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab",
-        "spina_app/tabs/collectors.py:110:spina_app.tabs.collectors._collectors_get_selected_name",
-        "spina_app/tabs/collectors.py:155:spina_app.tabs.collectors._collectors_apply_markers"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9921:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._delete_selected_collector"
       ],
       "calls_raw": [
         "any",
@@ -46344,7 +46469,6 @@
         "set"
       ],
       "calls_resolved": [
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
         "spina_app/tabs/collectors.py:155:spina_app.tabs.collectors._collectors_apply_markers",
         "spina_app/tabs/collectors.py:192:spina_app.tabs.collectors._collectors_refresh_bulk_bar"
       ],
@@ -46468,8 +46592,7 @@
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1191:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_exc",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:880:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._write_json_atomic",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:972:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:972:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path"
       ],
       "class_name": null,
       "database_tables": [],
@@ -46616,7 +46739,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16563:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_name_from_values",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:880:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._write_json_atomic",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:972:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
         "spina_app/tabs/collectors.py:332:spina_app.tabs.collectors._collectors_cancel_inline_edit",
         "tools/test_collectors_editor_wave_26.py:112:tools.test_collectors_editor_wave_26.FakeListbox.selection_set",
         "tools/test_collectors_editor_wave_26.py:76:tools.test_collectors_editor_wave_26.FakeTree.focus",
@@ -46823,9 +46945,7 @@
         "self.root.after",
         "self.root.after_cancel"
       ],
-      "calls_resolved": [
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors"
-      ],
+      "calls_resolved": [],
       "class_name": null,
       "database_tables": [],
       "docstring": "Debounce refresh_collectors while typing in Search.",
@@ -46865,9 +46985,7 @@
         "self.collector_route_search_var.set",
         "self.refresh_collectors"
       ],
-      "calls_resolved": [
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors"
-      ],
+      "calls_resolved": [],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
@@ -47072,8 +47190,7 @@
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1191:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_exc",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:880:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._write_json_atomic",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:972:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:972:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path"
       ],
       "class_name": null,
       "database_tables": [],
@@ -47118,8 +47235,7 @@
         "self.refresh_collectors"
       ],
       "calls_resolved": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once"
       ],
       "class_name": null,
       "database_tables": [],
@@ -47171,8 +47287,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1191:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_exc",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:880:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._write_json_atomic",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:972:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:972:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path"
       ],
       "class_name": null,
       "database_tables": [],
@@ -47246,7 +47361,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16563:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_name_from_values",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:880:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._write_json_atomic",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:972:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
         "tools/test_collectors_editor_wave_26.py:76:tools.test_collectors_editor_wave_26.FakeTree.focus"
       ],
       "class_name": null,
@@ -47317,7 +47431,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16563:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_name_from_values",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:880:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._write_json_atomic",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:972:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.data_path",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
         "tools/test_collectors_editor_wave_26.py:76:tools.test_collectors_editor_wave_26.FakeTree.focus"
       ],
       "class_name": null,
@@ -54331,9 +54444,7 @@
         "self.root.after",
         "self.root.after_cancel"
       ],
-      "calls_resolved": [
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors"
-      ],
+      "calls_resolved": [],
       "class_name": null,
       "database_tables": [],
       "docstring": "Debounce refresh_collectors while typing in Search.",
@@ -54373,9 +54484,7 @@
         "self.collector_route_search_var.set",
         "self.refresh_collectors"
       ],
-      "calls_resolved": [
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors"
-      ],
+      "calls_resolved": [],
       "class_name": null,
       "database_tables": [],
       "docstring": "Clear search + quick filters for Collector's Route UI.",
@@ -55933,7 +56042,6 @@
         "txtw.get"
       ],
       "calls_resolved": [
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
         "spina_app/tabs/collectors.py:110:spina_app.tabs.collectors._collectors_get_selected_name"
       ],
       "class_name": null,
@@ -55977,7 +56085,6 @@
         "self.refresh_collectors"
       ],
       "calls_resolved": [
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
         "spina_app/tabs/collectors.py:218:spina_app.tabs.collectors._collectors_clear_checked"
       ],
       "class_name": null,
@@ -57582,8 +57689,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:13754:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_reports",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:20166:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.refresh_clients",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4682:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.restore_client",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4706:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.restore_client_by_uid",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4706:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.restore_client_by_uid"
       ],
       "class_name": null,
       "database_tables": [],
@@ -62821,7 +62927,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1191:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_exc",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16337:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._build_collectors_tab._set_sort",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36978:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_collector_button",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
         "spina_app/tabs/collectors.py:16:spina_app.tabs.collectors._spina_v25_collector_card",
         "spina_app/tabs/collectors.py:232:spina_app.tabs.collectors._collectors_start_inline_edit",
         "spina_app/tabs/collectors.py:29:spina_app.tabs.collectors._spina_v25_style_collector_trees",
@@ -73321,32 +73426,7 @@
         "self"
       ],
       "callbacks": [],
-      "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10126:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._edit_selected_collector",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10219:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._add_collector",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16213:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._build_collectors_tab",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16337:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._build_collectors_tab._set_sort",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16626:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_multi_toggle",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16745:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_delete_selected",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16858:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_save_inline_edit",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17023:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_areas_drag_end._schedule_collectors_refresh",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17042:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_areas_drag_end._clear_collectors_search_filters",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17258:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select._save_collector_notes",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17304:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select._refresh_collectors_table",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17312:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select._add_collector_dialog",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17358:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select._edit_collector_dialog",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17435:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select._delete_collector",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26133:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._schedule_collectors_refresh",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26153:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._clear_collectors_search_filters",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:29699:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._save_selected_collector_notes",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:29792:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_multi_toggle",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:31027:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_open_archived_clients_dialog.restore_selected",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37023:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9839:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_conflicts",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9865:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_unassigned_areas",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9921:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._delete_selected_collector",
-        "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab"
-      ],
+      "callers": [],
       "calls_raw": [
         "_cur_active.execute",
         "_cur_active.execute.fetchall",
@@ -73793,7 +73873,9 @@
           "target": "_popup"
         }
       ],
-      "callers": [],
+      "callers": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main"
+      ],
       "calls_raw": [
         "_log_exc",
         "_set_sort",
@@ -73880,9 +73962,7 @@
       ],
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16337:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._build_collectors_tab._set_sort",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16563:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_name_from_values",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37446:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_route_button",
-        "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
         "spina_app/tabs/collector_route.py:30:spina_app.tabs.collector_route._spina_v27_update_route_cards",
         "spina_app/tabs/collector_route.py:90:spina_app.tabs.collector_route._spina_v27_hidden_collector_widgets",
         "spina_app/ui_cards.py:41:spina_app.ui_cards._spina_v27_route_card",
@@ -79892,7 +79972,6 @@
         "tree.selection"
       ],
       "calls_resolved": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16563:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_name_from_values",
         "tools/test_collectors_editor_wave_26.py:76:tools.test_collectors_editor_wave_26.FakeTree.focus"
       ],
       "class_name": null,
@@ -79998,7 +80077,6 @@
         "tuple"
       ],
       "calls_resolved": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16563:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_name_from_values",
         "spina_app/tabs/collectors.py:192:spina_app.tabs.collectors._collectors_refresh_bulk_bar"
       ],
       "class_name": null,
@@ -117309,6 +117387,853 @@
     },
     {
       "args": [
+        "_self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 33,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [
+        "COLORS"
+      ],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:32:tools.test_collector_tab_widget_smoke_wave_44._route_colors",
+      "imports_used": [],
+      "kind": "function",
+      "line": 32,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_route_colors",
+      "parent": null,
+      "purpose": "Handles route colors for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44._route_colors",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "8ad68fd35950a997754f93da8000b13e9436c85492670ac558911eeb7ee2aefc"
+    },
+    {
+      "args": [
+        "parent",
+        "text",
+        "command",
+        "kind"
+      ],
+      "callbacks": [
+        {
+          "kind": "command",
+          "line": 38,
+          "target": "command"
+        }
+      ],
+      "callers": [],
+      "calls_raw": [
+        "tk.Button"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 38,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:36:tools.test_collector_tab_widget_smoke_wave_44._route_button",
+      "imports_used": [
+        "tkinter"
+      ],
+      "kind": "function",
+      "line": 36,
+      "lines": 3,
+      "monkey_patches": [],
+      "name": "_route_button",
+      "parent": null,
+      "purpose": "Handles route button for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44._route_button",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "f222affd013defacc414ef762fe52c05cde8eaae7c6efc5526851e2aa343640e"
+    },
+    {
+      "args": [
+        "parent",
+        "title",
+        "value",
+        "subtitle",
+        "accent"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "subtitle_label.pack",
+        "tk.Frame",
+        "tk.Frame.pack",
+        "tk.Label",
+        "tk.Label.pack",
+        "value_label.pack"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 50,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [
+        "COLORS"
+      ],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:41:tools.test_collector_tab_widget_smoke_wave_44._route_card",
+      "imports_used": [
+        "tkinter"
+      ],
+      "kind": "function",
+      "line": 41,
+      "lines": 10,
+      "monkey_patches": [],
+      "name": "_route_card",
+      "parent": null,
+      "purpose": "Handles route card for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44._route_card",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "faacbfcb0c3afc0927237c9edc79dd4c9ef52886c50c96ea6d21dab87dc9e446"
+    },
+    {
+      "args": [
+        "_self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "style.configure",
+        "ttk.Style"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 55,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:53:tools.test_collector_tab_widget_smoke_wave_44._style_route_trees",
+      "imports_used": [
+        "tkinter.ttk"
+      ],
+      "kind": "function",
+      "line": 53,
+      "lines": 3,
+      "monkey_patches": [],
+      "name": "_style_route_trees",
+      "parent": null,
+      "purpose": "Handles style route trees for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44._style_route_trees",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "58011cf2ac2d825061139f05ad514dc910a6bd4aefd78cd79cf9ab59a3796d2e"
+    },
+    {
+      "args": [
+        "self",
+        "parent"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "tk.Frame",
+        "tk.StringVar"
+      ],
+      "calls_resolved": [
+        "tools/test_legacy_dashboard_controls_batch_15.py:47:tools.test_legacy_dashboard_controls_batch_15.FakeTk.StringVar"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 61,
+      "feature": "other",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [
+        "COLORS"
+      ],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:58:tools.test_collector_tab_widget_smoke_wave_44._hidden_widgets",
+      "imports_used": [
+        "tkinter"
+      ],
+      "kind": "function",
+      "line": 58,
+      "lines": 4,
+      "monkey_patches": [],
+      "name": "_hidden_widgets",
+      "parent": null,
+      "purpose": "Handles hidden widgets for the other feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44._hidden_widgets",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "b3c1e4a7c84c048387fcf2f41a9b5564a0b3afd03e0a73d7bc35c3f458ec9460"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "hasattr",
+        "label.configure",
+        "len",
+        "self.collectors_tree.get_children",
+        "str",
+        "values.items"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 74,
+      "feature": "other",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:64:tools.test_collector_tab_widget_smoke_wave_44._update_cards",
+      "imports_used": [],
+      "kind": "function",
+      "line": 64,
+      "lines": 11,
+      "monkey_patches": [],
+      "name": "_update_cards",
+      "parent": null,
+      "purpose": "Updates update cards for the other feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44._update_cards",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "bbbd0e9b8429d642da25a88a03706c38d13f8c875aecaed7e97bc447b871e93f"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main"
+      ],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 130,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:77:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp",
+      "imports_used": [],
+      "kind": "class",
+      "line": 77,
+      "lines": 54,
+      "monkey_patches": [],
+      "name": "FakeCollectorApp",
+      "parent": null,
+      "purpose": "Groups FakeCollectorApp for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp",
+      "risk": "container",
+      "risk_flags": [],
+      "source_sha256": "b6b35a054d0cd2f8ed1f14ad8333c63a55e723f45fee7fe1ab1ae88c0956a07d"
+    },
+    {
+      "args": [
+        "self",
+        "root"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self.tab_collectors.pack",
+        "tk.Frame"
+      ],
+      "calls_resolved": [],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 82,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:78:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.__init__",
+      "imports_used": [
+        "tkinter"
+      ],
+      "kind": "method",
+      "line": 78,
+      "lines": 5,
+      "monkey_patches": [],
+      "name": "__init__",
+      "parent": null,
+      "purpose": "Handles init for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.__init__",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "42f156bbeab232cf284558985d478721cd2fa82910b8e5d29b62bac1e77b1345"
+    },
+    {
+      "args": [
+        "self",
+        "action"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:101:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_unassigned_areas",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:104:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_no_area_clients",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:107:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_conflicts",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:110:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._delete_selected_collector",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:87:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.print_collector_route_daily_ledger",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:90:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._edit_selected_collector",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:93:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._add_collector",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:96:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._clear_collectors_search_filters"
+      ],
+      "calls_raw": [
+        "self.actions.append"
+      ],
+      "calls_resolved": [],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 85,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:84:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record",
+      "imports_used": [],
+      "kind": "method",
+      "line": 84,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_record",
+      "parent": null,
+      "purpose": "Handles record for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "e1c1d1c10ab371d261e88cbf82f59bf069b3c22570481073bd72ba5eb5da1be2"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self._record"
+      ],
+      "calls_resolved": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:84:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record"
+      ],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 88,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:87:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.print_collector_route_daily_ledger",
+      "imports_used": [],
+      "kind": "method",
+      "line": 87,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "print_collector_route_daily_ledger",
+      "parent": null,
+      "purpose": "Generates print collector route daily ledger for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.print_collector_route_daily_ledger",
+      "risk": "reports",
+      "risk_flags": [
+        "reports"
+      ],
+      "source_sha256": "a7ae8ed934871107bdd077cdafb81bb85c42233f71dfbc1f8729b855f7737865"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self._record"
+      ],
+      "calls_resolved": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:84:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record"
+      ],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 91,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:90:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._edit_selected_collector",
+      "imports_used": [],
+      "kind": "method",
+      "line": 90,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_edit_selected_collector",
+      "parent": null,
+      "purpose": "Handles edit selected collector for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._edit_selected_collector",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "2fc1e1477a09de539860623987ffeebfb3cd1488b757ebd870a2da22e0eb08c0"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self._record"
+      ],
+      "calls_resolved": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:84:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record"
+      ],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 94,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:93:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._add_collector",
+      "imports_used": [],
+      "kind": "method",
+      "line": 93,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_add_collector",
+      "parent": null,
+      "purpose": "Handles add collector for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._add_collector",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "77757709898e18091e5b47155619f9d079c169d14e05149789dd2cfa168ef1f0"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self._record",
+        "self.collector_route_filter_main_var.set",
+        "self.collector_route_search_var.set"
+      ],
+      "calls_resolved": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:84:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record"
+      ],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 99,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:96:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._clear_collectors_search_filters",
+      "imports_used": [],
+      "kind": "method",
+      "line": 96,
+      "lines": 4,
+      "monkey_patches": [],
+      "name": "_clear_collectors_search_filters",
+      "parent": null,
+      "purpose": "Handles clear collectors search filters for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._clear_collectors_search_filters",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "250b5c0ee1504fbe8e72045fc90cca3c3229209cc23187e864358d422524725d"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self._record"
+      ],
+      "calls_resolved": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:84:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record"
+      ],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 102,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:101:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_unassigned_areas",
+      "imports_used": [],
+      "kind": "method",
+      "line": 101,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_show_unassigned_areas",
+      "parent": null,
+      "purpose": "Handles show unassigned areas for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_unassigned_areas",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "7942fbd0d38a20b5609092fe579f98d8fd0fcacacc24ac7efcb336d71b409aad"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self._record"
+      ],
+      "calls_resolved": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:84:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record"
+      ],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 105,
+      "feature": "clients",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:104:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_no_area_clients",
+      "imports_used": [],
+      "kind": "method",
+      "line": 104,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_show_no_area_clients",
+      "parent": null,
+      "purpose": "Handles show no area clients for the clients feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_no_area_clients",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "a2b4595581c1f51f9e54300a4cd12a486e96f37b432625095750275936844304"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self._record"
+      ],
+      "calls_resolved": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:84:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record"
+      ],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 108,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:107:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_conflicts",
+      "imports_used": [],
+      "kind": "method",
+      "line": 107,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_show_conflicts",
+      "parent": null,
+      "purpose": "Handles show conflicts for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_conflicts",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "33bf253b2cc57f8822eaf5a01218ce2555f4ffb130286ce4cb2ce34268d9cbad"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self._record"
+      ],
+      "calls_resolved": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:84:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record"
+      ],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 111,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:110:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._delete_selected_collector",
+      "imports_used": [],
+      "kind": "method",
+      "line": 110,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_delete_selected_collector",
+      "parent": null,
+      "purpose": "Removes delete selected collector for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._delete_selected_collector",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "ec76e1d6ce7477aac3f6c92789cfd924a8993651528a328745b0ea20149a6a53"
+    },
+    {
+      "args": [
+        "self",
+        "values"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "len",
+        "str"
+      ],
+      "calls_resolved": [],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 114,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:113:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._collectors_name_from_values",
+      "imports_used": [],
+      "kind": "method",
+      "line": 113,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_collectors_name_from_values",
+      "parent": null,
+      "purpose": "Handles collectors name from values for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._collectors_name_from_values",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "3eb7f346ec950fd7795983c8f7956da41455bfadd4597094e4fb865c9aed6978"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self.refresh_collectors"
+      ],
+      "calls_resolved": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:119:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.refresh_collectors"
+      ],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 117,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:116:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._schedule_collectors_refresh",
+      "imports_used": [],
+      "kind": "method",
+      "line": 116,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_schedule_collectors_refresh",
+      "parent": null,
+      "purpose": "Handles schedule collectors refresh for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._schedule_collectors_refresh",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "946015d029fc84240416f05a36547ce1b1edf7094e533229a3245fb6bed5a009"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:116:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._schedule_collectors_refresh"
+      ],
+      "calls_raw": [
+        "getattr",
+        "tree.delete",
+        "tree.get_children",
+        "tree.insert"
+      ],
+      "calls_resolved": [],
+      "class_name": "FakeCollectorApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 130,
+      "feature": "collectors",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:119:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.refresh_collectors",
+      "imports_used": [],
+      "kind": "method",
+      "line": 119,
+      "lines": 12,
+      "monkey_patches": [],
+      "name": "refresh_collectors",
+      "parent": null,
+      "purpose": "Refreshes refresh collectors for the collectors feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.refresh_collectors",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "9ce70fce3f20cf8ed9368e9c5cb404b9e1f563dee99987008c2d786f6354be19"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "FakeCollectorApp",
+        "app._collector_route_cards.cget",
+        "app._collector_route_hidden_panel.winfo_exists",
+        "app.collector_route_search_var.set",
+        "app.collectors_tree.event_generate",
+        "app.collectors_tree.focus",
+        "app.collectors_tree.get_children",
+        "app.collectors_tree.selection_set",
+        "app.collectors_tree.winfo_exists",
+        "errors.append",
+        "len",
+        "logged.append",
+        "presentation._spina_v27_build_collectors_tab",
+        "print",
+        "root.destroy",
+        "root.update",
+        "root.update_idletasks",
+        "root.withdraw",
+        "set",
+        "str",
+        "tk.Tk",
+        "tuple"
+      ],
+      "calls_resolved": [
+        "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:77:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp",
+        "tools/test_collectors_editor_wave_26.py:112:tools.test_collectors_editor_wave_26.FakeListbox.selection_set",
+        "tools/test_collectors_editor_wave_26.py:76:tools.test_collectors_editor_wave_26.FakeTree.focus"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 195,
+      "feature": "other",
+      "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
+      "imports_used": [
+        "spina_app.collector_tab_presentation",
+        "tkinter"
+      ],
+      "kind": "function",
+      "line": 133,
+      "lines": 63,
+      "monkey_patches": [
+        {
+          "line": 139,
+          "source": "_route_colors",
+          "target": "presentation._spina_v27_route_colors"
+        },
+        {
+          "line": 140,
+          "source": "_route_button",
+          "target": "presentation._spina_v27_route_button"
+        },
+        {
+          "line": 141,
+          "source": "_route_card",
+          "target": "presentation._spina_v27_route_card"
+        },
+        {
+          "line": 142,
+          "source": "_style_route_trees",
+          "target": "presentation._spina_v27_style_route_trees"
+        },
+        {
+          "line": 143,
+          "source": "_hidden_widgets",
+          "target": "presentation._spina_v27_hidden_collector_widgets"
+        },
+        {
+          "line": 144,
+          "source": "_update_cards",
+          "target": "presentation._spina_v27_update_route_cards"
+        }
+      ],
+      "name": "main",
+      "parent": null,
+      "purpose": "Handles main for the other feature.",
+      "qualified_name": "tools.test_collector_tab_widget_smoke_wave_44.main",
+      "risk": "reports",
+      "risk_flags": [
+        "reports",
+        "ui_only"
+      ],
+      "source_sha256": "c6593cad046008f8280f2c1173365b90e665c9e23973aade73316676915446f5"
+    },
+    {
+      "args": [
         "text"
       ],
       "callbacks": [],
@@ -118003,7 +118928,8 @@
         "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab",
         "spina_app/tabs/client_info_logs.py:453:spina_app.tabs.client_info_logs._spina_v24_render_client_info_logs",
         "spina_app/tabs/client_info_logs.py:695:spina_app.tabs.client_info_logs._spina_render_client_info_logs",
-        "spina_app/tabs/collectors.py:110:spina_app.tabs.collectors._collectors_get_selected_name"
+        "spina_app/tabs/collectors.py:110:spina_app.tabs.collectors._collectors_get_selected_name",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main"
       ],
       "calls_raw": [],
       "calls_resolved": [],
@@ -118453,7 +119379,8 @@
         "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
         "spina_app/tabs/client_info_logs.py:453:spina_app.tabs.client_info_logs._spina_v24_render_client_info_logs",
         "spina_app/tabs/client_info_logs.py:695:spina_app.tabs.client_info_logs._spina_render_client_info_logs",
-        "spina_app/tabs/collectors.py:425:spina_app.tabs.collectors._collectors_move_area"
+        "spina_app/tabs/collectors.py:425:spina_app.tabs.collectors._collectors_move_area",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main"
       ],
       "calls_raw": [
         "int"
@@ -124428,7 +125355,8 @@
         "spina_app/tabs/dashboard.py:78:spina_app.tabs.dashboard._spina_v17_visible_dashboard_rows",
         "spina_app/tabs/dashboard.py:973:spina_app.tabs.dashboard._spina_v19_populate_dashboard_tree",
         "spina_app/tabs/reports.py:105:spina_app.tabs.reports._spina_v22_build_reports_tab",
-        "spina_app/ui_controls.py:157:spina_app.ui_controls._spina_v17_update_filter_buttons"
+        "spina_app/ui_controls.py:157:spina_app.ui_controls._spina_v17_update_filter_buttons",
+        "tools/test_collector_tab_widget_smoke_wave_44.py:58:tools.test_collector_tab_widget_smoke_wave_44._hidden_widgets"
       ],
       "calls_raw": [
         "FakeStringVar",
