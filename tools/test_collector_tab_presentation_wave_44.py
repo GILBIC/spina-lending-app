@@ -17,6 +17,7 @@ TARGET = '_spina_v27_build_collectors_tab'
 EXPECTED_LINES = 293
 EXPECTED_SHA256 = '5ce718e8f43404331b044d2f3f43b81dc34b0782a15d45a317121e61da6701cb'
 EXPECTED_SIGNATURE = 'self'
+EXPECTED_NESTED = ['_set_sort', '_select_status', '_popup', '_on_search']
 SQL_WRITE_RE = re.compile(r'\b(?:INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|REPLACE\s+INTO|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE)\b', re.I)
 
 
@@ -56,7 +57,7 @@ def main() -> None:
     assert module.COLLECTOR_TAB_SOURCE_LINES == EXPECTED_LINES
     assert module.COLLECTOR_TAB_SOURCE_SHA256 == EXPECTED_SHA256
     assert module.COLLECTOR_TAB_SIGNATURE == EXPECTED_SIGNATURE
-    assert module.COLLECTOR_TAB_NESTED_CALLBACKS == []
+    assert module.COLLECTOR_TAB_NESTED_CALLBACKS == EXPECTED_NESTED
 
     module_text = MODULE_PATH.read_text(encoding='utf-8')
     module_lines = module_text.splitlines()
@@ -68,7 +69,19 @@ def main() -> None:
     assert len(fn_source.splitlines()) == EXPECTED_LINES
     assert hashlib.sha256(normalized(fn_source).encode()).hexdigest() == EXPECTED_SHA256
     assert signature_text(fn) == EXPECTED_SIGNATURE
-    assert [n.name for n in fn.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))] == []
+    nested = [
+        node.name
+        for node in sorted(
+            (
+                node
+                for node in ast.walk(fn)
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and node is not fn
+            ),
+            key=lambda node: node.lineno,
+        )
+    ]
+    assert nested == EXPECTED_NESTED
 
     calls = sorted({dotted(n.func) for n in ast.walk(fn) if isinstance(n, ast.Call) and dotted(n.func)})
     assert calls == module.COLLECTOR_TAB_CALLS

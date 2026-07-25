@@ -5522,7 +5522,6 @@
       "spina_app/collector_dialog_presentation.py:21:spina_app.collector_dialog_presentation.configure_collector_dialog_dependencies",
       "spina_app/collector_dialog_presentation.py:36:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog",
       "spina_app/collector_refresh_presentation.py:14:spina_app.collector_refresh_presentation.configure_collector_refresh_dependencies",
-      "spina_app/collector_tab_presentation.py:20:spina_app.collector_tab_presentation.configure_collector_tab_dependencies",
       "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
       "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
       "spina_app/long_task_presentation.py:21:spina_app.long_task_presentation.configure_long_task_dependencies",
@@ -11366,7 +11365,7 @@
         "tools/test_collector_refresh_presentation_wave_39.py:35:tools.test_collector_refresh_presentation_wave_39.main",
         "tools/test_collector_route_card_batch_13.py:183:tools.test_collector_route_card_batch_13.main",
         "tools/test_collector_route_presentation_wave_23.py:28:tools.test_collector_route_presentation_wave_23.main",
-        "tools/test_collector_tab_presentation_wave_44.py:53:tools.test_collector_tab_presentation_wave_44.main",
+        "tools/test_collector_tab_presentation_wave_44.py:54:tools.test_collector_tab_presentation_wave_44.main",
         "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
         "tools/test_collectors_editor_wave_26.py:248:tools.test_collectors_editor_wave_26.main",
         "tools/test_collectors_summary_wave_22.py:23:tools.test_collectors_summary_wave_22.main",
@@ -11429,7 +11428,7 @@
         "tools/test_client_history_presentation_wave_36.py:19:tools.test_client_history_presentation_wave_36.normalized",
         "tools/test_collector_dialog_presentation_wave_43.py:25:tools.test_collector_dialog_presentation_wave_43.normalized",
         "tools/test_collector_refresh_presentation_wave_39.py:21:tools.test_collector_refresh_presentation_wave_39.normalized",
-        "tools/test_collector_tab_presentation_wave_44.py:23:tools.test_collector_tab_presentation_wave_44.normalized",
+        "tools/test_collector_tab_presentation_wave_44.py:24:tools.test_collector_tab_presentation_wave_44.normalized",
         "tools/test_long_task_presentation_wave_42.py:24:tools.test_long_task_presentation_wave_42.normalized",
         "tools/test_note_editor_presentation_wave_40.py:20:tools.test_note_editor_presentation_wave_40.normalized",
         "tools/test_theme_presentation_wave_35.py:18:tools.test_theme_presentation_wave_35.normalized"
@@ -11541,7 +11540,7 @@
       "source_for": [
         "tools/test_collector_dialog_presentation_wave_43.py:43:tools.test_collector_dialog_presentation_wave_43.source_for",
         "tools/test_collector_route_presentation_wave_23.py:24:tools.test_collector_route_presentation_wave_23.source_for",
-        "tools/test_collector_tab_presentation_wave_44.py:40:tools.test_collector_tab_presentation_wave_44.source_for",
+        "tools/test_collector_tab_presentation_wave_44.py:41:tools.test_collector_tab_presentation_wave_44.source_for",
         "tools/test_collectors_editor_wave_26.py:23:tools.test_collectors_editor_wave_26.source_for",
         "tools/test_collectors_summary_wave_22.py:19:tools.test_collectors_summary_wave_22.source_for",
         "tools/test_dashboard_visibility_wave_24.py:17:tools.test_dashboard_visibility_wave_24.source_for",
@@ -13323,11 +13322,11 @@
         "tools/test_collector_route_card_batch_13.py:80:tools.test_collector_route_card_batch_13._source_function",
         "tools/test_collector_route_presentation_wave_23.py:24:tools.test_collector_route_presentation_wave_23.source_for",
         "tools/test_collector_route_presentation_wave_23.py:28:tools.test_collector_route_presentation_wave_23.main",
-        "tools/test_collector_tab_presentation_wave_44.py:27:tools.test_collector_tab_presentation_wave_44.dotted",
-        "tools/test_collector_tab_presentation_wave_44.py:36:tools.test_collector_tab_presentation_wave_44.top_functions",
-        "tools/test_collector_tab_presentation_wave_44.py:40:tools.test_collector_tab_presentation_wave_44.source_for",
-        "tools/test_collector_tab_presentation_wave_44.py:44:tools.test_collector_tab_presentation_wave_44.signature_text",
-        "tools/test_collector_tab_presentation_wave_44.py:53:tools.test_collector_tab_presentation_wave_44.main",
+        "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted",
+        "tools/test_collector_tab_presentation_wave_44.py:37:tools.test_collector_tab_presentation_wave_44.top_functions",
+        "tools/test_collector_tab_presentation_wave_44.py:41:tools.test_collector_tab_presentation_wave_44.source_for",
+        "tools/test_collector_tab_presentation_wave_44.py:45:tools.test_collector_tab_presentation_wave_44.signature_text",
+        "tools/test_collector_tab_presentation_wave_44.py:54:tools.test_collector_tab_presentation_wave_44.main",
         "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
         "tools/test_collector_tab_widget_smoke_wave_44.py:58:tools.test_collector_tab_widget_smoke_wave_44._hidden_widgets",
         "tools/test_collector_tab_widget_smoke_wave_44.py:64:tools.test_collector_tab_widget_smoke_wave_44._update_cards",
@@ -13938,7 +13937,7 @@
         "tools/test_client_read_queries_wave_31.py:16:tools.test_client_read_queries_wave_31.normalized_source",
         "tools/test_collector_dialog_presentation_wave_43.py:25:tools.test_collector_dialog_presentation_wave_43.normalized",
         "tools/test_collector_refresh_presentation_wave_39.py:21:tools.test_collector_refresh_presentation_wave_39.normalized",
-        "tools/test_collector_tab_presentation_wave_44.py:23:tools.test_collector_tab_presentation_wave_44.normalized",
+        "tools/test_collector_tab_presentation_wave_44.py:24:tools.test_collector_tab_presentation_wave_44.normalized",
         "tools/test_date_display_helper_extraction.py:44:tools.test_date_display_helper_extraction._validate_signature",
         "tools/test_date_helpers_extraction.py:50:tools.test_date_helpers_extraction._validate_signature",
         "tools/test_display_formatter_extraction.py:43:tools.test_display_formatter_extraction._validate_signature",
@@ -14128,7 +14127,7 @@
       "self.db": [
         "tools/test_calendar_presentation_wave_41.py:34:tools.test_calendar_presentation_wave_41.main",
         "tools/test_collector_dialog_presentation_wave_43.py:47:tools.test_collector_dialog_presentation_wave_43.main",
-        "tools/test_collector_tab_presentation_wave_44.py:53:tools.test_collector_tab_presentation_wave_44.main",
+        "tools/test_collector_tab_presentation_wave_44.py:54:tools.test_collector_tab_presentation_wave_44.main",
         "tools/test_long_task_presentation_wave_42.py:38:tools.test_long_task_presentation_wave_42.main",
         "tools/test_note_editor_presentation_wave_40.py:34:tools.test_note_editor_presentation_wave_40.main"
       ],
@@ -14865,42 +14864,6 @@
         "target": "module._spina_v27_route_colors"
       },
       {
-        "line": 139,
-        "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
-        "source": "_route_colors",
-        "target": "presentation._spina_v27_route_colors"
-      },
-      {
-        "line": 140,
-        "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
-        "source": "_route_button",
-        "target": "presentation._spina_v27_route_button"
-      },
-      {
-        "line": 141,
-        "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
-        "source": "_route_card",
-        "target": "presentation._spina_v27_route_card"
-      },
-      {
-        "line": 142,
-        "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
-        "source": "_style_route_trees",
-        "target": "presentation._spina_v27_style_route_trees"
-      },
-      {
-        "line": 143,
-        "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
-        "source": "_hidden_widgets",
-        "target": "presentation._spina_v27_hidden_collector_widgets"
-      },
-      {
-        "line": 144,
-        "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
-        "source": "_update_cards",
-        "target": "presentation._spina_v27_update_route_cards"
-      },
-      {
         "line": 172,
         "owner": "tools/test_collectors_editor_wave_26.py:169:tools.test_collectors_editor_wave_26.behavior_checks",
         "source": "FakeTree",
@@ -15628,7 +15591,6 @@
       "spina_app/collector_dialog_presentation.py:21:spina_app.collector_dialog_presentation.configure_collector_dialog_dependencies",
       "spina_app/collector_dialog_presentation.py:36:spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog",
       "spina_app/collector_refresh_presentation.py:14:spina_app.collector_refresh_presentation.configure_collector_refresh_dependencies",
-      "spina_app/collector_tab_presentation.py:20:spina_app.collector_tab_presentation.configure_collector_tab_dependencies",
       "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
       "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
       "spina_app/long_task_presentation.py:21:spina_app.long_task_presentation.configure_long_task_dependencies",
@@ -15733,6 +15695,12 @@
       "tools/test_collector_route_card_batch_13.py:58:tools.test_collector_route_card_batch_13._WidgetFactory.__call__",
       "tools/test_collector_tab_widget_smoke_wave_44.py:113:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._collectors_name_from_values",
       "tools/test_collector_tab_widget_smoke_wave_44.py:116:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._schedule_collectors_refresh",
+      "tools/test_collector_tab_widget_smoke_wave_44.py:32:tools.test_collector_tab_widget_smoke_wave_44._route_colors",
+      "tools/test_collector_tab_widget_smoke_wave_44.py:36:tools.test_collector_tab_widget_smoke_wave_44._route_button",
+      "tools/test_collector_tab_widget_smoke_wave_44.py:41:tools.test_collector_tab_widget_smoke_wave_44._route_card",
+      "tools/test_collector_tab_widget_smoke_wave_44.py:53:tools.test_collector_tab_widget_smoke_wave_44._style_route_trees",
+      "tools/test_collector_tab_widget_smoke_wave_44.py:58:tools.test_collector_tab_widget_smoke_wave_44._hidden_widgets",
+      "tools/test_collector_tab_widget_smoke_wave_44.py:64:tools.test_collector_tab_widget_smoke_wave_44._update_cards",
       "tools/test_collectors_editor_wave_26.py:101:tools.test_collectors_editor_wave_26.FakeListbox.delete",
       "tools/test_collectors_editor_wave_26.py:119:tools.test_collectors_editor_wave_26.FakeText.delete",
       "tools/test_collectors_editor_wave_26.py:121:tools.test_collectors_editor_wave_26.FakeText.insert",
@@ -16357,7 +16325,7 @@
         "tools/test_collector_route_card_batch_13.py:76:tools.test_collector_route_card_batch_13._load_manifest",
         "tools/test_collector_route_card_batch_13.py:80:tools.test_collector_route_card_batch_13._source_function",
         "tools/test_collector_route_presentation_wave_23.py:28:tools.test_collector_route_presentation_wave_23.main",
-        "tools/test_collector_tab_presentation_wave_44.py:53:tools.test_collector_tab_presentation_wave_44.main",
+        "tools/test_collector_tab_presentation_wave_44.py:54:tools.test_collector_tab_presentation_wave_44.main",
         "tools/test_collectors_editor_wave_26.py:138:tools.test_collectors_editor_wave_26.static_checks",
         "tools/test_collectors_summary_wave_22.py:23:tools.test_collectors_summary_wave_22.main",
         "tools/test_dashboard_feature_wave_17.py:33:tools.test_dashboard_feature_wave_17._functions",
@@ -17627,11 +17595,11 @@
         "tools/test_collector_route_card_batch_13.py:58:tools.test_collector_route_card_batch_13._WidgetFactory.__call__",
         "tools/test_collector_route_card_batch_13.py:70:tools.test_collector_route_card_batch_13._route_palette",
         "tools/test_collector_route_presentation_wave_23.py:24:tools.test_collector_route_presentation_wave_23.source_for",
-        "tools/test_collector_tab_presentation_wave_44.py:23:tools.test_collector_tab_presentation_wave_44.normalized",
-        "tools/test_collector_tab_presentation_wave_44.py:27:tools.test_collector_tab_presentation_wave_44.dotted",
-        "tools/test_collector_tab_presentation_wave_44.py:36:tools.test_collector_tab_presentation_wave_44.top_functions",
-        "tools/test_collector_tab_presentation_wave_44.py:40:tools.test_collector_tab_presentation_wave_44.source_for",
-        "tools/test_collector_tab_presentation_wave_44.py:44:tools.test_collector_tab_presentation_wave_44.signature_text",
+        "tools/test_collector_tab_presentation_wave_44.py:24:tools.test_collector_tab_presentation_wave_44.normalized",
+        "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted",
+        "tools/test_collector_tab_presentation_wave_44.py:37:tools.test_collector_tab_presentation_wave_44.top_functions",
+        "tools/test_collector_tab_presentation_wave_44.py:41:tools.test_collector_tab_presentation_wave_44.source_for",
+        "tools/test_collector_tab_presentation_wave_44.py:45:tools.test_collector_tab_presentation_wave_44.signature_text",
         "tools/test_collector_tab_widget_smoke_wave_44.py:101:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_unassigned_areas",
         "tools/test_collector_tab_widget_smoke_wave_44.py:104:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_no_area_clients",
         "tools/test_collector_tab_widget_smoke_wave_44.py:107:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_conflicts",
@@ -18934,7 +18902,7 @@
         "_PROTECTED_GLOBALS"
       ],
       "monkey_patches": [],
-      "sha256": "87a962bc45a21af17b79145fd99152f2bb08da4561cf539c0756d433f92b12f2",
+      "sha256": "7174459b674193e3da6de6d10c41ccd20560633f675fc11298a236393d93bf0a",
       "syntax_ok": true
     },
     {
@@ -21446,11 +21414,12 @@
         "re": "re",
         "sys": "sys"
       },
-      "lines": 123,
+      "lines": 136,
       "module": "tools.test_collector_tab_presentation_wave_44",
       "module_globals": [
         "DESKTOP",
         "EXPECTED_LINES",
+        "EXPECTED_NESTED",
         "EXPECTED_SHA256",
         "EXPECTED_SIGNATURE",
         "MODULE_PATH",
@@ -21459,7 +21428,7 @@
         "TARGET"
       ],
       "monkey_patches": [],
-      "sha256": "8dce368a8cb9a06b63f9037755eb86fc130077ae1cc46fbc5362a0331170f032",
+      "sha256": "346dc4126a8c75a3e021f6b26628ed61740618e627299dfc44251f4ea6c9061e",
       "syntax_ok": true
     },
     {
@@ -21473,14 +21442,14 @@
         "tk": "tkinter",
         "ttk": "tkinter.ttk"
       },
-      "lines": 199,
+      "lines": 206,
       "module": "tools.test_collector_tab_widget_smoke_wave_44",
       "module_globals": [
         "COLORS",
         "ROOT"
       ],
       "monkey_patches": [],
-      "sha256": "181b894edc9b1359780a54d638fd840b86f9dff9029e0b8e5ec2b866de8c94fd",
+      "sha256": "f60d36a806826c1f3da7b780591cb089d9758a4b229cf8857a4716832a3dcb4e",
       "syntax_ok": true
     },
     {
@@ -22504,17 +22473,17 @@
     "duplicate_names": 91,
     "functions": 1308,
     "methods": 503,
-    "monkey_patches": 136,
+    "monkey_patches": 130,
     "nested_functions": 381,
     "parse_errors": 0,
-    "possible_orphans": 122,
+    "possible_orphans": 121,
     "python_files": 165,
     "repository_database_tables": 19,
     "repository_duplicate_names": 243,
-    "repository_possible_orphans": 238,
-    "resolved_call_edges": 3704,
+    "repository_possible_orphans": 243,
+    "resolved_call_edges": 3705,
     "symbols": 2284,
-    "total_python_lines": 73944,
+    "total_python_lines": 73964,
     "ui_callback_edges": 500
   },
   "symbols": [
@@ -73733,7 +73702,9 @@
         "namespace"
       ],
       "callbacks": [],
-      "callers": [],
+      "callers": [
+        "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main"
+      ],
       "calls_raw": [
         "_COLLECTOR_TAB_DEPENDENCIES.clear",
         "_COLLECTOR_TAB_DEPENDENCIES.update",
@@ -117118,7 +117089,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/test_collector_tab_presentation_wave_44.py:53:tools.test_collector_tab_presentation_wave_44.main"
+        "tools/test_collector_tab_presentation_wave_44.py:54:tools.test_collector_tab_presentation_wave_44.main"
       ],
       "calls_raw": [
         "join",
@@ -117130,16 +117101,16 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 24,
+      "end_line": 25,
       "feature": "utilities",
       "file": "tools/test_collector_tab_presentation_wave_44.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "tools/test_collector_tab_presentation_wave_44.py:23:tools.test_collector_tab_presentation_wave_44.normalized",
+      "id": "tools/test_collector_tab_presentation_wave_44.py:24:tools.test_collector_tab_presentation_wave_44.normalized",
       "imports_used": [],
       "kind": "function",
-      "line": 23,
+      "line": 24,
       "lines": 2,
       "monkey_patches": [],
       "name": "normalized",
@@ -117156,31 +117127,31 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/test_collector_tab_presentation_wave_44.py:27:tools.test_collector_tab_presentation_wave_44.dotted",
-        "tools/test_collector_tab_presentation_wave_44.py:53:tools.test_collector_tab_presentation_wave_44.main"
+        "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted",
+        "tools/test_collector_tab_presentation_wave_44.py:54:tools.test_collector_tab_presentation_wave_44.main"
       ],
       "calls_raw": [
         "dotted",
         "isinstance"
       ],
       "calls_resolved": [
-        "tools/test_collector_tab_presentation_wave_44.py:27:tools.test_collector_tab_presentation_wave_44.dotted"
+        "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted"
       ],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 33,
+      "end_line": 34,
       "feature": "other",
       "file": "tools/test_collector_tab_presentation_wave_44.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "tools/test_collector_tab_presentation_wave_44.py:27:tools.test_collector_tab_presentation_wave_44.dotted",
+      "id": "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted",
       "imports_used": [
         "ast"
       ],
       "kind": "function",
-      "line": 27,
+      "line": 28,
       "lines": 7,
       "monkey_patches": [],
       "name": "dotted",
@@ -117198,7 +117169,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/test_collector_tab_presentation_wave_44.py:53:tools.test_collector_tab_presentation_wave_44.main"
+        "tools/test_collector_tab_presentation_wave_44.py:54:tools.test_collector_tab_presentation_wave_44.main"
       ],
       "calls_raw": [
         "isinstance"
@@ -117207,18 +117178,18 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 37,
+      "end_line": 38,
       "feature": "other",
       "file": "tools/test_collector_tab_presentation_wave_44.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "tools/test_collector_tab_presentation_wave_44.py:36:tools.test_collector_tab_presentation_wave_44.top_functions",
+      "id": "tools/test_collector_tab_presentation_wave_44.py:37:tools.test_collector_tab_presentation_wave_44.top_functions",
       "imports_used": [
         "ast"
       ],
       "kind": "function",
-      "line": 36,
+      "line": 37,
       "lines": 2,
       "monkey_patches": [],
       "name": "top_functions",
@@ -117236,7 +117207,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/test_collector_tab_presentation_wave_44.py:53:tools.test_collector_tab_presentation_wave_44.main"
+        "tools/test_collector_tab_presentation_wave_44.py:54:tools.test_collector_tab_presentation_wave_44.main"
       ],
       "calls_raw": [
         "join"
@@ -117245,16 +117216,16 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 41,
+      "end_line": 42,
       "feature": "other",
       "file": "tools/test_collector_tab_presentation_wave_44.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "tools/test_collector_tab_presentation_wave_44.py:40:tools.test_collector_tab_presentation_wave_44.source_for",
+      "id": "tools/test_collector_tab_presentation_wave_44.py:41:tools.test_collector_tab_presentation_wave_44.source_for",
       "imports_used": [],
       "kind": "function",
-      "line": 40,
+      "line": 41,
       "lines": 2,
       "monkey_patches": [],
       "name": "source_for",
@@ -117271,7 +117242,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/test_collector_tab_presentation_wave_44.py:53:tools.test_collector_tab_presentation_wave_44.main"
+        "tools/test_collector_tab_presentation_wave_44.py:54:tools.test_collector_tab_presentation_wave_44.main"
       ],
       "calls_raw": [
         "args.append",
@@ -117285,18 +117256,18 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 50,
+      "end_line": 51,
       "feature": "other",
       "file": "tools/test_collector_tab_presentation_wave_44.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "tools/test_collector_tab_presentation_wave_44.py:44:tools.test_collector_tab_presentation_wave_44.signature_text",
+      "id": "tools/test_collector_tab_presentation_wave_44.py:45:tools.test_collector_tab_presentation_wave_44.signature_text",
       "imports_used": [
         "ast"
       ],
       "kind": "function",
-      "line": 44,
+      "line": 45,
       "lines": 7,
       "monkey_patches": [],
       "name": "signature_text",
@@ -117339,16 +117310,16 @@
         "top_functions"
       ],
       "calls_resolved": [
-        "tools/test_collector_tab_presentation_wave_44.py:23:tools.test_collector_tab_presentation_wave_44.normalized",
-        "tools/test_collector_tab_presentation_wave_44.py:27:tools.test_collector_tab_presentation_wave_44.dotted",
-        "tools/test_collector_tab_presentation_wave_44.py:36:tools.test_collector_tab_presentation_wave_44.top_functions",
-        "tools/test_collector_tab_presentation_wave_44.py:40:tools.test_collector_tab_presentation_wave_44.source_for",
-        "tools/test_collector_tab_presentation_wave_44.py:44:tools.test_collector_tab_presentation_wave_44.signature_text"
+        "tools/test_collector_tab_presentation_wave_44.py:24:tools.test_collector_tab_presentation_wave_44.normalized",
+        "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted",
+        "tools/test_collector_tab_presentation_wave_44.py:37:tools.test_collector_tab_presentation_wave_44.top_functions",
+        "tools/test_collector_tab_presentation_wave_44.py:41:tools.test_collector_tab_presentation_wave_44.source_for",
+        "tools/test_collector_tab_presentation_wave_44.py:45:tools.test_collector_tab_presentation_wave_44.signature_text"
       ],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 119,
+      "end_line": 132,
       "feature": "other",
       "file": "tools/test_collector_tab_presentation_wave_44.py",
       "file_paths": [
@@ -117357,6 +117328,7 @@
       "globals_read": [
         "DESKTOP",
         "EXPECTED_LINES",
+        "EXPECTED_NESTED",
         "EXPECTED_SHA256",
         "EXPECTED_SIGNATURE",
         "MODULE_PATH",
@@ -117364,15 +117336,15 @@
         "TARGET"
       ],
       "globals_written": [],
-      "id": "tools/test_collector_tab_presentation_wave_44.py:53:tools.test_collector_tab_presentation_wave_44.main",
+      "id": "tools/test_collector_tab_presentation_wave_44.py:54:tools.test_collector_tab_presentation_wave_44.main",
       "imports_used": [
         "ast",
         "hashlib",
         "importlib"
       ],
       "kind": "function",
-      "line": 53,
-      "lines": 67,
+      "line": 54,
+      "lines": 79,
       "monkey_patches": [],
       "name": "main",
       "parent": null,
@@ -117383,7 +117355,7 @@
         "filesystem",
         "reports"
       ],
-      "source_sha256": "9946e1695eb346687bd2e6a060748b61d0cfcc95a17baa9376ba6032977240d1"
+      "source_sha256": "8644a0401d0dabe65a3e02b5ab1a715204dd55150d09e1ec3e4a36e747c243ac"
     },
     {
       "args": [
@@ -118152,10 +118124,13 @@
         "app.collectors_tree.get_children",
         "app.collectors_tree.selection_set",
         "app.collectors_tree.winfo_exists",
+        "dependencies.items",
         "errors.append",
+        "getattr",
         "len",
         "logged.append",
         "presentation._spina_v27_build_collectors_tab",
+        "presentation.configure_collector_tab_dependencies",
         "print",
         "root.destroy",
         "root.update",
@@ -118167,6 +118142,7 @@
         "tuple"
       ],
       "calls_resolved": [
+        "spina_app/collector_tab_presentation.py:20:spina_app.collector_tab_presentation.configure_collector_tab_dependencies",
         "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab",
         "tools/test_collector_tab_widget_smoke_wave_44.py:77:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp",
         "tools/test_collectors_editor_wave_26.py:112:tools.test_collectors_editor_wave_26.FakeListbox.selection_set",
@@ -118175,7 +118151,7 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 195,
+      "end_line": 202,
       "feature": "other",
       "file": "tools/test_collector_tab_widget_smoke_wave_44.py",
       "file_paths": [],
@@ -118188,39 +118164,8 @@
       ],
       "kind": "function",
       "line": 133,
-      "lines": 63,
-      "monkey_patches": [
-        {
-          "line": 139,
-          "source": "_route_colors",
-          "target": "presentation._spina_v27_route_colors"
-        },
-        {
-          "line": 140,
-          "source": "_route_button",
-          "target": "presentation._spina_v27_route_button"
-        },
-        {
-          "line": 141,
-          "source": "_route_card",
-          "target": "presentation._spina_v27_route_card"
-        },
-        {
-          "line": 142,
-          "source": "_style_route_trees",
-          "target": "presentation._spina_v27_style_route_trees"
-        },
-        {
-          "line": 143,
-          "source": "_hidden_widgets",
-          "target": "presentation._spina_v27_hidden_collector_widgets"
-        },
-        {
-          "line": 144,
-          "source": "_update_cards",
-          "target": "presentation._spina_v27_update_route_cards"
-        }
-      ],
+      "lines": 70,
+      "monkey_patches": [],
       "name": "main",
       "parent": null,
       "purpose": "Handles main for the other feature.",
@@ -118230,7 +118175,7 @@
         "reports",
         "ui_only"
       ],
-      "source_sha256": "c6593cad046008f8280f2c1173365b90e665c9e23973aade73316676915446f5"
+      "source_sha256": "d6c5c33032b9fa52fd353580ddfa7e6a317767e610df2fcb5d4aa2476720efb3"
     },
     {
       "args": [

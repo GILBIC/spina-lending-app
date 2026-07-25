@@ -136,13 +136,20 @@ def main() -> None:
     root = tk.Tk()
     root.withdraw()
     try:
-        presentation._spina_v27_route_colors = _route_colors
-        presentation._spina_v27_route_button = _route_button
-        presentation._spina_v27_route_card = _route_card
-        presentation._spina_v27_style_route_trees = _style_route_trees
-        presentation._spina_v27_hidden_collector_widgets = _hidden_widgets
-        presentation._spina_v27_update_route_cards = _update_cards
-        presentation._log_exc = lambda context, exc: logged.append((context, str(exc)))
+        logged_callback = lambda context, exc: logged.append((context, str(exc)))
+        dependencies = {
+            '_spina_v27_route_colors': _route_colors,
+            '_spina_v27_route_button': _route_button,
+            '_spina_v27_route_card': _route_card,
+            '_spina_v27_style_route_trees': _style_route_trees,
+            '_spina_v27_hidden_collector_widgets': _hidden_widgets,
+            '_spina_v27_update_route_cards': _update_cards,
+            '_log_exc': logged_callback,
+        }
+        presentation.configure_collector_tab_dependencies(dependencies)
+        assert presentation._COLLECTOR_TAB_DEPENDENCIES == dependencies
+        for name, value in dependencies.items():
+            assert getattr(presentation, name) is value
         presentation.messagebox.showerror = lambda title, message: errors.append((title, message))
 
         app = FakeCollectorApp(root)

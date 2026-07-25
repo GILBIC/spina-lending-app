@@ -2,7 +2,7 @@
 
 Generated from commit `d42bf000e599c40eb62af008994b5ea9bda416e3`.
 
-Scanned **165 Python files**, **73,944 lines**, and **2,284 symbols**.
+Scanned **165 Python files**, **73,964 lines**, and **2,284 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -2270,7 +2270,6 @@ Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._
 - `spina_app.collector_dialog_presentation.configure_collector_dialog_dependencies` — spina_app/collector_dialog_presentation.py:21
 - `spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog` — spina_app/collector_dialog_presentation.py:36
 - `spina_app.collector_refresh_presentation.configure_collector_refresh_dependencies` — spina_app/collector_refresh_presentation.py:14
-- `spina_app.collector_tab_presentation.configure_collector_tab_dependencies` — spina_app/collector_tab_presentation.py:20
 - `spina_app.linked_client_queries.configure_linked_client_query_dependencies` — spina_app/linked_client_queries.py:27
 - `spina_app.loan_context_queries.configure_loan_context_dependencies` — spina_app/loan_context_queries.py:5
 - `spina_app.long_task_presentation.configure_long_task_dependencies` — spina_app/long_task_presentation.py:21

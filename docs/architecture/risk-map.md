@@ -2,7 +2,7 @@
 
 Generated from commit `d42bf000e599c40eb62af008994b5ea9bda416e3`.
 
-Scanned **165 Python files**, **73,944 lines**, and **2,284 symbols**.
+Scanned **165 Python files**, **73,964 lines**, and **2,284 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 

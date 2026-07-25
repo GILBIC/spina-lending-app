@@ -2,7 +2,7 @@
 
 Generated from commit `d42bf000e599c40eb62af008994b5ea9bda416e3`.
 
-Scanned **165 Python files**, **73,944 lines**, and **2,284 symbols**.
+Scanned **165 Python files**, **73,964 lines**, and **2,284 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -2260,12 +2260,12 @@ Scanned **165 Python files**, **73,944 lines**, and **2,284 symbols**.
 
 ## `tools/test_collector_tab_presentation_wave_44.py`
 
-- **tools.test_collector_tab_presentation_wave_44.normalized** (function, lines 23–24, 2 lines, risk `support`): Handles normalized for the utilities feature.
-- **tools.test_collector_tab_presentation_wave_44.dotted** (function, lines 27–33, 7 lines, risk `support`): Handles dotted for the other feature.
-- **tools.test_collector_tab_presentation_wave_44.top_functions** (function, lines 36–37, 2 lines, risk `support`): Handles top functions for the other feature.
-- **tools.test_collector_tab_presentation_wave_44.source_for** (function, lines 40–41, 2 lines, risk `support`): Handles source for for the other feature.
-- **tools.test_collector_tab_presentation_wave_44.signature_text** (function, lines 44–50, 7 lines, risk `support`): Handles signature text for the other feature.
-- **tools.test_collector_tab_presentation_wave_44.main** (function, lines 53–119, 67 lines, risk `filesystem`): Handles main for the other feature.
+- **tools.test_collector_tab_presentation_wave_44.normalized** (function, lines 24–25, 2 lines, risk `support`): Handles normalized for the utilities feature.
+- **tools.test_collector_tab_presentation_wave_44.dotted** (function, lines 28–34, 7 lines, risk `support`): Handles dotted for the other feature.
+- **tools.test_collector_tab_presentation_wave_44.top_functions** (function, lines 37–38, 2 lines, risk `support`): Handles top functions for the other feature.
+- **tools.test_collector_tab_presentation_wave_44.source_for** (function, lines 41–42, 2 lines, risk `support`): Handles source for for the other feature.
+- **tools.test_collector_tab_presentation_wave_44.signature_text** (function, lines 45–51, 7 lines, risk `support`): Handles signature text for the other feature.
+- **tools.test_collector_tab_presentation_wave_44.main** (function, lines 54–132, 79 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_collector_tab_widget_smoke_wave_44.py`
 
@@ -2289,7 +2289,7 @@ Scanned **165 Python files**, **73,944 lines**, and **2,284 symbols**.
 - **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._collectors_name_from_values** (method, lines 113–114, 2 lines, risk `support`): Handles collectors name from values for the collectors feature.
 - **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._schedule_collectors_refresh** (method, lines 116–117, 2 lines, risk `support`): Handles schedule collectors refresh for the collectors feature.
 - **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.refresh_collectors** (method, lines 119–130, 12 lines, risk `support`): Refreshes refresh collectors for the collectors feature.
-- **tools.test_collector_tab_widget_smoke_wave_44.main** (function, lines 133–195, 63 lines, risk `reports`): Handles main for the other feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.main** (function, lines 133–202, 70 lines, risk `reports`): Handles main for the other feature.
 
 ## `tools/test_collectors_editor_wave_26.py`
 
