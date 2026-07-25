@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "cd281e0a9e0a6026b66f8fde1f8b6bb8e9d0ea5b",
+  "generated_from_commit": "f1445f0f913395c006f1bfdc05ebf9cb532efbf3",
   "indexes": {
     "application_callbacks": [
       {
@@ -3723,8 +3723,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37703:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37877:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7097:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._access_prefs_path",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7102:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7116:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_user_role",
@@ -3742,6 +3742,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7759:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role._cancel",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7794:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._remove_role_overlays",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7869:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.apply_role_access",
+        "spina_app/account_header_presentation.py:16:spina_app.account_header_presentation.configure_account_header_dependencies",
+        "spina_app/account_header_presentation.py:31:spina_app.account_header_presentation._spina_v32_refresh_user_header",
         "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
         "spina_app/login_dialog_presentation.py:117:spina_app.login_dialog_presentation._spina_v32_prompt_login._toggle_show",
         "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
@@ -3909,9 +3911,9 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36763:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_add_client_dialog",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36815:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_on_client_edit",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:377:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_store_client_picture_to_db",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37929:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37911:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37925:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37926:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3802:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._active_client_name_exists",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3833:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3900:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_term",
@@ -4425,6 +4427,7 @@
       ],
       "navigation": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12386:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_header",
+        "spina_app/account_header_presentation.py:46:spina_app.account_header_presentation._spina_v32_build_header",
         "spina_app/navigation.py:11:spina_app.navigation._noop_log",
         "spina_app/navigation.py:18:spina_app.navigation.fmt_currency",
         "spina_app/navigation.py:201:spina_app.navigation._refresh_side_nav_selection",
@@ -4602,7 +4605,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35761:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v20_fix_chart_titles",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35983:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v21_cash_refresh",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37734:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:526:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:530:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:536:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__getitem__",
@@ -5499,10 +5501,9 @@
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37023:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37877:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37925:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:495:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_patch_reportlab_canvas_save",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:541:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__iter__",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:630:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatCursor.connection",
@@ -5563,9 +5564,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37703:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37877:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7102:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7116:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7147:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._users_db_path",
@@ -5588,6 +5588,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9291:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._close_day",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9352:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._reopen_day",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9381:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._update_workflow",
+        "spina_app/account_header_presentation.py:31:spina_app.account_header_presentation._spina_v32_refresh_user_header",
+        "spina_app/account_header_presentation.py:46:spina_app.account_header_presentation._spina_v32_build_header",
         "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
         "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
         "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok",
@@ -5849,7 +5851,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36308:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.norm_lt",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36412:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._load_pic_preview",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36566:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._parse_float_var",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37925:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3802:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._active_client_name_exists",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3900:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_term",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4092:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_term",
@@ -5955,7 +5957,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2879:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_pdf_header",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36763:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_add_client_dialog",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36815:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_on_client_edit",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37929:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37911:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:495:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_patch_reportlab_canvas_save",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7066:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._on_mode_change",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8007:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._is_client_new",
@@ -6213,7 +6215,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37506:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_get_route_master_areas",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37653:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_default_name",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37734:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37926:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3930:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_weekday",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_dom",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4132:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_weekday",
@@ -6295,6 +6297,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9814:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason.on_cancel",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9839:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_conflicts",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9865:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_unassigned_areas",
+        "spina_app/account_header_presentation.py:16:spina_app.account_header_presentation.configure_account_header_dependencies",
         "spina_app/area_hierarchy.py:255:spina_app.area_hierarchy.ensure_area_hierarchy_ready",
         "spina_app/area_hierarchy.py:25:spina_app.area_hierarchy._now_text",
         "spina_app/area_hierarchy.py:262:spina_app.area_hierarchy.list_area_nodes",
@@ -11212,6 +11215,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:25036:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.do_link"
       ],
       "dotted": [
+        "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
         "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted",
         "tools/test_login_dialog_presentation_wave_45.py:32:tools.test_login_dialog_presentation_wave_45.dotted"
       ],
@@ -11385,6 +11389,8 @@
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
         "tools/spina_quality_audit.py:306:tools.spina_quality_audit.main",
         "tools/spina_startup_diagnostics.py:82:tools.spina_startup_diagnostics.main",
+        "tools/test_account_header_presentation_wave_46.py:104:tools.test_account_header_presentation_wave_46.main",
+        "tools/test_account_header_widget_smoke_wave_46.py:18:tools.test_account_header_widget_smoke_wave_46.main",
         "tools/test_append_unique_text_extraction.py:85:tools.test_append_unique_text_extraction.main",
         "tools/test_architecture_map.py:29:tools.test_architecture_map.main",
         "tools/test_area_picker_presentation_wave_37.py:36:tools.test_area_picker_presentation_wave_37.main",
@@ -11470,6 +11476,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:27794:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger.new_page_headers"
       ],
       "normalized": [
+        "tools/test_account_header_presentation_wave_46.py:45:tools.test_account_header_presentation_wave_46.normalized",
         "tools/test_area_picker_presentation_wave_37.py:18:tools.test_area_picker_presentation_wave_37.normalized",
         "tools/test_calendar_presentation_wave_41.py:20:tools.test_calendar_presentation_wave_41.normalized",
         "tools/test_client_form_presentation_wave_38.py:18:tools.test_client_form_presentation_wave_38.normalized",
@@ -11586,7 +11593,12 @@
         "tools/test_dashboard_feature_wave_17.py:29:tools.test_dashboard_feature_wave_17.Var.set",
         "tools/test_navigation_databank_shell_wave_29.py:190:tools.test_navigation_databank_shell_wave_29.FakeVar.set"
       ],
+      "signature_text": [
+        "tools/test_account_header_presentation_wave_46.py:58:tools.test_account_header_presentation_wave_46.signature_text",
+        "tools/test_collector_tab_presentation_wave_44.py:45:tools.test_collector_tab_presentation_wave_44.signature_text"
+      ],
       "source_for": [
+        "tools/test_account_header_presentation_wave_46.py:75:tools.test_account_header_presentation_wave_46.source_for",
         "tools/test_collector_dialog_presentation_wave_43.py:43:tools.test_collector_dialog_presentation_wave_43.source_for",
         "tools/test_collector_route_presentation_wave_23.py:24:tools.test_collector_route_presentation_wave_23.source_for",
         "tools/test_collector_tab_presentation_wave_44.py:41:tools.test_collector_tab_presentation_wave_44.source_for",
@@ -11701,8 +11713,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37703:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37877:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7097:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._access_prefs_path",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7102:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7116:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_user_role",
@@ -11720,6 +11732,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7759:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role._cancel",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7794:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._remove_role_overlays",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7869:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.apply_role_access",
+        "spina_app/account_header_presentation.py:16:spina_app.account_header_presentation.configure_account_header_dependencies",
+        "spina_app/account_header_presentation.py:31:spina_app.account_header_presentation._spina_v32_refresh_user_header",
         "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
         "spina_app/login_dialog_presentation.py:117:spina_app.login_dialog_presentation._spina_v32_prompt_login._toggle_show",
         "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
@@ -11894,9 +11908,9 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36763:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_add_client_dialog",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36815:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_on_client_edit",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:377:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_store_client_picture_to_db",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37929:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37911:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37925:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37926:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3802:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._active_client_name_exists",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3833:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3900:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_term",
@@ -12443,6 +12457,7 @@
       ],
       "navigation": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12386:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_header",
+        "spina_app/account_header_presentation.py:46:spina_app.account_header_presentation._spina_v32_build_header",
         "spina_app/navigation.py:11:spina_app.navigation._noop_log",
         "spina_app/navigation.py:18:spina_app.navigation.fmt_currency",
         "spina_app/navigation.py:201:spina_app.navigation._refresh_side_nav_selection",
@@ -12634,7 +12649,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35761:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v20_fix_chart_titles",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35983:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v21_cash_refresh",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37734:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:526:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:530:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:536:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__getitem__",
@@ -13185,6 +13199,14 @@
         "tools/spina_startup_diagnostics.py:46:tools.spina_startup_diagnostics.check_psycopg",
         "tools/spina_startup_diagnostics.py:54:tools.spina_startup_diagnostics.check_tcp",
         "tools/spina_startup_diagnostics.py:82:tools.spina_startup_diagnostics.main",
+        "tools/test_account_header_presentation_wave_46.py:104:tools.test_account_header_presentation_wave_46.main",
+        "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
+        "tools/test_account_header_presentation_wave_46.py:58:tools.test_account_header_presentation_wave_46.signature_text",
+        "tools/test_account_header_presentation_wave_46.py:75:tools.test_account_header_presentation_wave_46.source_for",
+        "tools/test_account_header_presentation_wave_46.py:79:tools.test_account_header_presentation_wave_46.function_defs",
+        "tools/test_account_header_presentation_wave_46.py:83:tools.test_account_header_presentation_wave_46.check_function",
+        "tools/test_account_header_widget_smoke_wave_46.py:14:tools.test_account_header_widget_smoke_wave_46.Harness",
+        "tools/test_account_header_widget_smoke_wave_46.py:18:tools.test_account_header_widget_smoke_wave_46.main",
         "tools/test_append_unique_text_extraction.py:62:tools.test_append_unique_text_extraction.capture_behavior",
         "tools/test_append_unique_text_extraction.py:85:tools.test_append_unique_text_extraction.main",
         "tools/test_architecture_map.py:106:tools.test_architecture_map.main.feature_for_suffix",
@@ -14006,6 +14028,7 @@
         "tools/extract_merge_note_dict.py:97:tools.extract_merge_note_dict.validate_plan",
         "tools/extract_note_dict_helper.py:98:tools.extract_note_dict_helper.validate_plan",
         "tools/extract_numeric_parsers.py:82:tools.extract_numeric_parsers._validate_function",
+        "tools/test_account_header_presentation_wave_46.py:45:tools.test_account_header_presentation_wave_46.normalized",
         "tools/test_append_unique_text_extraction.py:36:tools.test_append_unique_text_extraction.load_helper",
         "tools/test_area_picker_presentation_wave_37.py:18:tools.test_area_picker_presentation_wave_37.normalized",
         "tools/test_calendar_presentation_wave_41.py:20:tools.test_calendar_presentation_wave_41.normalized",
@@ -14203,6 +14226,7 @@
         "tools/test_clients_read_presentation_wave_30.py:142:tools.test_clients_read_presentation_wave_30.assert_focused_behavior"
       ],
       "self.db": [
+        "tools/test_account_header_presentation_wave_46.py:83:tools.test_account_header_presentation_wave_46.check_function",
         "tools/test_calendar_presentation_wave_41.py:34:tools.test_calendar_presentation_wave_41.main",
         "tools/test_collector_dialog_presentation_wave_43.py:47:tools.test_collector_dialog_presentation_wave_43.main",
         "tools/test_collector_tab_presentation_wave_44.py:54:tools.test_collector_tab_presentation_wave_44.main",
@@ -14845,6 +14869,12 @@
         "owner": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:22313:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.auto_attach_enhancements",
         "source": "safe_excel_import",
         "target": "obj.import_from_excel"
+      },
+      {
+        "line": 24,
+        "owner": "tools/test_account_header_widget_smoke_wave_46.py:18:tools.test_account_header_widget_smoke_wave_46.main",
+        "source": "tk.Label",
+        "target": "harness.user_role_label"
       },
       {
         "line": 100,
@@ -15646,10 +15676,9 @@
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37023:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
-      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37877:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37925:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:495:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_patch_reportlab_canvas_save",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:541:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__iter__",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:630:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatCursor.connection",
@@ -15836,9 +15865,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37703:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37877:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7102:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7116:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_user_role",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7147:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._users_db_path",
@@ -15861,6 +15889,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9291:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._close_day",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9352:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._reopen_day",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9381:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._update_workflow",
+        "spina_app/account_header_presentation.py:31:spina_app.account_header_presentation._spina_v32_refresh_user_header",
+        "spina_app/account_header_presentation.py:46:spina_app.account_header_presentation._spina_v32_build_header",
         "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
         "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
         "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok",
@@ -15872,6 +15902,7 @@
         "tools/spina_startup_diagnostics.py:35:tools.spina_startup_diagnostics.check_password",
         "tools/spina_startup_diagnostics.py:62:tools.spina_startup_diagnostics.check_login",
         "tools/spina_startup_diagnostics.py:82:tools.spina_startup_diagnostics.main",
+        "tools/test_account_header_widget_smoke_wave_46.py:18:tools.test_account_header_widget_smoke_wave_46.main",
         "tools/test_login_dialog_widget_smoke_wave_45.py:102:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in",
         "tools/test_login_dialog_widget_smoke_wave_45.py:135:tools.test_login_dialog_widget_smoke_wave_45.run_cancel",
         "tools/test_login_dialog_widget_smoke_wave_45.py:43:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._load_users_db",
@@ -15945,6 +15976,7 @@
         "tools/plan_remaining_pass_only_groups.py:108:tools.plan_remaining_pass_only_groups.PassOnlyVisitor",
         "tools/plan_ui_compatibility_pass_only.py:138:tools.plan_ui_compatibility_pass_only.PassOnlyVisitor",
         "tools/spina_startup_diagnostics.py:17:tools.spina_startup_diagnostics.CheckResult",
+        "tools/test_account_header_widget_smoke_wave_46.py:14:tools.test_account_header_widget_smoke_wave_46.Harness",
         "tools/test_base_theme_palette_batch_11.py:30:tools.test_base_theme_palette_batch_11.Holder",
         "tools/test_base_theme_palette_batch_11.py:36:tools.test_base_theme_palette_batch_11.BadString",
         "tools/test_cash_control_feature_wave_21.py:30:tools.test_cash_control_feature_wave_21.FakeCanvas",
@@ -16223,7 +16255,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36308:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.norm_lt",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36412:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._load_pic_preview",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36566:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form._parse_float_var",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37925:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3802:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._active_client_name_exists",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3900:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_term",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4092:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_term",
@@ -16367,6 +16399,7 @@
         "tools/spina_quality_audit.py:116:tools.spina_quality_audit.audit",
         "tools/spina_quality_audit.py:306:tools.spina_quality_audit.main",
         "tools/spina_startup_diagnostics.py:27:tools.spina_startup_diagnostics.check_python",
+        "tools/test_account_header_presentation_wave_46.py:104:tools.test_account_header_presentation_wave_46.main",
         "tools/test_append_unique_text_extraction.py:36:tools.test_append_unique_text_extraction.load_helper",
         "tools/test_append_unique_text_extraction.py:85:tools.test_append_unique_text_extraction.main",
         "tools/test_architecture_map.py:29:tools.test_architecture_map.main",
@@ -16586,7 +16619,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2879:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_pdf_header",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36763:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_add_client_dialog",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36815:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_on_client_edit",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37929:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37911:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:495:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_patch_reportlab_canvas_save",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7066:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._on_mode_change",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8007:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._is_client_new",
@@ -16876,7 +16909,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37506:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_get_route_master_areas",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37653:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_default_name",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37734:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37926:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3930:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_weekday",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client._norm_dom",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4132:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client._norm_weekday",
@@ -16958,6 +16991,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9814:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason.on_cancel",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9839:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_conflicts",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9865:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_unassigned_areas",
+        "spina_app/account_header_presentation.py:16:spina_app.account_header_presentation.configure_account_header_dependencies",
         "spina_app/area_hierarchy.py:255:spina_app.area_hierarchy.ensure_area_hierarchy_ready",
         "spina_app/area_hierarchy.py:25:spina_app.area_hierarchy._now_text",
         "spina_app/area_hierarchy.py:262:spina_app.area_hierarchy.list_area_nodes",
@@ -17563,6 +17597,12 @@
         "tools/spina_quality_audit.py:95:tools.spina_quality_audit._risk_area",
         "tools/spina_startup_diagnostics.py:23:tools.spina_startup_diagnostics._env",
         "tools/spina_startup_diagnostics.py:46:tools.spina_startup_diagnostics.check_psycopg",
+        "tools/test_account_header_presentation_wave_46.py:45:tools.test_account_header_presentation_wave_46.normalized",
+        "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
+        "tools/test_account_header_presentation_wave_46.py:58:tools.test_account_header_presentation_wave_46.signature_text",
+        "tools/test_account_header_presentation_wave_46.py:75:tools.test_account_header_presentation_wave_46.source_for",
+        "tools/test_account_header_presentation_wave_46.py:79:tools.test_account_header_presentation_wave_46.function_defs",
+        "tools/test_account_header_presentation_wave_46.py:83:tools.test_account_header_presentation_wave_46.check_function",
         "tools/test_append_unique_text_extraction.py:62:tools.test_append_unique_text_extraction.capture_behavior",
         "tools/test_architecture_map.py:106:tools.test_architecture_map.main.feature_for_suffix",
         "tools/test_architecture_map.py:25:tools.test_architecture_map.is_app",
@@ -18389,6 +18429,9 @@
         "_wave43_collector_editor_dialog": "spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog",
         "_wave44_spina_v27_build_collectors_tab": "spina_app.collector_tab_presentation._spina_v27_build_collectors_tab",
         "_wave45_spina_v32_prompt_login": "spina_app.login_dialog_presentation._spina_v32_prompt_login",
+        "_wave46_configure_account_header_dependencies": "spina_app.account_header_presentation.configure_account_header_dependencies",
+        "_wave46_spina_v32_build_header": "spina_app.account_header_presentation._spina_v32_build_header",
+        "_wave46_spina_v32_refresh_user_header": "spina_app.account_header_presentation._spina_v32_refresh_user_header",
         "calendar": "calendar",
         "configure_cash_control_dependencies": "spina_app.tabs.cash_control.configure_cash_control_dependencies",
         "configure_client_info_logs_dependencies": "spina_app.tabs.client_info_logs.configure_client_info_logs_dependencies",
@@ -18415,7 +18458,7 @@
         "ttk": "tkinter.ttk",
         "warnings": "warnings"
       },
-      "lines": 37956,
+      "lines": 37938,
       "module": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed",
       "module_globals": [
         "APP_DIR",
@@ -18470,7 +18513,9 @@
         "_spina_v27_build_collectors_tab",
         "_spina_v27_collector_editor_dialog",
         "_spina_v27_route_colors",
+        "_spina_v32_build_header",
         "_spina_v32_prompt_login",
+        "_spina_v32_refresh_user_header",
         "pick_date",
         "pick_date_range"
       ],
@@ -18758,7 +18803,7 @@
           "target": "App.open_areas_manager"
         }
       ],
-      "sha256": "a00da4e041de4908d3625ede7735a3a61fbafc7327091e08e80665f692875fc9",
+      "sha256": "d749b5efcde78011fe74c3e76ffd3154e4135a8a1be1984d06c8a0a5e94277a5",
       "syntax_ok": true
     },
     {
@@ -18770,6 +18815,28 @@
       "module_globals": [],
       "monkey_patches": [],
       "sha256": "8b3288016ea555e99f4e7c4fb810ed70164b5a39798a375466bf7e4a00582c27",
+      "syntax_ok": true
+    },
+    {
+      "application_file": true,
+      "file": "spina_app/account_header_presentation.py",
+      "imports": {
+        "annotations": "__future__.annotations"
+      },
+      "lines": 57,
+      "module": "spina_app.account_header_presentation",
+      "module_globals": [
+        "ACCOUNT_HEADER_CALLS",
+        "ACCOUNT_HEADER_NESTED_CALLBACKS",
+        "ACCOUNT_HEADER_SIGNATURES",
+        "ACCOUNT_HEADER_SOURCE_LINES",
+        "ACCOUNT_HEADER_SOURCE_SHA256",
+        "ACCOUNT_HEADER_TARGETS",
+        "_ACCOUNT_HEADER_DEPENDENCIES",
+        "_PROTECTED_GLOBALS"
+      ],
+      "monkey_patches": [],
+      "sha256": "ae2da5342e64bbbccdfd46eccddee0f927a4af6e0d1a141bf9bbc46d31234d5d",
       "syntax_ok": true
     },
     {
@@ -20874,6 +20941,58 @@
     },
     {
       "application_file": false,
+      "file": "tools/test_account_header_presentation_wave_46.py",
+      "imports": {
+        "Path": "pathlib.Path",
+        "annotations": "__future__.annotations",
+        "ast": "ast",
+        "hashlib": "hashlib",
+        "importlib": "importlib",
+        "re": "re",
+        "sys": "sys",
+        "textwrap": "textwrap"
+      },
+      "lines": 172,
+      "module": "tools.test_account_header_presentation_wave_46",
+      "module_globals": [
+        "BUILD",
+        "DESKTOP",
+        "EXPECTED_CALLS",
+        "EXPECTED_HASHES",
+        "EXPECTED_LINES",
+        "EXPECTED_SIGNATURES",
+        "MODULE_PATH",
+        "PROMPT_ROLE_SHA256",
+        "REFRESH",
+        "ROOT",
+        "SQL_WRITE_RE",
+        "SWITCH_ACCOUNT_SHA256"
+      ],
+      "monkey_patches": [],
+      "sha256": "0b6577550718ab5e05a4840d149c0bc15b12ed3b26d6a4dadd1be5f0de8b5f11",
+      "syntax_ok": true
+    },
+    {
+      "application_file": false,
+      "file": "tools/test_account_header_widget_smoke_wave_46.py",
+      "imports": {
+        "Path": "pathlib.Path",
+        "annotations": "__future__.annotations",
+        "presentation": "spina_app.account_header_presentation",
+        "sys": "sys",
+        "tk": "tkinter"
+      },
+      "lines": 63,
+      "module": "tools.test_account_header_widget_smoke_wave_46",
+      "module_globals": [
+        "ROOT"
+      ],
+      "monkey_patches": [],
+      "sha256": "12d87b1ccd2ec7787b04061728769cd24bacb55af361709002eab85500d6d66a",
+      "syntax_ok": true
+    },
+    {
+      "application_file": false,
       "file": "tools/test_append_unique_text_extraction.py",
       "imports": {
         "Path": "pathlib.Path",
@@ -22652,26 +22771,26 @@
   "schema_version": 2,
   "summary": {
     "application_monkey_patches": 56,
-    "application_python_files": 44,
-    "application_resolved_call_edges": 2691,
-    "application_symbols": 1172,
+    "application_python_files": 45,
+    "application_resolved_call_edges": 2693,
+    "application_symbols": 1174,
     "application_ui_callback_edges": 498,
-    "classes": 93,
+    "classes": 94,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1322,
+    "functions": 1332,
     "methods": 508,
-    "monkey_patches": 130,
+    "monkey_patches": 131,
     "nested_functions": 385,
     "parse_errors": 0,
-    "possible_orphans": 120,
-    "python_files": 168,
+    "possible_orphans": 119,
+    "python_files": 171,
     "repository_database_tables": 19,
-    "repository_duplicate_names": 250,
-    "repository_possible_orphans": 246,
-    "resolved_call_edges": 3722,
-    "symbols": 2308,
-    "total_python_lines": 74302,
+    "repository_duplicate_names": 251,
+    "repository_possible_orphans": 245,
+    "resolved_call_edges": 3737,
+    "symbols": 2319,
+    "total_python_lines": 74576,
     "ui_callback_edges": 503
   },
   "symbols": [
@@ -25502,7 +25621,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35791:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v20_draw_dashboard_charts",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35983:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v21_cash_refresh",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37023:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4017:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4320:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.renew_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:5421:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB._append_databank_day_close_history",
@@ -25737,7 +25856,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:34157:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_build_paid_cache_for_date",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:34247:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy_same_format",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:34721:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_route_adv_marker_for",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3833:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.add_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4017:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4320:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.renew_client",
@@ -25795,6 +25913,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9865:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_unassigned_areas",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9921:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._delete_selected_collector",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9989:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._collector_editor_dialog",
+        "spina_app/account_header_presentation.py:31:spina_app.account_header_presentation._spina_v32_refresh_user_header",
         "spina_app/area_picker_presentation.py:185:spina_app.area_picker_presentation._area_picker_dialog._set_info",
         "spina_app/area_picker_presentation.py:217:spina_app.area_picker_presentation._area_picker_dialog._replace_right",
         "spina_app/area_picker_presentation.py:26:spina_app.area_picker_presentation._area_picker_dialog",
@@ -32903,7 +33022,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11180:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
       ],
       "calls_raw": [
         "IOError",
@@ -33791,7 +33910,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11180:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
       ],
       "calls_raw": [
         "IOError",
@@ -33866,7 +33985,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11180:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
       ],
       "calls_raw": [
         "_log_ignored",
@@ -34435,7 +34554,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11180:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -40936,7 +41055,8 @@
       "callbacks": [],
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "spina_app/account_header_presentation.py:46:spina_app.account_header_presentation._spina_v32_build_header"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -63367,8 +63487,8 @@
       ],
       "callbacks": [],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "spina_app/account_header_presentation.py:31:spina_app.account_header_presentation._spina_v32_refresh_user_header"
       ],
       "calls_raw": [
         "_spina_v32_account_default_name",
@@ -63608,51 +63728,6 @@
       "callbacks": [],
       "callers": [],
       "calls_raw": [
-        "_log_suppressed_once",
-        "_spina_v32_account_display_name",
-        "getattr",
-        "self._refresh_header_theme",
-        "self.user_role_label.config"
-      ],
-      "calls_resolved": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37677:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_display_name",
-        "spina_app/theme_presentation.py:303:spina_app.theme_presentation._refresh_header_theme",
-        "tools/test_navigation_databank_shell_wave_29.py:198:tools.test_navigation_databank_shell_wave_29.FakeButton.config"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 37820,
-      "feature": "other",
-      "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
-      "imports_used": [],
-      "kind": "function",
-      "line": 37807,
-      "lines": 14,
-      "monkey_patches": [],
-      "name": "_spina_v32_refresh_user_header",
-      "parent": null,
-      "purpose": "Handles spina v32 refresh user header for the other feature.",
-      "qualified_name": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
-      "risk": "authentication",
-      "risk_flags": [
-        "authentication",
-        "ui_only"
-      ],
-      "source_sha256": "40ea77825bff770c8ed996a630917072ab235718640900540a84b24e2fa3eb7c"
-    },
-    {
-      "args": [
-        "self"
-      ],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
         "_log_exc",
         "_spina_v32_account_display_name",
         "getattr",
@@ -63679,18 +63754,18 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 37880,
+      "end_line": 37874,
       "feature": "authentication",
       "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
       "imports_used": [
         "tkinter.messagebox"
       ],
       "kind": "function",
-      "line": 37823,
+      "line": 37817,
       "lines": 58,
       "monkey_patches": [],
       "name": "_spina_v32_switch_account",
@@ -63718,16 +63793,16 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 37886,
+      "end_line": 37880,
       "feature": "authentication",
       "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37883:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
+      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37877:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
       "imports_used": [],
       "kind": "function",
-      "line": 37883,
+      "line": 37877,
       "lines": 4,
       "monkey_patches": [],
       "name": "_spina_v32_prompt_user_role",
@@ -63746,7 +63821,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37926:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action"
       ],
       "calls_raw": [
         "globals",
@@ -63758,18 +63833,18 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 37940,
+      "end_line": 37922,
       "feature": "clients",
       "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37929:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
+      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37911:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message",
       "imports_used": [
         "tkinter.messagebox"
       ],
       "kind": "function",
-      "line": 37929,
+      "line": 37911,
       "lines": 12,
       "monkey_patches": [],
       "name": "_spina_legacy_client_action_removed_message",
@@ -63797,16 +63872,16 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 37948,
+      "end_line": 37930,
       "feature": "clients",
       "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37943:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
+      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37925:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
       "imports_used": [],
       "kind": "function",
-      "line": 37943,
+      "line": 37925,
       "lines": 6,
       "monkey_patches": [],
       "name": "_spina_make_removed_legacy_client_action",
@@ -63830,21 +63905,21 @@
         "_spina_legacy_client_action_removed_message"
       ],
       "calls_resolved": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37929:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37911:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message"
       ],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 37946,
+      "end_line": 37928,
       "feature": "clients",
       "file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37944:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
+      "id": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37926:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action",
       "imports_used": [],
       "kind": "nested_function",
-      "line": 37944,
+      "line": 37926,
       "lines": 3,
       "monkey_patches": [],
       "name": "_spina_removed_action",
@@ -63854,6 +63929,141 @@
       "risk": "support",
       "risk_flags": [],
       "source_sha256": "5639e155730d3975adeeffb86c2d35428507b440ea82b4aa7aee1b3b074f7ecd"
+    },
+    {
+      "args": [
+        "namespace"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_account_header_widget_smoke_wave_46.py:18:tools.test_account_header_widget_smoke_wave_46.main"
+      ],
+      "calls_raw": [
+        "_ACCOUNT_HEADER_DEPENDENCIES.clear",
+        "_ACCOUNT_HEADER_DEPENDENCIES.update",
+        "globals",
+        "namespace.items"
+      ],
+      "calls_resolved": [
+        "spina_app/area_hierarchy_ui.py:255:spina_app.area_hierarchy_ui.select_area_node.clear"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 21,
+      "feature": "authentication",
+      "file": "spina_app/account_header_presentation.py",
+      "file_paths": [],
+      "globals_read": [
+        "_ACCOUNT_HEADER_DEPENDENCIES",
+        "_PROTECTED_GLOBALS"
+      ],
+      "globals_written": [],
+      "id": "spina_app/account_header_presentation.py:16:spina_app.account_header_presentation.configure_account_header_dependencies",
+      "imports_used": [],
+      "kind": "function",
+      "line": 16,
+      "lines": 6,
+      "monkey_patches": [],
+      "name": "configure_account_header_dependencies",
+      "parent": null,
+      "purpose": "Handles configure account header dependencies for the authentication feature.",
+      "qualified_name": "spina_app.account_header_presentation.configure_account_header_dependencies",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "689239feb0c565ac90d4dcb6cff6bce97d0110f7327920bbec083938995bd049"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_account_header_widget_smoke_wave_46.py:18:tools.test_account_header_widget_smoke_wave_46.main"
+      ],
+      "calls_raw": [
+        "_log_suppressed_once",
+        "_spina_v32_account_display_name",
+        "getattr",
+        "self._refresh_header_theme",
+        "self.user_role_label.config"
+      ],
+      "calls_resolved": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37677:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_display_name",
+        "spina_app/theme_presentation.py:303:spina_app.theme_presentation._refresh_header_theme",
+        "tools/test_navigation_databank_shell_wave_29.py:198:tools.test_navigation_databank_shell_wave_29.FakeButton.config"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 44,
+      "feature": "authentication",
+      "file": "spina_app/account_header_presentation.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "spina_app/account_header_presentation.py:31:spina_app.account_header_presentation._spina_v32_refresh_user_header",
+      "imports_used": [],
+      "kind": "function",
+      "line": 31,
+      "lines": 14,
+      "monkey_patches": [],
+      "name": "_spina_v32_refresh_user_header",
+      "parent": null,
+      "purpose": "Handles spina v32 refresh user header for the authentication feature.",
+      "qualified_name": "spina_app.account_header_presentation._spina_v32_refresh_user_header",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication",
+        "ui_only"
+      ],
+      "source_sha256": "40ea77825bff770c8ed996a630917072ab235718640900540a84b24e2fa3eb7c"
+    },
+    {
+      "args": [
+        "self",
+        "*args",
+        "**kwargs"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_account_header_widget_smoke_wave_46.py:18:tools.test_account_header_widget_smoke_wave_46.main"
+      ],
+      "calls_raw": [
+        "_spina_v32_orig_build_header",
+        "getattr",
+        "self._refresh_user_header",
+        "self.switch_account_btn.configure"
+      ],
+      "calls_resolved": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12556:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._refresh_user_header"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 57,
+      "feature": "navigation",
+      "file": "spina_app/account_header_presentation.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "spina_app/account_header_presentation.py:46:spina_app.account_header_presentation._spina_v32_build_header",
+      "imports_used": [],
+      "kind": "function",
+      "line": 46,
+      "lines": 12,
+      "monkey_patches": [],
+      "name": "_spina_v32_build_header",
+      "parent": null,
+      "purpose": "Handles spina v32 build header for the navigation feature.",
+      "qualified_name": "spina_app.account_header_presentation._spina_v32_build_header",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication",
+        "ui_only"
+      ],
+      "source_sha256": "fd4181d88fc574d769ed29cedde91d7b52433fcf0017f25808bf048ca2f23d75"
     },
     {
       "args": [],
@@ -66527,6 +66737,7 @@
       "args": [],
       "callbacks": [],
       "callers": [
+        "spina_app/account_header_presentation.py:16:spina_app.account_header_presentation.configure_account_header_dependencies",
         "spina_app/area_picker_presentation.py:14:spina_app.area_picker_presentation.configure_area_picker_dependencies",
         "spina_app/area_picker_presentation.py:434:spina_app.area_picker_presentation._area_picker_dialog._refresh_tree",
         "spina_app/calendar_presentation.py:20:spina_app.calendar_presentation.configure_calendar_dependencies",
@@ -75538,7 +75749,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11180:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account",
         "spina_app/theme_presentation.py:281:spina_app.theme_presentation._refresh_modern_shell_theme"
       ],
       "calls_raw": [
@@ -83737,7 +83948,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11636:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.set_theme",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12556:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._refresh_user_header",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header"
+        "spina_app/account_header_presentation.py:31:spina_app.account_header_presentation._spina_v32_refresh_user_header"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -108390,6 +108601,441 @@
       "source_sha256": "4cb16167f802429dcdd8b537bc24c1dd1505af188626e42ecdca01c1cd2c4839"
     },
     {
+      "args": [
+        "text"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_account_header_presentation_wave_46.py:104:tools.test_account_header_presentation_wave_46.main",
+        "tools/test_account_header_presentation_wave_46.py:83:tools.test_account_header_presentation_wave_46.check_function"
+      ],
+      "calls_raw": [
+        "join",
+        "line.rstrip",
+        "textwrap.dedent",
+        "textwrap.dedent.strip",
+        "textwrap.dedent.strip.splitlines"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 46,
+      "feature": "utilities",
+      "file": "tools/test_account_header_presentation_wave_46.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_account_header_presentation_wave_46.py:45:tools.test_account_header_presentation_wave_46.normalized",
+      "imports_used": [
+        "textwrap"
+      ],
+      "kind": "function",
+      "line": 45,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "normalized",
+      "parent": null,
+      "purpose": "Handles normalized for the utilities feature.",
+      "qualified_name": "tools.test_account_header_presentation_wave_46.normalized",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "9216945d9242bf9f1d2573b9f9d1fff643329a07a312749679dda51396694d4e"
+    },
+    {
+      "args": [
+        "node"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
+        "tools/test_account_header_presentation_wave_46.py:83:tools.test_account_header_presentation_wave_46.check_function"
+      ],
+      "calls_raw": [
+        "dotted",
+        "isinstance"
+      ],
+      "calls_resolved": [
+        "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 55,
+      "feature": "other",
+      "file": "tools/test_account_header_presentation_wave_46.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
+      "imports_used": [
+        "ast"
+      ],
+      "kind": "function",
+      "line": 49,
+      "lines": 7,
+      "monkey_patches": [],
+      "name": "dotted",
+      "parent": null,
+      "purpose": "Handles dotted for the other feature.",
+      "qualified_name": "tools.test_account_header_presentation_wave_46.dotted",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "2a733f095eb1d3e1c88599d56fcec48d4da92732519a24a7e0ecc5f05a56886d"
+    },
+    {
+      "args": [
+        "fn"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_account_header_presentation_wave_46.py:83:tools.test_account_header_presentation_wave_46.check_function"
+      ],
+      "calls_raw": [
+        "ast.unparse",
+        "join",
+        "len",
+        "list",
+        "parts.append",
+        "zip"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 72,
+      "feature": "other",
+      "file": "tools/test_account_header_presentation_wave_46.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_account_header_presentation_wave_46.py:58:tools.test_account_header_presentation_wave_46.signature_text",
+      "imports_used": [
+        "ast"
+      ],
+      "kind": "function",
+      "line": 58,
+      "lines": 15,
+      "monkey_patches": [],
+      "name": "signature_text",
+      "parent": null,
+      "purpose": "Handles signature text for the other feature.",
+      "qualified_name": "tools.test_account_header_presentation_wave_46.signature_text",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "cf3b9a13eae6610280c34ecdf445c965e548a9dd82aebb5a0a8b256c763d0c36"
+    },
+    {
+      "args": [
+        "lines",
+        "node"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_account_header_presentation_wave_46.py:104:tools.test_account_header_presentation_wave_46.main",
+        "tools/test_account_header_presentation_wave_46.py:83:tools.test_account_header_presentation_wave_46.check_function"
+      ],
+      "calls_raw": [
+        "join"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 76,
+      "feature": "other",
+      "file": "tools/test_account_header_presentation_wave_46.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_account_header_presentation_wave_46.py:75:tools.test_account_header_presentation_wave_46.source_for",
+      "imports_used": [],
+      "kind": "function",
+      "line": 75,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "source_for",
+      "parent": null,
+      "purpose": "Handles source for for the other feature.",
+      "qualified_name": "tools.test_account_header_presentation_wave_46.source_for",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "ef3534378014ad647e3b674deadc995e87a0d9d896af8097fac524642fba0df2"
+    },
+    {
+      "args": [
+        "tree",
+        "name"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_account_header_presentation_wave_46.py:104:tools.test_account_header_presentation_wave_46.main"
+      ],
+      "calls_raw": [
+        "ast.walk",
+        "isinstance"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 80,
+      "feature": "other",
+      "file": "tools/test_account_header_presentation_wave_46.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_account_header_presentation_wave_46.py:79:tools.test_account_header_presentation_wave_46.function_defs",
+      "imports_used": [
+        "ast"
+      ],
+      "kind": "function",
+      "line": 79,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "function_defs",
+      "parent": null,
+      "purpose": "Handles function defs for the other feature.",
+      "qualified_name": "tools.test_account_header_presentation_wave_46.function_defs",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "4376ecba6bb3a04b476bd2803ca36f0b82ee2d4f3fc1910df079c8d194f985bb"
+    },
+    {
+      "args": [
+        "fn",
+        "lines",
+        "name"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_account_header_presentation_wave_46.py:104:tools.test_account_header_presentation_wave_46.main"
+      ],
+      "calls_raw": [
+        "SQL_WRITE_RE.search",
+        "ast.walk",
+        "dotted",
+        "dotted.startswith",
+        "hashlib.sha256",
+        "hashlib.sha256.hexdigest",
+        "isinstance",
+        "len",
+        "normalized",
+        "normalized.encode",
+        "signature_text",
+        "sorted",
+        "source_for",
+        "textwrap.dedent",
+        "textwrap.dedent.splitlines"
+      ],
+      "calls_resolved": [
+        "tools/test_account_header_presentation_wave_46.py:45:tools.test_account_header_presentation_wave_46.normalized",
+        "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
+        "tools/test_account_header_presentation_wave_46.py:58:tools.test_account_header_presentation_wave_46.signature_text",
+        "tools/test_account_header_presentation_wave_46.py:75:tools.test_account_header_presentation_wave_46.source_for"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 101,
+      "feature": "other",
+      "file": "tools/test_account_header_presentation_wave_46.py",
+      "file_paths": [
+        "self.db"
+      ],
+      "globals_read": [
+        "EXPECTED_CALLS",
+        "EXPECTED_HASHES",
+        "EXPECTED_LINES",
+        "EXPECTED_SIGNATURES",
+        "SQL_WRITE_RE"
+      ],
+      "globals_written": [],
+      "id": "tools/test_account_header_presentation_wave_46.py:83:tools.test_account_header_presentation_wave_46.check_function",
+      "imports_used": [
+        "ast",
+        "hashlib",
+        "textwrap"
+      ],
+      "kind": "function",
+      "line": 83,
+      "lines": 19,
+      "monkey_patches": [],
+      "name": "check_function",
+      "parent": null,
+      "purpose": "Handles check function for the other feature.",
+      "qualified_name": "tools.test_account_header_presentation_wave_46.check_function",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "bd442543a61661345cf769a22db805302ddbf2ddbf4ebfeb650c62a215a9e7cd"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "DESKTOP.read_text",
+        "MODULE_PATH.read_text",
+        "ast.parse",
+        "ast.walk",
+        "check_function",
+        "desktop_text.splitlines",
+        "function_defs",
+        "hashlib.sha256",
+        "hashlib.sha256.hexdigest",
+        "importlib.import_module",
+        "isinstance",
+        "len",
+        "module_text.splitlines",
+        "normalized",
+        "normalized.encode",
+        "print",
+        "runtime.append",
+        "runtime.sort",
+        "sorted",
+        "source_for",
+        "symbol_rebinds.append"
+      ],
+      "calls_resolved": [
+        "tools/test_account_header_presentation_wave_46.py:45:tools.test_account_header_presentation_wave_46.normalized",
+        "tools/test_account_header_presentation_wave_46.py:75:tools.test_account_header_presentation_wave_46.source_for",
+        "tools/test_account_header_presentation_wave_46.py:79:tools.test_account_header_presentation_wave_46.function_defs",
+        "tools/test_account_header_presentation_wave_46.py:83:tools.test_account_header_presentation_wave_46.check_function"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 168,
+      "feature": "other",
+      "file": "tools/test_account_header_presentation_wave_46.py",
+      "file_paths": [],
+      "globals_read": [
+        "BUILD",
+        "DESKTOP",
+        "EXPECTED_CALLS",
+        "EXPECTED_HASHES",
+        "EXPECTED_LINES",
+        "EXPECTED_SIGNATURES",
+        "MODULE_PATH",
+        "PROMPT_ROLE_SHA256",
+        "REFRESH",
+        "SWITCH_ACCOUNT_SHA256"
+      ],
+      "globals_written": [],
+      "id": "tools/test_account_header_presentation_wave_46.py:104:tools.test_account_header_presentation_wave_46.main",
+      "imports_used": [
+        "ast",
+        "hashlib",
+        "importlib"
+      ],
+      "kind": "function",
+      "line": 104,
+      "lines": 65,
+      "monkey_patches": [],
+      "name": "main",
+      "parent": null,
+      "purpose": "Handles main for the other feature.",
+      "qualified_name": "tools.test_account_header_presentation_wave_46.main",
+      "risk": "filesystem",
+      "risk_flags": [
+        "filesystem",
+        "reports"
+      ],
+      "source_sha256": "023a12fb9b2c02d868a0c49ce612922ba7e3a931a1b74671e40eaa2e6dbe4725"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [
+        "tools/test_account_header_widget_smoke_wave_46.py:18:tools.test_account_header_widget_smoke_wave_46.main"
+      ],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "Harness",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 15,
+      "feature": "other",
+      "file": "tools/test_account_header_widget_smoke_wave_46.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_account_header_widget_smoke_wave_46.py:14:tools.test_account_header_widget_smoke_wave_46.Harness",
+      "imports_used": [],
+      "kind": "class",
+      "line": 14,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "Harness",
+      "parent": null,
+      "purpose": "Groups Harness for the other feature.",
+      "qualified_name": "tools.test_account_header_widget_smoke_wave_46.Harness",
+      "risk": "container",
+      "risk_flags": [],
+      "source_sha256": "b37782e8ca589aa4bf50a646cad771c26536bca68c2b941850575d423c7be5c5"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "Harness",
+        "harness.switch_account_btn.cget",
+        "harness.user_role_label.cget",
+        "presentation._spina_v32_build_header",
+        "presentation._spina_v32_refresh_user_header",
+        "presentation.configure_account_header_dependencies",
+        "print",
+        "root.destroy",
+        "root.withdraw",
+        "setattr",
+        "tk.Button",
+        "tk.Label",
+        "tk.Tk"
+      ],
+      "calls_resolved": [
+        "spina_app/account_header_presentation.py:16:spina_app.account_header_presentation.configure_account_header_dependencies",
+        "spina_app/account_header_presentation.py:31:spina_app.account_header_presentation._spina_v32_refresh_user_header",
+        "spina_app/account_header_presentation.py:46:spina_app.account_header_presentation._spina_v32_build_header",
+        "tools/test_account_header_widget_smoke_wave_46.py:14:tools.test_account_header_widget_smoke_wave_46.Harness"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 59,
+      "feature": "other",
+      "file": "tools/test_account_header_widget_smoke_wave_46.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_account_header_widget_smoke_wave_46.py:18:tools.test_account_header_widget_smoke_wave_46.main",
+      "imports_used": [
+        "spina_app.account_header_presentation",
+        "tkinter"
+      ],
+      "kind": "function",
+      "line": 18,
+      "lines": 42,
+      "monkey_patches": [
+        {
+          "line": 24,
+          "source": "tk.Label",
+          "target": "harness.user_role_label"
+        }
+      ],
+      "name": "main",
+      "parent": null,
+      "purpose": "Handles main for the other feature.",
+      "qualified_name": "tools.test_account_header_widget_smoke_wave_46.main",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication",
+        "reports",
+        "ui_only"
+      ],
+      "source_sha256": "4617412dfc5a83272bfbb42649e480d816ad4081f7031fb7b6996c48c09b3781"
+    },
+    {
       "args": [],
       "callbacks": [],
       "callers": [
@@ -129910,7 +130556,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:25646:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._set_auto_rc",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:25655:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._recompute",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26519:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header",
+        "spina_app/account_header_presentation.py:31:spina_app.account_header_presentation._spina_v32_refresh_user_header",
         "spina_app/client_form_presentation.py:24:spina_app.client_form_presentation._app__client_form",
         "spina_app/client_form_presentation.py:375:spina_app.client_form_presentation._app__client_form._toggle_new_until",
         "spina_app/client_form_presentation.py:386:spina_app.client_form_presentation._app__client_form._toggle_due_widgets",

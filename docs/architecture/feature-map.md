@@ -1,8 +1,8 @@
 # SPINA Application Feature Map
 
-Generated from commit `cd281e0a9e0a6026b66f8fde1f8b6bb8e9d0ea5b`.
+Generated from commit `f1445f0f913395c006f1bfdc05ebf9cb532efbf3`.
 
-Scanned **168 Python files**, **74,302 lines**, and **2,308 symbols**.
+Scanned **171 Python files**, **74,576 lines**, and **2,319 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -10,16 +10,16 @@ Scanned **168 Python files**, **74,302 lines**, and **2,308 symbols**.
 
 ## Authentication
 
-**35 symbols · 1,219 non-overlapping function lines**
+**37 symbols · 1,239 non-overlapping function lines**
 
-Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (27), `spina_app/login_dialog_presentation.py` (7), `spina_app/theme_palettes.py` (1)
+Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (27), `spina_app/login_dialog_presentation.py` (7), `spina_app/account_header_presentation.py` (2), `spina_app/theme_palettes.py` (1)
 
 - `spina_app.login_dialog_presentation._spina_v32_prompt_login` — spina_app/login_dialog_presentation.py:24 — Modern account-based login dialog. Returns (username, internal_access_profile). Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.apply_role_access` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7869 — Apply role-based UI restrictions. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7582 — Login dialog: returns (username, role) or (None, None) if cancelled. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7710 — Simple role selector shown at startup. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_users_db` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7430 — Load users database from data/users.json. If missing, create defaults. Default accounts (created only if missing): - admin / admin123 -> Admin - encoder / encoder123 -> Encoder - viewer / viewer123 -> Viewer - system / system123 -> System Risk: **authentication**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823 — Handles spina v32 switch account for the authentication feature. Risk: **authentication**.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817 — Handles spina v32 switch account for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742 — Add account display metadata while preserving existing usernames/passwords/access. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568 — Handles switch account for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7502 — Handles verify login for the authentication feature. Risk: **authentication**.
@@ -31,10 +31,10 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37623 — Handles spina v32 login button for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_users_db` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7407 — Saves save users db for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._remove_role_overlays` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7794 — Removes remove role overlays for the authentication feature. Risk: **support**.
+- `spina_app.account_header_presentation._spina_v32_refresh_user_header` — spina_app/account_header_presentation.py:31 — Handles spina v32 refresh user header for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_user_role` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7102 — Best-effort load of last used role. Not security—just convenience. Risk: **authentication**.
 - `spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info` — spina_app/login_dialog_presentation.py:135 — Refreshes refresh account info for the authentication feature. Risk: **authentication**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role._ok` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7747 — Handles ok for the authentication feature. Risk: **support**.
-- …and 15 more application symbols in `architecture-map.json`.
+- …and 17 more application symbols in `architecture-map.json`.
 
 ## Backup
 
@@ -256,9 +256,9 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 
 ## Navigation
 
-**15 symbols · 527 non-overlapping function lines**
+**16 symbols · 539 non-overlapping function lines**
 
-Main files: `spina_app/navigation.py` (14), `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (1)
+Main files: `spina_app/navigation.py` (14), `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (1), `spina_app/account_header_presentation.py` (1)
 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_header` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12386 — Modern top header: app identity + fast Regular/7x7 switch + app actions. Risk: **authentication**.
 - `spina_app.navigation._rebuild_side_nav` — spina_app/navigation.py:94 — Rebuild the modern left-side navigation from the currently visible notebook tabs. Risk: **ui_only**.
@@ -269,6 +269,7 @@ Main files: `spina_app/navigation.py` (14), `OFFICIAL_SPINA_APP_PostgreSQL_TEST_
 - `spina_app.navigation._on_mousewheel_sync` — spina_app/navigation.py:358 — Mouse wheel scroll should move both name_tree (left) and days_tree (right) together. Risk: **support**.
 - `spina_app.navigation._update_data_toolbar` — spina_app/navigation.py:29 — Updates update data toolbar for the navigation feature. Risk: **support**.
 - `spina_app.navigation._make_header_button` — spina_app/navigation.py:282 — Create a flatter, modern top-bar button using tk.Button for better dark-mode control. Risk: **ui_only**.
+- `spina_app.account_header_presentation._spina_v32_build_header` — spina_app/account_header_presentation.py:46 — Handles spina v32 build header for the navigation feature. Risk: **authentication**.
 - `spina_app.navigation._update_toolbar_states` — spina_app/navigation.py:390 — Updates update toolbar states for the navigation feature. Risk: **ui_only**.
 - `spina_app.navigation._vscroll` — spina_app/navigation.py:345 — Handles vscroll for the navigation feature. Risk: **support**.
 - `spina_app.navigation.configure_navigation_dependencies` — spina_app/navigation.py:22 — Bind application-owned logging and currency display helpers. Risk: **support**.
@@ -306,9 +307,9 @@ Main files: `spina_app/note_editor_presentation.py` (29), `OFFICIAL_SPINA_APP_Po
 
 ## Other
 
-**259 symbols · 7,275 non-overlapping function lines**
+**258 symbols · 7,261 non-overlapping function lines**
 
-Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (134), `spina_app/area_hierarchy_ui.py` (36), `spina_app/calendar_presentation.py` (24), `spina_app/area_picker_presentation.py` (21), `spina_app/area_hierarchy.py` (16), `spina_app/area_hierarchy_ops.py` (15), `spina_app/long_task_presentation.py` (8), `spina_app/ui_controls.py` (3)
+Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (133), `spina_app/area_hierarchy_ui.py` (36), `spina_app/calendar_presentation.py` (24), `spina_app/area_picker_presentation.py` (21), `spina_app/area_hierarchy.py` (16), `spina_app/area_hierarchy_ops.py` (15), `spina_app/long_task_presentation.py` (8), `spina_app/ui_controls.py` (3)
 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7053 — Groups App for the other feature. Risk: **container**.
 - `spina_app.area_picker_presentation._area_picker_dialog` — spina_app/area_picker_presentation.py:26 — Route area picker (Main/Sub Tree + ordered selection). What you get: - Left: Tree of Main Areas with Sub Areas underneath - Right: Selected Route (ordered) as MAIN or MAIN - SUB entries - MAIN entry covers all its Sub Areas when printing/validating routes. Risk: **database_read**.
@@ -330,7 +331,7 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 - `spina_app.area_hierarchy_ui._select_parent_area` — spina_app/area_hierarchy_ui.py:379 — Select a new parent folder; an empty string means move to the root. Risk: **ui_only**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.on_day_double` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:13264 — Handles on day double for the other feature. Risk: **filesystem**.
 - `spina_app.area_hierarchy_ops._planned_subtree` — spina_app/area_hierarchy_ops.py:158 — Handles planned subtree for the other feature. Risk: **support**.
-- …and 239 more application symbols in `architecture-map.json`.
+- …and 238 more application symbols in `architecture-map.json`.
 
 ## Payments
 

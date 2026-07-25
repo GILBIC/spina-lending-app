@@ -1,8 +1,8 @@
 # SPINA Application Risk and Modularization Map
 
-Generated from commit `cd281e0a9e0a6026b66f8fde1f8b6bb8e9d0ea5b`.
+Generated from commit `f1445f0f913395c006f1bfdc05ebf9cb532efbf3`.
 
-Scanned **168 Python files**, **74,302 lines**, and **2,308 symbols**.
+Scanned **171 Python files**, **74,576 lines**, and **2,319 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -12,7 +12,7 @@ Scanned **168 Python files**, **74,302 lines**, and **2,308 symbols**.
 
 ### Authentication
 
-**43 symbols · 2,342 function lines**
+**44 symbols · 2,354 function lines**
 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12615 — App settings (local-only).
 - `spina_app.login_dialog_presentation._spina_v32_prompt_login` — spina_app/login_dialog_presentation.py:24 — Modern account-based login dialog. Returns (username, internal_access_profile).
@@ -25,7 +25,7 @@ Scanned **168 Python files**, **74,302 lines**, and **2,308 symbols**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7710 — Simple role selector shown at startup.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_users_db` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7430 — Load users database from data/users.json. If missing, create defaults. Default accounts (created only if missing): - admin / admin123 -> Admin - encoder / encoder123 -> Encoder - viewer / viewer123 -> Viewer - system / system123 -> System
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._close_day` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9291 — Handles close day for the data bank feature.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37823 — Handles spina v32 switch account for the authentication feature.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37817 — Handles spina v32 switch account for the authentication feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37742 — Add account display metadata while preserving existing usernames/passwords/access.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12568 — Handles switch account for the authentication feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7502 — Handles verify login for the authentication feature.
@@ -45,16 +45,16 @@ Scanned **168 Python files**, **74,302 lines**, and **2,308 symbols**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_users_db` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7407 — Saves save users db for the authentication feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._is_default_password_rec` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7212 — True if this user's stored hash matches the known default password.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_current_password` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8377 — Handles prompt current password for the payments feature.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37807 — Handles spina v32 refresh user header for the other feature.
+- `spina_app.account_header_presentation._spina_v32_refresh_user_header` — spina_app/account_header_presentation.py:31 — Handles spina v32 refresh user header for the authentication feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_user_role` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7102 — Best-effort load of last used role. Not security—just convenience.
+- `spina_app.account_header_presentation._spina_v32_build_header` — spina_app/account_header_presentation.py:46 — Handles spina v32 build header for the navigation feature.
 - `spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info` — spina_app/login_dialog_presentation.py:135 — Refreshes refresh account info for the authentication feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._refresh_user_header` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12556 — Refreshes refresh user header for the other feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_permission_text` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37664 — Handles spina v32 account permission text for the authentication feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_display_name` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37677 — Handles spina v32 account display name for the authentication feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37690 — Handles spina v32 account role for the authentication feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._hash_password_legacy` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7151 — Handles hash password legacy for the payments feature.
-- `spina_app.login_dialog_presentation.configure_login_dialog_dependencies` — spina_app/login_dialog_presentation.py:10 — Handles configure login dialog dependencies for the authentication feature.
-- …and 3 more.
+- …and 4 more.
 
 ### Backup
 
@@ -317,7 +317,7 @@ Scanned **168 Python files**, **74,302 lines**, and **2,308 symbols**.
 
 ### Support
 
-**578 symbols · 10,168 function lines**
+**579 symbols · 10,174 function lines**
 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_entry_worker` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14397 — Worker for _import_from_excel_entry (runs off the Tk main thread).
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_closed_route_payment_summary_page` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:29383 — Append closed-route payment summaries on a separate page. This keeps the route pages in the normal collector format while still saving a complete area-by-area payment summary plus grand total.
@@ -359,7 +359,7 @@ Scanned **168 Python files**, **74,302 lines**, and **2,308 symbols**.
 - `spina_app.theme_palettes._spina_v24_cilog_colors` — spina_app/theme_palettes.py:98 — Handles spina v24 cilog colors for the clients feature.
 - `spina_app.theme_palettes._spina_v18_dashboard_palette` — spina_app/theme_palettes.py:279 — Handles spina v18 dashboard palette for the dashboard feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._draw_global_header` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:18988 — Handles draw global header for the collectors feature.
-- …and 538 more.
+- …and 539 more.
 
 ### Ui Only
 

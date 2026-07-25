@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `cd281e0a9e0a6026b66f8fde1f8b6bb8e9d0ea5b`.
+Generated from commit `f1445f0f913395c006f1bfdc05ebf9cb532efbf3`.
 
-Scanned **168 Python files**, **74,302 lines**, and **2,308 symbols**.
+Scanned **171 Python files**, **74,576 lines**, and **2,319 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -745,12 +745,17 @@ Scanned **168 Python files**, **74,302 lines**, and **2,308 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices** (function, lines 37703–37731, 29 lines, risk `authentication`): Handles spina v32 account choices for the authentication feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user** (function, lines 37734–37739, 6 lines, risk `support`): Handles spina v32 selected label for user for the other feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based** (function, lines 37742–37796, 55 lines, risk `authentication`): Add account display metadata while preserving existing usernames/passwords/access.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header** (function, lines 37807–37820, 14 lines, risk `authentication`): Handles spina v32 refresh user header for the other feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account** (function, lines 37823–37880, 58 lines, risk `authentication`): Handles spina v32 switch account for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role** (function, lines 37883–37886, 4 lines, risk `authentication`): Handles spina v32 prompt user role for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message** (function, lines 37929–37940, 12 lines, risk `reports`): Handles spina legacy client action removed message for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action** (function, lines 37943–37948, 6 lines, risk `filesystem`): Handles spina make removed legacy client action for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action** (nested_function, lines 37944–37946, 3 lines, risk `support`): Handles spina removed action for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account** (function, lines 37817–37874, 58 lines, risk `authentication`): Handles spina v32 switch account for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role** (function, lines 37877–37880, 4 lines, risk `authentication`): Handles spina v32 prompt user role for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message** (function, lines 37911–37922, 12 lines, risk `reports`): Handles spina legacy client action removed message for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action** (function, lines 37925–37930, 6 lines, risk `filesystem`): Handles spina make removed legacy client action for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action** (nested_function, lines 37926–37928, 3 lines, risk `support`): Handles spina removed action for the clients feature.
+
+## `spina_app/account_header_presentation.py`
+
+- **spina_app.account_header_presentation.configure_account_header_dependencies** (function, lines 16–21, 6 lines, risk `support`): Handles configure account header dependencies for the authentication feature.
+- **spina_app.account_header_presentation._spina_v32_refresh_user_header** (function, lines 31–44, 14 lines, risk `authentication`): Handles spina v32 refresh user header for the authentication feature.
+- **spina_app.account_header_presentation._spina_v32_build_header** (function, lines 46–57, 12 lines, risk `authentication`): Handles spina v32 build header for the navigation feature.
 
 ## `spina_app/area_hierarchy.py`
 
@@ -1973,6 +1978,21 @@ Scanned **168 Python files**, **74,302 lines**, and **2,308 symbols**.
 - **tools.spina_startup_diagnostics.check_tcp** (function, lines 54–59, 6 lines, risk `network`): Handles check tcp for the other feature.
 - **tools.spina_startup_diagnostics.check_login** (function, lines 62–79, 18 lines, risk `authentication`): Handles check login for the authentication feature.
 - **tools.spina_startup_diagnostics.main** (function, lines 82–115, 34 lines, risk `authentication`): Handles main for the other feature.
+
+## `tools/test_account_header_presentation_wave_46.py`
+
+- **tools.test_account_header_presentation_wave_46.normalized** (function, lines 45–46, 2 lines, risk `support`): Handles normalized for the utilities feature.
+- **tools.test_account_header_presentation_wave_46.dotted** (function, lines 49–55, 7 lines, risk `support`): Handles dotted for the other feature.
+- **tools.test_account_header_presentation_wave_46.signature_text** (function, lines 58–72, 15 lines, risk `support`): Handles signature text for the other feature.
+- **tools.test_account_header_presentation_wave_46.source_for** (function, lines 75–76, 2 lines, risk `support`): Handles source for for the other feature.
+- **tools.test_account_header_presentation_wave_46.function_defs** (function, lines 79–80, 2 lines, risk `support`): Handles function defs for the other feature.
+- **tools.test_account_header_presentation_wave_46.check_function** (function, lines 83–101, 19 lines, risk `support`): Handles check function for the other feature.
+- **tools.test_account_header_presentation_wave_46.main** (function, lines 104–168, 65 lines, risk `filesystem`): Handles main for the other feature.
+
+## `tools/test_account_header_widget_smoke_wave_46.py`
+
+- **tools.test_account_header_widget_smoke_wave_46.Harness** (class, lines 14–15, 2 lines, risk `container`): Groups Harness for the other feature.
+- **tools.test_account_header_widget_smoke_wave_46.main** (function, lines 18–59, 42 lines, risk `authentication`): Handles main for the other feature.
 
 ## `tools/test_append_unique_text_extraction.py`
 
