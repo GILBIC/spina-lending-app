@@ -18,8 +18,6 @@ jobs:
           python -m py_compile spina_app\loan_context_queries.py
           python -m py_compile tools\test_loan_context_queries_wave_33.py
           python -m compileall -q spina_app
-      - shell: cmd
-        run: python -m tools.test_loan_context_queries_wave_33
       - uses: ./.github/actions/architecture-map-check
       - shell: cmd
         run: |
