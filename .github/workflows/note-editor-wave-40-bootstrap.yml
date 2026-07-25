@@ -15,7 +15,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
       - name: Extract guarded note editor module
         shell: cmd
         run: python tools/extract_note_editor_presentation_wave_40.py
@@ -53,10 +53,7 @@ jobs:
           git diff --cached --quiet || git commit -m "Refresh architecture map after Wave 40"
       - name: Push exact-head update
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          gh auth setup-git
           $branch = "${{ github.head_ref }}"
           $expected = "${{ github.event.pull_request.head.sha }}"
           $lease = "refs/heads/${branch}:$expected"
