@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import ast
+import builtins
+import hashlib
+import textwrap
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DESKTOP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 REPORT = ROOT / "wave-42-candidates.md"
+TARGET_CLASS = "App"
+TARGET_METHOD = "_run_long_task"
 
 UI_NAMES = {
     "tk", "ttk", "messagebox", "Toplevel", "Treeview", "Canvas", "Label",
@@ -21,7 +26,7 @@ MUTATION_SUFFIXES = {
     "renew_client", "add_transaction", "update_transaction", "delete_transaction",
     "set_transaction", "set_client_note", "save_settings", "_save_client_notes",
     "close_databank_day", "reopen_databank_day", "write", "write_text",
-    "write_bytes", "unlink", "remove", "rmtree", "rename", "replace",
+    "write_bytes", "unlink", "remove", "rmtree", "rename",
 }
 READ_SUFFIXES = {"fetchone", "fetchall", "fetchmany", "get_all_areas", "get_client", "get_clients"}
 FINANCE_WORDS = {
@@ -29,6 +34,10 @@ FINANCE_WORDS = {
     "adv", "pass", "7x7", "loan", "collection", "collector", "payroll",
 }
 SQL_WRITE = ("INSERT INTO", "UPDATE ", "DELETE FROM", "CREATE TABLE", "ALTER TABLE", "DROP TABLE")
+
+
+def normalized(source: str) -> str:
+    return textwrap.dedent(source).strip() + "\n"
 
 
 def chain(node: ast.AST) -> list[str]:
@@ -42,7 +51,6 @@ def chain(node: ast.AST) -> list[str]:
 
 
 def summarize(name: str, node: ast.AST, kind: str) -> dict[str, object]:
-    calls: set[str] = set()
     names: set[str] = set()
     strings: list[str] = []
     ui_hits: set[str] = set()
@@ -66,7 +74,6 @@ def summarize(name: str, node: ast.AST, kind: str) -> dict[str, object]:
             parts = chain(item.func)
             call = ".".join(parts)
             if call:
-                calls.add(call)
                 suffix = parts[-1].lower()
                 if "self.db" in call or suffix in {"cursor", "execute", "executemany"}:
                     db_calls.add(call)
@@ -112,10 +119,62 @@ def summarize(name: str, node: ast.AST, kind: str) -> dict[str, object]:
     }
 
 
+def target_details(node: ast.FunctionDef, text: str) -> list[str]:
+    lines = text.splitlines(keepends=True)
+    source = "".join(lines[node.lineno - 1 : node.end_lineno])
+    calls: set[str] = set()
+    strings: set[str] = set()
+    locals_bound: set[str] = set()
+    loads: set[str] = set()
+    nested: list[str] = []
+
+    args = [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]
+    if node.args.vararg:
+        args.append(node.args.vararg)
+    if node.args.kwarg:
+        args.append(node.args.kwarg)
+    locals_bound.update(arg.arg for arg in args)
+
+    for item in ast.walk(node):
+        if isinstance(item, ast.Call):
+            full = ".".join(chain(item.func))
+            if full:
+                calls.add(full)
+        elif isinstance(item, ast.Name):
+            if isinstance(item.ctx, ast.Store):
+                locals_bound.add(item.id)
+            elif isinstance(item.ctx, ast.Load):
+                loads.add(item.id)
+        elif isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item is not node:
+            nested.append(item.name)
+            locals_bound.add(item.name)
+        elif isinstance(item, ast.Constant) and isinstance(item.value, str):
+            cleaned = " ".join(item.value.split())
+            if cleaned and len(cleaned) <= 140:
+                strings.add(cleaned)
+
+    global_reads = sorted(loads - locals_bound - set(dir(builtins)))
+    signature = ast.unparse(node.args)
+    return [
+        "# Detailed inspection: `App._run_long_task`",
+        "",
+        f"- Signature: `{TARGET_METHOD}({signature})`",
+        f"- Source: lines {node.lineno}–{node.end_lineno} ({node.end_lineno - node.lineno + 1} lines)",
+        f"- Normalized SHA-256: `{hashlib.sha256(normalized(source).encode('utf-8')).hexdigest()}`",
+        f"- Nested callbacks: {', '.join(nested) or 'none'}",
+        f"- Global reads: {', '.join(global_reads) or 'none'}",
+        f"- Calls: {', '.join(sorted(calls)) or 'none'}",
+        "- Short UI/status strings:",
+        *[f"  - `{value}`" for value in sorted(strings)],
+        "",
+    ]
+
+
 def main() -> None:
     text = DESKTOP.read_text(encoding="utf-8")
     tree = ast.parse(text)
     candidates: list[dict[str, object]] = []
+    target_node: ast.FunctionDef | None = None
 
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -123,7 +182,7 @@ def main() -> None:
             if item["lines"] >= 180:
                 candidates.append(item)
         elif isinstance(node, ast.ClassDef):
-            if node.name != "App":
+            if node.name != TARGET_CLASS:
                 item = summarize(node.name, node, "top-level class")
                 if item["lines"] >= 180:
                     candidates.append(item)
@@ -132,6 +191,11 @@ def main() -> None:
                     item = summarize(f"{node.name}.{member.name}", member, "method")
                     if item["lines"] >= 180:
                         candidates.append(item)
+                    if node.name == TARGET_CLASS and member.name == TARGET_METHOD:
+                        target_node = member
+
+    if target_node is None:
+        raise RuntimeError(f"Missing {TARGET_CLASS}.{TARGET_METHOD}")
 
     candidates.sort(
         key=lambda item: (
@@ -166,8 +230,9 @@ def main() -> None:
             "",
         ])
 
+    rows.extend(target_details(target_node, text))
     REPORT.write_text("\n".join(rows), encoding="utf-8")
-    print(f"Wrote {REPORT.name} with {min(len(candidates), 60)} ranked candidates.")
+    print(f"Wrote {REPORT.name} with {min(len(candidates), 60)} ranked candidates and target detail.")
 
 
 if __name__ == "__main__":
