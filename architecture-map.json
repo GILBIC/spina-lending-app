@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "9aafa1ebfe02b566b10a17a22ae49c28406c5f04",
+  "generated_from_commit": "dc4197d6571d83be4a854a08eb883a8a371097b5",
   "indexes": {
     "application_callbacks": [
       {
@@ -2576,87 +2576,87 @@
       {
         "event": "'WM_DELETE_WINDOW'",
         "kind": "protocol",
-        "line": 87,
-        "owner": "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "line": 90,
+        "owner": "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
         "target": "self._close"
       },
       {
         "kind": "command",
-        "line": 280,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 283,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self.listbox.yview"
       },
       {
         "kind": "yscrollcommand",
-        "line": 281,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 284,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "lsb.set"
       },
       {
         "kind": "command",
-        "line": 288,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 291,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._refresh_list"
       },
       {
         "kind": "command",
-        "line": 289,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 292,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._jump_today"
       },
       {
         "kind": "command",
-        "line": 290,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 293,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._jump_default"
       },
       {
         "kind": "command",
-        "line": 302,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 305,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._pick_date"
       },
       {
         "kind": "command",
-        "line": 318,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 321,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self.txt.yview"
       },
       {
         "kind": "yscrollcommand",
-        "line": 319,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 322,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "ysb.set"
       },
       {
         "event": "'<<Modified>>'",
         "kind": "bind",
-        "line": 323,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 326,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._on_text_modified"
       },
       {
         "kind": "command",
-        "line": 332,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 335,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._open_notes_file"
       },
       {
         "kind": "command",
-        "line": 333,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 336,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._clear_text"
       },
       {
         "kind": "command",
-        "line": 335,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 338,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._delete_note"
       },
       {
         "kind": "command",
-        "line": 336,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 339,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._close"
       },
       {
@@ -3313,7 +3313,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11571:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:22901:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.push.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26001:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog.__init__",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
       ],
       "__iter__": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:541:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__iter__",
@@ -3327,7 +3327,7 @@
       "_build_ui": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1557:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._build_ui",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1702:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._build_ui",
-        "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui"
+        "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui"
       ],
       "_cancel": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7752:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog._cancel",
@@ -3352,7 +3352,7 @@
       "_close": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1645:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._close",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1843:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._close",
-        "spina_app/note_editor_presentation.py:657:spina_app.note_editor_presentation.NoteEditorDialog._close"
+        "spina_app/note_editor_presentation.py:660:spina_app.note_editor_presentation.NoteEditorDialog._close"
       ],
       "_close_editor": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:13994:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.on_day_double._close_editor",
@@ -4449,35 +4449,35 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2792:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._migrate_legacy_notes_by_name",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7389:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.draw_notes_aligned",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8525:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._open_note_dialog",
-        "spina_app/note_editor_presentation.py:108:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
-        "spina_app/note_editor_presentation.py:14:spina_app.note_editor_presentation.configure_note_editor_dependencies",
-        "spina_app/note_editor_presentation.py:179:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
-        "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
-        "spina_app/note_editor_presentation.py:191:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
-        "spina_app/note_editor_presentation.py:195:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
-        "spina_app/note_editor_presentation.py:217:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
-        "spina_app/note_editor_presentation.py:228:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
-        "spina_app/note_editor_presentation.py:242:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
-        "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
-        "spina_app/note_editor_presentation.py:28:spina_app.note_editor_presentation.NoteEditorDialog",
-        "spina_app/note_editor_presentation.py:339:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
-        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope",
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
-        "spina_app/note_editor_presentation.py:410:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
-        "spina_app/note_editor_presentation.py:439:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
-        "spina_app/note_editor_presentation.py:449:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
-        "spina_app/note_editor_presentation.py:461:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
-        "spina_app/note_editor_presentation.py:469:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
-        "spina_app/note_editor_presentation.py:480:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
-        "spina_app/note_editor_presentation.py:609:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
-        "spina_app/note_editor_presentation.py:619:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
-        "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
-        "spina_app/note_editor_presentation.py:653:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
-        "spina_app/note_editor_presentation.py:657:spina_app.note_editor_presentation.NoteEditorDialog._close",
+        "spina_app/note_editor_presentation.py:111:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
+        "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
+        "spina_app/note_editor_presentation.py:182:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
+        "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+        "spina_app/note_editor_presentation.py:194:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
+        "spina_app/note_editor_presentation.py:198:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
+        "spina_app/note_editor_presentation.py:220:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
+        "spina_app/note_editor_presentation.py:231:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
+        "spina_app/note_editor_presentation.py:245:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
+        "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "spina_app/note_editor_presentation.py:31:spina_app.note_editor_presentation.NoteEditorDialog",
+        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
+        "spina_app/note_editor_presentation.py:345:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope",
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
+        "spina_app/note_editor_presentation.py:413:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:442:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
+        "spina_app/note_editor_presentation.py:452:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
+        "spina_app/note_editor_presentation.py:464:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
+        "spina_app/note_editor_presentation.py:472:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
+        "spina_app/note_editor_presentation.py:483:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
+        "spina_app/note_editor_presentation.py:612:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
+        "spina_app/note_editor_presentation.py:622:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
+        "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
+        "spina_app/note_editor_presentation.py:656:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
+        "spina_app/note_editor_presentation.py:660:spina_app.note_editor_presentation.NoteEditorDialog._close",
         "spina_app/utilities/notes.py:15:spina_app.utilities.notes._append_unique_text",
         "spina_app/utilities/notes.py:28:spina_app.utilities.notes._merge_note_dict",
         "spina_app/utilities/notes.py:5:spina_app.utilities.notes._as_note_dict"
@@ -4887,8 +4887,8 @@
         "spina_app/area_hierarchy.py:47:spina_app.area_hierarchy.format_area_path",
         "spina_app/client_form_presentation.py:472:spina_app.client_form_presentation._app__client_form._validate_date",
         "spina_app/client_history_presentation.py:390:spina_app.client_history_presentation._app_open_client_history_dialog._in_date_range",
-        "spina_app/note_editor_presentation.py:202:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
-        "spina_app/note_editor_presentation.py:235:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
+        "spina_app/note_editor_presentation.py:205:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
+        "spina_app/note_editor_presentation.py:238:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
         "spina_app/ui_helpers.py:30:spina_app.ui_helpers._spina_v18_draw_round_rect",
         "spina_app/ui_helpers.py:43:spina_app.ui_helpers._spina_v17_set_card",
         "spina_app/ui_helpers.py:65:spina_app.ui_helpers._spina_v21_cash_set_card",
@@ -4964,7 +4964,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11571:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__"
       ],
       "Failed to delete note.\\n\\n{}\\n\\nSee log: data/spina_app.log": [
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
       ],
       "Failed to export. See data/spina_app.log": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17455:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_export_selected"
@@ -5008,7 +5008,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14801:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.generate_pdf_selected._err",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14855:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_dated_note_for_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14941:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_report_note_for_client",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
       ],
       "_MANIFEST.txt": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:34904:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy_same_format"
@@ -5514,7 +5514,7 @@
       "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
       "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
       "spina_app/navigation.py:11:spina_app.navigation._noop_log",
-      "spina_app/note_editor_presentation.py:14:spina_app.note_editor_presentation.configure_note_editor_dependencies",
+      "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
       "spina_app/postgres_compat.py:13:spina_app.postgres_compat.configure_postgres_compat_dependencies",
       "spina_app/tabs/cash_control.py:37:spina_app.tabs.cash_control._spina_v21_cash_build_tab",
       "spina_app/tabs/client_info_logs.py:202:spina_app.tabs.client_info_logs._spina_v24_build_client_info_logs_tab",
@@ -5629,7 +5629,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:620:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatCursor",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7444:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:769:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatConnection",
-        "spina_app/note_editor_presentation.py:28:spina_app.note_editor_presentation.NoteEditorDialog"
+        "spina_app/note_editor_presentation.py:31:spina_app.note_editor_presentation.NoteEditorDialog"
       ],
       "database_read": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10285:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._show_no_area_clients",
@@ -5857,7 +5857,7 @@
         "spina_app/client_history_presentation.py:89:spina_app.client_history_presentation._app_open_client_history_dialog._fmt_scalar",
         "spina_app/collector_refresh_presentation.py:112:spina_app.collector_refresh_presentation.refresh_collectors._lt_key",
         "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
-        "spina_app/note_editor_presentation.py:235:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
+        "spina_app/note_editor_presentation.py:238:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
         "spina_app/postgres_compat.py:70:spina_app.postgres_compat._spina_pg_guess_collector",
         "spina_app/tabs/dashboard.py:355:spina_app.tabs.dashboard._spina_v17_draw_dashboard_charts",
         "spina_app/tabs/reports.py:105:spina_app.tabs.reports._spina_v22_build_reports_tab",
@@ -6423,30 +6423,30 @@
         "spina_app/navigation.py:354:spina_app.navigation._month_label",
         "spina_app/navigation.py:358:spina_app.navigation._on_mousewheel_sync",
         "spina_app/navigation.py:60:spina_app.navigation._side_nav_items",
-        "spina_app/note_editor_presentation.py:108:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
-        "spina_app/note_editor_presentation.py:14:spina_app.note_editor_presentation.configure_note_editor_dependencies",
-        "spina_app/note_editor_presentation.py:179:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
-        "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
-        "spina_app/note_editor_presentation.py:191:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
-        "spina_app/note_editor_presentation.py:195:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
-        "spina_app/note_editor_presentation.py:202:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
-        "spina_app/note_editor_presentation.py:217:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
-        "spina_app/note_editor_presentation.py:228:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
-        "spina_app/note_editor_presentation.py:339:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
-        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope",
-        "spina_app/note_editor_presentation.py:410:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
-        "spina_app/note_editor_presentation.py:439:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
-        "spina_app/note_editor_presentation.py:449:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
-        "spina_app/note_editor_presentation.py:461:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
-        "spina_app/note_editor_presentation.py:469:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
-        "spina_app/note_editor_presentation.py:480:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
-        "spina_app/note_editor_presentation.py:609:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
-        "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
-        "spina_app/note_editor_presentation.py:653:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
-        "spina_app/note_editor_presentation.py:657:spina_app.note_editor_presentation.NoteEditorDialog._close",
+        "spina_app/note_editor_presentation.py:111:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
+        "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
+        "spina_app/note_editor_presentation.py:182:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
+        "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+        "spina_app/note_editor_presentation.py:194:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
+        "spina_app/note_editor_presentation.py:198:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
+        "spina_app/note_editor_presentation.py:205:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
+        "spina_app/note_editor_presentation.py:220:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
+        "spina_app/note_editor_presentation.py:231:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
+        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
+        "spina_app/note_editor_presentation.py:345:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope",
+        "spina_app/note_editor_presentation.py:413:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
+        "spina_app/note_editor_presentation.py:442:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
+        "spina_app/note_editor_presentation.py:452:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
+        "spina_app/note_editor_presentation.py:464:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
+        "spina_app/note_editor_presentation.py:472:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
+        "spina_app/note_editor_presentation.py:483:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
+        "spina_app/note_editor_presentation.py:612:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
+        "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
+        "spina_app/note_editor_presentation.py:656:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
+        "spina_app/note_editor_presentation.py:660:spina_app.note_editor_presentation.NoteEditorDialog._close",
         "spina_app/postgres_compat.py:116:spina_app.postgres_compat._spina_pg_escape_literal_percents",
         "spina_app/postgres_compat.py:13:spina_app.postgres_compat.configure_postgres_compat_dependencies",
         "spina_app/postgres_compat.py:31:spina_app.postgres_compat._spina_pg_sha256",
@@ -6658,11 +6658,11 @@
         "spina_app/navigation.py:311:spina_app.navigation._refresh_mode_toggle",
         "spina_app/navigation.py:390:spina_app.navigation._update_toolbar_states",
         "spina_app/navigation.py:94:spina_app.navigation._rebuild_side_nav",
-        "spina_app/note_editor_presentation.py:242:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
-        "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
-        "spina_app/note_editor_presentation.py:619:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
+        "spina_app/note_editor_presentation.py:245:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
+        "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:622:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
         "spina_app/tabs/cash_control.py:316:spina_app.tabs.cash_control._spina_v21_cash_draw_charts",
         "spina_app/tabs/cash_control.py:37:spina_app.tabs.cash_control._spina_v21_cash_build_tab",
         "spina_app/tabs/client_info_logs.py:202:spina_app.tabs.client_info_logs._spina_v24_build_client_info_logs_tab",
@@ -9300,87 +9300,87 @@
       {
         "event": "'WM_DELETE_WINDOW'",
         "kind": "protocol",
-        "line": 87,
-        "owner": "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "line": 90,
+        "owner": "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
         "target": "self._close"
       },
       {
         "kind": "command",
-        "line": 280,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 283,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self.listbox.yview"
       },
       {
         "kind": "yscrollcommand",
-        "line": 281,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 284,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "lsb.set"
       },
       {
         "kind": "command",
-        "line": 288,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 291,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._refresh_list"
       },
       {
         "kind": "command",
-        "line": 289,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 292,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._jump_today"
       },
       {
         "kind": "command",
-        "line": 290,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 293,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._jump_default"
       },
       {
         "kind": "command",
-        "line": 302,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 305,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._pick_date"
       },
       {
         "kind": "command",
-        "line": 318,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 321,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self.txt.yview"
       },
       {
         "kind": "yscrollcommand",
-        "line": 319,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 322,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "ysb.set"
       },
       {
         "event": "'<<Modified>>'",
         "kind": "bind",
-        "line": 323,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 326,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._on_text_modified"
       },
       {
         "kind": "command",
-        "line": 332,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 335,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._open_notes_file"
       },
       {
         "kind": "command",
-        "line": 333,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 336,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._clear_text"
       },
       {
         "kind": "command",
-        "line": 335,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 338,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._delete_note"
       },
       {
         "kind": "command",
-        "line": 336,
-        "owner": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "line": 339,
+        "owner": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
         "target": "self._close"
       },
       {
@@ -10171,7 +10171,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11571:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:22901:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.push.__init__",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26001:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog.__init__",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
         "tools/audit_bare_except_context.py:42:tools.audit_bare_except_context.Visitor.__init__",
         "tools/audit_blocking_ui_calls.py:89:tools.audit_blocking_ui_calls.BlockingCallVisitor.__init__",
         "tools/audit_pg_backup_action_flow.py:94:tools.audit_pg_backup_action_flow.Visitor.__init__",
@@ -10275,7 +10275,7 @@
       "_build_ui": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1557:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._build_ui",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1702:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._build_ui",
-        "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui"
+        "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui"
       ],
       "_call_name": [
         "tools/audit_blocking_ui_calls.py:55:tools.audit_blocking_ui_calls._call_name",
@@ -10368,7 +10368,7 @@
       "_close": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1645:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarPopup._close",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1843:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._CalendarRangePopup._close",
-        "spina_app/note_editor_presentation.py:657:spina_app.note_editor_presentation.NoteEditorDialog._close"
+        "spina_app/note_editor_presentation.py:660:spina_app.note_editor_presentation.NoteEditorDialog._close"
       ],
       "_close_editor": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:13994:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.on_day_double._close_editor",
@@ -11027,7 +11027,7 @@
         "tools/test_client_form_presentation_wave_38.py:22:tools.test_client_form_presentation_wave_38.call_chain",
         "tools/test_client_history_presentation_wave_36.py:27:tools.test_client_history_presentation_wave_36.call_chain",
         "tools/test_collector_refresh_presentation_wave_39.py:25:tools.test_collector_refresh_presentation_wave_39.call_chain",
-        "tools/test_note_editor_presentation_wave_40.py:23:tools.test_note_editor_presentation_wave_40.call_chain"
+        "tools/test_note_editor_presentation_wave_40.py:24:tools.test_note_editor_presentation_wave_40.call_chain"
       ],
       "cancel": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:21292:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.link_selected_client.cancel",
@@ -11335,7 +11335,7 @@
         "tools/test_module_separation_planner.py:36:tools.test_module_separation_planner.main",
         "tools/test_navigation_databank_shell_wave_29.py:307:tools.test_navigation_databank_shell_wave_29.main",
         "tools/test_note_dict_helper_extraction.py:102:tools.test_note_dict_helper_extraction.main",
-        "tools/test_note_editor_presentation_wave_40.py:33:tools.test_note_editor_presentation_wave_40.main",
+        "tools/test_note_editor_presentation_wave_40.py:34:tools.test_note_editor_presentation_wave_40.main",
         "tools/test_numeric_parser_extraction.py:180:tools.test_numeric_parser_extraction.main",
         "tools/test_payment_schedule_normalizer_batch_06.py:159:tools.test_payment_schedule_normalizer_batch_06.main",
         "tools/test_postgres_compat_wave_34.py:24:tools.test_postgres_compat_wave_34.main",
@@ -11368,7 +11368,7 @@
         "tools/test_client_form_presentation_wave_38.py:18:tools.test_client_form_presentation_wave_38.normalized",
         "tools/test_client_history_presentation_wave_36.py:19:tools.test_client_history_presentation_wave_36.normalized",
         "tools/test_collector_refresh_presentation_wave_39.py:21:tools.test_collector_refresh_presentation_wave_39.normalized",
-        "tools/test_note_editor_presentation_wave_40.py:19:tools.test_note_editor_presentation_wave_40.normalized",
+        "tools/test_note_editor_presentation_wave_40.py:20:tools.test_note_editor_presentation_wave_40.normalized",
         "tools/test_theme_presentation_wave_35.py:18:tools.test_theme_presentation_wave_35.normalized"
       ],
       "normalized_source": [
@@ -12323,35 +12323,35 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2792:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._migrate_legacy_notes_by_name",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7389:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.draw_notes_aligned",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8525:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._open_note_dialog",
-        "spina_app/note_editor_presentation.py:108:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
-        "spina_app/note_editor_presentation.py:14:spina_app.note_editor_presentation.configure_note_editor_dependencies",
-        "spina_app/note_editor_presentation.py:179:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
-        "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
-        "spina_app/note_editor_presentation.py:191:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
-        "spina_app/note_editor_presentation.py:195:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
-        "spina_app/note_editor_presentation.py:217:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
-        "spina_app/note_editor_presentation.py:228:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
-        "spina_app/note_editor_presentation.py:242:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
-        "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
-        "spina_app/note_editor_presentation.py:28:spina_app.note_editor_presentation.NoteEditorDialog",
-        "spina_app/note_editor_presentation.py:339:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
-        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope",
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
-        "spina_app/note_editor_presentation.py:410:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
-        "spina_app/note_editor_presentation.py:439:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
-        "spina_app/note_editor_presentation.py:449:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
-        "spina_app/note_editor_presentation.py:461:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
-        "spina_app/note_editor_presentation.py:469:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
-        "spina_app/note_editor_presentation.py:480:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
-        "spina_app/note_editor_presentation.py:609:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
-        "spina_app/note_editor_presentation.py:619:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
-        "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
-        "spina_app/note_editor_presentation.py:653:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
-        "spina_app/note_editor_presentation.py:657:spina_app.note_editor_presentation.NoteEditorDialog._close",
+        "spina_app/note_editor_presentation.py:111:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
+        "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
+        "spina_app/note_editor_presentation.py:182:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
+        "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+        "spina_app/note_editor_presentation.py:194:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
+        "spina_app/note_editor_presentation.py:198:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
+        "spina_app/note_editor_presentation.py:220:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
+        "spina_app/note_editor_presentation.py:231:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
+        "spina_app/note_editor_presentation.py:245:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
+        "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "spina_app/note_editor_presentation.py:31:spina_app.note_editor_presentation.NoteEditorDialog",
+        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
+        "spina_app/note_editor_presentation.py:345:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope",
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
+        "spina_app/note_editor_presentation.py:413:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:442:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
+        "spina_app/note_editor_presentation.py:452:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
+        "spina_app/note_editor_presentation.py:464:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
+        "spina_app/note_editor_presentation.py:472:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
+        "spina_app/note_editor_presentation.py:483:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
+        "spina_app/note_editor_presentation.py:612:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
+        "spina_app/note_editor_presentation.py:622:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
+        "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
+        "spina_app/note_editor_presentation.py:656:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
+        "spina_app/note_editor_presentation.py:660:spina_app.note_editor_presentation.NoteEditorDialog._close",
         "spina_app/utilities/notes.py:15:spina_app.utilities.notes._append_unique_text",
         "spina_app/utilities/notes.py:28:spina_app.utilities.notes._merge_note_dict",
         "spina_app/utilities/notes.py:5:spina_app.utilities.notes._as_note_dict",
@@ -13447,8 +13447,8 @@
         "tools/test_navigation_databank_shell_wave_29.py:98:tools.test_navigation_databank_shell_wave_29.assert_startup_wiring",
         "tools/test_note_dict_helper_extraction.py:102:tools.test_note_dict_helper_extraction.main",
         "tools/test_note_dict_helper_extraction.py:64:tools.test_note_dict_helper_extraction.capture_behavior",
-        "tools/test_note_editor_presentation_wave_40.py:23:tools.test_note_editor_presentation_wave_40.call_chain",
-        "tools/test_note_editor_presentation_wave_40.py:33:tools.test_note_editor_presentation_wave_40.main",
+        "tools/test_note_editor_presentation_wave_40.py:24:tools.test_note_editor_presentation_wave_40.call_chain",
+        "tools/test_note_editor_presentation_wave_40.py:34:tools.test_note_editor_presentation_wave_40.main",
         "tools/test_numeric_parser_extraction.py:108:tools.test_numeric_parser_extraction._source_state",
         "tools/test_numeric_parser_extraction.py:119:tools.test_numeric_parser_extraction._write_fixture",
         "tools/test_numeric_parser_extraction.py:129:tools.test_numeric_parser_extraction._test_original_state",
@@ -13785,8 +13785,8 @@
         "spina_app/area_hierarchy.py:47:spina_app.area_hierarchy.format_area_path",
         "spina_app/client_form_presentation.py:472:spina_app.client_form_presentation._app__client_form._validate_date",
         "spina_app/client_history_presentation.py:390:spina_app.client_history_presentation._app_open_client_history_dialog._in_date_range",
-        "spina_app/note_editor_presentation.py:202:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
-        "spina_app/note_editor_presentation.py:235:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
+        "spina_app/note_editor_presentation.py:205:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
+        "spina_app/note_editor_presentation.py:238:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
         "spina_app/ui_helpers.py:30:spina_app.ui_helpers._spina_v18_draw_round_rect",
         "spina_app/ui_helpers.py:43:spina_app.ui_helpers._spina_v17_set_card",
         "spina_app/ui_helpers.py:65:spina_app.ui_helpers._spina_v21_cash_set_card",
@@ -13836,7 +13836,7 @@
         "tools/test_merge_note_dict_extraction.py:50:tools.test_merge_note_dict_extraction.load_helper",
         "tools/test_note_dict_helper_extraction.py:38:tools.test_note_dict_helper_extraction.load_helper",
         "tools/test_note_dict_helper_extraction.py:87:tools.test_note_dict_helper_extraction.validate_copy_semantics",
-        "tools/test_note_editor_presentation_wave_40.py:19:tools.test_note_editor_presentation_wave_40.normalized",
+        "tools/test_note_editor_presentation_wave_40.py:20:tools.test_note_editor_presentation_wave_40.normalized",
         "tools/test_numeric_parser_extraction.py:45:tools.test_numeric_parser_extraction._validate_signature",
         "tools/test_postgres_compat_wave_34.py:16:tools.test_postgres_compat_wave_34.normalized_source",
         "tools/test_text_normalizer_extraction.py:44:tools.test_text_normalizer_extraction._validate_signature",
@@ -13900,7 +13900,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11571:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__"
       ],
       "Failed to delete note.\\n\\n{}\\n\\nSee log: data/spina_app.log": [
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
       ],
       "Failed to export. See data/spina_app.log": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17455:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_export_selected"
@@ -13944,7 +13944,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14801:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.generate_pdf_selected._err",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14855:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_dated_note_for_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14941:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_report_note_for_client",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
       ],
       "_MANIFEST.txt": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:34904:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy_same_format"
@@ -14014,7 +14014,7 @@
         "tools/test_clients_read_presentation_wave_30.py:142:tools.test_clients_read_presentation_wave_30.assert_focused_behavior"
       ],
       "self.db": [
-        "tools/test_note_editor_presentation_wave_40.py:33:tools.test_note_editor_presentation_wave_40.main"
+        "tools/test_note_editor_presentation_wave_40.py:34:tools.test_note_editor_presentation_wave_40.main"
       ],
       "settings.json": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:201:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_json_table_for_path"
@@ -14350,24 +14350,24 @@
         "feature": "notes",
         "file": "spina_app/note_editor_presentation.py",
         "functions": [
-          "spina_app/note_editor_presentation.py:14:spina_app.note_editor_presentation.configure_note_editor_dependencies",
-          "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
-          "spina_app/note_editor_presentation.py:108:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
-          "spina_app/note_editor_presentation.py:179:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
-          "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
-          "spina_app/note_editor_presentation.py:191:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
-          "spina_app/note_editor_presentation.py:195:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
-          "spina_app/note_editor_presentation.py:217:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
-          "spina_app/note_editor_presentation.py:228:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
-          "spina_app/note_editor_presentation.py:242:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
-          "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
-          "spina_app/note_editor_presentation.py:339:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
-          "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
-          "spina_app/note_editor_presentation.py:410:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
-          "spina_app/note_editor_presentation.py:439:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
-          "spina_app/note_editor_presentation.py:449:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
-          "spina_app/note_editor_presentation.py:461:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
-          "spina_app/note_editor_presentation.py:469:spina_app.note_editor_presentation.NoteEditorDialog._clear_text"
+          "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
+          "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+          "spina_app/note_editor_presentation.py:111:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
+          "spina_app/note_editor_presentation.py:182:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
+          "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+          "spina_app/note_editor_presentation.py:194:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
+          "spina_app/note_editor_presentation.py:198:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
+          "spina_app/note_editor_presentation.py:220:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
+          "spina_app/note_editor_presentation.py:231:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
+          "spina_app/note_editor_presentation.py:245:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
+          "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+          "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
+          "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
+          "spina_app/note_editor_presentation.py:413:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
+          "spina_app/note_editor_presentation.py:442:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
+          "spina_app/note_editor_presentation.py:452:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
+          "spina_app/note_editor_presentation.py:464:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
+          "spina_app/note_editor_presentation.py:472:spina_app.note_editor_presentation.NoteEditorDialog._clear_text"
         ],
         "lines": 403,
         "risk": [
@@ -14506,15 +14506,15 @@
         "feature": "notes",
         "file": "spina_app/note_editor_presentation.py",
         "functions": [
-          "spina_app/note_editor_presentation.py:480:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
-          "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-          "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-          "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
-          "spina_app/note_editor_presentation.py:609:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
-          "spina_app/note_editor_presentation.py:619:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
-          "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
-          "spina_app/note_editor_presentation.py:653:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
-          "spina_app/note_editor_presentation.py:657:spina_app.note_editor_presentation.NoteEditorDialog._close"
+          "spina_app/note_editor_presentation.py:483:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
+          "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+          "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+          "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
+          "spina_app/note_editor_presentation.py:612:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
+          "spina_app/note_editor_presentation.py:622:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
+          "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
+          "spina_app/note_editor_presentation.py:656:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
+          "spina_app/note_editor_presentation.py:660:spina_app.note_editor_presentation.NoteEditorDialog._close"
         ],
         "lines": 176,
         "risk": [
@@ -15461,7 +15461,7 @@
       "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
       "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
       "spina_app/navigation.py:11:spina_app.navigation._noop_log",
-      "spina_app/note_editor_presentation.py:14:spina_app.note_editor_presentation.configure_note_editor_dependencies",
+      "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
       "spina_app/postgres_compat.py:13:spina_app.postgres_compat.configure_postgres_compat_dependencies",
       "spina_app/tabs/cash_control.py:37:spina_app.tabs.cash_control._spina_v21_cash_build_tab",
       "spina_app/tabs/client_info_logs.py:202:spina_app.tabs.client_info_logs._spina_v24_build_client_info_logs_tab",
@@ -15696,7 +15696,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:620:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatCursor",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7444:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:769:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatConnection",
-        "spina_app/note_editor_presentation.py:28:spina_app.note_editor_presentation.NoteEditorDialog",
+        "spina_app/note_editor_presentation.py:31:spina_app.note_editor_presentation.NoteEditorDialog",
         "tools/audit_bare_except_context.py:41:tools.audit_bare_except_context.Visitor",
         "tools/audit_blocking_ui_calls.py:88:tools.audit_blocking_ui_calls.BlockingCallVisitor",
         "tools/audit_pg_backup_action_flow.py:93:tools.audit_pg_backup_action_flow.Visitor",
@@ -16009,7 +16009,7 @@
         "spina_app/client_history_presentation.py:89:spina_app.client_history_presentation._app_open_client_history_dialog._fmt_scalar",
         "spina_app/collector_refresh_presentation.py:112:spina_app.collector_refresh_presentation.refresh_collectors._lt_key",
         "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
-        "spina_app/note_editor_presentation.py:235:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
+        "spina_app/note_editor_presentation.py:238:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
         "spina_app/postgres_compat.py:70:spina_app.postgres_compat._spina_pg_guess_collector",
         "spina_app/tabs/dashboard.py:355:spina_app.tabs.dashboard._spina_v17_draw_dashboard_charts",
         "spina_app/tabs/reports.py:105:spina_app.tabs.reports._spina_v22_build_reports_tab",
@@ -16234,7 +16234,7 @@
         "tools/test_navigation_databank_shell_wave_29.py:98:tools.test_navigation_databank_shell_wave_29.assert_startup_wiring",
         "tools/test_note_dict_helper_extraction.py:102:tools.test_note_dict_helper_extraction.main",
         "tools/test_note_dict_helper_extraction.py:38:tools.test_note_dict_helper_extraction.load_helper",
-        "tools/test_note_editor_presentation_wave_40.py:33:tools.test_note_editor_presentation_wave_40.main",
+        "tools/test_note_editor_presentation_wave_40.py:34:tools.test_note_editor_presentation_wave_40.main",
         "tools/test_numeric_parser_extraction.py:119:tools.test_numeric_parser_extraction._write_fixture",
         "tools/test_numeric_parser_extraction.py:129:tools.test_numeric_parser_extraction._test_original_state",
         "tools/test_numeric_parser_extraction.py:160:tools.test_numeric_parser_extraction._test_applied_state",
@@ -16856,30 +16856,30 @@
         "spina_app/navigation.py:354:spina_app.navigation._month_label",
         "spina_app/navigation.py:358:spina_app.navigation._on_mousewheel_sync",
         "spina_app/navigation.py:60:spina_app.navigation._side_nav_items",
-        "spina_app/note_editor_presentation.py:108:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
-        "spina_app/note_editor_presentation.py:14:spina_app.note_editor_presentation.configure_note_editor_dependencies",
-        "spina_app/note_editor_presentation.py:179:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
-        "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
-        "spina_app/note_editor_presentation.py:191:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
-        "spina_app/note_editor_presentation.py:195:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
-        "spina_app/note_editor_presentation.py:202:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
-        "spina_app/note_editor_presentation.py:217:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
-        "spina_app/note_editor_presentation.py:228:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
-        "spina_app/note_editor_presentation.py:339:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
-        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope",
-        "spina_app/note_editor_presentation.py:410:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
-        "spina_app/note_editor_presentation.py:439:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
-        "spina_app/note_editor_presentation.py:449:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
-        "spina_app/note_editor_presentation.py:461:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
-        "spina_app/note_editor_presentation.py:469:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
-        "spina_app/note_editor_presentation.py:480:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
-        "spina_app/note_editor_presentation.py:609:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
-        "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
-        "spina_app/note_editor_presentation.py:653:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
-        "spina_app/note_editor_presentation.py:657:spina_app.note_editor_presentation.NoteEditorDialog._close",
+        "spina_app/note_editor_presentation.py:111:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
+        "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
+        "spina_app/note_editor_presentation.py:182:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
+        "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+        "spina_app/note_editor_presentation.py:194:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
+        "spina_app/note_editor_presentation.py:198:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
+        "spina_app/note_editor_presentation.py:205:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
+        "spina_app/note_editor_presentation.py:220:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
+        "spina_app/note_editor_presentation.py:231:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
+        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
+        "spina_app/note_editor_presentation.py:345:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope",
+        "spina_app/note_editor_presentation.py:413:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
+        "spina_app/note_editor_presentation.py:442:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
+        "spina_app/note_editor_presentation.py:452:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
+        "spina_app/note_editor_presentation.py:464:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
+        "spina_app/note_editor_presentation.py:472:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
+        "spina_app/note_editor_presentation.py:483:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
+        "spina_app/note_editor_presentation.py:612:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
+        "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
+        "spina_app/note_editor_presentation.py:656:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
+        "spina_app/note_editor_presentation.py:660:spina_app.note_editor_presentation.NoteEditorDialog._close",
         "spina_app/postgres_compat.py:116:spina_app.postgres_compat._spina_pg_escape_literal_percents",
         "spina_app/postgres_compat.py:13:spina_app.postgres_compat.configure_postgres_compat_dependencies",
         "spina_app/postgres_compat.py:31:spina_app.postgres_compat._spina_pg_sha256",
@@ -17585,8 +17585,8 @@
         "tools/test_navigation_databank_shell_wave_29.py:80:tools.test_navigation_databank_shell_wave_29.assignment_rows",
         "tools/test_note_dict_helper_extraction.py:64:tools.test_note_dict_helper_extraction.capture_behavior",
         "tools/test_note_dict_helper_extraction.py:87:tools.test_note_dict_helper_extraction.validate_copy_semantics",
-        "tools/test_note_editor_presentation_wave_40.py:19:tools.test_note_editor_presentation_wave_40.normalized",
-        "tools/test_note_editor_presentation_wave_40.py:23:tools.test_note_editor_presentation_wave_40.call_chain",
+        "tools/test_note_editor_presentation_wave_40.py:20:tools.test_note_editor_presentation_wave_40.normalized",
+        "tools/test_note_editor_presentation_wave_40.py:24:tools.test_note_editor_presentation_wave_40.call_chain",
         "tools/test_numeric_parser_extraction.py:108:tools.test_numeric_parser_extraction._source_state",
         "tools/test_numeric_parser_extraction.py:27:tools.test_numeric_parser_extraction._cases",
         "tools/test_numeric_parser_extraction.py:45:tools.test_numeric_parser_extraction._validate_signature",
@@ -17780,11 +17780,11 @@
         "spina_app/navigation.py:311:spina_app.navigation._refresh_mode_toggle",
         "spina_app/navigation.py:390:spina_app.navigation._update_toolbar_states",
         "spina_app/navigation.py:94:spina_app.navigation._rebuild_side_nav",
-        "spina_app/note_editor_presentation.py:242:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
-        "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
-        "spina_app/note_editor_presentation.py:619:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
+        "spina_app/note_editor_presentation.py:245:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
+        "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:622:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
         "spina_app/tabs/cash_control.py:316:spina_app.tabs.cash_control._spina_v21_cash_draw_charts",
         "spina_app/tabs/cash_control.py:37:spina_app.tabs.cash_control._spina_v21_cash_build_tab",
         "spina_app/tabs/client_info_logs.py:202:spina_app.tabs.client_info_logs._spina_v24_build_client_info_logs_tab",
@@ -18677,9 +18677,12 @@
       "application_file": true,
       "file": "spina_app/note_editor_presentation.py",
       "imports": {
-        "annotations": "__future__.annotations"
+        "annotations": "__future__.annotations",
+        "messagebox": "tkinter.messagebox",
+        "tk": "tkinter",
+        "ttk": "tkinter.ttk"
       },
-      "lines": 665,
+      "lines": 668,
       "module": "spina_app.note_editor_presentation",
       "module_globals": [
         "NOTE_EDITOR_CALLS",
@@ -18691,7 +18694,7 @@
         "_PROTECTED_GLOBALS"
       ],
       "monkey_patches": [],
-      "sha256": "94ec0fad3e16139edd6b704acb0d57643104845859f902b3573df12f02d5753c",
+      "sha256": "0e34db1976c926a92fde2f073ed3c8c7a1c1ef61c1a5cc05ae0b9e4485e84d34",
       "syntax_ok": true
     },
     {
@@ -21667,9 +21670,10 @@
         "annotations": "__future__.annotations",
         "ast": "ast",
         "hashlib": "hashlib",
+        "importlib": "importlib.util",
         "textwrap": "textwrap"
       },
-      "lines": 73,
+      "lines": 82,
       "module": "tools.test_note_editor_presentation_wave_40",
       "module_globals": [
         "DESKTOP",
@@ -21683,7 +21687,7 @@
         "TARGET"
       ],
       "monkey_patches": [],
-      "sha256": "d057cb289a89336c84de44292a358623b5d77189d88bd3d90e1b1071e14aa08e",
+      "sha256": "3e6d1e41831791b51d201edabde4e374b372338f5791929029799bab12dfb9aa",
       "syntax_ok": true
     },
     {
@@ -22023,7 +22027,7 @@
     "repository_possible_orphans": 233,
     "resolved_call_edges": 3702,
     "symbols": 2242,
-    "total_python_lines": 73131,
+    "total_python_lines": 73143,
     "ui_callback_edges": 499
   },
   "symbols": [
@@ -24708,7 +24712,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:34519:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:34904:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy_same_format",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8969:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.print_databank_close_report",
-        "spina_app/note_editor_presentation.py:480:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file"
+        "spina_app/note_editor_presentation.py:483:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file"
       ],
       "calls_raw": [
         "_spina_pg_store_file_to_db",
@@ -25198,22 +25202,22 @@
         "spina_app/navigation.py:358:spina_app.navigation._on_mousewheel_sync",
         "spina_app/navigation.py:390:spina_app.navigation._update_toolbar_states",
         "spina_app/navigation.py:94:spina_app.navigation._rebuild_side_nav",
-        "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
-        "spina_app/note_editor_presentation.py:202:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
-        "spina_app/note_editor_presentation.py:217:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
-        "spina_app/note_editor_presentation.py:242:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
-        "spina_app/note_editor_presentation.py:439:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
-        "spina_app/note_editor_presentation.py:449:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
-        "spina_app/note_editor_presentation.py:469:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
-        "spina_app/note_editor_presentation.py:480:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
-        "spina_app/note_editor_presentation.py:609:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
-        "spina_app/note_editor_presentation.py:619:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
-        "spina_app/note_editor_presentation.py:657:spina_app.note_editor_presentation.NoteEditorDialog._close",
+        "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+        "spina_app/note_editor_presentation.py:205:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
+        "spina_app/note_editor_presentation.py:220:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
+        "spina_app/note_editor_presentation.py:245:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:442:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
+        "spina_app/note_editor_presentation.py:452:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
+        "spina_app/note_editor_presentation.py:472:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
+        "spina_app/note_editor_presentation.py:483:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
+        "spina_app/note_editor_presentation.py:612:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
+        "spina_app/note_editor_presentation.py:622:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
+        "spina_app/note_editor_presentation.py:660:spina_app.note_editor_presentation.NoteEditorDialog._close",
         "spina_app/tabs/clients.py:706:spina_app.tabs.clients._spina_perf_refresh_clients",
         "spina_app/tabs/data_bank_shell.py:119:spina_app.tabs.data_bank_shell._show_audit_tab",
         "spina_app/tabs/data_bank_shell.py:130:spina_app.tabs.data_bank_shell._hide_audit_tab",
@@ -26771,7 +26775,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36961:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form",
         "spina_app/client_form_presentation.py:24:spina_app.client_form_presentation._app__client_form",
         "spina_app/client_form_presentation.py:286:spina_app.client_form_presentation._app__client_form._pick_dom",
-        "spina_app/note_editor_presentation.py:439:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
+        "spina_app/note_editor_presentation.py:442:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
         "spina_app/tabs/reports.py:105:spina_app.tabs.reports._spina_v22_build_reports_tab"
       ],
       "calls_raw": [
@@ -27097,7 +27101,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2235:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._resolve_note_key",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2296:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._resolve_note_key_scoped",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2792:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._migrate_legacy_notes_by_name",
-        "spina_app/note_editor_presentation.py:108:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed"
+        "spina_app/note_editor_presentation.py:111:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -27182,8 +27186,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2364:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._split_scoped_key",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:23926:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_record_report_generation",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2706:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.get_client_notes_in_range",
-        "spina_app/note_editor_presentation.py:228:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
-        "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui"
+        "spina_app/note_editor_presentation.py:231:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
+        "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui"
       ],
       "calls_raw": [
         "strip",
@@ -27224,7 +27228,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2296:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._resolve_note_key_scoped",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2792:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._migrate_legacy_notes_by_name",
-        "spina_app/note_editor_presentation.py:108:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed"
+        "spina_app/note_editor_presentation.py:111:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed"
       ],
       "calls_raw": [
         "_normalize_loan_type_value"
@@ -27264,7 +27268,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2296:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._resolve_note_key_scoped",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2792:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._migrate_legacy_notes_by_name",
-        "spina_app/note_editor_presentation.py:108:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed"
+        "spina_app/note_editor_presentation.py:111:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed"
       ],
       "calls_raw": [
         "strip"
@@ -27302,7 +27306,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2296:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._resolve_note_key_scoped",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2792:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._migrate_legacy_notes_by_name",
-        "spina_app/note_editor_presentation.py:108:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed"
+        "spina_app/note_editor_presentation.py:111:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed"
       ],
       "calls_raw": [
         "_normalize_loan_type_value",
@@ -27348,7 +27352,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2592:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.get_client_note",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2645:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.set_client_note",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2706:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.get_client_notes_in_range",
-        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope"
+        "spina_app/note_editor_presentation.py:345:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope"
       ],
       "calls_raw": [
         "_candidate_note_keys",
@@ -27476,8 +27480,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2645:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.set_client_note",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2706:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.get_client_notes_in_range",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2792:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._migrate_legacy_notes_by_name",
-        "spina_app/note_editor_presentation.py:108:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
-        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope"
+        "spina_app/note_editor_presentation.py:111:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
+        "spina_app/note_editor_presentation.py:345:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope"
       ],
       "calls_raw": [
         "_log_exc",
@@ -27633,7 +27637,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2645:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.set_client_note",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2792:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._migrate_legacy_notes_by_name",
-        "spina_app/note_editor_presentation.py:108:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed"
+        "spina_app/note_editor_presentation.py:111:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed"
       ],
       "calls_raw": [
         "_ensure_notes_dir",
@@ -27692,7 +27696,7 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14897:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._auto_load_report_note",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14982:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_report_note_for_client",
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note"
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note"
       ],
       "calls_raw": [
         "_load_client_notes",
@@ -27749,8 +27753,8 @@
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14855:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_dated_note_for_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14941:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_report_note_for_client",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
       ],
       "calls_raw": [
         "IOError",
@@ -35102,7 +35106,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14931:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._get_selected_report_client",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7447:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._mode_filter",
         "spina_app/client_queries.py:353:spina_app.client_queries.get_client_link_meta",
-        "spina_app/note_editor_presentation.py:28:spina_app.note_editor_presentation.NoteEditorDialog"
+        "spina_app/note_editor_presentation.py:31:spina_app.note_editor_presentation.NoteEditorDialog"
       ],
       "class_name": "App",
       "database_tables": [],
@@ -68834,7 +68838,7 @@
         "spina_app/collector_refresh_presentation.py:14:spina_app.collector_refresh_presentation.configure_collector_refresh_dependencies",
         "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
         "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
-        "spina_app/note_editor_presentation.py:14:spina_app.note_editor_presentation.configure_note_editor_dependencies",
+        "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
         "spina_app/postgres_compat.py:13:spina_app.postgres_compat.configure_postgres_compat_dependencies",
         "spina_app/theme_presentation.py:13:spina_app.theme_presentation.configure_theme_presentation_dependencies",
         "tools/test_collectors_editor_wave_26.py:101:tools.test_collectors_editor_wave_26.FakeListbox.delete",
@@ -75205,7 +75209,7 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 19,
+      "end_line": 22,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
@@ -75214,10 +75218,10 @@
         "_PROTECTED_GLOBALS"
       ],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:14:spina_app.note_editor_presentation.configure_note_editor_dependencies",
+      "id": "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
       "imports_used": [],
       "kind": "function",
-      "line": 14,
+      "line": 17,
       "lines": 6,
       "monkey_patches": [],
       "name": "configure_note_editor_dependencies",
@@ -75239,16 +75243,16 @@
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "Improved per-client notes editor. Features: - Dated and undated notes - Scope: Shared (both Regular/7x7) or This loan type - Left panel: list of existing notes (with search) - Autosave (debounced) + unsaved indicator - Safe switching between notes (prompts if needed) Notes storage is handled by get_",
-      "end_line": 665,
+      "end_line": 668,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:28:spina_app.note_editor_presentation.NoteEditorDialog",
+      "id": "spina_app/note_editor_presentation.py:31:spina_app.note_editor_presentation.NoteEditorDialog",
       "imports_used": [],
       "kind": "class",
-      "line": 28,
+      "line": 31,
       "lines": 638,
       "monkey_patches": [],
       "name": "NoteEditorDialog",
@@ -75273,12 +75277,12 @@
         {
           "event": "'WM_DELETE_WINDOW'",
           "kind": "protocol",
-          "line": 87,
+          "line": 90,
           "target": "self._close"
         }
       ],
       "callers": [
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
       ],
       "calls_raw": [
         "_log_exc",
@@ -75315,17 +75319,17 @@
       ],
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
-        "spina_app/note_editor_presentation.py:108:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
-        "spina_app/note_editor_presentation.py:179:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
-        "spina_app/note_editor_presentation.py:217:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
-        "spina_app/note_editor_presentation.py:242:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
-        "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-        "spina_app/note_editor_presentation.py:653:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
-        "spina_app/note_editor_presentation.py:657:spina_app.note_editor_presentation.NoteEditorDialog._close",
+        "spina_app/note_editor_presentation.py:111:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
+        "spina_app/note_editor_presentation.py:182:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
+        "spina_app/note_editor_presentation.py:220:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
+        "spina_app/note_editor_presentation.py:245:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
+        "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+        "spina_app/note_editor_presentation.py:656:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
+        "spina_app/note_editor_presentation.py:660:spina_app.note_editor_presentation.NoteEditorDialog._close",
         "tools/test_cash_control_feature_wave_21.py:42:tools.test_cash_control_feature_wave_21.FakeCanvas.winfo_width",
         "tools/test_cash_control_feature_wave_21.py:45:tools.test_cash_control_feature_wave_21.FakeCanvas.winfo_height",
         "tools/test_legacy_dashboard_controls_batch_15.py:47:tools.test_legacy_dashboard_controls_batch_15.FakeTk.StringVar"
@@ -75333,16 +75337,18 @@
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 105,
+      "end_line": 108,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
-      "imports_used": [],
+      "id": "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+      "imports_used": [
+        "tkinter"
+      ],
       "kind": "method",
-      "line": 40,
+      "line": 43,
       "lines": 66,
       "monkey_patches": [],
       "name": "__init__",
@@ -75361,7 +75367,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
       ],
       "calls_raw": [
         "_candidate_note_keys",
@@ -75392,16 +75398,16 @@
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "Move legacy name-based keys into stable-id keys for this client (best-effort). This prevents collisions if names repeat, and keeps notes attached even if a name changes. Runs only when we have a stable id (person_uid or client_uid).",
-      "end_line": 177,
+      "end_line": 180,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:108:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
+      "id": "spina_app/note_editor_presentation.py:111:spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed",
       "imports_used": [],
       "kind": "method",
-      "line": 108,
+      "line": 111,
       "lines": 70,
       "monkey_patches": [],
       "name": "_migrate_legacy_notes_if_needed",
@@ -75418,8 +75424,8 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
+        "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
       ],
       "calls_raw": [
         "getattr"
@@ -75428,16 +75434,16 @@
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 181,
+      "end_line": 184,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:179:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
+      "id": "spina_app/note_editor_presentation.py:182:spina_app.note_editor_presentation.NoteEditorDialog._title_text",
       "imports_used": [],
       "kind": "method",
-      "line": 179,
+      "line": 182,
       "lines": 3,
       "monkey_patches": [],
       "name": "_title_text",
@@ -75455,12 +75461,12 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:469:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
-        "spina_app/note_editor_presentation.py:609:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
-        "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch"
+        "spina_app/note_editor_presentation.py:472:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
+        "spina_app/note_editor_presentation.py:612:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
+        "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -75470,21 +75476,21 @@
       ],
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
-        "spina_app/note_editor_presentation.py:179:spina_app.note_editor_presentation.NoteEditorDialog._title_text"
+        "spina_app/note_editor_presentation.py:182:spina_app.note_editor_presentation.NoteEditorDialog._title_text"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 189,
+      "end_line": 192,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+      "id": "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
       "imports_used": [],
       "kind": "method",
-      "line": 183,
+      "line": 186,
       "lines": 7,
       "monkey_patches": [],
       "name": "_set_dirty",
@@ -75501,9 +75507,9 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
       ],
       "calls_raw": [
         "self.date_var.get",
@@ -75513,16 +75519,16 @@
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 193,
+      "end_line": 196,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:191:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
+      "id": "spina_app/note_editor_presentation.py:194:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
       "imports_used": [],
       "kind": "method",
-      "line": 191,
+      "line": 194,
       "lines": 3,
       "monkey_patches": [],
       "name": "_note_date_value",
@@ -75540,9 +75546,9 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
       ],
       "calls_raw": [
         "encode",
@@ -75555,16 +75561,16 @@
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 200,
+      "end_line": 203,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:195:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
+      "id": "spina_app/note_editor_presentation.py:198:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
       "imports_used": [],
       "kind": "method",
-      "line": 195,
+      "line": 198,
       "lines": 6,
       "monkey_patches": [],
       "name": "_sig_for_text",
@@ -75581,9 +75587,9 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -75598,16 +75604,18 @@
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 215,
+      "end_line": 218,
       "feature": "utilities",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:202:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
-      "imports_used": [],
+      "id": "spina_app/note_editor_presentation.py:205:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
+      "imports_used": [
+        "tkinter.messagebox"
+      ],
       "kind": "method",
-      "line": 202,
+      "line": 205,
       "lines": 14,
       "monkey_patches": [],
       "name": "_validate_date_or_warn",
@@ -75624,7 +75632,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -75636,16 +75644,16 @@
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 226,
+      "end_line": 229,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:217:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
+      "id": "spina_app/note_editor_presentation.py:220:spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope",
       "imports_used": [],
       "kind": "method",
-      "line": 217,
+      "line": 220,
       "lines": 10,
       "monkey_patches": [],
       "name": "_auto_choose_scope",
@@ -75663,8 +75671,8 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:235:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
+        "spina_app/note_editor_presentation.py:238:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
       ],
       "calls_raw": [
         "_normalize_loan_type_value",
@@ -75677,16 +75685,16 @@
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 233,
+      "end_line": 236,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:228:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
+      "id": "spina_app/note_editor_presentation.py:231:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
       "imports_used": [],
       "kind": "method",
-      "line": 228,
+      "line": 231,
       "lines": 6,
       "monkey_patches": [],
       "name": "_scope_label",
@@ -75706,7 +75714,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:339:spina_app.note_editor_presentation.NoteEditorDialog._collect_items"
+        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items"
       ],
       "calls_raw": [
         "len",
@@ -75716,21 +75724,21 @@
         "snippet.rstrip"
       ],
       "calls_resolved": [
-        "spina_app/note_editor_presentation.py:228:spina_app.note_editor_presentation.NoteEditorDialog._scope_label"
+        "spina_app/note_editor_presentation.py:231:spina_app.note_editor_presentation.NoteEditorDialog._scope_label"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 240,
+      "end_line": 243,
       "feature": "utilities",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:235:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
+      "id": "spina_app/note_editor_presentation.py:238:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
       "imports_used": [],
       "kind": "method",
-      "line": 235,
+      "line": 238,
       "lines": 6,
       "monkey_patches": [],
       "name": "_format_list_item",
@@ -75749,7 +75757,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -75762,16 +75770,16 @@
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 248,
+      "end_line": 251,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:242:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
+      "id": "spina_app/note_editor_presentation.py:245:spina_app.note_editor_presentation.NoteEditorDialog._focus_search",
       "imports_used": [],
       "kind": "method",
-      "line": 242,
+      "line": 245,
       "lines": 7,
       "monkey_patches": [],
       "name": "_focus_search",
@@ -75791,73 +75799,73 @@
       "callbacks": [
         {
           "kind": "command",
-          "line": 280,
+          "line": 283,
           "target": "self.listbox.yview"
         },
         {
           "kind": "yscrollcommand",
-          "line": 281,
+          "line": 284,
           "target": "lsb.set"
         },
         {
           "kind": "command",
-          "line": 288,
+          "line": 291,
           "target": "self._refresh_list"
         },
         {
           "kind": "command",
-          "line": 289,
+          "line": 292,
           "target": "self._jump_today"
         },
         {
           "kind": "command",
-          "line": 290,
+          "line": 293,
           "target": "self._jump_default"
         },
         {
           "kind": "command",
-          "line": 302,
+          "line": 305,
           "target": "self._pick_date"
         },
         {
           "kind": "command",
-          "line": 318,
+          "line": 321,
           "target": "self.txt.yview"
         },
         {
           "kind": "yscrollcommand",
-          "line": 319,
+          "line": 322,
           "target": "ysb.set"
         },
         {
           "event": "'<<Modified>>'",
           "kind": "bind",
-          "line": 323,
+          "line": 326,
           "target": "self._on_text_modified"
         },
         {
           "kind": "command",
-          "line": 332,
+          "line": 335,
           "target": "self._open_notes_file"
         },
         {
           "kind": "command",
-          "line": 333,
+          "line": 336,
           "target": "self._clear_text"
         },
         {
           "kind": "command",
-          "line": 335,
+          "line": 338,
           "target": "self._delete_note"
         },
         {
           "kind": "command",
-          "line": 336,
+          "line": 339,
           "target": "self._close"
         }
       ],
       "callers": [
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
       ],
       "calls_raw": [
         "_normalize_loan_type_value",
@@ -75903,24 +75911,27 @@
       ],
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2249:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._normalize_loan_type_value",
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
-        "spina_app/note_editor_presentation.py:410:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note"
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
+        "spina_app/note_editor_presentation.py:413:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 336,
+      "end_line": 339,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
-      "imports_used": [],
+      "id": "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+      "imports_used": [
+        "tkinter",
+        "tkinter.ttk"
+      ],
       "kind": "method",
-      "line": 251,
+      "line": 254,
       "lines": 86,
       "monkey_patches": [],
       "name": "_build_ui",
@@ -75939,7 +75950,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list"
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list"
       ],
       "calls_raw": [
         "add_scope",
@@ -75950,22 +75961,22 @@
         "strip.lower"
       ],
       "calls_resolved": [
-        "spina_app/note_editor_presentation.py:235:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
-        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope"
+        "spina_app/note_editor_presentation.py:238:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
+        "spina_app/note_editor_presentation.py:345:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 382,
+      "end_line": 385,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:339:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
+      "id": "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
       "imports_used": [],
       "kind": "method",
-      "line": 339,
+      "line": 342,
       "lines": 44,
       "monkey_patches": [],
       "name": "_collect_items",
@@ -75982,7 +75993,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:339:spina_app.note_editor_presentation.NoteEditorDialog._collect_items"
+        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items"
       ],
       "calls_raw": [
         "_load_client_notes",
@@ -76005,16 +76016,16 @@
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 368,
+      "end_line": 371,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope",
+      "id": "spina_app/note_editor_presentation.py:345:spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope",
       "imports_used": [],
       "kind": "nested_function",
-      "line": 342,
+      "line": 345,
       "lines": 27,
       "monkey_patches": [],
       "name": "add_scope",
@@ -76031,12 +76042,12 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
-        "spina_app/note_editor_presentation.py:410:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-        "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
+        "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "spina_app/note_editor_presentation.py:413:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+        "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -76051,23 +76062,23 @@
       ],
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
-        "spina_app/note_editor_presentation.py:339:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
+        "spina_app/note_editor_presentation.py:342:spina_app.note_editor_presentation.NoteEditorDialog._collect_items",
         "tools/test_collectors_editor_wave_26.py:110:tools.test_collectors_editor_wave_26.FakeListbox.selection_clear",
         "tools/test_collectors_editor_wave_26.py:112:tools.test_collectors_editor_wave_26.FakeListbox.selection_set"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 408,
+      "end_line": 411,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
+      "id": "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
       "imports_used": [],
       "kind": "method",
-      "line": 384,
+      "line": 387,
       "lines": 25,
       "monkey_patches": [],
       "name": "_refresh_list",
@@ -76086,7 +76097,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui"
+        "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui"
       ],
       "calls_raw": [
         "getattr",
@@ -76101,24 +76112,24 @@
         "self.scope_var.set"
       ],
       "calls_resolved": [
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
         "tools/test_collectors_editor_wave_26.py:108:tools.test_collectors_editor_wave_26.FakeListbox.curselection"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 436,
+      "end_line": 439,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:410:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
+      "id": "spina_app/note_editor_presentation.py:413:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
       "imports_used": [],
       "kind": "method",
-      "line": 410,
+      "line": 413,
       "lines": 27,
       "monkey_patches": [],
       "name": "_on_list_select",
@@ -76145,22 +76156,22 @@
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1896:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.pick_date",
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch"
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 447,
+      "end_line": 450,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:439:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
+      "id": "spina_app/note_editor_presentation.py:442:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
       "imports_used": [],
       "kind": "method",
-      "line": 439,
+      "line": 442,
       "lines": 9,
       "monkey_patches": [],
       "name": "_pick_date",
@@ -76188,22 +76199,22 @@
       ],
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch"
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 459,
+      "end_line": 462,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:449:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
+      "id": "spina_app/note_editor_presentation.py:452:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
       "imports_used": [],
       "kind": "method",
-      "line": 449,
+      "line": 452,
       "lines": 11,
       "monkey_patches": [],
       "name": "_jump_today",
@@ -76227,22 +76238,22 @@
         "self.scope_var.set"
       ],
       "calls_resolved": [
-        "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
-        "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch"
+        "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+        "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 467,
+      "end_line": 470,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:461:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
+      "id": "spina_app/note_editor_presentation.py:464:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
       "imports_used": [],
       "kind": "method",
-      "line": 461,
+      "line": 464,
       "lines": 7,
       "monkey_patches": [],
       "name": "_jump_default",
@@ -76268,23 +76279,23 @@
       ],
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
-        "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
-        "spina_app/note_editor_presentation.py:619:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
-        "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch"
+        "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+        "spina_app/note_editor_presentation.py:622:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
+        "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 478,
+      "end_line": 481,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:469:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
+      "id": "spina_app/note_editor_presentation.py:472:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
       "imports_used": [],
       "kind": "method",
-      "line": 469,
+      "line": 472,
       "lines": 10,
       "monkey_patches": [],
       "name": "_clear_text",
@@ -76313,16 +76324,18 @@
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 488,
+      "end_line": 491,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:480:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
-      "imports_used": [],
+      "id": "spina_app/note_editor_presentation.py:483:spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file",
+      "imports_used": [
+        "tkinter.messagebox"
+      ],
       "kind": "method",
-      "line": 480,
+      "line": 483,
       "lines": 9,
       "monkey_patches": [],
       "name": "_open_notes_file",
@@ -76340,12 +76353,12 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
-        "spina_app/note_editor_presentation.py:410:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
-        "spina_app/note_editor_presentation.py:439:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
-        "spina_app/note_editor_presentation.py:449:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
-        "spina_app/note_editor_presentation.py:461:spina_app.note_editor_presentation.NoteEditorDialog._jump_default"
+        "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "spina_app/note_editor_presentation.py:413:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:442:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
+        "spina_app/note_editor_presentation.py:452:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
+        "spina_app/note_editor_presentation.py:464:spina_app.note_editor_presentation.NoteEditorDialog._jump_default"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -76366,25 +76379,25 @@
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2592:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.get_client_note",
-        "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
-        "spina_app/note_editor_presentation.py:191:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
-        "spina_app/note_editor_presentation.py:195:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
-        "spina_app/note_editor_presentation.py:202:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list"
+        "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+        "spina_app/note_editor_presentation.py:194:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
+        "spina_app/note_editor_presentation.py:198:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
+        "spina_app/note_editor_presentation.py:205:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 523,
+      "end_line": 526,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:491:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
+      "id": "spina_app/note_editor_presentation.py:494:spina_app.note_editor_presentation.NoteEditorDialog._load_note",
       "imports_used": [],
       "kind": "method",
-      "line": 491,
+      "line": 494,
       "lines": 33,
       "monkey_patches": [],
       "name": "_load_note",
@@ -76403,11 +76416,11 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:251:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
-        "spina_app/note_editor_presentation.py:619:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
-        "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
-        "spina_app/note_editor_presentation.py:653:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close"
+        "spina_app/note_editor_presentation.py:254:spina_app.note_editor_presentation.NoteEditorDialog._build_ui",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:622:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
+        "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
+        "spina_app/note_editor_presentation.py:656:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -76430,25 +76443,27 @@
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2645:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.set_client_note",
-        "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
-        "spina_app/note_editor_presentation.py:191:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
-        "spina_app/note_editor_presentation.py:195:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
-        "spina_app/note_editor_presentation.py:202:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list"
+        "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+        "spina_app/note_editor_presentation.py:194:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
+        "spina_app/note_editor_presentation.py:198:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
+        "spina_app/note_editor_presentation.py:205:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 567,
+      "end_line": 570,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-      "imports_used": [],
+      "id": "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+      "imports_used": [
+        "tkinter.messagebox"
+      ],
       "kind": "method",
-      "line": 525,
+      "line": 528,
       "lines": 43,
       "monkey_patches": [],
       "name": "_save_note",
@@ -76487,17 +76502,17 @@
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2645:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.set_client_note",
-        "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
-        "spina_app/note_editor_presentation.py:191:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
-        "spina_app/note_editor_presentation.py:195:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
-        "spina_app/note_editor_presentation.py:202:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
-        "spina_app/note_editor_presentation.py:228:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list"
+        "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+        "spina_app/note_editor_presentation.py:194:spina_app.note_editor_presentation.NoteEditorDialog._note_date_value",
+        "spina_app/note_editor_presentation.py:198:spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text",
+        "spina_app/note_editor_presentation.py:205:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
+        "spina_app/note_editor_presentation.py:231:spina_app.note_editor_presentation.NoteEditorDialog._scope_label",
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 606,
+      "end_line": 609,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [
@@ -76506,10 +76521,12 @@
       ],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:569:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
-      "imports_used": [],
+      "id": "spina_app/note_editor_presentation.py:572:spina_app.note_editor_presentation.NoteEditorDialog._delete_note",
+      "imports_used": [
+        "tkinter.messagebox"
+      ],
       "kind": "method",
-      "line": 569,
+      "line": 572,
       "lines": 38,
       "monkey_patches": [],
       "name": "_delete_note",
@@ -76535,22 +76552,22 @@
       ],
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
-        "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
-        "spina_app/note_editor_presentation.py:619:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave"
+        "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+        "spina_app/note_editor_presentation.py:622:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 617,
+      "end_line": 620,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:609:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
+      "id": "spina_app/note_editor_presentation.py:612:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified",
       "imports_used": [],
       "kind": "method",
-      "line": 609,
+      "line": 612,
       "lines": 9,
       "monkey_patches": [],
       "name": "_on_text_modified",
@@ -76567,8 +76584,8 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:469:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
-        "spina_app/note_editor_presentation.py:609:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified"
+        "spina_app/note_editor_presentation.py:472:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
+        "spina_app/note_editor_presentation.py:612:spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -76580,21 +76597,21 @@
       ],
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note"
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 631,
+      "end_line": 634,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:619:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
+      "id": "spina_app/note_editor_presentation.py:622:spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave",
       "imports_used": [],
       "kind": "method",
-      "line": 619,
+      "line": 622,
       "lines": 13,
       "monkey_patches": [],
       "name": "_schedule_autosave",
@@ -76614,12 +76631,12 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:410:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
-        "spina_app/note_editor_presentation.py:439:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
-        "spina_app/note_editor_presentation.py:449:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
-        "spina_app/note_editor_presentation.py:461:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
-        "spina_app/note_editor_presentation.py:469:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
-        "spina_app/note_editor_presentation.py:657:spina_app.note_editor_presentation.NoteEditorDialog._close"
+        "spina_app/note_editor_presentation.py:413:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
+        "spina_app/note_editor_presentation.py:442:spina_app.note_editor_presentation.NoteEditorDialog._pick_date",
+        "spina_app/note_editor_presentation.py:452:spina_app.note_editor_presentation.NoteEditorDialog._jump_today",
+        "spina_app/note_editor_presentation.py:464:spina_app.note_editor_presentation.NoteEditorDialog._jump_default",
+        "spina_app/note_editor_presentation.py:472:spina_app.note_editor_presentation.NoteEditorDialog._clear_text",
+        "spina_app/note_editor_presentation.py:660:spina_app.note_editor_presentation.NoteEditorDialog._close"
       ],
       "calls_raw": [
         "bool",
@@ -76629,22 +76646,24 @@
         "self.autosave_var.get"
       ],
       "calls_resolved": [
-        "spina_app/note_editor_presentation.py:183:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note"
+        "spina_app/note_editor_presentation.py:186:spina_app.note_editor_presentation.NoteEditorDialog._set_dirty",
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 651,
+      "end_line": 654,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
-      "imports_used": [],
+      "id": "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch",
+      "imports_used": [
+        "tkinter.messagebox"
+      ],
       "kind": "method",
-      "line": 633,
+      "line": 636,
       "lines": 19,
       "monkey_patches": [],
       "name": "_confirm_before_switch",
@@ -76661,29 +76680,29 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__"
       ],
       "calls_raw": [
         "self._close",
         "self._save_note"
       ],
       "calls_resolved": [
-        "spina_app/note_editor_presentation.py:525:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
-        "spina_app/note_editor_presentation.py:657:spina_app.note_editor_presentation.NoteEditorDialog._close"
+        "spina_app/note_editor_presentation.py:528:spina_app.note_editor_presentation.NoteEditorDialog._save_note",
+        "spina_app/note_editor_presentation.py:660:spina_app.note_editor_presentation.NoteEditorDialog._close"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 655,
+      "end_line": 658,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:653:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
+      "id": "spina_app/note_editor_presentation.py:656:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close",
       "imports_used": [],
       "kind": "method",
-      "line": 653,
+      "line": 656,
       "lines": 3,
       "monkey_patches": [],
       "name": "_save_and_close",
@@ -76700,8 +76719,8 @@
       ],
       "callbacks": [],
       "callers": [
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
-        "spina_app/note_editor_presentation.py:653:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close"
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:656:spina_app.note_editor_presentation.NoteEditorDialog._save_and_close"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -76711,21 +76730,21 @@
       ],
       "calls_resolved": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
-        "spina_app/note_editor_presentation.py:633:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch"
+        "spina_app/note_editor_presentation.py:636:spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch"
       ],
       "class_name": "NoteEditorDialog",
       "database_tables": [],
       "docstring": "",
-      "end_line": 665,
+      "end_line": 668,
       "feature": "notes",
       "file": "spina_app/note_editor_presentation.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/note_editor_presentation.py:657:spina_app.note_editor_presentation.NoteEditorDialog._close",
+      "id": "spina_app/note_editor_presentation.py:660:spina_app.note_editor_presentation.NoteEditorDialog._close",
       "imports_used": [],
       "kind": "method",
-      "line": 657,
+      "line": 660,
       "lines": 9,
       "monkey_patches": [],
       "name": "_close",
@@ -108784,7 +108803,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8101:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role",
         "spina_app/area_picker_presentation.py:26:spina_app.area_picker_presentation._area_picker_dialog",
         "spina_app/client_form_presentation.py:24:spina_app.client_form_presentation._app__client_form",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
         "spina_app/tabs/cash_control.py:316:spina_app.tabs.cash_control._spina_v21_cash_draw_charts",
         "spina_app/tabs/client_info_logs.py:81:spina_app.tabs.client_info_logs._spina_v24_cilog_draw_charts",
         "spina_app/tabs/dashboard.py:355:spina_app.tabs.dashboard._spina_v17_draw_dashboard_charts",
@@ -108842,7 +108861,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8101:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role",
         "spina_app/area_picker_presentation.py:26:spina_app.area_picker_presentation._area_picker_dialog",
         "spina_app/client_form_presentation.py:24:spina_app.client_form_presentation._app__client_form",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
         "spina_app/tabs/cash_control.py:316:spina_app.tabs.cash_control._spina_v21_cash_draw_charts",
         "spina_app/tabs/client_info_logs.py:81:spina_app.tabs.client_info_logs._spina_v24_cilog_draw_charts",
         "spina_app/tabs/dashboard.py:355:spina_app.tabs.dashboard._spina_v17_draw_dashboard_charts"
@@ -117131,7 +117150,7 @@
         "spina_app/area_picker_presentation.py:276:spina_app.area_picker_presentation._area_picker_dialog.remove_sel",
         "spina_app/area_picker_presentation.py:284:spina_app.area_picker_presentation._area_picker_dialog.move_up",
         "spina_app/area_picker_presentation.py:301:spina_app.area_picker_presentation._area_picker_dialog.move_down",
-        "spina_app/note_editor_presentation.py:410:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
+        "spina_app/note_editor_presentation.py:413:spina_app.note_editor_presentation.NoteEditorDialog._on_list_select",
         "spina_app/tabs/collectors.py:415:spina_app.tabs.collectors._collectors_remove_area",
         "spina_app/tabs/collectors.py:425:spina_app.tabs.collectors._collectors_move_area"
       ],
@@ -117175,7 +117194,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:27209:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog._move",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:30660:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_areas_drag_motion",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38597:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_collector_editor_dialog._refresh_lists",
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
         "spina_app/tabs/collectors.py:425:spina_app.tabs.collectors._collectors_move_area"
       ],
       "calls_raw": [
@@ -117242,7 +117261,7 @@
         "spina_app/client_history_presentation.py:283:spina_app.client_history_presentation._app_open_client_history_dialog._render_tab1",
         "spina_app/client_history_presentation.py:490:spina_app.client_history_presentation._app_open_client_history_dialog._render_tab3",
         "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
-        "spina_app/note_editor_presentation.py:384:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
+        "spina_app/note_editor_presentation.py:387:spina_app.note_editor_presentation.NoteEditorDialog._refresh_list",
         "spina_app/tabs/client_info_logs.py:453:spina_app.tabs.client_info_logs._spina_v24_render_client_info_logs",
         "spina_app/tabs/client_info_logs.py:695:spina_app.tabs.client_info_logs._spina_render_client_info_logs",
         "spina_app/tabs/collectors.py:425:spina_app.tabs.collectors._collectors_move_area"
@@ -123201,7 +123220,7 @@
         "spina_app/area_picker_presentation.py:26:spina_app.area_picker_presentation._area_picker_dialog",
         "spina_app/client_form_presentation.py:24:spina_app.client_form_presentation._app__client_form",
         "spina_app/client_history_presentation.py:24:spina_app.client_history_presentation._app_open_client_history_dialog",
-        "spina_app/note_editor_presentation.py:40:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
+        "spina_app/note_editor_presentation.py:43:spina_app.note_editor_presentation.NoteEditorDialog.__init__",
         "spina_app/tabs/cash_control.py:37:spina_app.tabs.cash_control._spina_v21_cash_build_tab",
         "spina_app/tabs/client_info_logs.py:202:spina_app.tabs.client_info_logs._spina_v24_build_client_info_logs_tab",
         "spina_app/tabs/client_info_logs.py:453:spina_app.tabs.client_info_logs._spina_v24_render_client_info_logs",
@@ -126918,7 +126937,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/test_note_editor_presentation_wave_40.py:33:tools.test_note_editor_presentation_wave_40.main"
+        "tools/test_note_editor_presentation_wave_40.py:34:tools.test_note_editor_presentation_wave_40.main"
       ],
       "calls_raw": [
         "textwrap.dedent",
@@ -126928,18 +126947,18 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 20,
+      "end_line": 21,
       "feature": "utilities",
       "file": "tools/test_note_editor_presentation_wave_40.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "tools/test_note_editor_presentation_wave_40.py:19:tools.test_note_editor_presentation_wave_40.normalized",
+      "id": "tools/test_note_editor_presentation_wave_40.py:20:tools.test_note_editor_presentation_wave_40.normalized",
       "imports_used": [
         "textwrap"
       ],
       "kind": "function",
-      "line": 19,
+      "line": 20,
       "lines": 2,
       "monkey_patches": [],
       "name": "normalized",
@@ -126956,7 +126975,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/test_note_editor_presentation_wave_40.py:33:tools.test_note_editor_presentation_wave_40.main"
+        "tools/test_note_editor_presentation_wave_40.py:34:tools.test_note_editor_presentation_wave_40.main"
       ],
       "calls_raw": [
         "isinstance",
@@ -126968,18 +126987,18 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 30,
+      "end_line": 31,
       "feature": "other",
       "file": "tools/test_note_editor_presentation_wave_40.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "tools/test_note_editor_presentation_wave_40.py:23:tools.test_note_editor_presentation_wave_40.call_chain",
+      "id": "tools/test_note_editor_presentation_wave_40.py:24:tools.test_note_editor_presentation_wave_40.call_chain",
       "imports_used": [
         "ast"
       ],
       "kind": "function",
-      "line": 23,
+      "line": 24,
       "lines": 8,
       "monkey_patches": [],
       "name": "call_chain",
@@ -127005,7 +127024,10 @@
         "desktop_text.count",
         "hashlib.sha256",
         "hashlib.sha256.hexdigest",
+        "importlib.util.module_from_spec",
+        "importlib.util.spec_from_file_location",
         "isinstance",
+        "issubclass",
         "item.value.upper",
         "item.value.upper.split",
         "join",
@@ -127014,16 +127036,17 @@
         "normalized",
         "normalized.encode",
         "parts.lower",
-        "print"
+        "print",
+        "spec.loader.exec_module"
       ],
       "calls_resolved": [
-        "tools/test_note_editor_presentation_wave_40.py:19:tools.test_note_editor_presentation_wave_40.normalized",
-        "tools/test_note_editor_presentation_wave_40.py:23:tools.test_note_editor_presentation_wave_40.call_chain"
+        "tools/test_note_editor_presentation_wave_40.py:20:tools.test_note_editor_presentation_wave_40.normalized",
+        "tools/test_note_editor_presentation_wave_40.py:24:tools.test_note_editor_presentation_wave_40.call_chain"
       ],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 69,
+      "end_line": 78,
       "feature": "other",
       "file": "tools/test_note_editor_presentation_wave_40.py",
       "file_paths": [
@@ -127040,14 +127063,15 @@
         "TARGET"
       ],
       "globals_written": [],
-      "id": "tools/test_note_editor_presentation_wave_40.py:33:tools.test_note_editor_presentation_wave_40.main",
+      "id": "tools/test_note_editor_presentation_wave_40.py:34:tools.test_note_editor_presentation_wave_40.main",
       "imports_used": [
         "ast",
-        "hashlib"
+        "hashlib",
+        "importlib.util"
       ],
       "kind": "function",
-      "line": 33,
-      "lines": 37,
+      "line": 34,
+      "lines": 45,
       "monkey_patches": [],
       "name": "main",
       "parent": null,
@@ -127056,9 +127080,10 @@
       "risk": "filesystem",
       "risk_flags": [
         "filesystem",
-        "reports"
+        "reports",
+        "ui_only"
       ],
-      "source_sha256": "11810c1781f7d1b742ec5cac348710b1b1c42fd86ff7f0eb220ed8cc01c4b140"
+      "source_sha256": "67570af66dec2833f7f1c7272981eacc7677cf28d3b0722020c648b2c21cd1d3"
     },
     {
       "args": [],

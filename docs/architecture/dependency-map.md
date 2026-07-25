@@ -1,8 +1,8 @@
 # SPINA Application Dependency Map
 
-Generated from commit `9aafa1ebfe02b566b10a17a22ae49c28406c5f04`.
+Generated from commit `dc4197d6571d83be4a854a08eb883a8a371097b5`.
 
-Scanned **156 Python files**, **73,131 lines**, and **2,242 symbols**.
+Scanned **156 Python files**, **73,143 lines**, and **2,242 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -314,7 +314,7 @@ Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.A
 
 Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.get_client_note`, `spina_app.note_editor_presentation.NoteEditorDialog._set_dirty`, `spina_app.note_editor_presentation.NoteEditorDialog._note_date_value`, `spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text`, `spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn`, `spina_app.note_editor_presentation.NoteEditorDialog._refresh_list`
 
-Called by: `spina_app.note_editor_presentation.NoteEditorDialog._build_ui`, `spina_app.note_editor_presentation.NoteEditorDialog.__init__`, `spina_app.note_editor_presentation.NoteEditorDialog._on_list_select`, `spina_app.note_editor_presentation.NoteEditorDialog._pick_date`, `spina_app.note_editor_presentation.NoteEditorDialog._jump_today`, `spina_app.note_editor_presentation.NoteEditorDialog._jump_default`
+Called by: `spina_app.note_editor_presentation.NoteEditorDialog._build_ui`, `spina_app.note_editor_presentation.NoteEditorDialog._on_list_select`, `spina_app.note_editor_presentation.NoteEditorDialog.__init__`, `spina_app.note_editor_presentation.NoteEditorDialog._pick_date`, `spina_app.note_editor_presentation.NoteEditorDialog._jump_today`, `spina_app.note_editor_presentation.NoteEditorDialog._jump_default`
 
 ### `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_entry_worker`
 
@@ -524,7 +524,7 @@ Called by: `spina_app.area_hierarchy_ui.select_area_for_variable`
 
 Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once`, `spina_app.note_editor_presentation.NoteEditorDialog._collect_items`
 
-Called by: `spina_app.note_editor_presentation.NoteEditorDialog._build_ui`, `spina_app.note_editor_presentation.NoteEditorDialog.__init__`, `spina_app.note_editor_presentation.NoteEditorDialog._on_list_select`, `spina_app.note_editor_presentation.NoteEditorDialog._load_note`, `spina_app.note_editor_presentation.NoteEditorDialog._save_note`, `spina_app.note_editor_presentation.NoteEditorDialog._delete_note`
+Called by: `spina_app.note_editor_presentation.NoteEditorDialog._build_ui`, `spina_app.note_editor_presentation.NoteEditorDialog._on_list_select`, `spina_app.note_editor_presentation.NoteEditorDialog.__init__`, `spina_app.note_editor_presentation.NoteEditorDialog._load_note`, `spina_app.note_editor_presentation.NoteEditorDialog._save_note`, `spina_app.note_editor_presentation.NoteEditorDialog._delete_note`
 
 ### `spina_app.tabs.client_info_logs._spina_v24_build_client_info_logs_tab`
 
@@ -2271,7 +2271,7 @@ Called by: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.A
 - `spina_app.linked_client_queries.configure_linked_client_query_dependencies` — spina_app/linked_client_queries.py:27
 - `spina_app.loan_context_queries.configure_loan_context_dependencies` — spina_app/loan_context_queries.py:5
 - `spina_app.navigation._noop_log` — spina_app/navigation.py:11
-- `spina_app.note_editor_presentation.configure_note_editor_dependencies` — spina_app/note_editor_presentation.py:14
+- `spina_app.note_editor_presentation.configure_note_editor_dependencies` — spina_app/note_editor_presentation.py:17
 - `spina_app.postgres_compat.configure_postgres_compat_dependencies` — spina_app/postgres_compat.py:13
 - `spina_app.tabs.cash_control._spina_v21_cash_build_tab` — spina_app/tabs/cash_control.py:37
 - `spina_app.tabs.client_info_logs._spina_v24_build_client_info_logs_tab` — spina_app/tabs/client_info_logs.py:202

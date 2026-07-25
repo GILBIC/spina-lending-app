@@ -1,8 +1,8 @@
 # SPINA Application Risk and Modularization Map
 
-Generated from commit `9aafa1ebfe02b566b10a17a22ae49c28406c5f04`.
+Generated from commit `dc4197d6571d83be4a854a08eb883a8a371097b5`.
 
-Scanned **156 Python files**, **73,131 lines**, and **2,242 symbols**.
+Scanned **156 Python files**, **73,143 lines**, and **2,242 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -336,7 +336,7 @@ Scanned **156 Python files**, **73,131 lines**, and **2,242 symbols**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._migrate_legacy_notes_by_name` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2792 — Migrate legacy name-based notes (old_name and '<loan_type>::old_name') into stable-id keys. Use this when a client's name changes to avoid orphaning notes that were stored under the old name. Returns True if any changes were saved.
 - `spina_app.area_hierarchy_ops._planned_subtree` — spina_app/area_hierarchy_ops.py:158 — Handles planned subtree for the other feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._parse_reason_color_token_meta` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:23502 — Extract [RC:...] token plus optional window meta from the description. Supported token payloads (inside the brackets): - '#RRGGBB' - 'red' / 'green' / etc - '#RRGGBB;D:3' -> days=3 (inclusive, starting from the reason's date) - '#RRGGBB;UNTIL:YYYY-MM-DD' -> until (inclusive) - 'red;D:3' / 'red;UNTIL
-- `spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed` — spina_app/note_editor_presentation.py:108 — Move legacy name-based keys into stable-id keys for this client (best-effort). This prevents collisions if names repeat, and keeps notes attached even if a name changes. Runs only when we have a stable id (person_uid or client_uid).
+- `spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed` — spina_app/note_editor_presentation.py:111 — Move legacy name-based keys into stable-id keys for this client (best-effort). This prevents collisions if names repeat, and keeps notes attached even if a name changes. Runs only when we have a stable id (person_uid or client_uid).
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._collectors_areas_drag_end` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17658 — Handles collectors areas drag end for the collectors feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._resolve_note_key_scoped` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2296 — Resolve a notes_dict key for a client. Preferred (stable) keys: - shared scope: PID|<person_uid> (or CID|<client_uid> fallback) - type scope: PT|<person_uid>|<loan_type> (or CID|<client_uid> fallback) Legacy fallback keys remain supported: - shared: name - type: '<loan_type>::<name>' Uses candidate 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog._load` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9616 — Handles load for the data bank feature.
@@ -400,7 +400,7 @@ Scanned **156 Python files**, **73,131 lines**, and **2,242 symbols**.
 - `spina_app.tabs.client_info_logs._spina_v24_cilog_draw_charts` — spina_app/tabs/client_info_logs.py:81 — Handles spina v24 cilog draw charts for the clients feature.
 - `spina_app.tabs.clients._spina_perf_refresh_clients` — spina_app/tabs/clients.py:706 — Fast Clients tab refresh for large datasets.
 - `spina_app.tabs.data_bank_shell._resize_databank_columns` — spina_app/tabs/data_bank_shell.py:138 — Resize Data Bank columns responsively. Supports 'freeze panes' layout: - name_tree shows Client + Area (fixed, no horizontal scroll) - days_tree shows day columns with horizontal scroll
-- `spina_app.note_editor_presentation.NoteEditorDialog._build_ui` — spina_app/note_editor_presentation.py:251 — Builds build ui for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._build_ui` — spina_app/note_editor_presentation.py:254 — Builds build ui for the notes feature.
 - `spina_app.tabs.client_info_logs._spina_v24_render_client_info_logs` — spina_app/tabs/client_info_logs.py:453 — Handles spina v24 render client info logs for the clients feature.
 - `spina_app.tabs.dashboard._spina_v17_populate_dashboard_tree` — spina_app/tabs/dashboard.py:444 — Handles spina v17 populate dashboard tree for the dashboard feature.
 - `spina_app.area_hierarchy_ui._select_parent_area` — spina_app/area_hierarchy_ui.py:379 — Select a new parent folder; an empty string means move to the root.
@@ -671,24 +671,24 @@ Source file: `spina_app/note_editor_presentation.py`
 
 Risk mix: `support`, `ui_only`
 
-- `spina_app.note_editor_presentation.configure_note_editor_dependencies` — spina_app/note_editor_presentation.py:14 — Handles configure note editor dependencies for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog.__init__` — spina_app/note_editor_presentation.py:40 — Handles init for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed` — spina_app/note_editor_presentation.py:108 — Move legacy name-based keys into stable-id keys for this client (best-effort). This prevents collisions if names repeat, and keeps notes attached even if a name changes. Runs only when we have a stable id (person_uid or client_uid).
-- `spina_app.note_editor_presentation.NoteEditorDialog._title_text` — spina_app/note_editor_presentation.py:179 — Handles title text for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._set_dirty` — spina_app/note_editor_presentation.py:183 — Updates set dirty for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._note_date_value` — spina_app/note_editor_presentation.py:191 — Handles note date value for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text` — spina_app/note_editor_presentation.py:195 — Handles sig for text for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope` — spina_app/note_editor_presentation.py:217 — Handles auto choose scope for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._scope_label` — spina_app/note_editor_presentation.py:228 — Handles scope label for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._focus_search` — spina_app/note_editor_presentation.py:242 — Handles focus search for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._build_ui` — spina_app/note_editor_presentation.py:251 — Builds build ui for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._collect_items` — spina_app/note_editor_presentation.py:339 — Handles collect items for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._refresh_list` — spina_app/note_editor_presentation.py:384 — Refreshes refresh list for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._on_list_select` — spina_app/note_editor_presentation.py:410 — Handles on list select for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._pick_date` — spina_app/note_editor_presentation.py:439 — Handles pick date for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._jump_today` — spina_app/note_editor_presentation.py:449 — Handles jump today for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._jump_default` — spina_app/note_editor_presentation.py:461 — Handles jump default for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._clear_text` — spina_app/note_editor_presentation.py:469 — Handles clear text for the notes feature.
+- `spina_app.note_editor_presentation.configure_note_editor_dependencies` — spina_app/note_editor_presentation.py:17 — Handles configure note editor dependencies for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog.__init__` — spina_app/note_editor_presentation.py:43 — Handles init for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed` — spina_app/note_editor_presentation.py:111 — Move legacy name-based keys into stable-id keys for this client (best-effort). This prevents collisions if names repeat, and keeps notes attached even if a name changes. Runs only when we have a stable id (person_uid or client_uid).
+- `spina_app.note_editor_presentation.NoteEditorDialog._title_text` — spina_app/note_editor_presentation.py:182 — Handles title text for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._set_dirty` — spina_app/note_editor_presentation.py:186 — Updates set dirty for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._note_date_value` — spina_app/note_editor_presentation.py:194 — Handles note date value for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text` — spina_app/note_editor_presentation.py:198 — Handles sig for text for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope` — spina_app/note_editor_presentation.py:220 — Handles auto choose scope for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._scope_label` — spina_app/note_editor_presentation.py:231 — Handles scope label for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._focus_search` — spina_app/note_editor_presentation.py:245 — Handles focus search for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._build_ui` — spina_app/note_editor_presentation.py:254 — Builds build ui for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._collect_items` — spina_app/note_editor_presentation.py:342 — Handles collect items for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._refresh_list` — spina_app/note_editor_presentation.py:387 — Refreshes refresh list for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._on_list_select` — spina_app/note_editor_presentation.py:413 — Handles on list select for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._pick_date` — spina_app/note_editor_presentation.py:442 — Handles pick date for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._jump_today` — spina_app/note_editor_presentation.py:452 — Handles jump today for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._jump_default` — spina_app/note_editor_presentation.py:464 — Handles jump default for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._clear_text` — spina_app/note_editor_presentation.py:472 — Handles clear text for the notes feature.
 
 ### Batch 15: Navigation (358 lines)
 
@@ -796,15 +796,15 @@ Source file: `spina_app/note_editor_presentation.py`
 
 Risk mix: `support`, `ui_only`
 
-- `spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file` — spina_app/note_editor_presentation.py:480 — Handles open notes file for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._load_note` — spina_app/note_editor_presentation.py:491 — Loads load note for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._save_note` — spina_app/note_editor_presentation.py:525 — Saves save note for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._delete_note` — spina_app/note_editor_presentation.py:569 — Removes delete note for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified` — spina_app/note_editor_presentation.py:609 — Handles on text modified for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave` — spina_app/note_editor_presentation.py:619 — Handles schedule autosave for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch` — spina_app/note_editor_presentation.py:633 — Handles confirm before switch for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._save_and_close` — spina_app/note_editor_presentation.py:653 — Saves save and close for the notes feature.
-- `spina_app.note_editor_presentation.NoteEditorDialog._close` — spina_app/note_editor_presentation.py:657 — Handles close for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file` — spina_app/note_editor_presentation.py:483 — Handles open notes file for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._load_note` — spina_app/note_editor_presentation.py:494 — Loads load note for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._save_note` — spina_app/note_editor_presentation.py:528 — Saves save note for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._delete_note` — spina_app/note_editor_presentation.py:572 — Removes delete note for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified` — spina_app/note_editor_presentation.py:612 — Handles on text modified for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave` — spina_app/note_editor_presentation.py:622 — Handles schedule autosave for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch` — spina_app/note_editor_presentation.py:636 — Handles confirm before switch for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._save_and_close` — spina_app/note_editor_presentation.py:656 — Saves save and close for the notes feature.
+- `spina_app.note_editor_presentation.NoteEditorDialog._close` — spina_app/note_editor_presentation.py:660 — Handles close for the notes feature.
 
 ### Batch 23: Clients (169 lines)
 
@@ -861,14 +861,14 @@ Risk mix: `support`, `ui_only`
 ## Duplicate application symbol names
 
 - `__getattr__`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:765`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3136`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3215`
-- `__init__`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:530`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:621`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:770`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1524`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1655`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3061`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3141`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3223`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11571`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:22901`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26001`, `spina_app/note_editor_presentation.py:40`
+- `__init__`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:530`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:621`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:770`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1524`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1655`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3061`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3141`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3223`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11571`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:22901`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26001`, `spina_app/note_editor_presentation.py:43`
 - `__iter__`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:541`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:762`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:3132`
 - `_arrange_areas_dialog`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:18510`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:27176`
-- `_build_ui`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1557`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1702`, `spina_app/note_editor_presentation.py:251`
+- `_build_ui`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1557`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1702`, `spina_app/note_editor_presentation.py:254`
 - `_cancel`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7752`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8056`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8150`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:18488`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:18567`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:22336`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:27154`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:27233`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:38808`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:39250`
 - `_clear`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1641`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1838`
 - `_clear_collectors_search_filters`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17699`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26810`
-- `_close`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1645`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1843`, `spina_app/note_editor_presentation.py:657`
+- `_close`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1645`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1843`, `spina_app/note_editor_presentation.py:660`
 - `_close_editor`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:13994`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14066`
 - `_collectors_areas_drag_motion`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17638`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:30660`
 - `_delete_selected_collector`: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10312`, `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:30610`

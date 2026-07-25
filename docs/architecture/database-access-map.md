@@ -1,8 +1,8 @@
 # SPINA Application Database and File Access Map
 
-Generated from commit `9aafa1ebfe02b566b10a17a22ae49c28406c5f04`.
+Generated from commit `dc4197d6571d83be4a854a08eb883a8a371097b5`.
 
-Scanned **156 Python files**, **73,131 lines**, and **2,242 symbols**.
+Scanned **156 Python files**, **73,143 lines**, and **2,242 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -287,7 +287,7 @@ Scanned **156 Python files**, **73,131 lines**, and **2,242 symbols**.
 
 ### `Failed to delete note.\n\n{}\n\nSee log: data/spina_app.log`
 
-- `spina_app.note_editor_presentation.NoteEditorDialog._delete_note` — spina_app/note_editor_presentation.py:569
+- `spina_app.note_editor_presentation.NoteEditorDialog._delete_note` — spina_app/note_editor_presentation.py:572
 
 ### `Failed to export. See data/spina_app.log`
 
@@ -342,7 +342,7 @@ Scanned **156 Python files**, **73,131 lines**, and **2,242 symbols**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.generate_pdf_selected._err` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14801
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_dated_note_for_client` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14855
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_report_note_for_client` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14941
-- `spina_app.note_editor_presentation.NoteEditorDialog._delete_note` — spina_app/note_editor_presentation.py:569
+- `spina_app.note_editor_presentation.NoteEditorDialog._delete_note` — spina_app/note_editor_presentation.py:572
 
 ### `_MANIFEST.txt`
 

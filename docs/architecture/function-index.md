@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `9aafa1ebfe02b566b10a17a22ae49c28406c5f04`.
+Generated from commit `dc4197d6571d83be4a854a08eb883a8a371097b5`.
 
-Scanned **156 Python files**, **73,131 lines**, and **2,242 symbols**.
+Scanned **156 Python files**, **73,143 lines**, and **2,242 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1016,37 +1016,37 @@ Scanned **156 Python files**, **73,131 lines**, and **2,242 symbols**.
 
 ## `spina_app/note_editor_presentation.py`
 
-- **spina_app.note_editor_presentation.configure_note_editor_dependencies** (function, lines 14–19, 6 lines, risk `support`): Handles configure note editor dependencies for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog** (class, lines 28–665, 638 lines, risk `container`): Improved per-client notes editor. Features: - Dated and undated notes - Scope: Shared (both Regular/7x7) or This loan type - Left panel: list of existing notes (with search) - Autosave (debounced) + unsaved indicator - Safe switching between notes (prompts if needed) Notes storage is handled by get_
-- **spina_app.note_editor_presentation.NoteEditorDialog.__init__** (method, lines 40–105, 66 lines, risk `ui_only`): Handles init for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed** (method, lines 108–177, 70 lines, risk `support`): Move legacy name-based keys into stable-id keys for this client (best-effort). This prevents collisions if names repeat, and keeps notes attached even if a name changes. Runs only when we have a stable id (person_uid or client_uid).
-- **spina_app.note_editor_presentation.NoteEditorDialog._title_text** (method, lines 179–181, 3 lines, risk `support`): Handles title text for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._set_dirty** (method, lines 183–189, 7 lines, risk `support`): Updates set dirty for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._note_date_value** (method, lines 191–193, 3 lines, risk `support`): Handles note date value for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text** (method, lines 195–200, 6 lines, risk `support`): Handles sig for text for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn** (method, lines 202–215, 14 lines, risk `support`): Validates validate date or warn for the utilities feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope** (method, lines 217–226, 10 lines, risk `support`): Handles auto choose scope for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._scope_label** (method, lines 228–233, 6 lines, risk `support`): Handles scope label for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._format_list_item** (method, lines 235–240, 6 lines, risk `filesystem`): Handles format list item for the utilities feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._focus_search** (method, lines 242–248, 7 lines, risk `ui_only`): Handles focus search for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._build_ui** (method, lines 251–336, 86 lines, risk `ui_only`): Builds build ui for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._collect_items** (method, lines 339–382, 44 lines, risk `support`): Handles collect items for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope** (nested_function, lines 342–368, 27 lines, risk `support`): Handles add scope for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._refresh_list** (method, lines 384–408, 25 lines, risk `ui_only`): Refreshes refresh list for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._on_list_select** (method, lines 410–436, 27 lines, risk `support`): Handles on list select for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._pick_date** (method, lines 439–447, 9 lines, risk `support`): Handles pick date for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._jump_today** (method, lines 449–459, 11 lines, risk `support`): Handles jump today for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._jump_default** (method, lines 461–467, 7 lines, risk `support`): Handles jump default for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._clear_text** (method, lines 469–478, 10 lines, risk `support`): Handles clear text for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file** (method, lines 480–488, 9 lines, risk `support`): Handles open notes file for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._load_note** (method, lines 491–523, 33 lines, risk `support`): Loads load note for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._save_note** (method, lines 525–567, 43 lines, risk `support`): Saves save note for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._delete_note** (method, lines 569–606, 38 lines, risk `support`): Removes delete note for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified** (method, lines 609–617, 9 lines, risk `support`): Handles on text modified for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave** (method, lines 619–631, 13 lines, risk `ui_only`): Handles schedule autosave for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch** (method, lines 633–651, 19 lines, risk `support`): Handles confirm before switch for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._save_and_close** (method, lines 653–655, 3 lines, risk `support`): Saves save and close for the notes feature.
-- **spina_app.note_editor_presentation.NoteEditorDialog._close** (method, lines 657–665, 9 lines, risk `support`): Handles close for the notes feature.
+- **spina_app.note_editor_presentation.configure_note_editor_dependencies** (function, lines 17–22, 6 lines, risk `support`): Handles configure note editor dependencies for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog** (class, lines 31–668, 638 lines, risk `container`): Improved per-client notes editor. Features: - Dated and undated notes - Scope: Shared (both Regular/7x7) or This loan type - Left panel: list of existing notes (with search) - Autosave (debounced) + unsaved indicator - Safe switching between notes (prompts if needed) Notes storage is handled by get_
+- **spina_app.note_editor_presentation.NoteEditorDialog.__init__** (method, lines 43–108, 66 lines, risk `ui_only`): Handles init for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed** (method, lines 111–180, 70 lines, risk `support`): Move legacy name-based keys into stable-id keys for this client (best-effort). This prevents collisions if names repeat, and keeps notes attached even if a name changes. Runs only when we have a stable id (person_uid or client_uid).
+- **spina_app.note_editor_presentation.NoteEditorDialog._title_text** (method, lines 182–184, 3 lines, risk `support`): Handles title text for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._set_dirty** (method, lines 186–192, 7 lines, risk `support`): Updates set dirty for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._note_date_value** (method, lines 194–196, 3 lines, risk `support`): Handles note date value for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._sig_for_text** (method, lines 198–203, 6 lines, risk `support`): Handles sig for text for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn** (method, lines 205–218, 14 lines, risk `support`): Validates validate date or warn for the utilities feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._auto_choose_scope** (method, lines 220–229, 10 lines, risk `support`): Handles auto choose scope for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._scope_label** (method, lines 231–236, 6 lines, risk `support`): Handles scope label for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._format_list_item** (method, lines 238–243, 6 lines, risk `filesystem`): Handles format list item for the utilities feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._focus_search** (method, lines 245–251, 7 lines, risk `ui_only`): Handles focus search for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._build_ui** (method, lines 254–339, 86 lines, risk `ui_only`): Builds build ui for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._collect_items** (method, lines 342–385, 44 lines, risk `support`): Handles collect items for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope** (nested_function, lines 345–371, 27 lines, risk `support`): Handles add scope for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._refresh_list** (method, lines 387–411, 25 lines, risk `ui_only`): Refreshes refresh list for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._on_list_select** (method, lines 413–439, 27 lines, risk `support`): Handles on list select for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._pick_date** (method, lines 442–450, 9 lines, risk `support`): Handles pick date for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._jump_today** (method, lines 452–462, 11 lines, risk `support`): Handles jump today for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._jump_default** (method, lines 464–470, 7 lines, risk `support`): Handles jump default for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._clear_text** (method, lines 472–481, 10 lines, risk `support`): Handles clear text for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._open_notes_file** (method, lines 483–491, 9 lines, risk `support`): Handles open notes file for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._load_note** (method, lines 494–526, 33 lines, risk `support`): Loads load note for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._save_note** (method, lines 528–570, 43 lines, risk `support`): Saves save note for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._delete_note** (method, lines 572–609, 38 lines, risk `support`): Removes delete note for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._on_text_modified** (method, lines 612–620, 9 lines, risk `support`): Handles on text modified for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._schedule_autosave** (method, lines 622–634, 13 lines, risk `ui_only`): Handles schedule autosave for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch** (method, lines 636–654, 19 lines, risk `support`): Handles confirm before switch for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._save_and_close** (method, lines 656–658, 3 lines, risk `support`): Saves save and close for the notes feature.
+- **spina_app.note_editor_presentation.NoteEditorDialog._close** (method, lines 660–668, 9 lines, risk `support`): Handles close for the notes feature.
 
 ## `spina_app/postgres_compat.py`
 
@@ -2553,9 +2553,9 @@ Scanned **156 Python files**, **73,131 lines**, and **2,242 symbols**.
 
 ## `tools/test_note_editor_presentation_wave_40.py`
 
-- **tools.test_note_editor_presentation_wave_40.normalized** (function, lines 19–20, 2 lines, risk `support`): Handles normalized for the utilities feature.
-- **tools.test_note_editor_presentation_wave_40.call_chain** (function, lines 23–30, 8 lines, risk `support`): Handles call chain for the other feature.
-- **tools.test_note_editor_presentation_wave_40.main** (function, lines 33–69, 37 lines, risk `filesystem`): Handles main for the other feature.
+- **tools.test_note_editor_presentation_wave_40.normalized** (function, lines 20–21, 2 lines, risk `support`): Handles normalized for the utilities feature.
+- **tools.test_note_editor_presentation_wave_40.call_chain** (function, lines 24–31, 8 lines, risk `support`): Handles call chain for the other feature.
+- **tools.test_note_editor_presentation_wave_40.main** (function, lines 34–78, 45 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_numeric_parser_extraction.py`
 

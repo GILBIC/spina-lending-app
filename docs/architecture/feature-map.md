@@ -1,8 +1,8 @@
 # SPINA Application Feature Map
 
-Generated from commit `9aafa1ebfe02b566b10a17a22ae49c28406c5f04`.
+Generated from commit `dc4197d6571d83be4a854a08eb883a8a371097b5`.
 
-Scanned **156 Python files**, **73,131 lines**, and **2,242 symbols**.
+Scanned **156 Python files**, **73,143 lines**, and **2,242 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -282,23 +282,23 @@ Main files: `spina_app/navigation.py` (14), `OFFICIAL_SPINA_APP_PostgreSQL_TEST_
 
 Main files: `spina_app/note_editor_presentation.py` (29), `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (11), `spina_app/utilities/notes.py` (3)
 
-- `spina_app.note_editor_presentation.NoteEditorDialog` — spina_app/note_editor_presentation.py:28 — Improved per-client notes editor. Features: - Dated and undated notes - Scope: Shared (both Regular/7x7) or This loan type - Left panel: list of existing notes (with search) - Autosave (debounced) + unsaved indicator - Safe switching between notes (prompts if needed) Notes storage is handled by get_ Risk: **container**.
-- `spina_app.note_editor_presentation.NoteEditorDialog._build_ui` — spina_app/note_editor_presentation.py:251 — Builds build ui for the notes feature. Risk: **ui_only**.
+- `spina_app.note_editor_presentation.NoteEditorDialog` — spina_app/note_editor_presentation.py:31 — Improved per-client notes editor. Features: - Dated and undated notes - Scope: Shared (both Regular/7x7) or This loan type - Left panel: list of existing notes (with search) - Autosave (debounced) + unsaved indicator - Safe switching between notes (prompts if needed) Notes storage is handled by get_ Risk: **container**.
+- `spina_app.note_editor_presentation.NoteEditorDialog._build_ui` — spina_app/note_editor_presentation.py:254 — Builds build ui for the notes feature. Risk: **ui_only**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._migrate_legacy_notes_by_name` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2792 — Migrate legacy name-based notes (old_name and '<loan_type>::old_name') into stable-id keys. Use this when a client's name changes to avoid orphaning notes that were stored under the old name. Returns True if any changes were saved. Risk: **support**.
-- `spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed` — spina_app/note_editor_presentation.py:108 — Move legacy name-based keys into stable-id keys for this client (best-effort). This prevents collisions if names repeat, and keeps notes attached even if a name changes. Runs only when we have a stable id (person_uid or client_uid). Risk: **support**.
-- `spina_app.note_editor_presentation.NoteEditorDialog.__init__` — spina_app/note_editor_presentation.py:40 — Handles init for the notes feature. Risk: **ui_only**.
+- `spina_app.note_editor_presentation.NoteEditorDialog._migrate_legacy_notes_if_needed` — spina_app/note_editor_presentation.py:111 — Move legacy name-based keys into stable-id keys for this client (best-effort). This prevents collisions if names repeat, and keeps notes attached even if a name changes. Runs only when we have a stable id (person_uid or client_uid). Risk: **support**.
+- `spina_app.note_editor_presentation.NoteEditorDialog.__init__` — spina_app/note_editor_presentation.py:43 — Handles init for the notes feature. Risk: **ui_only**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._resolve_note_key_scoped` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2296 — Resolve a notes_dict key for a client. Preferred (stable) keys: - shared scope: PID|<person_uid> (or CID|<client_uid> fallback) - type scope: PT|<person_uid>|<loan_type> (or CID|<client_uid> fallback) Legacy fallback keys remain supported: - shared: name - type: '<loan_type>::<name>' Uses candidate  Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.draw_notes_aligned` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7389 — Draws: Note: YYYY-MM-DD wrapped note text (blank) continuation lines aligned under text column Returns the new y after drawing. Risk: **support**.
-- `spina_app.note_editor_presentation.NoteEditorDialog._collect_items` — spina_app/note_editor_presentation.py:339 — Handles collect items for the notes feature. Risk: **support**.
-- `spina_app.note_editor_presentation.NoteEditorDialog._save_note` — spina_app/note_editor_presentation.py:525 — Saves save note for the notes feature. Risk: **support**.
-- `spina_app.note_editor_presentation.NoteEditorDialog._delete_note` — spina_app/note_editor_presentation.py:569 — Removes delete note for the notes feature. Risk: **support**.
-- `spina_app.note_editor_presentation.NoteEditorDialog._load_note` — spina_app/note_editor_presentation.py:491 — Loads load note for the notes feature. Risk: **support**.
+- `spina_app.note_editor_presentation.NoteEditorDialog._collect_items` — spina_app/note_editor_presentation.py:342 — Handles collect items for the notes feature. Risk: **support**.
+- `spina_app.note_editor_presentation.NoteEditorDialog._save_note` — spina_app/note_editor_presentation.py:528 — Saves save note for the notes feature. Risk: **support**.
+- `spina_app.note_editor_presentation.NoteEditorDialog._delete_note` — spina_app/note_editor_presentation.py:572 — Removes delete note for the notes feature. Risk: **support**.
+- `spina_app.note_editor_presentation.NoteEditorDialog._load_note` — spina_app/note_editor_presentation.py:494 — Loads load note for the notes feature. Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._open_note_dialog` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8525 — Handles open note dialog for the notes feature. Risk: **reports**.
-- `spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope` — spina_app/note_editor_presentation.py:342 — Handles add scope for the notes feature. Risk: **support**.
-- `spina_app.note_editor_presentation.NoteEditorDialog._on_list_select` — spina_app/note_editor_presentation.py:410 — Handles on list select for the notes feature. Risk: **support**.
-- `spina_app.note_editor_presentation.NoteEditorDialog._refresh_list` — spina_app/note_editor_presentation.py:384 — Refreshes refresh list for the notes feature. Risk: **ui_only**.
+- `spina_app.note_editor_presentation.NoteEditorDialog._collect_items.add_scope` — spina_app/note_editor_presentation.py:345 — Handles add scope for the notes feature. Risk: **support**.
+- `spina_app.note_editor_presentation.NoteEditorDialog._on_list_select` — spina_app/note_editor_presentation.py:413 — Handles on list select for the notes feature. Risk: **support**.
+- `spina_app.note_editor_presentation.NoteEditorDialog._refresh_list` — spina_app/note_editor_presentation.py:387 — Refreshes refresh list for the notes feature. Risk: **ui_only**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._estimate_note_block_h` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:25155 — Handles estimate note block h for the notes feature. Risk: **support**.
-- `spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch` — spina_app/note_editor_presentation.py:633 — Handles confirm before switch for the notes feature. Risk: **support**.
+- `spina_app.note_editor_presentation.NoteEditorDialog._confirm_before_switch` — spina_app/note_editor_presentation.py:636 — Handles confirm before switch for the notes feature. Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._note_id_key` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2261 — Stable notes keys that do NOT depend on client name. kind: - 'CID' : client_uid (per record) - 'PID' : person_uid (shared across Regular/7x7 when linked) Uses '|' separators to avoid colliding with legacy '<loan_type>::<name>' keys. Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._note_type_key` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2278 — Type-scoped key stable across name changes. If person_uid exists (linked), store type notes under: PT|<person_uid>|<loan_type_norm> This lets us retrieve the other loan type's notes without needing that row's client_uid. Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._candidate_note_keys` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2218 — Handles candidate note keys for the notes feature. Risk: **support**.
@@ -432,7 +432,7 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._pick_missed_reason._parse_any_date` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10157 — Handles parse any date for the utilities feature. Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._parse_any_adv_range` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2881 — Handles parse any adv range for the utilities feature. Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._parse_adv_range_any` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:23433 — Handles parse adv range any for the utilities feature. Risk: **support**.
-- `spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn` — spina_app/note_editor_presentation.py:202 — Validates validate date or warn for the utilities feature. Risk: **support**.
+- `spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn` — spina_app/note_editor_presentation.py:205 — Validates validate date or warn for the utilities feature. Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._wrap_to_width` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7375 — Handles wrap to width for the utilities feature. Risk: **support**.
 - `spina_app.utilities.dates._spina__norm_weekday` — spina_app/utilities/dates.py:51 — Handles spina norm weekday for the utilities feature. Risk: **support**.
 - `spina_app.utilities.formatting._spina_v18_fmt_money_compact` — spina_app/utilities/formatting.py:81 — Handles spina v18 fmt money compact for the utilities feature. Risk: **support**.
