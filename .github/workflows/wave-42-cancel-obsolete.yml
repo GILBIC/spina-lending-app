@@ -15,11 +15,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CURRENT_HEAD: ${{ github.event.pull_request.head.sha }}
-          TARGET_WORKFLOW_ID: "320141254"
+          TARGET_WORKFLOW_NAME: "Long task presentation Wave 42"
         shell: bash
         run: |
-          gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/workflows/${TARGET_WORKFLOW_ID}/runs?event=pull_request&per_page=100" \
-            --jq '.workflow_runs[] | [.id, .head_sha, .status] | @tsv' |
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs?event=pull_request&per_page=100" \
+            --jq '.workflow_runs[] | select(.name == env.TARGET_WORKFLOW_NAME) | [.id, .head_sha, .status] | @tsv' |
           while IFS=$'\t' read -r run_id head_sha status; do
             if [[ "$head_sha" != "$CURRENT_HEAD" && ( "$status" == "queued" || "$status" == "in_progress" || "$status" == "pending" ) ]]; then
               echo "Cancelling obsolete run $run_id at $head_sha ($status)"
