@@ -1,0 +1,58 @@
+name: Bootstrap login dialog presentation Wave 45
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: write
+concurrency:
+  group: bootstrap-login-dialog-presentation-wave-45-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  extract:
+    if: github.head_ref == 'agent/modularization-wave-45'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 60
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Compile guarded extractor
+        shell: cmd
+        run: python -m py_compile .github/scripts/extract_login_dialog_presentation_wave_45.py
+      - name: Extract guarded login-dialog presentation
+        shell: cmd
+        run: python .github/scripts/extract_login_dialog_presentation_wave_45.py
+      - name: Compile generated application, module, and regression
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app/login_dialog_presentation.py
+          python -m py_compile tools/test_login_dialog_presentation_wave_45.py
+          python -m compileall -q spina_app
+      - name: Run exact Wave 45 regression
+        shell: cmd
+        run: python tools/test_login_dialog_presentation_wave_45.py
+      - name: Run repository audits before commit
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-45-bootstrap-redundancy.json
+          python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-45-bootstrap-quality.json
+      - name: Commit permanent extraction and clean architecture maps
+        shell: cmd
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app/login_dialog_presentation.py tools/test_login_dialog_presentation_wave_45.py .github/workflows/login-dialog-presentation-wave-45.yml
+          git diff --cached --quiet || git commit -m "Extract modern login dialog presentation Wave 45"
+          git rm tools/inspect_modularization_wave_45.py .github/workflows/inspect-modularization-wave-45.yml .github/scripts/extract_login_dialog_presentation_wave_45.py .github/workflows/bootstrap-login-dialog-presentation-wave-45.yml
+          python -m tools.generate_architecture_map
+          python -m tools.test_architecture_map
+          git add architecture-map.json docs/architecture
+          git diff --cached --quiet || git commit -m "Refresh architecture maps for Wave 45"
+          gh auth setup-git
+          git push origin HEAD:${{ github.head_ref }}
