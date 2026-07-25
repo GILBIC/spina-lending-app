@@ -35,7 +35,7 @@ jobs:
           python -m compileall -q spina_app
       - name: Run focused regression
         shell: cmd
-        run: python -m tools.test_loan_context_queries_wave_33
+        run: python tools\test_loan_context_queries_wave_33.py
       - name: Commit extraction and refresh architecture
         shell: cmd
         run: |
