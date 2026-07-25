@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `d3b8fbd7a0af4695c7b1e970f9ad585572acb71f`.
+Generated from commit `e88177e204738f0b7f5cbdc3ee2eecd257af2f16`.
 
-Scanned **175 Python files**, **75,178 lines**, and **2,333 symbols**.
+Scanned **175 Python files**, **75,172 lines**, and **2,333 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1746,7 +1746,7 @@ Scanned **175 Python files**, **75,178 lines**, and **2,333 symbols**.
 ## `tools/fix_tk_shutdown_wave_46.py`
 
 - **tools.fix_tk_shutdown_wave_46.dotted** (function, lines 12–18, 7 lines, risk `support`): Handles dotted for the other feature.
-- **tools.fix_tk_shutdown_wave_46.main** (function, lines 21–288, 268 lines, risk `filesystem`): Handles main for the other feature.
+- **tools.fix_tk_shutdown_wave_46.main** (function, lines 21–282, 262 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/inject_critical_path_logging.py`
 

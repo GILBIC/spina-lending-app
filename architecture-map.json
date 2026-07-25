@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "d3b8fbd7a0af4695c7b1e970f9ad585572acb71f",
+  "generated_from_commit": "e88177e204738f0b7f5cbdc3ee2eecd257af2f16",
   "indexes": {
     "application_callbacks": [
       {
@@ -20619,7 +20619,7 @@
         "ast": "ast",
         "textwrap": "textwrap"
       },
-      "lines": 292,
+      "lines": 286,
       "module": "tools.fix_tk_shutdown_wave_46",
       "module_globals": [
         "DESKTOP",
@@ -20627,7 +20627,7 @@
         "TEST"
       ],
       "monkey_patches": [],
-      "sha256": "23d10fdcb421440062d579b746b36a5662739cfe819680f08a4bd6890db12dea",
+      "sha256": "38de30da78a4a63289033e10d477886aa378a5211073bbe84d498726d919c6e2",
       "syntax_ok": true
     },
     {
@@ -22941,7 +22941,7 @@
     "repository_possible_orphans": 246,
     "resolved_call_edges": 3753,
     "symbols": 2333,
-    "total_python_lines": 75178,
+    "total_python_lines": 75172,
     "ui_callback_edges": 505
   },
   "symbols": [
@@ -101187,7 +101187,6 @@
         "lines.lstrip",
         "lines.strip",
         "newline.join",
-        "prepare_source.count",
         "print",
         "sorted",
         "text.endswith",
@@ -101196,8 +101195,7 @@
         "textwrap.dedent.strip",
         "textwrap.indent",
         "textwrap.indent.splitlines",
-        "updated.count",
-        "updated.index"
+        "updated.count"
       ],
       "calls_resolved": [
         "tools/fix_tk_shutdown_wave_46.py:12:tools.fix_tk_shutdown_wave_46.dotted"
@@ -101205,7 +101203,7 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 288,
+      "end_line": 282,
       "feature": "other",
       "file": "tools/fix_tk_shutdown_wave_46.py",
       "file_paths": [],
@@ -101221,7 +101219,7 @@
       ],
       "kind": "function",
       "line": 21,
-      "lines": 268,
+      "lines": 262,
       "monkey_patches": [],
       "name": "main",
       "parent": null,
@@ -101233,7 +101231,7 @@
         "reports",
         "ui_only"
       ],
-      "source_sha256": "9103c244d86f3dd302cf15c4f4f7cdb38836d30f3c68c1f1745cc15a7bf44684"
+      "source_sha256": "1c55c50a985db9a82968b3e6625b9ae72599f63ae8382db3a1f5efb6b1044bad"
     },
     {
       "args": [
