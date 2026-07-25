@@ -1,0 +1,43 @@
+name: Client form presentation Wave 38
+on: [pull_request]
+permissions:
+  contents: read
+jobs:
+  validate:
+    if: github.head_ref == 'agent/client-form-presentation-wave-38'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Compile application, module, and test
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app/client_form_presentation.py
+          python -m py_compile tools/test_client_form_presentation_wave_38.py
+          python -m compileall -q spina_app
+      - name: Run exact client-form regression
+        shell: cmd
+        run: python tools/test_client_form_presentation_wave_38.py
+      - name: Validate permanent architecture map
+        uses: ./.github/actions/architecture-map-check
+      - name: Run repository audits
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-38-redundancy.json
+          python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-38-quality.json
+      - name: Upload Wave 38 reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-form-presentation-wave-38-reports
+          path: |
+            artifacts/wave-38-redundancy.json
+            artifacts/wave-38-quality.json
+            architecture-map.json
+            docs/architecture
+          if-no-files-found: error
