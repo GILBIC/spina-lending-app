@@ -1,0 +1,39 @@
+name: Clients read presentation Wave 30 inventory
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    if: github.head_ref == 'agent/clients-read-presentation-wave-30'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify local Python
+        shell: cmd
+        run: |
+          where python
+          python --version
+
+      - name: Compile and inventory Wave 30 candidates
+        shell: cmd
+        run: |
+          python -m py_compile tools/inventory_clients_read_presentation_wave_30.py
+          python -m tools.inventory_clients_read_presentation_wave_30
+
+      - name: Upload Wave 30 inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: clients-read-presentation-wave-30-inventory
+          path: artifacts/clients-read-presentation-wave-30-inventory.json
+          if-no-files-found: error
