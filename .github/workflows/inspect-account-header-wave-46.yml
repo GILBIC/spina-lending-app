@@ -25,7 +25,9 @@ jobs:
         run: python -m py_compile tools/inspect_account_header_wave_46.py
       - name: Inspect active account header targets
         shell: cmd
-        run: python tools/inspect_account_header_wave_46.py
+        run: |
+          set PYTHONIOENCODING=utf-8
+          python tools/inspect_account_header_wave_46.py
       - name: Upload Wave 46 candidate report
         uses: actions/upload-artifact@v4
         with:
