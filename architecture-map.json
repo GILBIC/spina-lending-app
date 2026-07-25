@@ -11023,7 +11023,6 @@
         "tools/plan_ui_compatibility_pass_only.py:196:tools.plan_ui_compatibility_pass_only.build_report"
       ],
       "call_chain": [
-        "tools/extract_note_editor_presentation_wave_40.py:81:tools.extract_note_editor_presentation_wave_40.call_chain",
         "tools/test_area_picker_presentation_wave_37.py:26:tools.test_area_picker_presentation_wave_37.call_chain",
         "tools/test_client_form_presentation_wave_38.py:22:tools.test_client_form_presentation_wave_38.call_chain",
         "tools/test_client_history_presentation_wave_36.py:27:tools.test_client_history_presentation_wave_36.call_chain",
@@ -11266,7 +11265,6 @@
         "tools/extract_log_serialization_helper.py:129:tools.extract_log_serialization_helper.main",
         "tools/extract_merge_note_dict.py:143:tools.extract_merge_note_dict.main",
         "tools/extract_note_dict_helper.py:144:tools.extract_note_dict_helper.main",
-        "tools/extract_note_editor_presentation_wave_40.py:283:tools.extract_note_editor_presentation_wave_40.main",
         "tools/extract_numeric_parsers.py:221:tools.extract_numeric_parsers.main",
         "tools/extract_pure_helper_batch.py:248:tools.extract_pure_helper_batch.main",
         "tools/extract_text_normalizers.py:286:tools.extract_text_normalizers.main",
@@ -11366,7 +11364,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:28451:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger.new_page_headers"
       ],
       "normalized": [
-        "tools/extract_note_editor_presentation_wave_40.py:77:tools.extract_note_editor_presentation_wave_40.normalized",
         "tools/test_area_picker_presentation_wave_37.py:18:tools.test_area_picker_presentation_wave_37.normalized",
         "tools/test_client_form_presentation_wave_38.py:18:tools.test_client_form_presentation_wave_38.normalized",
         "tools/test_client_history_presentation_wave_36.py:19:tools.test_client_history_presentation_wave_36.normalized",
@@ -12892,11 +12889,6 @@
         "tools/extract_note_dict_helper.py:33:tools.extract_note_dict_helper.top_level_functions",
         "tools/extract_note_dict_helper.py:38:tools.extract_note_dict_helper.external_names",
         "tools/extract_note_dict_helper.py:57:tools.extract_note_dict_helper.build_plan",
-        "tools/extract_note_editor_presentation_wave_40.py:127:tools.extract_note_editor_presentation_wave_40.build_module",
-        "tools/extract_note_editor_presentation_wave_40.py:159:tools.extract_note_editor_presentation_wave_40.build_test",
-        "tools/extract_note_editor_presentation_wave_40.py:236:tools.extract_note_editor_presentation_wave_40.build_workflow",
-        "tools/extract_note_editor_presentation_wave_40.py:283:tools.extract_note_editor_presentation_wave_40.main",
-        "tools/extract_note_editor_presentation_wave_40.py:81:tools.extract_note_editor_presentation_wave_40.call_chain",
         "tools/extract_numeric_parsers.py:119:tools.extract_numeric_parsers._patched_source",
         "tools/extract_numeric_parsers.py:130:tools.extract_numeric_parsers._state",
         "tools/extract_numeric_parsers.py:143:tools.extract_numeric_parsers.build_plan",
@@ -13829,8 +13821,6 @@
         "tools/extract_log_serialization_helper.py:47:tools.extract_log_serialization_helper._validate",
         "tools/extract_merge_note_dict.py:97:tools.extract_merge_note_dict.validate_plan",
         "tools/extract_note_dict_helper.py:98:tools.extract_note_dict_helper.validate_plan",
-        "tools/extract_note_editor_presentation_wave_40.py:77:tools.extract_note_editor_presentation_wave_40.normalized",
-        "tools/extract_note_editor_presentation_wave_40.py:91:tools.extract_note_editor_presentation_wave_40.validate_target",
         "tools/extract_numeric_parsers.py:82:tools.extract_numeric_parsers._validate_function",
         "tools/test_append_unique_text_extraction.py:36:tools.test_append_unique_text_extraction.load_helper",
         "tools/test_area_picker_presentation_wave_37.py:18:tools.test_area_picker_presentation_wave_37.normalized",
@@ -14024,8 +14014,6 @@
         "tools/test_clients_read_presentation_wave_30.py:142:tools.test_clients_read_presentation_wave_30.assert_focused_behavior"
       ],
       "self.db": [
-        "tools/extract_note_editor_presentation_wave_40.py:159:tools.extract_note_editor_presentation_wave_40.build_test",
-        "tools/extract_note_editor_presentation_wave_40.py:91:tools.extract_note_editor_presentation_wave_40.validate_target",
         "tools/test_note_editor_presentation_wave_40.py:33:tools.test_note_editor_presentation_wave_40.main"
       ],
       "settings.json": [
@@ -16103,7 +16091,6 @@
         "tools/extract_note_dict_helper.py:144:tools.extract_note_dict_helper.main",
         "tools/extract_note_dict_helper.py:21:tools.extract_note_dict_helper.atomic_write",
         "tools/extract_note_dict_helper.py:57:tools.extract_note_dict_helper.build_plan",
-        "tools/extract_note_editor_presentation_wave_40.py:283:tools.extract_note_editor_presentation_wave_40.main",
         "tools/extract_numeric_parsers.py:143:tools.extract_numeric_parsers.build_plan",
         "tools/extract_numeric_parsers.py:197:tools.extract_numeric_parsers._atomic_write",
         "tools/extract_numeric_parsers.py:221:tools.extract_numeric_parsers.main",
@@ -17176,12 +17163,6 @@
         "tools/extract_note_dict_helper.py:33:tools.extract_note_dict_helper.top_level_functions",
         "tools/extract_note_dict_helper.py:38:tools.extract_note_dict_helper.external_names",
         "tools/extract_note_dict_helper.py:98:tools.extract_note_dict_helper.validate_plan",
-        "tools/extract_note_editor_presentation_wave_40.py:127:tools.extract_note_editor_presentation_wave_40.build_module",
-        "tools/extract_note_editor_presentation_wave_40.py:159:tools.extract_note_editor_presentation_wave_40.build_test",
-        "tools/extract_note_editor_presentation_wave_40.py:236:tools.extract_note_editor_presentation_wave_40.build_workflow",
-        "tools/extract_note_editor_presentation_wave_40.py:77:tools.extract_note_editor_presentation_wave_40.normalized",
-        "tools/extract_note_editor_presentation_wave_40.py:81:tools.extract_note_editor_presentation_wave_40.call_chain",
-        "tools/extract_note_editor_presentation_wave_40.py:91:tools.extract_note_editor_presentation_wave_40.validate_target",
         "tools/extract_numeric_parsers.py:119:tools.extract_numeric_parsers._patched_source",
         "tools/extract_numeric_parsers.py:130:tools.extract_numeric_parsers._state",
         "tools/extract_numeric_parsers.py:209:tools.extract_numeric_parsers.apply_extraction",
@@ -19953,35 +19934,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/extract_note_editor_presentation_wave_40.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json",
-        "textwrap": "textwrap"
-      },
-      "lines": 331,
-      "module": "tools.extract_note_editor_presentation_wave_40",
-      "module_globals": [
-        "DESKTOP",
-        "EXPECTED_LINES",
-        "EXPECTED_METHODS",
-        "FORBIDDEN_CALL_SUFFIXES",
-        "FORBIDDEN_SQL_TOKENS",
-        "MODULE",
-        "ROOT",
-        "TARGET",
-        "TEST",
-        "WORKFLOW"
-      ],
-      "monkey_patches": [],
-      "sha256": "0d4de374bad107dd80de74445cb1d1bbad16416295f82da1792b03cbf87dcbb0",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/extract_numeric_parsers.py",
       "imports": {
         "Any": "typing.Any",
@@ -22059,19 +22011,19 @@
     "classes": 91,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1286,
+    "functions": 1279,
     "methods": 491,
     "monkey_patches": 129,
     "nested_functions": 381,
     "parse_errors": 0,
     "possible_orphans": 119,
-    "python_files": 157,
+    "python_files": 156,
     "repository_database_tables": 19,
     "repository_duplicate_names": 236,
     "repository_possible_orphans": 233,
-    "resolved_call_edges": 3709,
-    "symbols": 2249,
-    "total_python_lines": 73462,
+    "resolved_call_edges": 3702,
+    "symbols": 2242,
+    "total_python_lines": 73131,
     "ui_callback_edges": 499
   },
   "symbols": [
@@ -98274,341 +98226,6 @@
         "reports"
       ],
       "source_sha256": "74dc0aa2c7d755ca18a6f1029d7c908da1094f66d77252db13802694601a25eb"
-    },
-    {
-      "args": [
-        "source"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_note_editor_presentation_wave_40.py:127:tools.extract_note_editor_presentation_wave_40.build_module",
-        "tools/extract_note_editor_presentation_wave_40.py:91:tools.extract_note_editor_presentation_wave_40.validate_target"
-      ],
-      "calls_raw": [
-        "textwrap.dedent",
-        "textwrap.dedent.strip"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 78,
-      "feature": "utilities",
-      "file": "tools/extract_note_editor_presentation_wave_40.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_note_editor_presentation_wave_40.py:77:tools.extract_note_editor_presentation_wave_40.normalized",
-      "imports_used": [
-        "textwrap"
-      ],
-      "kind": "function",
-      "line": 77,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "normalized",
-      "parent": null,
-      "purpose": "Handles normalized for the utilities feature.",
-      "qualified_name": "tools.extract_note_editor_presentation_wave_40.normalized",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "212c4b0706345368a26ac5130c1cc5ea53765fba386bdd24087af11327ca5cf5"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_note_editor_presentation_wave_40.py:91:tools.extract_note_editor_presentation_wave_40.validate_target"
-      ],
-      "calls_raw": [
-        "isinstance",
-        "list",
-        "parts.append",
-        "reversed"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 88,
-      "feature": "other",
-      "file": "tools/extract_note_editor_presentation_wave_40.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_note_editor_presentation_wave_40.py:81:tools.extract_note_editor_presentation_wave_40.call_chain",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 81,
-      "lines": 8,
-      "monkey_patches": [],
-      "name": "call_chain",
-      "parent": null,
-      "purpose": "Handles call chain for the other feature.",
-      "qualified_name": "tools.extract_note_editor_presentation_wave_40.call_chain",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "19e59dc44044c52bcc33cea7a30905f09b91cd863c8039f796ef8630d0c2bdc6"
-    },
-    {
-      "args": [
-        "node",
-        "source"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_note_editor_presentation_wave_40.py:283:tools.extract_note_editor_presentation_wave_40.main"
-      ],
-      "calls_raw": [
-        "AssertionError",
-        "ast.walk",
-        "call_chain",
-        "calls.add",
-        "chain.startswith",
-        "chain_parts.lower",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "isinstance",
-        "item.value.upper",
-        "item.value.upper.split",
-        "join",
-        "normalized",
-        "normalized.encode",
-        "set",
-        "sorted"
-      ],
-      "calls_resolved": [
-        "tools/extract_note_editor_presentation_wave_40.py:77:tools.extract_note_editor_presentation_wave_40.normalized",
-        "tools/extract_note_editor_presentation_wave_40.py:81:tools.extract_note_editor_presentation_wave_40.call_chain"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 124,
-      "feature": "utilities",
-      "file": "tools/extract_note_editor_presentation_wave_40.py",
-      "file_paths": [
-        "self.db"
-      ],
-      "globals_read": [
-        "EXPECTED_LINES",
-        "EXPECTED_METHODS",
-        "FORBIDDEN_CALL_SUFFIXES",
-        "FORBIDDEN_SQL_TOKENS",
-        "TARGET"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_note_editor_presentation_wave_40.py:91:tools.extract_note_editor_presentation_wave_40.validate_target",
-      "imports_used": [
-        "ast",
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 91,
-      "lines": 34,
-      "monkey_patches": [],
-      "name": "validate_target",
-      "parent": null,
-      "purpose": "Validates validate target for the utilities feature.",
-      "qualified_name": "tools.extract_note_editor_presentation_wave_40.validate_target",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "76d08939e7580ec97d2559373a14dd61e230b7d7db3dd3c1d140a488f064eed6"
-    },
-    {
-      "args": [
-        "class_source",
-        "digest",
-        "calls"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_note_editor_presentation_wave_40.py:283:tools.extract_note_editor_presentation_wave_40.main"
-      ],
-      "calls_raw": [
-        "normalized"
-      ],
-      "calls_resolved": [
-        "tools/extract_note_editor_presentation_wave_40.py:77:tools.extract_note_editor_presentation_wave_40.normalized"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 156,
-      "feature": "other",
-      "file": "tools/extract_note_editor_presentation_wave_40.py",
-      "file_paths": [],
-      "globals_read": [
-        "EXPECTED_LINES",
-        "EXPECTED_METHODS",
-        "TARGET"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_note_editor_presentation_wave_40.py:127:tools.extract_note_editor_presentation_wave_40.build_module",
-      "imports_used": [],
-      "kind": "function",
-      "line": 127,
-      "lines": 30,
-      "monkey_patches": [],
-      "name": "build_module",
-      "parent": null,
-      "purpose": "Builds build module for the other feature.",
-      "qualified_name": "tools.extract_note_editor_presentation_wave_40.build_module",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "28fba314609afe0b3ff85afbfeec41c4c657bab2080babb3fc931de99987ed12"
-    },
-    {
-      "args": [
-        "digest"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_note_editor_presentation_wave_40.py:283:tools.extract_note_editor_presentation_wave_40.main"
-      ],
-      "calls_raw": [
-        "sorted"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 233,
-      "feature": "other",
-      "file": "tools/extract_note_editor_presentation_wave_40.py",
-      "file_paths": [
-        "self.db"
-      ],
-      "globals_read": [
-        "EXPECTED_LINES",
-        "EXPECTED_METHODS",
-        "FORBIDDEN_CALL_SUFFIXES",
-        "FORBIDDEN_SQL_TOKENS",
-        "TARGET"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_note_editor_presentation_wave_40.py:159:tools.extract_note_editor_presentation_wave_40.build_test",
-      "imports_used": [],
-      "kind": "function",
-      "line": 159,
-      "lines": 75,
-      "monkey_patches": [],
-      "name": "build_test",
-      "parent": null,
-      "purpose": "Builds build test for the other feature.",
-      "qualified_name": "tools.extract_note_editor_presentation_wave_40.build_test",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "ea51fd518c4773a3ba08c8bea3b8bbe3c463328d014ec473b7774d0d51812b99"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_note_editor_presentation_wave_40.py:283:tools.extract_note_editor_presentation_wave_40.main"
-      ],
-      "calls_raw": [],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 280,
-      "feature": "other",
-      "file": "tools/extract_note_editor_presentation_wave_40.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_note_editor_presentation_wave_40.py:236:tools.extract_note_editor_presentation_wave_40.build_workflow",
-      "imports_used": [],
-      "kind": "function",
-      "line": 236,
-      "lines": 45,
-      "monkey_patches": [],
-      "name": "build_workflow",
-      "parent": null,
-      "purpose": "Builds build workflow for the other feature.",
-      "qualified_name": "tools.extract_note_editor_presentation_wave_40.build_workflow",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "57fa0e1c2c0330348a9a39940d815daa7f817663736f2348b3ab0c3c4869929d"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "AssertionError",
-        "DESKTOP.read_text",
-        "DESKTOP.write_text",
-        "MODULE.parent.mkdir",
-        "MODULE.relative_to",
-        "MODULE.write_text",
-        "TEST.parent.mkdir",
-        "TEST.relative_to",
-        "TEST.write_text",
-        "WORKFLOW.parent.mkdir",
-        "WORKFLOW.relative_to",
-        "WORKFLOW.write_text",
-        "ast.parse",
-        "build_module",
-        "build_test",
-        "build_workflow",
-        "isinstance",
-        "join",
-        "json.dumps",
-        "len",
-        "print",
-        "str",
-        "text.splitlines",
-        "validate_target"
-      ],
-      "calls_resolved": [
-        "tools/extract_note_editor_presentation_wave_40.py:127:tools.extract_note_editor_presentation_wave_40.build_module",
-        "tools/extract_note_editor_presentation_wave_40.py:159:tools.extract_note_editor_presentation_wave_40.build_test",
-        "tools/extract_note_editor_presentation_wave_40.py:236:tools.extract_note_editor_presentation_wave_40.build_workflow",
-        "tools/extract_note_editor_presentation_wave_40.py:91:tools.extract_note_editor_presentation_wave_40.validate_target"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 327,
-      "feature": "other",
-      "file": "tools/extract_note_editor_presentation_wave_40.py",
-      "file_paths": [],
-      "globals_read": [
-        "DESKTOP",
-        "EXPECTED_LINES",
-        "EXPECTED_METHODS",
-        "MODULE",
-        "ROOT",
-        "TARGET",
-        "TEST",
-        "WORKFLOW"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_note_editor_presentation_wave_40.py:283:tools.extract_note_editor_presentation_wave_40.main",
-      "imports_used": [
-        "ast",
-        "json"
-      ],
-      "kind": "function",
-      "line": 283,
-      "lines": 45,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.extract_note_editor_presentation_wave_40.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "0a477828c20c7c54cdfb735eb9874e45cd7562d09b36892c8a0ae494e951a16a"
     },
     {
       "args": [

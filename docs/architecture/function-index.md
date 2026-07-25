@@ -2,7 +2,7 @@
 
 Generated from commit `9aafa1ebfe02b566b10a17a22ae49c28406c5f04`.
 
-Scanned **157 Python files**, **73,462 lines**, and **2,249 symbols**.
+Scanned **156 Python files**, **73,131 lines**, and **2,242 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1671,16 +1671,6 @@ Scanned **157 Python files**, **73,462 lines**, and **2,249 symbols**.
 - **tools.extract_note_dict_helper.validate_plan** (function, lines 98–109, 12 lines, risk `support`): Validates validate plan for the utilities feature.
 - **tools.extract_note_dict_helper.apply_extraction** (function, lines 112–141, 30 lines, risk `filesystem`): Handles apply extraction for the other feature.
 - **tools.extract_note_dict_helper.main** (function, lines 144–157, 14 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/extract_note_editor_presentation_wave_40.py`
-
-- **tools.extract_note_editor_presentation_wave_40.normalized** (function, lines 77–78, 2 lines, risk `support`): Handles normalized for the utilities feature.
-- **tools.extract_note_editor_presentation_wave_40.call_chain** (function, lines 81–88, 8 lines, risk `support`): Handles call chain for the other feature.
-- **tools.extract_note_editor_presentation_wave_40.validate_target** (function, lines 91–124, 34 lines, risk `support`): Validates validate target for the utilities feature.
-- **tools.extract_note_editor_presentation_wave_40.build_module** (function, lines 127–156, 30 lines, risk `support`): Builds build module for the other feature.
-- **tools.extract_note_editor_presentation_wave_40.build_test** (function, lines 159–233, 75 lines, risk `support`): Builds build test for the other feature.
-- **tools.extract_note_editor_presentation_wave_40.build_workflow** (function, lines 236–280, 45 lines, risk `support`): Builds build workflow for the other feature.
-- **tools.extract_note_editor_presentation_wave_40.main** (function, lines 283–327, 45 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_numeric_parsers.py`
 
