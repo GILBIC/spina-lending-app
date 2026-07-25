@@ -20,6 +20,83 @@ jobs:
           python --version
           where gh
           gh auth status
+      - name: Post PostgreSQL helper inventory
+        shell: powershell
+        run: |
+          @'
+          import ast
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          root = Path.cwd()
+          desktop = root / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+          text = desktop.read_text(encoding="utf-8-sig")
+          tree = ast.parse(text)
+          already = {
+              "_spina_pg_sha256", "_spina_pg_guess_file_type", "_spina_pg_guess_report_date",
+              "_spina_pg_guess_collector", "_spina_pg_normalize_value",
+              "_spina_pg_replace_qmarks", "_spina_pg_escape_literal_percents",
+          }
+          exact = {
+              "_spina_pg_storage_enabled", "_spina_pg_app_dir", "_spina_pg_relpath",
+              "_spina_pg_json_table_for_path", "_spina_pg_read_json",
+          }
+          read_parts = ("read", "load", "fetch", "find", "lookup", "list", "get", "exists", "enabled", "relpath", "app_dir", "json_table")
+          excluded_parts = ("write", "store", "save", "ensure", "sync", "import", "backup", "restore", "delete", "remove", "update", "insert", "upsert", "migrate", "schema", "commit", "rollback", "connect", "_conn", "_log")
+          write_markers = ("INSERT INTO", "UPDATE ", "DELETE FROM", "CREATE TABLE", "ALTER TABLE", "DROP TABLE", "TRUNCATE ", "REPLACE INTO", "ON CONFLICT")
+          mutating = {"commit", "rollback", "write", "write_text", "write_bytes", "unlink", "remove", "rename", "mkdir", "makedirs", "rmdir", "touch", "copy", "copy2", "move"}
+
+          def accepted(node, source):
+              name = node.name
+              low = name.lower()
+              if name in already:
+                  return False
+              if name not in exact:
+                  if not any(part in low for part in read_parts):
+                      return False
+                  if any(part in low for part in excluded_parts):
+                      return False
+              if any(marker in source.upper() for marker in write_markers):
+                  return False
+              for item in ast.walk(node):
+                  if isinstance(item, ast.Call):
+                      fn = item.func
+                      call_name = fn.attr if isinstance(fn, ast.Attribute) else fn.id if isinstance(fn, ast.Name) else ""
+                      if call_name.lower() in mutating:
+                          return False
+                      if call_name == "open":
+                          mode = None
+                          if len(item.args) >= 2 and isinstance(item.args[1], ast.Constant):
+                              mode = item.args[1].value
+                          for kw in item.keywords:
+                              if kw.arg == "mode" and isinstance(kw.value, ast.Constant):
+                                  mode = kw.value.value
+                          if isinstance(mode, str) and any(ch in mode for ch in "wax+"):
+                              return False
+              return True
+
+          rows = []
+          accepted_lines = 0
+          for node in tree.body:
+              if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or not node.name.startswith("_spina_pg_") or node.name in already:
+                  continue
+              source = ast.get_source_segment(text, node) or ""
+              lines = (node.end_lineno or node.lineno) - node.lineno + 1
+              ok = accepted(node, source)
+              if ok:
+                  accepted_lines += lines
+              rows.append(f"- `{node.name}` — {lines} lines — {'accepted' if ok else 'excluded'}")
+
+          event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+          pr = event["pull_request"]["number"]
+          body = "## Wave 35 exact PostgreSQL helper inventory\n\nAccepted by the first guard: **{} lines**.\n\n{}".format(accepted_lines, "\n".join(rows))
+          report = Path(os.environ["RUNNER_TEMP"]) / "wave35-inventory.md"
+          report.write_text(body, encoding="utf-8")
+          subprocess.run(["gh", "pr", "comment", str(pr), "--body-file", str(report)], check=True)
+          '@ | Set-Content -Path "$env:RUNNER_TEMP\wave35_inventory.py" -Encoding UTF8
+          python "$env:RUNNER_TEMP\wave35_inventory.py"
       - name: Apply guarded high-volume extraction
         shell: cmd
         run: python tools\apply_postgres_read_storage_wave_35.py
