@@ -79,5 +79,4 @@ jobs:
           python -m tools.test_architecture_map
           git add architecture-map.json docs/architecture
           git diff --cached --quiet || git commit -m "Refresh architecture maps for Wave 44"
-          gh auth setup-git
           git push origin HEAD:${{ github.head_ref }}
