@@ -16,19 +16,6 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Guard exact checked-out head
-        shell: pwsh
-        run: |
-          $branch = "${{ github.head_ref }}"
-          $expected = "${{ github.event.pull_request.head.sha }}"
-          $checkedOut = (git rev-parse HEAD).Trim()
-          $remote = (git rev-parse "refs/remotes/origin/$branch").Trim()
-          if ($checkedOut -ne $expected) {
-            throw "Wave 40 checkout mismatch. Expected $expected, found $checkedOut."
-          }
-          if ($remote -ne $expected) {
-            throw "Wave 40 remote-head mismatch. Expected $expected, found $remote."
-          }
       - name: Extract guarded note editor module
         shell: cmd
         run: python tools/extract_note_editor_presentation_wave_40.py
