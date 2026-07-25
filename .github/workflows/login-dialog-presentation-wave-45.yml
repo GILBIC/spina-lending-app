@@ -1,0 +1,50 @@
+name: Login dialog presentation Wave 45
+on:
+  pull_request:
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/login_dialog_presentation.py"
+      - "tools/test_login_dialog_presentation_wave_45.py"
+      - "tools/test_login_dialog_widget_smoke_wave_45.py"
+      - "architecture-map.json"
+      - "docs/architecture/**"
+      - ".github/workflows/login-dialog-presentation-wave-45.yml"
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Compile application, module, and tests
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app/login_dialog_presentation.py
+          python -m py_compile tools/test_login_dialog_presentation_wave_45.py
+          python -m py_compile tools/test_login_dialog_widget_smoke_wave_45.py
+          python -m compileall -q spina_app
+      - name: Run exact login-dialog regression
+        shell: cmd
+        run: python tools/test_login_dialog_presentation_wave_45.py
+      - name: Run login-dialog Tkinter smoke test
+        shell: cmd
+        run: python tools/test_login_dialog_widget_smoke_wave_45.py
+      - name: Validate permanent architecture map
+        shell: cmd
+        run: python -m tools.test_architecture_map
+      - name: Run repository audits
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-45-redundancy.json
+          python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-45-quality.json
+      - name: Upload Wave 45 reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-45-reports
+          path: artifacts/wave-45-*.json
