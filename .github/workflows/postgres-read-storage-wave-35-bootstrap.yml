@@ -1,77 +1,31 @@
 name: PostgreSQL read storage Wave 35 bootstrap
 on: [pull_request]
 permissions:
-  contents: write
+  contents: read
 jobs:
-  extract-and-validate:
+  inventory:
     if: github.head_ref == 'agent/postgres-read-storage-wave-35'
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 45
+    timeout-minutes: 25
     steps:
       - name: Check out Wave 35 branch
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
-      - name: Verify local Python and GitHub CLI
+      - name: Verify Python
         shell: cmd
         run: |
           where python
           python --version
-          where gh
-          gh auth status
-      - name: Capture PostgreSQL helper inventory
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
-          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\wave35_inventory.py", [Convert]::FromBase64String("aW1wb3J0IGFzdAppbXBvcnQganNvbgppbXBvcnQgb3MKaW1wb3J0IHN1YnByb2Nlc3MKZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCgpyb290ID0gUGF0aC5jd2QoKQpkZXNrdG9wID0gcm9vdCAvICJPRkZJQ0lBTF9TUElOQV9BUFBfUG9zdGdyZVNRTF9URVNUX3YzM19zdGFiaWxpdHlfcGVyZm9ybWFuY2VfZml4ZWQucHkiCnRleHQgPSBkZXNrdG9wLnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgtc2lnIikKdHJlZSA9IGFzdC5wYXJzZSh0ZXh0KQphbHJlYWR5ID0gewogICAgIl9zcGluYV9wZ19zaGEyNTYiLCAiX3NwaW5hX3BnX2d1ZXNzX2ZpbGVfdHlwZSIsICJfc3BpbmFfcGdfZ3Vlc3NfcmVwb3J0X2RhdGUiLAogICAgIl9zcGluYV9wZ19ndWVzc19jb2xsZWN0b3IiLCAiX3NwaW5hX3BnX25vcm1hbGl6ZV92YWx1ZSIsCiAgICAiX3NwaW5hX3BnX3JlcGxhY2VfcW1hcmtzIiwgIl9zcGluYV9wZ19lc2NhcGVfbGl0ZXJhbF9wZXJjZW50cyIsCn0KZXhhY3QgPSB7CiAgICAiX3NwaW5hX3BnX3N0b3JhZ2VfZW5hYmxlZCIsICJfc3BpbmFfcGdfYXBwX2RpciIsICJfc3BpbmFfcGdfcmVscGF0aCIsCiAgICAiX3NwaW5hX3BnX2pzb25fdGFibGVfZm9yX3BhdGgiLCAiX3NwaW5hX3BnX3JlYWRfanNvbiIsCn0KcmVhZF9wYXJ0cyA9ICgicmVhZCIsICJsb2FkIiwgImZldGNoIiwgImZpbmQiLCAibG9va3VwIiwgImxpc3QiLCAiZ2V0IiwgImV4aXN0cyIsICJlbmFibGVkIiwgInJlbHBhdGgiLCAiYXBwX2RpciIsICJqc29uX3RhYmxlIikKZXhjbHVkZWRfcGFydHMgPSAoIndyaXRlIiwgInN0b3JlIiwgInNhdmUiLCAiZW5zdXJlIiwgInN5bmMiLCAiaW1wb3J0IiwgImJhY2t1cCIsICJyZXN0b3JlIiwgImRlbGV0ZSIsICJyZW1vdmUiLCAidXBkYXRlIiwgImluc2VydCIsICJ1cHNlcnQiLCAibWlncmF0ZSIsICJzY2hlbWEiLCAiY29tbWl0IiwgInJvbGxiYWNrIiwgImNvbm5lY3QiLCAiX2Nvbm4iLCAiX2xvZyIpCndyaXRlX21hcmtlcnMgPSAoIklOU0VSVCBJTlRPIiwgIlVQREFURSAiLCAiREVMRVRFIEZST00iLCAiQ1JFQVRFIFRBQkxFIiwgIkFMVEVSIFRBQkxFIiwgIkRST1AgVEFCTEUiLCAiVFJVTkNBVEUgIiwgIlJFUExBQ0UgSU5UTyIsICJPTiBDT05GTElDVCIpCm11dGF0aW5nID0geyJjb21taXQiLCAicm9sbGJhY2siLCAid3JpdGUiLCAid3JpdGVfdGV4dCIsICJ3cml0ZV9ieXRlcyIsICJ1bmxpbmsiLCAicmVtb3ZlIiwgInJlbmFtZSIsICJta2RpciIsICJtYWtlZGlycyIsICJybWRpciIsICJ0b3VjaCIsICJjb3B5IiwgImNvcHkyIiwgIm1vdmUifQoKZGVmIGFjY2VwdGVkKG5vZGUsIHNvdXJjZSk6CiAgICBuYW1lID0gbm9kZS5uYW1lCiAgICBsb3cgPSBuYW1lLmxvd2VyKCkKICAgIGlmIG5hbWUgaW4gYWxyZWFkeToKICAgICAgICByZXR1cm4gRmFsc2UKICAgIGlmIG5hbWUgbm90IGluIGV4YWN0OgogICAgICAgIGlmIG5vdCBhbnkocGFydCBpbiBsb3cgZm9yIHBhcnQgaW4gcmVhZF9wYXJ0cyk6CiAgICAgICAgICAgIHJldHVybiBGYWxzZQogICAgICAgIGlmIGFueShwYXJ0IGluIGxvdyBmb3IgcGFydCBpbiBleGNsdWRlZF9wYXJ0cyk6CiAgICAgICAgICAgIHJldHVybiBGYWxzZQogICAgaWYgYW55KG1hcmtlciBpbiBzb3VyY2UudXBwZXIoKSBmb3IgbWFya2VyIGluIHdyaXRlX21hcmtlcnMpOgogICAgICAgIHJldHVybiBGYWxzZQogICAgZm9yIGl0ZW0gaW4gYXN0LndhbGsobm9kZSk6CiAgICAgICAgaWYgaXNpbnN0YW5jZShpdGVtLCBhc3QuQ2FsbCk6CiAgICAgICAgICAgIGZuID0gaXRlbS5mdW5jCiAgICAgICAgICAgIGNhbGxfbmFtZSA9IGZuLmF0dHIgaWYgaXNpbnN0YW5jZShmbiwgYXN0LkF0dHJpYnV0ZSkgZWxzZSBmbi5pZCBpZiBpc2luc3RhbmNlKGZuLCBhc3QuTmFtZSkgZWxzZSAiIgogICAgICAgICAgICBpZiBjYWxsX25hbWUubG93ZXIoKSBpbiBtdXRhdGluZzoKICAgICAgICAgICAgICAgIHJldHVybiBGYWxzZQogICAgICAgICAgICBpZiBjYWxsX25hbWUgPT0gIm9wZW4iOgogICAgICAgICAgICAgICAgbW9kZSA9IE5vbmUKICAgICAgICAgICAgICAgIGlmIGxlbihpdGVtLmFyZ3MpID49IDIgYW5kIGlzaW5zdGFuY2UoaXRlbS5hcmdzWzFdLCBhc3QuQ29uc3RhbnQpOgogICAgICAgICAgICAgICAgICAgIG1vZGUgPSBpdGVtLmFyZ3NbMV0udmFsdWUKICAgICAgICAgICAgICAgIGZvciBrdyBpbiBpdGVtLmtleXdvcmRzOgogICAgICAgICAgICAgICAgICAgIGlmIGt3LmFyZyA9PSAibW9kZSIgYW5kIGlzaW5zdGFuY2Uoa3cudmFsdWUsIGFzdC5Db25zdGFudCk6CiAgICAgICAgICAgICAgICAgICAgICAgIG1vZGUgPSBrdy52YWx1ZS52YWx1ZQogICAgICAgICAgICAgICAgaWYgaXNpbnN0YW5jZShtb2RlLCBzdHIpIGFuZCBhbnkoY2ggaW4gbW9kZSBmb3IgY2ggaW4gIndheCsiKToKICAgICAgICAgICAgICAgICAgICByZXR1cm4gRmFsc2UKICAgIHJldHVybiBUcnVlCgpyb3dzID0gW10KYWNjZXB0ZWRfbGluZXMgPSAwCmZvciBub2RlIGluIHRyZWUuYm9keToKICAgIGlmIG5vdCBpc2luc3RhbmNlKG5vZGUsIChhc3QuRnVuY3Rpb25EZWYsIGFzdC5Bc3luY0Z1bmN0aW9uRGVmKSkgb3Igbm90IG5vZGUubmFtZS5zdGFydHN3aXRoKCJfc3BpbmFfcGdfIikgb3Igbm9kZS5uYW1lIGluIGFscmVhZHk6CiAgICAgICAgY29udGludWUKICAgIHNvdXJjZSA9IGFzdC5nZXRfc291cmNlX3NlZ21lbnQodGV4dCwgbm9kZSkgb3IgIiIKICAgIGxpbmVzID0gKG5vZGUuZW5kX2xpbmVubyBvciBub2RlLmxpbmVubykgLSBub2RlLmxpbmVubyArIDEKICAgIG9rID0gYWNjZXB0ZWQobm9kZSwgc291cmNlKQogICAgaWYgb2s6CiAgICAgICAgYWNjZXB0ZWRfbGluZXMgKz0gbGluZXMKICAgIHJvd3MuYXBwZW5kKGYiLSBge25vZGUubmFtZX1gIOKAlCB7bGluZXN9IGxpbmVzIOKAlCB7J2FjY2VwdGVkJyBpZiBvayBlbHNlICdleGNsdWRlZCd9IikKCmFydGlmYWN0cyA9IHJvb3QgLyAiYXJ0aWZhY3RzIgphcnRpZmFjdHMubWtkaXIoZXhpc3Rfb2s9VHJ1ZSkKYm9keSA9ICIjIyBXYXZlIDM1IGV4YWN0IFBvc3RncmVTUUwgaGVscGVyIGludmVudG9yeVxuXG5BY2NlcHRlZCBieSB0aGUgZmlyc3QgZ3VhcmQ6ICoqe30gbGluZXMqKi5cblxue30iLmZvcm1hdChhY2NlcHRlZF9saW5lcywgIlxuIi5qb2luKHJvd3MpKQooYXJ0aWZhY3RzIC8gIndhdmUzNS1pbnZlbnRvcnkubWQiKS53cml0ZV90ZXh0KGJvZHksIGVuY29kaW5nPSJ1dGYtOCIpCnByaW50KGJvZHkpCg=="))
-          python "$env:RUNNER_TEMP\wave35_inventory.py" *>&1 | Tee-Object -FilePath artifacts\wave35-inventory-output.txt
-          exit 0
+      - name: Generate exact PostgreSQL helper inventory
+        shell: cmd
+        run: python tools\apply_postgres_read_storage_wave_35.py
       - name: Upload PostgreSQL helper inventory
         uses: actions/upload-artifact@v4
         with:
           name: wave-35-postgres-helper-inventory
-          path: artifacts
+          path: |
+            artifacts/wave35-inventory.json
+            artifacts/wave35-inventory.md
           if-no-files-found: error
-      - name: Apply guarded high-volume extraction
-        shell: cmd
-        run: python tools\apply_postgres_read_storage_wave_35.py
-      - name: Compile application, module, and test
-        shell: cmd
-        run: |
-          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
-          python -m py_compile spina_app\postgres_read_storage.py
-          python -m py_compile tools\test_postgres_read_storage_wave_35.py
-          python -m compileall -q spina_app
-      - name: Run high-volume PostgreSQL read/storage regression
-        shell: cmd
-        run: python tools\test_postgres_read_storage_wave_35.py
-      - name: Commit application extraction
-        shell: cmd
-        run: |
-          git config user.name "GILBIC"
-          git config user.email "267608671+GILBIC@users.noreply.github.com"
-          git add -A
-          git commit -m "Extract PostgreSQL read storage Wave 35"
-      - name: Regenerate architecture map
-        shell: cmd
-        run: |
-          python tools\generate_architecture_map.py
-          python tools\test_architecture_map.py
-      - name: Run repository audits
-        shell: cmd
-        run: |
-          if not exist artifacts mkdir artifacts
-          python tools\redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-35-redundancy.json
-          python tools\spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-35-quality.json
-      - name: Commit architecture refresh
-        shell: cmd
-        run: |
-          git add architecture-map.json docs/architecture
-          git commit -m "Refresh architecture map after Wave 35"
-      - name: Push completed Wave 35 branch
-        shell: cmd
-        run: |
-          git config --local --unset-all http.https://github.com/.extraheader 2>nul || ver >nul
-          gh auth setup-git
-          git push origin HEAD:agent/postgres-read-storage-wave-35
