@@ -1,0 +1,37 @@
+name: Inspect collector dialog Wave 43
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: write
+concurrency:
+  group: inspect-collector-dialog-wave-43-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  inspect:
+    if: github.head_ref == 'agent/collector-dialog-presentation-wave-43'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Inspect collector dialog bindings
+        shell: cmd
+        run: python .github/scripts/inspect_collector_dialog_wave_43.py
+      - name: Commit inspection report when changed
+        shell: cmd
+        run: |
+          git config user.name "SPINA Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add wave-43-collector-dialog-inspection.md wave-43-collector-dialog-inspection.json
+          git diff --cached --quiet || git commit -m "Record Wave 43 collector dialog bindings"
+      - name: Configure runner GitHub authentication
+        shell: cmd
+        run: gh auth setup-git
+      - name: Push inspection report
+        shell: cmd
+        run: git push origin HEAD:refs/heads/${{ github.head_ref }}
