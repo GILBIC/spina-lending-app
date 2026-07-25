@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `82f7c6ed6e9f91c4a01d12aeaf21c3fb16f34ec2`.
+Generated from commit `5996bff0f62421d4e6e27d6bd2863003bed50a93`.
 
-Scanned **162 Python files**, **73,581 lines**, and **2,256 symbols**.
+Scanned **165 Python files**, **73,964 lines**, and **2,284 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -736,28 +736,27 @@ Scanned **162 Python files**, **73,581 lines**, and **2,256 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_collector_button** (function, lines 36978–37006, 29 lines, risk `ui_only`): Handles spina v25 collector button for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab** (function, lines 37023–37368, 346 lines, risk `ui_only`): Handles spina v25 build collectors tab for the collectors feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_route_button** (function, lines 37446–37475, 30 lines, risk `ui_only`): Handles spina v27 route button for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_build_collectors_tab** (function, lines 37497–37789, 293 lines, risk `ui_only`): Handles spina v27 build collectors tab for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_get_route_master_areas** (function, lines 37792–37823, 32 lines, risk `support`): Handles spina v27 get route master areas for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button** (function, lines 37909–37936, 28 lines, risk `authentication`): Handles spina v32 login button for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_default_name** (function, lines 37939–37947, 9 lines, risk `support`): Handles spina v32 account default name for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_permission_text** (function, lines 37950–37960, 11 lines, risk `authentication`): Handles spina v32 account permission text for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_display_name** (function, lines 37963–37973, 11 lines, risk `authentication`): Handles spina v32 account display name for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role** (function, lines 37976–37986, 11 lines, risk `authentication`): Handles spina v32 account role for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices** (function, lines 37989–38017, 29 lines, risk `authentication`): Handles spina v32 account choices for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user** (function, lines 38020–38025, 6 lines, risk `support`): Handles spina v32 selected label for user for the other feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based** (function, lines 38028–38082, 55 lines, risk `authentication`): Add account display metadata while preserving existing usernames/passwords/access.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login** (function, lines 38085–38318, 234 lines, risk `authentication`): Modern account-based login dialog. Returns (username, internal_access_profile).
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._toggle_show** (nested_function, lines 38178–38182, 5 lines, risk `ui_only`): Handles toggle show for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info** (nested_function, lines 38196–38207, 12 lines, risk `authentication`): Refreshes refresh account info for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok** (nested_function, lines 38209–38247, 39 lines, risk `authentication`): Handles ok for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel** (nested_function, lines 38249–38254, 6 lines, risk `support`): Handles cancel for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._enter** (nested_function, lines 38277–38278, 2 lines, risk `support`): Handles enter for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header** (function, lines 38321–38334, 14 lines, risk `authentication`): Handles spina v32 refresh user header for the other feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account** (function, lines 38337–38394, 58 lines, risk `authentication`): Handles spina v32 switch account for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role** (function, lines 38397–38400, 4 lines, risk `authentication`): Handles spina v32 prompt user role for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message** (function, lines 38443–38454, 12 lines, risk `reports`): Handles spina legacy client action removed message for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action** (function, lines 38457–38462, 6 lines, risk `filesystem`): Handles spina make removed legacy client action for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action** (nested_function, lines 38458–38460, 3 lines, risk `support`): Handles spina removed action for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_get_route_master_areas** (function, lines 37506–37537, 32 lines, risk `support`): Handles spina v27 get route master areas for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button** (function, lines 37623–37650, 28 lines, risk `authentication`): Handles spina v32 login button for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_default_name** (function, lines 37653–37661, 9 lines, risk `support`): Handles spina v32 account default name for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_permission_text** (function, lines 37664–37674, 11 lines, risk `authentication`): Handles spina v32 account permission text for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_display_name** (function, lines 37677–37687, 11 lines, risk `authentication`): Handles spina v32 account display name for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role** (function, lines 37690–37700, 11 lines, risk `authentication`): Handles spina v32 account role for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices** (function, lines 37703–37731, 29 lines, risk `authentication`): Handles spina v32 account choices for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user** (function, lines 37734–37739, 6 lines, risk `support`): Handles spina v32 selected label for user for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based** (function, lines 37742–37796, 55 lines, risk `authentication`): Add account display metadata while preserving existing usernames/passwords/access.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login** (function, lines 37799–38032, 234 lines, risk `authentication`): Modern account-based login dialog. Returns (username, internal_access_profile).
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._toggle_show** (nested_function, lines 37892–37896, 5 lines, risk `ui_only`): Handles toggle show for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._refresh_account_info** (nested_function, lines 37910–37921, 12 lines, risk `authentication`): Refreshes refresh account info for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._ok** (nested_function, lines 37923–37961, 39 lines, risk `authentication`): Handles ok for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._cancel** (nested_function, lines 37963–37968, 6 lines, risk `support`): Handles cancel for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_login._enter** (nested_function, lines 37991–37992, 2 lines, risk `support`): Handles enter for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_refresh_user_header** (function, lines 38035–38048, 14 lines, risk `authentication`): Handles spina v32 refresh user header for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account** (function, lines 38051–38108, 58 lines, risk `authentication`): Handles spina v32 switch account for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role** (function, lines 38111–38114, 4 lines, risk `authentication`): Handles spina v32 prompt user role for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message** (function, lines 38157–38168, 12 lines, risk `reports`): Handles spina legacy client action removed message for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action** (function, lines 38171–38176, 6 lines, risk `filesystem`): Handles spina make removed legacy client action for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action** (nested_function, lines 38172–38174, 3 lines, risk `support`): Handles spina removed action for the clients feature.
 
 ## `spina_app/area_hierarchy.py`
 
@@ -977,6 +976,11 @@ Scanned **162 Python files**, **73,581 lines**, and **2,256 symbols**.
 - **spina_app.collector_refresh_presentation.refresh_collectors._lt_key** (nested_function, lines 112–116, 5 lines, risk `filesystem`): Handles lt key for the collectors feature.
 - **spina_app.collector_refresh_presentation.refresh_collectors._expand_route_area_to_master_norms** (nested_function, lines 217–250, 34 lines, risk `support`): Return list of master area norms covered by this route entry. Rules: - If route entry has sub: match exact (main, sub) in master areas (separator-insensitive). - If route entry is MAIN-only: cover ALL master areas that share that main. - Legacy: if the full string matches a master area exactly, acce
 - **spina_app.collector_refresh_presentation.refresh_collectors._sort_key** (nested_function, lines 533–549, 17 lines, risk `support`): Handles sort key for the collectors feature.
+
+## `spina_app/collector_tab_presentation.py`
+
+- **spina_app.collector_tab_presentation.configure_collector_tab_dependencies** (function, lines 20–25, 6 lines, risk `support`): Handles configure collector tab dependencies for the collectors feature.
+- **spina_app.collector_tab_presentation._spina_v27_build_collectors_tab** (function, lines 35–327, 293 lines, risk `ui_only`): Handles spina v27 build collectors tab for the collectors feature.
 
 ## `spina_app/linked_client_queries.py`
 
@@ -2253,6 +2257,39 @@ Scanned **162 Python files**, **73,581 lines**, and **2,256 symbols**.
 
 - **tools.test_collector_route_presentation_wave_23.source_for** (function, lines 24–25, 2 lines, risk `support`): Handles source for for the other feature.
 - **tools.test_collector_route_presentation_wave_23.main** (function, lines 28–80, 53 lines, risk `filesystem`): Handles main for the other feature.
+
+## `tools/test_collector_tab_presentation_wave_44.py`
+
+- **tools.test_collector_tab_presentation_wave_44.normalized** (function, lines 24–25, 2 lines, risk `support`): Handles normalized for the utilities feature.
+- **tools.test_collector_tab_presentation_wave_44.dotted** (function, lines 28–34, 7 lines, risk `support`): Handles dotted for the other feature.
+- **tools.test_collector_tab_presentation_wave_44.top_functions** (function, lines 37–38, 2 lines, risk `support`): Handles top functions for the other feature.
+- **tools.test_collector_tab_presentation_wave_44.source_for** (function, lines 41–42, 2 lines, risk `support`): Handles source for for the other feature.
+- **tools.test_collector_tab_presentation_wave_44.signature_text** (function, lines 45–51, 7 lines, risk `support`): Handles signature text for the other feature.
+- **tools.test_collector_tab_presentation_wave_44.main** (function, lines 54–132, 79 lines, risk `filesystem`): Handles main for the other feature.
+
+## `tools/test_collector_tab_widget_smoke_wave_44.py`
+
+- **tools.test_collector_tab_widget_smoke_wave_44._route_colors** (function, lines 32–33, 2 lines, risk `support`): Handles route colors for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44._route_button** (function, lines 36–38, 3 lines, risk `ui_only`): Handles route button for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44._route_card** (function, lines 41–50, 10 lines, risk `ui_only`): Handles route card for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44._style_route_trees** (function, lines 53–55, 3 lines, risk `ui_only`): Handles style route trees for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44._hidden_widgets** (function, lines 58–61, 4 lines, risk `ui_only`): Handles hidden widgets for the other feature.
+- **tools.test_collector_tab_widget_smoke_wave_44._update_cards** (function, lines 64–74, 11 lines, risk `ui_only`): Updates update cards for the other feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp** (class, lines 77–130, 54 lines, risk `container`): Groups FakeCollectorApp for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.__init__** (method, lines 78–82, 5 lines, risk `ui_only`): Handles init for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._record** (method, lines 84–85, 2 lines, risk `support`): Handles record for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.print_collector_route_daily_ledger** (method, lines 87–88, 2 lines, risk `reports`): Generates print collector route daily ledger for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._edit_selected_collector** (method, lines 90–91, 2 lines, risk `support`): Handles edit selected collector for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._add_collector** (method, lines 93–94, 2 lines, risk `support`): Handles add collector for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._clear_collectors_search_filters** (method, lines 96–99, 4 lines, risk `support`): Handles clear collectors search filters for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_unassigned_areas** (method, lines 101–102, 2 lines, risk `support`): Handles show unassigned areas for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_no_area_clients** (method, lines 104–105, 2 lines, risk `support`): Handles show no area clients for the clients feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_conflicts** (method, lines 107–108, 2 lines, risk `support`): Handles show conflicts for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._delete_selected_collector** (method, lines 110–111, 2 lines, risk `support`): Removes delete selected collector for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._collectors_name_from_values** (method, lines 113–114, 2 lines, risk `support`): Handles collectors name from values for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._schedule_collectors_refresh** (method, lines 116–117, 2 lines, risk `support`): Handles schedule collectors refresh for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp.refresh_collectors** (method, lines 119–130, 12 lines, risk `support`): Refreshes refresh collectors for the collectors feature.
+- **tools.test_collector_tab_widget_smoke_wave_44.main** (function, lines 133–202, 70 lines, risk `reports`): Handles main for the other feature.
 
 ## `tools/test_collectors_editor_wave_26.py`
 
