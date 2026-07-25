@@ -37804,20 +37804,14 @@ configure_login_dialog_dependencies(globals())
 _spina_v32_prompt_login = _wave45_spina_v32_prompt_login
 
 
-def _spina_v32_refresh_user_header(self):
-    try:
-        if getattr(self, "user_role_label", None) is not None:
-            display = _spina_v32_account_display_name(self, getattr(self, "user_name", ""))
-            self.user_role_label.config(text=f"Account: {display}")
-    except Exception as __spina_exc:
-        try:
-            _log_suppressed_once("v32_refresh_user_header", "v32 refresh user header failed", __spina_exc)
-        except Exception:
-            pass
-    try:
-        self._refresh_header_theme()
-    except Exception:
-        pass
+from spina_app.account_header_presentation import (
+    configure_account_header_dependencies as _wave46_configure_account_header_dependencies,
+    _spina_v32_refresh_user_header as _wave46_spina_v32_refresh_user_header,
+    _spina_v32_build_header as _wave46_spina_v32_build_header,
+)
+_wave46_configure_account_header_dependencies(globals())
+_spina_v32_refresh_user_header = _wave46_spina_v32_refresh_user_header
+_spina_v32_build_header = _wave46_spina_v32_build_header
 
 
 def _spina_v32_switch_account(self):
@@ -37899,18 +37893,6 @@ try:
 
         _spina_v32_orig_build_header = getattr(App, "_build_header", None)
         if callable(_spina_v32_orig_build_header):
-            def _spina_v32_build_header(self, *args, **kwargs):
-                res = _spina_v32_orig_build_header(self, *args, **kwargs)
-                try:
-                    self._refresh_user_header()
-                except Exception:
-                    pass
-                try:
-                    if getattr(self, "switch_account_btn", None) is not None:
-                        self.switch_account_btn.configure(text="Account")
-                except Exception:
-                    pass
-                return res
             App._build_header = _spina_v32_build_header
 except Exception as __spina_exc:
     try:
