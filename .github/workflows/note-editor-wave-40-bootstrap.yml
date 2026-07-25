@@ -51,12 +51,9 @@ jobs:
           python -m tools.test_architecture_map
           git add architecture-map.json docs\architecture
           git diff --cached --quiet || git commit -m "Refresh architecture map after Wave 40"
-      - name: Push exact-head update with runner GitHub login
-        shell: pwsh
-        run: |
-          gh auth status
-          gh auth setup-git
-          $branch = "${{ github.head_ref }}"
-          $expected = "${{ github.event.pull_request.head.sha }}"
-          $lease = "refs/heads/${branch}:$expected"
-          git push "--force-with-lease=$lease" origin "HEAD:refs/heads/$branch"
+      - name: Configure runner GitHub authentication
+        shell: cmd
+        run: gh auth setup-git
+      - name: Push generated Wave 40 commits
+        shell: cmd
+        run: git push origin HEAD:refs/heads/${{ github.head_ref }}
