@@ -2,7 +2,7 @@
 
 Generated from commit `cd281e0a9e0a6026b66f8fde1f8b6bb8e9d0ea5b`.
 
-Scanned **167 Python files**, **74,132 lines**, and **2,291 symbols**.
+Scanned **168 Python files**, **74,302 lines**, and **2,308 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -2573,6 +2573,26 @@ Scanned **167 Python files**, **74,132 lines**, and **2,291 symbols**.
 - **tools.test_login_dialog_presentation_wave_45.top_functions** (function, lines 45–46, 2 lines, risk `support`): Handles top functions for the other feature.
 - **tools.test_login_dialog_presentation_wave_45.app_method** (function, lines 49–53, 5 lines, risk `support`): Handles app method for the other feature.
 - **tools.test_login_dialog_presentation_wave_45.main** (function, lines 56–135, 80 lines, risk `filesystem`): Handles main for the other feature.
+
+## `tools/test_login_dialog_widget_smoke_wave_45.py`
+
+- **tools.test_login_dialog_widget_smoke_wave_45.descendants** (function, lines 16–19, 4 lines, risk `support`): Handles descendants for the other feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.top_level** (function, lines 22–25, 4 lines, risk `ui_only`): Handles top level for the other feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.find_button** (function, lines 28–34, 7 lines, risk `ui_only`): Retrieves find button for the other feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.DummyApp** (class, lines 37–64, 28 lines, risk `container`): Groups DummyApp for the other feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.DummyApp.__init__** (method, lines 38–41, 4 lines, risk `ui_only`): Handles init for the other feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.DummyApp._load_users_db** (method, lines 43–51, 9 lines, risk `authentication`): Loads load users db for the authentication feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.DummyApp._verify_login** (method, lines 53–57, 5 lines, risk `authentication`): Handles verify login for the authentication feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.DummyApp._must_change_password** (method, lines 59–60, 2 lines, risk `authentication`): Handles must change password for the payments feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.DummyApp._force_change_password_dialog** (method, lines 62–64, 3 lines, risk `authentication`): Handles force change password dialog for the payments feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies** (function, lines 67–99, 33 lines, risk `authentication`): Handles configure dependencies for the other feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies.account_choices** (nested_function, lines 80–82, 3 lines, risk `support`): Handles account choices for the authentication feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies.login_button** (nested_function, lines 84–86, 3 lines, risk `authentication`): Handles login button for the authentication feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.run_sign_in** (function, lines 102–132, 31 lines, risk `authentication`): Handles run sign in for the other feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.run_sign_in.action** (nested_function, lines 105–125, 21 lines, risk `ui_only`): Handles action for the other feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.run_cancel** (function, lines 135–153, 19 lines, risk `authentication`): Handles run cancel for the other feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.run_cancel.action** (nested_function, lines 138–146, 9 lines, risk `ui_only`): Handles action for the other feature.
+- **tools.test_login_dialog_widget_smoke_wave_45.main** (function, lines 156–166, 11 lines, risk `reports`): Handles main for the other feature.
 
 ## `tools/test_login_palette_wave_25.py`
 

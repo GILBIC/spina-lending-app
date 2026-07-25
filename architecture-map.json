@@ -5524,8 +5524,6 @@
       "spina_app/collector_refresh_presentation.py:14:spina_app.collector_refresh_presentation.configure_collector_refresh_dependencies",
       "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
       "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
-      "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
-      "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
       "spina_app/long_task_presentation.py:21:spina_app.long_task_presentation.configure_long_task_dependencies",
       "spina_app/navigation.py:11:spina_app.navigation._noop_log",
       "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
@@ -9854,6 +9852,26 @@
         "line": 171,
         "owner": "tools/test_collectors_editor_wave_26.py:169:tools.test_collectors_editor_wave_26.behavior_checks",
         "target": "module"
+      },
+      {
+        "kind": "command",
+        "line": 86,
+        "owner": "tools/test_login_dialog_widget_smoke_wave_45.py:84:tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies.login_button",
+        "target": "command"
+      },
+      {
+        "event": "100",
+        "kind": "after",
+        "line": 127,
+        "owner": "tools/test_login_dialog_widget_smoke_wave_45.py:102:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in",
+        "target": "action"
+      },
+      {
+        "event": "100",
+        "kind": "after",
+        "line": 149,
+        "owner": "tools/test_login_dialog_widget_smoke_wave_45.py:135:tools.test_login_dialog_widget_smoke_wave_45.run_cancel",
+        "target": "action"
       }
     ],
     "database_tables": {
@@ -10244,6 +10262,7 @@
         "tools/test_legacy_dashboard_controls_batch_15.py:55:tools.test_legacy_dashboard_controls_batch_15.FakeButton.__init__",
         "tools/test_legacy_dashboard_controls_batch_15.py:67:tools.test_legacy_dashboard_controls_batch_15.FakeStyle.__init__",
         "tools/test_legacy_dashboard_palette_batch_14.py:31:tools.test_legacy_dashboard_palette_batch_14.Holder.__init__",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:38:tools.test_login_dialog_widget_smoke_wave_45.DummyApp.__init__",
         "tools/test_navigation_databank_shell_wave_29.py:136:tools.test_navigation_databank_shell_wave_29.FakeNotebook.__init__",
         "tools/test_navigation_databank_shell_wave_29.py:161:tools.test_navigation_databank_shell_wave_29.FakeTree.__init__",
         "tools/test_navigation_databank_shell_wave_29.py:187:tools.test_navigation_databank_shell_wave_29.FakeVar.__init__",
@@ -10479,6 +10498,10 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8244:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._system_data_refresh_summary._fmt_amt",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9587:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._fmt_amt"
       ],
+      "_force_change_password_dialog": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7287:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:62:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._force_change_password_dialog"
+      ],
       "_functions": [
         "tools/test_cash_control_input_normalizer_batch_07.py:60:tools.test_cash_control_input_normalizer_batch_07._functions",
         "tools/test_dashboard_feature_wave_17.py:33:tools.test_dashboard_feature_wave_17._functions"
@@ -10576,6 +10599,10 @@
         "tools/test_cilog_value_formatter_extraction.py:76:tools.test_cilog_value_formatter_extraction._load_module",
         "tools/test_log_serialization_helper_extraction.py:59:tools.test_log_serialization_helper_extraction._load_module"
       ],
+      "_load_users_db": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7430:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_users_db",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:43:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._load_users_db"
+      ],
       "_local_names": [
         "tools/extract_cilog_action_label.py:20:tools.extract_cilog_action_label._local_names",
         "tools/extract_cilog_diff_pairs.py:42:tools.extract_cilog_diff_pairs._local_names",
@@ -10609,6 +10636,10 @@
       "_move": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17886:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._arrange_areas_dialog._move",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:26552:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._arrange_areas_dialog._move"
+      ],
+      "_must_change_password": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7232:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._must_change_password",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:59:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._must_change_password"
       ],
       "_name": [
         "tools/plan_app_lifecycle_window_pass_only.py:48:tools.plan_app_lifecycle_window_pass_only._name",
@@ -10953,6 +10984,10 @@
         "tools/test_numeric_parser_extraction.py:45:tools.test_numeric_parser_extraction._validate_signature",
         "tools/test_text_normalizer_extraction.py:44:tools.test_text_normalizer_extraction._validate_signature"
       ],
+      "_verify_login": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7502:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:53:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._verify_login"
+      ],
       "_widget_summary": [
         "tools/test_cash_control_ui_controls_batch_09.py:147:tools.test_cash_control_ui_controls_batch_09._widget_summary",
         "tools/test_cilog_ui_controls_batch_10.py:143:tools.test_cilog_ui_controls_batch_10._widget_summary",
@@ -10986,6 +11021,10 @@
       "accept": [
         "spina_app/area_hierarchy_ui.py:245:spina_app.area_hierarchy_ui.select_area_node.accept",
         "spina_app/area_hierarchy_ui.py:439:spina_app.area_hierarchy_ui._select_parent_area.accept"
+      ],
+      "action": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:105:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in.action",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:138:tools.test_login_dialog_widget_smoke_wave_45.run_cancel.action"
       ],
       "add": [
         "tools/test_dashboard_presentation_wave_28.py:78:tools.test_dashboard_presentation_wave_28.FakeNotebook.add",
@@ -11395,6 +11434,7 @@
         "tools/test_loan_context_queries_wave_33.py:8:tools.test_loan_context_queries_wave_33.main",
         "tools/test_log_serialization_helper_extraction.py:132:tools.test_log_serialization_helper_extraction.main",
         "tools/test_login_dialog_presentation_wave_45.py:56:tools.test_login_dialog_presentation_wave_45.main",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:156:tools.test_login_dialog_widget_smoke_wave_45.main",
         "tools/test_login_palette_wave_25.py:23:tools.test_login_palette_wave_25.main",
         "tools/test_long_task_presentation_wave_42.py:38:tools.test_long_task_presentation_wave_42.main",
         "tools/test_merge_note_dict_extraction.py:122:tools.test_merge_note_dict_extraction.main",
@@ -11690,7 +11730,11 @@
         "spina_app/theme_palettes.py:330:spina_app.theme_palettes._spina_v32_login_colors",
         "tools/plan_pure_login_dialog_ui_pass_only.py:142:tools.plan_pure_login_dialog_ui_pass_only._classify_pure_login_dialog_ui",
         "tools/plan_pure_login_dialog_ui_pass_only.py:160:tools.plan_pure_login_dialog_ui_pass_only._fallback_login_group",
-        "tools/spina_startup_diagnostics.py:62:tools.spina_startup_diagnostics.check_login"
+        "tools/spina_startup_diagnostics.py:62:tools.spina_startup_diagnostics.check_login",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:43:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._load_users_db",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:53:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._verify_login",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:80:tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies.account_choices",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:84:tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies.login_button"
       ],
       "backup": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11810:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._postgres_backup_dir",
@@ -13547,6 +13591,17 @@
         "tools/test_login_dialog_presentation_wave_45.py:45:tools.test_login_dialog_presentation_wave_45.top_functions",
         "tools/test_login_dialog_presentation_wave_45.py:49:tools.test_login_dialog_presentation_wave_45.app_method",
         "tools/test_login_dialog_presentation_wave_45.py:56:tools.test_login_dialog_presentation_wave_45.main",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:102:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:105:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in.action",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:135:tools.test_login_dialog_widget_smoke_wave_45.run_cancel",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:138:tools.test_login_dialog_widget_smoke_wave_45.run_cancel.action",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:156:tools.test_login_dialog_widget_smoke_wave_45.main",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:16:tools.test_login_dialog_widget_smoke_wave_45.descendants",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:22:tools.test_login_dialog_widget_smoke_wave_45.top_level",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:28:tools.test_login_dialog_widget_smoke_wave_45.find_button",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:37:tools.test_login_dialog_widget_smoke_wave_45.DummyApp",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:38:tools.test_login_dialog_widget_smoke_wave_45.DummyApp.__init__",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:67:tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies",
         "tools/test_login_palette_wave_25.py:19:tools.test_login_palette_wave_25.source_for",
         "tools/test_login_palette_wave_25.py:23:tools.test_login_palette_wave_25.main",
         "tools/test_long_task_presentation_wave_42.py:28:tools.test_long_task_presentation_wave_42.call_chain",
@@ -13782,7 +13837,9 @@
         "tools/plan_ui_compatibility_pass_only.py:153:tools.plan_ui_compatibility_pass_only.PassOnlyVisitor.visit_AsyncFunctionDef",
         "tools/plan_ui_compatibility_pass_only.py:158:tools.plan_ui_compatibility_pass_only.PassOnlyVisitor.visit_ExceptHandler",
         "tools/spina_quality_audit.py:79:tools.spina_quality_audit._is_pass_only",
-        "tools/spina_startup_diagnostics.py:35:tools.spina_startup_diagnostics.check_password"
+        "tools/spina_startup_diagnostics.py:35:tools.spina_startup_diagnostics.check_password",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:59:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._must_change_password",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:62:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._force_change_password_dialog"
       ],
       "reports": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12681:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog._browse_reports",
@@ -15614,8 +15671,6 @@
       "spina_app/collector_refresh_presentation.py:14:spina_app.collector_refresh_presentation.configure_collector_refresh_dependencies",
       "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
       "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
-      "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
-      "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login",
       "spina_app/long_task_presentation.py:21:spina_app.long_task_presentation.configure_long_task_dependencies",
       "spina_app/navigation.py:11:spina_app.navigation._noop_log",
       "spina_app/note_editor_presentation.py:17:spina_app.note_editor_presentation.configure_note_editor_dependencies",
@@ -15749,6 +15804,10 @@
       "tools/test_legacy_dashboard_controls_batch_15.py:74:tools.test_legacy_dashboard_controls_batch_15.FakeStyle.map",
       "tools/test_legacy_dashboard_controls_batch_15.py:83:tools.test_legacy_dashboard_controls_batch_15.FakeTtk.Style",
       "tools/test_legacy_dashboard_palette_batch_14.py:37:tools.test_legacy_dashboard_palette_batch_14.BadString.__str__",
+      "tools/test_login_dialog_widget_smoke_wave_45.py:43:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._load_users_db",
+      "tools/test_login_dialog_widget_smoke_wave_45.py:53:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._verify_login",
+      "tools/test_login_dialog_widget_smoke_wave_45.py:59:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._must_change_password",
+      "tools/test_login_dialog_widget_smoke_wave_45.py:62:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._force_change_password_dialog",
       "tools/test_navigation_databank_shell_wave_29.py:141:tools.test_navigation_databank_shell_wave_29.FakeNotebook.tabs",
       "tools/test_navigation_databank_shell_wave_29.py:149:tools.test_navigation_databank_shell_wave_29.FakeNotebook.add",
       "tools/test_navigation_databank_shell_wave_29.py:154:tools.test_navigation_databank_shell_wave_29.FakeNotebook.hide",
@@ -15812,7 +15871,15 @@
         "tools/plan_pure_login_dialog_ui_pass_only.py:160:tools.plan_pure_login_dialog_ui_pass_only._fallback_login_group",
         "tools/spina_startup_diagnostics.py:35:tools.spina_startup_diagnostics.check_password",
         "tools/spina_startup_diagnostics.py:62:tools.spina_startup_diagnostics.check_login",
-        "tools/spina_startup_diagnostics.py:82:tools.spina_startup_diagnostics.main"
+        "tools/spina_startup_diagnostics.py:82:tools.spina_startup_diagnostics.main",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:102:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:135:tools.test_login_dialog_widget_smoke_wave_45.run_cancel",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:43:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._load_users_db",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:53:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._verify_login",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:59:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._must_change_password",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:62:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._force_change_password_dialog",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:67:tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:84:tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies.login_button"
       ],
       "backup": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11810:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._postgres_backup_dir",
@@ -15930,6 +15997,7 @@
         "tools/test_legacy_dashboard_controls_batch_15.py:78:tools.test_legacy_dashboard_controls_batch_15.FakeTtk",
         "tools/test_legacy_dashboard_palette_batch_14.py:30:tools.test_legacy_dashboard_palette_batch_14.Holder",
         "tools/test_legacy_dashboard_palette_batch_14.py:36:tools.test_legacy_dashboard_palette_batch_14.BadString",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:37:tools.test_login_dialog_widget_smoke_wave_45.DummyApp",
         "tools/test_navigation_databank_shell_wave_29.py:135:tools.test_navigation_databank_shell_wave_29.FakeNotebook",
         "tools/test_navigation_databank_shell_wave_29.py:160:tools.test_navigation_databank_shell_wave_29.FakeTree",
         "tools/test_navigation_databank_shell_wave_29.py:186:tools.test_navigation_databank_shell_wave_29.FakeVar",
@@ -16561,6 +16629,7 @@
         "tools/test_dashboard_feature_wave_17.py:128:tools.test_dashboard_feature_wave_17.main",
         "tools/test_dashboard_presentation_wave_28.py:107:tools.test_dashboard_presentation_wave_28.main",
         "tools/test_hierarchical_area_storage_phase1.py:126:tools.test_hierarchical_area_storage_phase1.main",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:156:tools.test_login_dialog_widget_smoke_wave_45.main",
         "tools/test_navigation_databank_shell_wave_29.py:307:tools.test_navigation_databank_shell_wave_29.main",
         "tools/test_reports_feature_wave_18.py:118:tools.test_reports_feature_wave_18.main",
         "tools/test_reports_feature_wave_18.py:67:tools.test_reports_feature_wave_18._assert_dependency_bridge",
@@ -17769,6 +17838,8 @@
         "tools/test_login_dialog_presentation_wave_45.py:41:tools.test_login_dialog_presentation_wave_45.source_for",
         "tools/test_login_dialog_presentation_wave_45.py:45:tools.test_login_dialog_presentation_wave_45.top_functions",
         "tools/test_login_dialog_presentation_wave_45.py:49:tools.test_login_dialog_presentation_wave_45.app_method",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:16:tools.test_login_dialog_widget_smoke_wave_45.descendants",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:80:tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies.account_choices",
         "tools/test_login_palette_wave_25.py:19:tools.test_login_palette_wave_25.source_for",
         "tools/test_long_task_presentation_wave_42.py:24:tools.test_long_task_presentation_wave_42.normalized",
         "tools/test_long_task_presentation_wave_42.py:28:tools.test_long_task_presentation_wave_42.call_chain",
@@ -18074,6 +18145,11 @@
         "tools/test_legacy_dashboard_controls_batch_15.py:159:tools.test_legacy_dashboard_controls_batch_15._capture_filter",
         "tools/test_legacy_dashboard_controls_batch_15.py:196:tools.test_legacy_dashboard_controls_batch_15._capture_style",
         "tools/test_legacy_dashboard_controls_batch_15.py:47:tools.test_legacy_dashboard_controls_batch_15.FakeTk.StringVar",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:105:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in.action",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:138:tools.test_login_dialog_widget_smoke_wave_45.run_cancel.action",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:22:tools.test_login_dialog_widget_smoke_wave_45.top_level",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:28:tools.test_login_dialog_widget_smoke_wave_45.find_button",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:38:tools.test_login_dialog_widget_smoke_wave_45.DummyApp.__init__",
         "tools/test_navigation_databank_shell_wave_29.py:176:tools.test_navigation_databank_shell_wave_29.FakeTree.winfo_class"
       ]
     }
@@ -22057,6 +22133,27 @@
     },
     {
       "application_file": false,
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "imports": {
+        "Path": "pathlib.Path",
+        "annotations": "__future__.annotations",
+        "os": "os",
+        "presentation": "spina_app.login_dialog_presentation",
+        "sys": "sys",
+        "tk": "tkinter",
+        "ttk": "tkinter.ttk"
+      },
+      "lines": 170,
+      "module": "tools.test_login_dialog_widget_smoke_wave_45",
+      "module_globals": [
+        "ROOT"
+      ],
+      "monkey_patches": [],
+      "sha256": "ef7304099f0cda0e899a433ed06331fa327a1cdb80769c21d168e97065e6b966",
+      "syntax_ok": true
+    },
+    {
+      "application_file": false,
       "file": "tools/test_login_palette_wave_25.py",
       "imports": {
         "Path": "pathlib.Path",
@@ -22556,26 +22653,26 @@
   "summary": {
     "application_monkey_patches": 56,
     "application_python_files": 44,
-    "application_resolved_call_edges": 2695,
+    "application_resolved_call_edges": 2691,
     "application_symbols": 1172,
     "application_ui_callback_edges": 498,
-    "classes": 92,
+    "classes": 93,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1315,
-    "methods": 503,
+    "functions": 1322,
+    "methods": 508,
     "monkey_patches": 130,
-    "nested_functions": 381,
+    "nested_functions": 385,
     "parse_errors": 0,
-    "possible_orphans": 122,
-    "python_files": 167,
+    "possible_orphans": 120,
+    "python_files": 168,
     "repository_database_tables": 19,
-    "repository_duplicate_names": 245,
-    "repository_possible_orphans": 244,
-    "resolved_call_edges": 3712,
-    "symbols": 2291,
-    "total_python_lines": 74132,
-    "ui_callback_edges": 500
+    "repository_duplicate_names": 250,
+    "repository_possible_orphans": 246,
+    "resolved_call_edges": 3722,
+    "symbols": 2308,
+    "total_python_lines": 74302,
+    "ui_callback_edges": 503
   },
   "symbols": [
     {
@@ -33126,8 +33223,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7631:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok",
-        "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7631:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok"
       ],
       "calls_raw": [
         "bool",
@@ -33264,8 +33360,7 @@
         }
       ],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7631:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok",
-        "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7631:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok"
       ],
       "calls_raw": [
         "_log_ignored",
@@ -33526,8 +33621,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7232:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._must_change_password",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7259:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._set_user_password",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7502:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7582:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login",
-        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7582:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login"
       ],
       "calls_raw": [
         "_log_suppressed_once",
@@ -33594,8 +33688,7 @@
       "callbacks": [],
       "callers": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7631:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8377:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_current_password",
-        "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8377:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_current_password"
       ],
       "calls_raw": [
         "_log_exc",
@@ -74434,7 +74527,9 @@
         "namespace"
       ],
       "callbacks": [],
-      "callers": [],
+      "callers": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:67:tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies"
+      ],
       "calls_raw": [
         "_LOGIN_DIALOG_DEPENDENCIES.clear",
         "_LOGIN_DIALOG_DEPENDENCIES.update",
@@ -74506,7 +74601,10 @@
           "target": "_enter"
         }
       ],
-      "callers": [],
+      "callers": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:102:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:135:tools.test_login_dialog_widget_smoke_wave_45.run_cancel"
+      ],
       "calls_raw": [
         "_log_suppressed_once",
         "_refresh_account_info",
@@ -74566,7 +74664,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37623:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37703:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37734:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7430:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_users_db",
         "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
         "spina_app/theme_palettes.py:330:spina_app.theme_palettes._spina_v32_login_colors",
         "tools/test_cash_control_feature_wave_21.py:42:tools.test_cash_control_feature_wave_21.FakeCanvas.winfo_width",
@@ -74705,11 +74802,7 @@
         "str.strip",
         "strip"
       ],
-      "calls_resolved": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7232:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._must_change_password",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7287:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7502:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login"
-      ],
+      "calls_resolved": [],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
@@ -127696,6 +127789,710 @@
         "reports"
       ],
       "source_sha256": "64bb2eec956ca72470fd66ca30367fb6facc207d8b6f40f96fadd62c9b36aa3a"
+    },
+    {
+      "args": [
+        "widget"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:105:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in.action",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:16:tools.test_login_dialog_widget_smoke_wave_45.descendants",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:28:tools.test_login_dialog_widget_smoke_wave_45.find_button"
+      ],
+      "calls_raw": [
+        "descendants",
+        "widget.winfo_children"
+      ],
+      "calls_resolved": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:16:tools.test_login_dialog_widget_smoke_wave_45.descendants"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 19,
+      "feature": "other",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:16:tools.test_login_dialog_widget_smoke_wave_45.descendants",
+      "imports_used": [],
+      "kind": "function",
+      "line": 16,
+      "lines": 4,
+      "monkey_patches": [],
+      "name": "descendants",
+      "parent": null,
+      "purpose": "Handles descendants for the other feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.descendants",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "884b243a0e447443c737eb60bf6dc634180734689512d800fe716b76063c71c4"
+    },
+    {
+      "args": [
+        "root"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:105:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in.action",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:138:tools.test_login_dialog_widget_smoke_wave_45.run_cancel.action"
+      ],
+      "calls_raw": [
+        "isinstance",
+        "len",
+        "root.winfo_children"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 25,
+      "feature": "other",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:22:tools.test_login_dialog_widget_smoke_wave_45.top_level",
+      "imports_used": [
+        "tkinter"
+      ],
+      "kind": "function",
+      "line": 22,
+      "lines": 4,
+      "monkey_patches": [],
+      "name": "top_level",
+      "parent": null,
+      "purpose": "Handles top level for the other feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.top_level",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "653ed3dcf5aee1ab112ebb6495f1cfaf24dc91cc3dfd5a69108927c4b039d84f"
+    },
+    {
+      "args": [
+        "dialog",
+        "text"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:105:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in.action",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:138:tools.test_login_dialog_widget_smoke_wave_45.run_cancel.action"
+      ],
+      "calls_raw": [
+        "descendants",
+        "isinstance",
+        "len",
+        "str",
+        "widget.cget"
+      ],
+      "calls_resolved": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:16:tools.test_login_dialog_widget_smoke_wave_45.descendants"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 34,
+      "feature": "other",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:28:tools.test_login_dialog_widget_smoke_wave_45.find_button",
+      "imports_used": [
+        "tkinter.ttk"
+      ],
+      "kind": "function",
+      "line": 28,
+      "lines": 7,
+      "monkey_patches": [],
+      "name": "find_button",
+      "parent": null,
+      "purpose": "Retrieves find button for the other feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.find_button",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "6412e610d45717f2741b157d7b688761040f3a6441b274f48467efd0326bc6ab"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:156:tools.test_login_dialog_widget_smoke_wave_45.main"
+      ],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "DummyApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 64,
+      "feature": "other",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:37:tools.test_login_dialog_widget_smoke_wave_45.DummyApp",
+      "imports_used": [],
+      "kind": "class",
+      "line": 37,
+      "lines": 28,
+      "monkey_patches": [],
+      "name": "DummyApp",
+      "parent": null,
+      "purpose": "Groups DummyApp for the other feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.DummyApp",
+      "risk": "container",
+      "risk_flags": [],
+      "source_sha256": "ad2ecad83e3e8218ec8044039a611a73f86799cf6b7943021ffaf7ea6b126522"
+    },
+    {
+      "args": [
+        "self",
+        "root"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "DummyApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 41,
+      "feature": "other",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:38:tools.test_login_dialog_widget_smoke_wave_45.DummyApp.__init__",
+      "imports_used": [],
+      "kind": "method",
+      "line": 38,
+      "lines": 4,
+      "monkey_patches": [],
+      "name": "__init__",
+      "parent": null,
+      "purpose": "Handles init for the other feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.DummyApp.__init__",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "6589c84bd6c31708167d586bc0f7dc9af245e9e6f138c6f4bb16219e631c8788"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "DummyApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 51,
+      "feature": "authentication",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:43:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._load_users_db",
+      "imports_used": [],
+      "kind": "method",
+      "line": 43,
+      "lines": 9,
+      "monkey_patches": [],
+      "name": "_load_users_db",
+      "parent": null,
+      "purpose": "Loads load users db for the authentication feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.DummyApp._load_users_db",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication"
+      ],
+      "source_sha256": "efab28df6248cd8f95c632d6d180eadb14fc49baf4c1e0225e90157c92094d8c"
+    },
+    {
+      "args": [
+        "self",
+        "username",
+        "password"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self.verify_calls.append"
+      ],
+      "calls_resolved": [],
+      "class_name": "DummyApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 57,
+      "feature": "authentication",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:53:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._verify_login",
+      "imports_used": [],
+      "kind": "method",
+      "line": 53,
+      "lines": 5,
+      "monkey_patches": [],
+      "name": "_verify_login",
+      "parent": null,
+      "purpose": "Handles verify login for the authentication feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.DummyApp._verify_login",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication"
+      ],
+      "source_sha256": "b275d65264bc74003dda00cf6014d51f1111f154d001b865173cc1462ed15915"
+    },
+    {
+      "args": [
+        "self",
+        "username",
+        "password"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "DummyApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 60,
+      "feature": "payments",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:59:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._must_change_password",
+      "imports_used": [],
+      "kind": "method",
+      "line": 59,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_must_change_password",
+      "parent": null,
+      "purpose": "Handles must change password for the payments feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.DummyApp._must_change_password",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication"
+      ],
+      "source_sha256": "ada9b012c6a32fcb8d96dab317aad59fe5e1d70c20fa1d294b626d042655e98a"
+    },
+    {
+      "args": [
+        "self",
+        "username",
+        "old_password"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self.password_change_calls.append"
+      ],
+      "calls_resolved": [],
+      "class_name": "DummyApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 64,
+      "feature": "payments",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:62:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._force_change_password_dialog",
+      "imports_used": [],
+      "kind": "method",
+      "line": 62,
+      "lines": 3,
+      "monkey_patches": [],
+      "name": "_force_change_password_dialog",
+      "parent": null,
+      "purpose": "Handles force change password dialog for the payments feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.DummyApp._force_change_password_dialog",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication"
+      ],
+      "source_sha256": "a9e188cb91e16bf4fa2fdeff39fedb6c8e3256b659f7bacd07b09b8549b83f8e"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:156:tools.test_login_dialog_widget_smoke_wave_45.main"
+      ],
+      "calls_raw": [
+        "presentation.configure_login_dialog_dependencies"
+      ],
+      "calls_resolved": [
+        "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 99,
+      "feature": "other",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:67:tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies",
+      "imports_used": [
+        "os",
+        "spina_app.login_dialog_presentation"
+      ],
+      "kind": "function",
+      "line": 67,
+      "lines": 33,
+      "monkey_patches": [],
+      "name": "configure_dependencies",
+      "parent": null,
+      "purpose": "Handles configure dependencies for the other feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication",
+        "ui_only"
+      ],
+      "source_sha256": "15df8b3c2d5730d82aad5e1ac76b6a3b9b1607036cb8798fc07d02a5769d316e"
+    },
+    {
+      "args": [
+        "_self",
+        "users"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 82,
+      "feature": "authentication",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:80:tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies.account_choices",
+      "imports_used": [],
+      "kind": "nested_function",
+      "line": 80,
+      "lines": 3,
+      "monkey_patches": [],
+      "name": "account_choices",
+      "parent": "configure_dependencies",
+      "purpose": "Handles account choices for the authentication feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies.account_choices",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "66ed66a2da9d5e48fe40083025811c02c52ea632af91d21ace6fc00639a3a33f"
+    },
+    {
+      "args": [
+        "parent",
+        "text",
+        "command",
+        "kind"
+      ],
+      "callbacks": [
+        {
+          "kind": "command",
+          "line": 86,
+          "target": "command"
+        }
+      ],
+      "callers": [],
+      "calls_raw": [
+        "ttk.Button"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 86,
+      "feature": "authentication",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:84:tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies.login_button",
+      "imports_used": [
+        "tkinter.ttk"
+      ],
+      "kind": "nested_function",
+      "line": 84,
+      "lines": 3,
+      "monkey_patches": [],
+      "name": "login_button",
+      "parent": "configure_dependencies",
+      "purpose": "Handles login button for the authentication feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies.login_button",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication",
+        "ui_only"
+      ],
+      "source_sha256": "2b35d13b213c8aababcb8c72dd9c525d25bff4eb549be3e5d1c6649e20e8e707"
+    },
+    {
+      "args": [
+        "root",
+        "app"
+      ],
+      "callbacks": [
+        {
+          "event": "100",
+          "kind": "after",
+          "line": 127,
+          "target": "action"
+        }
+      ],
+      "callers": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:156:tools.test_login_dialog_widget_smoke_wave_45.main"
+      ],
+      "calls_raw": [
+        "presentation._spina_v32_prompt_login",
+        "root.after"
+      ],
+      "calls_resolved": [
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 132,
+      "feature": "other",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:102:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in",
+      "imports_used": [
+        "spina_app.login_dialog_presentation"
+      ],
+      "kind": "function",
+      "line": 102,
+      "lines": 31,
+      "monkey_patches": [],
+      "name": "run_sign_in",
+      "parent": null,
+      "purpose": "Handles run sign in for the other feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.run_sign_in",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication",
+        "ui_only"
+      ],
+      "source_sha256": "65c4b2fc1434f3d53797389abc1a9b81a0c4ee4db92d7308cacc7a41c3aafedb"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "child.destroy",
+        "combos.get",
+        "descendants",
+        "dialog.title",
+        "entries.delete",
+        "entries.insert",
+        "errors.append",
+        "find_button",
+        "find_button.invoke",
+        "isinstance",
+        "len",
+        "list",
+        "root.winfo_children",
+        "top_level"
+      ],
+      "calls_resolved": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:16:tools.test_login_dialog_widget_smoke_wave_45.descendants",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:22:tools.test_login_dialog_widget_smoke_wave_45.top_level",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:28:tools.test_login_dialog_widget_smoke_wave_45.find_button"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 125,
+      "feature": "other",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:105:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in.action",
+      "imports_used": [
+        "tkinter",
+        "tkinter.ttk"
+      ],
+      "kind": "nested_function",
+      "line": 105,
+      "lines": 21,
+      "monkey_patches": [],
+      "name": "action",
+      "parent": "run_sign_in",
+      "purpose": "Handles action for the other feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.run_sign_in.action",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "5c492d42305f239f7b139a99cbce664f0394852d054de04e628bedeabcdc06cb"
+    },
+    {
+      "args": [
+        "root",
+        "app"
+      ],
+      "callbacks": [
+        {
+          "event": "100",
+          "kind": "after",
+          "line": 149,
+          "target": "action"
+        }
+      ],
+      "callers": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:156:tools.test_login_dialog_widget_smoke_wave_45.main"
+      ],
+      "calls_raw": [
+        "list",
+        "presentation._spina_v32_prompt_login",
+        "root.after"
+      ],
+      "calls_resolved": [
+        "spina_app/login_dialog_presentation.py:24:spina_app.login_dialog_presentation._spina_v32_prompt_login"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 153,
+      "feature": "other",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:135:tools.test_login_dialog_widget_smoke_wave_45.run_cancel",
+      "imports_used": [
+        "spina_app.login_dialog_presentation"
+      ],
+      "kind": "function",
+      "line": 135,
+      "lines": 19,
+      "monkey_patches": [],
+      "name": "run_cancel",
+      "parent": null,
+      "purpose": "Handles run cancel for the other feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.run_cancel",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication",
+        "ui_only"
+      ],
+      "source_sha256": "2af621c442be6cdb61b1e95973a1ff14255ce60b5d3c6dab578f98ceba05aa57"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "child.destroy",
+        "errors.append",
+        "find_button",
+        "find_button.invoke",
+        "isinstance",
+        "root.winfo_children",
+        "top_level"
+      ],
+      "calls_resolved": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:22:tools.test_login_dialog_widget_smoke_wave_45.top_level",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:28:tools.test_login_dialog_widget_smoke_wave_45.find_button"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 146,
+      "feature": "other",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:138:tools.test_login_dialog_widget_smoke_wave_45.run_cancel.action",
+      "imports_used": [
+        "tkinter"
+      ],
+      "kind": "nested_function",
+      "line": 138,
+      "lines": 9,
+      "monkey_patches": [],
+      "name": "action",
+      "parent": "run_cancel",
+      "purpose": "Handles action for the other feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.run_cancel.action",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "260fe0d7dbc991df4e2c2be8311908d4a405c4dbc3da1fe37ebcdc10ee3062eb"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "DummyApp",
+        "configure_dependencies",
+        "print",
+        "root.destroy",
+        "root.withdraw",
+        "run_cancel",
+        "run_sign_in",
+        "tk.Tk"
+      ],
+      "calls_resolved": [
+        "tools/test_login_dialog_widget_smoke_wave_45.py:102:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:135:tools.test_login_dialog_widget_smoke_wave_45.run_cancel",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:37:tools.test_login_dialog_widget_smoke_wave_45.DummyApp",
+        "tools/test_login_dialog_widget_smoke_wave_45.py:67:tools.test_login_dialog_widget_smoke_wave_45.configure_dependencies"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 166,
+      "feature": "other",
+      "file": "tools/test_login_dialog_widget_smoke_wave_45.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_login_dialog_widget_smoke_wave_45.py:156:tools.test_login_dialog_widget_smoke_wave_45.main",
+      "imports_used": [
+        "tkinter"
+      ],
+      "kind": "function",
+      "line": 156,
+      "lines": 11,
+      "monkey_patches": [],
+      "name": "main",
+      "parent": null,
+      "purpose": "Handles main for the other feature.",
+      "qualified_name": "tools.test_login_dialog_widget_smoke_wave_45.main",
+      "risk": "reports",
+      "risk_flags": [
+        "reports",
+        "ui_only"
+      ],
+      "source_sha256": "cbcc8d7ce276d006e2bd40eda18fa3e27714e2ce61983660963664d1da8a2e8d"
     },
     {
       "args": [
