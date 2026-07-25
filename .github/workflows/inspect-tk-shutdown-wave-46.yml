@@ -1,17 +1,17 @@
-name: Repair Tk shutdown Wave 46
+name: Clean Tk shutdown maps Wave 46
 on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
-      - "tools/adjust_tk_shutdown_guard_wave_46.py"
-      - "tools/fix_tk_shutdown_wave_46.py"
-      - "tools/inspect_tk_shutdown_wave_46.py"
+      - "tools/test_tk_shutdown_wave_46.py"
+      - "architecture-map.json"
+      - "docs/architecture/**"
       - ".github/workflows/inspect-tk-shutdown-wave-46.yml"
 permissions:
   contents: write
 jobs:
-  repair:
+  clean:
     if: github.head_ref == 'agent/account-header-presentation-wave-46'
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 60
@@ -21,15 +21,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-      - name: Narrow and compile guarded shutdown repair
-        shell: cmd
-        run: |
-          python -m py_compile tools/adjust_tk_shutdown_guard_wave_46.py
-          python tools/adjust_tk_shutdown_guard_wave_46.py
-          python -m py_compile tools/fix_tk_shutdown_wave_46.py
-      - name: Apply guarded shutdown repair
-        shell: cmd
-        run: python tools/fix_tk_shutdown_wave_46.py
       - name: Compile application and Wave 46 tests
         shell: cmd
         run: |
@@ -39,16 +30,13 @@ jobs:
           python -m py_compile tools/test_account_header_widget_smoke_wave_46.py
           python -m py_compile tools/test_tk_shutdown_wave_46.py
           python -m compileall -q spina_app
-      - name: Run account-header regression
+      - name: Run Wave 46 regressions
         shell: cmd
-        run: python tools/test_account_header_presentation_wave_46.py
-      - name: Run account-header Tkinter smoke test
-        shell: cmd
-        run: python tools/test_account_header_widget_smoke_wave_46.py
-      - name: Run Tk shutdown regression
-        shell: cmd
-        run: python tools/test_tk_shutdown_wave_46.py
-      - name: Generate and validate architecture maps
+        run: |
+          python tools/test_account_header_presentation_wave_46.py
+          python tools/test_account_header_widget_smoke_wave_46.py
+          python tools/test_tk_shutdown_wave_46.py
+      - name: Regenerate clean architecture maps
         shell: cmd
         run: |
           python -m tools.generate_architecture_map
@@ -59,12 +47,11 @@ jobs:
           if not exist artifacts mkdir artifacts
           python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-46-shutdown-redundancy.json
           python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-46-shutdown-quality.json
-      - name: Commit repaired shutdown lifecycle
+      - name: Commit clean architecture maps
         shell: cmd
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm tools/adjust_tk_shutdown_guard_wave_46.py tools/fix_tk_shutdown_wave_46.py tools/inspect_tk_shutdown_wave_46.py
-          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py tools/test_tk_shutdown_wave_46.py architecture-map.json docs/architecture
-          git commit -m "Fix Wave 46 Tk shutdown callbacks"
+          git add architecture-map.json docs/architecture
+          git diff --cached --quiet || git commit -m "Refresh clean Wave 46 architecture maps [skip ci]"
           git push origin HEAD:${{ github.head_ref }}
