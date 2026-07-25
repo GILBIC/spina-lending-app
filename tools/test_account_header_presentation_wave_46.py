@@ -135,6 +135,18 @@ def main() -> None:
     assert (REFRESH, "_wave46_spina_v32_refresh_user_header") in aliases
     assert (BUILD, "_wave46_spina_v32_build_header") in aliases
 
+    configure_marker = "_wave46_configure_account_header_dependencies(globals())"
+    original_marker = '_spina_v32_orig_build_header = getattr(App, "_build_header", None)'
+    build_binding_marker = "App._build_header = _spina_v32_build_header"
+    assert desktop_text.count(configure_marker) == 1
+    assert desktop_text.count(original_marker) == 1
+    assert desktop_text.count(build_binding_marker) == 1
+    assert (
+        desktop_text.index(original_marker)
+        < desktop_text.index(configure_marker)
+        < desktop_text.index(build_binding_marker)
+    ), "Wave 46 dependencies must be configured after capturing the original header"
+
     symbol_rebinds = []
     runtime = []
     for node in ast.walk(desktop_tree):
