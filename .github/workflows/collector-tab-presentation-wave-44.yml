@@ -16,16 +16,20 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-      - name: Compile application, module, and test
+      - name: Compile application, module, and tests
         shell: cmd
         run: |
           python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
           python -m py_compile spina_app/collector_tab_presentation.py
           python -m py_compile tools/test_collector_tab_presentation_wave_44.py
+          python -m py_compile tools/test_collector_tab_widget_smoke_wave_44.py
           python -m compileall -q spina_app
       - name: Run exact collector-tab regression
         shell: cmd
         run: python tools/test_collector_tab_presentation_wave_44.py
+      - name: Run Collector Route Tkinter widget smoke test
+        shell: cmd
+        run: python tools/test_collector_tab_widget_smoke_wave_44.py
       - name: Validate permanent architecture map
         uses: ./.github/actions/architecture-map-check
       - name: Run repository audits
