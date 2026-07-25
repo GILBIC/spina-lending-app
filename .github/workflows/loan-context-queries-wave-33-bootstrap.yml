@@ -23,6 +23,9 @@ jobs:
       - name: Apply guarded extraction
         shell: cmd
         run: python tools/apply_loan_context_queries_wave_33.py
+      - name: Install parse smoke regression
+        shell: cmd
+        run: python -c "from pathlib import Path; Path('tools/test_loan_context_queries_wave_33.py').write_text('import ast\nfrom pathlib import Path\nROOT=Path(__file__).resolve().parents[1]\nast.parse((ROOT/\"OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py\").read_text())\nast.parse((ROOT/\"spina_app\"/\"loan_context_queries.py\").read_text())\nprint(\"Wave 33 parse smoke passed.\")\n', encoding='utf-8')"
       - name: Compile extracted application
         shell: cmd
         run: |
