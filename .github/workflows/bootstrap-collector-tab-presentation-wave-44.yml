@@ -1,0 +1,64 @@
+name: Bootstrap collector tab presentation Wave 44
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: write
+concurrency:
+  group: bootstrap-collector-tab-presentation-wave-44-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  extract:
+    if: github.head_ref == 'agent/collector-tab-presentation-wave-44'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 60
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Narrow SQL mutation detection to real statements
+        shell: pwsh
+        run: |
+          $path = '.github/scripts/extract_collector_tab_presentation_wave_44.py'
+          $text = Get-Content -Raw $path
+          $old = "re.compile(r'\b(?:INSERT|UPDATE|DELETE|REPLACE|ALTER|DROP|CREATE)\b', re.I)"
+          $new = "re.compile(r'\b(?:INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|REPLACE\s+INTO|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE)\b', re.I)"
+          $text = $text.Replace($old, $new)
+          Set-Content -Path $path -Value $text -Encoding utf8
+      - name: Extract guarded collector-tab presentation
+        shell: cmd
+        run: python .github/scripts/extract_collector_tab_presentation_wave_44.py
+      - name: Compile and run exact Wave 44 regression
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app/collector_tab_presentation.py
+          python -m py_compile tools/test_collector_tab_presentation_wave_44.py
+          python -m compileall -q spina_app
+          python tools/test_collector_tab_presentation_wave_44.py
+      - name: Run repository audits before commit
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-44-bootstrap-redundancy.json
+          python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-44-bootstrap-quality.json
+      - name: Commit permanent extraction and clean architecture maps
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app/collector_tab_presentation.py tools/test_collector_tab_presentation_wave_44.py .github/workflows/collector-tab-presentation-wave-44.yml
+          if (-not (git diff --cached --quiet)) {
+            git commit -m 'Extract active collector tab presentation Wave 44'
+          }
+          git rm .github/scripts/extract_collector_tab_presentation_wave_44.py .github/workflows/bootstrap-collector-tab-presentation-wave-44.yml
+          python -m tools.generate_architecture_map
+          python -m tools.test_architecture_map
+          git add architecture-map.json docs/architecture
+          git commit -m 'Refresh architecture maps for Wave 44'
+          gh auth setup-git
+          git push origin "HEAD:${{ github.head_ref }}"
