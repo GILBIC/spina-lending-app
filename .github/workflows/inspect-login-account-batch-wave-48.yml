@@ -1,0 +1,31 @@
+name: Inspect login account batch Wave 48
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "tools/inspect_login_account_batch_wave_48.py"
+      - ".github/workflows/inspect-login-account-batch-wave-48.yml"
+permissions:
+  contents: read
+jobs:
+  inspect:
+    if: github.head_ref == 'agent/login-account-presentation-batch-wave-48'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Compile inspector
+        shell: cmd
+        run: python -m py_compile tools/inspect_login_account_batch_wave_48.py
+      - name: Inspect active login account support block
+        shell: cmd
+        run: python tools/inspect_login_account_batch_wave_48.py
+      - name: Upload Wave 48 inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-48-login-account-batch-inspection
+          path: artifacts/wave-48-login-account-batch-inspection.json
