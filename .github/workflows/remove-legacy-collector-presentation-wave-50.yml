@@ -65,9 +65,11 @@ jobs:
           git rm tools/inspect_remaining_presentation_families_wave_50.py
           git rm tools/inspect_legacy_collector_presentation_wave_50.py
           git rm tools/remove_legacy_collector_presentation_wave_50.py
+          git rm tools/diagnose_legacy_collector_removal_wave_50.py
           git rm .github/workflows/plan-high-volume-presentation-wave-50.yml
           git rm .github/workflows/inspect-remaining-presentation-families-wave-50.yml
           git rm .github/workflows/inspect-legacy-collector-presentation-wave-50.yml
+          git rm .github/workflows/diagnose-legacy-collector-removal-wave-50.yml
           git rm .github/workflows/remove-legacy-collector-presentation-wave-50.yml
       - name: Generate and validate architecture maps
         shell: cmd
