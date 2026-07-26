@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import runpy
+import traceback
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,7 +31,14 @@ def main() -> None:
     compile(updated, str(EXTRACTOR), "exec")
     EXTRACTOR.write_text(updated, encoding="utf-8")
     runpy.run_path(str(EXTRACTOR), run_name="__main__")
-    runpy.run_path(str(TEST), run_name="__main__")
+    try:
+        runpy.run_path(str(TEST), run_name="__main__")
+    except Exception as exc:
+        frames = traceback.extract_tb(exc.__traceback__)
+        last = frames[-1] if frames else None
+        location = f"{last.filename}:{last.lineno} in {last.name}" if last else "unknown"
+        print(f"WAVE47_REGRESSION_ERROR type={type(exc).__name__} message={exc!r} location={location}")
+        raise SystemExit(1) from exc
 
 
 if __name__ == "__main__":
