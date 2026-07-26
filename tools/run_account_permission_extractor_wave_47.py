@@ -5,6 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 EXTRACTOR = ROOT / "tools" / "extract_account_permission_wave_47.py"
+TEST = ROOT / "tools" / "test_account_permission_presentation_wave_47.py"
 
 
 def main() -> None:
@@ -29,6 +30,7 @@ def main() -> None:
     compile(updated, str(EXTRACTOR), "exec")
     EXTRACTOR.write_text(updated, encoding="utf-8")
     runpy.run_path(str(EXTRACTOR), run_name="__main__")
+    runpy.run_path(str(TEST), run_name="__main__")
 
 
 if __name__ == "__main__":
