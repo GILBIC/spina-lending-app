@@ -1,8 +1,8 @@
 # SPINA Application Feature Map
 
-Generated from commit `76059b0487b3e7e38065b3624fe88b4d5b8e1100`.
+Generated from commit `ea93c2d52564e681cc3c4af4d355805a394bb929`.
 
-Scanned **179 Python files**, **76,026 lines**, and **2,366 symbols**.
+Scanned **181 Python files**, **75,980 lines**, and **2,395 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -19,16 +19,16 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7582 — Login dialog: returns (username, role) or (None, None) if cancelled. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7710 — Simple role selector shown at startup. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_users_db` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7430 — Load users database from data/users.json. If missing, create defaults. Default accounts (created only if missing): - admin / admin123 -> Admin - encoder / encoder123 -> Encoder - viewer / viewer123 -> Viewer - system / system123 -> System Risk: **authentication**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37667 — Handles spina v32 switch account for the authentication feature. Risk: **authentication**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37593 — Add account display metadata while preserving existing usernames/passwords/access. Risk: **authentication**.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37386 — Handles spina v32 switch account for the authentication feature. Risk: **authentication**.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37312 — Add account display metadata while preserving existing usernames/passwords/access. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12605 — Handles switch account for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7502 — Handles verify login for the authentication feature. Risk: **authentication**.
 - `spina_app.theme_palettes._spina_v32_login_colors` — spina_app/theme_palettes.py:330 — Handles spina v32 login colors for the authentication feature. Risk: **authentication**.
 - `spina_app.login_dialog_presentation._spina_v32_prompt_login._ok` — spina_app/login_dialog_presentation.py:148 — Handles ok for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7631 — Handles ok for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_user_role` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7116 — Saves save user role for the authentication feature. Risk: **authentication**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37554 — Handles spina v32 account choices for the authentication feature. Risk: **authentication**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37481 — Handles spina v32 login button for the authentication feature. Risk: **authentication**.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37273 — Handles spina v32 account choices for the authentication feature. Risk: **authentication**.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37200 — Handles spina v32 login button for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_users_db` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7407 — Saves save users db for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._remove_role_overlays` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7794 — Removes remove role overlays for the authentication feature. Risk: **support**.
 - `spina_app.account_header_presentation._spina_v32_refresh_user_header` — spina_app/account_header_presentation.py:31 — Handles spina v32 refresh user header for the authentication feature. Risk: **authentication**.
@@ -96,7 +96,7 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:23451 — Override: Client SOA PDF that expands ADV ranges to daily 'Adv' markers in the Payment column, and prints other reasons as text in Payment. Never prints long notes in the Date column. Layout: 3 columns per page, 11 rows per column. Risk: **financial_calculation**.
 - `spina_app.client_form_presentation._app__client_form` — spina_app/client_form_presentation.py:24 — Handles app client form for the clients feature. Risk: **ui_only**.
 - `spina_app.client_history_presentation._app_open_client_history_dialog` — spina_app/client_history_presentation.py:24 — Handles app open client history dialog for the clients feature. Risk: **ui_only**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36162 — Handles spina v23 client form for the clients feature. Risk: **ui_only**.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35881 — Handles spina v23 client form for the clients feature. Risk: **ui_only**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.attach_direct_integration` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:21797 — Minimal integration after removing undo/redo/backups. - Ensures a DB is attached - Wraps Excel import with a safe error dialog (if present) - Triggers initial UI refreshes (if methods exist) Risk: **database_write**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._maybe_suggest_link_clients.import_clients_from_excel` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:20838 — Import ONLY client details from an Excel file into the Clients DB. Multi-loan-type safe: - If the sheet has a "Loan Type" column, it imports per-row (Regular / 7x7). - Otherwise, it imports into the CURRENT view mode (top selector). Risk: **filesystem**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.update_client` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:4017 — Update a client (append-only history is written to client_history). Risk: **database_write**.
@@ -124,7 +124,7 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 - `spina_app.collector_refresh_presentation.refresh_collectors` — spina_app/collector_refresh_presentation.py:26 — Refresh the Collector's Route table (enhanced). - Supports older collectors.json schemas (dict/list/strings) and normalizes to: {name: {areas: [...], notes: "..."}} - Computes: * unassigned areas (master areas not in any route) * unknown route areas (route areas not found in master areas) * conflict Risk: **filesystem**.
 - `spina_app.collector_dialog_presentation._spina_v27_collector_editor_dialog` — spina_app/collector_dialog_presentation.py:36 — Modern route editor: Available Areas vs Assigned Route Order. Risk: **ui_only**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._build_collectors_tab` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:16250 — Collector's Route UI (organized + obvious selection + inline edit). Adds: - Obvious selection column (radio in single-select, checkbox in multi-select) - Per-row Actions column (View / Edit / Delete) - Multi-select bulk bar (Delete / Export / Clear) - Inline edit in the right-side panel (name + area Risk: **ui_only**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36881 — Handles spina v25 build collectors tab for the collectors feature. Risk: **ui_only**.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36600 — Handles spina v25 build collectors tab for the collectors feature. Risk: **ui_only**.
 - `spina_app.collector_tab_presentation._spina_v27_build_collectors_tab` — spina_app/collector_tab_presentation.py:35 — Handles spina v27 build collectors tab for the collectors feature. Risk: **ui_only**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:33907 — Save an audit copy of the Collector Route after Daily Close. The PDF contains the closed total/actual cash for the day and the amount paid by each client on that date. It is separate from Generate Report and from editable Data Bank rows. Risk: **backup**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_collector_route_daily_ledger` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:17534 — Print the SELECTED collector's route using the same 3-column Daily Collection Ledger layout as `print_full_daily_ledger`, but ONLY for that collector's areas (no 'arrange all areas' step). - Uses selection() first (more reliable than focus()). - Reads collectors.json in multiple historical schemas.  Risk: **filesystem**.
@@ -150,8 +150,8 @@ Main files: `spina_app/tabs/dashboard.py` (26), `OFFICIAL_SPINA_APP_PostgreSQL_T
 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_dashboard_fetch_rows` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:31437 — Return active client completion rows using payments from latest released date only. Latest released date = max(clients.date_released, latest renewals.renew_date). Payment start = latest released date + clients.pay_start_offset_days (normalized to 0/1 day). Risk: **financial_calculation**.
 - `spina_app.tabs.dashboard._spina_v17_build_dashboard_tab` — spina_app/tabs/dashboard.py:106 — Handles spina v17 build dashboard tab for the dashboard feature. Risk: **ui_only**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v20_draw_dashboard_charts` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35649 — Replace old progress/remaining charts with more useful active-client charts. Risk: **financial_calculation**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v18_draw_dashboard_charts` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35454 — Handles spina v18 draw dashboard charts for the dashboard feature. Risk: **filesystem**.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v20_draw_dashboard_charts` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35368 — Replace old progress/remaining charts with more useful active-client charts. Risk: **financial_calculation**.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v18_draw_dashboard_charts` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35173 — Handles spina v18 draw dashboard charts for the dashboard feature. Risk: **filesystem**.
 - `spina_app.tabs.dashboard._spina_build_dashboard_tab` — spina_app/tabs/dashboard.py:705 — Handles spina build dashboard tab for the dashboard feature. Risk: **ui_only**.
 - `spina_app.tabs.dashboard._spina_v17_draw_dashboard_charts` — spina_app/tabs/dashboard.py:355 — Handles spina v17 draw dashboard charts for the dashboard feature. Risk: **filesystem**.
 - `spina_app.tabs.dashboard._spina_v17_populate_dashboard_tree` — spina_app/tabs/dashboard.py:444 — Handles spina v17 populate dashboard tree for the dashboard feature. Risk: **ui_only**.
@@ -172,9 +172,9 @@ Main files: `spina_app/tabs/dashboard.py` (26), `OFFICIAL_SPINA_APP_PostgreSQL_T
 
 ## Data Bank
 
-**85 symbols · 4,627 non-overlapping function lines**
+**94 symbols · 4,924 non-overlapping function lines**
 
-Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (77), `spina_app/tabs/data_bank_shell.py` (8)
+Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (77), `spina_app/databank_presentation.py` (9), `spina_app/tabs/data_bank_shell.py` (8)
 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8814 — Handles open databank close dialog for the data bank feature. Risk: **reports**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_entry_worker` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14434 — Worker for _import_from_excel_entry (runs off the Tk main thread). Risk: **support**.
@@ -186,6 +186,7 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.import_from_excel_with_reasons` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:22651 — Import the Excel 'range template' where columns are: Client Name | 2025-10-01 | 2025-10-01 Reason | 2025-10-02 | 2025-10-02 Reason | ... Saves both Amount and Reason for each date. Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._begin_cell_edit` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10285 — Create an Entry over the clicked (or remembered) day cell and save back to DB. Risk: **filesystem**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_delete_day_dialog` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10698 — Delete all Data Bank entries for one selected date, with backup + password confirmation. Risk: **authentication**.
+- `spina_app.databank_presentation._spina_v15_build_data_tab` — spina_app/databank_presentation.py:112 — Modern Data Bank page: card header, fast search, summary cards, grouped actions, same grid logic. Risk: **ui_only**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_audit_tab` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11066 — Refreshes refresh audit tab for the data bank feature. Risk: **financial_calculation**.
 - `spina_app.tabs.data_bank_shell._resize_databank_columns` — spina_app/tabs/data_bank_shell.py:138 — Resize Data Bank columns responsively. Supports 'freeze panes' layout: - name_tree shows Client + Area (fixed, no horizontal scroll) - days_tree shows day columns with horizontal scroll Risk: **ui_only**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.delete_selected_cell` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10534 — Removes delete selected cell for the data bank feature. Risk: **support**.
@@ -195,8 +196,7 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.import_from_excel_with_reasons._write` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:22732 — Handles write for the data bank feature. Risk: **database_write**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.set_databank_day_close` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:5639 — Updates set databank day close for the data bank feature. Risk: **database_write**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._load_records` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9603 — Loads load records for the data bank feature. Risk: **filesystem**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_data_tab` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12945 — Builds build data tab for the data bank feature. Risk: **ui_only**.
-- …and 65 more application symbols in `architecture-map.json`.
+- …and 74 more application symbols in `architecture-map.json`.
 
 ## Database
 
@@ -256,9 +256,9 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 
 ## Navigation
 
-**21 symbols · 713 non-overlapping function lines**
+**22 symbols · 720 non-overlapping function lines**
 
-Main files: `spina_app/navigation.py` (14), `spina_app/side_navigation_presentation.py` (5), `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (1), `spina_app/account_header_presentation.py` (1)
+Main files: `spina_app/navigation.py` (14), `spina_app/side_navigation_presentation.py` (5), `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (1), `spina_app/account_header_presentation.py` (1), `spina_app/databank_presentation.py` (1)
 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_header` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12423 — Modern top header: app identity + fast Regular/7x7 switch + app actions. Risk: **authentication**.
 - `spina_app.navigation._rebuild_side_nav` — spina_app/navigation.py:94 — Rebuild the modern left-side navigation from the currently visible notebook tabs. Risk: **ui_only**.
@@ -274,13 +274,13 @@ Main files: `spina_app/navigation.py` (14), `spina_app/side_navigation_presentat
 - `spina_app.navigation._make_header_button` — spina_app/navigation.py:282 — Create a flatter, modern top-bar button using tk.Button for better dark-mode control. Risk: **ui_only**.
 - `spina_app.account_header_presentation._spina_v32_build_header` — spina_app/account_header_presentation.py:46 — Handles spina v32 build header for the navigation feature. Risk: **authentication**.
 - `spina_app.navigation._update_toolbar_states` — spina_app/navigation.py:390 — Updates update toolbar states for the navigation feature. Risk: **ui_only**.
+- `spina_app.databank_presentation._spina_v15_update_data_toolbar` — spina_app/databank_presentation.py:308 — Handles spina v15 update data toolbar for the navigation feature. Risk: **support**.
 - `spina_app.navigation._vscroll` — spina_app/navigation.py:345 — Handles vscroll for the navigation feature. Risk: **support**.
 - `spina_app.side_navigation_presentation._spina_v13_setup_style` — spina_app/side_navigation_presentation.py:229 — Handles spina v13 setup style for the navigation feature. Risk: **support**.
 - `spina_app.side_navigation_presentation.configure_side_navigation_dependencies` — spina_app/side_navigation_presentation.py:22 — Handles configure side navigation dependencies for the navigation feature. Risk: **support**.
 - `spina_app.navigation.configure_navigation_dependencies` — spina_app/navigation.py:22 — Bind application-owned logging and currency display helpers. Risk: **support**.
 - `spina_app.navigation._noop_log` — spina_app/navigation.py:11 — Handles noop log for the navigation feature. Risk: **support**.
-- `spina_app.navigation.fmt_currency` — spina_app/navigation.py:18 — Handles fmt currency for the navigation feature. Risk: **support**.
-- …and 1 more application symbols in `architecture-map.json`.
+- …and 2 more application symbols in `architecture-map.json`.
 
 ## Notes
 
@@ -324,7 +324,7 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 - `spina_app.area_hierarchy_ui.open_area_manager` — spina_app/area_hierarchy_ui.py:459 — Open the folder-style unlimited hierarchical Area manager. Risk: **ui_only**.
 - `spina_app.calendar_presentation._CalendarRangePopup` — spina_app/calendar_presentation.py:164 — Groups CalendarRangePopup for the other feature. Risk: **container**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.export_range_template` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:22467 — Export an Excel template for payments over a chosen date range. Presets: This Month / This Year / Custom (YYYY-MM-DD). Risk: **ui_only**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v21_cash_refresh` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35841 — Handles spina v21 cash refresh for the other feature. Risk: **financial_calculation**.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v21_cash_refresh` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:35560 — Handles spina v21 cash refresh for the other feature. Risk: **financial_calculation**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_crc_fetch_close_rows` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:33678 — Build route rows with amount paid on the close date. Risk: **database_read**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_areas_manager` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:15937 — Open the Areas manager window (create/rename/delete areas). Risk: **ui_only**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11180 — Handles init for the other feature. Risk: **authentication**.
@@ -396,9 +396,9 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 
 ## Settings
 
-**20 symbols · 933 non-overlapping function lines**
+**21 symbols · 944 non-overlapping function lines**
 
-Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (9), `spina_app/theme_presentation.py` (7), `spina_app/theme_palettes.py` (3), `spina_app/side_navigation_presentation.py` (1)
+Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (9), `spina_app/theme_presentation.py` (7), `spina_app/theme_palettes.py` (3), `spina_app/databank_presentation.py` (1), `spina_app/side_navigation_presentation.py` (1)
 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12652 — App settings (local-only). Risk: **authentication**.
 - `spina_app.theme_presentation._apply_ui_theme` — spina_app/theme_presentation.py:85 — Handles apply ui theme for the settings feature. Risk: **ui_only**.
@@ -415,11 +415,12 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog._save_auto_close_setting_only` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12764 — Saves save auto close setting only for the settings feature. Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog._run_auto_close_now` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12783 — Handles run auto close now for the settings feature. Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog._open_target` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12845 — Handles open target for the settings feature. Risk: **support**.
+- `spina_app.databank_presentation._spina_v15_apply_ui_theme` — spina_app/databank_presentation.py:316 — Handles spina v15 apply ui theme for the settings feature. Risk: **support**.
 - `spina_app.side_navigation_presentation._spina_v13_apply_ui_theme` — spina_app/side_navigation_presentation.py:237 — Handles spina v13 apply ui theme for the settings feature. Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.save_settings` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:939 — Saves save settings for the settings feature. Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.toggle_theme` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11666 — Handles toggle theme for the settings feature. Risk: **support**.
 - `spina_app.theme_presentation.configure_theme_presentation_dependencies` — spina_app/theme_presentation.py:13 — Handles configure theme presentation dependencies for the settings feature. Risk: **support**.
-- `spina_app.theme_presentation._theme_toggle_text` — spina_app/theme_presentation.py:31 — Handles theme toggle text for the settings feature. Risk: **support**.
+- …and 1 more application symbols in `architecture-map.json`.
 
 ## Utilities
 
