@@ -55,27 +55,18 @@ def main() -> None:
         assert len(matches) == 1, (name, len(matches))
         wrapper_hashes[name] = normalized_hash(source_segment(text, matches[0]))
 
-    login_if = None
-    cancel_return = None
-    safe_destroy_call = None
+    cancel_branches = []
     for node in ast.walk(app_init):
         if not isinstance(node, ast.If):
-            continue
-        calls = [dotted(call.func) for call in ast.walk(node.test) if isinstance(call, ast.Call)]
-        if not any(name in {"self._prompt_login", "self._prompt_user_role"} for name in calls):
             continue
         body_calls = [call for stmt in node.body for call in ast.walk(stmt) if isinstance(call, ast.Call)]
         destroy = next((call for call in body_calls if dotted(call.func) in {"self._destroy_root_safely", "root.destroy", "self.root.destroy"}), None)
         returns = [stmt for stmt in node.body if isinstance(stmt, ast.Return)]
         if destroy is not None and returns:
-            login_if = node
-            safe_destroy_call = destroy
-            cancel_return = returns[-1]
-            break
+            cancel_branches.append((node, destroy, returns[-1]))
 
-    assert login_if is not None, "Login-cancel branch not found in App.__init__"
-    assert safe_destroy_call is not None
-    assert cancel_return is not None
+    assert len(cancel_branches) == 1, [(node.lineno, dotted(destroy.func), ret.lineno) for node, destroy, ret in cancel_branches]
+    login_if, safe_destroy_call, cancel_return = cancel_branches[0]
     assert dotted(safe_destroy_call.func) == "self._destroy_root_safely", dotted(safe_destroy_call.func)
     assert cancel_return.value is None
 
@@ -161,19 +152,16 @@ def main() -> None:
 
             app = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "App")
             app_init = next(node for node in app.body if isinstance(node, ast.FunctionDef) and node.name == "__init__")
-            login_branches = []
+            cancel_branches = []
             for node in ast.walk(app_init):
                 if not isinstance(node, ast.If):
-                    continue
-                calls = [dotted(call.func) for call in ast.walk(node.test) if isinstance(call, ast.Call)]
-                if not any(name in {{"self._prompt_login", "self._prompt_user_role"}} for name in calls):
                     continue
                 body_calls = [dotted(call.func) for stmt in node.body for call in ast.walk(stmt) if isinstance(call, ast.Call)]
                 raises = [stmt for stmt in node.body if isinstance(stmt, ast.Raise)]
                 if "self._destroy_root_safely" in body_calls and raises:
-                    login_branches.append(node)
-            assert len(login_branches) == 1, len(login_branches)
-            branch = login_branches[0]
+                    cancel_branches.append(node)
+            assert len(cancel_branches) == 1, [node.lineno for node in cancel_branches]
+            branch = cancel_branches[0]
             destroy_index = next(i for i, stmt in enumerate(branch.body) if any(isinstance(call, ast.Call) and dotted(call.func) == "self._destroy_root_safely" for call in ast.walk(stmt)))
             raise_index = next(i for i, stmt in enumerate(branch.body) if isinstance(stmt, ast.Raise))
             assert destroy_index < raise_index
