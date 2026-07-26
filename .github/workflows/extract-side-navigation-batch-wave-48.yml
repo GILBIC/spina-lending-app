@@ -5,6 +5,7 @@ on:
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
       - "tools/extract_side_navigation_batch_wave_48.py"
+      - "tools/run_side_navigation_extractor_wave_48.py"
       - ".github/workflows/extract-side-navigation-batch-wave-48.yml"
 permissions:
   contents: write
@@ -21,10 +22,12 @@ jobs:
           fetch-depth: 0
       - name: Compile guarded extractor
         shell: cmd
-        run: python -m py_compile tools/extract_side_navigation_batch_wave_48.py
+        run: |
+          python -m py_compile tools/extract_side_navigation_batch_wave_48.py
+          python -m py_compile tools/run_side_navigation_extractor_wave_48.py
       - name: Apply guarded extraction
         shell: cmd
-        run: python tools/extract_side_navigation_batch_wave_48.py
+        run: python tools/run_side_navigation_extractor_wave_48.py
       - name: Compile application, module, and tests
         shell: cmd
         run: |
@@ -60,6 +63,7 @@ jobs:
           git rm tools/plan_high_volume_batch_wave_48.py
           git rm tools/inspect_side_navigation_batch_wave_48.py
           git rm tools/extract_side_navigation_batch_wave_48.py
+          git rm tools/run_side_navigation_extractor_wave_48.py
           git rm .github/workflows/inspect-login-account-batch-wave-48.yml
           git rm .github/workflows/plan-high-volume-wave-48.yml
           git rm .github/workflows/inspect-side-navigation-batch-wave-48.yml
