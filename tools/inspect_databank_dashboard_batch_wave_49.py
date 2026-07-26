@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import traceback
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,8 +37,14 @@ def normalized_hash(source: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
-def main() -> None:
+def source_for(lines: list[str], node: ast.AST) -> str:
+    end = getattr(node, "end_lineno", None) or node.lineno
+    return "\n".join(lines[node.lineno - 1:end])
+
+
+def build_report() -> dict[str, object]:
     text = DESKTOP.read_text(encoding="utf-8")
+    lines = text.splitlines()
     tree = ast.parse(text)
     candidates: list[dict[str, object]] = []
 
@@ -46,9 +53,7 @@ def main() -> None:
             continue
         if not node.name.startswith(PREFIXES):
             continue
-        source = ast.get_source_segment(text, node)
-        if source is None:
-            continue
+        source = source_for(lines, node)
         calls = sorted({
             dotted(call.func)
             for call in ast.walk(node)
@@ -100,10 +105,10 @@ def main() -> None:
         assignments.append({
             "lineno": getattr(node, "lineno", None),
             "mentioned": sorted(mentioned),
-            "source": ast.get_source_segment(text, node) or "",
+            "source": source_for(lines, node),
         })
 
-    report = {
+    return {
         "desktop": DESKTOP.name,
         "prefixes": list(PREFIXES),
         "candidate_count": len(candidates),
@@ -111,13 +116,34 @@ def main() -> None:
         "candidates": candidates,
         "assignments": sorted(assignments, key=lambda item: int(item["lineno"] or 0)),
     }
+
+
+def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        report = build_report()
+    except BaseException as exc:
+        frames = traceback.extract_tb(exc.__traceback__)
+        last = frames[-1] if frames else None
+        report = {
+            "error_type": type(exc).__name__,
+            "error_message": repr(exc),
+            "error_location": (
+                f"{last.filename}:{last.lineno} in {last.name}" if last else "unknown"
+            ),
+        }
     OUT.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(json.dumps({
-        "candidate_count": report["candidate_count"],
-        "total_candidate_lines": report["total_candidate_lines"],
-        "names": [item["name"] for item in candidates],
-    }, ensure_ascii=True))
+    summary = {
+        key: report.get(key)
+        for key in (
+            "candidate_count", "total_candidate_lines", "error_type",
+            "error_message", "error_location",
+        )
+        if key in report
+    }
+    if "candidates" in report:
+        summary["names"] = [item["name"] for item in report["candidates"]]
+    print(json.dumps(summary, ensure_ascii=True))
 
 
 if __name__ == "__main__":
