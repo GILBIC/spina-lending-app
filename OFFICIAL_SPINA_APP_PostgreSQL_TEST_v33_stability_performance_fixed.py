@@ -37706,17 +37706,10 @@ def _spina_v32_account_default_name(username):
     }.get(u, str(username or "").strip() or "Account")
 
 
-def _spina_v32_account_permission_text(role):
-    r = str(role or "").strip()
-    if r == "Admin":
-        return "Full app access"
-    if r == "Encoder":
-        return "Encoding, reports, and route access"
-    if r == "Viewer":
-        return "Reports access"
-    if r == "System":
-        return "Audit, controls, and system tools"
-    return "Custom account access"
+from spina_app.account_permission_presentation import (
+    _spina_v32_account_permission_text as _wave47_spina_v32_account_permission_text,
+)
+_spina_v32_account_permission_text = _wave47_spina_v32_account_permission_text
 
 
 def _spina_v32_account_display_name(self, username):
