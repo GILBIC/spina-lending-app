@@ -123,7 +123,15 @@ def main() -> None:
             ),
         }
     OUT.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(json.dumps(report, indent=2, ensure_ascii=False))
+    summary = {
+        key: report.get(key)
+        for key in (
+            "candidate_count", "total_candidate_lines", "error_type",
+            "error_message", "error_location",
+        )
+        if key in report
+    }
+    print(json.dumps(summary, ensure_ascii=True))
 
 
 if __name__ == "__main__":
