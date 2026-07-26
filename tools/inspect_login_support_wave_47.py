@@ -51,21 +51,37 @@ def normalized_hash(source: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
+def referenced_names(node: ast.AST) -> set[str]:
+    names: set[str] = set()
+    for part in ast.walk(node):
+        if isinstance(part, ast.Name):
+            names.add(part.id)
+        elif isinstance(part, ast.Attribute):
+            value = dotted(part)
+            if value:
+                names.add(value)
+                names.add(part.attr)
+    return names
+
+
 def main() -> None:
     text = DESKTOP.read_text(encoding="utf-8")
     tree = ast.parse(text)
+    all_nodes = list(ast.walk(tree))
     report: dict[str, object] = {
         "desktop": DESKTOP.name,
         "targets": {},
         "assignments": [],
     }
 
+    function_nodes = [
+        node
+        for node in all_nodes
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+
     for name in TARGETS:
-        matches = [
-            node
-            for node in ast.walk(tree)
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name
-        ]
+        matches = [node for node in function_nodes if node.name == name]
         if not matches:
             report["targets"][name] = {"found": False}
             continue
@@ -117,17 +133,19 @@ def main() -> None:
             )
         report["targets"][name] = {"found": True, "definitions": entries}
 
-    for node in ast.walk(tree):
+    for node in all_nodes:
         if not isinstance(node, (ast.Assign, ast.AnnAssign)):
             continue
+        names = referenced_names(node)
+        if not any(name in names for name in TARGETS):
+            continue
         rendered = ast.get_source_segment(text, node) or ""
-        if any(name in rendered for name in TARGETS):
-            report["assignments"].append(
-                {
-                    "lineno": getattr(node, "lineno", None),
-                    "source": rendered,
-                }
-            )
+        report["assignments"].append(
+            {
+                "lineno": getattr(node, "lineno", None),
+                "source": rendered,
+            }
+        )
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
