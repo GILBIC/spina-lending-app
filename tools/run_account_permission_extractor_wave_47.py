@@ -28,6 +28,26 @@ def main() -> None:
     ]
     lines[start:end] = replacement
     updated = "\n".join(lines) + "\n"
+
+    needle = (
+        "        import ast\n"
+        "        import hashlib\n"
+        "        from pathlib import Path\n\n"
+        "        from spina_app.account_permission_presentation import ("
+    )
+    test_imports = (
+        "        import ast\n"
+        "        import hashlib\n"
+        "        import sys\n"
+        "        from pathlib import Path\n\n"
+        "        _TEST_ROOT = Path(__file__).resolve().parents[1]\n"
+        "        if str(_TEST_ROOT) not in sys.path:\n"
+        "            sys.path.insert(0, str(_TEST_ROOT))\n\n"
+        "        from spina_app.account_permission_presentation import ("
+    )
+    assert updated.count(needle) == 1
+    updated = updated.replace(needle, test_imports)
+
     compile(updated, str(EXTRACTOR), "exec")
     EXTRACTOR.write_text(updated, encoding="utf-8")
     runpy.run_path(str(EXTRACTOR), run_name="__main__")
