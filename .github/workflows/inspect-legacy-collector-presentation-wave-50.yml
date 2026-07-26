@@ -11,18 +11,16 @@ permissions:
 jobs:
   inspect:
     if: github.head_ref == 'agent/high-volume-presentation-wave-50'
-    runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Check out exact PR head
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Compile inspector
-        shell: cmd
         run: python -m py_compile tools/inspect_legacy_collector_presentation_wave_50.py
       - name: Inspect legacy collector presentation boundary
-        shell: cmd
         run: python tools/inspect_legacy_collector_presentation_wave_50.py
       - name: Upload Wave 50 collector boundary
         if: always()
