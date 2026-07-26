@@ -11182,6 +11182,12 @@ class App:
         # threading/UI marshaling support (keeps Tk responsive during long tasks)
         self._main_thread_id = threading.get_ident()
         self._ui_queue = queue.Queue()
+        self._tk_shutdown_started = False
+        self._ui_queue_after_id = None
+        try:
+            root.protocol("WM_DELETE_WINDOW", self._destroy_root_safely)
+        except Exception as __spina_exc:
+            _log_suppressed_once('tk_shutdown_protocol', 'Tk shutdown protocol setup failed', __spina_exc)
         self._start_ui_queue_pump()
         self._patch_messagebox_threadsafe()
         root.title(APP_TITLE)
@@ -11225,13 +11231,15 @@ class App:
             u, r = self._prompt_login(default_user=self.user_name)
             if not u or not r:
                 try:
-                    root.destroy()
+                    self._destroy_root_safely()
                 except Exception as __spina_exc:
                     _log_suppressed_once('excpass_0271', 'suppressed exception excpass_0271', __spina_exc)
                     pass
-                return
+                raise _SpinaStartupCancelled()
             self.user_name = u
             self.user_role = r
+        except _SpinaStartupCancelled:
+            raise
         except Exception:
             # fallback: if login dialog fails unexpectedly, use the old role selector
             try:
@@ -11333,13 +11341,54 @@ class App:
 
     # ---------------- Background / Threading Helpers ----------------
 
-    def _start_ui_queue_pump(self):
-        """Process UI-call requests from worker threads.
+    def _prepare_tk_shutdown(self):
+        """Cancel recurring Tk callbacks before the root interpreter is destroyed."""
+        if getattr(self, "_tk_shutdown_started", False):
+            return
+        self._tk_shutdown_started = True
 
-        This keeps Tk operations on the main thread. Any unexpected errors in the pump
-        are logged (instead of silently swallowed) to avoid "stuck UI" mysteries.
-        """
+        after_id = getattr(self, "_ui_queue_after_id", None)
+        self._ui_queue_after_id = None
+        if after_id:
+            try:
+                self.root.after_cancel(after_id)
+            except Exception:
+                pass
+
+        try:
+            if self.root.winfo_exists():
+                self.root.update_idletasks()
+        except Exception:
+            pass
+
+    def _destroy_root_safely(self):
+        """Finish pending ttk idle work, cancel timers, then destroy the root once."""
+        self._prepare_tk_shutdown()
+        try:
+            if self.root.winfo_exists():
+                self.root.destroy()
+        except Exception:
+            pass
+
+    def _start_ui_queue_pump(self):
+        """Process UI-call requests from worker threads on the Tk main thread."""
+        def _schedule_next():
+            if getattr(self, "_tk_shutdown_started", False):
+                self._ui_queue_after_id = None
+                return
+            try:
+                if self.root.winfo_exists():
+                    self._ui_queue_after_id = self.root.after(50, _pump)
+                else:
+                    self._ui_queue_after_id = None
+            except Exception as __spina_exc:
+                self._ui_queue_after_id = None
+                _log_suppressed_once('ui_queue_pump_schedule', 'UI queue pump scheduling stopped', __spina_exc)
+
         def _pump():
+            self._ui_queue_after_id = None
+            if getattr(self, "_tk_shutdown_started", False):
+                return
             try:
                 while True:
                     func, args, kwargs, ev, out = self._ui_queue.get_nowait()
@@ -11352,28 +11401,16 @@ class App:
                             ev.set()
                         except Exception as __spina_exc:
                             _log_suppressed_once('excpass_0275', 'suppressed exception excpass_0275', __spina_exc)
-                            pass
             except queue.Empty:
-                # nothing pending
                 pass
             except Exception as e:
                 try:
                     _log_exc("ui_queue_pump", e)
                 except Exception as __spina_exc:
                     _log_suppressed_once('excpass_0276', 'suppressed exception excpass_0276', __spina_exc)
-                    pass
-            try:
-                if self.root.winfo_exists():
-                    self.root.after(50, _pump)
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0277', 'suppressed exception excpass_0277', __spina_exc)
-                pass
+            _schedule_next()
 
-        try:
-            self.root.after(50, _pump)
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0278', 'suppressed exception excpass_0278', __spina_exc)
-            pass
+        _schedule_next()
 
     def _ui_call(self, func, *args, **kwargs):
         """Call a UI function from any thread and wait for completion.
@@ -26081,10 +26118,18 @@ App.open_areas_manager = _spina_area_open_manager
 # === END Phase 2 hierarchical Area manager override ===
 
 
+class _SpinaStartupCancelled(Exception):
+    """Internal signal used to stop layered App initialization after login cancellation."""
+    pass
+
+
 def main():
     import tkinter as tk
     root = tk.Tk()
-    app = App(root)
+    try:
+        app = App(root)
+    except _SpinaStartupCancelled:
+        return
     try:
         _attach = globals().get('attach_direct_integration')
         if callable(_attach):
@@ -37804,20 +37849,13 @@ configure_login_dialog_dependencies(globals())
 _spina_v32_prompt_login = _wave45_spina_v32_prompt_login
 
 
-def _spina_v32_refresh_user_header(self):
-    try:
-        if getattr(self, "user_role_label", None) is not None:
-            display = _spina_v32_account_display_name(self, getattr(self, "user_name", ""))
-            self.user_role_label.config(text=f"Account: {display}")
-    except Exception as __spina_exc:
-        try:
-            _log_suppressed_once("v32_refresh_user_header", "v32 refresh user header failed", __spina_exc)
-        except Exception:
-            pass
-    try:
-        self._refresh_header_theme()
-    except Exception:
-        pass
+from spina_app.account_header_presentation import (
+    configure_account_header_dependencies as _wave46_configure_account_header_dependencies,
+    _spina_v32_refresh_user_header as _wave46_spina_v32_refresh_user_header,
+    _spina_v32_build_header as _wave46_spina_v32_build_header,
+)
+_spina_v32_refresh_user_header = _wave46_spina_v32_refresh_user_header
+_spina_v32_build_header = _wave46_spina_v32_build_header
 
 
 def _spina_v32_switch_account(self):
@@ -37899,18 +37937,7 @@ try:
 
         _spina_v32_orig_build_header = getattr(App, "_build_header", None)
         if callable(_spina_v32_orig_build_header):
-            def _spina_v32_build_header(self, *args, **kwargs):
-                res = _spina_v32_orig_build_header(self, *args, **kwargs)
-                try:
-                    self._refresh_user_header()
-                except Exception:
-                    pass
-                try:
-                    if getattr(self, "switch_account_btn", None) is not None:
-                        self.switch_account_btn.configure(text="Account")
-                except Exception:
-                    pass
-                return res
+            _wave46_configure_account_header_dependencies(globals())
             App._build_header = _spina_v32_build_header
 except Exception as __spina_exc:
     try:
