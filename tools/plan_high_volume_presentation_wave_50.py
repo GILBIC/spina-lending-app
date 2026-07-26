@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -10,11 +11,11 @@ DESKTOP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_f
 OUT = ROOT / "artifacts" / "wave-50-high-volume-presentation-plan.json"
 
 LINE_START = 25000
-MIN_HELPERS = 5
+MIN_HELPERS = 3
 MAX_HELPERS = 12
-MIN_LINES = 150
+MIN_LINES = 100
 MAX_LINES = 450
-MAX_GAP = 45
+MAX_GAP = 220
 
 PROTECTED_FRAGMENTS = (
     "password", "verify_login", "hash_password", "force_change_password",
@@ -63,6 +64,14 @@ def top_level_functions(tree: ast.Module) -> list[ast.FunctionDef]:
     return [node for node in tree.body if isinstance(node, ast.FunctionDef)]
 
 
+def family_for(name: str) -> str:
+    version = re.match(r"(_spina_v\d+)_", name)
+    if version:
+        return version.group(1)
+    pieces = [part for part in name.split("_") if part]
+    return "_".join(pieces[:3])
+
+
 def active_bindings(tree: ast.Module) -> dict[str, list[str]]:
     bindings: dict[str, list[str]] = {}
     for node in ast.walk(tree):
@@ -102,6 +111,7 @@ def record(text: str, node: ast.FunctionDef, bindings: dict[str, list[str]]) -> 
     lines = (node.end_lineno or node.lineno) - node.lineno + 1
     return {
         "name": node.name,
+        "family": family_for(node.name),
         "lineno": node.lineno,
         "end_lineno": node.end_lineno,
         "lines": lines,
@@ -140,7 +150,9 @@ def main() -> None:
             continue
         previous = current[-1]
         gap = int(item["lineno"]) - int(previous["end_lineno"] or previous["lineno"])
-        if gap <= MAX_GAP:
+        same_family = item["family"] == previous["family"]
+        both_bound = bool(item["active_bindings"]) and bool(previous["active_bindings"])
+        if gap <= MAX_GAP and (same_family or both_bound):
             current.append(item)
         else:
             blocks.append(current)
@@ -164,11 +176,13 @@ def main() -> None:
                     1 for item in window
                     if any("orig" in call or "prev" in call for call in item["calls"])
                 )
+                distinct_families = len({str(item["family"]) for item in window})
                 score = (
                     active_count * 10000
                     + presentation_count * 1000
                     + wrapper_count * 250
                     + total_lines
+                    - max(0, distinct_families - 1) * 500
                 )
                 groups.append({
                     "start_line": window[0]["lineno"],
@@ -178,6 +192,7 @@ def main() -> None:
                     "active_binding_count": active_count,
                     "presentation_hit_count": presentation_count,
                     "wrapper_count": wrapper_count,
+                    "families": sorted({str(item["family"]) for item in window}),
                     "score": score,
                     "helpers": window,
                 })
@@ -193,6 +208,7 @@ def main() -> None:
         },
         "scanned_function_count": len(records),
         "safe_function_count": len(safe),
+        "safe_functions": safe,
         "candidate_group_count": len(groups),
         "top_groups": groups[:40],
     }
