@@ -46,7 +46,7 @@ def top_functions(tree: ast.Module, name: str) -> list[ast.FunctionDef]:
 
 def build_bindings(tree: ast.Module) -> list[tuple[int, str]]:
     rows = []
-    for node in tree.body:
+    for node in ast.walk(tree):
         if not isinstance(node, ast.Assign) or len(node.targets) != 1:
             continue
         target = node.targets[0]
@@ -59,6 +59,7 @@ def build_bindings(tree: ast.Module) -> list[tuple[int, str]]:
         ):
             continue
         rows.append((node.lineno, node.value.id))
+    rows.sort()
     return rows
 
 
@@ -89,7 +90,7 @@ def main() -> None:
     assert (ACTIVE, ACTIVE_ALIAS) in aliases, aliases
 
     active_rebinds = [
-        node for node in desktop_tree.body
+        node for node in ast.walk(desktop_tree)
         if isinstance(node, ast.Assign)
         and len(node.targets) == 1
         and isinstance(node.targets[0], ast.Name)
