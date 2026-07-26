@@ -36,7 +36,7 @@ def source_for(text: str, node: ast.AST) -> str:
 
 def build_bindings(tree: ast.Module) -> list[tuple[ast.Assign, str]]:
     rows: list[tuple[ast.Assign, str]] = []
-    for node in tree.body:
+    for node in ast.walk(tree):
         if not isinstance(node, ast.Assign) or len(node.targets) != 1:
             continue
         target = node.targets[0]
@@ -49,6 +49,7 @@ def build_bindings(tree: ast.Module) -> list[tuple[ast.Assign, str]]:
         ):
             continue
         rows.append((node, node.value.id))
+    rows.sort(key=lambda row: row[0].lineno)
     return rows
 
 
@@ -114,7 +115,7 @@ def main() -> None:
     assert (ACTIVE, ACTIVE_IMPORT_ALIAS) in aliases, aliases
 
     active_rebinds = [
-        node for node in tree.body
+        node for node in ast.walk(tree)
         if isinstance(node, ast.Assign)
         and len(node.targets) == 1
         and isinstance(node.targets[0], ast.Name)
