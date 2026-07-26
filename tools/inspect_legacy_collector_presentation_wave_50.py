@@ -55,9 +55,22 @@ def function_record(text: str, node: ast.FunctionDef) -> dict[str, object]:
 def main() -> None:
     text = DESKTOP.read_text(encoding="utf-8")
     tree = ast.parse(text)
+    all_nodes = list(ast.walk(tree))
+    function_ranges = sorted(
+        [
+            (
+                node.lineno,
+                node.end_lineno or node.lineno,
+                node.name,
+            )
+            for node in all_nodes
+            if isinstance(node, ast.FunctionDef)
+        ],
+        key=lambda item: (item[0], -item[1]),
+    )
 
     functions: dict[str, list[ast.FunctionDef]] = {name: [] for name in (*LEGACY, ACTIVE)}
-    for node in ast.walk(tree):
+    for node in all_nodes:
         if isinstance(node, ast.FunctionDef) and node.name in functions:
             functions[node.name].append(node)
 
@@ -72,25 +85,25 @@ def main() -> None:
     active_records = [function_record(text, node) for node in functions[ACTIVE]]
 
     name_loads: dict[str, list[dict[str, object]]] = {name: [] for name in LEGACY}
-    for node in ast.walk(tree):
+    for node in all_nodes:
         if not isinstance(node, ast.Name) or not isinstance(node.ctx, ast.Load):
             continue
         if node.id not in name_loads:
             continue
-        owner = None
-        for candidate in ast.walk(tree):
-            if isinstance(candidate, ast.FunctionDef):
-                if candidate.lineno <= node.lineno <= (candidate.end_lineno or candidate.lineno):
-                    if owner is None or candidate.lineno >= owner.lineno:
-                        owner = candidate
+        owners = [
+            (start, end, name)
+            for start, end, name in function_ranges
+            if start <= node.lineno <= end
+        ]
+        owner_name = max(owners, key=lambda item: item[0])[2] if owners else None
         name_loads[node.id].append({
             "lineno": node.lineno,
-            "owner_function": owner.name if owner is not None else None,
+            "owner_function": owner_name,
         })
 
     assignments = []
     imports = []
-    for node in ast.walk(tree):
+    for node in all_nodes:
         if isinstance(node, ast.Assign):
             source = ast.get_source_segment(text, node) or ""
             if any(name in source for name in (*LEGACY, ACTIVE)) or "App._build_collectors_tab" in source:
@@ -112,7 +125,7 @@ def main() -> None:
                 })
 
     build_bindings = []
-    for node in ast.walk(tree):
+    for node in all_nodes:
         if not isinstance(node, ast.Assign) or len(node.targets) != 1:
             continue
         target = node.targets[0]
