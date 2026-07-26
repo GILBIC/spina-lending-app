@@ -1,0 +1,66 @@
+name: Repair login cancel Wave 46
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "tools/fix_login_cancel_startup_wave_46.py"
+      - ".github/workflows/repair-login-cancel-wave-46.yml"
+permissions:
+  contents: write
+jobs:
+  repair:
+    if: github.head_ref == 'agent/account-header-presentation-wave-46'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 60
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Compile guarded login-cancel repair
+        shell: cmd
+        run: python -m py_compile tools/fix_login_cancel_startup_wave_46.py
+      - name: Apply guarded login-cancel repair
+        shell: cmd
+        run: python tools/fix_login_cancel_startup_wave_46.py
+      - name: Compile application and permanent tests
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app/account_header_presentation.py
+          python -m py_compile tools/test_account_header_presentation_wave_46.py
+          python -m py_compile tools/test_account_header_widget_smoke_wave_46.py
+          python -m py_compile tools/test_tk_shutdown_wave_46.py
+          python -m py_compile tools/test_login_cancel_startup_wave_46.py
+          python -m compileall -q spina_app
+      - name: Run Wave 46 regressions
+        shell: cmd
+        run: |
+          python tools/test_account_header_presentation_wave_46.py
+          python tools/test_account_header_widget_smoke_wave_46.py
+          python tools/test_tk_shutdown_wave_46.py
+          python tools/test_login_cancel_startup_wave_46.py
+      - name: Remove temporary repair source
+        shell: cmd
+        run: git rm tools/fix_login_cancel_startup_wave_46.py
+      - name: Generate and validate architecture maps
+        shell: cmd
+        run: |
+          python -m tools.generate_architecture_map
+          python -m tools.test_architecture_map
+      - name: Run repository audits
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-46-login-cancel-redundancy.json
+          python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-46-login-cancel-quality.json
+      - name: Commit repaired login-cancel lifecycle
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py tools/test_login_cancel_startup_wave_46.py architecture-map.json docs/architecture
+          git commit -m "Stop Wave 46 startup after login cancellation"
+          git push origin HEAD:${{ github.head_ref }}
