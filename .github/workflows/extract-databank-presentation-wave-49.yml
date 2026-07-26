@@ -44,10 +44,10 @@ jobs:
         run: python tools/test_databank_widget_smoke_wave_49.py
       - name: Run protected dashboard regression
         shell: cmd
-        run: python tools/test_dashboard_presentation_wave_28.py
+        run: python -m tools.test_dashboard_presentation_wave_28
       - name: Run protected navigation and Data Bank shell regression
         shell: cmd
-        run: python tools/test_navigation_databank_shell_wave_29.py
+        run: python -m tools.test_navigation_databank_shell_wave_29
       - name: Run protected theme and side-navigation regressions
         shell: cmd
         run: |
@@ -60,9 +60,11 @@ jobs:
           git rm tools/inspect_databank_dashboard_batch_wave_49.py
           git rm tools/inspect_databank_presentation_boundary_wave_49.py
           git rm tools/extract_databank_presentation_wave_49.py
+          git rm tools/diagnose_dashboard_regression_wave_49.py
           git rm .github/workflows/inspect-databank-dashboard-wave-49.yml
           git rm .github/workflows/inspect-databank-presentation-boundary-wave-49.yml
           git rm .github/workflows/extract-databank-presentation-wave-49.yml
+          git rm .github/workflows/diagnose-dashboard-wave-49.yml
       - name: Generate and validate architecture maps
         shell: cmd
         run: |
