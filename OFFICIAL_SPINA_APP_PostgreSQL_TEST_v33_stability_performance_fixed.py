@@ -11238,6 +11238,8 @@ class App:
                 raise _SpinaStartupCancelled()
             self.user_name = u
             self.user_role = r
+        except _SpinaStartupCancelled:
+            raise
         except Exception:
             # fallback: if login dialog fails unexpectedly, use the old role selector
             try:

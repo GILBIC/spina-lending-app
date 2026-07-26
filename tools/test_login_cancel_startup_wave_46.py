@@ -47,6 +47,27 @@ def main() -> None:
     raised = branch.body[raise_index].exc
     assert isinstance(raised, ast.Call) and dotted(raised.func) == "_SpinaStartupCancelled"
 
+    # The login try must re-raise startup cancellation before its broad Exception fallback.
+    login_tries = []
+    for node in ast.walk(app_init):
+        if not isinstance(node, ast.Try):
+            continue
+        if not any(
+            isinstance(call, ast.Call) and dotted(call.func) == "self._prompt_login"
+            for stmt in node.body
+            for call in ast.walk(stmt)
+        ):
+            continue
+        login_tries.append(node)
+    assert len(login_tries) == 1, [node.lineno for node in login_tries]
+    login_try = login_tries[0]
+    handler_names = [dotted(handler.type) for handler in login_try.handlers]
+    assert handler_names[:2] == ["_SpinaStartupCancelled", "Exception"], handler_names
+    startup_handler = login_try.handlers[0]
+    assert len(startup_handler.body) == 1
+    assert isinstance(startup_handler.body[0], ast.Raise)
+    assert startup_handler.body[0].exc is None
+
     main_fn = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "main")
     guarded = []
     for node in ast.walk(main_fn):
