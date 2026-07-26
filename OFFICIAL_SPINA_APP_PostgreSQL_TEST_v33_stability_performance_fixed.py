@@ -11235,7 +11235,7 @@ class App:
                 except Exception as __spina_exc:
                     _log_suppressed_once('excpass_0271', 'suppressed exception excpass_0271', __spina_exc)
                     pass
-                return
+                raise _SpinaStartupCancelled()
             self.user_name = u
             self.user_role = r
         except Exception:
@@ -26116,10 +26116,18 @@ App.open_areas_manager = _spina_area_open_manager
 # === END Phase 2 hierarchical Area manager override ===
 
 
+class _SpinaStartupCancelled(Exception):
+    """Internal signal used to stop layered App initialization after login cancellation."""
+    pass
+
+
 def main():
     import tkinter as tk
     root = tk.Tk()
-    app = App(root)
+    try:
+        app = App(root)
+    except _SpinaStartupCancelled:
+        return
     try:
         _attach = globals().get('attach_direct_integration')
         if callable(_attach):
