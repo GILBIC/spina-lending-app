@@ -94,7 +94,8 @@ def main() -> None:
     desktop_text = DESKTOP.read_text(encoding='utf-8')
     desktop_tree = ast.parse(desktop_text)
     assert not top_functions(desktop_tree, TARGET), 'original target still present in desktop'
-    assert len(top_functions(desktop_tree, '_spina_v25_build_collectors_tab')) == 1
+    assert not top_functions(desktop_tree, '_spina_v25_build_collectors_tab')
+    assert not top_functions(desktop_tree, '_spina_v25_collector_button')
     assert len(top_functions(desktop_tree, '_build_collectors_tab')) == 1
 
     imports = [
@@ -124,8 +125,7 @@ def main() -> None:
     rebinds.sort()
     runtime.sort()
     assert rebinds == [(rebinds[0][0], '_wave44_spina_v27_build_collectors_tab')]
-    assert runtime
-    assert runtime[-1][1] == TARGET, runtime
+    assert runtime == [(runtime[0][0], TARGET)], runtime
 
     assert 'import tkinter as tk' in module_text
     assert 'from tkinter import messagebox, ttk' in module_text
