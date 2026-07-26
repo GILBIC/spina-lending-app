@@ -4,7 +4,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
-      - "tools/inspect_login_account_batch_wave_48.py"
+      - "tools/inspect_login_account_batch_wave_48_v2.py"
       - ".github/workflows/inspect-login-account-batch-wave-48.yml"
 permissions:
   contents: read
@@ -20,10 +20,10 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: Compile inspector
         shell: cmd
-        run: python -m py_compile tools/inspect_login_account_batch_wave_48.py
+        run: python -m py_compile tools/inspect_login_account_batch_wave_48_v2.py
       - name: Inspect active login account support block
         shell: cmd
-        run: python tools/inspect_login_account_batch_wave_48.py
+        run: python tools/inspect_login_account_batch_wave_48_v2.py
       - name: Upload Wave 48 inspection
         uses: actions/upload-artifact@v4
         with:
