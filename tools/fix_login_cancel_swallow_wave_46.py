@@ -39,11 +39,12 @@ def find_login_try(tree: ast.Module) -> ast.Try:
 
 def main() -> None:
     text = DESKTOP.read_text(encoding="utf-8")
-    assert "except _SpinaStartupCancelled:" not in text, "Cancellation re-raise already present"
     newline = "\r\n" if "\r\n" in text else "\n"
     lines = text.splitlines()
     tree = ast.parse(text)
     login_try = find_login_try(tree)
+    existing_handlers = [dotted(handler.type) for handler in login_try.handlers]
+    assert "_SpinaStartupCancelled" not in existing_handlers, existing_handlers
 
     broad = next(handler for handler in login_try.handlers if dotted(handler.type) == "Exception")
     line = lines[broad.lineno - 1]
