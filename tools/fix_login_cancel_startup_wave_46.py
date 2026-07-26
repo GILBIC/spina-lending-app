@@ -51,7 +51,7 @@ def main() -> None:
     )
     wrapper_hashes: dict[str, str] = {}
     for name in wrapper_names:
-        matches = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == name]
+        matches = [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == name]
         assert len(matches) == 1, (name, len(matches))
         wrapper_hashes[name] = normalized_hash(source_segment(text, matches[0]))
 
@@ -119,7 +119,7 @@ def main() -> None:
     lines[main_index:main_index] = exception_lines
 
     updated = newline.join(lines) + (newline if text.endswith(("\n", "\r\n")) else "")
-    parsed = ast.parse(updated)
+    ast.parse(updated)
     assert updated.count("class _SpinaStartupCancelled(Exception):") == 1
     assert updated.count("raise _SpinaStartupCancelled()") == 1
     assert updated.count("except _SpinaStartupCancelled:") == 1
@@ -194,12 +194,11 @@ def main() -> None:
             assert len(guarded) == 1, len(guarded)
 
             for name, expected in WRAPPER_HASHES.items():
-                node = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == name)
+                node = next(node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == name)
                 source = ast.get_source_segment(text, node)
                 assert source is not None
                 assert normalized_hash(source) == expected, (name, normalized_hash(source), expected)
 
-            # Prove a startup-cancel exception unwinds every wrapper without executing post-init builders.
             events = []
 
             class StartupCancelled(Exception):
