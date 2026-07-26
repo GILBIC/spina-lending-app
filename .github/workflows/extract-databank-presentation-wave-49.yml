@@ -42,11 +42,12 @@ jobs:
       - name: Run real Tkinter Data Bank smoke test
         shell: cmd
         run: python tools/test_databank_widget_smoke_wave_49.py
-      - name: Run protected dashboard and navigation regressions
+      - name: Run protected dashboard regression
         shell: cmd
-        run: |
-          python tools/test_dashboard_presentation_wave_28.py
-          python tools/test_navigation_databank_shell_wave_29.py
+        run: python tools/test_dashboard_presentation_wave_28.py
+      - name: Run protected navigation and Data Bank shell regression
+        shell: cmd
+        run: python tools/test_navigation_databank_shell_wave_29.py
       - name: Run protected theme and side-navigation regressions
         shell: cmd
         run: |
