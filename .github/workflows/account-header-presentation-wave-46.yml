@@ -7,6 +7,7 @@ on:
       - "tools/test_account_header_presentation_wave_46.py"
       - "tools/test_account_header_widget_smoke_wave_46.py"
       - "tools/test_tk_shutdown_wave_46.py"
+      - "tools/test_login_cancel_startup_wave_46.py"
       - "architecture-map.json"
       - "docs/architecture/**"
       - ".github/workflows/account-header-presentation-wave-46.yml"
@@ -29,6 +30,7 @@ jobs:
           python -m py_compile tools/test_account_header_presentation_wave_46.py
           python -m py_compile tools/test_account_header_widget_smoke_wave_46.py
           python -m py_compile tools/test_tk_shutdown_wave_46.py
+          python -m py_compile tools/test_login_cancel_startup_wave_46.py
           python -m compileall -q spina_app
       - name: Run exact account-header regression
         shell: cmd
@@ -39,6 +41,9 @@ jobs:
       - name: Run Tk shutdown regression
         shell: cmd
         run: python tools/test_tk_shutdown_wave_46.py
+      - name: Run login-cancel startup regression
+        shell: cmd
+        run: python tools/test_login_cancel_startup_wave_46.py
       - name: Validate permanent architecture map
         shell: cmd
         run: python -m tools.test_architecture_map
