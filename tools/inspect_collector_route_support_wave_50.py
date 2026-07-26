@@ -62,16 +62,59 @@ def record(text: str, node: ast.FunctionDef) -> dict[str, object]:
     }
 
 
+def assignment_targets(node: ast.AST) -> set[str]:
+    result: set[str] = set()
+    targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []
+    for target in targets:
+        for part in ast.walk(target):
+            if isinstance(part, ast.Name):
+                result.add(part.id)
+            elif isinstance(part, ast.Attribute):
+                name = dotted(part)
+                if name:
+                    result.add(name)
+    return result
+
+
 def main() -> None:
     text = DESKTOP.read_text(encoding="utf-8")
     tree = ast.parse(text)
-    target_records = []
-    for name in TARGETS:
-        matches = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == name]
-        assert len(matches) == 1, (name, len(matches))
-        rec = record(text, matches[0])
-        assert not rec["forbidden_hits"], (name, rec["forbidden_hits"])
-        target_records.append(rec)
+
+    definitions: dict[str, list[dict[str, object]]] = {name: [] for name in TARGETS}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name in definitions:
+            definitions[node.name].append(record(text, node))
+
+    imports = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        aliases = []
+        for alias in node.names:
+            visible = alias.asname or alias.name
+            if alias.name in TARGETS or visible in TARGETS:
+                aliases.append({"name": alias.name, "asname": alias.asname, "visible": visible})
+        if aliases:
+            imports.append({"lineno": node.lineno, "module": node.module, "aliases": aliases})
+
+    assignments = []
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+            continue
+        targets = sorted(assignment_targets(node))
+        mentioned_targets = sorted({name for name in TARGETS if name in targets})
+        mentioned_values = sorted({
+            part.id for part in ast.walk(node)
+            if isinstance(part, ast.Name) and part.id in TARGETS
+        })
+        if mentioned_targets or mentioned_values:
+            assignments.append({
+                "lineno": getattr(node, "lineno", None),
+                "targets": targets,
+                "mentioned_targets": mentioned_targets,
+                "mentioned_values": mentioned_values,
+                "source": ast.get_source_segment(text, node) or "",
+            })
 
     module_text = COLLECTOR_MODULE.read_text(encoding="utf-8")
     module_tree = ast.parse(module_text)
@@ -84,39 +127,39 @@ def main() -> None:
         for call in ast.walk(builder)
         if isinstance(call, ast.Call) and dotted(call.func)
     })
-    missing_from_builder = sorted(set(TARGETS) - set(builder_calls))
-    assert not missing_from_builder, missing_from_builder
 
-    assignments = []
-    for node in ast.walk(tree):
-        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
-            continue
-        mentioned = sorted({
-            part.id for part in ast.walk(node)
-            if isinstance(part, ast.Name) and part.id in TARGETS
-        })
-        if mentioned:
-            assignments.append({
-                "lineno": getattr(node, "lineno", None),
-                "mentioned": mentioned,
-                "source": ast.get_source_segment(text, node) or "",
-            })
+    resolution = {}
+    for name in TARGETS:
+        records = definitions[name]
+        bad = [item for item in records if item["forbidden_hits"]]
+        resolution[name] = {
+            "definition_count": len(records),
+            "definitions": records,
+            "forbidden_definition_count": len(bad),
+            "used_by_active_builder": name in builder_calls,
+            "import_rows": [row for row in imports if any(alias["visible"] == name or alias["name"] == name for alias in row["aliases"])],
+            "assignment_rows": [row for row in assignments if name in row["mentioned_targets"] or name in row["mentioned_values"]],
+        }
 
     report = {
         "desktop": DESKTOP.name,
         "collector_module": str(COLLECTOR_MODULE.relative_to(ROOT)),
-        "target_count": len(target_records),
-        "total_target_lines": sum(int(item["lines"]) for item in target_records),
-        "targets": target_records,
+        "targets": list(TARGETS),
         "builder_calls": builder_calls,
+        "resolution": resolution,
+        "imports": imports,
         "assignments": sorted(assignments, key=lambda item: int(item["lineno"] or 0)),
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     print(json.dumps({
-        "target_count": report["target_count"],
-        "total_target_lines": report["total_target_lines"],
-        "target_names": list(TARGETS),
+        name: {
+            "definitions": resolution[name]["definition_count"],
+            "imports": len(resolution[name]["import_rows"]),
+            "assignments": len(resolution[name]["assignment_rows"]),
+            "used": resolution[name]["used_by_active_builder"],
+        }
+        for name in TARGETS
     }, ensure_ascii=True))
 
 
