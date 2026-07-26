@@ -1,8 +1,8 @@
 # SPINA Application Feature Map
 
-Generated from commit `611020711cd8204e49ed5000148602bdae28bf7c`.
+Generated from commit `0bf512ea002127b2727acf1e410e2846950fc00a`.
 
-Scanned **173 Python files**, **74,861 lines**, and **2,333 symbols**.
+Scanned **176 Python files**, **75,254 lines**, and **2,341 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -12,22 +12,22 @@ Scanned **173 Python files**, **74,861 lines**, and **2,333 symbols**.
 
 **37 symbols · 1,239 non-overlapping function lines**
 
-Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (27), `spina_app/login_dialog_presentation.py` (7), `spina_app/account_header_presentation.py` (2), `spina_app/theme_palettes.py` (1)
+Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (26), `spina_app/login_dialog_presentation.py` (7), `spina_app/account_header_presentation.py` (2), `spina_app/account_permission_presentation.py` (1), `spina_app/theme_palettes.py` (1)
 
 - `spina_app.login_dialog_presentation._spina_v32_prompt_login` — spina_app/login_dialog_presentation.py:24 — Modern account-based login dialog. Returns (username, internal_access_profile). Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.apply_role_access` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7869 — Apply role-based UI restrictions. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7582 — Login dialog: returns (username, role) or (None, None) if cancelled. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_user_role` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7710 — Simple role selector shown at startup. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._load_users_db` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7430 — Load users database from data/users.json. If missing, create defaults. Default accounts (created only if missing): - admin / admin123 -> Admin - encoder / encoder123 -> Encoder - viewer / viewer123 -> Viewer - system / system123 -> System Risk: **authentication**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37861 — Handles spina v32 switch account for the authentication feature. Risk: **authentication**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37787 — Add account display metadata while preserving existing usernames/passwords/access. Risk: **authentication**.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37854 — Handles spina v32 switch account for the authentication feature. Risk: **authentication**.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37780 — Add account display metadata while preserving existing usernames/passwords/access. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.switch_account` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12605 — Handles switch account for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7502 — Handles verify login for the authentication feature. Risk: **authentication**.
 - `spina_app.theme_palettes._spina_v32_login_colors` — spina_app/theme_palettes.py:330 — Handles spina v32 login colors for the authentication feature. Risk: **authentication**.
 - `spina_app.login_dialog_presentation._spina_v32_prompt_login._ok` — spina_app/login_dialog_presentation.py:148 — Handles ok for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login._ok` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7631 — Handles ok for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_user_role` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7116 — Saves save user role for the authentication feature. Risk: **authentication**.
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37748 — Handles spina v32 account choices for the authentication feature. Risk: **authentication**.
+- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37741 — Handles spina v32 account choices for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:37668 — Handles spina v32 login button for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._save_users_db` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7407 — Saves save users db for the authentication feature. Risk: **authentication**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._remove_role_overlays` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7794 — Removes remove role overlays for the authentication feature. Risk: **support**.
