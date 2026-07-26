@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import traceback
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -147,4 +148,11 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        frames = traceback.extract_tb(exc.__traceback__)
+        last = frames[-1] if frames else None
+        location = f"{last.filename}:{last.lineno} in {last.name}" if last else "unknown"
+        print(f"WAVE48_INSPECTION_ERROR type={type(exc).__name__} message={exc!r} location={location}")
+        raise
