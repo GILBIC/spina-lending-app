@@ -11,20 +11,18 @@ permissions:
 jobs:
   inspect:
     if: github.head_ref == 'agent/databank-dashboard-presentation-wave-49'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
     steps:
       - name: Check out exact PR head
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
       - name: Compile inspector
+        shell: cmd
         run: python -m py_compile tools/inspect_databank_dashboard_batch_wave_49.py
       - name: Inspect Data Bank dashboard block
+        shell: cmd
         run: python tools/inspect_databank_dashboard_batch_wave_49.py
       - name: Upload Wave 49 inspection
         if: always()
