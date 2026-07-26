@@ -25,6 +25,7 @@ jobs:
         shell: cmd
         run: python tools/inspect_login_account_batch_wave_48_v2.py
       - name: Upload Wave 48 inspection
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: wave-48-login-account-batch-inspection
