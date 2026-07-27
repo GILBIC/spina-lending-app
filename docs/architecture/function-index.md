@@ -2,7 +2,7 @@
 
 Generated from commit `1f6e5d401376c25b9288eeaa91bfda615243b652`.
 
-Scanned **217 Python files**, **78,763 lines**, and **2,545 symbols**.
+Scanned **212 Python files**, **78,448 lines**, and **2,537 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1859,10 +1859,6 @@ Scanned **217 Python files**, **78,763 lines**, and **2,545 symbols**.
 - **tools.inspect_stale_databank_protected_context._matching_terms** (function, lines 31–33, 3 lines, risk `support`): Handles matching terms for the other feature.
 - **tools.inspect_stale_databank_protected_context.main** (function, lines 36–105, 70 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/patch_databank_editor_smoke_wave60_tmp.py`
-
-- **tools.patch_databank_editor_smoke_wave60_tmp.main** (function, lines 9–43, 35 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/plan_app_lifecycle_window_pass_only.py`
 
 - **tools.plan_app_lifecycle_window_pass_only._name** (function, lines 48–59, 12 lines, risk `support`): Handles name for the other feature.
@@ -1880,16 +1876,6 @@ Scanned **217 Python files**, **78,763 lines**, and **2,545 symbols**.
 - **tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_Try** (method, lines 131–157, 27 lines, risk `support`): Handles visit Try for the payments feature.
 - **tools.plan_app_lifecycle_window_pass_only.build_report** (function, lines 160–198, 39 lines, risk `filesystem`): Builds build report for the reports feature.
 - **tools.plan_app_lifecycle_window_pass_only.main** (function, lines 201–215, 15 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/plan_databank_editor_wave60_tmp.py`
-
-- **tools.plan_databank_editor_wave60_tmp.dotted** (function, lines 44–51, 8 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_databank_editor_wave60_tmp.main** (function, lines 54–120, 67 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/plan_databank_interactions_wave60_tmp.py`
-
-- **tools.plan_databank_interactions_wave60_tmp.dotted** (function, lines 23–30, 8 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_databank_interactions_wave60_tmp.main** (function, lines 33–74, 42 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_logger_fallback_pass_only.py`
 
@@ -2031,11 +2017,6 @@ Scanned **217 Python files**, **78,763 lines**, and **2,545 symbols**.
 - **tools.redundancy_audit.print_report** (function, lines 108–137, 30 lines, risk `reports`): Generates print report for the reports feature.
 - **tools.redundancy_audit.main** (function, lines 140–149, 10 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/refresh_architecture_wave60_tmp.py`
-
-- **tools.refresh_architecture_wave60_tmp._run** (function, lines 12–26, 15 lines, risk `support`): Handles run for the other feature.
-- **tools.refresh_architecture_wave60_tmp.main** (function, lines 29–41, 13 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/remove_databank_export_controls.py`
 
 - **tools.remove_databank_export_controls.remove_existing_block** (function, lines 363–372, 10 lines, risk `support`): Removes remove existing block for the other feature.
@@ -2043,10 +2024,6 @@ Scanned **217 Python files**, **78,763 lines**, and **2,545 symbols**.
 - **tools.remove_databank_export_controls._looks_like_ui_line** (function, lines 380–391, 12 lines, risk `ui_only`): Handles looks like ui line for the other feature.
 - **tools.remove_databank_export_controls.remove_static_export_lines** (function, lines 394–402, 9 lines, risk `support`): Removes remove static export lines for the other feature.
 - **tools.remove_databank_export_controls.main** (function, lines 405–433, 29 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/run_databank_editor_smoke_diagnostic_wave60_tmp.py`
-
-- **tools.run_databank_editor_smoke_diagnostic_wave60_tmp.main** (function, lines 10–17, 8 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/spina_quality_audit.py`
 
