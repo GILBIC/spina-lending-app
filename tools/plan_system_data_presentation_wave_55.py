@@ -67,7 +67,6 @@ def main() -> None:
             "calls": calls,
             "write_like_calls": write_like,
             "assignments": assignments,
-            "source_text": source,
         }
         report["targets"].append(item)
         total += item["lines"]
