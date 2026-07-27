@@ -63,25 +63,22 @@ def verify_button(parent, factory, kind: str, pady: int, font_size: int) -> None
 def main() -> None:
     root = tk.Tk()
     root.withdraw()
-    original_collector = ui_controls._spina_v25_collector_colors
+    assert not hasattr(ui_controls, "_spina_v25_collector_button")
     original_route = ui_controls._spina_v27_route_colors
     original_login = ui_controls._spina_v32_login_colors
     try:
-        ui_controls._spina_v25_collector_colors = lambda self=None: dict(COLORS)
         ui_controls._spina_v27_route_colors = lambda self=None: dict(COLORS)
         ui_controls._spina_v32_login_colors = lambda self=None: dict(COLORS)
 
         frame = tk.Frame(root)
         frame.pack()
         for kind in ("normal", "primary", "success", "danger", "soft"):
-            verify_button(frame, ui_controls._spina_v25_collector_button, kind, 8, 9)
             verify_button(frame, ui_controls._spina_v32_login_button, kind, 9, 10)
         for kind in ("normal", "primary", "success", "danger", "warning", "soft"):
             verify_button(frame, ui_controls._spina_v27_route_button, kind, 8, 9)
 
-        print("Wave 50 UI button-factory Tkinter smoke test passed.")
+        print("Wave 50 active UI button-factory Tkinter smoke test passed.")
     finally:
-        ui_controls._spina_v25_collector_colors = original_collector
         ui_controls._spina_v27_route_colors = original_route
         ui_controls._spina_v32_login_colors = original_login
         root.destroy()
