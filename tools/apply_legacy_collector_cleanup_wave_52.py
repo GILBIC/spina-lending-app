@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DESKTOP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 UI_CONTROLS = ROOT / "spina_app" / "ui_controls.py"
+DIAGNOSTIC = ROOT / "tools" / "wave52_diagnostic.txt"
 
 LEGACY_BUILDER = "_spina_v25_build_collectors_tab"
 LEGACY_BUTTON = "_spina_v25_collector_button"
@@ -183,10 +184,8 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
+        DIAGNOSTIC.unlink(missing_ok=True)
     except Exception:
-        artifacts = ROOT / "artifacts"
-        artifacts.mkdir(exist_ok=True)
         report = traceback.format_exc()
-        (artifacts / "wave-52-bootstrap.txt").write_text(report, encoding="utf-8")
+        DIAGNOSTIC.write_text(report, encoding="utf-8")
         print(report)
-        raise
