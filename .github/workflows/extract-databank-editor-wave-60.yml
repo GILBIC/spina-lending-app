@@ -6,6 +6,7 @@ on:
     paths:
       - "tools/extract_databank_editor_wave60_tmp.py"
       - "tools/patch_databank_editor_smoke_wave60_tmp.py"
+      - "tools/run_databank_editor_smoke_diagnostic_wave60_tmp.py"
       - ".github/workflows/extract-databank-editor-wave-60.yml"
   workflow_dispatch:
 
@@ -37,13 +38,14 @@ jobs:
           python -m py_compile spina_app\databank_editor_presentation.py
           python -m py_compile tools\test_databank_editor_presentation_wave_60.py
           python -m py_compile tools\test_databank_editor_widget_smoke_wave_60.py
+          python -m py_compile tools\run_databank_editor_smoke_diagnostic_wave60_tmp.py
           python -m compileall -q spina_app
       - name: Run exact Data Bank editor extraction regression
         shell: cmd
         run: python -m tools.test_databank_editor_presentation_wave_60
       - name: Run real Tkinter Data Bank editor behavior test
         shell: cmd
-        run: python -m tools.test_databank_editor_widget_smoke_wave_60
+        run: python -m tools.run_databank_editor_smoke_diagnostic_wave60_tmp
       - name: Run protected Data Bank and System Data regressions
         shell: cmd
         run: |
@@ -86,5 +88,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: databank-editor-wave-60-extraction
-          path: artifacts/wave-60-databank-editor-extraction.json
+          path: |
+            artifacts/wave-60-databank-editor-extraction.json
+            artifacts/wave-60-databank-editor-smoke-traceback.txt
           if-no-files-found: warn
