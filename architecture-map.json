@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "45ed4f47c502080eed9ee5ba359871a9997bc25f",
+  "generated_from_commit": "2db59608d2c71bffcbb3e77eb6c97f9a98b551ff",
   "indexes": {
     "application_callbacks": [
       {
@@ -11430,7 +11430,6 @@
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
-        "tools/repair_system_data_show_wave_55.py:91:tools.repair_system_data_show_wave_55.main",
         "tools/spina_quality_audit.py:306:tools.spina_quality_audit.main",
         "tools/spina_startup_diagnostics.py:82:tools.spina_startup_diagnostics.main",
         "tools/test_account_header_presentation_wave_46.py:104:tools.test_account_header_presentation_wave_46.main",
@@ -13364,10 +13363,6 @@
         "tools/remove_databank_export_controls.py:380:tools.remove_databank_export_controls._looks_like_ui_line",
         "tools/remove_databank_export_controls.py:394:tools.remove_databank_export_controls.remove_static_export_lines",
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
-        "tools/repair_system_data_show_wave_55.py:49:tools.repair_system_data_show_wave_55.replace_top_level_function",
-        "tools/repair_system_data_show_wave_55.py:60:tools.repair_system_data_show_wave_55.replace_literal_assignment",
-        "tools/repair_system_data_show_wave_55.py:77:tools.repair_system_data_show_wave_55.replace_simple_assignment",
-        "tools/repair_system_data_show_wave_55.py:91:tools.repair_system_data_show_wave_55.main",
         "tools/spina_quality_audit.py:103:tools.spina_quality_audit._handler_has_visible_action",
         "tools/spina_quality_audit.py:116:tools.spina_quality_audit.audit",
         "tools/spina_quality_audit.py:306:tools.spina_quality_audit.main",
@@ -16979,7 +16974,6 @@
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/redundancy_audit.py:33:tools.redundancy_audit.audit",
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
-        "tools/repair_system_data_show_wave_55.py:91:tools.repair_system_data_show_wave_55.main",
         "tools/spina_quality_audit.py:116:tools.spina_quality_audit.audit",
         "tools/spina_quality_audit.py:306:tools.spina_quality_audit.main",
         "tools/spina_startup_diagnostics.py:27:tools.spina_startup_diagnostics.check_python",
@@ -17253,7 +17247,6 @@
         "tools/plan_login_dialog_pass_only.py:195:tools.plan_login_dialog_pass_only.build_report",
         "tools/plan_ui_compatibility_pass_only.py:196:tools.plan_ui_compatibility_pass_only.build_report",
         "tools/redundancy_audit.py:108:tools.redundancy_audit.print_report",
-        "tools/repair_system_data_show_wave_55.py:60:tools.repair_system_data_show_wave_55.replace_literal_assignment",
         "tools/spina_quality_audit.py:271:tools.spina_quality_audit.print_report",
         "tools/test_clients_read_presentation_wave_30.py:197:tools.test_clients_read_presentation_wave_30.main",
         "tools/test_collector_tab_widget_smoke_wave_44.py:133:tools.test_collector_tab_widget_smoke_wave_44.main",
@@ -18218,8 +18211,6 @@
         "tools/remove_databank_export_controls.py:363:tools.remove_databank_export_controls.remove_existing_block",
         "tools/remove_databank_export_controls.py:375:tools.remove_databank_export_controls._contains_static_label",
         "tools/remove_databank_export_controls.py:394:tools.remove_databank_export_controls.remove_static_export_lines",
-        "tools/repair_system_data_show_wave_55.py:49:tools.repair_system_data_show_wave_55.replace_top_level_function",
-        "tools/repair_system_data_show_wave_55.py:77:tools.repair_system_data_show_wave_55.replace_simple_assignment",
         "tools/spina_quality_audit.py:103:tools.spina_quality_audit._handler_has_visible_action",
         "tools/spina_quality_audit.py:60:tools.spina_quality_audit._name",
         "tools/spina_quality_audit.py:73:tools.spina_quality_audit._line_span",
@@ -21906,29 +21897,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/repair_system_data_show_wave_55.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "pprint": "pprint"
-      },
-      "lines": 130,
-      "module": "tools.repair_system_data_show_wave_55",
-      "module_globals": [
-        "EXACT_TEST",
-        "MODULE",
-        "NEW_META",
-        "NEW_SOURCE",
-        "ROOT",
-        "WIDGET_TEST"
-      ],
-      "monkey_patches": [],
-      "sha256": "8d5f4121a98916165087d112bc33dd43121fb3cded433406dd4031e95ee4e1fb",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/spina_quality_audit.py",
       "imports": {
         "Any": "typing.Any",
@@ -24285,19 +24253,19 @@
     "classes": 103,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1459,
+    "functions": 1455,
     "methods": 536,
     "monkey_patches": 163,
     "nested_functions": 390,
     "parse_errors": 0,
     "possible_orphans": 129,
-    "python_files": 198,
+    "python_files": 197,
     "repository_database_tables": 19,
     "repository_duplicate_names": 288,
     "repository_possible_orphans": 271,
-    "resolved_call_edges": 3879,
-    "symbols": 2488,
-    "total_python_lines": 77964,
+    "resolved_call_edges": 3876,
+    "symbols": 2484,
+    "total_python_lines": 77834,
     "ui_callback_edges": 487
   },
   "symbols": [
@@ -110419,201 +110387,6 @@
         "reports"
       ],
       "source_sha256": "5bcb544e48cab1ea32c7b485c28763319d172a0e087c176c07b5601d47e48ad8"
-    },
-    {
-      "args": [
-        "text",
-        "name",
-        "replacement"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/repair_system_data_show_wave_55.py:91:tools.repair_system_data_show_wave_55.main"
-      ],
-      "calls_raw": [
-        "ast.parse",
-        "isinstance",
-        "join",
-        "next",
-        "text.splitlines"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 57,
-      "feature": "other",
-      "file": "tools/repair_system_data_show_wave_55.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/repair_system_data_show_wave_55.py:49:tools.repair_system_data_show_wave_55.replace_top_level_function",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 49,
-      "lines": 9,
-      "monkey_patches": [],
-      "name": "replace_top_level_function",
-      "parent": null,
-      "purpose": "Handles replace top level function for the other feature.",
-      "qualified_name": "tools.repair_system_data_show_wave_55.replace_top_level_function",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "74b69e75af679dd2876a589d1ecfde5412e471728aa89167b5c3cb9f3a0756f2"
-    },
-    {
-      "args": [
-        "text",
-        "name",
-        "update"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/repair_system_data_show_wave_55.py:91:tools.repair_system_data_show_wave_55.main"
-      ],
-      "calls_raw": [
-        "ast.literal_eval",
-        "ast.parse",
-        "isinstance",
-        "join",
-        "len",
-        "next",
-        "pprint.pformat",
-        "text.splitlines",
-        "update"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 74,
-      "feature": "other",
-      "file": "tools/repair_system_data_show_wave_55.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/repair_system_data_show_wave_55.py:60:tools.repair_system_data_show_wave_55.replace_literal_assignment",
-      "imports_used": [
-        "ast",
-        "pprint"
-      ],
-      "kind": "function",
-      "line": 60,
-      "lines": 15,
-      "monkey_patches": [],
-      "name": "replace_literal_assignment",
-      "parent": null,
-      "purpose": "Handles replace literal assignment for the other feature.",
-      "qualified_name": "tools.repair_system_data_show_wave_55.replace_literal_assignment",
-      "risk": "reports",
-      "risk_flags": [
-        "reports"
-      ],
-      "source_sha256": "78021a98ba5b514184cdc24b566a8995fadbb1eabdc7b22ea879898728f704fa"
-    },
-    {
-      "args": [
-        "text",
-        "name",
-        "replacement_value"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/repair_system_data_show_wave_55.py:91:tools.repair_system_data_show_wave_55.main"
-      ],
-      "calls_raw": [
-        "ast.parse",
-        "isinstance",
-        "join",
-        "len",
-        "next",
-        "text.splitlines"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 88,
-      "feature": "other",
-      "file": "tools/repair_system_data_show_wave_55.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/repair_system_data_show_wave_55.py:77:tools.repair_system_data_show_wave_55.replace_simple_assignment",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 77,
-      "lines": 12,
-      "monkey_patches": [],
-      "name": "replace_simple_assignment",
-      "parent": null,
-      "purpose": "Handles replace simple assignment for the other feature.",
-      "qualified_name": "tools.repair_system_data_show_wave_55.replace_simple_assignment",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "e8dda9d477ec8ce3d9ba9cc7812c00684d5dda0d95192bb0f500ff5a5f151ad5"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "EXACT_TEST.read_text",
-        "EXACT_TEST.write_text",
-        "MODULE.read_text",
-        "MODULE.write_text",
-        "SystemExit",
-        "WIDGET_TEST.read_text",
-        "WIDGET_TEST.write_text",
-        "data.__setitem__",
-        "dict",
-        "exact_text.replace",
-        "print",
-        "replace_literal_assignment",
-        "replace_simple_assignment",
-        "replace_top_level_function",
-        "widget_text.replace"
-      ],
-      "calls_resolved": [
-        "tools/repair_system_data_show_wave_55.py:49:tools.repair_system_data_show_wave_55.replace_top_level_function",
-        "tools/repair_system_data_show_wave_55.py:60:tools.repair_system_data_show_wave_55.replace_literal_assignment",
-        "tools/repair_system_data_show_wave_55.py:77:tools.repair_system_data_show_wave_55.replace_simple_assignment"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 126,
-      "feature": "other",
-      "file": "tools/repair_system_data_show_wave_55.py",
-      "file_paths": [],
-      "globals_read": [
-        "EXACT_TEST",
-        "MODULE",
-        "NEW_META",
-        "NEW_SOURCE",
-        "WIDGET_TEST"
-      ],
-      "globals_written": [],
-      "id": "tools/repair_system_data_show_wave_55.py:91:tools.repair_system_data_show_wave_55.main",
-      "imports_used": [],
-      "kind": "function",
-      "line": 91,
-      "lines": 36,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.repair_system_data_show_wave_55.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "a57c07d8678e4460e45834fb69ff329c13a5669a467e4fce430ea71fa1d45203"
     },
     {
       "args": [

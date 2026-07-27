@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `45ed4f47c502080eed9ee5ba359871a9997bc25f`.
+Generated from commit `2db59608d2c71bffcbb3e77eb6c97f9a98b551ff`.
 
-Scanned **198 Python files**, **77,964 lines**, and **2,488 symbols**.
+Scanned **197 Python files**, **77,834 lines**, and **2,484 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -2004,13 +2004,6 @@ Scanned **198 Python files**, **77,964 lines**, and **2,488 symbols**.
 - **tools.remove_databank_export_controls._looks_like_ui_line** (function, lines 380–391, 12 lines, risk `ui_only`): Handles looks like ui line for the other feature.
 - **tools.remove_databank_export_controls.remove_static_export_lines** (function, lines 394–402, 9 lines, risk `support`): Removes remove static export lines for the other feature.
 - **tools.remove_databank_export_controls.main** (function, lines 405–433, 29 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/repair_system_data_show_wave_55.py`
-
-- **tools.repair_system_data_show_wave_55.replace_top_level_function** (function, lines 49–57, 9 lines, risk `support`): Handles replace top level function for the other feature.
-- **tools.repair_system_data_show_wave_55.replace_literal_assignment** (function, lines 60–74, 15 lines, risk `reports`): Handles replace literal assignment for the other feature.
-- **tools.repair_system_data_show_wave_55.replace_simple_assignment** (function, lines 77–88, 12 lines, risk `support`): Handles replace simple assignment for the other feature.
-- **tools.repair_system_data_show_wave_55.main** (function, lines 91–126, 36 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/spina_quality_audit.py`
 
