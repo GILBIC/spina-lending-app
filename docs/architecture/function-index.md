@@ -2,7 +2,7 @@
 
 Generated from commit `9750e570e7d167a89cdc2fb6347688d8580cddaa`.
 
-Scanned **209 Python files**, **78,531 lines**, and **2,514 symbols**.
+Scanned **206 Python files**, **77,959 lines**, and **2,504 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1784,15 +1784,6 @@ Scanned **209 Python files**, **78,531 lines**, and **2,514 symbols**.
 - **tools.extract_pure_helper_batch.apply** (function, lines 200–245, 46 lines, risk `filesystem`): Handles apply for the other feature.
 - **tools.extract_pure_helper_batch.main** (function, lines 248–260, 13 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/extract_system_data_summary_wave58_tmp.py`
-
-- **tools.extract_system_data_summary_wave58_tmp.dotted** (function, lines 59–66, 8 lines, risk `support`): Handles dotted for the other feature.
-- **tools.extract_system_data_summary_wave58_tmp.find_targets** (function, lines 69–82, 14 lines, risk `support`): Retrieves find targets for the other feature.
-- **tools.extract_system_data_summary_wave58_tmp.render_module** (function, lines 85–113, 29 lines, risk `support`): Handles render module for the other feature.
-- **tools.extract_system_data_summary_wave58_tmp.render_exact_test** (function, lines 116–183, 68 lines, risk `support`): Handles render exact test for the other feature.
-- **tools.extract_system_data_summary_wave58_tmp.render_widget_test** (function, lines 186–279, 94 lines, risk `ui_only`): Handles render widget test for the other feature.
-- **tools.extract_system_data_summary_wave58_tmp.main** (function, lines 282–376, 95 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/extract_text_normalizers.py`
 
 - **tools.extract_text_normalizers._line_source** (function, lines 34–39, 6 lines, risk `support`): Handles line source for the other feature.
@@ -1859,10 +1850,6 @@ Scanned **209 Python files**, **78,531 lines**, and **2,514 symbols**.
 - **tools.inspect_stale_databank_protected_context._load_cleanup_tool** (function, lines 22–28, 7 lines, risk `support`): Loads load cleanup tool for the other feature.
 - **tools.inspect_stale_databank_protected_context._matching_terms** (function, lines 31–33, 3 lines, risk `support`): Handles matching terms for the other feature.
 - **tools.inspect_stale_databank_protected_context.main** (function, lines 36–105, 70 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/patch_wave58_summary_smoke_tmp.py`
-
-- **tools.patch_wave58_summary_smoke_tmp.main** (function, lines 35–58, 24 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_app_lifecycle_window_pass_only.py`
 
@@ -1996,12 +1983,6 @@ Scanned **209 Python files**, **78,531 lines**, and **2,514 symbols**.
 - **tools.plan_remaining_pass_only_groups.PassOnlyVisitor.visit_ExceptHandler** (method, lines 130–149, 20 lines, risk `support`): Handles visit ExceptHandler for the payments feature.
 - **tools.plan_remaining_pass_only_groups.build_report** (function, lines 152–193, 42 lines, risk `filesystem`): Builds build report for the reports feature.
 - **tools.plan_remaining_pass_only_groups.main** (function, lines 196–209, 14 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/plan_system_data_summary_wave58_tmp.py`
-
-- **tools.plan_system_data_summary_wave58_tmp.dotted** (function, lines 41–48, 8 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_system_data_summary_wave58_tmp.find_methods** (function, lines 51–60, 10 lines, risk `support`): Retrieves find methods for the other feature.
-- **tools.plan_system_data_summary_wave58_tmp.main** (function, lines 63–126, 64 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_ui_compatibility_pass_only.py`
 
