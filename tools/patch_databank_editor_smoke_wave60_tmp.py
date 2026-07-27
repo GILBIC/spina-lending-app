@@ -21,6 +21,10 @@ def main() -> None:
     if marker not in text:
         raise SystemExit("Could not locate Wave 60 smoke import marker")
     text = text.replace(marker, replacement, 1)
+    text = text.replace(
+        "    app.root = root\n",
+        "    app.root = root\n    app._walk_widgets = lambda widget: presentation._walk_widgets(app, widget)\n",
+    )
     SMOKE.write_text(text, encoding="utf-8", newline="\n")
     print("Configured Wave 60 smoke-test application dependencies")
 
