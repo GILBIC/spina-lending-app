@@ -37,5 +37,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: close-history-wave-57-candidate
-          path: artifacts/wave-57-close-history-candidate.json
+          path: |
+            artifacts/wave-57-close-history-candidate.json
+            artifacts/wave-57-close-history-source.py
           if-no-files-found: error
