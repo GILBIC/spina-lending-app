@@ -19,21 +19,25 @@ UI_CALL_TAILS = {
     "insert", "delete", "selection", "focus", "winfo_children", "winfo_exists",
     "StringVar", "BooleanVar", "IntVar", "DoubleVar", "after", "destroy",
 }
-PROTECTED_TERMS = {
-    "principal", "interest", "balance", "renew", "reloan", "offset", "payment",
-    "transaction", "advance", "adv", "pass", "7x7", "due_date", "daily_amount",
-    "loan_amount", "collector_route_daily_ledger", "full_daily_ledger", "statement",
-    "report", "pdf", "backup", "restore", "postgres", "sqlite", "connect_db",
-    "run_write", "execute", "executemany", "commit", "rollback", "authentication",
-    "password", "login", "role", "permission", "users_json", "day_close",
-    "close_day", "reopen", "cash_control", "payroll", "sss", "philhealth", "pagibig",
+PROTECTED_CALL_TAILS = {
+    "connect_db", "run_write", "execute", "executemany", "commit", "rollback",
+    "backup", "restore", "renew_client", "delete_transactions_for_day",
+    "add_transaction", "update_transaction", "delete_transaction",
+    "generate_client_pdf", "generate_pdf_selected", "print_full_daily_ledger",
+    "print_collector_route_daily_ledger", "print_databank_close_report",
+    "save_users", "set_password", "check_password", "authenticate",
 }
-FILESYSTEM_TERMS = {
+FINANCIAL_IDENTIFIERS = {
+    "principal", "interest", "balance", "remaining_balance", "loan_amount",
+    "daily_amount", "payment_amount", "total_payment", "offset_amount",
+    "renewal_amount", "due_date", "advance_days", "pass_days", "variance",
+}
+FILESYSTEM_CALL_TAILS = {
     "open", "write", "write_text", "write_bytes", "unlink", "mkdir", "makedirs",
-    "remove", "rename", "replace", "copy", "copy2", "move", "startfile", "subprocess",
-    "filedialog", "asksaveasfilename", "askopenfilename", "path", "os.path",
+    "remove", "rename", "replace", "copy", "copy2", "move", "startfile", "Popen",
+    "run", "asksaveasfilename", "askopenfilename", "askdirectory",
 }
-SQL_RE = re.compile(r"\b(?:SELECT|INSERT|UPDATE|DELETE|ALTER|DROP|CREATE|WITH)\b", re.I)
+SQL_RE = re.compile(r"\b(?:SELECT|INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE|WITH\s+\w+\s+AS)\b", re.I)
 
 
 def dotted(node: ast.AST) -> str:
@@ -53,6 +57,23 @@ def source_for(lines: list[str], node: ast.AST) -> str:
 def owner_name(stack: list[ast.AST], node: ast.AST) -> str:
     owners = [item.name for item in stack if isinstance(item, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))]
     return ".".join([*owners, node.name]) if owners else node.name
+
+
+def identifier_names(node: ast.AST) -> set[str]:
+    return {
+        part.id.lower() for part in ast.walk(node) if isinstance(part, ast.Name)
+    } | {
+        part.attr.lower() for part in ast.walk(node) if isinstance(part, ast.Attribute)
+    }
+
+
+def financial_operation_hits(node: ast.AST) -> list[str]:
+    hits: set[str] = set()
+    operation_nodes = (ast.BinOp, ast.UnaryOp, ast.Compare, ast.IfExp, ast.AugAssign)
+    for part in ast.walk(node):
+        if isinstance(part, operation_nodes):
+            hits.update(FINANCIAL_IDENTIFIERS & identifier_names(part))
+    return sorted(hits)
 
 
 class Collector(ast.NodeVisitor):
@@ -98,22 +119,17 @@ class Collector(ast.NodeVisitor):
         self.generic_visit(node)
 
 
-def analyze_candidate(name: str, node: ast.AST, depth: int, source: str, collector: Collector) -> dict[str, object]:
+def analyze_candidate(name: str, node: ast.AST, depth: int, collector: Collector) -> dict[str, object]:
     calls = sorted({dotted(part.func) for part in ast.walk(node) if isinstance(part, ast.Call) and dotted(part.func)})
     call_tails = {call.rsplit(".", 1)[-1] for call in calls}
-    identifiers = {
-        part.id.lower() for part in ast.walk(node) if isinstance(part, ast.Name)
-    } | {
-        part.attr.lower() for part in ast.walk(node) if isinstance(part, ast.Attribute)
-    }
     string_values = [
         part.value for part in ast.walk(node)
         if isinstance(part, ast.Constant) and isinstance(part.value, str)
     ]
-    source_lower = source.lower()
     ui_hits = sorted(UI_CALL_TAILS & call_tails)
-    protected_hits = sorted(term for term in PROTECTED_TERMS if term in identifiers or term in source_lower)
-    filesystem_hits = sorted(term for term in FILESYSTEM_TERMS if term in identifiers or term in source_lower)
+    protected_calls = sorted(PROTECTED_CALL_TAILS & call_tails)
+    filesystem_calls = sorted(FILESYSTEM_CALL_TAILS & call_tails)
+    financial_hits = financial_operation_hits(node)
     sql_hits = sorted({value.strip()[:120] for value in string_values if SQL_RE.search(value)})
     short_name = name.rsplit(".", 1)[-1]
     references = collector.name_refs[short_name] + collector.attr_refs[short_name]
@@ -122,9 +138,9 @@ def analyze_candidate(name: str, node: ast.AST, depth: int, source: str, collect
 
     if depth > 0:
         classification = "nested"
-    elif protected_hits or sql_hits:
+    elif sql_hits or protected_calls or financial_hits:
         classification = "protected"
-    elif filesystem_hits:
+    elif filesystem_calls:
         classification = "filesystem-review"
     elif len(ui_hits) >= 3:
         classification = "ui-candidate"
@@ -152,8 +168,9 @@ def analyze_candidate(name: str, node: ast.AST, depth: int, source: str, collect
         "references": references,
         "bindings": bindings,
         "ui_hits": ui_hits,
-        "protected_hits": protected_hits,
-        "filesystem_hits": filesystem_hits,
+        "protected_calls": protected_calls,
+        "financial_hits": financial_hits,
+        "filesystem_calls": filesystem_calls,
         "sql_hits": sql_hits,
         "calls": calls,
         "legacy_score": legacy_score,
@@ -162,7 +179,6 @@ def analyze_candidate(name: str, node: ast.AST, depth: int, source: str, collect
 
 def main() -> None:
     text = DESKTOP.read_text(encoding="utf-8")
-    lines = text.splitlines()
     tree = ast.parse(text, filename=str(DESKTOP))
     collector = Collector()
     collector.visit(tree)
@@ -172,7 +188,7 @@ def main() -> None:
         line_count = (getattr(node, "end_lineno", node.lineno) or node.lineno) - node.lineno + 1
         if line_count < MIN_LINES:
             continue
-        rows.append(analyze_candidate(name, node, depth, source_for(lines, node), collector))
+        rows.append(analyze_candidate(name, node, depth, collector))
 
     rows.sort(key=lambda row: (
         0 if row["classification"] == "ui-candidate" else 1,
@@ -189,13 +205,13 @@ def main() -> None:
         "",
         f"Scanned `{DESKTOP.name}` with a minimum size of {MIN_LINES} lines.",
         "",
-        "The planner is intentionally conservative. `protected` candidates are excluded from Wave 54 even when their architecture-map risk looks UI-heavy.",
+        "Protection is based on actual calls, SQL-shaped strings, and financial arithmetic—not ordinary `pass` statements or visible UI labels.",
         "",
         "| Rank | Candidate | Lines | Class | Refs | Bindings | UI evidence | Review flags |",
         "|---:|---|---:|---|---:|---:|---|---|",
     ]
-    for index, row in enumerate(selected[:35], start=1):
-        flags = ", ".join(row["filesystem_hits"][:6]) or "none"
+    for index, row in enumerate(selected[:40], start=1):
+        flags = ", ".join(row["filesystem_calls"][:6]) or "none"
         ui = ", ".join(row["ui_hits"][:8]) or "none"
         md.append(
             f"| {index} | `{row['qualified_name']}` | {row['lines']} | {row['classification']} | "
@@ -210,9 +226,11 @@ def main() -> None:
     ])
     protected = [row for row in rows if row["classification"] == "protected" and row["depth"] == 0]
     protected.sort(key=lambda row: -int(row["lines"]))
-    for row in protected[:25]:
-        evidence = ", ".join(row["protected_hits"][:10]) or "SQL string"
-        md.append(f"| `{row['qualified_name']}` | {row['lines']} | {evidence} |")
+    for row in protected[:30]:
+        evidence = [*row["protected_calls"], *row["financial_hits"]]
+        if row["sql_hits"]:
+            evidence.append("SQL")
+        md.append(f"| `{row['qualified_name']}` | {row['lines']} | {', '.join(evidence[:12]) or 'protected'} |")
 
     MD_OUT.write_text("\n".join(md) + "\n", encoding="utf-8")
     print(f"Wrote {JSON_OUT.relative_to(ROOT)} and {MD_OUT.relative_to(ROOT)}")
