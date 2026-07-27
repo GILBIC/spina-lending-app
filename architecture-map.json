@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "45d781b2d23bb1e2772cf8d5cd3a35e4f8154d65",
+  "generated_from_commit": "bf3818f050e5e01f8e03fd0820e6650ded861fec",
   "indexes": {
     "application_callbacks": [
       {
@@ -11380,8 +11380,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:23224:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.do_link"
       ],
       "dotted": [
-        "tools/extract_delete_day_wave62_tmp.py:34:tools.extract_delete_day_wave62_tmp.dotted",
-        "tools/plan_delete_day_wave62_tmp.py:26:tools.plan_delete_day_wave62_tmp.dotted",
         "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
         "tools/test_audit_presentation_wave_54.py:23:tools.test_audit_presentation_wave_54.dotted",
         "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted",
@@ -11588,14 +11586,12 @@
         "tools/cleanup_pure_login_dialog_ui_pass_only.py:304:tools.cleanup_pure_login_dialog_ui_pass_only.main",
         "tools/cleanup_stale_databank_generated_blocks.py:337:tools.cleanup_stale_databank_generated_blocks.main",
         "tools/disable_full_daily_ledger.py:403:tools.disable_full_daily_ledger.main",
-        "tools/dump_delete_day_wave62_tmp.py:11:tools.dump_delete_day_wave62_tmp.main",
         "tools/extract_append_unique_text.py:133:tools.extract_append_unique_text.main",
         "tools/extract_cilog_action_label.py:126:tools.extract_cilog_action_label.main",
         "tools/extract_cilog_diff_pairs.py:187:tools.extract_cilog_diff_pairs.main",
         "tools/extract_cilog_value_formatter.py:143:tools.extract_cilog_value_formatter.main",
         "tools/extract_date_display_helpers.py:236:tools.extract_date_display_helpers.main",
         "tools/extract_date_helpers_module.py:292:tools.extract_date_helpers_module.main",
-        "tools/extract_delete_day_wave62_tmp.py:43:tools.extract_delete_day_wave62_tmp.main",
         "tools/extract_display_formatters.py:219:tools.extract_display_formatters.main",
         "tools/extract_fmt_currency_module.py:177:tools.extract_fmt_currency_module.main",
         "tools/extract_log_serialization_helper.py:129:tools.extract_log_serialization_helper.main",
@@ -11610,7 +11606,6 @@
         "tools/inspect_blocking_ui_context.py:159:tools.inspect_blocking_ui_context.main",
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
-        "tools/plan_delete_day_wave62_tmp.py:39:tools.plan_delete_day_wave62_tmp.main",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_login_dialog_pass_only.py:243:tools.plan_login_dialog_pass_only.main",
         "tools/plan_modern_ui_pass_only_cleanup.py:199:tools.plan_modern_ui_pass_only_cleanup.main",
@@ -11912,8 +11907,6 @@
         "tools/test_navigation_databank_shell_wave_29.py:190:tools.test_navigation_databank_shell_wave_29.FakeVar.set"
       ],
       "sha": [
-        "tools/extract_delete_day_wave62_tmp.py:30:tools.extract_delete_day_wave62_tmp.sha",
-        "tools/plan_delete_day_wave62_tmp.py:35:tools.plan_delete_day_wave62_tmp.sha",
         "tools/test_databank_cell_writes_wave_61.py:18:tools.test_databank_cell_writes_wave_61.sha",
         "tools/test_databank_delete_day_wave_62.py:100:tools.test_databank_delete_day_wave_62.sha"
       ],
@@ -13375,7 +13368,6 @@
         "tools/disable_full_daily_ledger.py:376:tools.disable_full_daily_ledger._looks_like_legacy_button_line",
         "tools/disable_full_daily_ledger.py:392:tools.disable_full_daily_ledger.remove_static_legacy_button_lines",
         "tools/disable_full_daily_ledger.py:403:tools.disable_full_daily_ledger.main",
-        "tools/dump_delete_day_wave62_tmp.py:11:tools.dump_delete_day_wave62_tmp.main",
         "tools/extract_append_unique_text.py:101:tools.extract_append_unique_text.apply_extraction",
         "tools/extract_append_unique_text.py:133:tools.extract_append_unique_text.main",
         "tools/extract_append_unique_text.py:21:tools.extract_append_unique_text.atomic_write",
@@ -13428,9 +13420,6 @@
         "tools/extract_date_helpers_module.py:54:tools.extract_date_helpers_module._local_names",
         "tools/extract_date_helpers_module.py:78:tools.extract_date_helpers_module._external_loaded_names",
         "tools/extract_date_helpers_module.py:88:tools.extract_date_helpers_module._import_bindings",
-        "tools/extract_delete_day_wave62_tmp.py:30:tools.extract_delete_day_wave62_tmp.sha",
-        "tools/extract_delete_day_wave62_tmp.py:34:tools.extract_delete_day_wave62_tmp.dotted",
-        "tools/extract_delete_day_wave62_tmp.py:43:tools.extract_delete_day_wave62_tmp.main",
         "tools/extract_display_formatters.py:107:tools.extract_display_formatters._patched_source",
         "tools/extract_display_formatters.py:121:tools.extract_display_formatters._atomic_write",
         "tools/extract_display_formatters.py:133:tools.extract_display_formatters.build_plan",
@@ -13544,9 +13533,6 @@
         "tools/plan_app_lifecycle_window_pass_only.py:72:tools.plan_app_lifecycle_window_pass_only._context_text",
         "tools/plan_app_lifecycle_window_pass_only.py:76:tools.plan_app_lifecycle_window_pass_only._protected",
         "tools/plan_app_lifecycle_window_pass_only.py:80:tools.plan_app_lifecycle_window_pass_only._classify",
-        "tools/plan_delete_day_wave62_tmp.py:26:tools.plan_delete_day_wave62_tmp.dotted",
-        "tools/plan_delete_day_wave62_tmp.py:35:tools.plan_delete_day_wave62_tmp.sha",
-        "tools/plan_delete_day_wave62_tmp.py:39:tools.plan_delete_day_wave62_tmp.main",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_logger_fallback_pass_only.py:54:tools.plan_logger_fallback_pass_only._handler_name",
         "tools/plan_logger_fallback_pass_only.py:71:tools.plan_logger_fallback_pass_only._context",
@@ -14819,7 +14805,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:13465:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:6128:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.delete_transactions_for_day",
         "spina_app/databank_delete_day.py:103:spina_app.databank_delete_day.open_delete_day_dialog",
-        "tools/extract_delete_day_wave62_tmp.py:43:tools.extract_delete_day_wave62_tmp.main",
         "tools/test_databank_delete_day_behavior_wave_62.py:87:tools.test_databank_delete_day_behavior_wave_62.main"
       ],
       "encoder_import_{}.txt": [
@@ -17324,7 +17309,6 @@
         "tools/cleanup_pure_login_dialog_ui_pass_only.py:304:tools.cleanup_pure_login_dialog_ui_pass_only.main",
         "tools/cleanup_stale_databank_generated_blocks.py:337:tools.cleanup_stale_databank_generated_blocks.main",
         "tools/disable_full_daily_ledger.py:403:tools.disable_full_daily_ledger.main",
-        "tools/dump_delete_day_wave62_tmp.py:11:tools.dump_delete_day_wave62_tmp.main",
         "tools/extract_append_unique_text.py:101:tools.extract_append_unique_text.apply_extraction",
         "tools/extract_append_unique_text.py:133:tools.extract_append_unique_text.main",
         "tools/extract_append_unique_text.py:21:tools.extract_append_unique_text.atomic_write",
@@ -17345,8 +17329,6 @@
         "tools/extract_date_helpers_module.py:196:tools.extract_date_helpers_module.build_plan",
         "tools/extract_date_helpers_module.py:257:tools.extract_date_helpers_module._atomic_write",
         "tools/extract_date_helpers_module.py:292:tools.extract_date_helpers_module.main",
-        "tools/extract_delete_day_wave62_tmp.py:30:tools.extract_delete_day_wave62_tmp.sha",
-        "tools/extract_delete_day_wave62_tmp.py:43:tools.extract_delete_day_wave62_tmp.main",
         "tools/extract_display_formatters.py:121:tools.extract_display_formatters._atomic_write",
         "tools/extract_display_formatters.py:133:tools.extract_display_formatters.build_plan",
         "tools/extract_display_formatters.py:219:tools.extract_display_formatters.main",
@@ -17383,8 +17365,6 @@
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
         "tools/plan_app_lifecycle_window_pass_only.py:160:tools.plan_app_lifecycle_window_pass_only.build_report",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
-        "tools/plan_delete_day_wave62_tmp.py:35:tools.plan_delete_day_wave62_tmp.sha",
-        "tools/plan_delete_day_wave62_tmp.py:39:tools.plan_delete_day_wave62_tmp.main",
         "tools/plan_logger_fallback_pass_only.py:136:tools.plan_logger_fallback_pass_only.build_report",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_login_dialog_pass_only.py:243:tools.plan_login_dialog_pass_only.main",
@@ -18494,7 +18474,6 @@
         "tools/extract_date_helpers_module.py:54:tools.extract_date_helpers_module._local_names",
         "tools/extract_date_helpers_module.py:78:tools.extract_date_helpers_module._external_loaded_names",
         "tools/extract_date_helpers_module.py:88:tools.extract_date_helpers_module._import_bindings",
-        "tools/extract_delete_day_wave62_tmp.py:34:tools.extract_delete_day_wave62_tmp.dotted",
         "tools/extract_display_formatters.py:107:tools.extract_display_formatters._patched_source",
         "tools/extract_display_formatters.py:206:tools.extract_display_formatters.apply_extraction",
         "tools/extract_display_formatters.py:31:tools.extract_display_formatters._node_source",
@@ -18582,7 +18561,6 @@
         "tools/plan_app_lifecycle_window_pass_only.py:72:tools.plan_app_lifecycle_window_pass_only._context_text",
         "tools/plan_app_lifecycle_window_pass_only.py:76:tools.plan_app_lifecycle_window_pass_only._protected",
         "tools/plan_app_lifecycle_window_pass_only.py:80:tools.plan_app_lifecycle_window_pass_only._classify",
-        "tools/plan_delete_day_wave62_tmp.py:26:tools.plan_delete_day_wave62_tmp.dotted",
         "tools/plan_logger_fallback_pass_only.py:101:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_AsyncFunctionDef",
         "tools/plan_logger_fallback_pass_only.py:106:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_Try",
         "tools/plan_logger_fallback_pass_only.py:54:tools.plan_logger_fallback_pass_only._handler_name",
@@ -21871,25 +21849,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/dump_delete_day_wave62_tmp.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast"
-      },
-      "lines": 30,
-      "module": "tools.dump_delete_day_wave62_tmp",
-      "module_globals": [
-        "APP_PATH",
-        "OUT_PATH",
-        "TARGET"
-      ],
-      "monkey_patches": [],
-      "sha256": "fa90ec514ab82d896b620744c265f2331e02427b4937325be46efd4b82590d1b",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/extract_append_unique_text.py",
       "imports": {
         "Path": "pathlib.Path",
@@ -22043,36 +22002,6 @@
       ],
       "monkey_patches": [],
       "sha256": "87463497bdc556f0c34f34085ce8b97653a835a3104fabf43e48127e163220d8",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/extract_delete_day_wave62_tmp.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "pprint": "pprint",
-        "textwrap": "textwrap"
-      },
-      "lines": 368,
-      "module": "tools.extract_delete_day_wave62_tmp",
-      "module_globals": [
-        "APP_PATH",
-        "BEHAVIOR_TEST_PATH",
-        "EXACT_TEST_PATH",
-        "EXPECTED_DB_CALLS",
-        "EXPECTED_DEDENTED_SHA",
-        "EXPECTED_LINES",
-        "EXPECTED_SIGNATURE",
-        "EXPECTED_SOURCE_SHA",
-        "MODULE_PATH",
-        "PROTECTED_WAVE61",
-        "TARGET"
-      ],
-      "monkey_patches": [],
-      "sha256": "0d5e438cfbcc07332481bc479bb1bd4569add2053b48b64d1eda3ba54f2f8c49",
       "syntax_ok": true
     },
     {
@@ -22415,31 +22344,6 @@
       ],
       "monkey_patches": [],
       "sha256": "b47a2301bbe497c605feb6d3c24d78b8c190fbcd252a07a4369313ec4cb52147",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/plan_delete_day_wave62_tmp.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json",
-        "textwrap": "textwrap"
-      },
-      "lines": 173,
-      "module": "tools.plan_delete_day_wave62_tmp",
-      "module_globals": [
-        "APP_PATH",
-        "EXPECTED_LINES",
-        "OUT_PATH",
-        "REQUIRED_TEXT_MARKERS",
-        "SENSITIVE_CALL_TERMS",
-        "TARGET"
-      ],
-      "monkey_patches": [],
-      "sha256": "68d72ad197a3774713bcce9e926545f6e0dd0275562674ec9220b7c6f904fa9e",
       "syntax_ok": true
     },
     {
@@ -25310,19 +25214,19 @@
     "classes": 120,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1498,
+    "functions": 1491,
     "methods": 582,
     "monkey_patches": 175,
     "nested_functions": 390,
     "parse_errors": 0,
     "possible_orphans": 134,
-    "python_files": 221,
+    "python_files": 218,
     "repository_database_tables": 19,
     "repository_duplicate_names": 305,
     "repository_possible_orphans": 293,
-    "resolved_call_edges": 4014,
-    "symbols": 2590,
-    "total_python_lines": 79742,
+    "resolved_call_edges": 4008,
+    "symbols": 2583,
+    "total_python_lines": 79171,
     "ui_callback_edges": 488
   },
   "symbols": [
@@ -98374,55 +98278,6 @@
       "source_sha256": "39072c04e89a325ffe7b14f6ca26ff349dff3060fcbe3b35b234cfec5d015def"
     },
     {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP_PATH.read_text",
-        "OUT_PATH.parent.mkdir",
-        "OUT_PATH.write_text",
-        "SystemExit",
-        "ast.parse",
-        "isinstance",
-        "join",
-        "next",
-        "print",
-        "text.splitlines"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 26,
-      "feature": "other",
-      "file": "tools/dump_delete_day_wave62_tmp.py",
-      "file_paths": [],
-      "globals_read": [
-        "APP_PATH",
-        "OUT_PATH",
-        "TARGET"
-      ],
-      "globals_written": [],
-      "id": "tools/dump_delete_day_wave62_tmp.py:11:tools.dump_delete_day_wave62_tmp.main",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 11,
-      "lines": 16,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.dump_delete_day_wave62_tmp.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "be39f626eff7a8b69d58c552cf5b0b5e90130ee9332c9625422c826db3e3ee6a"
-    },
-    {
       "args": [
         "path",
         "text"
@@ -101116,169 +100971,6 @@
         "reports"
       ],
       "source_sha256": "2b892388260df7599a95b41278d4a6c00323538eea91bebaaf249eece29a3f88"
-    },
-    {
-      "args": [
-        "source"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_delete_day_wave62_tmp.py:43:tools.extract_delete_day_wave62_tmp.main"
-      ],
-      "calls_raw": [
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "source.replace",
-        "source.replace.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 31,
-      "feature": "other",
-      "file": "tools/extract_delete_day_wave62_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_delete_day_wave62_tmp.py:30:tools.extract_delete_day_wave62_tmp.sha",
-      "imports_used": [
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 30,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "sha",
-      "parent": null,
-      "purpose": "Handles sha for the other feature.",
-      "qualified_name": "tools.extract_delete_day_wave62_tmp.sha",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem"
-      ],
-      "source_sha256": "c8e300dd20861060c810492a9dbe9d30294bdf7a2e8343a19c1b96bc6b5df91f"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_delete_day_wave62_tmp.py:34:tools.extract_delete_day_wave62_tmp.dotted",
-        "tools/extract_delete_day_wave62_tmp.py:43:tools.extract_delete_day_wave62_tmp.main"
-      ],
-      "calls_raw": [
-        "dotted",
-        "isinstance"
-      ],
-      "calls_resolved": [
-        "tools/extract_delete_day_wave62_tmp.py:34:tools.extract_delete_day_wave62_tmp.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 40,
-      "feature": "other",
-      "file": "tools/extract_delete_day_wave62_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_delete_day_wave62_tmp.py:34:tools.extract_delete_day_wave62_tmp.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 34,
-      "lines": 7,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.extract_delete_day_wave62_tmp.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "23fa5fb0abd919fc8fa6ea0c982b8a1b4eed2e824ec69ba79403a7fbed4b5c74"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP_PATH.read_text",
-        "APP_PATH.write_text",
-        "BEHAVIOR_TEST_PATH.write_text",
-        "EXACT_TEST_PATH.write_text",
-        "MODULE_PATH.parent.mkdir",
-        "MODULE_PATH.write_text",
-        "app_text.count",
-        "app_text.splitlines",
-        "ast.parse",
-        "ast.unparse",
-        "ast.walk",
-        "call.startswith",
-        "dotted",
-        "isinstance",
-        "join",
-        "len",
-        "next",
-        "patched.count",
-        "patched.replace",
-        "pprint.pformat",
-        "print",
-        "sha",
-        "sorted",
-        "sum",
-        "textwrap.dedent"
-      ],
-      "calls_resolved": [
-        "tools/extract_delete_day_wave62_tmp.py:30:tools.extract_delete_day_wave62_tmp.sha",
-        "tools/extract_delete_day_wave62_tmp.py:34:tools.extract_delete_day_wave62_tmp.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 364,
-      "feature": "other",
-      "file": "tools/extract_delete_day_wave62_tmp.py",
-      "file_paths": [
-        "encoder_import_log.json"
-      ],
-      "globals_read": [
-        "APP_PATH",
-        "BEHAVIOR_TEST_PATH",
-        "EXACT_TEST_PATH",
-        "EXPECTED_DB_CALLS",
-        "EXPECTED_DEDENTED_SHA",
-        "EXPECTED_LINES",
-        "EXPECTED_SIGNATURE",
-        "EXPECTED_SOURCE_SHA",
-        "MODULE_PATH",
-        "PROTECTED_WAVE61",
-        "TARGET"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_delete_day_wave62_tmp.py:43:tools.extract_delete_day_wave62_tmp.main",
-      "imports_used": [
-        "ast",
-        "pprint",
-        "textwrap"
-      ],
-      "kind": "function",
-      "line": 43,
-      "lines": 322,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.extract_delete_day_wave62_tmp.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports",
-        "ui_only"
-      ],
-      "source_sha256": "8e8d50ae76d2c572cdc942811ae471cf67bdefa7d4bba4eaeaaaf206fecf2c0a"
     },
     {
       "args": [
@@ -107022,162 +106714,6 @@
         "reports"
       ],
       "source_sha256": "c34892d58d500fbdd612f33434def16f4671b86d94ee4c7b183d51a1cc13935e"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_delete_day_wave62_tmp.py:26:tools.plan_delete_day_wave62_tmp.dotted",
-        "tools/plan_delete_day_wave62_tmp.py:39:tools.plan_delete_day_wave62_tmp.main"
-      ],
-      "calls_raw": [
-        "dotted",
-        "isinstance"
-      ],
-      "calls_resolved": [
-        "tools/plan_delete_day_wave62_tmp.py:26:tools.plan_delete_day_wave62_tmp.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 32,
-      "feature": "other",
-      "file": "tools/plan_delete_day_wave62_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_delete_day_wave62_tmp.py:26:tools.plan_delete_day_wave62_tmp.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 26,
-      "lines": 7,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.plan_delete_day_wave62_tmp.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "23fa5fb0abd919fc8fa6ea0c982b8a1b4eed2e824ec69ba79403a7fbed4b5c74"
-    },
-    {
-      "args": [
-        "text"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_delete_day_wave62_tmp.py:39:tools.plan_delete_day_wave62_tmp.main"
-      ],
-      "calls_raw": [
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "text.replace",
-        "text.replace.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 36,
-      "feature": "other",
-      "file": "tools/plan_delete_day_wave62_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_delete_day_wave62_tmp.py:35:tools.plan_delete_day_wave62_tmp.sha",
-      "imports_used": [
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 35,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "sha",
-      "parent": null,
-      "purpose": "Handles sha for the other feature.",
-      "qualified_name": "tools.plan_delete_day_wave62_tmp.sha",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem"
-      ],
-      "source_sha256": "9e0c24cc284eb0bc37745df2dfdb180ae9f6ebd136661f1cfa596d0584c5391b"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP_PATH.read_text",
-        "OUT_PATH.parent.mkdir",
-        "OUT_PATH.write_text",
-        "SystemExit",
-        "any",
-        "ast.parse",
-        "ast.unparse",
-        "ast.walk",
-        "call.lower",
-        "call.startswith",
-        "child.value.strip",
-        "dotted",
-        "isinstance",
-        "join",
-        "json.dumps",
-        "list",
-        "marker.lower",
-        "next",
-        "out.append",
-        "out.extend",
-        "print",
-        "sha",
-        "sorted",
-        "source.lower",
-        "text.splitlines",
-        "textwrap.dedent"
-      ],
-      "calls_resolved": [
-        "tools/plan_delete_day_wave62_tmp.py:26:tools.plan_delete_day_wave62_tmp.dotted",
-        "tools/plan_delete_day_wave62_tmp.py:35:tools.plan_delete_day_wave62_tmp.sha"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 169,
-      "feature": "other",
-      "file": "tools/plan_delete_day_wave62_tmp.py",
-      "file_paths": [],
-      "globals_read": [
-        "APP_PATH",
-        "EXPECTED_LINES",
-        "OUT_PATH",
-        "REQUIRED_TEXT_MARKERS",
-        "SENSITIVE_CALL_TERMS",
-        "TARGET"
-      ],
-      "globals_written": [],
-      "id": "tools/plan_delete_day_wave62_tmp.py:39:tools.plan_delete_day_wave62_tmp.main",
-      "imports_used": [
-        "ast",
-        "json",
-        "textwrap"
-      ],
-      "kind": "function",
-      "line": 39,
-      "lines": 131,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.plan_delete_day_wave62_tmp.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "f529f230a1849a59d39fcc4aa7a664d557ab43e4ba6d886cbb6a7cd27dfdb5f7"
     },
     {
       "args": [

@@ -1,8 +1,8 @@
 # SPINA Application Feature Map
 
-Generated from commit `45d781b2d23bb1e2772cf8d5cd3a35e4f8154d65`.
+Generated from commit `bf3818f050e5e01f8e03fd0820e6650ded861fec`.
 
-Scanned **221 Python files**, **79,742 lines**, and **2,590 symbols**.
+Scanned **218 Python files**, **79,171 lines**, and **2,583 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 

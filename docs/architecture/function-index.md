@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `45d781b2d23bb1e2772cf8d5cd3a35e4f8154d65`.
+Generated from commit `bf3818f050e5e01f8e03fd0820e6650ded861fec`.
 
-Scanned **221 Python files**, **79,742 lines**, and **2,590 symbols**.
+Scanned **218 Python files**, **79,171 lines**, and **2,583 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1641,10 +1641,6 @@ Scanned **221 Python files**, **79,742 lines**, and **2,590 symbols**.
 - **tools.disable_full_daily_ledger.remove_static_legacy_button_lines** (function, lines 392–400, 9 lines, risk `support`): Removes remove static legacy button lines for the other feature.
 - **tools.disable_full_daily_ledger.main** (function, lines 403–438, 36 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/dump_delete_day_wave62_tmp.py`
-
-- **tools.dump_delete_day_wave62_tmp.main** (function, lines 11–26, 16 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/extract_append_unique_text.py`
 
 - **tools.extract_append_unique_text.atomic_write** (function, lines 21–30, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
@@ -1719,12 +1715,6 @@ Scanned **221 Python files**, **79,742 lines**, and **2,590 symbols**.
 - **tools.extract_date_helpers_module._atomic_write** (function, lines 257–266, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
 - **tools.extract_date_helpers_module.apply_extraction** (function, lines 269–289, 21 lines, risk `support`): Handles apply extraction for the other feature.
 - **tools.extract_date_helpers_module.main** (function, lines 292–310, 19 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/extract_delete_day_wave62_tmp.py`
-
-- **tools.extract_delete_day_wave62_tmp.sha** (function, lines 30–31, 2 lines, risk `filesystem`): Handles sha for the other feature.
-- **tools.extract_delete_day_wave62_tmp.dotted** (function, lines 34–40, 7 lines, risk `support`): Handles dotted for the other feature.
-- **tools.extract_delete_day_wave62_tmp.main** (function, lines 43–364, 322 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_display_formatters.py`
 
@@ -1894,12 +1884,6 @@ Scanned **221 Python files**, **79,742 lines**, and **2,590 symbols**.
 - **tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_Try** (method, lines 131–157, 27 lines, risk `support`): Handles visit Try for the payments feature.
 - **tools.plan_app_lifecycle_window_pass_only.build_report** (function, lines 160–198, 39 lines, risk `filesystem`): Builds build report for the reports feature.
 - **tools.plan_app_lifecycle_window_pass_only.main** (function, lines 201–215, 15 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/plan_delete_day_wave62_tmp.py`
-
-- **tools.plan_delete_day_wave62_tmp.dotted** (function, lines 26–32, 7 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_delete_day_wave62_tmp.sha** (function, lines 35–36, 2 lines, risk `filesystem`): Handles sha for the other feature.
-- **tools.plan_delete_day_wave62_tmp.main** (function, lines 39–169, 131 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_logger_fallback_pass_only.py`
 
