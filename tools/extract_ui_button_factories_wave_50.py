@@ -115,6 +115,10 @@ def verify_function_hash(path: Path, name: str, expected: str, mode: str) -> Non
     tree = ast.parse(text)
     node = top_function(text, tree, name)
     actual = source_hash(source_for(text, node), mode)
+    print(
+        f"WAVE50_PROTECTED_HASH path={path.name} name={name} mode={mode} actual={actual} expected={expected}",
+        flush=True,
+    )
     assert actual == expected, (path.name, name, actual, expected)
 
 
