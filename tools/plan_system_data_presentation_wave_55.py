@@ -48,6 +48,7 @@ def main() -> None:
         raise SystemExit(f"Missing App methods: {missing}")
 
     total = 0
+    pieces: list[str] = []
     for name in TARGETS:
         node = methods[name]
         start = node.lineno
@@ -55,19 +56,15 @@ def main() -> None:
         source = "".join(lines[start - 1:end])
         calls = sorted({dotted(n.func) for n in ast.walk(node) if isinstance(n, ast.Call) and dotted(n.func)})
         write_like = sorted({call for call in calls if call.rsplit(".", 1)[-1].lower() in WRITE_MARKERS})
-        assignments = sorted({dotted(n.targets[0]) for n in ast.walk(node) if isinstance(n, ast.Assign) and len(n.targets) == 1 and dotted(n.targets[0])})
         line_count = end - start + 1
         total += line_count
-        print(
-            "METHOD|"
-            f"{name}|start={start}|end={end}|lines={line_count}|"
-            f"sha256={hashlib.sha256(source.encode('utf-8')).hexdigest()}|"
-            f"write_like={','.join(write_like) or '-'}|"
-            f"assignments={','.join(assignments) or '-'}|"
-            f"calls={','.join(calls) or '-'}"
+        pieces.append(
+            f"{name}:start={start},end={end},lines={line_count},"
+            f"sha={hashlib.sha256(source.encode('utf-8')).hexdigest()},"
+            f"write_like={','.join(write_like) or '-'}"
         )
 
-    print(f"TOTAL|methods={len(TARGETS)}|lines={total}")
+    print(f"WAVE55_PLAN|methods={len(TARGETS)}|total_lines={total}|" + ";".join(pieces))
 
 
 if __name__ == "__main__":
