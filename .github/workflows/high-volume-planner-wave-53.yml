@@ -1,0 +1,38 @@
+name: High-volume planner Wave 53
+on:
+  push:
+    branches:
+      - agent/high-volume-wave-53
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "tools/plan_high_volume_wave_53.py"
+      - ".github/workflows/high-volume-planner-wave-53.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: high-volume-planner-wave-53
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - name: Check out Wave 53 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/high-volume-wave-53
+          show-progress: false
+      - name: Compile planner
+        shell: cmd
+        run: python -m py_compile tools\plan_high_volume_wave_53.py
+      - name: Rank safe high-volume boundaries
+        shell: cmd
+        run: python tools\plan_high_volume_wave_53.py
+      - name: Upload planner report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: high-volume-wave-53-planner
+          path: artifacts/wave-53-planner.txt
+          if-no-files-found: error
