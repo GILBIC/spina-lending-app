@@ -8207,95 +8207,8 @@ class App:
             _log_suppressed_once('excpass_system_data_tab_hide', 'suppressed exception excpass_system_data_tab_hide', __spina_exc)
             pass
 
-    def _system_data_get_date(self):
-        from datetime import datetime as _dt
-        from tkinter import messagebox
-        ds = ''
-        try:
-            ds = (self.system_data_date_var.get() or '').strip()
-        except Exception:
-            ds = ''
-        if not ds:
-            ds = (self._get_databank_focus_date() or '').strip()
-            try:
-                self.system_data_date_var.set(ds)
-            except Exception:
-                pass
-        try:
-            return _dt.strptime(ds, '%Y-%m-%d').strftime('%Y-%m-%d')
-        except Exception:
-            messagebox.showerror('Data', 'Use date format YYYY-MM-DD.')
-            return ''
 
-    def _system_data_use_focus_date(self):
-        try:
-            ds = (self._get_databank_focus_date() or '').strip()
-            if ds:
-                self.system_data_date_var.set(ds)
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_system_data_focus_date', 'suppressed exception excpass_system_data_focus_date', __spina_exc)
-            pass
 
-    def _system_data_refresh_summary(self):
-        ds = self._system_data_get_date()
-        if not ds:
-            return
-
-        def _fmt_amt(v):
-            try:
-                return fmt_currency(v)
-            except Exception:
-                try:
-                    return f"{float(v or 0.0):,.2f}"
-                except Exception:
-                    return '0.00'
-
-        try:
-            reg_expected = round(float(self.db.get_databank_daily_total(ds, loan_type='Regular') or 0.0), 2)
-        except Exception:
-            reg_expected = 0.0
-        try:
-            x7_expected = round(float(self.db.get_databank_daily_total(ds, loan_type='7x7') or 0.0), 2)
-        except Exception:
-            x7_expected = 0.0
-
-        rec = None
-        try:
-            rec = self.db.get_databank_day_close(ds) if hasattr(self, 'db') else None
-        except Exception:
-            rec = None
-
-        if rec:
-            expected = round(float(rec.get('expected_amount') or 0.0), 2)
-            actual = round(float(rec.get('actual_cash') or 0.0), 2)
-            variance = round(float(rec.get('variance') or 0.0), 2)
-            variance_status = (rec.get('variance_status') or 'Balanced').strip()
-            workflow = (rec.get('variance_workflow_status') or rec.get('workflow_status') or 'Open').strip()
-            closed_txt = 'Closed' if bool(int(rec.get('is_closed') or 0)) else 'Open'
-            note = (rec.get('note') or '').strip()
-            note_txt = f"\nNote: {note}" if note else ''
-            txt = (
-                f"Date: {ds}\n"
-                f"Regular Expected: {_fmt_amt(reg_expected)}\n"
-                f"7x7 Expected: {_fmt_amt(x7_expected)}\n"
-                f"Total Expected: {_fmt_amt(expected)}\n"
-                f"Actual Cash: {_fmt_amt(actual)}\n"
-                f"Variance: {_fmt_amt(abs(variance))} ({variance_status})\n"
-                f"Workflow: {workflow} | Status: {closed_txt}{note_txt}"
-            )
-        else:
-            combined = round(reg_expected + x7_expected, 2)
-            txt = (
-                f"Date: {ds}\n"
-                f"Regular Expected: {_fmt_amt(reg_expected)}\n"
-                f"7x7 Expected: {_fmt_amt(x7_expected)}\n"
-                f"Total Expected: {_fmt_amt(combined)}\n"
-                f"No Daily Close record yet for this date."
-            )
-        try:
-            self.system_data_summary_var.set(txt)
-        except Exception:
-            pass
 
     def _system_data_open_close(self):
         ds = self._system_data_get_date()
@@ -25368,6 +25281,19 @@ from spina_app.databank_close_history_presentation import (
 )
 _configure_wave57_close_history_presentation(globals())
 App.open_databank_close_history_dialog = _wave57_open_databank_close_history_dialog
+
+
+# Wave 58: System Data date and summary helpers.
+from spina_app.system_data_summary_presentation import (
+    configure_system_data_summary_dependencies as _configure_wave58_system_data_summary,
+    _system_data_get_date as _wave58_system_data_get_date,
+    _system_data_use_focus_date as _wave58_system_data_use_focus_date,
+    _system_data_refresh_summary as _wave58_system_data_refresh_summary,
+)
+_configure_wave58_system_data_summary(globals())
+App._system_data_get_date = _wave58_system_data_get_date
+App._system_data_use_focus_date = _wave58_system_data_use_focus_date
+App._system_data_refresh_summary = _wave58_system_data_refresh_summary
 
 def main():
     import tkinter as tk
