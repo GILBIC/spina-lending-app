@@ -12,41 +12,45 @@ OUT = ROOT / "artifacts" / "wave-51-high-volume-plan.json"
 
 MIN_LINES = 150
 MAX_LINES = 450
-MIN_FUNCS = 2
+MIN_FUNCS = 1
 MAX_FUNCS = 12
-MAX_GAP = 45
+MAX_GAP = 60
 
-FORBIDDEN_TOKENS = (
+# These are concrete side-effect or protected-domain indicators. Ordinary imports,
+# builder names, refresh helpers, widget updates, and command references are allowed.
+HARD_FORBIDDEN_TOKENS = (
     # Database / persistence
     "connect_db(", "run_write(", ".execute(", ".executemany(", ".commit(",
-    ".rollback(", "cursor(", "insert into", "delete from", "alter table",
-    "create table", "drop table", "pragma ", "self.db", "psycopg", "sqlite3",
-    # Filesystem / imports / exports / reports
-    "open(", "pathlib", "path(", ".read_text(", ".write_text(", ".read_bytes(",
-    ".write_bytes(", "json.load", "json.dump", "os.remove", "os.rename",
-    "os.replace", "os.makedirs", "shutil.", "subprocess.", "filedialog",
-    "reportlab", "canvas(", "pdf", "export", "import", "backup", "restore",
-    "print_", "printer", "workbook", "openpyxl", "csv.",
+    ".rollback(", "insert into", "delete from", "alter table", "create table",
+    "drop table", "pragma ", "self.db", "psycopg.connect", "sqlite3.connect",
+    # Filesystem / external processes
+    "open(", ".read_text(", ".write_text(", ".read_bytes(", ".write_bytes(",
+    "json.load", "json.dump", "os.remove", "os.rename", "os.replace",
+    "os.makedirs", "shutil.", "subprocess.", "filedialog.", "webbrowser.",
+    # Reports / import-export / backup
+    "reportlab", "canvas.save", "workbook(", "openpyxl", "csv.writer",
+    "csv.dictwriter", "export_", "import_", "backup_", "restore_", "print_",
     # Authentication / permissions
-    "password", "verify_login", "authenticate", "permission", "role", "users_db",
-    "account_choices", "must_change_password", "hash_password",
-    # Lending / operational behavior
-    "principal", "interest", "balance", "payment", "renewal", "offset", "advance",
-    "\"adv", "'adv", " pass", "7x7", "due_date", "loan_type", "daily_amount",
-    "auto_close", "close_day", "day_close", "schedule", ".after(", ".after_idle(",
-    # Mutation / destructive operations
-    "save_", "delete_", "remove_", "update_", "insert_", "create_", "add_",
-    "edit_", "write_", "apply_", "set_password", "mark_", "approve_", "reject_",
-    "archive_", "trash_", "upload_", "download_", "migrate_",
-    # Threads / external side effects
-    "threading.", "thread(", "socket", "requests.", "urllib", "webbrowser",
+    "verify_login(", "authenticate", "hash_password", "must_change_password",
+    "users_db", "set_password", "permission", "role_map",
+    # Lending / operational calculations and rules
+    "principal", "interest", "balance", "payment", "renewal", "offset",
+    "advance", "7x7", "due_date", "daily_amount", "auto_close", "close_day",
+    "day_close", "loan_type", "collection_amount",
+    # Scheduling / threading
+    ".after(", ".after_idle(", "threading.", "thread(", "socket.", "requests.",
 )
 
 NAME_FORBIDDEN = re.compile(
-    r"(?:payment|balance|principal|interest|renew|offset|advance|pass|7x7|loan|due|"
-    r"auth|login|password|permission|role|report|pdf|print|export|import|backup|"
-    r"restore|save|delete|remove|update|insert|create|add|edit|write|apply|mark|"
-    r"approve|reject|archive|upload|download|migrate|close_day|auto_close|schedule)",
+    r"(?:payment|balance|principal|interest|renew|offset|advance|7x7|loan|due|"
+    r"auth|password|permission|report|pdf|export|import|backup|restore|migrate|"
+    r"close_day|auto_close)",
+    re.I,
+)
+
+MUTATING_CALL_RE = re.compile(
+    r"(?:^|\.)(?:save|delete|remove|insert|write|apply|approve|reject|archive|"
+    r"upload|download|migrate|commit|rollback)(?:_|$)",
     re.I,
 )
 
@@ -54,6 +58,7 @@ UI_MARKERS = (
     "tk.", "ttk.", ".pack(", ".grid(", ".place(", ".configure(", ".config(",
     ".bind(", ".heading(", ".column(", ".tag_configure(", "StringVar(",
     "BooleanVar(", "IntVar(", "DoubleVar(", "messagebox.", "font=(", "bg=", "fg=",
+    "Toplevel(", "Treeview(", "Combobox(", "Scrollbar(", "Menu(",
 )
 
 ALLOWED_CALL_PREFIXES = (
@@ -96,19 +101,27 @@ def inspect_function(text: str, node: ast.FunctionDef) -> dict[str, object]:
         for call in ast.walk(node)
         if isinstance(call, ast.Call) and dotted(call.func)
     })
-    forbidden_hits = sorted({token for token in FORBIDDEN_TOKENS if token.lower() in lower})
+    hard_hits = sorted({token for token in HARD_FORBIDDEN_TOKENS if token.lower() in lower})
+    mutating_calls = sorted(call for call in calls if MUTATING_CALL_RE.search(call))
     ui_hits = sum(source.count(marker) for marker in UI_MARKERS)
     self_calls = sorted(call for call in calls if call.startswith("self."))
     external_calls = sorted(
         call for call in calls
         if not call.startswith(ALLOWED_CALL_PREFIXES)
-        and not call.startswith(("self.", "super.", "w.", "widget.", "tree.", "style.", "st.", "btn.", "lbl.", "frm.", "frame.", "box.", "row.", "col.", "menu.", "canvas."))
+        and not call.startswith((
+            "self.", "super.", "w.", "widget.", "tree.", "style.", "st.",
+            "btn.", "lbl.", "frm.", "frame.", "box.", "row.", "col.",
+            "menu.", "canvas.", "dlg.", "win.", "top.", "entry.", "ent.",
+            "combo.", "cmb.", "scroll.", "sb.", "var.", "shell.", "card.",
+        ))
     )
+    line_count = len(source.splitlines())
     safe = (
         not NAME_FORBIDDEN.search(node.name)
-        and not forbidden_hits
-        and ui_hits >= 3
-        and len(source.splitlines()) >= 8
+        and not hard_hits
+        and not mutating_calls
+        and ui_hits >= 4
+        and line_count >= 8
     )
     return {
         "name": node.name,
@@ -122,7 +135,9 @@ def inspect_function(text: str, node: ast.FunctionDef) -> dict[str, object]:
         "calls": calls,
         "self_calls": self_calls,
         "external_calls": external_calls,
-        "forbidden_hits": forbidden_hits,
+        "hard_forbidden_hits": hard_hits,
+        "mutating_calls": mutating_calls,
+        "name_forbidden": bool(NAME_FORBIDDEN.search(node.name)),
         "safe": safe,
         "first_line": source.splitlines()[0] if source else "",
     }
@@ -137,8 +152,10 @@ def main() -> None:
         if isinstance(node, ast.FunctionDef)
     ]
 
-    safe_records = [record for record in records if record["safe"]]
-    safe_records.sort(key=lambda item: int(item["lineno"]))
+    safe_records = sorted(
+        (record for record in records if record["safe"]),
+        key=lambda item: int(item["lineno"]),
+    )
 
     batches: list[dict[str, object]] = []
     for start in range(len(safe_records)):
@@ -160,12 +177,12 @@ def main() -> None:
                 continue
 
             families = {str(item["family"]) for item in current}
-            family_bonus = 80 if len(families) == 1 else 35 if len(families) == 2 else 0
+            family_bonus = 100 if len(families) == 1 else 45 if len(families) == 2 else 0
             compact_span = int(current[-1]["end_lineno"]) - int(current[0]["lineno"]) + 1
             gap_lines = compact_span - total
             ui_hits = sum(int(item["ui_hits"]) for item in current)
             external_count = sum(len(item["external_calls"]) for item in current)
-            score = total * 3 + ui_hits * 2 + family_bonus - gap_lines * 2 - external_count * 3
+            score = total * 3 + ui_hits * 2 + family_bonus - gap_lines * 2 - external_count * 2
             batches.append({
                 "score": score,
                 "function_count": len(current),
@@ -183,7 +200,12 @@ def main() -> None:
         key = tuple(str(item["name"]) for item in batch["functions"])
         unique.setdefault(key, batch)
 
-    ranked = list(unique.values())[:30]
+    ranked = list(unique.values())[:40]
+    ui_heavy = sorted(
+        (record for record in records if int(record["ui_hits"]) >= 4),
+        key=lambda item: (-int(item["lines"]), -int(item["ui_hits"])),
+    )[:80]
+
     report = {
         "desktop": DESKTOP.name,
         "criteria": {
@@ -198,6 +220,7 @@ def main() -> None:
         "candidate_batch_count": len(unique),
         "ranked_batches": ranked,
         "safe_functions": safe_records,
+        "ui_heavy_functions_including_rejected": ui_heavy,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -211,7 +234,17 @@ def main() -> None:
                 "total_lines": batch["total_lines"],
                 "functions": [item["name"] for item in batch["functions"]],
             }
-            for batch in ranked[:10]
+            for batch in ranked[:12]
+        ],
+        "largest_ui_heavy": [
+            {
+                "name": item["name"],
+                "lines": item["lines"],
+                "safe": item["safe"],
+                "hard_hits": item["hard_forbidden_hits"],
+                "mutating_calls": item["mutating_calls"],
+            }
+            for item in ui_heavy[:12]
         ],
     }, ensure_ascii=True))
 
