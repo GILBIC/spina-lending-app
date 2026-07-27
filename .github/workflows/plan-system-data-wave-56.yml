@@ -1,0 +1,41 @@
+name: Plan System Data presentation Wave 56
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "tools/plan_system_data_wave56_tmp.py"
+      - ".github/workflows/plan-system-data-wave-56.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plan-system-data-wave-56-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-56'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          show-progress: false
+      - name: Compile boundary analyzer
+        shell: cmd
+        run: python -m py_compile tools\plan_system_data_wave56_tmp.py
+      - name: Analyze active System Data boundary
+        shell: cmd
+        run: python tools\plan_system_data_wave56_tmp.py
+      - name: Upload candidate report
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-data-wave-56-candidate
+          path: artifacts/wave-56-system-data-candidate.json
+          if-no-files-found: error
