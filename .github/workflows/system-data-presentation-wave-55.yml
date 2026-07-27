@@ -1,6 +1,6 @@
 name: System Data presentation Wave 55
 
-# Permanent read-only validation for the finalized Wave 55 branch.
+# Permanent read-only validation for the final clean Wave 55 branch.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
