@@ -27,5 +27,11 @@ new = '''    if newline == "\\r\\n":
 '''
 if old not in text:
     raise SystemExit("Wave 56 newline output block not found")
-path.write_text(text.replace(old, new, 1), encoding="utf-8")
-print("Wave 56 extractor newline normalization fixed")
+text = text.replace(old, new, 1)
+old_exact = r'    lowered = "\n".join(module.SYSTEM_DATA_PRESENTATION_CALLS).lower()'
+new_exact = r'    lowered = "\\n".join(module.SYSTEM_DATA_PRESENTATION_CALLS).lower()'
+if old_exact not in text:
+    raise SystemExit("Wave 56 generated newline escape block not found")
+text = text.replace(old_exact, new_exact, 1)
+path.write_text(text, encoding="utf-8")
+print("Wave 56 extractor newline normalization and generated escape fixed")
