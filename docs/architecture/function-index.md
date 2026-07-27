@@ -2,7 +2,7 @@
 
 Generated from commit `1f6e5d401376c25b9288eeaa91bfda615243b652`.
 
-Scanned **218 Python files**, **79,198 lines**, and **2,552 symbols**.
+Scanned **217 Python files**, **78,763 lines**, and **2,545 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1674,16 +1674,6 @@ Scanned **218 Python files**, **79,198 lines**, and **2,552 symbols**.
 - **tools.extract_cilog_value_formatter._atomic_write** (function, lines 118–127, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
 - **tools.extract_cilog_value_formatter.apply_extraction** (function, lines 130–140, 11 lines, risk `support`): Handles apply extraction for the other feature.
 - **tools.extract_cilog_value_formatter.main** (function, lines 143–161, 19 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/extract_databank_editor_wave60_tmp.py`
-
-- **tools.extract_databank_editor_wave60_tmp.dotted** (function, lines 67–74, 8 lines, risk `support`): Handles dotted for the other feature.
-- **tools.extract_databank_editor_wave60_tmp.source_for** (function, lines 77–81, 5 lines, risk `support`): Handles source for for the other feature.
-- **tools.extract_databank_editor_wave60_tmp.metadata** (function, lines 84–106, 23 lines, risk `support`): Handles metadata for the other feature.
-- **tools.extract_databank_editor_wave60_tmp.render_module** (function, lines 109–131, 23 lines, risk `support`): Handles render module for the other feature.
-- **tools.extract_databank_editor_wave60_tmp.render_exact_test** (function, lines 134–219, 86 lines, risk `support`): Handles render exact test for the other feature.
-- **tools.extract_databank_editor_wave60_tmp.render_smoke_test** (function, lines 222–345, 124 lines, risk `ui_only`): Handles render smoke test for the other feature.
-- **tools.extract_databank_editor_wave60_tmp.main** (function, lines 348–431, 84 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_date_display_helpers.py`
 
