@@ -8,7 +8,6 @@ on:
       - "spina_app/collector_tab_presentation.py"
       - "spina_app/login_dialog_presentation.py"
       - "tools/apply_legacy_collector_cleanup_wave_52.py"
-      - "tools/wave52_diagnostic.txt"
       - "tools/test_legacy_collector_cleanup_wave_52.py"
       - "tools/test_ui_button_factories_wave_50.py"
       - "tools/test_ui_button_factories_widget_smoke_wave_50.py"
@@ -31,50 +30,27 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: true
-      - name: Apply one-time Wave 52 cleanup
+          show-progress: false
+      - name: Run Wave 52 transformer
         if: ${{ hashFiles('tools/apply_legacy_collector_cleanup_wave_52.py') != '' }}
-        shell: powershell
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: cmd
+        run: |
+          python tools\apply_legacy_collector_cleanup_wave_52.py
+          if exist tools\wave52_diagnostic.txt type tools\wave52_diagnostic.txt
+          if exist tools\wave52_diagnostic.txt exit /b 1
+      - name: Commit transformed Wave 52 source
+        if: ${{ hashFiles('tools/apply_legacy_collector_cleanup_wave_52.py') != '' }}
+        shell: cmd
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          $ErrorActionPreference = "Continue"
-          if (Get-Variable PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
-            $PSNativeCommandUseErrorActionPreference = $false
-          }
-          cmd.exe /d /c "python tools\apply_legacy_collector_cleanup_wave_52.py > artifacts\wave-52-bootstrap-console.txt 2>&1"
-          $bootstrapCode = $LASTEXITCODE
-          if ($bootstrapCode -ne 0) {
-            Get-Content artifacts/wave-52-bootstrap-console.txt
-            exit $bootstrapCode
-          }
-          if (Test-Path tools/wave52_diagnostic.txt) {
-            $diag = Get-Content tools/wave52_diagnostic.txt -Raw
-            $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($diag))
-            $payload = @{
-              message = "Record Wave 52 diagnostic"
-              content = $encoded
-              branch = "agent/high-volume-wave-52"
-            } | ConvertTo-Json -Depth 3
-            Invoke-RestMethod `
-              -Uri "https://api.github.com/repos/${{ github.repository }}/contents/tools/wave52_diagnostic.txt" `
-              -Method Put `
-              -Headers @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = "application/vnd.github+json"; "X-GitHub-Api-Version" = "2022-11-28" } `
-              -ContentType "application/json" `
-              -Body $payload
-            exit 1
-          }
-          Remove-Item tools/apply_legacy_collector_cleanup_wave_52.py
-          Remove-Item artifacts/wave-52-bootstrap-console.txt -ErrorAction SilentlyContinue
-          Remove-Item artifacts/wave-52-bootstrap.txt -ErrorAction SilentlyContinue
-          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app/ui_controls.py tools/apply_legacy_collector_cleanup_wave_52.py artifacts
+          del tools\apply_legacy_collector_cleanup_wave_52.py
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app\ui_controls.py tools\apply_legacy_collector_cleanup_wave_52.py
           git commit -m "Remove obsolete Collector Route presentation layer"
-          python tools/generate_architecture_map.py
-          git add architecture-map.json docs/architecture
+          python tools\generate_architecture_map.py
+          git add architecture-map.json docs\architecture
           git commit -m "Refresh architecture map for Wave 52"
-          git push origin "HEAD:refs/heads/agent/high-volume-wave-52"
+          git push origin HEAD:refs/heads/agent/high-volume-wave-52
       - name: Compile application, modules, and tests
         shell: cmd
         run: |
@@ -130,7 +106,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: legacy-collector-cleanup-wave-52-reports
-          path: |
-            artifacts/wave-52-*
-            tools/wave52_diagnostic.txt
+          path: artifacts/wave-52-*.json
           if-no-files-found: warn
