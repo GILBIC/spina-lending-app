@@ -1,5 +1,6 @@
 name: Audit presentation Wave 54
 
+# Permanent read-only validation for the finalized Wave 54 branch.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
