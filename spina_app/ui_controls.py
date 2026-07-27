@@ -11,6 +11,8 @@ from spina_app.theme_palettes import (
     _spina_v22_reports_colors as _spina_v23_clients_colors,
     _spina_v24_cilog_colors,
     _spina_v25_collector_colors as _spina_v27_route_colors,
+    _spina_v25_collector_colors,
+    _spina_v32_login_colors,
 )
 
 
@@ -191,3 +193,94 @@ def _spina_v17_style_dashboard_table(self):
         st.map("ModernDash.Treeview", background=[("selected", colors["accent"])])
     except Exception:
         pass
+
+
+def _spina_v25_collector_button(parent, text, command=None, kind="normal", width=None):
+    c = _spina_v25_collector_colors()
+    bg = c["card2"]
+    fg = c["fg"]
+    if kind == "primary":
+        bg, fg = c["blue"], "#ffffff"
+    elif kind == "success":
+        bg, fg = c["green"], "#ffffff"
+    elif kind == "danger":
+        bg, fg = c["red"], "#ffffff"
+    elif kind == "soft":
+        bg, fg = c["soft"], c["fg"]
+
+    return tk.Button(
+        parent,
+        text=text,
+        command=command,
+        bg=bg,
+        fg=fg,
+        activebackground=bg,
+        activeforeground=fg,
+        relief="flat",
+        bd=0,
+        padx=14,
+        pady=8,
+        font=("Segoe UI", 9, "bold"),
+        cursor="hand2",
+        width=width,
+    )
+
+def _spina_v27_route_button(parent, text, command=None, kind="normal", width=None):
+    c = _spina_v27_route_colors()
+    bg, fg = c["card2"], c["fg"]
+    if kind == "primary":
+        bg, fg = c["blue"], "#ffffff"
+    elif kind == "success":
+        bg, fg = c["green"], "#ffffff"
+    elif kind == "danger":
+        bg, fg = c["red"], "#ffffff"
+    elif kind == "warning":
+        bg, fg = c["orange"], "#ffffff"
+    elif kind == "soft":
+        bg, fg = c["soft"], c["fg"]
+
+    return tk.Button(
+        parent,
+        text=text,
+        command=command,
+        bg=bg,
+        fg=fg,
+        activebackground=bg,
+        activeforeground=fg,
+        relief="flat",
+        bd=0,
+        padx=14,
+        pady=8,
+        font=("Segoe UI", 9, "bold"),
+        cursor="hand2",
+        width=width,
+    )
+
+def _spina_v32_login_button(parent, text, command=None, kind="normal", width=None):
+    c = _spina_v32_login_colors()
+    bg, fg = c["card2"], c["fg"]
+    if kind == "primary":
+        bg, fg = c["blue"], "#ffffff"
+    elif kind == "success":
+        bg, fg = c["green"], "#ffffff"
+    elif kind == "danger":
+        bg, fg = c["red"], "#ffffff"
+    elif kind == "soft":
+        bg, fg = c["soft"], c["fg"]
+
+    return tk.Button(
+        parent,
+        text=text,
+        command=command,
+        bg=bg,
+        fg=fg,
+        activebackground=bg,
+        activeforeground=fg,
+        relief="flat",
+        bd=0,
+        padx=14,
+        pady=9,
+        font=("Segoe UI", 10, "bold"),
+        cursor="hand2",
+        width=width,
+    )
