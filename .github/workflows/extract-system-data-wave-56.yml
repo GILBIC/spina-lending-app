@@ -30,10 +30,10 @@ jobs:
           show-progress: false
       - name: Normalize Windows source hashing
         shell: cmd
-        run: python tools\fix_system_data_wave56_newlines_tmp.py
+        run: python tools\fix_system_data_wave56_newlines_tmp.py >nul
       - name: Extract guarded System Data boundary
         shell: cmd
-        run: python tools\extract_system_data_wave56_tmp.py
+        run: python tools\extract_system_data_wave56_tmp.py >nul
       - name: Compile application, module, and tests
         shell: cmd
         run: |
