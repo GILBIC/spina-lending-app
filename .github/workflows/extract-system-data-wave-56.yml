@@ -6,7 +6,6 @@ on:
     paths:
       - "tools/extract_system_data_wave56_tmp.py"
       - "tools/fix_system_data_wave56_newlines_tmp.py"
-      - "tools/diagnose_system_data_wave56_tmp.py"
       - ".github/workflows/extract-system-data-wave-56.yml"
   workflow_dispatch:
 
@@ -42,11 +41,7 @@ jobs:
           python -m py_compile spina_app\system_data_presentation.py
           python -m py_compile tools\test_system_data_presentation_wave_56.py
           python -m py_compile tools\test_system_data_widget_smoke_wave_56.py
-          python -m py_compile tools\diagnose_system_data_wave56_tmp.py
           python -m compileall -q spina_app
-      - name: Diagnose exact extraction conditions
-        shell: cmd
-        run: python tools\diagnose_system_data_wave56_tmp.py
       - name: Run exact extraction regression
         shell: cmd
         run: python -m tools.test_system_data_presentation_wave_56
