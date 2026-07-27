@@ -18,7 +18,7 @@ concurrency:
 jobs:
   extract:
     if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-55-clean'
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: windows-latest
     timeout-minutes: 60
     steps:
       - name: Check out exact branch head
