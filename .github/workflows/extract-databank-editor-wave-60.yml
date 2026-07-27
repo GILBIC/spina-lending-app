@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - "tools/extract_databank_editor_wave60_tmp.py"
+      - "tools/patch_databank_editor_smoke_wave60_tmp.py"
       - ".github/workflows/extract-databank-editor-wave-60.yml"
   workflow_dispatch:
 
@@ -26,6 +27,9 @@ jobs:
       - name: Extract guarded Data Bank editor boundary
         shell: cmd
         run: python -m tools.extract_databank_editor_wave60_tmp
+      - name: Configure generated smoke-test dependencies
+        shell: cmd
+        run: python -m tools.patch_databank_editor_smoke_wave60_tmp
       - name: Compile application, module, and tests
         shell: cmd
         run: |
