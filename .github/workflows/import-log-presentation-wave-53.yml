@@ -5,9 +5,6 @@ on:
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
       - "spina_app/import_log_presentation.py"
-      - "tools/apply_import_log_presentation_wave_53.py"
-      - "tools/plan_high_volume_wave_53.py"
-      - "tools/inspect_high_volume_wave_53.py"
       - "tools/test_import_log_presentation_wave_53.py"
       - "tools/test_import_log_widget_smoke_wave_53.py"
       - "architecture-map.json"
@@ -16,7 +13,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: import-log-presentation-wave-53-${{ github.event.pull_request.number || github.ref }}
@@ -32,34 +29,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: true
           show-progress: false
-
-      - name: Compile and run one-time Wave 53 extractor
-        if: ${{ hashFiles('tools/apply_import_log_presentation_wave_53.py') != '' }}
-        shell: cmd
-        run: |
-          python -m py_compile tools\apply_import_log_presentation_wave_53.py
-          python tools\apply_import_log_presentation_wave_53.py
-          if exist tools\wave53_diagnostic.txt type tools\wave53_diagnostic.txt
-          if exist tools\wave53_diagnostic.txt exit /b 1
-
-      - name: Commit extracted Wave 53 source
-        if: ${{ hashFiles('tools/apply_import_log_presentation_wave_53.py') != '' }}
-        shell: cmd
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          del tools\apply_import_log_presentation_wave_53.py
-          if exist tools\plan_high_volume_wave_53.py del tools\plan_high_volume_wave_53.py
-          if exist tools\inspect_high_volume_wave_53.py del tools\inspect_high_volume_wave_53.py
-          if exist tools\wave53_diagnostic.txt del tools\wave53_diagnostic.txt
-          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app\import_log_presentation.py tools
-          git commit -m "Extract Import Log presentation Wave 53"
-          python tools\generate_architecture_map.py
-          git add architecture-map.json docs\architecture
-          git commit -m "Refresh architecture map for Wave 53"
-          git push origin HEAD:refs/heads/agent/high-volume-wave-53
 
       - name: Compile application, module, and tests
         shell: cmd
