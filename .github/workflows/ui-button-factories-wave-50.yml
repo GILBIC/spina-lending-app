@@ -10,6 +10,7 @@ on:
       - "spina_app/login_dialog_presentation.py"
       - "tools/test_ui_button_factories_wave_50.py"
       - "tools/test_ui_button_factories_widget_smoke_wave_50.py"
+      - "tools/test_account_permission_presentation_wave_47.py"
       - "architecture-map.json"
       - "docs/architecture/**"
       - ".github/workflows/ui-button-factories-wave-50.yml"
@@ -35,6 +36,7 @@ jobs:
           python -m py_compile spina_app/login_dialog_presentation.py
           python -m py_compile tools/test_ui_button_factories_wave_50.py
           python -m py_compile tools/test_ui_button_factories_widget_smoke_wave_50.py
+          python -m py_compile tools/test_account_permission_presentation_wave_47.py
           python -m compileall -q spina_app
       - name: Run exact UI button-factory regression
         shell: cmd
@@ -47,7 +49,7 @@ jobs:
         run: |
           python tools/test_collector_tab_presentation_wave_44.py
           python tools/test_collector_tab_widget_smoke_wave_44.py
-      - name: Run protected login and shutdown regressions
+      - name: Run protected login, permission, and shutdown regressions
         shell: cmd
         run: |
           python tools/test_login_dialog_presentation_wave_45.py
@@ -55,6 +57,7 @@ jobs:
           python tools/test_account_header_presentation_wave_46.py
           python tools/test_tk_shutdown_wave_46.py
           python tools/test_login_cancel_startup_wave_46.py
+          python tools/test_account_permission_presentation_wave_47.py
       - name: Run protected theme regression
         shell: cmd
         run: python -m tools.test_theme_presentation_wave_35
