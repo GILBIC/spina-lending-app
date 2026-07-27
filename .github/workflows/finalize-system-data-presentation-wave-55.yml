@@ -27,6 +27,12 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
+      - name: Apply guarded hidden-tab restoration repair
+        shell: cmd
+        run: |
+          python -m py_compile tools\repair_system_data_show_wave_55.py
+          python -m tools.repair_system_data_show_wave_55
+
       - name: Compile and run focused System Data tests
         shell: cmd
         run: |
@@ -54,10 +60,12 @@ jobs:
           python -m tools.generate_architecture_map
           python -m tools.test_architecture_map
 
-      - name: Remove finalizer and commit clean Wave 55 branch
+      - name: Remove temporary repair files and commit clean Wave 55 branch
         shell: cmd
         run: |
+          del .github\workflows\diagnose-system-data-wave-55.yml
           del .github\workflows\finalize-system-data-presentation-wave-55.yml
+          del tools\repair_system_data_show_wave_55.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
