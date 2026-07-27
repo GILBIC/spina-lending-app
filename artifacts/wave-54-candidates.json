@@ -6,7 +6,7 @@
     "line_end": 35128,
     "lines": 169,
     "depth": 0,
-    "classification": "protected",
+    "classification": "ui-candidate",
     "references": 1,
     "bindings": [],
     "ui_hits": [
@@ -14,19 +14,10 @@
       "delete",
       "insert"
     ],
-    "protected_hits": [
-      "7x7",
-      "cash_control",
-      "due_date",
-      "interest",
-      "pass",
-      "principal",
-      "renew"
-    ],
-    "filesystem_hits": [],
-    "sql_hits": [
-      "Cash Control refreshed with modern graphs and all active renewal reserve."
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
     "calls": [
       "_log_exc",
       "_spina_cashctl__fmt_money",
@@ -81,7 +72,957 @@
       "tree.get_children",
       "tree.insert"
     ],
+    "legacy_score": 9
+  },
+  {
+    "qualified_name": "_spina_perf_refresh_data_grid",
+    "short_name": "_spina_perf_refresh_data_grid",
+    "line_start": 30318,
+    "line_end": 30522,
+    "lines": 205,
+    "depth": 0,
+    "classification": "ui-candidate",
+    "references": 1,
+    "bindings": [],
+    "ui_hits": [
+      "Frame",
+      "Scrollbar",
+      "Treeview",
+      "bind",
+      "column",
+      "configure",
+      "destroy",
+      "focus",
+      "grid",
+      "heading",
+      "insert",
+      "selection",
+      "winfo_children"
+    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
+    "calls": [
+      "_log_exc",
+      "_log_ignored",
+      "_log_suppressed_once",
+      "_spina_perf_clients_rows",
+      "_spina_perf_month_transactions",
+      "_sync_selection",
+      "calendar.monthrange",
+      "date",
+      "enumerate",
+      "float",
+      "fmt_currency",
+      "from_tv.selection",
+      "grid.grid",
+      "grid.grid_columnconfigure",
+      "grid.grid_rowconfigure",
+      "h.grid",
+      "hasattr",
+      "info.get",
+      "int",
+      "len",
+      "lower",
+      "name.strip",
+      "payment_map.get",
+      "range",
+      "self._configure_tree_stripes",
+      "self._db_menu.add_command",
+      "self._db_menu.add_separator",
+      "self._db_menu.grab_release",
+      "self._db_menu.tk_popup",
+      "self._db_rows_var.set",
+      "self._mode_filter",
+      "self._month_label",
+      "self._remember_cell_click",
+      "self._resize_databank_columns",
+      "self._update_data_toolbar",
+      "self.days_tree.bind",
+      "self.days_tree.column",
+      "self.days_tree.configure",
+      "self.days_tree.grid",
+      "self.days_tree.heading",
+      "self.days_tree.insert",
+      "self.days_tree.yview",
+      "self.inner.bind",
+      "self.inner.grid_columnconfigure",
+      "self.inner.grid_rowconfigure",
+      "self.inner.winfo_children",
+      "self.name_tree.bind",
+      "self.name_tree.column",
+      "self.name_tree.configure",
+      "self.name_tree.grid",
+      "self.name_tree.heading",
+      "self.name_tree.insert",
+      "self.name_tree.yview",
+      "self.search_db_var.get",
+      "self.status_var.set",
+      "str",
+      "strftime",
+      "strip",
+      "tk.Menu",
+      "to_tv.focus",
+      "to_tv.selection",
+      "to_tv.selection_set",
+      "ttk.Frame",
+      "ttk.Scrollbar",
+      "ttk.Treeview",
+      "tuple",
+      "tv.bind",
+      "v.grid",
+      "vals.append",
+      "w.destroy"
+    ],
     "legacy_score": 7
+  },
+  {
+    "qualified_name": "_app_refresh_clients",
+    "short_name": "_app_refresh_clients",
+    "line_start": 24360,
+    "line_end": 24509,
+    "lines": 150,
+    "depth": 0,
+    "classification": "ui-candidate",
+    "references": 1,
+    "bindings": [],
+    "ui_hits": [
+      "StringVar",
+      "delete",
+      "insert"
+    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
+    "calls": [
+      "_app__norm_lt_value",
+      "_app__other_lt",
+      "_log_suppressed_once",
+      "_spina__client_due_meta",
+      "_spina__fmt_client_money",
+      "any",
+      "get",
+      "getattr",
+      "hasattr",
+      "info.get",
+      "len",
+      "lower",
+      "mode.startswith",
+      "r.get",
+      "rows_to_show.append",
+      "self._mode_filter",
+      "self._refresh_area_dropdowns",
+      "self._update_toolbar_states",
+      "self.clients_count_var.set",
+      "self.clients_tree.delete",
+      "self.clients_tree.get_children",
+      "self.clients_tree.insert",
+      "self.db.find_clients_by_person_uid",
+      "self.db.get_all_clients",
+      "self.db.get_client_info",
+      "self.db.get_unpaired_7x7_names",
+      "str",
+      "strip",
+      "tags.append",
+      "tk.StringVar",
+      "tuple"
+    ],
+    "legacy_score": 7
+  },
+  {
+    "qualified_name": "_spina_cashctl_build_tab",
+    "short_name": "_spina_cashctl_build_tab",
+    "line_start": 31863,
+    "line_end": 31987,
+    "lines": 125,
+    "depth": 0,
+    "classification": "ui-candidate",
+    "references": 1,
+    "bindings": [],
+    "ui_hits": [
+      "Button",
+      "Entry",
+      "Frame",
+      "Label",
+      "Scrollbar",
+      "StringVar",
+      "Treeview",
+      "column",
+      "configure",
+      "grid",
+      "heading",
+      "insert",
+      "pack"
+    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
+    "calls": [
+      "_log_exc",
+      "controls.columnconfigure",
+      "controls.grid",
+      "date.today",
+      "frame.columnconfigure",
+      "frame.grid",
+      "frame.rowconfigure",
+      "grid",
+      "hasattr",
+      "headings.get",
+      "hsb.grid",
+      "outer.columnconfigure",
+      "outer.rowconfigure",
+      "pack",
+      "range",
+      "self.cashctl_date_var.set",
+      "self.cashctl_tree.column",
+      "self.cashctl_tree.configure",
+      "self.cashctl_tree.grid",
+      "self.cashctl_tree.heading",
+      "self.nb.add",
+      "self.nb.insert",
+      "self.refresh_cash_control",
+      "strftime",
+      "summary.columnconfigure",
+      "summary.grid",
+      "title.grid",
+      "tk.StringVar",
+      "ttk.Button",
+      "ttk.Entry",
+      "ttk.Frame",
+      "ttk.Label",
+      "ttk.LabelFrame",
+      "ttk.Scrollbar",
+      "ttk.Treeview",
+      "var.trace_add",
+      "vsb.grid",
+      "widths.get"
+    ],
+    "legacy_score": 7
+  },
+  {
+    "qualified_name": "App._force_change_password_dialog",
+    "short_name": "_force_change_password_dialog",
+    "line_start": 7287,
+    "line_end": 7405,
+    "lines": 119,
+    "depth": 0,
+    "classification": "ui-candidate",
+    "references": 1,
+    "bindings": [],
+    "ui_hits": [
+      "Button",
+      "Entry",
+      "Frame",
+      "Label",
+      "StringVar",
+      "Toplevel",
+      "bind",
+      "destroy",
+      "grid",
+      "pack"
+    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
+    "calls": [
+      "_log_ignored",
+      "_log_suppressed_once",
+      "_save",
+      "bool",
+      "btns.grid",
+      "conf_ent.bind",
+      "conf_ent.grid",
+      "conf_var.get",
+      "dlg.destroy",
+      "dlg.geometry",
+      "dlg.grab_release",
+      "dlg.grab_set",
+      "dlg.resizable",
+      "dlg.title",
+      "dlg.transient",
+      "dlg.update_idletasks",
+      "dlg.winfo_height",
+      "dlg.winfo_width",
+      "grid",
+      "len",
+      "max",
+      "msg.grid",
+      "msg_var.set",
+      "new_ent.bind",
+      "new_ent.focus_set",
+      "new_ent.grid",
+      "new_var.get",
+      "outer.pack",
+      "pack",
+      "result.get",
+      "self._default_password_for",
+      "self._set_user_password",
+      "self.root.wait_window",
+      "self.root.winfo_height",
+      "self.root.winfo_rootx",
+      "self.root.winfo_rooty",
+      "self.root.winfo_width",
+      "tk.StringVar",
+      "tk.Toplevel",
+      "ttk.Button",
+      "ttk.Entry",
+      "ttk.Frame",
+      "ttk.Label"
+    ],
+    "legacy_score": 7
+  },
+  {
+    "qualified_name": "_spina_cashctl_refresh",
+    "short_name": "_spina_cashctl_refresh",
+    "line_start": 31990,
+    "line_end": 32102,
+    "lines": 113,
+    "depth": 0,
+    "classification": "ui-candidate",
+    "references": 1,
+    "bindings": [],
+    "ui_hits": [
+      "StringVar",
+      "delete",
+      "insert"
+    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
+    "calls": [
+      "_log_exc",
+      "_spina_cashctl__fmt_money",
+      "_spina_cashctl__fmt_pct",
+      "_spina_cashctl__int_range",
+      "_spina_cashctl__parse_amount",
+      "_spina_cashctl__parse_percent",
+      "_spina_cashctl__valid_date",
+      "_spina_cashctl_get_average_collection",
+      "_spina_cashctl_get_collection_totals",
+      "_spina_cashctl_reserve_rows",
+      "_spina_dash__date_text",
+      "abs",
+      "avg_info.get",
+      "float",
+      "get",
+      "getattr",
+      "globals",
+      "hasattr",
+      "int",
+      "max",
+      "r.get",
+      "round",
+      "self.cashctl_avg_collection_var.set",
+      "self.cashctl_breakdown_var.set",
+      "self.cashctl_buffer_amount_var.set",
+      "self.cashctl_collection_var.set",
+      "self.cashctl_current_available_var.set",
+      "self.cashctl_date_var.get",
+      "self.cashctl_date_var.set",
+      "self.cashctl_decision_var.set",
+      "self.cashctl_forecast_available_var.set",
+      "self.cashctl_forecast_safe_var.set",
+      "self.cashctl_future_cash_var.set",
+      "self.cashctl_net_renewal_var.set",
+      "self.cashctl_renewal_payoff_var.set",
+      "self.cashctl_reserve_var.set",
+      "self.cashctl_safe_now_var.set",
+      "self.status_var.set",
+      "str",
+      "strip",
+      "sum",
+      "tk.StringVar",
+      "totals.get",
+      "tree.delete",
+      "tree.get_children",
+      "tree.insert"
+    ],
+    "legacy_score": 7
+  },
+  {
+    "qualified_name": "App.refresh_audit_tab",
+    "short_name": "refresh_audit_tab",
+    "line_start": 11066,
+    "line_end": 11178,
+    "lines": 113,
+    "depth": 0,
+    "classification": "ui-candidate",
+    "references": 6,
+    "bindings": [],
+    "ui_hits": [
+      "delete",
+      "focus",
+      "insert"
+    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
+    "calls": [
+      "enumerate",
+      "float",
+      "iter",
+      "len",
+      "list",
+      "lower",
+      "next",
+      "r.get",
+      "row.get",
+      "self._audit_money_text",
+      "self._audit_new_rows_map.keys",
+      "self._audit_parse_date_filters",
+      "self._audit_renew_rows_map.keys",
+      "self._audit_set_detail_text",
+      "self._audit_show_selected",
+      "self.audit_name_var.get",
+      "self.audit_new_tree.delete",
+      "self.audit_new_tree.focus",
+      "self.audit_new_tree.get_children",
+      "self.audit_new_tree.insert",
+      "self.audit_new_tree.selection_set",
+      "self.audit_renew_tree.delete",
+      "self.audit_renew_tree.focus",
+      "self.audit_renew_tree.get_children",
+      "self.audit_renew_tree.insert",
+      "self.audit_renew_tree.selection_set",
+      "self.audit_summary_var.set",
+      "self.db.get_audit_new_loan_rows",
+      "self.db.get_audit_renewal_rows",
+      "str",
+      "strip"
+    ],
+    "legacy_score": 4
+  },
+  {
+    "qualified_name": "App.refresh_data_grid",
+    "short_name": "refresh_data_grid",
+    "line_start": 13030,
+    "line_end": 13300,
+    "lines": 271,
+    "depth": 0,
+    "classification": "ui-candidate",
+    "references": 37,
+    "bindings": [
+      {
+        "line": 34720,
+        "rhs": "_spina_v15_refresh_data_grid"
+      },
+      {
+        "line": 34743,
+        "rhs": "_spina_v16_refresh_data_grid"
+      }
+    ],
+    "ui_hits": [
+      "Frame",
+      "Scrollbar",
+      "Treeview",
+      "bind",
+      "column",
+      "configure",
+      "destroy",
+      "focus",
+      "grid",
+      "heading",
+      "insert",
+      "selection",
+      "winfo_children"
+    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
+    "calls": [
+      "_log_ignored",
+      "_log_suppressed_once",
+      "_sync_selection",
+      "c.get",
+      "calendar.monthrange",
+      "date",
+      "enumerate",
+      "float",
+      "fmt_currency",
+      "from_tv.selection",
+      "grid.grid",
+      "grid.grid_columnconfigure",
+      "grid.grid_rowconfigure",
+      "h.grid",
+      "hasattr",
+      "info.get",
+      "int",
+      "isinstance",
+      "len",
+      "range",
+      "self._configure_tree_stripes",
+      "self._db_menu.add_command",
+      "self._db_menu.add_separator",
+      "self._db_menu.grab_release",
+      "self._db_menu.tk_popup",
+      "self._db_rows_var.set",
+      "self._ensure_databank_edit_bindings",
+      "self._mode_filter",
+      "self._month_label",
+      "self._remember_cell_click",
+      "self._resize_databank_columns",
+      "self._update_data_toolbar",
+      "self.days_tree.bind",
+      "self.days_tree.column",
+      "self.days_tree.configure",
+      "self.days_tree.focus",
+      "self.days_tree.grid",
+      "self.days_tree.heading",
+      "self.days_tree.identify_row",
+      "self.days_tree.insert",
+      "self.days_tree.selection_set",
+      "self.days_tree.yview",
+      "self.db.get_all_clients",
+      "self.db.get_client_info",
+      "self.db.get_transaction",
+      "self.inner.bind",
+      "self.inner.grid_columnconfigure",
+      "self.inner.grid_rowconfigure",
+      "self.inner.winfo_children",
+      "self.name_tree.bind",
+      "self.name_tree.column",
+      "self.name_tree.configure",
+      "self.name_tree.focus",
+      "self.name_tree.grid",
+      "self.name_tree.heading",
+      "self.name_tree.identify_row",
+      "self.name_tree.insert",
+      "self.name_tree.selection_set",
+      "self.name_tree.yview",
+      "self.root.bell",
+      "self.search_db_var.get",
+      "self.status_var.set",
+      "str",
+      "strftime",
+      "strip",
+      "tk.Menu",
+      "to_tv.focus",
+      "to_tv.selection",
+      "to_tv.selection_set",
+      "ttk.Frame",
+      "ttk.Scrollbar",
+      "ttk.Treeview",
+      "tuple",
+      "tv.bind",
+      "v.grid",
+      "vals.append",
+      "w.destroy"
+    ],
+    "legacy_score": 2
+  },
+  {
+    "qualified_name": "App.__init__",
+    "short_name": "__init__",
+    "line_start": 11180,
+    "line_end": 11340,
+    "lines": 161,
+    "depth": 0,
+    "classification": "ui-candidate",
+    "references": 10,
+    "bindings": [
+      {
+        "line": 31432,
+        "rhs": "_spina_app_init_with_dashboard"
+      },
+      {
+        "line": 32151,
+        "rhs": "_spina_app_init_with_cash_control"
+      },
+      {
+        "line": 32504,
+        "rhs": "_spina_app_init_with_client_info_logs"
+      },
+      {
+        "line": 32738,
+        "rhs": "_spina_app_init_with_auto_close"
+      },
+      {
+        "line": 34658,
+        "rhs": "_spina_v13_app_init"
+      }
+    ],
+    "ui_hits": [
+      "Frame",
+      "Label",
+      "Notebook",
+      "StringVar",
+      "bind",
+      "configure",
+      "pack"
+    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
+    "calls": [
+      "LoanDB",
+      "_SpinaStartupCancelled",
+      "_alert_user",
+      "_log_exc",
+      "_log_suppressed_once",
+      "date.today",
+      "max",
+      "queue.Queue",
+      "root.configure",
+      "root.geometry",
+      "root.minsize",
+      "root.protocol",
+      "root.title",
+      "root.update_idletasks",
+      "root.winfo_screenheight",
+      "root.winfo_screenwidth",
+      "sbar.pack",
+      "self._build_audit_tab",
+      "self._build_clients_tab",
+      "self._build_collectors_tab",
+      "self._build_data_tab",
+      "self._build_header",
+      "self._build_reports_tab",
+      "self._build_system_data_tab",
+      "self._destroy_root_safely",
+      "self._load_last_user",
+      "self._load_user_role",
+      "self._mode_filter",
+      "self._patch_messagebox_threadsafe",
+      "self._prompt_login",
+      "self._prompt_user_role",
+      "self._rebuild_side_nav",
+      "self._refresh_side_nav_selection",
+      "self._save_last_user",
+      "self._save_user_role",
+      "self._setup_style",
+      "self._start_ui_queue_pump",
+      "self.apply_role_access",
+      "self.content_frame.pack",
+      "self.db.set_default_loan_type",
+      "self.main_shell.pack",
+      "self.nb.add",
+      "self.nb.bind",
+      "self.nb.hide",
+      "self.nb.pack",
+      "self.refresh_audit_tab",
+      "self.refresh_clients",
+      "self.refresh_data_grid",
+      "self.refresh_reports",
+      "self.sidebar_frame.pack",
+      "threading.get_ident",
+      "tk.StringVar",
+      "ttk.Frame",
+      "ttk.Label",
+      "ttk.Notebook"
+    ],
+    "legacy_score": 2
+  },
+  {
+    "qualified_name": "App._build_clients_tab",
+    "short_name": "_build_clients_tab",
+    "line_start": 15420,
+    "line_end": 15575,
+    "lines": 156,
+    "depth": 0,
+    "classification": "ui-candidate",
+    "references": 2,
+    "bindings": [
+      {
+        "line": 30156,
+        "rhs": "_build_clients_tab_with_picture"
+      },
+      {
+        "line": 35865,
+        "rhs": "_spina_v23_build_clients_tab"
+      }
+    ],
+    "ui_hits": [
+      "Button",
+      "Combobox",
+      "Entry",
+      "Frame",
+      "Label",
+      "Scrollbar",
+      "StringVar",
+      "Treeview",
+      "bind",
+      "column",
+      "config",
+      "configure",
+      "grid",
+      "heading",
+      "pack"
+    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
+    "calls": [
+      "_anchors.get",
+      "_hdr.get",
+      "_log_ignored",
+      "_log_suppressed_once",
+      "_w.get",
+      "actions.pack",
+      "area_box.pack",
+      "c.title",
+      "filters.pack",
+      "getattr",
+      "mode_cb.bind",
+      "mode_cb.pack",
+      "pack",
+      "self._configure_tree_stripes",
+      "self._del_client_btn.config",
+      "self._del_client_btn.pack",
+      "self._refresh_area_dropdowns",
+      "self._schedule_refresh_clients",
+      "self._update_toolbar_states",
+      "self.bulk_area_cb.pack",
+      "self.clients_tree.bind",
+      "self.clients_tree.column",
+      "self.clients_tree.configure",
+      "self.clients_tree.grid",
+      "self.clients_tree.heading",
+      "self.clients_tree.tag_configure",
+      "self.search_clients_var.trace_add",
+      "tk.StringVar",
+      "top_wrap.pack",
+      "tree_box.grid_columnconfigure",
+      "tree_box.grid_rowconfigure",
+      "tree_box.pack",
+      "ttk.Button",
+      "ttk.Combobox",
+      "ttk.Entry",
+      "ttk.Frame",
+      "ttk.Label",
+      "ttk.Scrollbar",
+      "ttk.Treeview",
+      "xsb.grid",
+      "ysb.grid"
+    ],
+    "legacy_score": 2
+  },
+  {
+    "qualified_name": "App._prompt_login",
+    "short_name": "_prompt_login",
+    "line_start": 7582,
+    "line_end": 7707,
+    "lines": 126,
+    "depth": 0,
+    "classification": "ui-candidate",
+    "references": 3,
+    "bindings": [
+      {
+        "line": 36425,
+        "rhs": "_spina_v32_prompt_login"
+      }
+    ],
+    "ui_hits": [
+      "Button",
+      "Combobox",
+      "Entry",
+      "Frame",
+      "Label",
+      "StringVar",
+      "Toplevel",
+      "bind",
+      "destroy",
+      "grid",
+      "pack"
+    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
+    "calls": [
+      "_log_exc",
+      "_log_ignored",
+      "_log_suppressed_once",
+      "_ok",
+      "btns.grid",
+      "cb.bind",
+      "cb.grid",
+      "db.get",
+      "dlg.destroy",
+      "dlg.geometry",
+      "dlg.grab_release",
+      "dlg.grab_set",
+      "dlg.resizable",
+      "dlg.title",
+      "dlg.transient",
+      "dlg.update_idletasks",
+      "dlg.winfo_height",
+      "dlg.winfo_width",
+      "ent.bind",
+      "ent.focus_set",
+      "ent.grid",
+      "ent.selection_range",
+      "grid",
+      "hint.grid",
+      "isinstance",
+      "max",
+      "msg.grid",
+      "msg_var.set",
+      "outer.pack",
+      "pack",
+      "pw_var.get",
+      "result.get",
+      "s.lower",
+      "self._force_change_password_dialog",
+      "self._load_users_db",
+      "self._must_change_password",
+      "self._verify_login",
+      "self.root.wait_window",
+      "self.root.winfo_height",
+      "self.root.winfo_rootx",
+      "self.root.winfo_rooty",
+      "self.root.winfo_width",
+      "sorted",
+      "strip",
+      "tk.StringVar",
+      "tk.Toplevel",
+      "ttk.Button",
+      "ttk.Combobox",
+      "ttk.Entry",
+      "ttk.Frame",
+      "ttk.Label",
+      "u.strip",
+      "user_var.get",
+      "users.keys"
+    ],
+    "legacy_score": 2
+  },
+  {
+    "qualified_name": "App.refresh_reports",
+    "short_name": "refresh_reports",
+    "line_start": 13791,
+    "line_end": 13897,
+    "lines": 107,
+    "depth": 0,
+    "classification": "ui-candidate",
+    "references": 30,
+    "bindings": [
+      {
+        "line": 35174,
+        "rhs": "_spina_v22_refresh_reports"
+      }
+    ],
+    "ui_hits": [
+      "StringVar",
+      "delete",
+      "insert"
+    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
+    "calls": [
+      "_display_loan_type_label",
+      "_spina__client_due_meta",
+      "_spina__fmt_client_money",
+      "bool",
+      "enumerate",
+      "get",
+      "getattr",
+      "info.get",
+      "join",
+      "len",
+      "lower",
+      "rows_to_show.append",
+      "s.lower",
+      "self._clear_preview",
+      "self._mode_filter",
+      "self.db.get_all_clients",
+      "self.db.get_client_info",
+      "self.report_summary_var.set",
+      "self.reports_tree.delete",
+      "self.reports_tree.get_children",
+      "self.reports_tree.insert",
+      "str",
+      "strip",
+      "tk.StringVar",
+      "tuple",
+      "types.append"
+    ],
+    "legacy_score": 2
+  },
+  {
+    "qualified_name": "RenewDialog.body",
+    "short_name": "body",
+    "line_start": 25387,
+    "line_end": 25479,
+    "lines": 93,
+    "depth": 0,
+    "classification": "ui-candidate",
+    "references": 7,
+    "bindings": [
+      {
+        "line": 12995,
+        "rhs": "ttk.Frame(frm)"
+      },
+      {
+        "line": 13602,
+        "rhs": "ttk.Frame(frm)"
+      }
+    ],
+    "ui_hits": [
+      "BooleanVar",
+      "Button",
+      "Checkbutton",
+      "Entry",
+      "Frame",
+      "Label",
+      "StringVar",
+      "Text",
+      "bind",
+      "configure",
+      "grid",
+      "pack"
+    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
+    "calls": [
+      "_log_ignored",
+      "_row",
+      "date.today",
+      "float",
+      "frm.columnconfigure",
+      "frm.pack",
+      "grid",
+      "int",
+      "isinstance",
+      "lower",
+      "rate_entry.configure",
+      "rate_entry.state",
+      "rc_frame.columnconfigure",
+      "self._recompute",
+      "self.auto_hint_lbl.grid",
+      "self.client.get",
+      "self.date_var.trace_add",
+      "self.new_principal_var.trace_add",
+      "self.note_txt.grid",
+      "self.rc_entry.bind",
+      "self.rc_entry.grid",
+      "self.stats_lbl.grid",
+      "str",
+      "strftime",
+      "strip",
+      "tk.BooleanVar",
+      "tk.StringVar",
+      "tk.Text",
+      "ttk.Button",
+      "ttk.Checkbutton",
+      "ttk.Entry",
+      "ttk.Frame",
+      "ttk.Label",
+      "widget.grid"
+    ],
+    "legacy_score": 2
   },
   {
     "qualified_name": "generate_client_pdf",
@@ -96,30 +1037,13 @@
     "ui_hits": [
       "Canvas"
     ],
-    "protected_hits": [
-      "7x7",
-      "adv",
-      "balance",
-      "due_date",
+    "protected_calls": [],
+    "financial_hits": [
       "interest",
-      "offset",
-      "pass",
-      "payment",
-      "pdf",
-      "principal",
-      "renew",
-      "report",
-      "restore",
-      "statement",
-      "transaction"
+      "principal"
     ],
-    "filesystem_hits": [
-      "move",
-      "os.path",
-      "path",
-      "remove",
-      "replace",
-      "write"
+    "filesystem_calls": [
+      "replace"
     ],
     "sql_hits": [],
     "calls": [
@@ -260,36 +1184,15 @@
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
+    "protected_calls": [
       "backup",
-      "balance",
       "commit",
       "connect_db",
-      "day_close",
-      "due_date",
       "execute",
-      "executemany",
-      "interest",
-      "offset",
-      "pass",
-      "payment",
-      "principal",
-      "renew",
-      "report",
-      "sqlite",
-      "transaction"
+      "executemany"
     ],
-    "filesystem_hits": [
-      "copy",
-      "move",
-      "open",
-      "os.path",
-      "path",
-      "remove",
-      "rename",
-      "write"
-    ],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
       "ALTER TABLE clients ADD COLUMN archived_at TEXT",
       "ALTER TABLE clients ADD COLUMN client_uid TEXT",
@@ -320,18 +1223,6 @@
       "ALTER TABLE renewals ADD COLUMN released_cash REAL DEFAULT 0",
       "ALTER TABLE transactions ADD COLUMN client_uid TEXT",
       "ALTER TABLE transactions ADD COLUMN loan_type TEXT DEFAULT 'Regular'",
-      "CREATE INDEX IF NOT EXISTS idx_client_history_uid ON client_history(client_uid, changed_at)",
-      "CREATE INDEX IF NOT EXISTS idx_clients_is_archived ON clients(is_archived)",
-      "CREATE INDEX IF NOT EXISTS idx_clients_loan_type ON clients(loan_type)",
-      "CREATE INDEX IF NOT EXISTS idx_clients_person_uid ON clients(person_uid)",
-      "CREATE INDEX IF NOT EXISTS idx_day_close_collector_date_type ON databank_day_collector_close(close_date, loan_type, sort",
-      "CREATE INDEX IF NOT EXISTS idx_day_close_date_type ON databank_day_close(close_date, loan_type)",
-      "CREATE INDEX IF NOT EXISTS idx_day_close_hist_date_type ON databank_day_close_history(close_date, loan_type, event_at)",
-      "CREATE INDEX IF NOT EXISTS idx_renewals_uid_date ON renewals(client_uid, loan_type, renew_date)",
-      "CREATE INDEX IF NOT EXISTS idx_tx_client_uid_type_date ON transactions(client_uid, loan_type, date)",
-      "CREATE INDEX IF NOT EXISTS idx_tx_history_person ON transaction_history(person_uid, changed_at)",
-      "CREATE INDEX IF NOT EXISTS idx_tx_history_uid ON transaction_history(client_uid, changed_at)",
-      "CREATE INDEX IF NOT EXISTS idx_tx_name_type_date ON transactions(name, loan_type, date)",
       "CREATE TABLE IF NOT EXISTS areas (\n                    name TEXT PRIMARY KEY,\n                    created_at TEXT\n      ",
       "CREATE TABLE IF NOT EXISTS client_history (\n                        id INTEGER PRIMARY KEY AUTOINCREMENT,\n              ",
       "CREATE TABLE IF NOT EXISTS client_history (\n                    id INTEGER PRIMARY KEY AUTOINCREMENT,\n                  ",
@@ -343,8 +1234,6 @@
       "CREATE TABLE IF NOT EXISTS transaction_history (\n                        id INTEGER PRIMARY KEY AUTOINCREMENT,\n         ",
       "CREATE TABLE IF NOT EXISTS transactions (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                client_u",
       "CREATE TABLE clients__tmp (\n                        id INTEGER PRIMARY KEY AUTOINCREMENT,\n                        client",
-      "CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_name_type ON clients(name, loan_type)",
-      "CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_uid ON clients(client_uid)",
       "DROP TABLE IF EXISTS clients__tmp",
       "DROP TABLE clients",
       "INSERT INTO client_history\n                               (client_uid, name_before, name_after, loan_type_before, loan_t",
@@ -429,32 +1318,15 @@
       "selection",
       "winfo_children"
     ],
-    "protected_hits": [
-      "backup",
+    "protected_calls": [
       "commit",
-      "execute",
-      "pass",
-      "payment",
-      "report",
-      "transaction"
+      "execute"
     ],
-    "filesystem_hits": [
-      "move",
-      "remove",
-      "write"
-    ],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
-      "<Delete>",
-      "Are you sure you want to delete",
-      "Are you sure you want to delete client '",
-      "Click the specific day cell, then press Delete or .",
-      "Confirm Delete",
       "DELETE FROM clients WHERE name = ? AND loan_type = ?",
       "DELETE FROM transactions WHERE name = ? AND loan_type = ?",
-      "Delete",
-      "Delete Failed",
-      "Delete the selected client(s) and all their data.\n                Works with either LoanDB.delete_client(...) or direct ",
-      "Minimal integration after removing undo/redo/backups.\n        - Ensures a DB is attached\n        - Wraps Excel import wi",
       "Select a client (left) and click a day cell to clear.",
       "Select a client first."
     ],
@@ -536,27 +1408,15 @@
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
-      "adv",
-      "advance",
-      "pass",
-      "payment",
-      "pdf",
-      "transaction"
-    ],
-    "filesystem_hits": [
-      "copy",
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
       "makedirs",
       "open",
-      "os.path",
-      "path",
-      "rename",
       "replace",
       "write"
     ],
     "sql_hits": [
-      "Import One-Day Encoder exports (.jsonl or .csv) into the DB.\n\n        - Dedupe by record_id (preferred) or a content has",
       "Unsupported file type. Please select .jsonl or .csv."
     ],
     "calls": [
@@ -642,20 +1502,13 @@
     "line_end": 14830,
     "lines": 397,
     "depth": 0,
-    "classification": "protected",
+    "classification": "filesystem-review",
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "pass",
-      "payment",
-      "report",
-      "transaction"
-    ],
-    "filesystem_hits": [
-      "open",
-      "os.path",
-      "path",
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
       "replace"
     ],
     "sql_hits": [],
@@ -731,22 +1584,14 @@
     "references": 0,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
-      "due_date",
-      "execute",
-      "interest",
-      "offset",
-      "pass",
-      "payment",
-      "principal",
-      "report"
+    "protected_calls": [
+      "execute"
     ],
-    "filesystem_hits": [
+    "financial_hits": [
+      "principal"
+    ],
+    "filesystem_calls": [
       "askopenfilename",
-      "filedialog",
-      "open",
-      "path",
       "replace"
     ],
     "sql_hits": [
@@ -827,20 +1672,10 @@
       "insert",
       "pack"
     ],
-    "protected_hits": [
-      "close_day",
-      "pass",
-      "pdf",
-      "report",
-      "statement"
-    ],
-    "filesystem_hits": [
-      "copy",
-      "filedialog",
-      "open",
-      "os.path",
-      "path",
-      "write"
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
+      "askdirectory"
     ],
     "sql_hits": [
       "Select Reports Folder"
@@ -936,21 +1771,12 @@
     "ui_hits": [
       "Canvas"
     ],
-    "protected_hits": [
-      "7x7",
-      "day_close",
-      "pass",
-      "payment",
-      "pdf",
-      "report",
-      "restore"
+    "protected_calls": [],
+    "financial_hits": [
+      "variance"
     ],
-    "filesystem_hits": [
-      "copy",
+    "filesystem_calls": [
       "makedirs",
-      "open",
-      "os.path",
-      "path",
       "replace"
     ],
     "sql_hits": [],
@@ -1039,20 +1865,13 @@
     "ui_hits": [
       "selection"
     ],
-    "protected_hits": [
-      "offset",
-      "pass",
-      "payment",
-      "pdf",
-      "renew",
-      "report",
-      "statement"
+    "protected_calls": [
+      "generate_client_pdf"
     ],
-    "filesystem_hits": [
+    "financial_hits": [],
+    "filesystem_calls": [
       "makedirs",
       "open",
-      "os.path",
-      "path",
       "replace",
       "write"
     ],
@@ -1120,34 +1939,21 @@
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
-      "backup",
-      "balance",
+    "protected_calls": [
       "commit",
-      "day_close",
       "execute",
-      "pass",
-      "payment",
-      "rollback",
-      "transaction"
+      "rollback"
     ],
-    "filesystem_hits": [
+    "financial_hits": [],
+    "filesystem_calls": [
       "makedirs",
-      "move",
       "open",
-      "os.path",
-      "path",
-      "remove",
-      "replace",
-      "write"
+      "replace"
     ],
     "sql_hits": [
       "DELETE FROM databank_day_close WHERE close_date=?",
       "DELETE FROM databank_day_collector_close WHERE close_date=?",
       "DELETE FROM transactions WHERE date(date)=date(?)",
-      "Delete ALL Data Bank transaction rows for one calendar date.\n\n        Safety behavior:\n          - Validates YYYY-MM-DD.",
-      "Delete Day",
       "SELECT *\n              FROM transactions\n             WHERE date(date) = date(?)\n             ORDER BY IFNULL(NULLIF(TRI",
       "SELECT * FROM databank_day_close WHERE close_date=? ORDER BY id",
       "SELECT * FROM databank_day_collector_close WHERE close_date=? ORDER BY sort_order, id"
@@ -1211,28 +2017,18 @@
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
+    "protected_calls": [
       "commit",
-      "due_date",
       "execute",
-      "interest",
-      "offset",
-      "pass",
-      "payment",
-      "postgres",
-      "principal",
-      "reloan",
-      "renew",
       "rollback"
     ],
-    "filesystem_hits": [
+    "financial_hits": [],
+    "filesystem_calls": [
       "replace"
     ],
     "sql_hits": [
       "ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS payment_start_date TEXT",
-      "INSERT INTO public.renewals\n                        (client_uid, loan_type, renew_date, released_cash, principal_after, ",
-      "UPDATE public.clients\n                           SET principal=%s,\n                               interest_rate=%s,\n    "
+      "INSERT INTO public.renewals\n                        (client_uid, loan_type, renew_date, released_cash, principal_after, "
     ],
     "calls": [
       "RuntimeError",
@@ -1269,117 +2065,6 @@
     "legacy_score": 5
   },
   {
-    "qualified_name": "_spina_perf_refresh_data_grid",
-    "short_name": "_spina_perf_refresh_data_grid",
-    "line_start": 30318,
-    "line_end": 30522,
-    "lines": 205,
-    "depth": 0,
-    "classification": "protected",
-    "references": 1,
-    "bindings": [],
-    "ui_hits": [
-      "Frame",
-      "Scrollbar",
-      "Treeview",
-      "bind",
-      "column",
-      "configure",
-      "destroy",
-      "focus",
-      "grid",
-      "heading",
-      "insert",
-      "selection",
-      "winfo_children"
-    ],
-    "protected_hits": [
-      "7x7",
-      "pass",
-      "payment",
-      "transaction"
-    ],
-    "filesystem_hits": [],
-    "sql_hits": [
-      "<Delete>",
-      "Delete this payment cell",
-      "databank row insert skipped"
-    ],
-    "calls": [
-      "_log_exc",
-      "_log_ignored",
-      "_log_suppressed_once",
-      "_spina_perf_clients_rows",
-      "_spina_perf_month_transactions",
-      "_sync_selection",
-      "calendar.monthrange",
-      "date",
-      "enumerate",
-      "float",
-      "fmt_currency",
-      "from_tv.selection",
-      "grid.grid",
-      "grid.grid_columnconfigure",
-      "grid.grid_rowconfigure",
-      "h.grid",
-      "hasattr",
-      "info.get",
-      "int",
-      "len",
-      "lower",
-      "name.strip",
-      "payment_map.get",
-      "range",
-      "self._configure_tree_stripes",
-      "self._db_menu.add_command",
-      "self._db_menu.add_separator",
-      "self._db_menu.grab_release",
-      "self._db_menu.tk_popup",
-      "self._db_rows_var.set",
-      "self._mode_filter",
-      "self._month_label",
-      "self._remember_cell_click",
-      "self._resize_databank_columns",
-      "self._update_data_toolbar",
-      "self.days_tree.bind",
-      "self.days_tree.column",
-      "self.days_tree.configure",
-      "self.days_tree.grid",
-      "self.days_tree.heading",
-      "self.days_tree.insert",
-      "self.days_tree.yview",
-      "self.inner.bind",
-      "self.inner.grid_columnconfigure",
-      "self.inner.grid_rowconfigure",
-      "self.inner.winfo_children",
-      "self.name_tree.bind",
-      "self.name_tree.column",
-      "self.name_tree.configure",
-      "self.name_tree.grid",
-      "self.name_tree.heading",
-      "self.name_tree.insert",
-      "self.name_tree.yview",
-      "self.search_db_var.get",
-      "self.status_var.set",
-      "str",
-      "strftime",
-      "strip",
-      "tk.Menu",
-      "to_tv.focus",
-      "to_tv.selection",
-      "to_tv.selection_set",
-      "ttk.Frame",
-      "ttk.Scrollbar",
-      "ttk.Treeview",
-      "tuple",
-      "tv.bind",
-      "v.grid",
-      "vals.append",
-      "w.destroy"
-    ],
-    "legacy_score": 5
-  },
-  {
     "qualified_name": "print_full_daily_ledger._draw_closed_route_payment_summary_page",
     "short_name": "_draw_closed_route_payment_summary_page",
     "line_start": 29090,
@@ -1390,16 +2075,9 @@
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
-      "pass",
-      "payment",
-      "pdf",
-      "restore"
-    ],
-    "filesystem_hits": [
-      "copy"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [],
     "calls": [
       "_as_float",
@@ -1451,20 +2129,12 @@
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
-      "adv",
-      "balance",
+    "protected_calls": [],
+    "financial_hits": [
       "interest",
-      "offset",
-      "pass",
-      "payment",
-      "pdf",
-      "principal",
-      "report",
-      "transaction"
+      "principal"
     ],
-    "filesystem_hits": [
+    "filesystem_calls": [
       "replace"
     ],
     "sql_hits": [],
@@ -1528,22 +2198,11 @@
       "pack",
       "selection"
     ],
-    "protected_hits": [
-      "backup",
-      "pass",
-      "postgres",
-      "restore",
-      "role"
-    ],
-    "filesystem_hits": [
-      "open",
-      "os.path",
-      "path",
-      "write"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
-      "Select a backup file first.",
-      "This will DROP and recreate only this test database:\n\nspina_restore_test\n\nIt will NOT overwrite your live spina_db. Cont"
+      "Select a backup file first."
     ],
     "calls": [
       "_dtm.datetime.fromtimestamp",
@@ -1599,7 +2258,7 @@
     "line_end": 22307,
     "lines": 179,
     "depth": 0,
-    "classification": "protected",
+    "classification": "filesystem-review",
     "references": 1,
     "bindings": [],
     "ui_hits": [
@@ -1616,16 +2275,10 @@
       "grid",
       "pack"
     ],
-    "protected_hits": [
-      "pass",
-      "payment"
-    ],
-    "filesystem_hits": [
-      "asksaveasfilename",
-      "filedialog",
-      "open",
-      "path",
-      "write"
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
+      "asksaveasfilename"
     ],
     "sql_hits": [],
     "calls": [
@@ -1706,28 +2359,21 @@
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "day_close",
+    "protected_calls": [
       "execute",
-      "full_daily_ledger",
-      "pass",
-      "payment",
-      "pdf"
+      "print_full_daily_ledger"
     ],
-    "filesystem_hits": [
-      "copy",
+    "financial_hits": [],
+    "filesystem_calls": [
       "makedirs",
       "move",
       "open",
-      "os.path",
-      "path",
       "remove",
       "replace",
       "write"
     ],
     "sql_hits": [
-      "SELECT DISTINCT TRIM(area) AS a FROM clients WHERE IFNULL(TRIM(area),'')<>'' AND COALESCE(is_archived,0)=0 ORDER BY a CO",
-      "Save final closed Collector Route copy using the SAME Collector Route PDF layout.\n\n    Difference from normal print: the"
+      "SELECT DISTINCT TRIM(area) AS a FROM clients WHERE IFNULL(TRIM(area),'')<>'' AND COALESCE(is_archived,0)=0 ORDER BY a CO"
     ],
     "calls": [
       "RuntimeError",
@@ -1789,17 +2435,12 @@
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "execute",
-      "pass",
-      "payment",
-      "transaction"
+    "protected_calls": [
+      "execute"
     ],
-    "filesystem_hits": [
-      "copy"
-    ],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
-      "Build route rows with amount paid on the close date.",
       "SELECT",
       "SELECT client_uid, name, IFNULL(loan_type,'Regular') AS loan_type,\n                   COALESCE(payment,0) AS payment, de"
     ],
@@ -1849,20 +2490,14 @@
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "execute",
-      "pass",
-      "payment",
-      "transaction"
+    "protected_calls": [
+      "execute"
     ],
-    "filesystem_hits": [
-      "open",
-      "path",
-      "replace",
-      "write"
+    "financial_hits": [],
+    "filesystem_calls": [
+      "replace"
     ],
     "sql_hits": [
-      "Auto-detect payments and reasons from Excel.\n\n        Rules:\n          \" First row = headers. Must include 'Client Name'",
       "SELECT name FROM clients"
     ],
     "calls": [
@@ -1912,15 +2547,13 @@
     "line_end": 32911,
     "lines": 164,
     "depth": 0,
-    "classification": "protected",
+    "classification": "support-review",
     "references": 0,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "pass",
-      "payment"
-    ],
-    "filesystem_hits": [],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [],
     "calls": [
       "_cal.monthrange",
@@ -1957,68 +2590,6 @@
     "legacy_score": 5
   },
   {
-    "qualified_name": "_app_refresh_clients",
-    "short_name": "_app_refresh_clients",
-    "line_start": 24360,
-    "line_end": 24509,
-    "lines": 150,
-    "depth": 0,
-    "classification": "protected",
-    "references": 1,
-    "bindings": [],
-    "ui_hits": [
-      "StringVar",
-      "delete",
-      "insert"
-    ],
-    "protected_hits": [
-      "7x7",
-      "due_date",
-      "interest",
-      "pass",
-      "payment",
-      "principal"
-    ],
-    "filesystem_hits": [
-      "unlink"
-    ],
-    "sql_hits": [],
-    "calls": [
-      "_app__norm_lt_value",
-      "_app__other_lt",
-      "_log_suppressed_once",
-      "_spina__client_due_meta",
-      "_spina__fmt_client_money",
-      "any",
-      "get",
-      "getattr",
-      "hasattr",
-      "info.get",
-      "len",
-      "lower",
-      "mode.startswith",
-      "r.get",
-      "rows_to_show.append",
-      "self._mode_filter",
-      "self._refresh_area_dropdowns",
-      "self._update_toolbar_states",
-      "self.clients_count_var.set",
-      "self.clients_tree.delete",
-      "self.clients_tree.get_children",
-      "self.clients_tree.insert",
-      "self.db.find_clients_by_person_uid",
-      "self.db.get_all_clients",
-      "self.db.get_client_info",
-      "self.db.get_unpaired_7x7_names",
-      "str",
-      "strip",
-      "tags.append",
-      "tk.StringVar",
-      "tuple"
-    ],
-    "legacy_score": 5
-  },
-  {
     "qualified_name": "import_from_excel_with_reasons",
     "short_name": "import_from_excel_with_reasons",
     "line_start": 22313,
@@ -2029,26 +2600,17 @@
     "references": 0,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "adv",
-      "advance",
+    "protected_calls": [
       "commit",
-      "execute",
-      "pass",
-      "payment",
-      "transaction"
+      "execute"
     ],
-    "filesystem_hits": [
-      "askopenfilename",
-      "filedialog",
-      "open",
-      "path",
-      "write"
+    "financial_hits": [],
+    "filesystem_calls": [
+      "askopenfilename"
     ],
     "sql_hits": [
       "INSERT INTO payments (name, date, amount, reason) VALUES (?,?,?,?)",
       "INSERT INTO transactions (name, date, payment, description) VALUES (?,?,?,?)",
-      "No DB connection to insert payment.",
       "Select Excel to Import"
     ],
     "calls": [
@@ -2089,18 +2651,13 @@
     "line_end": 22957,
     "lines": 145,
     "depth": 0,
-    "classification": "protected",
+    "classification": "support-review",
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "adv",
-      "advance",
-      "pass",
-      "payment",
-      "report"
-    ],
-    "filesystem_hits": [],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [],
     "calls": [
       "_adv_ranges_from_desc",
@@ -2141,20 +2698,15 @@
     "line_end": 23109,
     "lines": 142,
     "depth": 0,
-    "classification": "protected",
+    "classification": "filesystem-review",
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "pass",
-      "pdf",
-      "report"
-    ],
-    "filesystem_hits": [
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
       "makedirs",
       "open",
-      "os.path",
-      "path",
       "write"
     ],
     "sql_hits": [],
@@ -2205,36 +2757,17 @@
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
-      "backup",
-      "day_close",
-      "execute",
-      "pass",
-      "password",
-      "payment",
-      "reopen",
-      "report",
-      "transaction"
+    "protected_calls": [
+      "delete_transactions_for_day",
+      "execute"
     ],
-    "filesystem_hits": [
-      "move",
-      "open",
-      "os.path",
-      "path",
-      "remove"
+    "financial_hits": [],
+    "filesystem_calls": [
+      "open"
     ],
     "sql_hits": [
-      "Confirm Delete a Day",
-      "DELETE DATA BANK DAY:",
-      "Delete a Day",
-      "Delete all Data Bank entries for one selected date, with backup + password confirmation.",
       "Enter the date to delete from Data Bank (YYYY-MM-DD):\n\nThis deletes BOTH Regular and 7x7 payments/missed-payment rows fo",
-      "Enter your current account password to delete this day.",
-      "Failed to delete day:",
-      "SELECT COUNT(*), COALESCE(SUM(COALESCE(payment,0)),0) FROM transactions WHERE date(date)=date(?)",
-      "This will:\n  \u2022 create a backup file first\n  \u2022 delete all Regular and 7x7 entries for this date\n  \u2022 clear/reopen the Dail",
-      "Transaction rows to delete:"
+      "SELECT COUNT(*), COALESCE(SUM(COALESCE(payment,0)),0) FROM transactions WHERE date(date)=date(?)"
     ],
     "calls": [
       "_date",
@@ -2302,16 +2835,9 @@
       "pack",
       "selection"
     ],
-    "protected_hits": [
-      "7x7",
-      "pass",
-      "report",
-      "restore"
-    ],
-    "filesystem_hits": [
-      "open",
-      "write"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
       "Select an archived client first.",
       "archived client(s). Select one and click Restore."
@@ -2397,18 +2923,10 @@
       "pack",
       "selection"
     ],
-    "protected_hits": [
-      "7x7",
-      "pass",
-      "report",
-      "restore"
-    ],
-    "filesystem_hits": [
-      "open",
-      "write"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
-      "Archived clients restore dialog with UID fallback and refresh after restore.",
       "Select an archived client first.",
       "archived client(s). Select one and click Restore."
     ],
@@ -2476,11 +2994,9 @@
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "pass",
-      "payment"
-    ],
-    "filesystem_hits": [
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
       "replace"
     ],
     "sql_hits": [],
@@ -2517,89 +3033,6 @@
     "legacy_score": 5
   },
   {
-    "qualified_name": "_spina_cashctl_build_tab",
-    "short_name": "_spina_cashctl_build_tab",
-    "line_start": 31863,
-    "line_end": 31987,
-    "lines": 125,
-    "depth": 0,
-    "classification": "protected",
-    "references": 1,
-    "bindings": [],
-    "ui_hits": [
-      "Button",
-      "Entry",
-      "Frame",
-      "Label",
-      "Scrollbar",
-      "StringVar",
-      "Treeview",
-      "column",
-      "configure",
-      "grid",
-      "heading",
-      "insert",
-      "pack"
-    ],
-    "protected_hits": [
-      "7x7",
-      "cash_control",
-      "due_date",
-      "interest",
-      "pass",
-      "principal",
-      "renew"
-    ],
-    "filesystem_hits": [
-      "write"
-    ],
-    "sql_hits": [
-      "Result: Cash Control now reserves for all active clients, with urgent clients sorted first.",
-      "Safe Amount Now uses real cash only: Cash On Hand + Today Collection - Net Renewal Cash Need - Emergency Buffer. Forecas"
-    ],
-    "calls": [
-      "_log_exc",
-      "controls.columnconfigure",
-      "controls.grid",
-      "date.today",
-      "frame.columnconfigure",
-      "frame.grid",
-      "frame.rowconfigure",
-      "grid",
-      "hasattr",
-      "headings.get",
-      "hsb.grid",
-      "outer.columnconfigure",
-      "outer.rowconfigure",
-      "pack",
-      "range",
-      "self.cashctl_date_var.set",
-      "self.cashctl_tree.column",
-      "self.cashctl_tree.configure",
-      "self.cashctl_tree.grid",
-      "self.cashctl_tree.heading",
-      "self.nb.add",
-      "self.nb.insert",
-      "self.refresh_cash_control",
-      "strftime",
-      "summary.columnconfigure",
-      "summary.grid",
-      "title.grid",
-      "tk.StringVar",
-      "ttk.Button",
-      "ttk.Entry",
-      "ttk.Frame",
-      "ttk.Label",
-      "ttk.LabelFrame",
-      "ttk.Scrollbar",
-      "ttk.Treeview",
-      "var.trace_add",
-      "vsb.grid",
-      "widths.get"
-    ],
-    "legacy_score": 5
-  },
-  {
     "qualified_name": "_maybe_suggest_link_clients.link_selected_client",
     "short_name": "link_selected_client",
     "line_start": 20221,
@@ -2621,15 +3054,9 @@
       "pack",
       "selection"
     ],
-    "protected_hits": [
-      "7x7",
-      "pass",
-      "reopen"
-    ],
-    "filesystem_hits": [
-      "open",
-      "unlink"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
       "Please select a client first.",
       "Select"
@@ -2703,16 +3130,10 @@
       "grid",
       "pack"
     ],
-    "protected_hits": [
-      "pass",
-      "payment"
-    ],
-    "filesystem_hits": [
-      "asksaveasfilename",
-      "filedialog",
-      "open",
-      "path",
-      "write"
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
+      "asksaveasfilename"
     ],
     "sql_hits": [],
     "calls": [
@@ -2803,18 +3224,12 @@
       "insert",
       "pack"
     ],
-    "protected_hits": [
-      "pass"
-    ],
-    "filesystem_hits": [
-      "unlink",
-      "write"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
-      ") with '",
       "Select a client first.",
-      "Select a record to link.",
-      "record to link with:"
+      "Select a record to link."
     ],
     "calls": [
       "_app__get_selected_client_name",
@@ -2870,81 +3285,6 @@
     "legacy_score": 5
   },
   {
-    "qualified_name": "App._force_change_password_dialog",
-    "short_name": "_force_change_password_dialog",
-    "line_start": 7287,
-    "line_end": 7405,
-    "lines": 119,
-    "depth": 0,
-    "classification": "protected",
-    "references": 1,
-    "bindings": [],
-    "ui_hits": [
-      "Button",
-      "Entry",
-      "Frame",
-      "Label",
-      "StringVar",
-      "Toplevel",
-      "bind",
-      "destroy",
-      "grid",
-      "pack"
-    ],
-    "protected_hits": [
-      "pass",
-      "password"
-    ],
-    "filesystem_hits": [],
-    "sql_hits": [],
-    "calls": [
-      "_log_ignored",
-      "_log_suppressed_once",
-      "_save",
-      "bool",
-      "btns.grid",
-      "conf_ent.bind",
-      "conf_ent.grid",
-      "conf_var.get",
-      "dlg.destroy",
-      "dlg.geometry",
-      "dlg.grab_release",
-      "dlg.grab_set",
-      "dlg.resizable",
-      "dlg.title",
-      "dlg.transient",
-      "dlg.update_idletasks",
-      "dlg.winfo_height",
-      "dlg.winfo_width",
-      "grid",
-      "len",
-      "max",
-      "msg.grid",
-      "msg_var.set",
-      "new_ent.bind",
-      "new_ent.focus_set",
-      "new_ent.grid",
-      "new_var.get",
-      "outer.pack",
-      "pack",
-      "result.get",
-      "self._default_password_for",
-      "self._set_user_password",
-      "self.root.wait_window",
-      "self.root.winfo_height",
-      "self.root.winfo_rootx",
-      "self.root.winfo_rooty",
-      "self.root.winfo_width",
-      "tk.StringVar",
-      "tk.Toplevel",
-      "ttk.Button",
-      "ttk.Entry",
-      "ttk.Frame",
-      "ttk.Label"
-    ],
-    "legacy_score": 5
-  },
-  {
     "qualified_name": "_app_open_archived_clients_dialog",
     "short_name": "_app_open_archived_clients_dialog",
     "line_start": 25635,
@@ -2971,16 +3311,9 @@
       "pack",
       "selection"
     ],
-    "protected_hits": [
-      "7x7",
-      "pass",
-      "report",
-      "restore"
-    ],
-    "filesystem_hits": [
-      "open",
-      "write"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
       "Select an archived client first.",
       "archived client(s). Select one and click Restore."
@@ -3045,22 +3378,12 @@
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
-      "interest",
-      "offset",
-      "pass",
-      "principal",
-      "report"
-    ],
-    "filesystem_hits": [
-      "askopenfilename",
-      "filedialog",
-      "open",
-      "path"
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
+      "askopenfilename"
     ],
     "sql_hits": [
-      "Missing dependency: openpyxl. Install with: pip install openpyxl",
       "Select Clients Excel"
     ],
     "calls": [
@@ -3098,105 +3421,22 @@
     "legacy_score": 5
   },
   {
-    "qualified_name": "_spina_cashctl_refresh",
-    "short_name": "_spina_cashctl_refresh",
-    "line_start": 31990,
-    "line_end": 32102,
-    "lines": 113,
-    "depth": 0,
-    "classification": "protected",
-    "references": 1,
-    "bindings": [],
-    "ui_hits": [
-      "StringVar",
-      "delete",
-      "insert"
-    ],
-    "protected_hits": [
-      "7x7",
-      "cash_control",
-      "due_date",
-      "interest",
-      "pass",
-      "principal",
-      "renew"
-    ],
-    "filesystem_hits": [],
-    "sql_hits": [
-      "Forecasted Available Cash (with average collection): %s"
-    ],
-    "calls": [
-      "_log_exc",
-      "_spina_cashctl__fmt_money",
-      "_spina_cashctl__fmt_pct",
-      "_spina_cashctl__int_range",
-      "_spina_cashctl__parse_amount",
-      "_spina_cashctl__parse_percent",
-      "_spina_cashctl__valid_date",
-      "_spina_cashctl_get_average_collection",
-      "_spina_cashctl_get_collection_totals",
-      "_spina_cashctl_reserve_rows",
-      "_spina_dash__date_text",
-      "abs",
-      "avg_info.get",
-      "float",
-      "get",
-      "getattr",
-      "globals",
-      "hasattr",
-      "int",
-      "max",
-      "r.get",
-      "round",
-      "self.cashctl_avg_collection_var.set",
-      "self.cashctl_breakdown_var.set",
-      "self.cashctl_buffer_amount_var.set",
-      "self.cashctl_collection_var.set",
-      "self.cashctl_current_available_var.set",
-      "self.cashctl_date_var.get",
-      "self.cashctl_date_var.set",
-      "self.cashctl_decision_var.set",
-      "self.cashctl_forecast_available_var.set",
-      "self.cashctl_forecast_safe_var.set",
-      "self.cashctl_future_cash_var.set",
-      "self.cashctl_net_renewal_var.set",
-      "self.cashctl_renewal_payoff_var.set",
-      "self.cashctl_reserve_var.set",
-      "self.cashctl_safe_now_var.set",
-      "self.status_var.set",
-      "str",
-      "strip",
-      "sum",
-      "tk.StringVar",
-      "totals.get",
-      "tree.delete",
-      "tree.get_children",
-      "tree.insert"
-    ],
-    "legacy_score": 5
-  },
-  {
     "qualified_name": "_collectors_save_inline_edit",
     "short_name": "_collectors_save_inline_edit",
     "line_start": 16557,
     "line_end": 16666,
     "lines": 110,
     "depth": 0,
-    "classification": "protected",
+    "classification": "filesystem-review",
     "references": 1,
     "bindings": [],
     "ui_hits": [
       "focus"
     ],
-    "protected_hits": [
-      "pass",
-      "restore"
-    ],
-    "filesystem_hits": [
-      "open",
-      "path",
-      "rename",
-      "write"
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
+      "open"
     ],
     "sql_hits": [],
     "calls": [
@@ -3242,21 +3482,15 @@
     "references": 1,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
-      "due_date",
-      "execute",
-      "interest",
-      "pass",
-      "principal",
-      "report"
+    "protected_calls": [
+      "execute"
     ],
-    "filesystem_hits": [
+    "financial_hits": [
+      "principal"
+    ],
+    "filesystem_calls": [
       "makedirs",
-      "open",
-      "os.path",
-      "path",
-      "write"
+      "open"
     ],
     "sql_hits": [
       "SELECT id, client_uid, person_uid, name, loan_type, area,\n                      principal, interest_rate, interest_amoun"
@@ -3301,18 +3535,15 @@
     "line_end": 29657,
     "lines": 101,
     "depth": 0,
-    "classification": "protected",
+    "classification": "filesystem-review",
     "references": 1,
     "bindings": [],
     "ui_hits": [
       "focus"
     ],
-    "protected_hits": [
-      "pass"
-    ],
-    "filesystem_hits": [
-      "move",
-      "open",
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
       "remove"
     ],
     "sql_hits": [],
@@ -3353,16 +3584,11 @@
       "focus",
       "selection"
     ],
-    "protected_hits": [
-      "pass",
-      "permission"
-    ],
-    "filesystem_hits": [
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
       "makedirs",
-      "open",
-      "path",
-      "rename",
-      "write"
+      "open"
     ],
     "sql_hits": [
       "Please select a collector to edit.",
@@ -3407,17 +3633,15 @@
     "line_end": 16442,
     "lines": 92,
     "depth": 0,
-    "classification": "protected",
+    "classification": "filesystem-review",
     "references": 1,
     "bindings": [],
     "ui_hits": [
       "focus"
     ],
-    "protected_hits": [
-      "pass"
-    ],
-    "filesystem_hits": [
-      "move",
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
       "remove"
     ],
     "sql_hits": [],
@@ -3472,25 +3696,16 @@
       "grid",
       "pack"
     ],
-    "protected_hits": [
-      "7x7",
-      "balance",
+    "protected_calls": [],
+    "financial_hits": [
       "interest",
-      "offset",
-      "pass",
-      "payment",
-      "principal",
-      "renew"
+      "principal"
     ],
-    "filesystem_hits": [
+    "filesystem_calls": [
       "askopenfilename",
       "copy",
-      "filedialog",
       "open",
-      "os.path",
-      "path",
-      "replace",
-      "write"
+      "replace"
     ],
     "sql_hits": [
       "Select Client Picture",
@@ -3681,22 +3896,13 @@
       "heading",
       "pack"
     ],
-    "protected_hits": [
-      "collector_route_daily_ledger",
-      "pass"
-    ],
-    "filesystem_hits": [
-      "move",
-      "remove",
-      "write"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
-      "<Delete>",
       "Collector's Route UI (organized + obvious selection + inline edit).\n\n    Adds:\n    - Obvious selection column (radio in ",
-      "Delete",
       "Multi-select",
-      "Select a collector\u2026",
-      "\ud83d\uddd1 Delete"
+      "Select a collector\u2026"
     ],
     "calls": [
       "_set_sort",
@@ -3824,17 +4030,10 @@
       "heading",
       "pack"
     ],
-    "protected_hits": [
-      "pass",
-      "payment",
-      "pdf",
-      "principal",
-      "report"
-    ],
-    "filesystem_hits": [
-      "open",
-      "replace",
-      "write"
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
+      "replace"
     ],
     "sql_hits": [
       "Select Date Range",
@@ -3944,7 +4143,7 @@
     "line_end": 12591,
     "lines": 169,
     "depth": 0,
-    "classification": "protected",
+    "classification": "filesystem-review",
     "references": 1,
     "bindings": [
       {
@@ -3960,18 +4159,11 @@
       "grid",
       "pack"
     ],
-    "protected_hits": [
-      "7x7",
-      "backup",
-      "pass",
-      "postgres",
-      "role"
-    ],
-    "filesystem_hits": [
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
       "copy",
-      "open",
-      "os.path",
-      "path"
+      "open"
     ],
     "sql_hits": [],
     "calls": [
@@ -4046,21 +4238,13 @@
       "pack",
       "winfo_exists"
     ],
-    "protected_hits": [
-      "pass"
-    ],
-    "filesystem_hits": [
-      "open",
-      "rename"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
-      "Delete",
-      "Failed to delete area:",
-      "Open the Areas manager window (create/rename/delete areas).",
       "Please select an area to delete.",
       "Please select an area to rename.",
-      "Select",
-      "client(s).\n\nDelete it and CLEAR that area from those clients?"
+      "Select"
     ],
     "calls": [
       "_log_ignored",
@@ -4148,52 +4332,24 @@
       "selection",
       "winfo_children"
     ],
-    "protected_hits": [
-      "7x7",
-      "backup",
-      "balance",
+    "protected_calls": [
       "commit",
-      "due_date",
-      "execute",
-      "interest",
-      "offset",
-      "pass",
-      "payment",
-      "principal",
-      "renew",
-      "reopen",
-      "report",
-      "transaction"
+      "execute"
     ],
-    "filesystem_hits": [
+    "financial_hits": [
+      "principal"
+    ],
+    "filesystem_calls": [
       "askopenfilename",
       "asksaveasfilename",
-      "copy",
       "copy2",
-      "filedialog",
       "makedirs",
-      "move",
-      "open",
-      "os.path",
-      "path",
       "remove",
-      "replace",
-      "unlink",
-      "write"
+      "replace"
     ],
     "sql_hits": [
-      "<Delete>",
-      "Are you sure you want to delete",
-      "Are you sure you want to delete client '",
-      "Click the specific day cell, then press Delete or .",
-      "Confirm Delete",
       "DELETE FROM clients WHERE name = ? AND loan_type = ?",
       "DELETE FROM transactions WHERE name = ? AND loan_type = ?",
-      "Delete",
-      "Delete Failed",
-      "Delete the selected client(s) and all their data.\n                Works with either LoanDB.delete_client(...) or direct ",
-      "Minimal integration after removing undo/redo/backups.\n        - Ensures a DB is attached\n        - Wraps Excel import wi",
-      "Overwrite DB file with snapshot src. Close and reopen connections handled externally.",
       "Please select a client first.",
       "SELECT name FROM clients",
       "SELECT name, loan_type FROM clients",
@@ -4203,8 +4359,7 @@
       "Select New-until Date",
       "Select Release Date",
       "Select a client (left) and click a day cell to clear.",
-      "Select a client first.",
-      "update"
+      "Select a client first."
     ],
     "calls": [
       "FileNotFoundError",
@@ -4528,33 +4683,17 @@
       "pack",
       "selection"
     ],
-    "protected_hits": [
-      "7x7",
-      "balance",
-      "close_day",
-      "day_close",
-      "pass",
-      "password",
-      "reopen",
-      "report",
-      "role"
+    "protected_calls": [
+      "print_databank_close_report"
     ],
-    "filesystem_hits": [
-      "copy",
-      "move",
-      "open",
-      "path",
-      "remove",
-      "replace",
-      "write"
+    "financial_hits": [
+      "variance"
+    ],
+    "filesystem_calls": [
+      "replace"
     ],
     "sql_hits": [
-      "Add / Update Row",
-      "Enter the System password to update workflow and note.",
-      "Please select a collector row to remove.",
-      "Update Variance Workflow",
-      "Update Workflow",
-      "You can view any day. Closing locks the combined day for both Regular and 7x7 until reopened with a password. Split-by-c"
+      "Please select a collector row to remove."
     ],
     "calls": [
       "_apply_mode",
@@ -4723,30 +4862,20 @@
     "references": 8,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
+    "protected_calls": [
       "commit",
-      "due_date",
-      "execute",
-      "interest",
-      "offset",
-      "pass",
-      "payment",
-      "principal",
-      "transaction"
+      "execute"
     ],
-    "filesystem_hits": [
-      "path",
-      "rename",
+    "financial_hits": [
+      "payment_amount",
+      "principal"
+    ],
+    "filesystem_calls": [
       "replace"
     ],
     "sql_hits": [
-      "UPDATE",
       "UPDATE clients\n                           SET name=?,\n                               contact_number=?,\n                 ",
-      "UPDATE transactions SET name=? WHERE name=? AND loan_type=?",
-      "Update a client (append-only history is written to client_history).",
-      "clients:update",
-      "suppressed client Area UID sync after update"
+      "UPDATE transactions SET name=? WHERE name=? AND loan_type=?"
     ],
     "calls": [
       "_log_exc",
@@ -4802,20 +4931,15 @@
     "references": 5,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
-      "due_date",
-      "execute",
-      "interest",
-      "offset",
-      "pass",
-      "payment",
-      "principal",
-      "renew",
-      "sqlite",
-      "transaction"
+    "protected_calls": [
+      "execute"
     ],
-    "filesystem_hits": [],
+    "financial_hits": [
+      "due_date",
+      "interest",
+      "principal"
+    ],
+    "filesystem_calls": [],
     "sql_hits": [
       "SELECT %s FROM clients c ORDER BY c.name COLLATE NOCASE",
       "SELECT %s FROM clients c WHERE IFNULL(c.is_archived,0)=0 ORDER BY c.name COLLATE NOCASE",
@@ -4880,26 +5004,14 @@
     "references": 2,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
-      "adv",
-      "balance",
-      "interest",
-      "offset",
-      "pass",
-      "payment",
-      "principal",
-      "renew",
-      "report",
-      "transaction"
+    "protected_calls": [],
+    "financial_hits": [
+      "principal"
     ],
-    "filesystem_hits": [
-      "replace",
-      "write"
+    "filesystem_calls": [
+      "replace"
     ],
-    "sql_hits": [
-      "Return dict with paid/remaining/suggested released cash (best-effort).\n\n        Regular:\n            remaining_due = max"
-    ],
+    "sql_hits": [],
     "calls": [
       "_log_suppressed_once",
       "_sum_paid_per_day",
@@ -4949,28 +5061,17 @@
     "ui_hits": [
       "Canvas"
     ],
-    "protected_hits": [
-      "7x7",
-      "balance",
-      "day_close",
-      "execute",
-      "pass",
-      "pdf",
-      "reopen",
-      "report",
-      "transaction"
+    "protected_calls": [
+      "execute"
     ],
-    "filesystem_hits": [
+    "financial_hits": [
+      "variance"
+    ],
+    "filesystem_calls": [
       "asksaveasfilename",
-      "filedialog",
-      "move",
-      "open",
-      "os.path",
-      "path",
       "remove"
     ],
     "sql_hits": [
-      "Printing requires ReportLab.\n\nInstall it with:\n  pip install reportlab",
       "SELECT COUNT(*) FROM transactions WHERE date(date)=date(?)"
     ],
     "calls": [
@@ -5054,14 +5155,13 @@
       "pack",
       "selection"
     ],
-    "protected_hits": [
-      "7x7",
-      "balance",
-      "day_close",
-      "report"
+    "protected_calls": [
+      "print_databank_close_report"
     ],
-    "filesystem_hits": [
-      "open",
+    "financial_hits": [
+      "variance"
+    ],
+    "filesystem_calls": [
       "replace"
     ],
     "sql_hits": [
@@ -5158,21 +5258,14 @@
     "references": 6,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
+    "protected_calls": [
       "commit",
-      "due_date",
-      "execute",
-      "interest",
-      "offset",
-      "pass",
-      "payment",
-      "principal",
-      "renew",
-      "sqlite"
+      "execute"
     ],
-    "filesystem_hits": [
-      "path",
+    "financial_hits": [
+      "payment_amount"
+    ],
+    "filesystem_calls": [
       "replace"
     ],
     "sql_hits": [
@@ -5232,20 +5325,14 @@
     "references": 4,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
-      "adv",
-      "advance",
-      "execute",
-      "pass",
-      "postgres",
-      "transaction"
+    "protected_calls": [
+      "execute"
     ],
-    "filesystem_hits": [
+    "financial_hits": [],
+    "filesystem_calls": [
       "replace"
     ],
     "sql_hits": [
-      "Collector Route ADV lookup with stronger PostgreSQL migration fallback.\n\n    This version does not rely only on the prin",
       "SELECT client_uid, person_uid, name, loan_type\n                      FROM clients\n                     WHERE TRIM(COALES",
       "SELECT client_uid, person_uid, name, loan_type\n                  FROM clients\n                 WHERE UPPER(TRIM(name)) =",
       "SELECT date, description, name, client_uid, loan_type\n                  FROM transactions\n                 WHERE descrip",
@@ -5288,23 +5375,17 @@
     "line_end": 2166,
     "lines": 160,
     "depth": 0,
-    "classification": "protected",
+    "classification": "filesystem-review",
     "references": 4,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "pass"
-    ],
-    "filesystem_hits": [
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
       "open",
-      "os.path",
-      "path",
-      "replace",
-      "write"
+      "replace"
     ],
-    "sql_hits": [
-      "notes.load.merge.update"
-    ],
+    "sql_hits": [],
     "calls": [
       "Exception",
       "_alert_user",
@@ -5357,15 +5438,9 @@
       "pack",
       "winfo_children"
     ],
-    "protected_hits": [
-      "adv",
-      "advance",
-      "pass",
-      "payment"
-    ],
-    "filesystem_hits": [
-      "write"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
       "Missed Payment - Select reason(s)"
     ],
@@ -5442,7 +5517,7 @@
     "line_end": 10426,
     "lines": 142,
     "depth": 0,
-    "classification": "protected",
+    "classification": "filesystem-review",
     "references": 2,
     "bindings": [],
     "ui_hits": [
@@ -5452,16 +5527,12 @@
       "insert",
       "place"
     ],
-    "protected_hits": [
-      "commit",
-      "pass"
-    ],
-    "filesystem_hits": [
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
       "replace"
     ],
-    "sql_hits": [
-      "Create an Entry over the clicked (or remembered) day cell and save back to DB."
-    ],
+    "sql_hits": [],
     "calls": [
       "_log_suppressed_once",
       "cn.startswith",
@@ -5511,19 +5582,10 @@
     "references": 2,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "pass",
-      "payment",
-      "report",
-      "transaction"
-    ],
-    "filesystem_hits": [
-      "write"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
-      "<Delete>",
-      "Click the specific day cell, then press Delete or .",
-      "Delete",
       "Select a client (left) and click a day cell to clear."
     ],
     "calls": [
@@ -5562,10 +5624,11 @@
     "references": 4,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
+    "protected_calls": [
       "execute"
     ],
-    "filesystem_hits": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
       "SELECT new_until, created_at, date_released FROM clients WHERE name=? AND loan_type=?"
     ],
@@ -5599,18 +5662,13 @@
     "references": 2,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
-      "balance",
-      "execute",
-      "interest",
-      "payment",
-      "principal",
-      "renew",
-      "sqlite",
-      "transaction"
+    "protected_calls": [
+      "execute"
     ],
-    "filesystem_hits": [
+    "financial_hits": [
+      "principal"
+    ],
+    "filesystem_calls": [
       "replace"
     ],
     "sql_hits": [
@@ -5661,32 +5719,19 @@
     "references": 2,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
+    "protected_calls": [
       "commit",
-      "day_close",
-      "execute",
-      "pass",
-      "password",
-      "payment",
-      "reopen",
-      "sqlite",
-      "transaction"
+      "execute"
     ],
-    "filesystem_hits": [
-      "open",
-      "rename",
-      "write"
-    ],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
       "INSERT INTO transactions (client_uid, name, loan_type, date, payment, description, created_at) VALUES (?,?,?,?,?,?,?)",
       "INSERT INTO transactions (name, loan_type, date, payment, description, created_at) VALUES (?,?,?,?,?,?)",
-      "Insert or update a transaction using client_uid as the stable key.\n\n        Key: (client_uid, loan_type, date)\n\n        ",
       "SELECT * FROM transactions WHERE client_uid=? AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular') = IFNULL(NULLIF(TRIM(?),'",
       "SELECT id FROM transactions WHERE client_uid=? AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular') = IFNULL(NULLIF(TRIM(?),",
       "UPDATE transactions SET name=?, loan_type=?, payment=?, description=?, created_at=? WHERE id=?",
-      "UPDATE transactions SET payment=?, description=?, created_at=? WHERE id=?",
-      "is already closed for the combined Data Bank day (Regular + 7x7). Reopen it with a password before changing Data Bank en"
+      "UPDATE transactions SET payment=?, description=?, created_at=? WHERE id=?"
     ],
     "calls": [
       "ValueError",
@@ -5721,12 +5766,11 @@
     "references": 2,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
-      "execute",
-      "transaction"
+    "protected_calls": [
+      "execute"
     ],
-    "filesystem_hits": [
+    "financial_hits": [],
+    "filesystem_calls": [
       "replace"
     ],
     "sql_hits": [
@@ -5756,83 +5800,20 @@
     "legacy_score": 2
   },
   {
-    "qualified_name": "App.refresh_audit_tab",
-    "short_name": "refresh_audit_tab",
-    "line_start": 11066,
-    "line_end": 11178,
-    "lines": 113,
-    "depth": 0,
-    "classification": "protected",
-    "references": 6,
-    "bindings": [],
-    "ui_hits": [
-      "delete",
-      "focus",
-      "insert"
-    ],
-    "protected_hits": [
-      "pass",
-      "payment",
-      "principal",
-      "renew"
-    ],
-    "filesystem_hits": [],
-    "sql_hits": [],
-    "calls": [
-      "enumerate",
-      "float",
-      "iter",
-      "len",
-      "list",
-      "lower",
-      "next",
-      "r.get",
-      "row.get",
-      "self._audit_money_text",
-      "self._audit_new_rows_map.keys",
-      "self._audit_parse_date_filters",
-      "self._audit_renew_rows_map.keys",
-      "self._audit_set_detail_text",
-      "self._audit_show_selected",
-      "self.audit_name_var.get",
-      "self.audit_new_tree.delete",
-      "self.audit_new_tree.focus",
-      "self.audit_new_tree.get_children",
-      "self.audit_new_tree.insert",
-      "self.audit_new_tree.selection_set",
-      "self.audit_renew_tree.delete",
-      "self.audit_renew_tree.focus",
-      "self.audit_renew_tree.get_children",
-      "self.audit_renew_tree.insert",
-      "self.audit_renew_tree.selection_set",
-      "self.audit_summary_var.set",
-      "self.db.get_audit_new_loan_rows",
-      "self.db.get_audit_renewal_rows",
-      "str",
-      "strip"
-    ],
-    "legacy_score": 2
-  },
-  {
     "qualified_name": "parse_advance_ranges",
     "short_name": "parse_advance_ranges",
     "line_start": 2549,
     "line_end": 2656,
     "lines": 108,
     "depth": 0,
-    "classification": "protected",
+    "classification": "support-review",
     "references": 9,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "adv",
-      "advance",
-      "transaction"
-    ],
-    "filesystem_hits": [],
-    "sql_hits": [
-      "Parse one or more ADV date ranges from a transaction description.\n\n    Supported tags (whitespace/case-tolerant):\n      "
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
+    "sql_hits": [],
     "calls": [
       "_dt.strptime",
       "_is_date",
@@ -5876,34 +5857,20 @@
     "references": 13,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
+    "protected_calls": [
       "commit",
-      "day_close",
-      "execute",
-      "pass",
-      "password",
-      "payment",
-      "reopen",
-      "sqlite",
-      "transaction"
+      "execute"
     ],
-    "filesystem_hits": [
-      "open",
-      "path",
-      "rename",
-      "write"
-    ],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
       "INSERT INTO transactions (client_uid, name, loan_type, date, payment, description, created_at) VALUES (?,?,?,?,?,?,?)",
       "INSERT INTO transactions (name, loan_type, date, payment, description, created_at) VALUES (?,?,?,?,?,?)",
-      "Insert or update a transaction (Data Bank) row.\n\n        Key: prefer (client_uid, loan_type, date); fallback to legacy (",
       "SELECT * FROM transactions WHERE name=? AND loan_type=? AND date=?",
       "SELECT * FROM transactions WHERE name=? AND loan_type=? AND date=? ORDER BY id DESC LIMIT 1",
       "SELECT id FROM transactions WHERE name = ? AND loan_type = ? AND date = ?",
       "UPDATE transactions SET client_uid=?, payment=?, description=?, created_at=? WHERE id=?",
-      "UPDATE transactions SET payment=?, description=?, created_at=? WHERE id=?",
-      "is already closed for the combined Data Bank day (Regular + 7x7). Reopen it with a password before changing Data Bank en"
+      "UPDATE transactions SET payment=?, description=?, created_at=? WHERE id=?"
     ],
     "calls": [
       "ValueError",
@@ -5935,21 +5902,15 @@
     "line_end": 31860,
     "lines": 95,
     "depth": 0,
-    "classification": "protected",
+    "classification": "filesystem-review",
     "references": 3,
     "bindings": [],
     "ui_hits": [
       "StringVar"
     ],
-    "protected_hits": [
-      "7x7",
-      "balance",
-      "interest",
-      "pass",
-      "principal",
-      "renew"
-    ],
-    "filesystem_hits": [
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
       "replace"
     ],
     "sql_hits": [],
@@ -5994,17 +5955,15 @@
     "references": 2,
     "bindings": [],
     "ui_hits": [],
-    "protected_hits": [
-      "balance",
+    "protected_calls": [
       "commit",
-      "day_close",
       "execute",
       "rollback"
     ],
-    "filesystem_hits": [
-      "open",
-      "replace"
+    "financial_hits": [
+      "variance"
     ],
+    "filesystem_calls": [],
     "sql_hits": [
       "DELETE FROM databank_day_collector_close WHERE close_date=? AND loan_type=?",
       "INSERT INTO databank_day_collector_close\n                        (close_date, loan_type, collector_name, expected_amount"
@@ -6068,38 +6027,15 @@
       "insert",
       "pack"
     ],
-    "protected_hits": [
-      "7x7",
-      "adv",
-      "advance",
-      "balance",
-      "execute",
-      "full_daily_ledger",
-      "pass",
-      "payment",
-      "pdf",
-      "postgres",
-      "principal",
-      "renew",
-      "report",
-      "restore",
-      "sqlite",
-      "transaction"
+    "protected_calls": [
+      "execute"
     ],
-    "filesystem_hits": [
-      "copy",
+    "financial_hits": [],
+    "filesystem_calls": [
       "makedirs",
-      "move",
-      "open",
-      "os.path",
-      "path",
-      "replace",
-      "unlink",
-      "write"
+      "replace"
     ],
     "sql_hits": [
-      "Print a 3-column DAILY COLLECTION LEDGER with a small UI to change:\n      - Ledger Date\n      - Paper size and orientati",
-      "Printing requires the 'reportlab' package. Install it with:\n\n    pip install reportlab",
       "SELECT COALESCE(SUM(COALESCE(payment,0)),0)\n                                      FROM transactions\n                    ",
       "SELECT COALESCE(SUM(COALESCE(payment,0)),0)\n                                  FROM transactions\n                        ",
       "SELECT COALESCE(SUM(COALESCE(payment,0)),0)\n                          FROM transactions\n                         WHERE d",
@@ -6458,46 +6394,19 @@
       "pack",
       "selection"
     ],
-    "protected_hits": [
-      "7x7",
-      "adv",
-      "advance",
-      "balance",
-      "collector_route_daily_ledger",
+    "protected_calls": [
       "execute",
-      "full_daily_ledger",
-      "interest",
-      "pass",
-      "payment",
-      "pdf",
-      "permission",
-      "postgres",
-      "principal",
-      "renew",
-      "report",
-      "restore",
-      "sqlite",
-      "transaction"
+      "print_full_daily_ledger"
     ],
-    "filesystem_hits": [
-      "copy",
+    "financial_hits": [],
+    "filesystem_calls": [
       "makedirs",
-      "move",
       "open",
-      "os.path",
-      "path",
-      "replace",
-      "unlink",
-      "write"
+      "replace"
     ],
     "sql_hits": [
-      "Delete collector",
-      "Internal: update one collector's notes in collectors.json.",
-      "Legacy delete; now deletes from the main collectors.json dict schema.",
-      "PDF printing requires ReportLab.\n\nInstall it with:\n  pip install reportlab",
       "Please select a collector first.",
       "Please select a valid collector row.",
-      "Print a 3-column DAILY COLLECTION LEDGER with a small UI to change:\n          - Ledger Date\n          - Paper size and o",
       "SELECT COALESCE(SUM(COALESCE(payment,0)),0)\n                              FROM transactions\n                            ",
       "SELECT DISTINCT TRIM(area) AS a FROM clients WHERE IFNULL(TRIM(area),'')<>'' AND COALESCE(is_archived,0)=0 ORDER BY a CO",
       "SELECT DISTINCT name FROM clients WHERE person_uid IN ({ph}) AND COALESCE(is_archived,0)=0 AND name IS NOT NULL AND TRIM",
@@ -6513,8 +6422,7 @@
       "Select a collector to edit",
       "Select a collector\u2026",
       "Select a valid collector row",
-      "Select collector",
-      "Update the right panel: selected name, stats, areas tree, notes."
+      "Select collector"
     ],
     "calls": [
       "IOError",
@@ -6866,39 +6774,15 @@
       "insert",
       "pack"
     ],
-    "protected_hits": [
-      "7x7",
-      "adv",
-      "advance",
-      "balance",
-      "execute",
-      "full_daily_ledger",
-      "interest",
-      "pass",
-      "payment",
-      "pdf",
-      "postgres",
-      "principal",
-      "renew",
-      "report",
-      "restore",
-      "sqlite",
-      "transaction"
+    "protected_calls": [
+      "execute"
     ],
-    "filesystem_hits": [
-      "copy",
+    "financial_hits": [],
+    "filesystem_calls": [
       "makedirs",
-      "move",
-      "open",
-      "os.path",
-      "path",
-      "replace",
-      "unlink",
-      "write"
+      "replace"
     ],
     "sql_hits": [
-      "PDF printing requires ReportLab.\n\nInstall it with:\n  pip install reportlab",
-      "Print a 3-column DAILY COLLECTION LEDGER with a small UI to change:\n          - Ledger Date\n          - Paper size and o",
       "SELECT COALESCE(SUM(COALESCE(payment,0)),0)\n                              FROM transactions\n                            ",
       "SELECT DISTINCT name FROM clients WHERE person_uid IN ({ph}) AND COALESCE(is_archived,0)=0 AND name IS NOT NULL AND TRIM",
       "SELECT DISTINCT person_uid FROM clients WHERE name IN ({ph}) AND COALESCE(is_archived,0)=0 AND person_uid IS NOT NULL AN",
@@ -7175,134 +7059,6 @@
     "legacy_score": 0
   },
   {
-    "qualified_name": "App.refresh_data_grid",
-    "short_name": "refresh_data_grid",
-    "line_start": 13030,
-    "line_end": 13300,
-    "lines": 271,
-    "depth": 0,
-    "classification": "protected",
-    "references": 37,
-    "bindings": [
-      {
-        "line": 34720,
-        "rhs": "_spina_v15_refresh_data_grid"
-      },
-      {
-        "line": 34743,
-        "rhs": "_spina_v16_refresh_data_grid"
-      }
-    ],
-    "ui_hits": [
-      "Frame",
-      "Scrollbar",
-      "Treeview",
-      "bind",
-      "column",
-      "configure",
-      "destroy",
-      "focus",
-      "grid",
-      "heading",
-      "insert",
-      "selection",
-      "winfo_children"
-    ],
-    "protected_hits": [
-      "pass",
-      "payment",
-      "transaction"
-    ],
-    "filesystem_hits": [
-      "move",
-      "remove"
-    ],
-    "sql_hits": [
-      "<Delete>",
-      "Delete this payment cell"
-    ],
-    "calls": [
-      "_log_ignored",
-      "_log_suppressed_once",
-      "_sync_selection",
-      "c.get",
-      "calendar.monthrange",
-      "date",
-      "enumerate",
-      "float",
-      "fmt_currency",
-      "from_tv.selection",
-      "grid.grid",
-      "grid.grid_columnconfigure",
-      "grid.grid_rowconfigure",
-      "h.grid",
-      "hasattr",
-      "info.get",
-      "int",
-      "isinstance",
-      "len",
-      "range",
-      "self._configure_tree_stripes",
-      "self._db_menu.add_command",
-      "self._db_menu.add_separator",
-      "self._db_menu.grab_release",
-      "self._db_menu.tk_popup",
-      "self._db_rows_var.set",
-      "self._ensure_databank_edit_bindings",
-      "self._mode_filter",
-      "self._month_label",
-      "self._remember_cell_click",
-      "self._resize_databank_columns",
-      "self._update_data_toolbar",
-      "self.days_tree.bind",
-      "self.days_tree.column",
-      "self.days_tree.configure",
-      "self.days_tree.focus",
-      "self.days_tree.grid",
-      "self.days_tree.heading",
-      "self.days_tree.identify_row",
-      "self.days_tree.insert",
-      "self.days_tree.selection_set",
-      "self.days_tree.yview",
-      "self.db.get_all_clients",
-      "self.db.get_client_info",
-      "self.db.get_transaction",
-      "self.inner.bind",
-      "self.inner.grid_columnconfigure",
-      "self.inner.grid_rowconfigure",
-      "self.inner.winfo_children",
-      "self.name_tree.bind",
-      "self.name_tree.column",
-      "self.name_tree.configure",
-      "self.name_tree.focus",
-      "self.name_tree.grid",
-      "self.name_tree.heading",
-      "self.name_tree.identify_row",
-      "self.name_tree.insert",
-      "self.name_tree.selection_set",
-      "self.name_tree.yview",
-      "self.root.bell",
-      "self.search_db_var.get",
-      "self.status_var.set",
-      "str",
-      "strftime",
-      "strip",
-      "tk.Menu",
-      "to_tv.focus",
-      "to_tv.selection",
-      "to_tv.selection_set",
-      "ttk.Frame",
-      "ttk.Scrollbar",
-      "ttk.Treeview",
-      "tuple",
-      "tv.bind",
-      "v.grid",
-      "vals.append",
-      "w.destroy"
-    ],
-    "legacy_score": 0
-  },
-  {
     "qualified_name": "refresh_clients",
     "short_name": "refresh_clients",
     "line_start": 19865,
@@ -7331,29 +7087,16 @@
       "insert",
       "selection"
     ],
-    "protected_hits": [
-      "7x7",
-      "due_date",
-      "interest",
-      "offset",
-      "pass",
-      "payment",
-      "principal",
-      "reloan",
-      "renew",
-      "report",
-      "transaction"
+    "protected_calls": [
+      "renew_client"
     ],
-    "filesystem_hits": [
-      "open",
+    "financial_hits": [],
+    "filesystem_calls": [
       "replace"
     ],
     "sql_hits": [
-      "Delete Error",
-      "Delete client '",
       "Please select a client to delete.",
       "Please select one client to renew.",
-      "Renew (reloan) the selected client and update the client row.",
       "Select"
     ],
     "calls": [
@@ -7421,25 +7164,14 @@
       }
     ],
     "ui_hits": [],
-    "protected_hits": [
-      "7x7",
+    "protected_calls": [
       "commit",
-      "due_date",
       "execute",
-      "interest",
-      "offset",
-      "pass",
-      "payment",
-      "principal",
-      "reloan",
-      "renew",
-      "report",
       "rollback",
       "run_write"
     ],
-    "filesystem_hits": [
-      "write"
-    ],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
       "ALTER TABLE renewals ADD COLUMN created_at TEXT",
       "ALTER TABLE renewals ADD COLUMN interest_rate REAL DEFAULT 0",
@@ -7447,7 +7179,6 @@
       "ALTER TABLE renewals ADD COLUMN note TEXT",
       "ALTER TABLE renewals ADD COLUMN principal_after REAL DEFAULT 0",
       "ALTER TABLE renewals ADD COLUMN released_cash REAL DEFAULT 0",
-      "CREATE INDEX IF NOT EXISTS idx_renewals_uid_date ON renewals(client_uid, loan_type, renew_date)",
       "CREATE TABLE IF NOT EXISTS renewals (\n                        id INTEGER PRIMARY KEY AUTOINCREMENT,\n                    ",
       "INSERT INTO renewals (client_uid, loan_type, renew_date, released_cash, principal_after, interest_rate, note, created_at",
       "UPDATE clients\n                      SET principal=?,\n                          interest_rate=?,\n                       ",
@@ -7504,20 +7235,14 @@
       "focus",
       "selection"
     ],
-    "protected_hits": [
-      "7x7",
-      "collector_route_daily_ledger",
+    "protected_calls": [
       "execute",
-      "full_daily_ledger",
-      "pass",
-      "payment",
-      "pdf",
-      "restore"
+      "print_full_daily_ledger"
     ],
-    "filesystem_hits": [
+    "financial_hits": [],
+    "filesystem_calls": [
       "makedirs",
-      "open",
-      "path"
+      "open"
     ],
     "sql_hits": [
       "Please select a collector first.",
@@ -7604,18 +7329,10 @@
       "grid",
       "pack"
     ],
-    "protected_hits": [
-      "7x7",
-      "interest",
-      "offset",
-      "pass",
-      "payment",
-      "principal"
-    ],
-    "filesystem_hits": [
-      "move",
-      "replace",
-      "write"
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [
+      "replace"
     ],
     "sql_hits": [
       "Select New-until Date",
@@ -7710,20 +7427,14 @@
       "focus",
       "selection"
     ],
-    "protected_hits": [
-      "7x7",
-      "collector_route_daily_ledger",
+    "protected_calls": [
       "execute",
-      "full_daily_ledger",
-      "pass",
-      "payment",
-      "pdf",
-      "restore"
+      "print_full_daily_ledger"
     ],
-    "filesystem_hits": [
+    "financial_hits": [],
+    "filesystem_calls": [
       "makedirs",
-      "open",
-      "path"
+      "open"
     ],
     "sql_hits": [
       "Please select a collector first.",
@@ -7777,222 +7488,13 @@
     "legacy_score": 0
   },
   {
-    "qualified_name": "App.__init__",
-    "short_name": "__init__",
-    "line_start": 11180,
-    "line_end": 11340,
-    "lines": 161,
-    "depth": 0,
-    "classification": "protected",
-    "references": 10,
-    "bindings": [
-      {
-        "line": 31432,
-        "rhs": "_spina_app_init_with_dashboard"
-      },
-      {
-        "line": 32151,
-        "rhs": "_spina_app_init_with_cash_control"
-      },
-      {
-        "line": 32504,
-        "rhs": "_spina_app_init_with_client_info_logs"
-      },
-      {
-        "line": 32738,
-        "rhs": "_spina_app_init_with_auto_close"
-      },
-      {
-        "line": 34658,
-        "rhs": "_spina_v13_app_init"
-      }
-    ],
-    "ui_hits": [
-      "Frame",
-      "Label",
-      "Notebook",
-      "StringVar",
-      "bind",
-      "configure",
-      "pack"
-    ],
-    "protected_hits": [
-      "7x7",
-      "login",
-      "pass",
-      "permission",
-      "report",
-      "role"
-    ],
-    "filesystem_hits": [],
-    "sql_hits": [],
-    "calls": [
-      "LoanDB",
-      "_SpinaStartupCancelled",
-      "_alert_user",
-      "_log_exc",
-      "_log_suppressed_once",
-      "date.today",
-      "max",
-      "queue.Queue",
-      "root.configure",
-      "root.geometry",
-      "root.minsize",
-      "root.protocol",
-      "root.title",
-      "root.update_idletasks",
-      "root.winfo_screenheight",
-      "root.winfo_screenwidth",
-      "sbar.pack",
-      "self._build_audit_tab",
-      "self._build_clients_tab",
-      "self._build_collectors_tab",
-      "self._build_data_tab",
-      "self._build_header",
-      "self._build_reports_tab",
-      "self._build_system_data_tab",
-      "self._destroy_root_safely",
-      "self._load_last_user",
-      "self._load_user_role",
-      "self._mode_filter",
-      "self._patch_messagebox_threadsafe",
-      "self._prompt_login",
-      "self._prompt_user_role",
-      "self._rebuild_side_nav",
-      "self._refresh_side_nav_selection",
-      "self._save_last_user",
-      "self._save_user_role",
-      "self._setup_style",
-      "self._start_ui_queue_pump",
-      "self.apply_role_access",
-      "self.content_frame.pack",
-      "self.db.set_default_loan_type",
-      "self.main_shell.pack",
-      "self.nb.add",
-      "self.nb.bind",
-      "self.nb.hide",
-      "self.nb.pack",
-      "self.refresh_audit_tab",
-      "self.refresh_clients",
-      "self.refresh_data_grid",
-      "self.refresh_reports",
-      "self.sidebar_frame.pack",
-      "threading.get_ident",
-      "tk.StringVar",
-      "ttk.Frame",
-      "ttk.Label",
-      "ttk.Notebook"
-    ],
-    "legacy_score": 0
-  },
-  {
-    "qualified_name": "App._build_clients_tab",
-    "short_name": "_build_clients_tab",
-    "line_start": 15420,
-    "line_end": 15575,
-    "lines": 156,
-    "depth": 0,
-    "classification": "protected",
-    "references": 2,
-    "bindings": [
-      {
-        "line": 30156,
-        "rhs": "_build_clients_tab_with_picture"
-      },
-      {
-        "line": 35865,
-        "rhs": "_spina_v23_build_clients_tab"
-      }
-    ],
-    "ui_hits": [
-      "Button",
-      "Combobox",
-      "Entry",
-      "Frame",
-      "Label",
-      "Scrollbar",
-      "StringVar",
-      "Treeview",
-      "bind",
-      "column",
-      "config",
-      "configure",
-      "grid",
-      "heading",
-      "pack"
-    ],
-    "protected_hits": [
-      "7x7",
-      "interest",
-      "pass",
-      "payment",
-      "principal",
-      "renew",
-      "statement"
-    ],
-    "filesystem_hits": [
-      "move",
-      "open",
-      "remove",
-      "unlink",
-      "write"
-    ],
-    "sql_hits": [
-      "Delete Client"
-    ],
-    "calls": [
-      "_anchors.get",
-      "_hdr.get",
-      "_log_ignored",
-      "_log_suppressed_once",
-      "_w.get",
-      "actions.pack",
-      "area_box.pack",
-      "c.title",
-      "filters.pack",
-      "getattr",
-      "mode_cb.bind",
-      "mode_cb.pack",
-      "pack",
-      "self._configure_tree_stripes",
-      "self._del_client_btn.config",
-      "self._del_client_btn.pack",
-      "self._refresh_area_dropdowns",
-      "self._schedule_refresh_clients",
-      "self._update_toolbar_states",
-      "self.bulk_area_cb.pack",
-      "self.clients_tree.bind",
-      "self.clients_tree.column",
-      "self.clients_tree.configure",
-      "self.clients_tree.grid",
-      "self.clients_tree.heading",
-      "self.clients_tree.tag_configure",
-      "self.search_clients_var.trace_add",
-      "tk.StringVar",
-      "top_wrap.pack",
-      "tree_box.grid_columnconfigure",
-      "tree_box.grid_rowconfigure",
-      "tree_box.pack",
-      "ttk.Button",
-      "ttk.Combobox",
-      "ttk.Entry",
-      "ttk.Frame",
-      "ttk.Label",
-      "ttk.Scrollbar",
-      "ttk.Treeview",
-      "xsb.grid",
-      "ysb.grid"
-    ],
-    "legacy_score": 0
-  },
-  {
     "qualified_name": "App.apply_role_access",
     "short_name": "apply_role_access",
     "line_start": 7869,
     "line_end": 8005,
     "lines": 137,
     "depth": 0,
-    "classification": "protected",
+    "classification": "support-review",
     "references": 3,
     "bindings": [
       {
@@ -8013,16 +7515,9 @@
       }
     ],
     "ui_hits": [],
-    "protected_hits": [
-      "pass",
-      "report",
-      "restore",
-      "role"
-    ],
-    "filesystem_hits": [
-      "move",
-      "remove"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [],
     "calls": [
       "_log_suppressed_once",
@@ -8046,7 +7541,7 @@
     "line_end": 11660,
     "lines": 137,
     "depth": 0,
-    "classification": "protected",
+    "classification": "support-review",
     "references": 2,
     "bindings": [
       {
@@ -8057,10 +7552,9 @@
     "ui_hits": [
       "configure"
     ],
-    "protected_hits": [
-      "pass"
-    ],
-    "filesystem_hits": [],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [],
     "calls": [
       "_log_suppressed_once",
@@ -8112,10 +7606,9 @@
       "insert",
       "pack"
     ],
-    "protected_hits": [
-      "pass"
-    ],
-    "filesystem_hits": [],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
       "Please select at least one area for this collector.",
       "Select Route Areas"
@@ -8176,160 +7669,6 @@
     "legacy_score": 0
   },
   {
-    "qualified_name": "App._prompt_login",
-    "short_name": "_prompt_login",
-    "line_start": 7582,
-    "line_end": 7707,
-    "lines": 126,
-    "depth": 0,
-    "classification": "protected",
-    "references": 3,
-    "bindings": [
-      {
-        "line": 36425,
-        "rhs": "_spina_v32_prompt_login"
-      }
-    ],
-    "ui_hits": [
-      "Button",
-      "Combobox",
-      "Entry",
-      "Frame",
-      "Label",
-      "StringVar",
-      "Toplevel",
-      "bind",
-      "destroy",
-      "grid",
-      "pack"
-    ],
-    "protected_hits": [
-      "login",
-      "pass",
-      "password",
-      "role"
-    ],
-    "filesystem_hits": [],
-    "sql_hits": [],
-    "calls": [
-      "_log_exc",
-      "_log_ignored",
-      "_log_suppressed_once",
-      "_ok",
-      "btns.grid",
-      "cb.bind",
-      "cb.grid",
-      "db.get",
-      "dlg.destroy",
-      "dlg.geometry",
-      "dlg.grab_release",
-      "dlg.grab_set",
-      "dlg.resizable",
-      "dlg.title",
-      "dlg.transient",
-      "dlg.update_idletasks",
-      "dlg.winfo_height",
-      "dlg.winfo_width",
-      "ent.bind",
-      "ent.focus_set",
-      "ent.grid",
-      "ent.selection_range",
-      "grid",
-      "hint.grid",
-      "isinstance",
-      "max",
-      "msg.grid",
-      "msg_var.set",
-      "outer.pack",
-      "pack",
-      "pw_var.get",
-      "result.get",
-      "s.lower",
-      "self._force_change_password_dialog",
-      "self._load_users_db",
-      "self._must_change_password",
-      "self._verify_login",
-      "self.root.wait_window",
-      "self.root.winfo_height",
-      "self.root.winfo_rootx",
-      "self.root.winfo_rooty",
-      "self.root.winfo_width",
-      "sorted",
-      "strip",
-      "tk.StringVar",
-      "tk.Toplevel",
-      "ttk.Button",
-      "ttk.Combobox",
-      "ttk.Entry",
-      "ttk.Frame",
-      "ttk.Label",
-      "u.strip",
-      "user_var.get",
-      "users.keys"
-    ],
-    "legacy_score": 0
-  },
-  {
-    "qualified_name": "App.refresh_reports",
-    "short_name": "refresh_reports",
-    "line_start": 13791,
-    "line_end": 13897,
-    "lines": 107,
-    "depth": 0,
-    "classification": "protected",
-    "references": 30,
-    "bindings": [
-      {
-        "line": 35174,
-        "rhs": "_spina_v22_refresh_reports"
-      }
-    ],
-    "ui_hits": [
-      "StringVar",
-      "delete",
-      "insert"
-    ],
-    "protected_hits": [
-      "7x7",
-      "due_date",
-      "pass",
-      "payment",
-      "principal",
-      "report"
-    ],
-    "filesystem_hits": [],
-    "sql_hits": [],
-    "calls": [
-      "_display_loan_type_label",
-      "_spina__client_due_meta",
-      "_spina__fmt_client_money",
-      "bool",
-      "enumerate",
-      "get",
-      "getattr",
-      "info.get",
-      "join",
-      "len",
-      "lower",
-      "rows_to_show.append",
-      "s.lower",
-      "self._clear_preview",
-      "self._mode_filter",
-      "self.db.get_all_clients",
-      "self.db.get_client_info",
-      "self.report_summary_var.set",
-      "self.reports_tree.delete",
-      "self.reports_tree.get_children",
-      "self.reports_tree.insert",
-      "str",
-      "strip",
-      "tk.StringVar",
-      "tuple",
-      "types.append"
-    ],
-    "legacy_score": 0
-  },
-  {
     "qualified_name": "_on_collectors_select._populate_collector_details",
     "short_name": "_populate_collector_details",
     "line_start": 16826,
@@ -8348,15 +7687,11 @@
       "delete",
       "insert"
     ],
-    "protected_hits": [
-      "pass"
-    ],
-    "filesystem_hits": [
-      "open"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
-      "Select a collector\u2026",
-      "Update the right panel: selected name, stats, areas tree, notes."
+      "Select a collector\u2026"
     ],
     "calls": [
       "append",
@@ -8405,15 +7740,11 @@
       "delete",
       "insert"
     ],
-    "protected_hits": [
-      "pass"
-    ],
-    "filesystem_hits": [
-      "open"
-    ],
+    "protected_calls": [],
+    "financial_hits": [],
+    "filesystem_calls": [],
     "sql_hits": [
-      "Select a collector\u2026",
-      "Update the right panel: selected name, stats, areas tree, notes."
+      "Select a collector\u2026"
     ],
     "calls": [
       "append",
@@ -8440,88 +7771,6 @@
       "tv.item",
       "txtw.delete",
       "txtw.insert"
-    ],
-    "legacy_score": 0
-  },
-  {
-    "qualified_name": "RenewDialog.body",
-    "short_name": "body",
-    "line_start": 25387,
-    "line_end": 25479,
-    "lines": 93,
-    "depth": 0,
-    "classification": "protected",
-    "references": 7,
-    "bindings": [
-      {
-        "line": 12995,
-        "rhs": "ttk.Frame(frm)"
-      },
-      {
-        "line": 13602,
-        "rhs": "ttk.Frame(frm)"
-      }
-    ],
-    "ui_hits": [
-      "BooleanVar",
-      "Button",
-      "Checkbutton",
-      "Entry",
-      "Frame",
-      "Label",
-      "StringVar",
-      "Text",
-      "bind",
-      "configure",
-      "grid",
-      "pack"
-    ],
-    "protected_hits": [
-      "interest",
-      "offset",
-      "payment",
-      "principal",
-      "renew"
-    ],
-    "filesystem_hits": [
-      "write"
-    ],
-    "sql_hits": [],
-    "calls": [
-      "_log_ignored",
-      "_row",
-      "date.today",
-      "float",
-      "frm.columnconfigure",
-      "frm.pack",
-      "grid",
-      "int",
-      "isinstance",
-      "lower",
-      "rate_entry.configure",
-      "rate_entry.state",
-      "rc_frame.columnconfigure",
-      "self._recompute",
-      "self.auto_hint_lbl.grid",
-      "self.client.get",
-      "self.date_var.trace_add",
-      "self.new_principal_var.trace_add",
-      "self.note_txt.grid",
-      "self.rc_entry.bind",
-      "self.rc_entry.grid",
-      "self.stats_lbl.grid",
-      "str",
-      "strftime",
-      "strip",
-      "tk.BooleanVar",
-      "tk.StringVar",
-      "tk.Text",
-      "ttk.Button",
-      "ttk.Checkbutton",
-      "ttk.Entry",
-      "ttk.Frame",
-      "ttk.Label",
-      "widget.grid"
     ],
     "legacy_score": 0
   }
