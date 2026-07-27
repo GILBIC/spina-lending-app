@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 OUT = ROOT / "artifacts" / "wave-57-close-history-candidate.json"
+SOURCE_OUT = ROOT / "artifacts" / "wave-57-close-history-source.py"
 TARGET_CLASS = "App"
 TARGET_METHOD = "open_databank_close_history_dialog"
 
@@ -115,6 +116,7 @@ def main() -> None:
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    SOURCE_OUT.write_text(source, encoding="utf-8")
     print(json.dumps(report, indent=2))
 
 
