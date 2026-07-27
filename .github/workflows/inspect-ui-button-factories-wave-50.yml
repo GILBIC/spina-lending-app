@@ -5,9 +5,11 @@ on:
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
       - "spina_app/ui_controls.py"
+      - "spina_app/theme_palettes.py"
       - "spina_app/collector_tab_presentation.py"
       - "spina_app/login_dialog_presentation.py"
       - "tools/inspect_ui_button_factories_wave_50.py"
+      - "tools/inspect_button_palette_dependencies_wave_50.py"
       - ".github/workflows/inspect-ui-button-factories-wave-50.yml"
 permissions:
   contents: read
@@ -21,15 +23,22 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - name: Compile inspector
+      - name: Compile inspectors
         shell: cmd
-        run: python -m py_compile tools/inspect_ui_button_factories_wave_50.py
+        run: |
+          python -m py_compile tools/inspect_ui_button_factories_wave_50.py
+          python -m py_compile tools/inspect_button_palette_dependencies_wave_50.py
       - name: Inspect UI button factory boundary
         shell: cmd
         run: python tools/inspect_ui_button_factories_wave_50.py
+      - name: Inspect button palette dependencies
+        shell: cmd
+        run: python tools/inspect_button_palette_dependencies_wave_50.py
       - name: Upload Wave 50 button boundary
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: wave-50-ui-button-factories-boundary
-          path: artifacts/wave-50-ui-button-factories-boundary.json
+          path: |
+            artifacts/wave-50-ui-button-factories-boundary.json
+            artifacts/wave-50-button-palette-dependencies.json
