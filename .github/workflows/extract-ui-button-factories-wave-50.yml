@@ -8,6 +8,7 @@ on:
       - "spina_app/theme_palettes.py"
       - "spina_app/collector_tab_presentation.py"
       - "spina_app/login_dialog_presentation.py"
+      - "tools/prepare_ui_button_factories_wave_50.py"
       - "tools/extract_ui_button_factories_wave_50.py"
       - "tools/test_ui_button_factories_wave_50.py"
       - "tools/test_ui_button_factories_widget_smoke_wave_50.py"
@@ -25,6 +26,9 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
+      - name: Apply corrected protected caller hash
+        shell: cmd
+        run: python tools/prepare_ui_button_factories_wave_50.py
       - name: Compile guarded extractor and tests
         shell: cmd
         run: |
@@ -70,6 +74,7 @@ jobs:
         run: |
           git rm tools/inspect_ui_button_factories_wave_50.py
           git rm tools/inspect_button_palette_dependencies_wave_50.py
+          git rm tools/prepare_ui_button_factories_wave_50.py
           git rm tools/extract_ui_button_factories_wave_50.py
           git rm .github/workflows/inspect-ui-button-factories-wave-50.yml
           git rm .github/workflows/extract-ui-button-factories-wave-50.yml
