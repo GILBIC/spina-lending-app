@@ -354,3 +354,76 @@ def _spina_v16_refresh_data_grid(self, *args, **kwargs):
                 except Exception:
                     pass
                 return res
+
+
+# Wave 53 desktop-test repair: restore the active Data Bank payment-import control.
+# The exact Wave 49 presentation function above remains source-hash unchanged.
+_spina_v15_build_data_tab_without_import_repair = _spina_v15_build_data_tab
+
+
+def _spina_v53_widget_text(widget):
+    try:
+        return " ".join(str(widget.cget("text") or "").strip().split())
+    except Exception:
+        return ""
+
+
+def _spina_v53_walk_widgets(widget):
+    try:
+        children = list(widget.winfo_children())
+    except Exception:
+        children = []
+    for child in children:
+        yield child
+        yield from _spina_v53_walk_widgets(child)
+
+
+def _spina_v53_restore_databank_import_control(self):
+    callback = getattr(self, "_import_from_excel_entry", None)
+    root = getattr(self, "tab_data", None)
+    if not callable(callback) or root is None:
+        return None
+
+    widgets = list(_spina_v53_walk_widgets(root))
+    for widget in widgets:
+        if _spina_v53_widget_text(widget) == "Import Excel":
+            self._db_import_excel_btn = widget
+            return widget
+
+    daily_close = next(
+        (widget for widget in widgets if _spina_v53_widget_text(widget) == "Daily Close / View"),
+        None,
+    )
+    if daily_close is None:
+        return None
+
+    try:
+        parent = daily_close.master
+        button = ttk.Button(
+            parent,
+            text="Import Excel",
+            style="Primary.TButton",
+            command=callback,
+        )
+        button.pack(side="left", padx=3, before=daily_close)
+        self._db_import_excel_btn = button
+        return button
+    except Exception as exc:
+        try:
+            _log_suppressed_once(
+                "wave53_restore_databank_import_control",
+                "Data Bank Import Excel control restore failed",
+                exc,
+            )
+        except Exception:
+            pass
+        return None
+
+
+def _spina_v53_build_data_tab_with_import_control(self):
+    result = _spina_v15_build_data_tab_without_import_repair(self)
+    _spina_v53_restore_databank_import_control(self)
+    return result
+
+
+_spina_v15_build_data_tab = _spina_v53_build_data_tab_with_import_control
