@@ -64,7 +64,8 @@ def main() -> None:
             f"write_like={','.join(write_like) or '-'}"
         )
 
-    print(f"WAVE55_PLAN|methods={len(TARGETS)}|total_lines={total}|" + ";".join(pieces))
+    print(f"WAVE55_PLAN_A|methods={len(TARGETS)}|total_lines={total}|" + ";".join(pieces[:5]))
+    print("WAVE55_PLAN_B|" + ";".join(pieces[5:]))
 
 
 if __name__ == "__main__":
