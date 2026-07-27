@@ -90,6 +90,10 @@ def bind_methods(app):
         setattr(app, name, lambda *args, _name=name, **kwargs: getattr(system_data, _name)(app, *args, **kwargs))
 
 
+def stage(name):
+    print(f"WAVE55_WIDGET_STAGE|{name}", flush=True)
+
+
 def main() -> None:
     system_data.configure_system_data_presentation_dependencies(
         {
@@ -103,6 +107,7 @@ def main() -> None:
     errors = []
     messagebox.showerror = lambda title, text, **kwargs: errors.append((title, text))
     try:
+        stage("construct")
         root.geometry("1280x720+20+20")
         app = DummySystemDataApp(root)
         bind_methods(app)
@@ -110,6 +115,7 @@ def main() -> None:
         system_data._build_system_data_tab(app)
         root.update_idletasks()
 
+        stage("labels")
         texts = widget_texts(app.tab_system_data)
         for expected in (
             "Data",
@@ -126,6 +132,7 @@ def main() -> None:
         ):
             assert expected in texts, (expected, texts)
 
+        stage("initial-summary")
         initial = app.system_data_summary_var.get()
         assert "Date: 2026-07-27" in initial
         assert "Regular Expected: $1,200.00" in initial
@@ -137,10 +144,12 @@ def main() -> None:
             ("2026-07-27", "7x7"),
         ]
 
+        stage("focus-date")
         app.focus_date = "2026-07-26"
         button_by_text(app.tab_system_data, "Use Focus Date").invoke()
         assert app.system_data_date_var.get() == "2026-07-26"
 
+        stage("closed-summary")
         app.system_data_date_var.set("2026-07-27")
         app.db.day_close = {
             "expected_amount": 1500,
@@ -159,6 +168,7 @@ def main() -> None:
         assert "Workflow: For Review | Status: Closed" in closed
         assert "Note: Collector count checked" in closed
 
+        stage("routing")
         button_by_text(app.tab_system_data, "Open Daily Close / Variance").invoke()
         button_by_text(app.tab_system_data, "History").invoke()
         button_by_text(app.tab_system_data, "Records").invoke()
@@ -170,10 +180,12 @@ def main() -> None:
             ("print", "2026-07-27"),
         ]
 
+        stage("invalid-date")
         app.system_data_date_var.set("bad-date")
         assert system_data._system_data_get_date(app) == ""
         assert errors[-1] == ("Data", "Use date format YYYY-MM-DD.")
 
+        stage("hide-show")
         system_data._hide_system_data_tab(app)
         root.update_idletasks()
         assert str(app.tab_system_data) not in set(app.nb.tabs())
