@@ -1,0 +1,45 @@
+name: Wave 63 Architecture Refresh
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "spina_app/databank_delete_day.py"
+      - "tools/test_databank_delete_day_wave_62.py"
+      - "tools/test_databank_delete_day_password_gate_wave_63.py"
+      - ".github/workflows/databank-delete-day-password-gate-wave-63.yml"
+      - ".github/workflows/wave63-architecture-refresh.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wave63-architecture-refresh-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/databank-delete-day-password-gate-wave-63'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Wave 63 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Regenerate architecture maps
+        run: python -m tools.generate_architecture_map
+
+      - name: Commit generated maps when changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add architecture-map.json docs/architecture
+          if git diff --cached --quiet; then
+            echo "Architecture maps are already current."
+            exit 0
+          fi
+          git commit -m "Refresh Wave 63 architecture maps"
+          git push origin HEAD:${{ github.head_ref }}
