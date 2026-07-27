@@ -188,10 +188,12 @@ def main() -> None:
         stage("hide-show")
         system_data._hide_system_data_tab(app)
         root.update_idletasks()
-        assert str(app.tab_system_data) not in set(app.nb.tabs())
+        assert str(app.tab_system_data) in set(app.nb.tabs())
+        assert str(app.nb.tab(app.tab_system_data, "state")).lower() == "hidden"
         system_data._show_system_data_tab(app)
         root.update_idletasks()
         assert str(app.tab_system_data) in set(app.nb.tabs())
+        assert str(app.nb.tab(app.tab_system_data, "state")).lower() != "hidden"
         assert app.nb.tab(app.tab_system_data, "text") == "Data"
 
         print("Wave 55 System Data real Tkinter smoke test passed.")

@@ -9,10 +9,10 @@ ROOT = Path(__file__).resolve().parents[1]
 DESKTOP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 MODULE_PATH = ROOT / "spina_app" / "system_data_presentation.py"
 TARGETS = ('_show_system_data_tab', '_hide_system_data_tab', '_system_data_get_date', '_system_data_use_focus_date', '_system_data_refresh_summary', '_system_data_open_close', '_system_data_open_history', '_system_data_open_records', '_system_data_print_report', '_build_system_data_tab')
-EXPECTED = {'_show_system_data_tab': {'lines': 10,
-                           'sha256': '97518f51463e32f6b7222e505629edb860b144273485d3416e78cbf606b973ee',
+EXPECTED = {'_show_system_data_tab': {'lines': 18,
+                           'sha256': '7f68b43da86c941ed570d272da7f7c80c72c88aa7fb5deed17d0c7528a588927',
                            'signature': 'self',
-                           'calls': ['_log_suppressed_once', 'self.nb.add', 'self.nb.tab', 'self.nb.tabs', 'set', 'str']},
+                           'calls': ['_log_suppressed_once', 'lower', 'self.nb.add', 'self.nb.tab', 'self.nb.tabs', 'set', 'str', 'strip']},
  '_hide_system_data_tab': {'lines': 6,
                            'sha256': '2cc94304e83ecae87891240bd36de8d2762137639004abd3a27be55200dd40f8',
                            'signature': 'self',
@@ -30,7 +30,10 @@ EXPECTED = {'_show_system_data_tab': {'lines': 10,
  '_system_data_use_focus_date': {'lines': 8,
                                  'sha256': '9901deaa24a7cefc43e532d31afb65e481c52ba08c09d4ea433836606ab1858d',
                                  'signature': 'self',
-                                 'calls': ['_log_suppressed_once', 'self._get_databank_focus_date', 'self.system_data_date_var.set', 'strip']},
+                                 'calls': ['_log_suppressed_once',
+                                           'self._get_databank_focus_date',
+                                           'self.system_data_date_var.set',
+                                           'strip']},
  '_system_data_refresh_summary': {'lines': 60,
                                   'sha256': 'c6d42e2c651689494e4bded48d8754fdb8ee3ec1a9ecb85053819cea8cf7bcf6',
                                   'signature': 'self',
@@ -51,7 +54,9 @@ EXPECTED = {'_show_system_data_tab': {'lines': 10,
  '_system_data_open_close': {'lines': 11,
                              'sha256': 'c2a29a0b52164e57da672c065b5b983b7c81614b1f7f3114c768fe1fb85386e4',
                              'signature': 'self',
-                             'calls': ['self._system_data_get_date', 'self._system_data_refresh_summary', 'self.open_databank_close_dialog']},
+                             'calls': ['self._system_data_get_date',
+                                       'self._system_data_refresh_summary',
+                                       'self.open_databank_close_dialog']},
  '_system_data_open_history': {'lines': 5,
                                'sha256': '7deeb5e16c62824a50a62d186c5d80ee91fddc1494e5d417c75275ad0a94a4b4',
                                'signature': 'self',
@@ -112,7 +117,7 @@ def dotted(node: ast.AST) -> str:
 def main() -> None:
     module = importlib.import_module("spina_app.system_data_presentation")
     assert module.SYSTEM_DATA_PRESENTATION_TARGETS == list(TARGETS)
-    assert module.SYSTEM_DATA_PRESENTATION_TOTAL_SOURCE_LINES == 175
+    assert module.SYSTEM_DATA_PRESENTATION_TOTAL_SOURCE_LINES == 183
     assert module.SYSTEM_DATA_PRESENTATION_SOURCE_LINES == {name: item["lines"] for name, item in EXPECTED.items()}
     assert module.SYSTEM_DATA_PRESENTATION_SOURCE_SHA256 == {name: item["sha256"] for name, item in EXPECTED.items()}
     assert module.SYSTEM_DATA_PRESENTATION_SIGNATURES == {name: item["signature"] for name, item in EXPECTED.items()}

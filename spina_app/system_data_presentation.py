@@ -11,10 +11,10 @@ def configure_system_data_presentation_dependencies(namespace):
         if name not in _PROTECTED_GLOBALS:
             globals()[name] = value
 
-_SYSTEM_DATA_PRESENTATION_METADATA = {'_show_system_data_tab': {'lines': 10,
-                           'sha256': '97518f51463e32f6b7222e505629edb860b144273485d3416e78cbf606b973ee',
+_SYSTEM_DATA_PRESENTATION_METADATA = {'_show_system_data_tab': {'lines': 18,
+                           'sha256': '7f68b43da86c941ed570d272da7f7c80c72c88aa7fb5deed17d0c7528a588927',
                            'signature': 'self',
-                           'calls': ['_log_suppressed_once', 'self.nb.add', 'self.nb.tab', 'self.nb.tabs', 'set', 'str']},
+                           'calls': ['_log_suppressed_once', 'lower', 'self.nb.add', 'self.nb.tab', 'self.nb.tabs', 'set', 'str', 'strip']},
  '_hide_system_data_tab': {'lines': 6,
                            'sha256': '2cc94304e83ecae87891240bd36de8d2762137639004abd3a27be55200dd40f8',
                            'signature': 'self',
@@ -101,15 +101,23 @@ SYSTEM_DATA_PRESENTATION_SOURCE_LINES = {name: item['lines'] for name, item in _
 SYSTEM_DATA_PRESENTATION_SOURCE_SHA256 = {name: item['sha256'] for name, item in _SYSTEM_DATA_PRESENTATION_METADATA.items()}
 SYSTEM_DATA_PRESENTATION_SIGNATURES = {name: item['signature'] for name, item in _SYSTEM_DATA_PRESENTATION_METADATA.items()}
 SYSTEM_DATA_PRESENTATION_CALLS = {name: item['calls'] for name, item in _SYSTEM_DATA_PRESENTATION_METADATA.items()}
-SYSTEM_DATA_PRESENTATION_TOTAL_SOURCE_LINES = 175
+SYSTEM_DATA_PRESENTATION_TOTAL_SOURCE_LINES = 183
 
 def _show_system_data_tab(self):
     try:
         tabs = set(self.nb.tabs())
-        if str(self.tab_system_data) not in tabs:
+        tab_id = str(self.tab_system_data)
+        if tab_id not in tabs:
             self.nb.add(self.tab_system_data, text='Data')
         else:
-            self.nb.tab(self.tab_system_data, text='Data')
+            try:
+                state = str(self.nb.tab(self.tab_system_data, 'state') or '').strip().lower()
+            except Exception:
+                state = ''
+            if state == 'hidden':
+                self.nb.add(self.tab_system_data, text='Data')
+            else:
+                self.nb.tab(self.tab_system_data, text='Data')
     except Exception as __spina_exc:
         _log_suppressed_once('excpass_system_data_tab_show', 'suppressed exception excpass_system_data_tab_show', __spina_exc)
         pass
