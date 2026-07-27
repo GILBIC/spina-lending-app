@@ -10,15 +10,10 @@ APP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed
 OUT = ROOT / "artifacts" / "wave-58-system-data-helper-candidates.json"
 SOURCE_DIR = ROOT / "artifacts" / "wave-58-system-data-sources"
 TARGET_CLASS = "App"
-TARGETS = (
-    "_system_data_selected_date",
+PREFERRED_NAMES = {
     "_system_data_use_focus_date",
     "_system_data_refresh_summary",
-    "_system_data_open_close",
-    "_system_data_open_history",
-    "_system_data_open_records",
-    "_system_data_print_report",
-)
+}
 
 PROTECTED_MARKERS = (
     ".execute",
@@ -60,7 +55,7 @@ def find_methods(tree: ast.Module) -> dict[str, ast.FunctionDef | ast.AsyncFunct
                 child.name: child
                 for child in node.body
                 if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
-                and child.name in TARGETS
+                and child.name.startswith("_system_data_")
             }
     raise SystemExit(f"Missing class {TARGET_CLASS}")
 
@@ -71,14 +66,12 @@ def main() -> None:
     lines = text.splitlines(keepends=True)
     tree = ast.parse(text, filename=str(APP))
     methods = find_methods(tree)
-    missing = [name for name in TARGETS if name not in methods]
-    if missing:
-        raise SystemExit(f"Missing Wave 58 candidates: {missing}")
+    if not methods:
+        raise SystemExit("No current App._system_data_* helpers found")
 
     SOURCE_DIR.mkdir(parents=True, exist_ok=True)
     reports: list[dict[str, object]] = []
-    for name in TARGETS:
-        node = methods[name]
+    for name, node in sorted(methods.items(), key=lambda pair: pair[1].lineno):
         if node.end_lineno is None:
             raise SystemExit(f"Missing end line for {name}")
         source = "".join(lines[node.lineno - 1 : node.end_lineno])
@@ -115,17 +108,17 @@ def main() -> None:
 
     preferred = [
         report for report in reports
-        if report["target"].split(".")[-1] in {
-            "_system_data_selected_date",
-            "_system_data_use_focus_date",
-            "_system_data_refresh_summary",
-        }
+        if report["target"].split(".")[-1] in PREFERRED_NAMES
     ]
     summary = {
         "base_commit": "883907675bc64ede2916e7fe4ab167799f559ebf",
+        "discovered_names": [report["target"].split(".")[-1] for report in reports],
         "preferred_targets": [report["target"] for report in preferred],
         "preferred_total_lines": sum(int(report["lines"]) for report in preferred),
-        "preferred_all_clean": all(report["classification"] == "ui_read_candidate" for report in preferred),
+        "preferred_all_present": PREFERRED_NAMES.issubset(methods),
+        "preferred_all_clean": bool(preferred) and all(
+            report["classification"] == "ui_read_candidate" for report in preferred
+        ),
         "candidates": reports,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
