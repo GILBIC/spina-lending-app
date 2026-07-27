@@ -3,7 +3,6 @@ from __future__ import annotations
 # Wave 55 candidate inspection runs only on the feature branch.
 import ast
 import hashlib
-import json
 from pathlib import Path
 
 SOURCE = Path("OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py")
@@ -48,7 +47,6 @@ def main() -> None:
     if missing:
         raise SystemExit(f"Missing App methods: {missing}")
 
-    report: dict[str, object] = {"source": str(SOURCE), "targets": []}
     total = 0
     for name in TARGETS:
         node = methods[name]
@@ -58,21 +56,18 @@ def main() -> None:
         calls = sorted({dotted(n.func) for n in ast.walk(node) if isinstance(n, ast.Call) and dotted(n.func)})
         write_like = sorted({call for call in calls if call.rsplit(".", 1)[-1].lower() in WRITE_MARKERS})
         assignments = sorted({dotted(n.targets[0]) for n in ast.walk(node) if isinstance(n, ast.Assign) and len(n.targets) == 1 and dotted(n.targets[0])})
-        item = {
-            "name": name,
-            "start": start,
-            "end": end,
-            "lines": end - start + 1,
-            "sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
-            "calls": calls,
-            "write_like_calls": write_like,
-            "assignments": assignments,
-        }
-        report["targets"].append(item)
-        total += item["lines"]
+        line_count = end - start + 1
+        total += line_count
+        print(
+            "METHOD|"
+            f"{name}|start={start}|end={end}|lines={line_count}|"
+            f"sha256={hashlib.sha256(source.encode('utf-8')).hexdigest()}|"
+            f"write_like={','.join(write_like) or '-'}|"
+            f"assignments={','.join(assignments) or '-'}|"
+            f"calls={','.join(calls) or '-'}"
+        )
 
-    report["total_lines"] = total
-    print(json.dumps(report, indent=2))
+    print(f"TOTAL|methods={len(TARGETS)}|lines={total}")
 
 
 if __name__ == "__main__":
