@@ -6,17 +6,22 @@ on:
       - agent/high-volume-wave-54
     paths:
       - ".github/workflows/finalize-audit-presentation-wave-54.yml"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/finalize-audit-presentation-wave-54.yml"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: finalize-audit-presentation-wave-54
+  group: finalize-audit-presentation-wave-54-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   finalize:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-54'
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 90
     steps:
