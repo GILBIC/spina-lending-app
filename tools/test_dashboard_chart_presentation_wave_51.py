@@ -185,10 +185,9 @@ def main() -> None:
             if dotted(call.func) == "_wave51_configure_dashboard_chart_dependencies":
                 configure_calls.append(node.lineno)
     for call in (node for node in ast.walk(desktop_tree) if isinstance(node, ast.Call)):
-        if dotted(call.func).endswith("configure_legacy_dashboard_feature"):
-            kw = {item.arg: dotted(item.value) for item in call.keywords if item.arg}
-            if kw.get("draw_v18_charts") == "_spina_v18_draw_dashboard_charts" and kw.get("draw_v20_charts") == "_spina_v20_draw_dashboard_charts":
-                bridge_calls.append((call.lineno, kw))
+        kw = {item.arg: dotted(item.value) for item in call.keywords if item.arg}
+        if kw.get("draw_v18_charts") == "_spina_v18_draw_dashboard_charts" and kw.get("draw_v20_charts") == "_spina_v20_draw_dashboard_charts":
+            bridge_calls.append((call.lineno, dotted(call.func), kw))
     assert actual_rebinds == expected_rebinds, actual_rebinds
     assert len(configure_calls) == 1, configure_calls
     assert len(bridge_calls) == 1, bridge_calls
