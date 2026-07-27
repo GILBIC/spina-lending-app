@@ -7,6 +7,7 @@ on:
       - ".github/workflows/plan-high-volume-wave-55.yml"
       - "tools/extract_clients_tab_wave55_tmp.py"
       - "tools/fix_clients_tab_wave55_hash_tmp.py"
+      - "tools/finalize_clients_tab_wave55_tmp.py"
   workflow_dispatch:
 
 permissions:
@@ -63,16 +64,4 @@ jobs:
           python -m tools.test_architecture_map
       - name: Finalize clean branch
         shell: cmd
-        run: |
-          if exist tools\extract_clients_tab_wave55_tmp.py del /f /q tools\extract_clients_tab_wave55_tmp.py
-          if exist tools\fix_clients_tab_wave55_hash_tmp.py del /f /q tools\fix_clients_tab_wave55_hash_tmp.py
-          if exist .github\workflows\plan-high-volume-wave-55.yml del /f /q .github\workflows\plan-high-volume-wave-55.yml
-          if exist docs\wave-55-candidate-report.md del /f /q docs\wave-55-candidate-report.md
-          if exist artifacts\wave-55-candidates.json del /f /q artifacts\wave-55-candidates.json
-          if exist artifacts\wave-55-extraction.json del /f /q artifacts\wave-55-extraction.json
-          git status --short
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Extract Clients tab presentation Wave 55"
-          git push origin HEAD:agent/high-volume-wave-55-clean
+        run: python tools\finalize_clients_tab_wave55_tmp.py
