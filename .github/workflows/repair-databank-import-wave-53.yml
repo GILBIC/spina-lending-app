@@ -24,7 +24,7 @@ concurrency:
 jobs:
   repair:
     if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-53'
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: windows-latest
     timeout-minutes: 90
     steps:
       - name: Check out exact Wave 53 head
