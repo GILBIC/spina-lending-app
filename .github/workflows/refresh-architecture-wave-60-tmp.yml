@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - "tools/refresh_architecture_wave60_tmp.py"
+      - "tools/test_architecture_map.py"
       - ".github/workflows/refresh-architecture-wave-60-tmp.yml"
   workflow_dispatch:
 
