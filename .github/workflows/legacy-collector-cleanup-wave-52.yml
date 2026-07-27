@@ -35,8 +35,8 @@ jobs:
         if: ${{ hashFiles('tools/apply_legacy_collector_cleanup_wave_52.py') != '' }}
         shell: cmd
         run: |
-          python tools\apply_legacy_collector_cleanup_wave_52.py
-          if exist tools\wave52_diagnostic.txt type tools\wave52_diagnostic.txt
+          python tools\apply_legacy_collector_cleanup_wave_52.py > nul 2>&1
+          if exist tools\wave52_diagnostic.txt python -c "from pathlib import Path; p=Path(r'tools/wave52_diagnostic.txt'); print('WAVE52_ERROR:', p.read_text(encoding='utf-8').strip().splitlines()[-1])"
           if exist tools\wave52_diagnostic.txt exit /b 1
       - name: Commit transformed Wave 52 source
         if: ${{ hashFiles('tools/apply_legacy_collector_cleanup_wave_52.py') != '' }}
