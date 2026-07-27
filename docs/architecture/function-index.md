@@ -2,7 +2,7 @@
 
 Generated from commit `b77777bb07a40217577632acfdf3fd4e444d95a7`.
 
-Scanned **204 Python files**, **78,092 lines**, and **2,495 symbols**.
+Scanned **200 Python files**, **77,603 lines**, and **2,484 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1608,10 +1608,6 @@ Scanned **204 Python files**, **78,092 lines**, and **2,495 symbols**.
 - **tools.cleanup_stale_databank_generated_blocks._safety_check_range** (function, lines 301–334, 34 lines, risk `support`): Handles safety check range for the other feature.
 - **tools.cleanup_stale_databank_generated_blocks.main** (function, lines 337–437, 101 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/diagnose_system_data_wave56_tmp.py`
-
-- **tools.diagnose_system_data_wave56_tmp.main** (function, lines 14–59, 46 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/disable_full_daily_ledger.py`
 
 - **tools.disable_full_daily_ledger._flush** (function, lines 349–350, 2 lines, risk `reports`): Handles flush for the other feature.
@@ -1779,17 +1775,6 @@ Scanned **204 Python files**, **78,092 lines**, and **2,495 symbols**.
 - **tools.extract_pure_helper_batch.inspect** (function, lines 81–197, 117 lines, risk `filesystem`): Handles inspect for the other feature.
 - **tools.extract_pure_helper_batch.apply** (function, lines 200–245, 46 lines, risk `filesystem`): Handles apply for the other feature.
 - **tools.extract_pure_helper_batch.main** (function, lines 248–260, 13 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/extract_system_data_wave56_tmp.py`
-
-- **tools.extract_system_data_wave56_tmp.dotted** (function, lines 36–43, 8 lines, risk `support`): Handles dotted for the other feature.
-- **tools.extract_system_data_wave56_tmp.find_target** (function, lines 46–52, 7 lines, risk `support`): Retrieves find target for the other feature.
-- **tools.extract_system_data_wave56_tmp.static_text** (function, lines 55–59, 5 lines, risk `support`): Handles static text for the other feature.
-- **tools.extract_system_data_wave56_tmp.command_name** (function, lines 62–71, 10 lines, risk `support`): Handles command name for the other feature.
-- **tools.extract_system_data_wave56_tmp.render_module** (function, lines 74–99, 26 lines, risk `support`): Handles render module for the other feature.
-- **tools.extract_system_data_wave56_tmp.render_exact_test** (function, lines 102–145, 44 lines, risk `support`): Handles render exact test for the other feature.
-- **tools.extract_system_data_wave56_tmp.render_widget_test** (function, lines 148–214, 67 lines, risk `ui_only`): Handles render widget test for the other feature.
-- **tools.extract_system_data_wave56_tmp.main** (function, lines 217–314, 98 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_text_normalizers.py`
 
@@ -1990,11 +1975,6 @@ Scanned **204 Python files**, **78,092 lines**, and **2,495 symbols**.
 - **tools.plan_remaining_pass_only_groups.PassOnlyVisitor.visit_ExceptHandler** (method, lines 130–149, 20 lines, risk `support`): Handles visit ExceptHandler for the payments feature.
 - **tools.plan_remaining_pass_only_groups.build_report** (function, lines 152–193, 42 lines, risk `filesystem`): Builds build report for the reports feature.
 - **tools.plan_remaining_pass_only_groups.main** (function, lines 196–209, 14 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/plan_system_data_wave56_tmp.py`
-
-- **tools.plan_system_data_wave56_tmp.dotted** (function, lines 15–22, 8 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_system_data_wave56_tmp.main** (function, lines 25–67, 43 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_ui_compatibility_pass_only.py`
 
