@@ -1,0 +1,72 @@
+name: Dashboard chart presentation Wave 51
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/dashboard_chart_presentation.py"
+      - "spina_app/tabs/dashboard.py"
+      - "spina_app/theme_palettes.py"
+      - "spina_app/ui_helpers.py"
+      - "tools/test_dashboard_chart_presentation_wave_51.py"
+      - "tools/test_dashboard_chart_widget_smoke_wave_51.py"
+      - "architecture-map.json"
+      - "docs/architecture/**"
+      - ".github/workflows/dashboard-chart-presentation-wave-51.yml"
+permissions:
+  contents: read
+concurrency:
+  group: dashboard-chart-presentation-wave-51-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    if: github.head_ref == 'agent/high-volume-wave-51'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 90
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Compile application, chart module, and tests
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app/dashboard_chart_presentation.py
+          python -m py_compile spina_app/tabs/dashboard.py
+          python -m py_compile tools/test_dashboard_chart_presentation_wave_51.py
+          python -m py_compile tools/test_dashboard_chart_widget_smoke_wave_51.py
+          python -m compileall -q spina_app
+      - name: Run exact dashboard-chart regression
+        shell: cmd
+        run: python tools/test_dashboard_chart_presentation_wave_51.py
+      - name: Run real Tkinter dashboard-chart smoke test
+        shell: cmd
+        run: python tools/test_dashboard_chart_widget_smoke_wave_51.py
+      - name: Run protected Dashboard Wave 28 regression
+        shell: cmd
+        run: python -m tools.test_dashboard_presentation_wave_28
+      - name: Run protected Theme Wave 35 regression
+        shell: cmd
+        run: python -m tools.test_theme_presentation_wave_35
+      - name: Run protected UI button Wave 50 regressions
+        shell: cmd
+        run: |
+          python tools/test_ui_button_factories_wave_50.py
+          python tools/test_ui_button_factories_widget_smoke_wave_50.py
+      - name: Validate permanent architecture map
+        shell: cmd
+        run: python -m tools.test_architecture_map
+      - name: Run repository audits
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-51-redundancy.json
+          python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-51-quality.json
+      - name: Upload Wave 51 reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-chart-presentation-wave-51-reports
+          path: artifacts/wave-51-*.json
+          if-no-files-found: error
