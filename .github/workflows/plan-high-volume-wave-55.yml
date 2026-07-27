@@ -34,7 +34,7 @@ jobs:
         run: python tools\fix_clients_tab_wave55_hash_tmp.py
       - name: Extract guarded Clients-tab boundary
         shell: cmd
-        run: python tools\extract_clients_tab_wave55_tmp.py
+        run: python tools\extract_clients_tab_wave55_tmp.py >nul
       - name: Compile extracted code and tests
         shell: cmd
         run: |
@@ -44,24 +44,24 @@ jobs:
           python -m py_compile tools\test_clients_tab_widget_smoke_wave_55.py
       - name: Run exact extraction regression
         shell: cmd
-        run: python -m tools.test_clients_tab_presentation_wave_55
+        run: python -m tools.test_clients_tab_presentation_wave_55 >nul
       - name: Run real Tkinter construction test
         shell: cmd
-        run: python -m tools.test_clients_tab_widget_smoke_wave_55
+        run: python -m tools.test_clients_tab_widget_smoke_wave_55 >nul
       - name: Run protected client regressions
         shell: cmd
         run: |
-          python -m tools.test_clients_read_presentation_wave_30
-          python -m tools.test_client_read_queries_wave_31
-          python -m tools.test_client_form_presentation_wave_38
-          python -m tools.test_navigation_and_databank_shell_wave_29
-          python -m tools.test_side_navigation_presentation_wave_48
-          python -m tools.test_side_navigation_widget_smoke_wave_48
+          python -m tools.test_clients_read_presentation_wave_30 >nul
+          python -m tools.test_client_read_queries_wave_31 >nul
+          python -m tools.test_client_form_presentation_wave_38 >nul
+          python -m tools.test_navigation_and_databank_shell_wave_29 >nul
+          python -m tools.test_side_navigation_presentation_wave_48 >nul
+          python -m tools.test_side_navigation_widget_smoke_wave_48 >nul
       - name: Regenerate and validate architecture map
         shell: cmd
         run: |
-          python -m tools.generate_architecture_map
-          python -m tools.test_architecture_map
+          python -m tools.generate_architecture_map >nul
+          python -m tools.test_architecture_map >nul
       - name: Finalize clean branch
         shell: cmd
         run: python tools\finalize_clients_tab_wave55_tmp.py
