@@ -80,10 +80,10 @@ jobs:
           git add architecture-map.json docs\architecture
           git diff --cached --quiet || git commit -m "Refresh Wave 56 architecture maps"
           git push origin HEAD:agent/high-volume-wave-56
-      - name: Upload Wave 56 extraction report
+      - name: Upload Wave 56 reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: system-data-wave-56-extraction
-          path: artifacts/wave-56-system-data-extraction.json
+          name: system-data-wave-56-reports
+          path: artifacts/wave-56-*.json
           if-no-files-found: warn
