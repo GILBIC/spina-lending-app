@@ -31,7 +31,7 @@ def configure_databank_presentation_dependencies(namespace):
 
 DATABANK_PRESENTATION_TARGETS = ['_spina_v15_palette', '_spina_v15_setup_databank_styles', '_spina_v15_stat_card', '_spina_v15_build_data_tab', '_spina_v15_update_databank_cards', '_spina_v15_refresh_data_grid', '_spina_v15_update_data_toolbar', '_spina_v15_apply_ui_theme', '_spina_v16_apply_bigger_payment_grid', '_spina_v16_refresh_data_grid']
 DATABANK_PRESENTATION_SOURCE_LINES = {'_spina_v15_palette': 17, '_spina_v15_setup_databank_styles': 48, '_spina_v15_stat_card': 5, '_spina_v15_build_data_tab': 136, '_spina_v15_update_databank_cards': 39, '_spina_v15_refresh_data_grid': 18, '_spina_v15_update_data_toolbar': 7, '_spina_v15_apply_ui_theme': 11, '_spina_v16_apply_bigger_payment_grid': 21, '_spina_v16_refresh_data_grid': 7}
-DATABANK_PRESENTATION_SOURCE_SHA256 = {'_spina_v15_palette': 'a3f62850e60b84110fe96e601061be175730d07a7df1a273c64a2628a49eb037', '_spina_v15_setup_databank_styles': '55f92454aaf29af7e3f2a8995769ff109a9153c50835132a337bac5e86248212', '_spina_v15_stat_card': '44552d9fec3486c45f7e5f56aed237dd3cf035bd55ae0219b7f34cd46ad75657', '_spina_v15_build_data_tab': '06715b426fc112b66bf2cfca76ed844f7b5544276d6e9c867b6656e6b2c211ad', '_spina_v15_update_databank_cards': 'ceaf5045cfade6235e8acfceee400ddf2211b89f09e364d257938fbc543e1780', '_spina_v15_refresh_data_grid': '8c2bc3d43da89ca2f770f5f03c5af71356d38cb2d32eac1cce72a0c27b4b0441', '_spina_v15_update_data_toolbar': '567bf6416e53cc0e9543227e37540d07308a43e192a2495e09693580ebef6632', '_spina_v15_apply_ui_theme': 'cf7b8980b2617457ff3d40aa543c1c0f80cbfe60c951611fe3cf2beedc52ac9a', '_spina_v16_apply_bigger_payment_grid': '38daa05d54931f818a0252ec98bb84d8fd92aec332f7cd3aa87cfeacac9c6d97', '_spina_v16_refresh_data_grid': '0de5180c884ed6c8c2e6168efe7a8d8d4891b738f17ba1b9cbd404108e6e82ff'}
+DATABANK_PRESENTATION_SOURCE_SHA256 = {'_spina_v15_palette': 'a3f62850e60b84110fe96e601061be175730d07a7df1a273c64a2628a49eb037', '_spina_v15_setup_databank_styles': '55f92454aaf29af7e5f2a8995769ff109a9153c50835132a337bac5e86248212', '_spina_v15_stat_card': '44552d9fec3486c45f7e5f56aed237dd3cf035bd55ae0219b7f34cd46ad75657', '_spina_v15_build_data_tab': '06715b426fc112b66bf2cfca76ed844f7b5544276d6e9c867b6656e6b2c211ad', '_spina_v15_update_databank_cards': 'ceaf5045cfade6235e8acfceee400ddf2211b89f09e364d257938fbc543e1780', '_spina_v15_refresh_data_grid': '8c2bc3d43da89ca2f770f5f03c5af71356d38cb2d32eac1cce72a0c27b4b0441', '_spina_v15_update_data_toolbar': '567bf6416e53cc0e9543227e37540d07308a43e192a2495e09693580ebef6632', '_spina_v15_apply_ui_theme': 'cf7b8980b2617457ff3d40aa543c1c0f80cbfe60c951611fe3cf2beedc52ac9a', '_spina_v16_apply_bigger_payment_grid': '38daa05d54931f818a0252ec98bb84d8fd92aec332f7cd3aa87cfeacac9c6d97', '_spina_v16_refresh_data_grid': '0de5180c884ed6c8c2e6168efe7a8d8d4891b738f17ba1b9cbd404108e6e82ff'}
 DATABANK_PRESENTATION_SIGNATURES = {'_spina_v15_palette': 'self', '_spina_v15_setup_databank_styles': 'self', '_spina_v15_stat_card': 'parent, title, textvar', '_spina_v15_build_data_tab': 'self', '_spina_v15_update_databank_cards': 'self', '_spina_v15_refresh_data_grid': 'self, *args, **kwargs', '_spina_v15_update_data_toolbar': 'self, *args, **kwargs', '_spina_v15_apply_ui_theme': 'self, *args, **kwargs', '_spina_v16_apply_bigger_payment_grid': 'self', '_spina_v16_refresh_data_grid': 'self, *args, **kwargs'}
 DATABANK_PRESENTATION_CALLS = {'_spina_v15_palette': ['getattr', 'isinstance', 'lower', 'self._theme_palette', 'startswith', 'str'], '_spina_v15_setup_databank_styles': ['_log_suppressed_once', '_spina_v15_palette', 'getattr', 'lower', 'p.get', 'st.configure', 'st.map', 'startswith', 'str', 'ttk.Style'], '_spina_v15_stat_card': ['pack', 'ttk.Frame', 'ttk.Label'], '_spina_v15_build_data_tab': ['_spina_v15_palette', '_spina_v15_setup_databank_styles', '_spina_v15_stat_card', '_spina_v15_update_databank_cards', 'actions.pack', 'body_card.pack', 'c.grid', 'child.destroy', 'enumerate', 'frm.configure', 'frm.winfo_children', 'getattr', 'grid_head.pack', 'hasattr', 'header.pack', 'left.pack', 'left_actions.pack', 'lower', 'nav.pack', 'nav_row.pack', 'p.get', 'pack', 'page.pack', 'range', 'right_actions.pack', 'search_box.pack', 'search_row.pack', 'self._mode_filter', 'self._month_label', 'self._update_data_toolbar', 'self.db_search_entry.bind', 'self.db_search_entry.pack', 'self.inner.pack', 'self.month_lbl.pack', 'self.refresh_data_grid', 'self.search_db_var.set', 'self.search_db_var.trace_add', 'startswith', 'stats.grid_columnconfigure', 'stats.pack', 'str', 'tk.StringVar', 'ttk.Button', 'ttk.Entry', 'ttk.Frame', 'ttk.Label'], '_spina_v15_update_databank_cards': ['_log_suppressed_once', 'get', 'getattr', 'hasattr', 'self._db_card_clients_var.set', 'self._db_card_close_var.set', 'self._db_card_month_var.set', 'self._db_card_view_var.set', 'self._mode_filter', 'self._month_label', 'str', 'strip', 'tv.get_children', 'tv.item'], '_spina_v15_refresh_data_grid': ['_spina_v15_orig_refresh_data_grid', '_spina_v15_setup_databank_styles', '_spina_v15_update_databank_cards', 'getattr', 'self.days_tree.configure', 'self.name_tree.configure'], '_spina_v15_update_data_toolbar': ['_spina_v15_orig_update_data_toolbar', '_spina_v15_update_databank_cards'], '_spina_v15_apply_ui_theme': ['_spina_v15_orig_apply_theme', '_spina_v15_setup_databank_styles', '_spina_v15_update_databank_cards'], '_spina_v16_apply_bigger_payment_grid': ['_spina_v15_setup_databank_styles', 'getattr', 'self.days_tree.column', 'self.days_tree.configure', 'self.name_tree.column', 'self.name_tree.configure', 'startswith', 'str'], '_spina_v16_refresh_data_grid': ['_spina_v16_apply_bigger_payment_grid', '_spina_v16_prev_refresh_data_grid']}
 DATABANK_PRESENTATION_TOTAL_SOURCE_LINES = 309
@@ -354,3 +354,76 @@ def _spina_v16_refresh_data_grid(self, *args, **kwargs):
                 except Exception:
                     pass
                 return res
+
+
+# Wave 53 desktop-test repair: restore the active Data Bank payment-import control.
+# The exact Wave 49 presentation function above remains source-hash unchanged.
+_spina_v15_build_data_tab_without_import_repair = _spina_v15_build_data_tab
+
+
+def _spina_v53_widget_text(widget):
+    try:
+        return " ".join(str(widget.cget("text") or "").strip().split())
+    except Exception:
+        return ""
+
+
+def _spina_v53_walk_widgets(widget):
+    try:
+        children = list(widget.winfo_children())
+    except Exception:
+        children = []
+    for child in children:
+        yield child
+        yield from _spina_v53_walk_widgets(child)
+
+
+def _spina_v53_restore_databank_import_control(self):
+    callback = getattr(self, "_import_from_excel_entry", None)
+    root = getattr(self, "tab_data", None)
+    if not callable(callback) or root is None:
+        return None
+
+    widgets = list(_spina_v53_walk_widgets(root))
+    for widget in widgets:
+        if _spina_v53_widget_text(widget) == "Import Excel":
+            self._db_import_excel_btn = widget
+            return widget
+
+    daily_close = next(
+        (widget for widget in widgets if _spina_v53_widget_text(widget) == "Daily Close / View"),
+        None,
+    )
+    if daily_close is None:
+        return None
+
+    try:
+        parent = daily_close.master
+        button = ttk.Button(
+            parent,
+            text="Import Excel",
+            style="Primary.TButton",
+            command=callback,
+        )
+        button.pack(side="left", padx=3, before=daily_close)
+        self._db_import_excel_btn = button
+        return button
+    except Exception as exc:
+        try:
+            _log_suppressed_once(
+                "wave53_restore_databank_import_control",
+                "Data Bank Import Excel control restore failed",
+                exc,
+            )
+        except Exception:
+            pass
+        return None
+
+
+def _spina_v53_build_data_tab_with_import_control(self):
+    result = _spina_v15_build_data_tab_without_import_repair(self)
+    _spina_v53_restore_databank_import_control(self)
+    return result
+
+
+_spina_v15_build_data_tab = _spina_v53_build_data_tab_with_import_control
