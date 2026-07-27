@@ -85,5 +85,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: system-data-wave-56-reports
-          path: artifacts/wave-56-*.json
+          path: |
+            artifacts/wave-56-*.json
+            spina_app/system_data_presentation.py
+            tools/test_system_data_presentation_wave_56.py
+            tools/test_system_data_widget_smoke_wave_56.py
           if-no-files-found: warn
