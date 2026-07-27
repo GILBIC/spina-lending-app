@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `bf3818f050e5e01f8e03fd0820e6650ded861fec`.
+Generated from commit `ffc2f8b30013c59da76a004065f5eaa6b693e20a`.
 
-Scanned **218 Python files**, **79,171 lines**, and **2,583 symbols**.
+Scanned **219 Python files**, **79,222 lines**, and **2,599 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -966,8 +966,8 @@ Scanned **218 Python files**, **79,171 lines**, and **2,583 symbols**.
 
 ## `spina_app/databank_delete_day.py`
 
-- **spina_app.databank_delete_day.configure_databank_delete_day_dependencies** (function, lines 11–16, 6 lines, risk `support`): Handles configure databank delete day dependencies for the data bank feature.
-- **spina_app.databank_delete_day.open_delete_day_dialog** (function, lines 103–243, 141 lines, risk `authentication`): Delete all Data Bank entries for one selected date, with backup + password confirmation.
+- **spina_app.databank_delete_day.configure_databank_delete_day_dependencies** (function, lines 12–17, 6 lines, risk `support`): Handles configure databank delete day dependencies for the data bank feature.
+- **spina_app.databank_delete_day.open_delete_day_dialog** (function, lines 111–252, 142 lines, risk `authentication`): Delete all Data Bank entries for one selected date, with backup + password confirmation.
 
 ## `spina_app/databank_editor_presentation.py`
 
@@ -2612,11 +2612,30 @@ Scanned **218 Python files**, **79,171 lines**, and **2,583 symbols**.
 - **tools.test_databank_delete_day_behavior_wave_62.FakeApp.refresh_audit_tab** (method, lines 83–84, 2 lines, risk `support`): Refreshes refresh audit tab for the data bank feature.
 - **tools.test_databank_delete_day_behavior_wave_62.main** (function, lines 87–165, 79 lines, risk `filesystem`): Handles main for the other feature.
 
+## `tools/test_databank_delete_day_password_gate_wave_63.py`
+
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeCursor** (class, lines 10–17, 8 lines, risk `container`): Groups FakeCursor for the database feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.execute** (method, lines 11–14, 4 lines, risk `support`): Handles execute for the database feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.fetchone** (method, lines 16–17, 2 lines, risk `support`): Handles fetchone for the database feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeConn** (class, lines 20–22, 3 lines, risk `container`): Groups FakeConn for the other feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeConn.cursor** (method, lines 21–22, 2 lines, risk `support`): Handles cursor for the database feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeDB** (class, lines 25–35, 11 lines, risk `container`): Groups FakeDB for the other feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeDB.__init__** (method, lines 26–28, 3 lines, risk `support`): Handles init for the other feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeDB.get_databank_day_close** (method, lines 30–31, 2 lines, risk `support`): Retrieves get databank day close for the data bank feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeDB.delete_transactions_for_day** (method, lines 33–35, 3 lines, risk `support`): Removes delete transactions for day for the payments feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeApp** (class, lines 38–58, 21 lines, risk `container`): Groups FakeApp for the other feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeApp.__init__** (method, lines 39–46, 8 lines, risk `support`): Handles init for the other feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeApp._prompt_current_password** (method, lines 48–49, 2 lines, risk `authentication`): Handles prompt current password for the payments feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_data_grid** (method, lines 51–52, 2 lines, risk `support`): Refreshes refresh data grid for the data bank feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_reports** (method, lines 54–55, 2 lines, risk `reports`): Refreshes refresh reports for the reports feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_audit_tab** (method, lines 57–58, 2 lines, risk `support`): Refreshes refresh audit tab for the data bank feature.
+- **tools.test_databank_delete_day_password_gate_wave_63.main** (function, lines 61–93, 33 lines, risk `reports`): Handles main for the other feature.
+
 ## `tools/test_databank_delete_day_wave_62.py`
 
-- **tools.test_databank_delete_day_wave_62.sha** (function, lines 100–101, 2 lines, risk `filesystem`): Handles sha for the other feature.
-- **tools.test_databank_delete_day_wave_62.dotted** (function, lines 104–110, 7 lines, risk `support`): Handles dotted for the other feature.
-- **tools.test_databank_delete_day_wave_62.main** (function, lines 113–148, 36 lines, risk `filesystem`): Handles main for the other feature.
+- **tools.test_databank_delete_day_wave_62.sha** (function, lines 20–21, 2 lines, risk `filesystem`): Handles sha for the other feature.
+- **tools.test_databank_delete_day_wave_62.dotted** (function, lines 24–30, 7 lines, risk `support`): Handles dotted for the other feature.
+- **tools.test_databank_delete_day_wave_62.main** (function, lines 33–93, 61 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_databank_editor_presentation_wave_60.py`
 

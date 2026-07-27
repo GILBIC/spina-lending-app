@@ -1,8 +1,8 @@
 # SPINA Application Database and File Access Map
 
-Generated from commit `bf3818f050e5e01f8e03fd0820e6650ded861fec`.
+Generated from commit `ffc2f8b30013c59da76a004065f5eaa6b693e20a`.
 
-Scanned **218 Python files**, **79,171 lines**, and **2,583 symbols**.
+Scanned **219 Python files**, **79,222 lines**, and **2,599 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -218,7 +218,7 @@ Scanned **218 Python files**, **79,171 lines**, and **2,583 symbols**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_route_adv_marker_for` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:6790 — risk `filesystem`.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_databank_collector_defaults_for_date` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8301 — risk `database_read`.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.print_databank_close_report` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8374 — risk `filesystem`.
-- `spina_app.databank_delete_day.open_delete_day_dialog` — spina_app/databank_delete_day.py:103 — risk `authentication`.
+- `spina_app.databank_delete_day.open_delete_day_dialog` — spina_app/databank_delete_day.py:111 — risk `authentication`.
 - `spina_app.linked_client_queries.get_transactions_for_client_uids` — spina_app/linked_client_queries.py:114 — risk `database_read`.
 - `spina_app.linked_client_queries.get_transactions_for_client` — spina_app/linked_client_queries.py:218 — risk `database_read`.
 
@@ -392,7 +392,7 @@ Scanned **218 Python files**, **79,171 lines**, and **2,583 symbols**.
 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:13465
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.delete_transactions_for_day` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:6128
-- `spina_app.databank_delete_day.open_delete_day_dialog` — spina_app/databank_delete_day.py:103
+- `spina_app.databank_delete_day.open_delete_day_dialog` — spina_app/databank_delete_day.py:111
 
 ### `encoder_import_{}.txt`
 

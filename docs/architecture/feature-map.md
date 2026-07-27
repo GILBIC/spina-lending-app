@@ -1,8 +1,8 @@
 # SPINA Application Feature Map
 
-Generated from commit `bf3818f050e5e01f8e03fd0820e6650ded861fec`.
+Generated from commit `ffc2f8b30013c59da76a004065f5eaa6b693e20a`.
 
-Scanned **218 Python files**, **79,171 lines**, and **2,583 symbols**.
+Scanned **219 Python files**, **79,222 lines**, and **2,599 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -172,7 +172,7 @@ Main files: `spina_app/tabs/dashboard.py` (26), `OFFICIAL_SPINA_APP_PostgreSQL_T
 
 ## Data Bank
 
-**113 symbols · 5,156 non-overlapping function lines**
+**113 symbols · 5,157 non-overlapping function lines**
 
 Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (57), `spina_app/databank_presentation.py` (12), `spina_app/databank_grid_presentation.py` (11), `spina_app/databank_editor_presentation.py` (8), `spina_app/tabs/data_bank_shell.py` (8), `spina_app/system_data_summary_presentation.py` (5), `spina_app/databank_cell_writes.py` (4), `spina_app/audit_presentation.py` (2)
 
@@ -184,8 +184,8 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_perf_refresh_data_grid` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:28900 — Fast Data Bank month grid refresh using bulk month transaction query. Risk: **ui_only**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_core` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:13886 — Auto-detect payments and reasons from Excel. Rules: " First row = headers. Must include 'Client Name' and at least one date column. " A date column can be an Excel date/datetime or a string 'YYYY-MM-DD'. " If a cell under a date column is numeric (or numeric-looking text): that's the amount. " If a  Risk: **database_read**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.import_from_excel_with_reasons` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:20802 — Import the Excel 'range template' where columns are: Client Name | 2025-10-01 | 2025-10-01 Reason | 2025-10-02 | 2025-10-02 Reason | ... Saves both Amount and Reason for each date. Risk: **support**.
+- `spina_app.databank_delete_day.open_delete_day_dialog` — spina_app/databank_delete_day.py:111 — Delete all Data Bank entries for one selected date, with backup + password confirmation. Risk: **authentication**.
 - `spina_app.databank_editor_presentation._begin_cell_edit` — spina_app/databank_editor_presentation.py:170 — Create an Entry over the clicked (or remembered) day cell and save back to DB. Risk: **filesystem**.
-- `spina_app.databank_delete_day.open_delete_day_dialog` — spina_app/databank_delete_day.py:103 — Delete all Data Bank entries for one selected date, with backup + password confirmation. Risk: **authentication**.
 - `spina_app.databank_presentation._spina_v15_build_data_tab` — spina_app/databank_presentation.py:112 — Modern Data Bank page: card header, fast search, summary cards, grouped actions, same grid logic. Risk: **ui_only**.
 - `spina_app.audit_presentation.refresh_audit_tab` — spina_app/audit_presentation.py:92 — Refreshes refresh audit tab for the data bank feature. Risk: **financial_calculation**.
 - `spina_app.tabs.data_bank_shell._resize_databank_columns` — spina_app/tabs/data_bank_shell.py:138 — Resize Data Bank columns responsively. Supports 'freeze panes' layout: - name_tree shows Client + Area (fixed, no horizontal scroll) - days_tree shows day columns with horizontal scroll Risk: **ui_only**.

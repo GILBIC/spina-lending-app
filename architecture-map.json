@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "bf3818f050e5e01f8e03fd0820e6650ded861fec",
+  "generated_from_commit": "ffc2f8b30013c59da76a004065f5eaa6b693e20a",
   "indexes": {
     "application_callbacks": [
       {
@@ -3164,7 +3164,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:6790:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_route_adv_marker_for",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8301:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_databank_collector_defaults_for_date",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8374:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.print_databank_close_report",
-        "spina_app/databank_delete_day.py:103:spina_app.databank_delete_day.open_delete_day_dialog",
+        "spina_app/databank_delete_day.py:111:spina_app.databank_delete_day.open_delete_day_dialog",
         "spina_app/linked_client_queries.py:114:spina_app.linked_client_queries.get_transactions_for_client_uids",
         "spina_app/linked_client_queries.py:218:spina_app.linked_client_queries.get_transactions_for_client"
       ]
@@ -4166,8 +4166,8 @@
         "spina_app/databank_cell_writes.py:7:spina_app.databank_cell_writes.configure_databank_cell_write_dependencies",
         "spina_app/databank_close_history_presentation.py:22:spina_app.databank_close_history_presentation.open_databank_close_history_dialog",
         "spina_app/databank_close_history_presentation.py:7:spina_app.databank_close_history_presentation.configure_databank_close_history_presentation_dependencies",
-        "spina_app/databank_delete_day.py:103:spina_app.databank_delete_day.open_delete_day_dialog",
-        "spina_app/databank_delete_day.py:11:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
+        "spina_app/databank_delete_day.py:111:spina_app.databank_delete_day.open_delete_day_dialog",
+        "spina_app/databank_delete_day.py:12:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
         "spina_app/databank_editor_presentation.py:113:spina_app.databank_editor_presentation._pick_missed_reason.on_ok",
         "spina_app/databank_editor_presentation.py:139:spina_app.databank_editor_presentation._pick_missed_reason.on_cancel",
         "spina_app/databank_editor_presentation.py:170:spina_app.databank_editor_presentation._begin_cell_edit",
@@ -4966,7 +4966,7 @@
       "encoder_import_log.json": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:13465:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:6128:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.delete_transactions_for_day",
-        "spina_app/databank_delete_day.py:103:spina_app.databank_delete_day.open_delete_day_dialog"
+        "spina_app/databank_delete_day.py:111:spina_app.databank_delete_day.open_delete_day_dialog"
       ],
       "encoder_import_{}.txt": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:13465:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch"
@@ -5638,7 +5638,7 @@
         "spina_app/account_header_presentation.py:31:spina_app.account_header_presentation._spina_v32_refresh_user_header",
         "spina_app/account_header_presentation.py:46:spina_app.account_header_presentation._spina_v32_build_header",
         "spina_app/account_permission_presentation.py:10:spina_app.account_permission_presentation._spina_v32_account_permission_text",
-        "spina_app/databank_delete_day.py:103:spina_app.databank_delete_day.open_delete_day_dialog",
+        "spina_app/databank_delete_day.py:111:spina_app.databank_delete_day.open_delete_day_dialog",
         "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
         "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
         "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok",
@@ -6460,7 +6460,7 @@
         "spina_app/databank_cell_writes.py:102:spina_app.databank_cell_writes.delete_selected_cell",
         "spina_app/databank_cell_writes.py:7:spina_app.databank_cell_writes.configure_databank_cell_write_dependencies",
         "spina_app/databank_close_history_presentation.py:7:spina_app.databank_close_history_presentation.configure_databank_close_history_presentation_dependencies",
-        "spina_app/databank_delete_day.py:11:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
+        "spina_app/databank_delete_day.py:12:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
         "spina_app/databank_editor_presentation.py:113:spina_app.databank_editor_presentation._pick_missed_reason.on_ok",
         "spina_app/databank_editor_presentation.py:139:spina_app.databank_editor_presentation._pick_missed_reason.on_cancel",
         "spina_app/databank_editor_presentation.py:162:spina_app.databank_editor_presentation._walk_widgets",
@@ -10066,7 +10066,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:6790:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_route_adv_marker_for",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8301:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_databank_collector_defaults_for_date",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8374:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.print_databank_close_report",
-        "spina_app/databank_delete_day.py:103:spina_app.databank_delete_day.open_delete_day_dialog",
+        "spina_app/databank_delete_day.py:111:spina_app.databank_delete_day.open_delete_day_dialog",
         "spina_app/linked_client_queries.py:114:spina_app.linked_client_queries.get_transactions_for_client_uids",
         "spina_app/linked_client_queries.py:218:spina_app.linked_client_queries.get_transactions_for_client"
       ]
@@ -10094,6 +10094,7 @@
         "tools/test_databank_cell_writes_behavior_wave_61.py:63:tools.test_databank_cell_writes_behavior_wave_61.FakeApp",
         "tools/test_databank_close_history_widget_smoke_wave_57.py:31:tools.test_databank_close_history_widget_smoke_wave_57.FakeApp",
         "tools/test_databank_delete_day_behavior_wave_62.py:59:tools.test_databank_delete_day_behavior_wave_62.FakeApp",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:38:tools.test_databank_delete_day_password_gate_wave_63.FakeApp",
         "tools/test_databank_grid_widget_smoke_wave_59.py:42:tools.test_databank_grid_widget_smoke_wave_59.FakeApp",
         "tools/test_system_data_summary_widget_smoke_wave_58.py:31:tools.test_system_data_summary_widget_smoke_wave_58.FakeApp",
         "tools/test_system_data_widget_smoke_wave_56.py:17:tools.test_system_data_widget_smoke_wave_56.FakeApp"
@@ -10106,12 +10107,21 @@
         "tools/test_cash_control_feature_wave_21.py:30:tools.test_cash_control_feature_wave_21.FakeCanvas",
         "tools/test_ui_display_helper_batch.py:36:tools.test_ui_display_helper_batch.FakeCanvas"
       ],
+      "FakeConn": [
+        "tools/test_databank_delete_day_behavior_wave_62.py:28:tools.test_databank_delete_day_behavior_wave_62.FakeConn",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:20:tools.test_databank_delete_day_password_gate_wave_63.FakeConn"
+      ],
+      "FakeCursor": [
+        "tools/test_databank_delete_day_behavior_wave_62.py:14:tools.test_databank_delete_day_behavior_wave_62.FakeCursor",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:10:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor"
+      ],
       "FakeDB": [
         "tools/test_audit_widget_smoke_wave_54.py:33:tools.test_audit_widget_smoke_wave_54.FakeDB",
         "tools/test_clients_feature_wave_19.py:57:tools.test_clients_feature_wave_19.FakeDB",
         "tools/test_databank_cell_writes_behavior_wave_61.py:39:tools.test_databank_cell_writes_behavior_wave_61.FakeDB",
         "tools/test_databank_close_history_widget_smoke_wave_57.py:10:tools.test_databank_close_history_widget_smoke_wave_57.FakeDB",
         "tools/test_databank_delete_day_behavior_wave_62.py:36:tools.test_databank_delete_day_behavior_wave_62.FakeDB",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:25:tools.test_databank_delete_day_password_gate_wave_63.FakeDB",
         "tools/test_databank_grid_widget_smoke_wave_59.py:18:tools.test_databank_grid_widget_smoke_wave_59.FakeDB",
         "tools/test_system_data_summary_widget_smoke_wave_58.py:9:tools.test_system_data_summary_widget_smoke_wave_58.FakeDB"
       ],
@@ -10289,6 +10299,8 @@
         "tools/test_databank_delete_day_behavior_wave_62.py:29:tools.test_databank_delete_day_behavior_wave_62.FakeConn.__init__",
         "tools/test_databank_delete_day_behavior_wave_62.py:37:tools.test_databank_delete_day_behavior_wave_62.FakeDB.__init__",
         "tools/test_databank_delete_day_behavior_wave_62.py:60:tools.test_databank_delete_day_behavior_wave_62.FakeApp.__init__",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:26:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.__init__",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:39:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.__init__",
         "tools/test_databank_grid_widget_smoke_wave_59.py:19:tools.test_databank_grid_widget_smoke_wave_59.FakeDB.__init__",
         "tools/test_databank_grid_widget_smoke_wave_59.py:48:tools.test_databank_grid_widget_smoke_wave_59.FakeApp.__init__",
         "tools/test_databank_presentation_wave_49.py:183:tools.test_databank_presentation_wave_49.FakeVar.__init__",
@@ -10867,7 +10879,8 @@
       ],
       "_prompt_current_password": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8244:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_current_password",
-        "tools/test_databank_delete_day_behavior_wave_62.py:73:tools.test_databank_delete_day_behavior_wave_62.FakeApp._prompt_current_password"
+        "tools/test_databank_delete_day_behavior_wave_62.py:73:tools.test_databank_delete_day_behavior_wave_62.FakeApp._prompt_current_password",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:48:tools.test_databank_delete_day_password_gate_wave_63.FakeApp._prompt_current_password"
       ],
       "_protected": [
         "tools/audit_pass_only_exceptions.py:50:tools.audit_pass_only_exceptions._protected",
@@ -11335,7 +11348,8 @@
       "cursor": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:784:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatConnection.cursor",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2754:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._LockedConnection.cursor",
-        "tools/test_databank_delete_day_behavior_wave_62.py:32:tools.test_databank_delete_day_behavior_wave_62.FakeConn.cursor"
+        "tools/test_databank_delete_day_behavior_wave_62.py:32:tools.test_databank_delete_day_behavior_wave_62.FakeConn.cursor",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:21:tools.test_databank_delete_day_password_gate_wave_63.FakeConn.cursor"
       ],
       "defs": [
         "tools/test_client_info_logs_feature_wave_20.py:15:tools.test_client_info_logs_feature_wave_20.defs",
@@ -11360,7 +11374,8 @@
       ],
       "delete_transactions_for_day": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:6128:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.delete_transactions_for_day",
-        "tools/test_databank_delete_day_behavior_wave_62.py:52:tools.test_databank_delete_day_behavior_wave_62.FakeDB.delete_transactions_for_day"
+        "tools/test_databank_delete_day_behavior_wave_62.py:52:tools.test_databank_delete_day_behavior_wave_62.FakeDB.delete_transactions_for_day",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:33:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.delete_transactions_for_day"
       ],
       "descendants": [
         "tools/test_import_log_widget_smoke_wave_53.py:11:tools.test_import_log_widget_smoke_wave_53.descendants",
@@ -11385,7 +11400,7 @@
         "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted",
         "tools/test_dashboard_chart_presentation_wave_51.py:80:tools.test_dashboard_chart_presentation_wave_51.dotted",
         "tools/test_databank_cell_writes_wave_61.py:22:tools.test_databank_cell_writes_wave_61.dotted",
-        "tools/test_databank_delete_day_wave_62.py:104:tools.test_databank_delete_day_wave_62.dotted",
+        "tools/test_databank_delete_day_wave_62.py:24:tools.test_databank_delete_day_wave_62.dotted",
         "tools/test_databank_grid_presentation_wave_59.py:16:tools.test_databank_grid_presentation_wave_59.dotted",
         "tools/test_databank_presentation_wave_49.py:104:tools.test_databank_presentation_wave_49.dotted",
         "tools/test_import_log_presentation_wave_53.py:41:tools.test_import_log_presentation_wave_53.dotted",
@@ -11405,7 +11420,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:787:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatConnection.execute",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2674:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._LockedCursor.execute",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2759:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._LockedConnection.execute",
-        "tools/test_databank_delete_day_behavior_wave_62.py:18:tools.test_databank_delete_day_behavior_wave_62.FakeCursor.execute"
+        "tools/test_databank_delete_day_behavior_wave_62.py:18:tools.test_databank_delete_day_behavior_wave_62.FakeCursor.execute",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:11:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.execute"
       ],
       "executemany": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:708:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatCursor.executemany",
@@ -11433,7 +11449,8 @@
       "fetchone": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:724:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatCursor.fetchone",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2722:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._LockedCursor.fetchone",
-        "tools/test_databank_delete_day_behavior_wave_62.py:24:tools.test_databank_delete_day_behavior_wave_62.FakeCursor.fetchone"
+        "tools/test_databank_delete_day_behavior_wave_62.py:24:tools.test_databank_delete_day_behavior_wave_62.FakeCursor.fetchone",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:16:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.fetchone"
       ],
       "fmt_currency": [
         "spina_app/navigation.py:18:spina_app.navigation.fmt_currency",
@@ -11489,6 +11506,7 @@
       "get_databank_day_close": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:5381:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_databank_day_close",
         "tools/test_databank_delete_day_behavior_wave_62.py:48:tools.test_databank_delete_day_behavior_wave_62.FakeDB.get_databank_day_close",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:30:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.get_databank_day_close",
         "tools/test_system_data_summary_widget_smoke_wave_58.py:26:tools.test_system_data_summary_widget_smoke_wave_58.FakeDB.get_databank_day_close"
       ],
       "get_transaction": [
@@ -11665,7 +11683,8 @@
         "tools/test_databank_close_history_presentation_wave_57.py:13:tools.test_databank_close_history_presentation_wave_57.main",
         "tools/test_databank_close_history_widget_smoke_wave_57.py:43:tools.test_databank_close_history_widget_smoke_wave_57.main",
         "tools/test_databank_delete_day_behavior_wave_62.py:87:tools.test_databank_delete_day_behavior_wave_62.main",
-        "tools/test_databank_delete_day_wave_62.py:113:tools.test_databank_delete_day_wave_62.main",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:61:tools.test_databank_delete_day_password_gate_wave_63.main",
+        "tools/test_databank_delete_day_wave_62.py:33:tools.test_databank_delete_day_wave_62.main",
         "tools/test_databank_editor_presentation_wave_60.py:34:tools.test_databank_editor_presentation_wave_60.main",
         "tools/test_databank_editor_widget_smoke_wave_60.py:117:tools.test_databank_editor_widget_smoke_wave_60.main",
         "tools/test_databank_grid_presentation_wave_59.py:26:tools.test_databank_grid_presentation_wave_59.main",
@@ -11791,7 +11810,7 @@
         "tools/test_databank_widget_smoke_wave_49.py:70:tools.test_databank_widget_smoke_wave_49.DummyApp.open_databank_close_records_dialog"
       ],
       "open_delete_day_dialog": [
-        "spina_app/databank_delete_day.py:103:spina_app.databank_delete_day.open_delete_day_dialog",
+        "spina_app/databank_delete_day.py:111:spina_app.databank_delete_day.open_delete_day_dialog",
         "tools/test_databank_widget_smoke_wave_49.py:67:tools.test_databank_widget_smoke_wave_49.DummyApp.open_delete_day_dialog"
       ],
       "pack": [
@@ -11841,7 +11860,8 @@
       ],
       "refresh_audit_tab": [
         "spina_app/audit_presentation.py:92:spina_app.audit_presentation.refresh_audit_tab",
-        "tools/test_databank_delete_day_behavior_wave_62.py:83:tools.test_databank_delete_day_behavior_wave_62.FakeApp.refresh_audit_tab"
+        "tools/test_databank_delete_day_behavior_wave_62.py:83:tools.test_databank_delete_day_behavior_wave_62.FakeApp.refresh_audit_tab",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:57:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_audit_tab"
       ],
       "refresh_collectors": [
         "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
@@ -11851,11 +11871,13 @@
         "spina_app/databank_grid_presentation.py:32:spina_app.databank_grid_presentation.refresh_data_grid",
         "tools/test_databank_cell_writes_behavior_wave_61.py:78:tools.test_databank_cell_writes_behavior_wave_61.FakeApp.refresh_data_grid",
         "tools/test_databank_delete_day_behavior_wave_62.py:77:tools.test_databank_delete_day_behavior_wave_62.FakeApp.refresh_data_grid",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:51:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_data_grid",
         "tools/test_databank_widget_smoke_wave_49.py:73:tools.test_databank_widget_smoke_wave_49.DummyApp.refresh_data_grid"
       ],
       "refresh_reports": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12424:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_reports",
-        "tools/test_databank_delete_day_behavior_wave_62.py:80:tools.test_databank_delete_day_behavior_wave_62.FakeApp.refresh_reports"
+        "tools/test_databank_delete_day_behavior_wave_62.py:80:tools.test_databank_delete_day_behavior_wave_62.FakeApp.refresh_reports",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:54:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_reports"
       ],
       "remove_existing_block": [
         "tools/add_optional_performance_logs.py:117:tools.add_optional_performance_logs.remove_existing_block",
@@ -11908,7 +11930,7 @@
       ],
       "sha": [
         "tools/test_databank_cell_writes_wave_61.py:18:tools.test_databank_cell_writes_wave_61.sha",
-        "tools/test_databank_delete_day_wave_62.py:100:tools.test_databank_delete_day_wave_62.sha"
+        "tools/test_databank_delete_day_wave_62.py:20:tools.test_databank_delete_day_wave_62.sha"
       ],
       "signature_text": [
         "tools/test_account_header_presentation_wave_46.py:58:tools.test_account_header_presentation_wave_46.signature_text",
@@ -12659,8 +12681,8 @@
         "spina_app/databank_cell_writes.py:7:spina_app.databank_cell_writes.configure_databank_cell_write_dependencies",
         "spina_app/databank_close_history_presentation.py:22:spina_app.databank_close_history_presentation.open_databank_close_history_dialog",
         "spina_app/databank_close_history_presentation.py:7:spina_app.databank_close_history_presentation.configure_databank_close_history_presentation_dependencies",
-        "spina_app/databank_delete_day.py:103:spina_app.databank_delete_day.open_delete_day_dialog",
-        "spina_app/databank_delete_day.py:11:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
+        "spina_app/databank_delete_day.py:111:spina_app.databank_delete_day.open_delete_day_dialog",
+        "spina_app/databank_delete_day.py:12:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
         "spina_app/databank_editor_presentation.py:113:spina_app.databank_editor_presentation._pick_missed_reason.on_ok",
         "spina_app/databank_editor_presentation.py:139:spina_app.databank_editor_presentation._pick_missed_reason.on_cancel",
         "spina_app/databank_editor_presentation.py:170:spina_app.databank_editor_presentation._begin_cell_edit",
@@ -12714,6 +12736,9 @@
         "tools/test_databank_delete_day_behavior_wave_62.py:48:tools.test_databank_delete_day_behavior_wave_62.FakeDB.get_databank_day_close",
         "tools/test_databank_delete_day_behavior_wave_62.py:77:tools.test_databank_delete_day_behavior_wave_62.FakeApp.refresh_data_grid",
         "tools/test_databank_delete_day_behavior_wave_62.py:83:tools.test_databank_delete_day_behavior_wave_62.FakeApp.refresh_audit_tab",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:30:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.get_databank_day_close",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:51:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_data_grid",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:57:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_audit_tab",
         "tools/test_databank_grid_widget_smoke_wave_59.py:68:tools.test_databank_grid_widget_smoke_wave_59.FakeApp._ensure_databank_edit_bindings",
         "tools/test_databank_grid_widget_smoke_wave_59.py:80:tools.test_databank_grid_widget_smoke_wave_59.FakeApp._resize_databank_columns",
         "tools/test_databank_grid_widget_smoke_wave_59.py:86:tools.test_databank_grid_widget_smoke_wave_59.FakeApp._begin_cell_edit",
@@ -12804,7 +12829,11 @@
         "tools/test_databank_delete_day_behavior_wave_62.py:15:tools.test_databank_delete_day_behavior_wave_62.FakeCursor.__init__",
         "tools/test_databank_delete_day_behavior_wave_62.py:18:tools.test_databank_delete_day_behavior_wave_62.FakeCursor.execute",
         "tools/test_databank_delete_day_behavior_wave_62.py:24:tools.test_databank_delete_day_behavior_wave_62.FakeCursor.fetchone",
-        "tools/test_databank_delete_day_behavior_wave_62.py:32:tools.test_databank_delete_day_behavior_wave_62.FakeConn.cursor"
+        "tools/test_databank_delete_day_behavior_wave_62.py:32:tools.test_databank_delete_day_behavior_wave_62.FakeConn.cursor",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:10:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:11:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.execute",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:16:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.fetchone",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:21:tools.test_databank_delete_day_password_gate_wave_63.FakeConn.cursor"
       ],
       "loans": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12451:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.refresh_reports._display_loan_type_label",
@@ -13955,9 +13984,15 @@
         "tools/test_databank_delete_day_behavior_wave_62.py:59:tools.test_databank_delete_day_behavior_wave_62.FakeApp",
         "tools/test_databank_delete_day_behavior_wave_62.py:60:tools.test_databank_delete_day_behavior_wave_62.FakeApp.__init__",
         "tools/test_databank_delete_day_behavior_wave_62.py:87:tools.test_databank_delete_day_behavior_wave_62.main",
-        "tools/test_databank_delete_day_wave_62.py:100:tools.test_databank_delete_day_wave_62.sha",
-        "tools/test_databank_delete_day_wave_62.py:104:tools.test_databank_delete_day_wave_62.dotted",
-        "tools/test_databank_delete_day_wave_62.py:113:tools.test_databank_delete_day_wave_62.main",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:20:tools.test_databank_delete_day_password_gate_wave_63.FakeConn",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:25:tools.test_databank_delete_day_password_gate_wave_63.FakeDB",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:26:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.__init__",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:38:tools.test_databank_delete_day_password_gate_wave_63.FakeApp",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:39:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.__init__",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:61:tools.test_databank_delete_day_password_gate_wave_63.main",
+        "tools/test_databank_delete_day_wave_62.py:20:tools.test_databank_delete_day_wave_62.sha",
+        "tools/test_databank_delete_day_wave_62.py:24:tools.test_databank_delete_day_wave_62.dotted",
+        "tools/test_databank_delete_day_wave_62.py:33:tools.test_databank_delete_day_wave_62.main",
         "tools/test_databank_editor_presentation_wave_60.py:16:tools.test_databank_editor_presentation_wave_60._norm",
         "tools/test_databank_editor_presentation_wave_60.py:20:tools.test_databank_editor_presentation_wave_60._source_map",
         "tools/test_databank_editor_presentation_wave_60.py:34:tools.test_databank_editor_presentation_wave_60.main",
@@ -14445,6 +14480,8 @@
         "tools/test_databank_cell_writes_behavior_wave_61.py:84:tools.test_databank_cell_writes_behavior_wave_61.FakeApp._pick_missed_reason",
         "tools/test_databank_delete_day_behavior_wave_62.py:52:tools.test_databank_delete_day_behavior_wave_62.FakeDB.delete_transactions_for_day",
         "tools/test_databank_delete_day_behavior_wave_62.py:73:tools.test_databank_delete_day_behavior_wave_62.FakeApp._prompt_current_password",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:33:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.delete_transactions_for_day",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:48:tools.test_databank_delete_day_password_gate_wave_63.FakeApp._prompt_current_password",
         "tools/test_databank_editor_widget_smoke_wave_60.py:32:tools.test_databank_editor_widget_smoke_wave_60.test_missed_reason_dialog",
         "tools/test_databank_grid_widget_smoke_wave_59.py:33:tools.test_databank_grid_widget_smoke_wave_59.FakeDB.get_transaction",
         "tools/test_login_dialog_widget_smoke_wave_45.py:59:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._must_change_password",
@@ -14528,6 +14565,7 @@
         "tools/redundancy_audit.py:108:tools.redundancy_audit.print_report",
         "tools/spina_quality_audit.py:271:tools.spina_quality_audit.print_report",
         "tools/test_databank_delete_day_behavior_wave_62.py:80:tools.test_databank_delete_day_behavior_wave_62.FakeApp.refresh_reports",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:54:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_reports",
         "tools/ui_action_inventory.py:265:tools.ui_action_inventory.print_summary"
       ],
       "settings": [
@@ -14804,7 +14842,7 @@
       "encoder_import_log.json": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:13465:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_encoder_batch",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:6128:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.delete_transactions_for_day",
-        "spina_app/databank_delete_day.py:103:spina_app.databank_delete_day.open_delete_day_dialog",
+        "spina_app/databank_delete_day.py:111:spina_app.databank_delete_day.open_delete_day_dialog",
         "tools/test_databank_delete_day_behavior_wave_62.py:87:tools.test_databank_delete_day_behavior_wave_62.main"
       ],
       "encoder_import_{}.txt": [
@@ -15771,6 +15809,30 @@
         "owner": "tools/test_databank_delete_day_behavior_wave_62.py:87:tools.test_databank_delete_day_behavior_wave_62.main",
         "source": "RuntimeError",
         "target": "app.db.raise_delete"
+      },
+      {
+        "line": 88,
+        "owner": "tools/test_databank_delete_day_password_gate_wave_63.py:61:tools.test_databank_delete_day_password_gate_wave_63.main",
+        "source": "original_askstring",
+        "target": "simpledialog.askstring"
+      },
+      {
+        "line": 89,
+        "owner": "tools/test_databank_delete_day_password_gate_wave_63.py:61:tools.test_databank_delete_day_password_gate_wave_63.main",
+        "source": "original_askyesno",
+        "target": "messagebox.askyesno"
+      },
+      {
+        "line": 90,
+        "owner": "tools/test_databank_delete_day_password_gate_wave_63.py:61:tools.test_databank_delete_day_password_gate_wave_63.main",
+        "source": "original_showerror",
+        "target": "messagebox.showerror"
+      },
+      {
+        "line": 91,
+        "owner": "tools/test_databank_delete_day_password_gate_wave_63.py:61:tools.test_databank_delete_day_password_gate_wave_63.main",
+        "source": "original_showinfo",
+        "target": "messagebox.showinfo"
       },
       {
         "line": 34,
@@ -16763,6 +16825,12 @@
       "tools/test_databank_delete_day_behavior_wave_62.py:48:tools.test_databank_delete_day_behavior_wave_62.FakeDB.get_databank_day_close",
       "tools/test_databank_delete_day_behavior_wave_62.py:52:tools.test_databank_delete_day_behavior_wave_62.FakeDB.delete_transactions_for_day",
       "tools/test_databank_delete_day_behavior_wave_62.py:73:tools.test_databank_delete_day_behavior_wave_62.FakeApp._prompt_current_password",
+      "tools/test_databank_delete_day_password_gate_wave_63.py:11:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.execute",
+      "tools/test_databank_delete_day_password_gate_wave_63.py:16:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.fetchone",
+      "tools/test_databank_delete_day_password_gate_wave_63.py:21:tools.test_databank_delete_day_password_gate_wave_63.FakeConn.cursor",
+      "tools/test_databank_delete_day_password_gate_wave_63.py:30:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.get_databank_day_close",
+      "tools/test_databank_delete_day_password_gate_wave_63.py:33:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.delete_transactions_for_day",
+      "tools/test_databank_delete_day_password_gate_wave_63.py:48:tools.test_databank_delete_day_password_gate_wave_63.FakeApp._prompt_current_password",
       "tools/test_databank_grid_widget_smoke_wave_59.py:33:tools.test_databank_grid_widget_smoke_wave_59.FakeDB.get_transaction",
       "tools/test_databank_grid_widget_smoke_wave_59.py:64:tools.test_databank_grid_widget_smoke_wave_59.FakeApp._configure_tree_stripes",
       "tools/test_databank_grid_widget_smoke_wave_59.py:71:tools.test_databank_grid_widget_smoke_wave_59.FakeApp._mode_filter",
@@ -16845,7 +16913,7 @@
         "spina_app/account_header_presentation.py:31:spina_app.account_header_presentation._spina_v32_refresh_user_header",
         "spina_app/account_header_presentation.py:46:spina_app.account_header_presentation._spina_v32_build_header",
         "spina_app/account_permission_presentation.py:10:spina_app.account_permission_presentation._spina_v32_account_permission_text",
-        "spina_app/databank_delete_day.py:103:spina_app.databank_delete_day.open_delete_day_dialog",
+        "spina_app/databank_delete_day.py:111:spina_app.databank_delete_day.open_delete_day_dialog",
         "spina_app/login_dialog_presentation.py:10:spina_app.login_dialog_presentation.configure_login_dialog_dependencies",
         "spina_app/login_dialog_presentation.py:135:spina_app.login_dialog_presentation._spina_v32_prompt_login._refresh_account_info",
         "spina_app/login_dialog_presentation.py:148:spina_app.login_dialog_presentation._spina_v32_prompt_login._ok",
@@ -16861,6 +16929,7 @@
         "tools/test_account_header_widget_smoke_wave_46.py:18:tools.test_account_header_widget_smoke_wave_46.main",
         "tools/test_account_permission_presentation_wave_47.py:51:tools.test_account_permission_presentation_wave_47.main",
         "tools/test_databank_delete_day_behavior_wave_62.py:73:tools.test_databank_delete_day_behavior_wave_62.FakeApp._prompt_current_password",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:48:tools.test_databank_delete_day_password_gate_wave_63.FakeApp._prompt_current_password",
         "tools/test_login_cancel_startup_wave_46.py:25:tools.test_login_cancel_startup_wave_46.main",
         "tools/test_login_dialog_widget_smoke_wave_45.py:102:tools.test_login_dialog_widget_smoke_wave_45.run_sign_in",
         "tools/test_login_dialog_widget_smoke_wave_45.py:135:tools.test_login_dialog_widget_smoke_wave_45.run_cancel",
@@ -16992,6 +17061,10 @@
         "tools/test_databank_delete_day_behavior_wave_62.py:28:tools.test_databank_delete_day_behavior_wave_62.FakeConn",
         "tools/test_databank_delete_day_behavior_wave_62.py:36:tools.test_databank_delete_day_behavior_wave_62.FakeDB",
         "tools/test_databank_delete_day_behavior_wave_62.py:59:tools.test_databank_delete_day_behavior_wave_62.FakeApp",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:10:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:20:tools.test_databank_delete_day_password_gate_wave_63.FakeConn",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:25:tools.test_databank_delete_day_password_gate_wave_63.FakeDB",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:38:tools.test_databank_delete_day_password_gate_wave_63.FakeApp",
         "tools/test_databank_editor_widget_smoke_wave_60.py:16:tools.test_databank_editor_widget_smoke_wave_60.StubApp",
         "tools/test_databank_grid_widget_smoke_wave_59.py:12:tools.test_databank_grid_widget_smoke_wave_59.FixedDate",
         "tools/test_databank_grid_widget_smoke_wave_59.py:18:tools.test_databank_grid_widget_smoke_wave_59.FakeDB",
@@ -17456,8 +17529,8 @@
         "tools/test_databank_cell_writes_wave_61.py:31:tools.test_databank_cell_writes_wave_61.main",
         "tools/test_databank_close_history_presentation_wave_57.py:13:tools.test_databank_close_history_presentation_wave_57.main",
         "tools/test_databank_delete_day_behavior_wave_62.py:87:tools.test_databank_delete_day_behavior_wave_62.main",
-        "tools/test_databank_delete_day_wave_62.py:100:tools.test_databank_delete_day_wave_62.sha",
-        "tools/test_databank_delete_day_wave_62.py:113:tools.test_databank_delete_day_wave_62.main",
+        "tools/test_databank_delete_day_wave_62.py:20:tools.test_databank_delete_day_wave_62.sha",
+        "tools/test_databank_delete_day_wave_62.py:33:tools.test_databank_delete_day_wave_62.main",
         "tools/test_databank_editor_presentation_wave_60.py:16:tools.test_databank_editor_presentation_wave_60._norm",
         "tools/test_databank_grid_presentation_wave_59.py:26:tools.test_databank_grid_presentation_wave_59.main",
         "tools/test_databank_presentation_wave_49.py:201:tools.test_databank_presentation_wave_49.main",
@@ -17680,6 +17753,8 @@
         "tools/test_databank_cell_writes_behavior_wave_61.py:92:tools.test_databank_cell_writes_behavior_wave_61.main",
         "tools/test_databank_close_history_widget_smoke_wave_57.py:43:tools.test_databank_close_history_widget_smoke_wave_57.main",
         "tools/test_databank_delete_day_behavior_wave_62.py:80:tools.test_databank_delete_day_behavior_wave_62.FakeApp.refresh_reports",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:54:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_reports",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:61:tools.test_databank_delete_day_password_gate_wave_63.main",
         "tools/test_databank_editor_presentation_wave_60.py:34:tools.test_databank_editor_presentation_wave_60.main",
         "tools/test_databank_editor_widget_smoke_wave_60.py:117:tools.test_databank_editor_widget_smoke_wave_60.main",
         "tools/test_databank_grid_widget_smoke_wave_59.py:99:tools.test_databank_grid_widget_smoke_wave_59.main",
@@ -18130,7 +18205,7 @@
         "spina_app/databank_cell_writes.py:102:spina_app.databank_cell_writes.delete_selected_cell",
         "spina_app/databank_cell_writes.py:7:spina_app.databank_cell_writes.configure_databank_cell_write_dependencies",
         "spina_app/databank_close_history_presentation.py:7:spina_app.databank_close_history_presentation.configure_databank_close_history_presentation_dependencies",
-        "spina_app/databank_delete_day.py:11:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
+        "spina_app/databank_delete_day.py:12:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
         "spina_app/databank_editor_presentation.py:113:spina_app.databank_editor_presentation._pick_missed_reason.on_ok",
         "spina_app/databank_editor_presentation.py:139:spina_app.databank_editor_presentation._pick_missed_reason.on_cancel",
         "spina_app/databank_editor_presentation.py:162:spina_app.databank_editor_presentation._walk_widgets",
@@ -18909,7 +18984,16 @@
         "tools/test_databank_delete_day_behavior_wave_62.py:60:tools.test_databank_delete_day_behavior_wave_62.FakeApp.__init__",
         "tools/test_databank_delete_day_behavior_wave_62.py:77:tools.test_databank_delete_day_behavior_wave_62.FakeApp.refresh_data_grid",
         "tools/test_databank_delete_day_behavior_wave_62.py:83:tools.test_databank_delete_day_behavior_wave_62.FakeApp.refresh_audit_tab",
-        "tools/test_databank_delete_day_wave_62.py:104:tools.test_databank_delete_day_wave_62.dotted",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:11:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.execute",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:16:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.fetchone",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:21:tools.test_databank_delete_day_password_gate_wave_63.FakeConn.cursor",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:26:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.__init__",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:30:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.get_databank_day_close",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:33:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.delete_transactions_for_day",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:39:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.__init__",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:51:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_data_grid",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:57:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_audit_tab",
+        "tools/test_databank_delete_day_wave_62.py:24:tools.test_databank_delete_day_wave_62.dotted",
         "tools/test_databank_editor_presentation_wave_60.py:20:tools.test_databank_editor_presentation_wave_60._source_map",
         "tools/test_databank_grid_presentation_wave_59.py:16:tools.test_databank_grid_presentation_wave_59.dotted",
         "tools/test_databank_grid_widget_smoke_wave_59.py:14:tools.test_databank_grid_widget_smoke_wave_59.FixedDate.today",
@@ -20601,7 +20685,7 @@
       "imports": {
         "annotations": "__future__.annotations"
       },
-      "lines": 243,
+      "lines": 252,
       "module": "spina_app.databank_delete_day",
       "module_globals": [
         "DATABANK_DELETE_DAY_METHOD",
@@ -20609,7 +20693,7 @@
         "_PROTECTED_GLOBALS"
       ],
       "monkey_patches": [],
-      "sha256": "939b79d48b5375daa02831a9fdfc40dc7f5ab59bbb80ffafaec84243caf07292",
+      "sha256": "d81447f0a9f5324e8bcf784c59094ef33a29629956c4a857994c9744c58bb828",
       "syntax_ok": true
     },
     {
@@ -23769,6 +23853,22 @@
     },
     {
       "application_file": false,
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "imports": {
+        "annotations": "__future__.annotations",
+        "delete_day": "spina_app.databank_delete_day",
+        "messagebox": "tkinter.messagebox",
+        "simpledialog": "tkinter.simpledialog"
+      },
+      "lines": 97,
+      "module": "tools.test_databank_delete_day_password_gate_wave_63",
+      "module_globals": [],
+      "monkey_patches": [],
+      "sha256": "6e0865deed061ce4c61ad20b57002ea0253049166d7ec8f504385e7476009398",
+      "syntax_ok": true
+    },
+    {
+      "application_file": false,
       "file": "tools/test_databank_delete_day_wave_62.py",
       "imports": {
         "Path": "pathlib.Path",
@@ -23778,17 +23878,16 @@
         "importlib": "importlib",
         "textwrap": "textwrap"
       },
-      "lines": 152,
+      "lines": 97,
       "module": "tools.test_databank_delete_day_wave_62",
       "module_globals": [
         "APP_PATH",
-        "EXPECTED",
         "MODULE_PATH",
         "PROTECTED_WAVE61",
         "ROOT"
       ],
       "monkey_patches": [],
-      "sha256": "4fb2e1cdfdd98df9d53363299ea2e830b2e4d69fbf6a168bf52c47f1e1b96e24",
+      "sha256": "3aa2c0a6b8bd973aca7869990a970a7a69f2129f5a25ed605f246ebf141fa476",
       "syntax_ok": true
     },
     {
@@ -25211,22 +25310,22 @@
     "application_resolved_call_edges": 2749,
     "application_symbols": 1209,
     "application_ui_callback_edges": 478,
-    "classes": 120,
+    "classes": 124,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1491,
-    "methods": 582,
-    "monkey_patches": 175,
+    "functions": 1492,
+    "methods": 593,
+    "monkey_patches": 179,
     "nested_functions": 390,
     "parse_errors": 0,
     "possible_orphans": 134,
-    "python_files": 218,
+    "python_files": 219,
     "repository_database_tables": 19,
-    "repository_duplicate_names": 305,
-    "repository_possible_orphans": 293,
-    "resolved_call_edges": 4008,
-    "symbols": 2583,
-    "total_python_lines": 79171,
+    "repository_duplicate_names": 307,
+    "repository_possible_orphans": 299,
+    "resolved_call_edges": 4013,
+    "symbols": 2599,
+    "total_python_lines": 79222,
     "ui_callback_edges": 488
   },
   "symbols": [
@@ -27567,7 +27666,7 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9777:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._edit_selected_collector",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9870:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._add_collector",
         "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
-        "spina_app/databank_delete_day.py:103:spina_app.databank_delete_day.open_delete_day_dialog"
+        "spina_app/databank_delete_day.py:111:spina_app.databank_delete_day.open_delete_day_dialog"
       ],
       "calls_raw": [
         "os.path.join"
@@ -65837,7 +65936,7 @@
         "spina_app/dashboard_chart_presentation.py:23:spina_app.dashboard_chart_presentation.configure_dashboard_chart_dependencies",
         "spina_app/databank_cell_writes.py:7:spina_app.databank_cell_writes.configure_databank_cell_write_dependencies",
         "spina_app/databank_close_history_presentation.py:7:spina_app.databank_close_history_presentation.configure_databank_close_history_presentation_dependencies",
-        "spina_app/databank_delete_day.py:11:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
+        "spina_app/databank_delete_day.py:12:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
         "spina_app/databank_editor_presentation.py:7:spina_app.databank_editor_presentation.configure_databank_editor_dependencies",
         "spina_app/databank_grid_presentation.py:7:spina_app.databank_grid_presentation.configure_databank_grid_dependencies",
         "spina_app/databank_presentation.py:25:spina_app.databank_presentation.configure_databank_presentation_dependencies",
@@ -74161,7 +74260,8 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/test_databank_delete_day_behavior_wave_62.py:87:tools.test_databank_delete_day_behavior_wave_62.main"
+        "tools/test_databank_delete_day_behavior_wave_62.py:87:tools.test_databank_delete_day_behavior_wave_62.main",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:61:tools.test_databank_delete_day_password_gate_wave_63.main"
       ],
       "calls_raw": [
         "_DATABANK_DELETE_DAY_DEPENDENCIES.clear",
@@ -74175,7 +74275,7 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 16,
+      "end_line": 17,
       "feature": "data_bank",
       "file": "spina_app/databank_delete_day.py",
       "file_paths": [],
@@ -74184,10 +74284,10 @@
         "_PROTECTED_GLOBALS"
       ],
       "globals_written": [],
-      "id": "spina_app/databank_delete_day.py:11:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
+      "id": "spina_app/databank_delete_day.py:12:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
       "imports_used": [],
       "kind": "function",
-      "line": 11,
+      "line": 12,
       "lines": 6,
       "monkey_patches": [],
       "name": "configure_databank_delete_day_dependencies",
@@ -74253,7 +74353,7 @@
         "transactions"
       ],
       "docstring": "Delete all Data Bank entries for one selected date, with backup + password confirmation.",
-      "end_line": 243,
+      "end_line": 252,
       "feature": "data_bank",
       "file": "spina_app/databank_delete_day.py",
       "file_paths": [
@@ -74261,11 +74361,11 @@
       ],
       "globals_read": [],
       "globals_written": [],
-      "id": "spina_app/databank_delete_day.py:103:spina_app.databank_delete_day.open_delete_day_dialog",
+      "id": "spina_app/databank_delete_day.py:111:spina_app.databank_delete_day.open_delete_day_dialog",
       "imports_used": [],
       "kind": "function",
-      "line": 103,
-      "lines": 141,
+      "line": 111,
+      "lines": 142,
       "monkey_patches": [],
       "name": "open_delete_day_dialog",
       "parent": null,
@@ -74278,7 +74378,7 @@
         "filesystem",
         "reports"
       ],
-      "source_sha256": "2c6d2c263debcd5c0df188aaf8bef35144f67780cb38fcbba58b012a6e1480a1"
+      "source_sha256": "bb840d0370ce19e0f992b7d4cac6ba58c91aa1862e89fe48674350b89f71c61e"
     },
     {
       "args": [
@@ -129716,7 +129816,7 @@
         "tk.Tk"
       ],
       "calls_resolved": [
-        "spina_app/databank_delete_day.py:11:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
+        "spina_app/databank_delete_day.py:12:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
         "tools/test_databank_cell_writes_behavior_wave_61.py:21:tools.test_databank_cell_writes_behavior_wave_61.FakeEntry.destroy",
         "tools/test_databank_delete_day_behavior_wave_62.py:59:tools.test_databank_delete_day_behavior_wave_62.FakeApp"
       ],
@@ -129764,12 +129864,576 @@
       "source_sha256": "3295379447fbce650b9b0552f5c18a8ab9d4bf79c9abc35371d1b127cd9bb51e"
     },
     {
+      "args": [],
+      "callbacks": [],
+      "callers": [
+        "tools/test_databank_delete_day_password_gate_wave_63.py:21:tools.test_databank_delete_day_password_gate_wave_63.FakeConn.cursor"
+      ],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "FakeCursor",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 17,
+      "feature": "database",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:10:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor",
+      "imports_used": [],
+      "kind": "class",
+      "line": 10,
+      "lines": 8,
+      "monkey_patches": [],
+      "name": "FakeCursor",
+      "parent": null,
+      "purpose": "Groups FakeCursor for the database feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeCursor",
+      "risk": "container",
+      "risk_flags": [],
+      "source_sha256": "c149069678f51338f9f49e470ff39af1d70d1aca9533078e846e4c0119f5a686"
+    },
+    {
+      "args": [
+        "self",
+        "sql",
+        "params"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "FakeCursor",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 14,
+      "feature": "database",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:11:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.execute",
+      "imports_used": [],
+      "kind": "method",
+      "line": 11,
+      "lines": 4,
+      "monkey_patches": [],
+      "name": "execute",
+      "parent": null,
+      "purpose": "Handles execute for the database feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.execute",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "f886cbf53152fc14b82bddedf4160446d97b7dce65274b024db0c27c3b338543"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "FakeCursor",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 17,
+      "feature": "database",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:16:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.fetchone",
+      "imports_used": [],
+      "kind": "method",
+      "line": 16,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "fetchone",
+      "parent": null,
+      "purpose": "Handles fetchone for the database feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeCursor.fetchone",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "8d68dbdba7dd06a673d0f329c4b53d41c4d04dffde8edc2366394a734559cd3d"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [
+        "tools/test_databank_delete_day_password_gate_wave_63.py:26:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.__init__"
+      ],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "FakeConn",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 22,
+      "feature": "other",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:20:tools.test_databank_delete_day_password_gate_wave_63.FakeConn",
+      "imports_used": [],
+      "kind": "class",
+      "line": 20,
+      "lines": 3,
+      "monkey_patches": [],
+      "name": "FakeConn",
+      "parent": null,
+      "purpose": "Groups FakeConn for the other feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeConn",
+      "risk": "container",
+      "risk_flags": [],
+      "source_sha256": "c1c2f53e5d570030c8f749a0283e592b914575478b3c45ab7c95509d08a04d41"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "FakeCursor"
+      ],
+      "calls_resolved": [
+        "tools/test_databank_delete_day_password_gate_wave_63.py:10:tools.test_databank_delete_day_password_gate_wave_63.FakeCursor"
+      ],
+      "class_name": "FakeConn",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 22,
+      "feature": "database",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:21:tools.test_databank_delete_day_password_gate_wave_63.FakeConn.cursor",
+      "imports_used": [],
+      "kind": "method",
+      "line": 21,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "cursor",
+      "parent": null,
+      "purpose": "Handles cursor for the database feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeConn.cursor",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "bb9bd54cc5cda02c7d2e634c7c5c3b181dd132728296dd55ee8fafca8db48caf"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [
+        "tools/test_databank_delete_day_password_gate_wave_63.py:39:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.__init__"
+      ],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "FakeDB",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 35,
+      "feature": "other",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:25:tools.test_databank_delete_day_password_gate_wave_63.FakeDB",
+      "imports_used": [],
+      "kind": "class",
+      "line": 25,
+      "lines": 11,
+      "monkey_patches": [],
+      "name": "FakeDB",
+      "parent": null,
+      "purpose": "Groups FakeDB for the other feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeDB",
+      "risk": "container",
+      "risk_flags": [],
+      "source_sha256": "fb9926a89597d0cd0f21009b36848fbf8f12e094a0e6137591a5136c47291233"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "FakeConn"
+      ],
+      "calls_resolved": [
+        "tools/test_databank_delete_day_password_gate_wave_63.py:20:tools.test_databank_delete_day_password_gate_wave_63.FakeConn"
+      ],
+      "class_name": "FakeDB",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 28,
+      "feature": "other",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:26:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.__init__",
+      "imports_used": [],
+      "kind": "method",
+      "line": 26,
+      "lines": 3,
+      "monkey_patches": [],
+      "name": "__init__",
+      "parent": null,
+      "purpose": "Handles init for the other feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeDB.__init__",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "8df86eec7882926b0da595dce38dca3ac19673a20fec03739afb8872cf87a813"
+    },
+    {
+      "args": [
+        "self",
+        "ds",
+        "loan_type"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "FakeDB",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 31,
+      "feature": "data_bank",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:30:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.get_databank_day_close",
+      "imports_used": [],
+      "kind": "method",
+      "line": 30,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "get_databank_day_close",
+      "parent": null,
+      "purpose": "Retrieves get databank day close for the data bank feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeDB.get_databank_day_close",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "0f81541996563cc3a61ad53e7764f1f4bb9cc89385f7e62433a364d1b52a2aad"
+    },
+    {
+      "args": [
+        "self",
+        "ds",
+        "**kwargs"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self.delete_calls.append"
+      ],
+      "calls_resolved": [],
+      "class_name": "FakeDB",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 35,
+      "feature": "payments",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:33:tools.test_databank_delete_day_password_gate_wave_63.FakeDB.delete_transactions_for_day",
+      "imports_used": [],
+      "kind": "method",
+      "line": 33,
+      "lines": 3,
+      "monkey_patches": [],
+      "name": "delete_transactions_for_day",
+      "parent": null,
+      "purpose": "Removes delete transactions for day for the payments feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeDB.delete_transactions_for_day",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "85fea9b866cb05f14647006df7ac64b2f409cd64b7d4615af011c75ac7c3d4f6"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [
+        "tools/test_databank_delete_day_password_gate_wave_63.py:61:tools.test_databank_delete_day_password_gate_wave_63.main"
+      ],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "FakeApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 58,
+      "feature": "other",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:38:tools.test_databank_delete_day_password_gate_wave_63.FakeApp",
+      "imports_used": [],
+      "kind": "class",
+      "line": 38,
+      "lines": 21,
+      "monkey_patches": [],
+      "name": "FakeApp",
+      "parent": null,
+      "purpose": "Groups FakeApp for the other feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeApp",
+      "risk": "container",
+      "risk_flags": [],
+      "source_sha256": "c3317d1f8561a17a6b613b68bc7b61a4cd6ecc7d5bed3fdfbfd93c8b8e6d0ee8"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "FakeDB",
+        "object"
+      ],
+      "calls_resolved": [
+        "tools/test_databank_delete_day_password_gate_wave_63.py:25:tools.test_databank_delete_day_password_gate_wave_63.FakeDB"
+      ],
+      "class_name": "FakeApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 46,
+      "feature": "other",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:39:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.__init__",
+      "imports_used": [],
+      "kind": "method",
+      "line": 39,
+      "lines": 8,
+      "monkey_patches": [],
+      "name": "__init__",
+      "parent": null,
+      "purpose": "Handles init for the other feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeApp.__init__",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "2033bd4b738b13499a8b94160fcb11557967ac6c626582449f774e9613ef2aa4"
+    },
+    {
+      "args": [
+        "self",
+        "**kwargs"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "RuntimeError"
+      ],
+      "calls_resolved": [],
+      "class_name": "FakeApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 49,
+      "feature": "payments",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:48:tools.test_databank_delete_day_password_gate_wave_63.FakeApp._prompt_current_password",
+      "imports_used": [],
+      "kind": "method",
+      "line": 48,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_prompt_current_password",
+      "parent": null,
+      "purpose": "Handles prompt current password for the payments feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeApp._prompt_current_password",
+      "risk": "authentication",
+      "risk_flags": [
+        "authentication"
+      ],
+      "source_sha256": "8c2a40bf0a871819334d65604517d0a338129917d6fab492766e15b4b1afd16e"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self.refresh_calls.append"
+      ],
+      "calls_resolved": [],
+      "class_name": "FakeApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 52,
+      "feature": "data_bank",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:51:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_data_grid",
+      "imports_used": [],
+      "kind": "method",
+      "line": 51,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "refresh_data_grid",
+      "parent": null,
+      "purpose": "Refreshes refresh data grid for the data bank feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_data_grid",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "a73d7fb50d1e02174b956097cf2d2fdde6c5d6d3e9840e5ab51a3e300243efdc"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self.refresh_calls.append"
+      ],
+      "calls_resolved": [],
+      "class_name": "FakeApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 55,
+      "feature": "reports",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:54:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_reports",
+      "imports_used": [],
+      "kind": "method",
+      "line": 54,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "refresh_reports",
+      "parent": null,
+      "purpose": "Refreshes refresh reports for the reports feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_reports",
+      "risk": "reports",
+      "risk_flags": [
+        "reports"
+      ],
+      "source_sha256": "bfee2cfd219fc7c84059fed172727bce54aa191b2649c0f2a3192c26ed2e847b"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self.refresh_calls.append"
+      ],
+      "calls_resolved": [],
+      "class_name": "FakeApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 58,
+      "feature": "data_bank",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:57:tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_audit_tab",
+      "imports_used": [],
+      "kind": "method",
+      "line": 57,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "refresh_audit_tab",
+      "parent": null,
+      "purpose": "Refreshes refresh audit tab for the data bank feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.FakeApp.refresh_audit_tab",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "ebdb96c9b0855a05e52c6df44c3db7f64bfac9fedab359e301f756526f08bdd9"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "FakeApp",
+        "delete_day.configure_databank_delete_day_dependencies",
+        "delete_day.open_delete_day_dialog",
+        "notices.append",
+        "print"
+      ],
+      "calls_resolved": [
+        "spina_app/databank_delete_day.py:12:spina_app.databank_delete_day.configure_databank_delete_day_dependencies",
+        "tools/test_databank_delete_day_password_gate_wave_63.py:38:tools.test_databank_delete_day_password_gate_wave_63.FakeApp"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 93,
+      "feature": "other",
+      "file": "tools/test_databank_delete_day_password_gate_wave_63.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_delete_day_password_gate_wave_63.py:61:tools.test_databank_delete_day_password_gate_wave_63.main",
+      "imports_used": [
+        "spina_app.databank_delete_day",
+        "tkinter.messagebox",
+        "tkinter.simpledialog"
+      ],
+      "kind": "function",
+      "line": 61,
+      "lines": 33,
+      "monkey_patches": [
+        {
+          "line": 88,
+          "source": "original_askstring",
+          "target": "simpledialog.askstring"
+        },
+        {
+          "line": 89,
+          "source": "original_askyesno",
+          "target": "messagebox.askyesno"
+        },
+        {
+          "line": 90,
+          "source": "original_showerror",
+          "target": "messagebox.showerror"
+        },
+        {
+          "line": 91,
+          "source": "original_showinfo",
+          "target": "messagebox.showinfo"
+        }
+      ],
+      "name": "main",
+      "parent": null,
+      "purpose": "Handles main for the other feature.",
+      "qualified_name": "tools.test_databank_delete_day_password_gate_wave_63.main",
+      "risk": "reports",
+      "risk_flags": [
+        "reports"
+      ],
+      "source_sha256": "de95709c4c3a9ba1e1edcf6ded4a3a0271149d452e313aaa46731eccc142e934"
+    },
+    {
       "args": [
         "source"
       ],
       "callbacks": [],
       "callers": [
-        "tools/test_databank_delete_day_wave_62.py:113:tools.test_databank_delete_day_wave_62.main"
+        "tools/test_databank_delete_day_wave_62.py:33:tools.test_databank_delete_day_wave_62.main"
       ],
       "calls_raw": [
         "hashlib.sha256",
@@ -129781,18 +130445,18 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 101,
+      "end_line": 21,
       "feature": "other",
       "file": "tools/test_databank_delete_day_wave_62.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "tools/test_databank_delete_day_wave_62.py:100:tools.test_databank_delete_day_wave_62.sha",
+      "id": "tools/test_databank_delete_day_wave_62.py:20:tools.test_databank_delete_day_wave_62.sha",
       "imports_used": [
         "hashlib"
       ],
       "kind": "function",
-      "line": 100,
+      "line": 20,
       "lines": 2,
       "monkey_patches": [],
       "name": "sha",
@@ -129811,31 +130475,31 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/test_databank_delete_day_wave_62.py:104:tools.test_databank_delete_day_wave_62.dotted",
-        "tools/test_databank_delete_day_wave_62.py:113:tools.test_databank_delete_day_wave_62.main"
+        "tools/test_databank_delete_day_wave_62.py:24:tools.test_databank_delete_day_wave_62.dotted",
+        "tools/test_databank_delete_day_wave_62.py:33:tools.test_databank_delete_day_wave_62.main"
       ],
       "calls_raw": [
         "dotted",
         "isinstance"
       ],
       "calls_resolved": [
-        "tools/test_databank_delete_day_wave_62.py:104:tools.test_databank_delete_day_wave_62.dotted"
+        "tools/test_databank_delete_day_wave_62.py:24:tools.test_databank_delete_day_wave_62.dotted"
       ],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 110,
+      "end_line": 30,
       "feature": "other",
       "file": "tools/test_databank_delete_day_wave_62.py",
       "file_paths": [],
       "globals_read": [],
       "globals_written": [],
-      "id": "tools/test_databank_delete_day_wave_62.py:104:tools.test_databank_delete_day_wave_62.dotted",
+      "id": "tools/test_databank_delete_day_wave_62.py:24:tools.test_databank_delete_day_wave_62.dotted",
       "imports_used": [
         "ast"
       ],
       "kind": "function",
-      "line": 104,
+      "line": 24,
       "lines": 7,
       "monkey_patches": [],
       "name": "dotted",
@@ -129853,6 +130517,7 @@
       "calls_raw": [
         "APP_PATH.read_text",
         "MODULE_PATH.read_text",
+        "any",
         "app_text.count",
         "ast.parse",
         "ast.unparse",
@@ -129870,32 +130535,31 @@
         "textwrap.dedent"
       ],
       "calls_resolved": [
-        "tools/test_databank_delete_day_wave_62.py:100:tools.test_databank_delete_day_wave_62.sha",
-        "tools/test_databank_delete_day_wave_62.py:104:tools.test_databank_delete_day_wave_62.dotted"
+        "tools/test_databank_delete_day_wave_62.py:20:tools.test_databank_delete_day_wave_62.sha",
+        "tools/test_databank_delete_day_wave_62.py:24:tools.test_databank_delete_day_wave_62.dotted"
       ],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 148,
+      "end_line": 93,
       "feature": "other",
       "file": "tools/test_databank_delete_day_wave_62.py",
       "file_paths": [],
       "globals_read": [
         "APP_PATH",
-        "EXPECTED",
         "MODULE_PATH",
         "PROTECTED_WAVE61"
       ],
       "globals_written": [],
-      "id": "tools/test_databank_delete_day_wave_62.py:113:tools.test_databank_delete_day_wave_62.main",
+      "id": "tools/test_databank_delete_day_wave_62.py:33:tools.test_databank_delete_day_wave_62.main",
       "imports_used": [
         "ast",
         "importlib",
         "textwrap"
       ],
       "kind": "function",
-      "line": 113,
-      "lines": 36,
+      "line": 33,
+      "lines": 61,
       "monkey_patches": [],
       "name": "main",
       "parent": null,
@@ -129906,7 +130570,7 @@
         "filesystem",
         "reports"
       ],
-      "source_sha256": "c4bf6632d5574e8c2abd46d439f03ad153f94c027ab1bc4ad2720ab42807aeb5"
+      "source_sha256": "a810f69de560f2fc4e36d093fede07eb789631fd08f66ba46a23e5c431e8d7a8"
     },
     {
       "args": [
@@ -130516,7 +131180,7 @@
         "spina_app/calendar_presentation.py:361:spina_app.calendar_presentation.pick_date_range",
         "spina_app/calendar_presentation.py:406:spina_app.calendar_presentation.pick_date",
         "spina_app/client_form_presentation.py:269:spina_app.client_form_presentation._app__client_form._dom_seed_date",
-        "spina_app/databank_delete_day.py:103:spina_app.databank_delete_day.open_delete_day_dialog",
+        "spina_app/databank_delete_day.py:111:spina_app.databank_delete_day.open_delete_day_dialog",
         "spina_app/databank_editor_presentation.py:16:spina_app.databank_editor_presentation._pick_missed_reason",
         "spina_app/databank_grid_presentation.py:16:spina_app.databank_grid_presentation.goto_current_month",
         "spina_app/tabs/cash_control.py:37:spina_app.tabs.cash_control._spina_v21_cash_build_tab",
