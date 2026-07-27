@@ -1,12 +1,13 @@
-"""Data Bank Delete Day destructive workflow extracted in Wave 62."""
+"""Data Bank Delete Day destructive workflow with a fail-closed password gate."""
 from __future__ import annotations
 
 _DATABANK_DELETE_DAY_DEPENDENCIES = {}
 _PROTECTED_GLOBALS = {
-    '_DATABANK_DELETE_DAY_DEPENDENCIES', '_PROTECTED_GLOBALS',
-    'configure_databank_delete_day_dependencies', 'open_delete_day_dialog',
-    'DATABANK_DELETE_DAY_METHOD',
+    "_DATABANK_DELETE_DAY_DEPENDENCIES", "_PROTECTED_GLOBALS",
+    "configure_databank_delete_day_dependencies", "open_delete_day_dialog",
+    "DATABANK_DELETE_DAY_METHOD",
 }
+
 
 def configure_databank_delete_day_dependencies(namespace):
     _DATABANK_DELETE_DAY_DEPENDENCIES.clear()
@@ -14,6 +15,7 @@ def configure_databank_delete_day_dependencies(namespace):
     for name, value in namespace.items():
         if name not in _PROTECTED_GLOBALS:
             globals()[name] = value
+
 
 DATABANK_DELETE_DAY_METHOD = {'calls': ['_date',
            '_date.today',
@@ -50,11 +52,13 @@ DATABANK_DELETE_DAY_METHOD = {'calls': ['_date',
            'str',
            'strftime',
            'strip'],
- 'db_calls': ['self.db.conn.cursor', 'self.db.delete_transactions_for_day', 'self.db.get_databank_day_close'],
- 'dedented_sha256': '1947e0359e0dd97f49e90ac8fe3e3a9357a67213363416908d206b381ee076c0',
- 'lines': 141,
+ 'db_calls': ['self.db.conn.cursor',
+              'self.db.delete_transactions_for_day',
+              'self.db.get_databank_day_close'],
+ 'dedented_sha256': '9ecf5c06ba88ed6dcb44da83aca2cd8458b968ca110a9a48ba5f2faf7a3a8511',
+ 'lines': 142,
  'signature': 'self',
- 'source_sha256': 'b41b22e7c18f2e7f391f4cd400a9f0034c9ca535d2c7b10a9045db35af3d0407',
+ 'source_sha256': '9ecf5c06ba88ed6dcb44da83aca2cd8458b968ca110a9a48ba5f2faf7a3a8511',
  'strings': ['',
              '\n\nBackup saved here:\n',
              '\n'
@@ -77,7 +81,8 @@ DATABANK_DELETE_DAY_METHOD = {'calls': ['_date',
              'Confirm Delete a Day',
              'DELETE DATA BANK DAY: ',
              'Delete a Day',
-             'Delete all Data Bank entries for one selected date, with backup + password confirmation.',
+             'Delete all Data Bank entries for one selected date, with backup + password '
+             'confirmation.',
              'Deleted ',
              'Enter the date to delete from Data Bank (YYYY-MM-DD):\n'
              '\n'
@@ -86,7 +91,9 @@ DATABANK_DELETE_DAY_METHOD = {'calls': ['_date',
              'Failed to delete day:\n',
              'Invalid date. Use YYYY-MM-DD.',
              'No Data Bank entries or import-log markers found for ',
-             'SELECT COUNT(*), COALESCE(SUM(COALESCE(payment,0)),0) FROM transactions WHERE date(date)=date(?)',
+             'Password verification failed:\n',
+             'SELECT COUNT(*), COALESCE(SUM(COALESCE(payment,0)),0) FROM transactions WHERE '
+             'date(date)=date(?)',
              '_dbank_last_day',
              'backup_path',
              'databank:delete_day_button',
@@ -99,6 +106,7 @@ DATABANK_DELETE_DAY_METHOD = {'calls': ['_date',
              'user_name',
              'utf-8',
              '|']}
+
 
 def open_delete_day_dialog(self):
     """Delete all Data Bank entries for one selected date, with backup + password confirmation."""
@@ -202,8 +210,9 @@ def open_delete_day_dialog(self):
             title="Delete a Day",
             prompt="Enter your current account password to delete this day."
         )
-    except Exception:
-        ok = True
+    except Exception as exc:
+        messagebox.showerror("Delete a Day", f"Password verification failed:\n{exc}")
+        return
     if not ok:
         return
 

@@ -1,8 +1,8 @@
 # SPINA Application Risk and Modularization Map
 
-Generated from commit `bf3818f050e5e01f8e03fd0820e6650ded861fec`.
+Generated from commit `ffc2f8b30013c59da76a004065f5eaa6b693e20a`.
 
-Scanned **218 Python files**, **79,171 lines**, and **2,583 symbols**.
+Scanned **219 Python files**, **79,222 lines**, and **2,599 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -12,13 +12,13 @@ Scanned **218 Python files**, **79,171 lines**, and **2,583 symbols**.
 
 ### Authentication
 
-**44 symbols · 2,362 function lines**
+**44 symbols · 2,363 function lines**
 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_settings_dialog` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11569 — App settings (local-only).
 - `spina_app.login_dialog_presentation._spina_v32_prompt_login` — spina_app/login_dialog_presentation.py:24 — Modern account-based login dialog. Returns (username, internal_access_profile).
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_header` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11340 — Modern top header: app identity + fast Regular/7x7 switch + app actions.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10097 — Handles init for the other feature.
-- `spina_app.databank_delete_day.open_delete_day_dialog` — spina_app/databank_delete_day.py:103 — Delete all Data Bank entries for one selected date, with backup + password confirmation.
+- `spina_app.databank_delete_day.open_delete_day_dialog` — spina_app/databank_delete_day.py:111 — Delete all Data Bank entries for one selected date, with backup + password confirmation.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.apply_role_access` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7869 — Apply role-based UI restrictions.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._prompt_login` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7582 — Login dialog: returns (username, role) or (None, None) if cancelled.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._force_change_password_dialog` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7287 — Modal dialog that forces a password change. Returns True if changed.

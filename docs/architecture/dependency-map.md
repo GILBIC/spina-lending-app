@@ -1,8 +1,8 @@
 # SPINA Application Dependency Map
 
-Generated from commit `bf3818f050e5e01f8e03fd0820e6650ded861fec`.
+Generated from commit `ffc2f8b30013c59da76a004065f5eaa6b693e20a`.
 
-Scanned **218 Python files**, **79,171 lines**, and **2,583 symbols**.
+Scanned **219 Python files**, **79,222 lines**, and **2,599 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
