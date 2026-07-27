@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import traceback
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -89,18 +90,18 @@ def clean_desktop() -> tuple[int, int]:
     replacements.append(replacement_span(text, builders[0]))
 
     old_button_defs = top_functions(tree, LEGACY_BUTTON)
-    assert len(old_button_defs) <= 1
+    assert len(old_button_defs) <= 1, (LEGACY_BUTTON, len(old_button_defs))
     old_button_lines = 0
     if old_button_defs:
         old_button_lines = old_button_defs[0].end_lineno - old_button_defs[0].lineno + 1
         replacements.append(replacement_span(text, old_button_defs[0]))
 
     old_app_bindings = [node for node in tree.body if is_app_binding(node, LEGACY_BUILDER)]
-    assert len(old_app_bindings) == 1, len(old_app_bindings)
+    assert len(old_app_bindings) == 1, ("legacy_app_bindings", len(old_app_bindings))
     replacements.append(replacement_span(text, old_app_bindings[0]))
 
     old_name_bindings = [node for node in tree.body if is_name_binding(node, LEGACY_BUTTON)]
-    assert len(old_name_bindings) <= 1, len(old_name_bindings)
+    assert len(old_name_bindings) <= 1, ("legacy_button_bindings", len(old_name_bindings))
     for node in old_name_bindings:
         replacements.append(replacement_span(text, node))
 
@@ -110,7 +111,7 @@ def clean_desktop() -> tuple[int, int]:
         and node.module == "spina_app.ui_controls"
         and any(alias.name == LEGACY_BUTTON for alias in node.names)
     ]
-    assert len(button_imports) == 1, len(button_imports)
+    assert len(button_imports) == 1, ("legacy_button_imports", len(button_imports))
     node = button_imports[0]
     kept = [alias for alias in node.names if alias.name != LEGACY_BUTTON]
     assert kept, "Wave 52 must preserve active UI-control imports"
@@ -119,14 +120,20 @@ def clean_desktop() -> tuple[int, int]:
     updated = apply_replacements(text, replacements)
     updated_tree = ast.parse(updated)
 
-    assert not top_functions(updated_tree, LEGACY_BUILDER)
-    assert not top_functions(updated_tree, LEGACY_BUTTON)
-    assert not [node for node in ast.walk(updated_tree) if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id in {LEGACY_BUILDER, LEGACY_BUTTON}]
+    assert not top_functions(updated_tree, LEGACY_BUILDER), "legacy builder survived replacement"
+    assert not top_functions(updated_tree, LEGACY_BUTTON), "legacy button survived desktop replacement"
+    remaining_loads = [
+        node.id for node in ast.walk(updated_tree)
+        if isinstance(node, ast.Name)
+        and isinstance(node.ctx, ast.Load)
+        and node.id in {LEGACY_BUILDER, LEGACY_BUTTON}
+    ]
+    assert not remaining_loads, ("remaining_legacy_loads", remaining_loads)
 
     active_builders = top_functions(updated_tree, ACTIVE_BUILDER)
-    assert not active_builders, "Active builder must remain extracted in spina_app.collector_tab_presentation"
+    assert not active_builders, ("active_builder_should_be_extracted", len(active_builders))
     active_bindings = [node for node in updated_tree.body if is_app_binding(node, ACTIVE_BUILDER)]
-    assert len(active_bindings) == 1, len(active_bindings)
+    assert len(active_bindings) == 1, ("active_app_bindings", len(active_bindings))
 
     DESKTOP.write_text(updated, encoding="utf-8")
     return builder_lines, old_button_lines
@@ -149,7 +156,7 @@ def clean_ui_controls() -> int:
         and node.module == "spina_app.theme_palettes"
         and any(alias.name == "_spina_v25_collector_colors" and alias.asname is None for alias in node.names)
     ]
-    assert len(palette_imports) == 1, len(palette_imports)
+    assert len(palette_imports) == 1, ("direct_v25_palette_imports", len(palette_imports))
     node = palette_imports[0]
     kept = [
         alias for alias in node.names
@@ -159,9 +166,9 @@ def clean_ui_controls() -> int:
 
     updated = apply_replacements(text, replacements)
     updated_tree = ast.parse(updated)
-    assert not top_functions(updated_tree, LEGACY_BUTTON)
-    assert len(top_functions(updated_tree, ACTIVE_ROUTE_BUTTON)) == 1
-    assert len(top_functions(updated_tree, ACTIVE_LOGIN_BUTTON)) == 1
+    assert not top_functions(updated_tree, LEGACY_BUTTON), "legacy UI button survived replacement"
+    assert len(top_functions(updated_tree, ACTIVE_ROUTE_BUTTON)) == 1, "active route button changed"
+    assert len(top_functions(updated_tree, ACTIVE_LOGIN_BUTTON)) == 1, "active login button changed"
 
     UI_CONTROLS.write_text(updated, encoding="utf-8")
     return button_lines
@@ -170,8 +177,8 @@ def clean_ui_controls() -> int:
 def main() -> None:
     builder_lines, desktop_button_lines = clean_desktop()
     module_button_lines = clean_ui_controls()
-    assert desktop_button_lines == 0, desktop_button_lines
-    assert builder_lines + module_button_lines == 375
+    assert desktop_button_lines == 0, ("desktop_button_lines", desktop_button_lines)
+    assert builder_lines + module_button_lines == 375, (builder_lines, module_button_lines)
     print(
         "Wave 52 cleanup applied:",
         f"{builder_lines} legacy builder lines + {module_button_lines} unused button lines removed.",
@@ -179,4 +186,12 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        artifacts = ROOT / "artifacts"
+        artifacts.mkdir(exist_ok=True)
+        report = traceback.format_exc()
+        (artifacts / "wave-52-bootstrap.txt").write_text(report, encoding="utf-8")
+        print(report)
+        raise
