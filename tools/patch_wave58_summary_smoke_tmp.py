@@ -6,20 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TEST = ROOT / "tools" / "test_system_data_summary_widget_smoke_wave_58.py"
 
 
-def main() -> None:
-    text = TEST.read_text(encoding="utf-8")
-    old_record = '''        assert app.system_data_summary_var.get() == (
-            "Date: 2026-07-27\\n"
-            "Regular Expected: $2,500.00\\n"
-            "7x7 Expected: $1,000.00\\n"
-            "Total Expected: $3,500.00\\n"
-            "Actual Cash: $3,450.00\\n"
-            "Variance: $50.00 (Short)\\n"
-            "Workflow: Reviewed | Status: Closed\\n"
-            "Note: Safe test record"
-        )
-'''
-    new_record = '''        summary = app.system_data_summary_var.get()
+RECORD_REPLACEMENT = '''        summary = app.system_data_summary_var.get()
         for expected_line in (
             "Date: 2026-07-27",
             "Regular Expected:",
@@ -31,17 +18,9 @@ def main() -> None:
             "Workflow: Reviewed | Status: Closed",
             "Note: Safe test record",
         ):
-            assert expected_line in summary, (expected_line, summary)
-'''
-    old_open = '''        assert app.system_data_summary_var.get() == (
-            "Date: 2026-07-27\\n"
-            "Regular Expected: $2,500.00\\n"
-            "7x7 Expected: $1,000.00\\n"
-            "Total Expected: $3,500.00\\n"
-            "No Daily Close record yet for this date."
-        )
-'''
-    new_open = '''        open_summary = app.system_data_summary_var.get()
+            assert expected_line in summary, (expected_line, summary)'''
+
+OPEN_REPLACEMENT = '''        open_summary = app.system_data_summary_var.get()
         for expected_line in (
             "Date: 2026-07-27",
             "Regular Expected:",
@@ -50,11 +29,31 @@ def main() -> None:
             "No Daily Close record yet for this date.",
         ):
             assert expected_line in open_summary, (expected_line, open_summary)
-        assert "Actual Cash:" not in open_summary
-'''
-    if old_record not in text or old_open not in text:
-        raise SystemExit("Wave 58 smoke-test source changed")
-    text = text.replace(old_record, new_record, 1).replace(old_open, new_open, 1)
+        assert "Actual Cash:" not in open_summary'''
+
+
+def main() -> None:
+    text = TEST.read_text(encoding="utf-8")
+    marker = "        assert app.system_data_summary_var.get() == (\n"
+
+    first_start = text.find(marker)
+    if first_start < 0:
+        raise SystemExit("Wave 58 first summary assertion missing")
+    first_end_marker = "\n\n        app.db.calls.clear()"
+    first_end = text.find(first_end_marker, first_start)
+    if first_end < 0:
+        raise SystemExit("Wave 58 first summary boundary missing")
+    text = text[:first_start] + RECORD_REPLACEMENT + text[first_end:]
+
+    second_start = text.find(marker, first_start + len(RECORD_REPLACEMENT))
+    if second_start < 0:
+        raise SystemExit("Wave 58 second summary assertion missing")
+    second_end_marker = "\n        print(\"Wave 58 real Tkinter System Data summary behavior test passed\")"
+    second_end = text.find(second_end_marker, second_start)
+    if second_end < 0:
+        raise SystemExit("Wave 58 second summary boundary missing")
+    text = text[:second_start] + OPEN_REPLACEMENT + text[second_end:]
+
     TEST.write_text(text, encoding="utf-8")
     print("Wave 58 summary smoke assertions patched")
 
