@@ -16,7 +16,6 @@ on:
       - ".github/workflows/legacy-collector-cleanup-wave-52.yml"
 permissions:
   contents: write
-  issues: write
 concurrency:
   group: legacy-collector-cleanup-wave-52-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -56,34 +55,16 @@ jobs:
           python tools/generate_architecture_map.py
           git add architecture-map.json docs/architecture
           git commit -m "Refresh architecture map for Wave 52"
-          git push origin "HEAD:${{ github.head_ref }}"
-      - name: Post bootstrap diagnostic to PR
+          git push origin "HEAD:refs/heads/agent/high-volume-wave-52"
+      - name: Persist bootstrap diagnostic
         if: ${{ failure() && hashFiles('tools/apply_legacy_collector_cleanup_wave_52.py') != '' }}
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const paths = [
-              'artifacts/wave-52-bootstrap-console.txt',
-              'artifacts/wave-52-bootstrap.txt'
-            ];
-            const parts = [];
-            for (const path of paths) {
-              if (fs.existsSync(path)) {
-                parts.push(`### ${path}\n\n\`\`\`text\n${fs.readFileSync(path, 'utf8').slice(0, 12000)}\n\`\`\``);
-              }
-            }
-            const body = [
-              `Wave 52 bootstrap diagnostic for commit \`${context.sha}\`.`,
-              parts.join('\n\n') || 'No diagnostic file was produced.'
-            ].join('\n\n');
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body
-            });
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f artifacts
+          git commit -m "Record Wave 52 bootstrap diagnostic"
+          git push origin HEAD:refs/heads/agent/high-volume-wave-52
       - name: Compile application, modules, and tests
         shell: cmd
         run: |
