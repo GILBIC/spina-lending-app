@@ -1,0 +1,77 @@
+name: System Data summary presentation Wave 58
+
+# Validates the exact clean Wave 58 PR head before desktop testing.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/system_data_summary_presentation.py"
+      - "tools/test_system_data_summary_presentation_wave_58.py"
+      - "tools/test_system_data_summary_widget_smoke_wave_58.py"
+      - "architecture-map.json"
+      - "docs/architecture/**"
+      - ".github/workflows/system-data-summary-presentation-wave-58.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: system-data-summary-presentation-wave-58-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-58'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 90
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          show-progress: false
+      - name: Compile application, module, and tests
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\system_data_summary_presentation.py
+          python -m py_compile tools\test_system_data_summary_presentation_wave_58.py
+          python -m py_compile tools\test_system_data_summary_widget_smoke_wave_58.py
+          python -m compileall -q spina_app
+      - name: Run exact System Data summary extraction regression
+        shell: cmd
+        run: python -m tools.test_system_data_summary_presentation_wave_58
+      - name: Run real Tkinter System Data summary behavior test
+        shell: cmd
+        run: python -m tools.test_system_data_summary_widget_smoke_wave_58
+      - name: Run protected Data Bank and navigation regressions
+        shell: cmd
+        run: |
+          python -m tools.test_navigation_and_databank_shell_wave_29
+          python -m tools.test_databank_presentation_wave_49
+          python -m tools.test_databank_widget_smoke_wave_49
+          python -m tools.test_databank_import_control_wave_53
+          python -m tools.test_import_log_presentation_wave_53
+          python -m tools.test_audit_presentation_wave_54
+          python -m tools.test_system_data_presentation_wave_56
+          python -m tools.test_system_data_widget_smoke_wave_56
+          python -m tools.test_databank_close_history_presentation_wave_57
+          python -m tools.test_databank_close_history_widget_smoke_wave_57
+      - name: Validate permanent architecture map
+        uses: ./.github/actions/architecture-map-check
+      - name: Run repository audits
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools\redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts\wave-58-redundancy.json
+          python tools\spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts\wave-58-quality.json
+      - name: Upload Wave 58 reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-data-summary-presentation-wave-58-reports
+          path: artifacts/wave-58-*.json
+          if-no-files-found: warn
