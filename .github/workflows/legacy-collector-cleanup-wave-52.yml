@@ -50,9 +50,6 @@ jobs:
           }
           if (Test-Path tools/wave52_diagnostic.txt) {
             Get-Content tools/wave52_diagnostic.txt
-            git add -f tools/wave52_diagnostic.txt
-            git commit -m "Record Wave 52 tracked diagnostic"
-            git push origin "HEAD:refs/heads/agent/high-volume-wave-52"
             exit 1
           }
           Remove-Item tools/apply_legacy_collector_cleanup_wave_52.py
@@ -119,5 +116,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: legacy-collector-cleanup-wave-52-reports
-          path: artifacts/wave-52-*
+          path: |
+            artifacts/wave-52-*
+            tools/wave52_diagnostic.txt
           if-no-files-found: warn
