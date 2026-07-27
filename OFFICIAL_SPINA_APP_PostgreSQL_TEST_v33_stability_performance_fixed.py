@@ -12624,293 +12624,9 @@ class App:
             pass
 
 
-    def goto_current_month(self):
-        today = date.today()
-        self.grid_year = today.year
-        self.grid_month = today.month
-        self.refresh_data_grid()
-    def prev_month(self):
-        if self.grid_month == 1: self.grid_month = 12; self.grid_year -= 1
-        else: self.grid_month -= 1
-        self.month_lbl.config(text=self._month_label()); self.refresh_data_grid()
-    def next_month(self):
-        if self.grid_month == 12: self.grid_month = 1; self.grid_year += 1
-        else: self.grid_month += 1
-        self.month_lbl.config(text=self._month_label()); self.refresh_data_grid()
 
     
 
-    def refresh_data_grid(self):
-
-        # View-only reminder
-        try:
-            self.status_var.set('Data Bank is view-only. Encode in Excel, then Import.')
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0380', 'suppressed exception excpass_0380', __spina_exc)
-            pass
-
-        # Clear container
-        for w in self.inner.winfo_children():
-            try:
-                w.destroy()
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0381', 'suppressed exception excpass_0381', __spina_exc)
-                pass
-
-        days = calendar.monthrange(self.grid_year, self.grid_month)[1]
-        day_cols = tuple(f'd{d}' for d in range(1, days + 1))
-        cols = ('client', 'area') + day_cols
-
-        # --- Freeze panes layout: left (client+area) + right (days) ---
-        grid = ttk.Frame(self.inner)
-        grid.grid(row=0, column=0, sticky='nsew')
-        try:
-            self.inner.grid_rowconfigure(0, weight=1)
-            self.inner.grid_columnconfigure(0, weight=1)
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0382', 'suppressed exception excpass_0382', __spina_exc)
-            pass
-        grid.grid_rowconfigure(0, weight=1)
-        grid.grid_columnconfigure(1, weight=1)
-
-        # Left pane: Client + Area (no horizontal scroll)
-        self.name_tree = ttk.Treeview(grid, columns=('client', 'area'), show='headings', height=27)
-        self._configure_tree_stripes(self.name_tree)
-        self.name_tree.heading('client', text='Client Name')
-        self.name_tree.heading('area', text='Area')
-        self.name_tree.column('client', width=280, anchor='w', stretch=False)
-        self.name_tree.column('area', width=150, anchor='w', stretch=False)
-
-        # Right pane: Days (with horizontal scroll); keep hidden 'client'/'area' columns for existing logic
-        self.days_tree = ttk.Treeview(grid, columns=cols, show='headings', height=27)
-        self._configure_tree_stripes(self.days_tree)
-
-        # Hidden columns to keep column indices stable (day1 starts at #3)
-        self.days_tree.heading('client', text='')
-        self.days_tree.heading('area', text='')
-        self.days_tree.column('client', width=0, minwidth=0, stretch=False)
-        self.days_tree.column('area', width=0, minwidth=0, stretch=False)
-
-        for c in day_cols:
-            d = int(c[1:])
-            self.days_tree.heading(c, text=str(d))
-            self.days_tree.column(c, width=72, anchor='center', stretch=False)
-
-        # Scrollbars (shared vertical)
-        def _yview(*args):
-            try:
-                self.name_tree.yview(*args)
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0383', 'suppressed exception excpass_0383', __spina_exc)
-                pass
-            try:
-                self.days_tree.yview(*args)
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0384', 'suppressed exception excpass_0384', __spina_exc)
-                pass
-
-        v = ttk.Scrollbar(grid, orient='vertical', command=_yview)
-        h = ttk.Scrollbar(grid, orient='horizontal', command=self.days_tree.xview)
-
-        self.name_tree.configure(yscrollcommand=v.set)
-        self.days_tree.configure(yscrollcommand=v.set, xscrollcommand=h.set)
-
-        # Layout
-        self.name_tree.grid(row=0, column=0, sticky='ns')
-        self.days_tree.grid(row=0, column=1, sticky='nsew')
-        v.grid(row=0, column=2, sticky='ns')
-        h.grid(row=1, column=1, sticky='ew')
-
-        # Sync selection between panes
-        def _sync_selection(from_tv, to_tv):
-            try:
-                sel = from_tv.selection()
-                if not sel:
-                    return
-                if to_tv.selection() != sel:
-                    to_tv.selection_set(sel)
-                try:
-                    to_tv.focus(sel[0])
-                except Exception as __spina_exc:
-                    _log_suppressed_once('excpass_0385', 'suppressed exception excpass_0385', __spina_exc)
-                    pass
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0386', 'suppressed exception excpass_0386', __spina_exc)
-                pass
-
-        def _on_sel_left(_e=None):
-            _sync_selection(self.name_tree, self.days_tree)
-
-        def _on_sel_right(_e=None):
-            _sync_selection(self.days_tree, self.name_tree)
-
-        try:
-            self.name_tree.bind('<<TreeviewSelect>>', _on_sel_left, add='+')
-            self.days_tree.bind('<<TreeviewSelect>>', _on_sel_right, add='+')
-        except Exception as e:
-            _log_ignored("ui.bind failed", e, key="ui.bind_failed")
-
-        # Ensure clicks set focus on the right pane so Delete / edit hotkeys work naturally
-        def _focus_right_from_left(e):
-            try:
-                iid = self.name_tree.identify_row(e.y)
-                if iid:
-                    self.days_tree.selection_set((iid,))
-                    self.days_tree.focus(iid)
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0387', 'suppressed exception excpass_0387', __spina_exc)
-                pass
-
-        def _focus_left_from_right(e):
-            try:
-                iid = self.days_tree.identify_row(e.y)
-                if iid:
-                    self.name_tree.selection_set((iid,))
-                    self.name_tree.focus(iid)
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0388', 'suppressed exception excpass_0388', __spina_exc)
-                pass
-
-        try:
-            self.name_tree.bind('<Button-1>', _focus_right_from_left, add='+')
-            self.days_tree.bind('<Button-1>', _focus_left_from_right, add='+')
-        except Exception as e:
-            _log_ignored("ui.bind failed", e, key="ui.bind_failed")
-
-        # Bindings (always bind to the current widgets; they are recreated on refresh)
-        try:
-            self.days_tree.bind('<Double-1>', self._begin_cell_edit, add='+')
-        except Exception:
-            # If _begin_cell_edit was removed, just bell
-            try:
-                self.days_tree.bind('<Double-1>', lambda e: self.root.bell(), add='+')
-            except Exception as e:
-                _log_ignored("ui.bind failed", e, key="ui.bind_failed")
-
-        try:
-            self.days_tree.bind('<Button-1>', self._remember_cell_click, add='+')
-        except Exception as e:
-            _log_ignored("ui.bind failed", e, key="ui.bind_failed")
-
-        try:
-            self.days_tree.bind('<Delete>', self.delete_selected_cell, add='+')
-            self.name_tree.bind('<Delete>', self.delete_selected_cell, add='+')
-        except Exception as e:
-            _log_ignored("ui.bind failed", e, key="ui.bind_failed")
-
-        # Mousewheel should scroll both panes
-        try:
-            for tv in (self.name_tree, self.days_tree):
-                tv.bind('<MouseWheel>', self._on_mousewheel_sync, add='+')
-                tv.bind('<Button-4>', self._on_mousewheel_sync, add='+')
-                tv.bind('<Button-5>', self._on_mousewheel_sync, add='+')
-        except Exception as e:
-            _log_ignored("ui.bind failed", e, key="ui.bind_failed")
-
-        # Right-click context menu: mark missed with reason
-        try:
-            self._db_menu = tk.Menu(self.days_tree, tearoff=0)
-            self._db_menu.add_command(label="Mark as missed (enter reason)", command=self._mark_missed_for_selected)
-            self._db_menu.add_separator()
-            self._db_menu.add_command(label="Delete this payment cell", command=self.delete_selected_cell)
-
-            def _popup_db_menu(ev):
-                try:
-                    self._remember_cell_click(ev)
-                except Exception as __spina_exc:
-                    _log_suppressed_once('excpass_0389', 'suppressed exception excpass_0389', __spina_exc)
-                    pass
-                try:
-                    self._db_menu.tk_popup(ev.x_root, ev.y_root)
-                finally:
-                    try:
-                        self._db_menu.grab_release()
-                    except Exception as __spina_exc:
-                        _log_suppressed_once('excpass_0390', 'suppressed exception excpass_0390', __spina_exc)
-                        pass
-
-            self.days_tree.bind("<Button-3>", _popup_db_menu, add="+")
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0391', 'suppressed exception excpass_0391', __spina_exc)
-            pass
-
-        # Resize columns when container changes
-        try:
-            self.inner.bind('<Configure>', self._resize_databank_columns, add='+')
-        except Exception as e:
-            _log_ignored("ui.bind failed", e, key="ui.bind_failed")
-
-        # Fill rows
-        search_term = self.search_db_var.get().strip()
-        clients = self.db.get_all_clients(search=search_term if search_term else None, loan_type=self._mode_filter(), search_by='all')
-        try:
-            mode_txt = self._mode_filter()
-        except Exception:
-            mode_txt = 'Regular'
-        try:
-            rows_txt = f"{len(clients or [])} row{'s' if len(clients or []) != 1 else ''} • {mode_txt} • {self._month_label()}"
-            if search_term:
-                rows_txt += f" • filter: {search_term}"
-            if hasattr(self, '_db_rows_var') and self._db_rows_var is not None:
-                self._db_rows_var.set(rows_txt)
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_databank_rows_var', 'suppressed exception excpass_databank_rows_var', __spina_exc)
-            pass
-        if not clients:
-            iid = 'r0'
-            self.name_tree.insert('', 'end', iid=iid, values=('(no clients)', ''), tags=('odd',))
-            self.days_tree.insert('', 'end', iid=iid, values=('(no clients)', '', *(['']*days)), tags=('odd',))
-        else:
-            for idx, c in enumerate(clients):
-                if isinstance(c, dict):
-                    name = c.get('name','')
-                    area = c.get('area','')
-                else:
-                    info = self.db.get_client_info(c, loan_type=self._mode_filter()) or {}
-                    name = c
-                    area = info.get('area','')
-
-                vals = [name, area]
-                for d in range(1, days + 1):
-                    dt = date(self.grid_year, self.grid_month, d).strftime('%Y-%m-%d')
-                    tx = self.db.get_transaction(name, dt)
-                    if tx and tx['payment'] and float(tx['payment']) != 0:
-                        vals.append(fmt_currency(tx['payment']))
-                    elif tx and (tx['payment'] == 0 or tx['payment'] == '0'):
-                        vals.append('0')
-                    else:
-                        vals.append('')
-
-                tag = 'odd' if (idx % 2) == 0 else 'even'
-                iid = f"r{idx}"
-                try:
-                    self.name_tree.insert('', 'end', iid=iid, values=(name, area), tags=(tag,))
-                except Exception:
-                    self.name_tree.insert('', 'end', values=(name, area), tags=(tag,))
-                try:
-                    self.days_tree.insert('', 'end', iid=iid, values=tuple(vals), tags=(tag,))
-                except Exception:
-                    self.days_tree.insert('', 'end', values=tuple(vals), tags=(tag,))
-
-        # Update sizes / toolbar safely
-        try:
-            self._resize_databank_columns()
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0392', 'suppressed exception excpass_0392', __spina_exc)
-            pass
-
-        try:
-            if hasattr(self, '_update_data_toolbar'):
-                self._update_data_toolbar()
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0393', 'suppressed exception excpass_0393', __spina_exc)
-            pass
-
-        try:
-            self._ensure_databank_edit_bindings()
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0394', 'suppressed exception excpass_0394', __spina_exc)
-            pass
     def on_day_double(self, event):
         # Disabled in view-only mode
         return
@@ -25294,6 +25010,22 @@ _configure_wave58_system_data_summary(globals())
 App._system_data_get_date = _wave58_system_data_get_date
 App._system_data_use_focus_date = _wave58_system_data_use_focus_date
 App._system_data_refresh_summary = _wave58_system_data_refresh_summary
+
+
+
+# Wave 59: Data Bank month navigation and grid presentation.
+from spina_app.databank_grid_presentation import (
+    configure_databank_grid_dependencies as _configure_wave59_databank_grid,
+    goto_current_month as _wave59_goto_current_month,
+    prev_month as _wave59_prev_month,
+    next_month as _wave59_next_month,
+    refresh_data_grid as _wave59_refresh_data_grid,
+)
+_configure_wave59_databank_grid(globals())
+App.goto_current_month = _wave59_goto_current_month
+App.prev_month = _wave59_prev_month
+App.next_month = _wave59_next_month
+App.refresh_data_grid = _wave59_refresh_data_grid
 
 def main():
     import tkinter as tk
