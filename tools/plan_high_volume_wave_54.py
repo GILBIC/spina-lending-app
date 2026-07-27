@@ -11,7 +11,7 @@ DESKTOP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_f
 JSON_OUT = ROOT / "artifacts" / "wave-54-candidates.json"
 MD_OUT = ROOT / "docs" / "wave-54-candidate-report.md"
 
-MIN_LINES = 90
+MIN_LINES = 20
 UI_CALL_TAILS = {
     "Button", "Label", "Frame", "Entry", "Treeview", "Scrollbar", "Combobox",
     "Checkbutton", "Radiobutton", "Notebook", "Toplevel", "Canvas", "Text",
@@ -49,11 +49,6 @@ def dotted(node: ast.AST) -> str:
     return ""
 
 
-def source_for(lines: list[str], node: ast.AST) -> str:
-    end = getattr(node, "end_lineno", None) or node.lineno
-    return "\n".join(lines[node.lineno - 1 : end])
-
-
 def owner_name(stack: list[ast.AST], node: ast.AST) -> str:
     owners = [item.name for item in stack if isinstance(item, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))]
     return ".".join([*owners, node.name]) if owners else node.name
@@ -74,6 +69,29 @@ def financial_operation_hits(node: ast.AST) -> list[str]:
         if isinstance(part, operation_nodes):
             hits.update(FINANCIAL_IDENTIFIERS & identifier_names(part))
     return sorted(hits)
+
+
+def feature_group(name: str) -> str:
+    low = name.lower()
+    rules = (
+        ("cash-control", ("cashctl", "cash_control", "cash_refresh")),
+        ("data-bank", ("databank", "data_grid", "data_tab", "month", "cell_edit")),
+        ("clients", ("client", "renewdialog")),
+        ("collectors", ("collector", "route")),
+        ("dashboard", ("dashboard", "dash_")),
+        ("reports", ("report", "statement", "pdf")),
+        ("authentication", ("login", "password", "account", "role", "permission", "user_header")),
+        ("navigation-theme", ("nav", "header", "theme", "style", "palette")),
+        ("areas", ("area",)),
+        ("audit", ("audit",)),
+        ("settings", ("setting",)),
+        ("calendar", ("calendar", "date_picker")),
+        ("notes", ("note",)),
+    )
+    for group, tokens in rules:
+        if any(token in low for token in tokens):
+            return group
+    return "misc"
 
 
 class Collector(ast.NodeVisitor):
@@ -147,19 +165,10 @@ def analyze_candidate(name: str, node: ast.AST, depth: int, collector: Collector
     else:
         classification = "support-review"
 
-    legacy_score = 0
-    if references <= 1:
-        legacy_score += 3
-    if not bindings:
-        legacy_score += 2
-    if any(token in short_name.lower() for token in ("legacy", "old", "v1", "v2", "v3", "unused")):
-        legacy_score += 2
-    if classification == "ui-candidate":
-        legacy_score += 2
-
     return {
         "qualified_name": name,
         "short_name": short_name,
+        "feature_group": feature_group(name),
         "line_start": node.lineno,
         "line_end": getattr(node, "end_lineno", node.lineno),
         "lines": lines,
@@ -173,7 +182,6 @@ def analyze_candidate(name: str, node: ast.AST, depth: int, collector: Collector
         "filesystem_calls": filesystem_calls,
         "sql_hits": sql_hits,
         "calls": calls,
-        "legacy_score": legacy_score,
     }
 
 
@@ -186,20 +194,20 @@ def main() -> None:
     rows = []
     for name, node, depth in collector.functions:
         line_count = (getattr(node, "end_lineno", node.lineno) or node.lineno) - node.lineno + 1
-        if line_count < MIN_LINES:
-            continue
-        rows.append(analyze_candidate(name, node, depth, collector))
+        if line_count >= MIN_LINES:
+            rows.append(analyze_candidate(name, node, depth, collector))
 
-    rows.sort(key=lambda row: (
-        0 if row["classification"] == "ui-candidate" else 1,
-        -int(row["legacy_score"]),
-        -int(row["lines"]),
-    ))
+    rows.sort(key=lambda row: (row["classification"], -int(row["lines"]), row["qualified_name"]))
     JSON_OUT.parent.mkdir(parents=True, exist_ok=True)
     MD_OUT.parent.mkdir(parents=True, exist_ok=True)
     JSON_OUT.write_text(json.dumps(rows, indent=2), encoding="utf-8")
 
-    selected = [row for row in rows if row["classification"] in {"ui-candidate", "filesystem-review", "support-review"} and row["depth"] == 0]
+    safe = [row for row in rows if row["classification"] == "ui-candidate" and row["depth"] == 0]
+    groups: defaultdict[str, list[dict[str, object]]] = defaultdict(list)
+    for row in safe:
+        groups[str(row["feature_group"])].append(row)
+    group_rows = sorted(groups.items(), key=lambda item: -sum(int(row["lines"]) for row in item[1]))
+
     md = [
         "# Wave 54 high-volume candidate report",
         "",
@@ -207,16 +215,28 @@ def main() -> None:
         "",
         "Protection is based on actual calls, SQL-shaped strings, and financial arithmetic—not ordinary `pass` statements or visible UI labels.",
         "",
-        "| Rank | Candidate | Lines | Class | Refs | Bindings | UI evidence | Review flags |",
-        "|---:|---|---:|---|---:|---:|---|---|",
+        "## Safe presentation groups",
+        "",
+        "| Group | Functions | Total lines | Largest members |",
+        "|---|---:|---:|---|",
     ]
-    for index, row in enumerate(selected[:40], start=1):
-        flags = ", ".join(row["filesystem_calls"][:6]) or "none"
+    for group, members in group_rows:
+        total = sum(int(row["lines"]) for row in members)
+        largest = sorted(members, key=lambda row: -int(row["lines"]))[:6]
+        labels = ", ".join(f"`{row['qualified_name']}` ({row['lines']})" for row in largest)
+        md.append(f"| {group} | {len(members)} | {total} | {labels} |")
+
+    md.extend([
+        "",
+        "## Safe presentation candidates",
+        "",
+        "| Candidate | Group | Lines | Refs | UI evidence |",
+        "|---|---|---:|---:|---|",
+    ])
+    for row in sorted(safe, key=lambda row: (row["feature_group"], -int(row["lines"])))[:100]:
         ui = ", ".join(row["ui_hits"][:8]) or "none"
-        md.append(
-            f"| {index} | `{row['qualified_name']}` | {row['lines']} | {row['classification']} | "
-            f"{row['references']} | {len(row['bindings'])} | {ui} | {flags} |"
-        )
+        md.append(f"| `{row['qualified_name']}` | {row['feature_group']} | {row['lines']} | {row['references']} | {ui} |")
+
     md.extend([
         "",
         "## Protected large functions",
@@ -226,7 +246,7 @@ def main() -> None:
     ])
     protected = [row for row in rows if row["classification"] == "protected" and row["depth"] == 0]
     protected.sort(key=lambda row: -int(row["lines"]))
-    for row in protected[:30]:
+    for row in protected[:35]:
         evidence = [*row["protected_calls"], *row["financial_hits"]]
         if row["sql_hits"]:
             evidence.append("SQL")
