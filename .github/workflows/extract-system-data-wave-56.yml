@@ -5,6 +5,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - "tools/extract_system_data_wave56_tmp.py"
+      - "tools/fix_system_data_wave56_newlines_tmp.py"
       - ".github/workflows/extract-system-data-wave-56.yml"
   workflow_dispatch:
 
@@ -27,6 +28,9 @@ jobs:
           ref: agent/high-volume-wave-56
           fetch-depth: 0
           show-progress: false
+      - name: Normalize Windows source hashing
+        shell: cmd
+        run: python tools\fix_system_data_wave56_newlines_tmp.py
       - name: Extract guarded System Data boundary
         shell: cmd
         run: python tools\extract_system_data_wave56_tmp.py
