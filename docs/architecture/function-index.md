@@ -2,7 +2,7 @@
 
 Generated from commit `1c635c7e6a98ce46cf13831106ba5a2c4f5d0fbf`.
 
-Scanned **205 Python files**, **78,220 lines**, and **2,502 symbols**.
+Scanned **203 Python files**, **77,776 lines**, and **2,493 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1663,15 +1663,6 @@ Scanned **205 Python files**, **78,220 lines**, and **2,502 symbols**.
 - **tools.extract_cilog_value_formatter.apply_extraction** (function, lines 130–140, 11 lines, risk `support`): Handles apply extraction for the other feature.
 - **tools.extract_cilog_value_formatter.main** (function, lines 143–161, 19 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/extract_databank_close_history_wave57_tmp.py`
-
-- **tools.extract_databank_close_history_wave57_tmp.dotted** (function, lines 39–46, 8 lines, risk `support`): Handles dotted for the other feature.
-- **tools.extract_databank_close_history_wave57_tmp.find_target** (function, lines 49–55, 7 lines, risk `support`): Retrieves find target for the other feature.
-- **tools.extract_databank_close_history_wave57_tmp.render_module** (function, lines 58–84, 27 lines, risk `support`): Handles render module for the other feature.
-- **tools.extract_databank_close_history_wave57_tmp.render_exact_test** (function, lines 87–134, 48 lines, risk `support`): Handles render exact test for the other feature.
-- **tools.extract_databank_close_history_wave57_tmp.render_widget_test** (function, lines 137–235, 99 lines, risk `ui_only`): Handles render widget test for the other feature.
-- **tools.extract_databank_close_history_wave57_tmp.main** (function, lines 238–316, 79 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/extract_date_display_helpers.py`
 
 - **tools.extract_date_display_helpers._line_source** (function, lines 32–37, 6 lines, risk `support`): Handles line source for the other feature.
@@ -1873,12 +1864,6 @@ Scanned **205 Python files**, **78,220 lines**, and **2,502 symbols**.
 - **tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_Try** (method, lines 131–157, 27 lines, risk `support`): Handles visit Try for the payments feature.
 - **tools.plan_app_lifecycle_window_pass_only.build_report** (function, lines 160–198, 39 lines, risk `filesystem`): Builds build report for the reports feature.
 - **tools.plan_app_lifecycle_window_pass_only.main** (function, lines 201–215, 15 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/plan_close_history_wave57_tmp.py`
-
-- **tools.plan_close_history_wave57_tmp.dotted** (function, lines 37–44, 8 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_close_history_wave57_tmp.find_target** (function, lines 47–53, 7 lines, risk `support`): Retrieves find target for the other feature.
-- **tools.plan_close_history_wave57_tmp.main** (function, lines 56–120, 65 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_logger_fallback_pass_only.py`
 
