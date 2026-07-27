@@ -1,0 +1,47 @@
+name: Temporary Wave 60 architecture refresh
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "tools/refresh_architecture_wave60_tmp.py"
+      - ".github/workflows/refresh-architecture-wave-60-tmp.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-architecture-wave-60-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-60'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 60
+    steps:
+      - name: Check out Wave 60 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          fetch-depth: 0
+          show-progress: false
+      - name: Regenerate and diagnose architecture maps
+        shell: cmd
+        run: python -m tools.refresh_architecture_wave60_tmp
+      - name: Commit refreshed architecture maps
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add architecture-map.json docs\architecture
+          git commit -m "Refresh architecture maps for Wave 60"
+          git push origin HEAD:agent/high-volume-wave-60
+      - name: Upload architecture diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-60-architecture-refresh
+          path: artifacts/wave-60-architecture-refresh.json
+          if-no-files-found: warn
