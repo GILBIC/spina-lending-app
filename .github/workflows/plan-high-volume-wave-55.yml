@@ -70,7 +70,7 @@ jobs:
           if exist docs\wave-55-candidate-report.md del /f /q docs\wave-55-candidate-report.md
           if exist artifacts\wave-55-candidates.json del /f /q artifacts\wave-55-candidates.json
           if exist artifacts\wave-55-extraction.json del /f /q artifacts\wave-55-extraction.json
-          git diff --check
+          git status --short
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
