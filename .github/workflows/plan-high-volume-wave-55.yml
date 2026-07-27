@@ -1,5 +1,6 @@
 name: Plan high-volume cleanup Wave 55
 
+# One-time candidate ranking for Wave 55.
 on:
   push:
     branches: [agent/high-volume-wave-55-clean]
