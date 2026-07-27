@@ -34,7 +34,8 @@ def replacement_span(text: str, node: ast.AST, replacement: str = "") -> tuple[i
 
 
 def apply_replacements(text: str, replacements: list[tuple[int, int, str]]) -> str:
-    for start, end, replacement in sorted(replacements, reverse=True):
+    unique = {(start, end, replacement) for start, end, replacement in replacements}
+    for start, end, replacement in sorted(unique, reverse=True):
         text = text[:start] + replacement + text[end:]
     return text
 
@@ -99,7 +100,7 @@ def clean_desktop() -> tuple[int, int]:
     old_button_lines = sum(node.end_lineno - node.lineno + 1 for node in old_button_defs)
     replacements.extend(replacement_span(text, node) for node in old_button_defs)
 
-    for node in tree.body:
+    for node in ast.walk(tree):
         if is_app_binding(node, LEGACY_BUILDER) or is_name_binding(node, LEGACY_BUTTON):
             replacements.append(replacement_span(text, node))
 
@@ -125,7 +126,10 @@ def clean_desktop() -> tuple[int, int]:
     if remaining_loads:
         raise AssertionError(("remaining_legacy_loads", remaining_loads))
 
-    bindings = [node for node in updated_tree.body if is_app_binding(node)]
+    bindings = sorted(
+        [node for node in ast.walk(updated_tree) if is_app_binding(node)],
+        key=lambda node: node.lineno,
+    )
     if not bindings or not isinstance(bindings[-1].value, ast.Name) or bindings[-1].value.id != ACTIVE_BUILDER:
         raise AssertionError(("final_collector_binding", [getattr(node.value, "id", "") for node in bindings]))
 
