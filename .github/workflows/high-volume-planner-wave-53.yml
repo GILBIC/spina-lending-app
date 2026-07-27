@@ -6,12 +6,14 @@ on:
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
       - "tools/plan_high_volume_wave_53.py"
+      - "tools/inspect_high_volume_wave_53.py"
       - ".github/workflows/high-volume-planner-wave-53.yml"
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
       - "tools/plan_high_volume_wave_53.py"
+      - "tools/inspect_high_volume_wave_53.py"
       - ".github/workflows/high-volume-planner-wave-53.yml"
   workflow_dispatch:
 
@@ -30,16 +32,23 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           show-progress: false
-      - name: Compile planner
+      - name: Compile planner and inspector
         shell: cmd
-        run: python -m py_compile tools\plan_high_volume_wave_53.py
+        run: |
+          python -m py_compile tools\plan_high_volume_wave_53.py
+          python -m py_compile tools\inspect_high_volume_wave_53.py
       - name: Rank safe high-volume boundaries
         shell: cmd
         run: python tools\plan_high_volume_wave_53.py
-      - name: Upload planner report
+      - name: Inspect candidate sources
+        shell: cmd
+        run: python tools\inspect_high_volume_wave_53.py
+      - name: Upload planner reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: high-volume-wave-53-planner
-          path: artifacts/wave-53-planner.txt
+          path: |
+            artifacts/wave-53-planner.txt
+            artifacts/wave-53-candidates.txt
           if-no-files-found: error
