@@ -1,0 +1,59 @@
+name: Plan high-volume cleanup Wave 55
+
+on:
+  push:
+    branches: [agent/high-volume-wave-55-clean]
+    paths: [.github/workflows/plan-high-volume-wave-55.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  plan:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/high-volume-wave-55-clean
+          fetch-depth: 0
+          show-progress: false
+      - name: Rank safe presentation candidates
+        shell: powershell
+        run: |
+          @'
+          import ast, json
+          from pathlib import Path
+          p=Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py')
+          src=p.read_text(encoding='utf-8')
+          tree=ast.parse(src)
+          protected=('insert','update','delete','commit','rollback','execute','executemany','save','write','backup','restore','pdf','report','principal','interest','balance','payment','renew','offset','advance','pass','7x7','password','auth','role','permission','login','filedialog','open_path','os.remove','unlink')
+          rows=[]
+          for n in ast.walk(tree):
+              if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and getattr(n,'end_lineno',None):
+                  lines=n.end_lineno-n.lineno+1
+                  if lines < 45: continue
+                  text='\n'.join(src.splitlines()[n.lineno-1:n.end_lineno]).lower()
+                  hits=sorted({x for x in protected if x in text})
+                  ui=sum(text.count(x) for x in ('ttk.','tk.','grid(','pack(','place(','treeview','toplevel','notebook','label(','button('))
+                  rows.append({'name':n.name,'start':n.lineno,'end':n.end_lineno,'lines':lines,'ui_score':ui,'protected_hits':hits})
+          rows.sort(key=lambda r:(len(r['protected_hits'])>0,-r['ui_score'],-r['lines']))
+          out={'base':'0d97703e0511971c80b9a669a3805ee87ccea0d9','candidates':rows[:100]}
+          Path('artifacts').mkdir(exist_ok=True)
+          Path('artifacts/wave-55-candidates.json').write_text(json.dumps(out,indent=2),encoding='utf-8')
+          md=['# Wave 55 candidate report','','Candidates are ranked by no protected text hits, UI signal, and size.','']
+          for r in rows[:40]:
+              md.append(f"- `{r['name']}` lines {r['start']}-{r['end']} ({r['lines']} lines), UI score {r['ui_score']}, protected: {', '.join(r['protected_hits']) or 'none'}")
+          Path('docs/wave-55-candidate-report.md').write_text('\n'.join(md)+'\n',encoding='utf-8')
+          '@ | Set-Content -Encoding UTF8 tools\plan_wave55_tmp.py
+          python tools\plan_wave55_tmp.py
+          Remove-Item tools\plan_wave55_tmp.py
+      - name: Commit report
+        shell: powershell
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add artifacts/wave-55-candidates.json docs/wave-55-candidate-report.md
+          git commit -m "Rank Wave 55 presentation candidates"
+          git push origin HEAD:agent/high-volume-wave-55-clean
