@@ -1,0 +1,72 @@
+name: Hosted finalize Audit presentation Wave 54
+
+on:
+  push:
+    branches:
+      - agent/high-volume-wave-54
+    paths:
+      - ".github/workflows/finalize-audit-presentation-wave-54-hosted.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hosted-finalize-audit-presentation-wave-54
+  cancel-in-progress: true
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out Wave 54 branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/high-volume-wave-54
+          persist-credentials: true
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Install Tk virtual display support
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk xvfb
+
+      - name: Remove temporary Wave 54 files
+        run: |
+          rm -f tools/plan_high_volume_wave_54.py
+          rm -f tools/extract_audit_presentation_wave_54.py
+          rm -f docs/wave-54-candidate-report.md
+          rm -f artifacts/wave-54-candidates.json
+          rm -f .github/workflows/plan-high-volume-wave-54.yml
+          rm -f .github/workflows/extract-audit-presentation-wave-54.yml
+          rm -f .github/workflows/finalize-audit-presentation-wave-54.yml
+          rm -f .github/workflows/finalize-audit-presentation-wave-54-hosted.yml
+
+      - name: Compile and run focused tests
+        run: |
+          python3 -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python3 -m py_compile spina_app/audit_presentation.py
+          python3 -m py_compile tools/test_audit_presentation_wave_54.py
+          python3 -m py_compile tools/test_audit_widget_smoke_wave_54.py
+          python3 -m tools.test_audit_presentation_wave_54
+          xvfb-run -a python3 -m tools.test_audit_widget_smoke_wave_54
+          python3 -m tools.test_navigation_and_databank_shell_wave_29
+          python3 -m tools.test_theme_presentation_wave_35
+          xvfb-run -a python3 -m tools.test_side_navigation_presentation_wave_48
+          xvfb-run -a python3 -m tools.test_side_navigation_widget_smoke_wave_48
+
+      - name: Refresh and validate architecture map
+        run: |
+          python3 -m tools.generate_architecture_map
+          python3 -m tools.test_architecture_map
+
+      - name: Commit clean Wave 54 branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Finalize Audit presentation Wave 54"
+          git push origin HEAD:agent/high-volume-wave-54
