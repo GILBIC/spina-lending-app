@@ -1,8 +1,8 @@
 # SPINA Application Risk and Modularization Map
 
-Generated from commit `ec4be9a8b2f39b353a645b8bdcd6a1bf70ea54db`.
+Generated from commit `7bb316dc74a102cbdbbef0422e33a376a80a33af`.
 
-Scanned **190 Python files**, **76,740 lines**, and **2,429 symbols**.
+Scanned **191 Python files**, **76,933 lines**, and **2,438 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -58,7 +58,7 @@ Scanned **190 Python files**, **76,740 lines**, and **2,429 symbols**.
 
 ### Backup
 
-**35 symbols · 1,683 function lines**
+**37 symbols · 1,727 function lines**
 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_save_closed_collector_route_copy` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:33569 — Save an audit copy of the Collector Route after Daily Close. The PDF contains the closed total/actual cash for the day and the amount paid by each client on that date. It is separate from Generate Report and from editable Data Bank rows.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_backup_history_window` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12175 — Show backup files and provide verify/restore-test actions.
@@ -70,6 +70,7 @@ Scanned **190 Python files**, **76,740 lines**, and **2,429 symbols**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_get_archived_clients_with_id` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:30814 — List archived clients and include the internal row id for reliable restore.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.generate_client_pdf._draw_official_report_footer` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:23913 — Draw a small, subtle official-version label and daily Generate Report counter at the bottom. This footer is intentionally NOT styled like the big notes section. It is only a quiet authenticity/count marker near the bottom of the page.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_open_archived_clients_dialog.restore_selected` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:30734 — Handles restore selected for the backup feature.
+- `spina_app.databank_presentation._spina_v53_restore_databank_import_control` — spina_app/databank_presentation.py:381 — Handles spina v53 restore databank import control for the data bank feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_restore_client_picture_to_cache` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:436 — Handles spina pg restore client picture to cache for the clients feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._restore_backup_to_test_database` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12138 — Restore selected backup into spina_restore_test only; never overwrites live spina_db.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_fixed_open_archived_clients_dialog_rowid.restore_selected` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:31000 — Handles restore selected for the backup feature.
@@ -94,6 +95,7 @@ Scanned **190 Python files**, **76,740 lines**, and **2,429 symbols**.
 - `spina_app.area_hierarchy_ui._restore_parent_grab` — spina_app/area_hierarchy_ui.py:44 — Return modal control to the form that opened the Area window.
 - `spina_app.area_hierarchy_ui.select_area_node.close` — spina_app/area_hierarchy_ui.py:259 — Handles close for the other feature.
 - `spina_app.area_hierarchy_ui._select_parent_area.close` — spina_app/area_hierarchy_ui.py:431 — Handles close for the other feature.
+- `spina_app.databank_presentation._spina_v53_build_data_tab_with_import_control` — spina_app/databank_presentation.py:423 — Handles spina v53 build data tab with import control for the data bank feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatConnection.backup` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:804 — Handles backup for the backup feature.
 
 ### Database Read
@@ -317,7 +319,7 @@ Scanned **190 Python files**, **76,740 lines**, and **2,429 symbols**.
 
 ### Support
 
-**595 symbols · 10,424 function lines**
+**597 symbols · 10,437 function lines**
 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_entry_worker` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14434 — Worker for _import_from_excel_entry (runs off the Tk main thread).
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.print_full_daily_ledger._draw_closed_route_payment_summary_page` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:29090 — Append closed-route payment summaries on a separate page. This keeps the route pages in the normal collector format while still saving a complete area-by-area payment summary plus grand total.
@@ -359,7 +361,7 @@ Scanned **190 Python files**, **76,740 lines**, and **2,429 symbols**.
 - `spina_app.theme_palettes._spina_v24_cilog_colors` — spina_app/theme_palettes.py:98 — Handles spina v24 cilog colors for the clients feature.
 - `spina_app.theme_palettes._spina_v18_dashboard_palette` — spina_app/theme_palettes.py:279 — Handles spina v18 dashboard palette for the dashboard feature.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._on_collectors_select.print_full_daily_ledger._draw_global_header` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:18687 — Handles draw global header for the collectors feature.
-- …and 555 more.
+- …and 557 more.
 
 ### Ui Only
 
@@ -721,16 +723,7 @@ Risk mix: `support`, `ui_only`
 - `spina_app.theme_presentation._refresh_modern_shell_theme` — spina_app/theme_presentation.py:281 — Apply theme colors to the modern sidebar shell and rebuild nav labels/buttons.
 - `spina_app.theme_presentation._refresh_header_theme` — spina_app/theme_presentation.py:303 — Apply the current theme colors to the modern top header.
 
-### Batch 17: Collectors (299 lines)
-
-Source file: `spina_app/collector_tab_presentation.py`
-
-Risk mix: `support`, `ui_only`
-
-- `spina_app.collector_tab_presentation.configure_collector_tab_dependencies` — spina_app/collector_tab_presentation.py:20 — Handles configure collector tab dependencies for the collectors feature.
-- `spina_app.collector_tab_presentation._spina_v27_build_collectors_tab` — spina_app/collector_tab_presentation.py:35 — Handles spina v27 build collectors tab for the collectors feature.
-
-### Batch 18: Data Bank (297 lines)
+### Batch 17: Data Bank (302 lines)
 
 Source file: `spina_app/databank_presentation.py`
 
@@ -745,6 +738,16 @@ Risk mix: `support`, `ui_only`
 - `spina_app.databank_presentation._spina_v15_refresh_data_grid` — spina_app/databank_presentation.py:289 — Handles spina v15 refresh data grid for the data bank feature.
 - `spina_app.databank_presentation._spina_v16_apply_bigger_payment_grid` — spina_app/databank_presentation.py:328 — Make the Data Bank payment grid easier to read: bigger rows, wider client/area/day columns.
 - `spina_app.databank_presentation._spina_v16_refresh_data_grid` — spina_app/databank_presentation.py:350 — Handles spina v16 refresh data grid for the data bank feature.
+- `spina_app.databank_presentation._spina_v53_widget_text` — spina_app/databank_presentation.py:364 — Handles spina v53 widget text for the data bank feature.
+
+### Batch 18: Collectors (299 lines)
+
+Source file: `spina_app/collector_tab_presentation.py`
+
+Risk mix: `support`, `ui_only`
+
+- `spina_app.collector_tab_presentation.configure_collector_tab_dependencies` — spina_app/collector_tab_presentation.py:20 — Handles configure collector tab dependencies for the collectors feature.
+- `spina_app.collector_tab_presentation._spina_v27_build_collectors_tab` — spina_app/collector_tab_presentation.py:35 — Handles spina v27 build collectors tab for the collectors feature.
 
 ### Batch 19: Cash Control (259 lines)
 

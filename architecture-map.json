@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "ec4be9a8b2f39b353a645b8bdcd6a1bf70ea54db",
+  "generated_from_commit": "7bb316dc74a102cbdbbef0422e33a376a80a33af",
   "indexes": {
     "application_callbacks": [
       {
@@ -2272,6 +2272,12 @@
       },
       {
         "kind": "command",
+        "line": 402,
+        "owner": "spina_app/databank_presentation.py:381:spina_app.databank_presentation._spina_v53_restore_databank_import_control",
+        "target": "callback"
+      },
+      {
+        "kind": "command",
         "line": 329,
         "owner": "spina_app/import_log_presentation.py:24:spina_app.import_log_presentation._show_import_log_window",
         "target": "_copy_visible"
@@ -4178,7 +4184,10 @@
         "spina_app/databank_presentation.py:289:spina_app.databank_presentation._spina_v15_refresh_data_grid",
         "spina_app/databank_presentation.py:328:spina_app.databank_presentation._spina_v16_apply_bigger_payment_grid",
         "spina_app/databank_presentation.py:350:spina_app.databank_presentation._spina_v16_refresh_data_grid",
+        "spina_app/databank_presentation.py:364:spina_app.databank_presentation._spina_v53_widget_text",
+        "spina_app/databank_presentation.py:381:spina_app.databank_presentation._spina_v53_restore_databank_import_control",
         "spina_app/databank_presentation.py:39:spina_app.databank_presentation._spina_v15_palette",
+        "spina_app/databank_presentation.py:423:spina_app.databank_presentation._spina_v53_build_data_tab_with_import_control",
         "spina_app/databank_presentation.py:57:spina_app.databank_presentation._spina_v15_setup_databank_styles",
         "spina_app/tabs/data_bank_shell.py:119:spina_app.tabs.data_bank_shell._show_audit_tab",
         "spina_app/tabs/data_bank_shell.py:130:spina_app.tabs.data_bank_shell._hide_audit_tab",
@@ -4784,6 +4793,7 @@
         "spina_app/calendar_presentation.py:361:spina_app.calendar_presentation.pick_date_range",
         "spina_app/client_form_presentation.py:472:spina_app.client_form_presentation._app__client_form._validate_date",
         "spina_app/client_history_presentation.py:390:spina_app.client_history_presentation._app_open_client_history_dialog._in_date_range",
+        "spina_app/databank_presentation.py:371:spina_app.databank_presentation._spina_v53_walk_widgets",
         "spina_app/note_editor_presentation.py:205:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
         "spina_app/note_editor_presentation.py:238:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
         "spina_app/ui_helpers.py:30:spina_app.ui_helpers._spina_v18_draw_round_rect",
@@ -5419,6 +5429,7 @@
       "spina_app/dashboard_chart_presentation.py:182:spina_app.dashboard_chart_presentation._spina_v20_draw_dashboard_charts",
       "spina_app/dashboard_chart_presentation.py:38:spina_app.dashboard_chart_presentation._spina_v18_draw_dashboard_charts",
       "spina_app/databank_presentation.py:25:spina_app.databank_presentation.configure_databank_presentation_dependencies",
+      "spina_app/databank_presentation.py:423:spina_app.databank_presentation._spina_v53_build_data_tab_with_import_control",
       "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
       "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
       "spina_app/long_task_presentation.py:21:spina_app.long_task_presentation.configure_long_task_dependencies",
@@ -5532,7 +5543,9 @@
         "spina_app/area_hierarchy_ui.py:259:spina_app.area_hierarchy_ui.select_area_node.close",
         "spina_app/area_hierarchy_ui.py:431:spina_app.area_hierarchy_ui._select_parent_area.close",
         "spina_app/area_hierarchy_ui.py:44:spina_app.area_hierarchy_ui._restore_parent_grab",
-        "spina_app/area_hierarchy_ui.py:707:spina_app.area_hierarchy_ui.open_area_manager.close"
+        "spina_app/area_hierarchy_ui.py:707:spina_app.area_hierarchy_ui.open_area_manager.close",
+        "spina_app/databank_presentation.py:381:spina_app.databank_presentation._spina_v53_restore_databank_import_control",
+        "spina_app/databank_presentation.py:423:spina_app.databank_presentation._spina_v53_build_data_tab_with_import_control"
       ],
       "container": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:25031:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog",
@@ -6325,6 +6338,8 @@
         "spina_app/databank_presentation.py:308:spina_app.databank_presentation._spina_v15_update_data_toolbar",
         "spina_app/databank_presentation.py:316:spina_app.databank_presentation._spina_v15_apply_ui_theme",
         "spina_app/databank_presentation.py:350:spina_app.databank_presentation._spina_v16_refresh_data_grid",
+        "spina_app/databank_presentation.py:364:spina_app.databank_presentation._spina_v53_widget_text",
+        "spina_app/databank_presentation.py:371:spina_app.databank_presentation._spina_v53_walk_widgets",
         "spina_app/databank_presentation.py:39:spina_app.databank_presentation._spina_v15_palette",
         "spina_app/import_log_presentation.py:17:spina_app.import_log_presentation.configure_import_log_dependencies",
         "spina_app/import_log_presentation.py:180:spina_app.import_log_presentation._show_import_log_window._current_cat",
@@ -8939,6 +8954,12 @@
       },
       {
         "kind": "command",
+        "line": 402,
+        "owner": "spina_app/databank_presentation.py:381:spina_app.databank_presentation._spina_v53_restore_databank_import_control",
+        "target": "callback"
+      },
+      {
+        "kind": "command",
         "line": 329,
         "owner": "spina_app/import_log_presentation.py:24:spina_app.import_log_presentation._show_import_log_window",
         "target": "_copy_visible"
@@ -11289,6 +11310,7 @@
         "tools/test_dashboard_feature_wave_17.py:128:tools.test_dashboard_feature_wave_17.main",
         "tools/test_dashboard_presentation_wave_28.py:107:tools.test_dashboard_presentation_wave_28.main",
         "tools/test_dashboard_visibility_wave_24.py:50:tools.test_dashboard_visibility_wave_24.main",
+        "tools/test_databank_import_control_wave_53.py:114:tools.test_databank_import_control_wave_53.main",
         "tools/test_databank_presentation_wave_49.py:201:tools.test_databank_presentation_wave_49.main",
         "tools/test_databank_widget_smoke_wave_49.py:106:tools.test_databank_widget_smoke_wave_49.main",
         "tools/test_date_display_helper_extraction.py:201:tools.test_date_display_helper_extraction.main",
@@ -11535,6 +11557,10 @@
         "tools/test_postgres_compat_wave_34.py:20:tools.test_postgres_compat_wave_34.source_hash",
         "tools/test_ui_button_factories_wave_50.py:68:tools.test_ui_button_factories_wave_50.source_hash"
       ],
+      "static_checks": [
+        "tools/test_collectors_editor_wave_26.py:138:tools.test_collectors_editor_wave_26.static_checks",
+        "tools/test_databank_import_control_wave_53.py:36:tools.test_databank_import_control_wave_53.static_checks"
+      ],
       "tabs": [
         "tools/test_dashboard_presentation_wave_28.py:70:tools.test_dashboard_presentation_wave_28.FakeNotebook.tabs",
         "tools/test_navigation_databank_shell_wave_29.py:141:tools.test_navigation_databank_shell_wave_29.FakeNotebook.tabs"
@@ -11623,7 +11649,8 @@
         "spina_app/area_hierarchy_ui.py:79:spina_app.area_hierarchy_ui._remember_open_folders.walk",
         "spina_app/area_hierarchy_ui.py:93:spina_app.area_hierarchy_ui._refresh_folder_icons.walk",
         "spina_app/area_hierarchy_ui.py:105:spina_app.area_hierarchy_ui._set_all_folders.walk",
-        "tools/audit_pass_only_exceptions.py:65:tools.audit_pass_only_exceptions.audit.walk"
+        "tools/audit_pass_only_exceptions.py:65:tools.audit_pass_only_exceptions.audit.walk",
+        "tools/test_databank_import_control_wave_53.py:19:tools.test_databank_import_control_wave_53.walk"
       ]
     },
     "features": {
@@ -12259,7 +12286,10 @@
         "spina_app/databank_presentation.py:289:spina_app.databank_presentation._spina_v15_refresh_data_grid",
         "spina_app/databank_presentation.py:328:spina_app.databank_presentation._spina_v16_apply_bigger_payment_grid",
         "spina_app/databank_presentation.py:350:spina_app.databank_presentation._spina_v16_refresh_data_grid",
+        "spina_app/databank_presentation.py:364:spina_app.databank_presentation._spina_v53_widget_text",
+        "spina_app/databank_presentation.py:381:spina_app.databank_presentation._spina_v53_restore_databank_import_control",
         "spina_app/databank_presentation.py:39:spina_app.databank_presentation._spina_v15_palette",
+        "spina_app/databank_presentation.py:423:spina_app.databank_presentation._spina_v53_build_data_tab_with_import_control",
         "spina_app/databank_presentation.py:57:spina_app.databank_presentation._spina_v15_setup_databank_styles",
         "spina_app/tabs/data_bank_shell.py:119:spina_app.tabs.data_bank_shell._show_audit_tab",
         "spina_app/tabs/data_bank_shell.py:130:spina_app.tabs.data_bank_shell._hide_audit_tab",
@@ -13434,6 +13464,11 @@
         "tools/test_dashboard_visibility_wave_24.py:33:tools.test_dashboard_visibility_wave_24.sample_rows",
         "tools/test_dashboard_visibility_wave_24.py:41:tools.test_dashboard_visibility_wave_24.make_dummy",
         "tools/test_dashboard_visibility_wave_24.py:50:tools.test_dashboard_visibility_wave_24.main",
+        "tools/test_databank_import_control_wave_53.py:114:tools.test_databank_import_control_wave_53.main",
+        "tools/test_databank_import_control_wave_53.py:19:tools.test_databank_import_control_wave_53.walk",
+        "tools/test_databank_import_control_wave_53.py:25:tools.test_databank_import_control_wave_53.buttons_with_text",
+        "tools/test_databank_import_control_wave_53.py:36:tools.test_databank_import_control_wave_53.static_checks",
+        "tools/test_databank_import_control_wave_53.py:79:tools.test_databank_import_control_wave_53.widget_checks",
         "tools/test_databank_presentation_wave_49.py:104:tools.test_databank_presentation_wave_49.dotted",
         "tools/test_databank_presentation_wave_49.py:113:tools.test_databank_presentation_wave_49.source_for",
         "tools/test_databank_presentation_wave_49.py:122:tools.test_databank_presentation_wave_49.source_hash",
@@ -14016,6 +14051,7 @@
         "spina_app/calendar_presentation.py:361:spina_app.calendar_presentation.pick_date_range",
         "spina_app/client_form_presentation.py:472:spina_app.client_form_presentation._app__client_form._validate_date",
         "spina_app/client_history_presentation.py:390:spina_app.client_history_presentation._app_open_client_history_dialog._in_date_range",
+        "spina_app/databank_presentation.py:371:spina_app.databank_presentation._spina_v53_walk_widgets",
         "spina_app/note_editor_presentation.py:205:spina_app.note_editor_presentation.NoteEditorDialog._validate_date_or_warn",
         "spina_app/note_editor_presentation.py:238:spina_app.note_editor_presentation.NoteEditorDialog._format_list_item",
         "spina_app/ui_helpers.py:30:spina_app.ui_helpers._spina_v18_draw_round_rect",
@@ -14675,19 +14711,6 @@
         ]
       },
       {
-        "feature": "collectors",
-        "file": "spina_app/collector_tab_presentation.py",
-        "functions": [
-          "spina_app/collector_tab_presentation.py:20:spina_app.collector_tab_presentation.configure_collector_tab_dependencies",
-          "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab"
-        ],
-        "lines": 299,
-        "risk": [
-          "support",
-          "ui_only"
-        ]
-      },
-      {
         "feature": "data_bank",
         "file": "spina_app/databank_presentation.py",
         "functions": [
@@ -14699,9 +14722,23 @@
           "spina_app/databank_presentation.py:249:spina_app.databank_presentation._spina_v15_update_databank_cards",
           "spina_app/databank_presentation.py:289:spina_app.databank_presentation._spina_v15_refresh_data_grid",
           "spina_app/databank_presentation.py:328:spina_app.databank_presentation._spina_v16_apply_bigger_payment_grid",
-          "spina_app/databank_presentation.py:350:spina_app.databank_presentation._spina_v16_refresh_data_grid"
+          "spina_app/databank_presentation.py:350:spina_app.databank_presentation._spina_v16_refresh_data_grid",
+          "spina_app/databank_presentation.py:364:spina_app.databank_presentation._spina_v53_widget_text"
         ],
-        "lines": 297,
+        "lines": 302,
+        "risk": [
+          "support",
+          "ui_only"
+        ]
+      },
+      {
+        "feature": "collectors",
+        "file": "spina_app/collector_tab_presentation.py",
+        "functions": [
+          "spina_app/collector_tab_presentation.py:20:spina_app.collector_tab_presentation.configure_collector_tab_dependencies",
+          "spina_app/collector_tab_presentation.py:35:spina_app.collector_tab_presentation._spina_v27_build_collectors_tab"
+        ],
+        "lines": 299,
         "risk": [
           "support",
           "ui_only"
@@ -15888,6 +15925,7 @@
       "spina_app/dashboard_chart_presentation.py:182:spina_app.dashboard_chart_presentation._spina_v20_draw_dashboard_charts",
       "spina_app/dashboard_chart_presentation.py:38:spina_app.dashboard_chart_presentation._spina_v18_draw_dashboard_charts",
       "spina_app/databank_presentation.py:25:spina_app.databank_presentation.configure_databank_presentation_dependencies",
+      "spina_app/databank_presentation.py:423:spina_app.databank_presentation._spina_v53_build_data_tab_with_import_control",
       "spina_app/linked_client_queries.py:27:spina_app.linked_client_queries.configure_linked_client_query_dependencies",
       "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
       "spina_app/long_task_presentation.py:21:spina_app.long_task_presentation.configure_long_task_dependencies",
@@ -16148,7 +16186,10 @@
         "spina_app/area_hierarchy_ui.py:259:spina_app.area_hierarchy_ui.select_area_node.close",
         "spina_app/area_hierarchy_ui.py:431:spina_app.area_hierarchy_ui._select_parent_area.close",
         "spina_app/area_hierarchy_ui.py:44:spina_app.area_hierarchy_ui._restore_parent_grab",
-        "spina_app/area_hierarchy_ui.py:707:spina_app.area_hierarchy_ui.open_area_manager.close"
+        "spina_app/area_hierarchy_ui.py:707:spina_app.area_hierarchy_ui.open_area_manager.close",
+        "spina_app/databank_presentation.py:381:spina_app.databank_presentation._spina_v53_restore_databank_import_control",
+        "spina_app/databank_presentation.py:423:spina_app.databank_presentation._spina_v53_build_data_tab_with_import_control",
+        "tools/test_databank_import_control_wave_53.py:36:tools.test_databank_import_control_wave_53.static_checks"
       ],
       "container": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:25031:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog",
@@ -16879,6 +16920,7 @@
         "tools/test_dashboard_chart_widget_smoke_wave_51.py:46:tools.test_dashboard_chart_widget_smoke_wave_51.main",
         "tools/test_dashboard_feature_wave_17.py:128:tools.test_dashboard_feature_wave_17.main",
         "tools/test_dashboard_presentation_wave_28.py:107:tools.test_dashboard_presentation_wave_28.main",
+        "tools/test_databank_import_control_wave_53.py:79:tools.test_databank_import_control_wave_53.widget_checks",
         "tools/test_databank_widget_smoke_wave_49.py:106:tools.test_databank_widget_smoke_wave_49.main",
         "tools/test_hierarchical_area_storage_phase1.py:126:tools.test_hierarchical_area_storage_phase1.main",
         "tools/test_login_dialog_widget_smoke_wave_45.py:156:tools.test_login_dialog_widget_smoke_wave_45.main",
@@ -17339,6 +17381,8 @@
         "spina_app/databank_presentation.py:308:spina_app.databank_presentation._spina_v15_update_data_toolbar",
         "spina_app/databank_presentation.py:316:spina_app.databank_presentation._spina_v15_apply_ui_theme",
         "spina_app/databank_presentation.py:350:spina_app.databank_presentation._spina_v16_refresh_data_grid",
+        "spina_app/databank_presentation.py:364:spina_app.databank_presentation._spina_v53_widget_text",
+        "spina_app/databank_presentation.py:371:spina_app.databank_presentation._spina_v53_walk_widgets",
         "spina_app/databank_presentation.py:39:spina_app.databank_presentation._spina_v15_palette",
         "spina_app/import_log_presentation.py:17:spina_app.import_log_presentation.configure_import_log_dependencies",
         "spina_app/import_log_presentation.py:180:spina_app.import_log_presentation._show_import_log_window._current_cat",
@@ -18038,6 +18082,8 @@
         "tools/test_dashboard_visibility_wave_24.py:25:tools.test_dashboard_visibility_wave_24.Var.get",
         "tools/test_dashboard_visibility_wave_24.py:33:tools.test_dashboard_visibility_wave_24.sample_rows",
         "tools/test_dashboard_visibility_wave_24.py:41:tools.test_dashboard_visibility_wave_24.make_dummy",
+        "tools/test_databank_import_control_wave_53.py:114:tools.test_databank_import_control_wave_53.main",
+        "tools/test_databank_import_control_wave_53.py:19:tools.test_databank_import_control_wave_53.walk",
         "tools/test_databank_presentation_wave_49.py:104:tools.test_databank_presentation_wave_49.dotted",
         "tools/test_databank_presentation_wave_49.py:113:tools.test_databank_presentation_wave_49.source_for",
         "tools/test_databank_presentation_wave_49.py:118:tools.test_databank_presentation_wave_49.normalized",
@@ -18487,6 +18533,7 @@
         "tools/test_collectors_editor_wave_26.py:169:tools.test_collectors_editor_wave_26.behavior_checks",
         "tools/test_dashboard_chart_widget_smoke_wave_51.py:36:tools.test_dashboard_chart_widget_smoke_wave_51.chart_frame",
         "tools/test_dashboard_feature_wave_17.py:73:tools.test_dashboard_feature_wave_17.verify_visible_rows",
+        "tools/test_databank_import_control_wave_53.py:25:tools.test_databank_import_control_wave_53.buttons_with_text",
         "tools/test_databank_widget_smoke_wave_49.py:29:tools.test_databank_widget_smoke_wave_49.DummyApp.__init__",
         "tools/test_databank_widget_smoke_wave_49.py:73:tools.test_databank_widget_smoke_wave_49.DummyApp.refresh_data_grid",
         "tools/test_legacy_dashboard_controls_batch_15.py:100:tools.test_legacy_dashboard_controls_batch_15._reset_runtime",
@@ -19459,7 +19506,7 @@
         "tk": "tkinter",
         "ttk": "tkinter.ttk"
       },
-      "lines": 356,
+      "lines": 429,
       "module": "spina_app.databank_presentation",
       "module_globals": [
         "DATABANK_PRESENTATION_CALLS",
@@ -19469,10 +19516,12 @@
         "DATABANK_PRESENTATION_TARGETS",
         "DATABANK_PRESENTATION_TOTAL_SOURCE_LINES",
         "_DATABANK_PRESENTATION_DEPENDENCIES",
-        "_PROTECTED_GLOBALS"
+        "_PROTECTED_GLOBALS",
+        "_spina_v15_build_data_tab",
+        "_spina_v15_build_data_tab_without_import_repair"
       ],
       "monkey_patches": [],
-      "sha256": "f266dccdacb65549c33d077ad4fd8dcd15bab21c2809ed9de1176f7c4777e4d3",
+      "sha256": "0078404e4aa73dab2dd48a8dc8b0adbb19f1228acdded894ff1ea5e69853a15e",
       "syntax_ok": true
     },
     {
@@ -22349,6 +22398,29 @@
     },
     {
       "application_file": false,
+      "file": "tools/test_databank_import_control_wave_53.py",
+      "imports": {
+        "DummyApp": "tools.test_databank_widget_smoke_wave_49.DummyApp",
+        "Path": "pathlib.Path",
+        "annotations": "__future__.annotations",
+        "ast": "ast",
+        "databank": "spina_app.databank_presentation",
+        "sys": "sys",
+        "tk": "tkinter",
+        "ttk": "tkinter.ttk"
+      },
+      "lines": 120,
+      "module": "tools.test_databank_import_control_wave_53",
+      "module_globals": [
+        "MODULE",
+        "ROOT"
+      ],
+      "monkey_patches": [],
+      "sha256": "7f1058e6a0cbb1b1b44db2163d51f6d790c777e103f03507bf8a12530a6b960a",
+      "syntax_ok": true
+    },
+    {
+      "application_file": false,
       "file": "tools/test_databank_presentation_wave_49.py",
       "imports": {
         "Path": "pathlib.Path",
@@ -23583,26 +23655,26 @@
   "summary": {
     "application_monkey_patches": 57,
     "application_python_files": 50,
-    "application_resolved_call_edges": 2696,
-    "application_symbols": 1196,
-    "application_ui_callback_edges": 477,
+    "application_resolved_call_edges": 2701,
+    "application_symbols": 1200,
+    "application_ui_callback_edges": 478,
     "classes": 99,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1413,
+    "functions": 1422,
     "methods": 527,
     "monkey_patches": 150,
     "nested_functions": 390,
     "parse_errors": 0,
-    "possible_orphans": 124,
-    "python_files": 190,
+    "possible_orphans": 125,
+    "python_files": 191,
     "repository_database_tables": 19,
-    "repository_duplicate_names": 269,
-    "repository_possible_orphans": 254,
-    "resolved_call_edges": 3844,
-    "symbols": 2429,
-    "total_python_lines": 76740,
-    "ui_callback_edges": 484
+    "repository_duplicate_names": 270,
+    "repository_possible_orphans": 255,
+    "resolved_call_edges": 3856,
+    "symbols": 2438,
+    "total_python_lines": 76933,
+    "ui_callback_edges": 485
   },
   "symbols": [
     {
@@ -26742,6 +26814,7 @@
         "spina_app/client_queries.py:49:spina_app.client_queries.get_all_clients",
         "spina_app/collector_refresh_presentation.py:26:spina_app.collector_refresh_presentation.refresh_collectors",
         "spina_app/databank_presentation.py:249:spina_app.databank_presentation._spina_v15_update_databank_cards",
+        "spina_app/databank_presentation.py:381:spina_app.databank_presentation._spina_v53_restore_databank_import_control",
         "spina_app/databank_presentation.py:57:spina_app.databank_presentation._spina_v15_setup_databank_styles",
         "spina_app/import_log_presentation.py:158:spina_app.import_log_presentation._show_import_log_window._render",
         "spina_app/import_log_presentation.py:187:spina_app.import_log_presentation._show_import_log_window._refresh",
@@ -74085,6 +74158,7 @@
         }
       ],
       "callers": [
+        "tools/test_databank_import_control_wave_53.py:79:tools.test_databank_import_control_wave_53.widget_checks",
         "tools/test_databank_widget_smoke_wave_49.py:106:tools.test_databank_widget_smoke_wave_49.main"
       ],
       "calls_raw": [
@@ -74444,6 +74518,183 @@
       "risk": "support",
       "risk_flags": [],
       "source_sha256": "0de5180c884ed6c8c2e6168efe7a8d8d4891b738f17ba1b9cbd404108e6e82ff"
+    },
+    {
+      "args": [
+        "widget"
+      ],
+      "callbacks": [],
+      "callers": [
+        "spina_app/databank_presentation.py:381:spina_app.databank_presentation._spina_v53_restore_databank_import_control"
+      ],
+      "calls_raw": [
+        "join",
+        "str",
+        "str.strip",
+        "str.strip.split",
+        "widget.cget"
+      ],
+      "calls_resolved": [],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 368,
+      "feature": "data_bank",
+      "file": "spina_app/databank_presentation.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "spina_app/databank_presentation.py:364:spina_app.databank_presentation._spina_v53_widget_text",
+      "imports_used": [],
+      "kind": "function",
+      "line": 364,
+      "lines": 5,
+      "monkey_patches": [],
+      "name": "_spina_v53_widget_text",
+      "parent": null,
+      "purpose": "Handles spina v53 widget text for the data bank feature.",
+      "qualified_name": "spina_app.databank_presentation._spina_v53_widget_text",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "930f611a6e23178ff54a6e13a1a7513a1d0b48234874864061a4974fb91fbfbf"
+    },
+    {
+      "args": [
+        "widget"
+      ],
+      "callbacks": [],
+      "callers": [
+        "spina_app/databank_presentation.py:371:spina_app.databank_presentation._spina_v53_walk_widgets",
+        "spina_app/databank_presentation.py:381:spina_app.databank_presentation._spina_v53_restore_databank_import_control"
+      ],
+      "calls_raw": [
+        "_spina_v53_walk_widgets",
+        "list",
+        "widget.winfo_children"
+      ],
+      "calls_resolved": [
+        "spina_app/databank_presentation.py:371:spina_app.databank_presentation._spina_v53_walk_widgets"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 378,
+      "feature": "utilities",
+      "file": "spina_app/databank_presentation.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "spina_app/databank_presentation.py:371:spina_app.databank_presentation._spina_v53_walk_widgets",
+      "imports_used": [],
+      "kind": "function",
+      "line": 371,
+      "lines": 8,
+      "monkey_patches": [],
+      "name": "_spina_v53_walk_widgets",
+      "parent": null,
+      "purpose": "Handles spina v53 walk widgets for the utilities feature.",
+      "qualified_name": "spina_app.databank_presentation._spina_v53_walk_widgets",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "722589cb23118458ea5e9c1a75e54cc64dd7653a92259bf3497ef754dcbe1944"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [
+        {
+          "kind": "command",
+          "line": 402,
+          "target": "callback"
+        }
+      ],
+      "callers": [
+        "spina_app/databank_presentation.py:423:spina_app.databank_presentation._spina_v53_build_data_tab_with_import_control"
+      ],
+      "calls_raw": [
+        "_log_suppressed_once",
+        "_spina_v53_walk_widgets",
+        "_spina_v53_widget_text",
+        "button.pack",
+        "callable",
+        "getattr",
+        "list",
+        "next",
+        "ttk.Button"
+      ],
+      "calls_resolved": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1216:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once",
+        "spina_app/databank_presentation.py:364:spina_app.databank_presentation._spina_v53_widget_text",
+        "spina_app/databank_presentation.py:371:spina_app.databank_presentation._spina_v53_walk_widgets"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 420,
+      "feature": "data_bank",
+      "file": "spina_app/databank_presentation.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "spina_app/databank_presentation.py:381:spina_app.databank_presentation._spina_v53_restore_databank_import_control",
+      "imports_used": [
+        "tkinter.ttk"
+      ],
+      "kind": "function",
+      "line": 381,
+      "lines": 40,
+      "monkey_patches": [],
+      "name": "_spina_v53_restore_databank_import_control",
+      "parent": null,
+      "purpose": "Handles spina v53 restore databank import control for the data bank feature.",
+      "qualified_name": "spina_app.databank_presentation._spina_v53_restore_databank_import_control",
+      "risk": "backup",
+      "risk_flags": [
+        "backup",
+        "ui_only"
+      ],
+      "source_sha256": "53a21c6efc2cb412b5270cced8abb3b3869668d4ccd86857985de4369b70a2c7"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "_spina_v15_build_data_tab_without_import_repair",
+        "_spina_v53_restore_databank_import_control"
+      ],
+      "calls_resolved": [
+        "spina_app/databank_presentation.py:381:spina_app.databank_presentation._spina_v53_restore_databank_import_control"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 426,
+      "feature": "data_bank",
+      "file": "spina_app/databank_presentation.py",
+      "file_paths": [],
+      "globals_read": [
+        "_spina_v15_build_data_tab_without_import_repair"
+      ],
+      "globals_written": [],
+      "id": "spina_app/databank_presentation.py:423:spina_app.databank_presentation._spina_v53_build_data_tab_with_import_control",
+      "imports_used": [],
+      "kind": "function",
+      "line": 423,
+      "lines": 4,
+      "monkey_patches": [],
+      "name": "_spina_v53_build_data_tab_with_import_control",
+      "parent": null,
+      "purpose": "Handles spina v53 build data tab with import control for the data bank feature.",
+      "qualified_name": "spina_app.databank_presentation._spina_v53_build_data_tab_with_import_control",
+      "risk": "backup",
+      "risk_flags": [
+        "backup"
+      ],
+      "source_sha256": "b7503c5e5c2a4418549448733a266cab942ee4478d6c48518227c3b5e72cd727"
     },
     {
       "args": [
@@ -124268,6 +124519,230 @@
         "ui_only"
       ],
       "source_sha256": "403ebfa75f8382c78f0cc5feb9aa821b8f7a8d4005d13dc8186fbf313d8d2814"
+    },
+    {
+      "args": [
+        "widget"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_databank_import_control_wave_53.py:19:tools.test_databank_import_control_wave_53.walk",
+        "tools/test_databank_import_control_wave_53.py:25:tools.test_databank_import_control_wave_53.buttons_with_text",
+        "tools/test_databank_import_control_wave_53.py:36:tools.test_databank_import_control_wave_53.static_checks"
+      ],
+      "calls_raw": [
+        "walk",
+        "widget.winfo_children"
+      ],
+      "calls_resolved": [
+        "tools/test_databank_import_control_wave_53.py:19:tools.test_databank_import_control_wave_53.walk"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 22,
+      "feature": "other",
+      "file": "tools/test_databank_import_control_wave_53.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_import_control_wave_53.py:19:tools.test_databank_import_control_wave_53.walk",
+      "imports_used": [],
+      "kind": "function",
+      "line": 19,
+      "lines": 4,
+      "monkey_patches": [],
+      "name": "walk",
+      "parent": null,
+      "purpose": "Handles walk for the other feature.",
+      "qualified_name": "tools.test_databank_import_control_wave_53.walk",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "0b63b889f2dd7515a6e9629ab48604ab2151ee4679da4c620e3fca80a037416d"
+    },
+    {
+      "args": [
+        "widget",
+        "text"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_databank_import_control_wave_53.py:79:tools.test_databank_import_control_wave_53.widget_checks"
+      ],
+      "calls_raw": [
+        "child.cget",
+        "isinstance",
+        "matches.append",
+        "str",
+        "walk"
+      ],
+      "calls_resolved": [
+        "tools/test_databank_import_control_wave_53.py:19:tools.test_databank_import_control_wave_53.walk"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 33,
+      "feature": "other",
+      "file": "tools/test_databank_import_control_wave_53.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_import_control_wave_53.py:25:tools.test_databank_import_control_wave_53.buttons_with_text",
+      "imports_used": [
+        "tkinter.ttk"
+      ],
+      "kind": "function",
+      "line": 25,
+      "lines": 9,
+      "monkey_patches": [],
+      "name": "buttons_with_text",
+      "parent": null,
+      "purpose": "Handles buttons with text for the other feature.",
+      "qualified_name": "tools.test_databank_import_control_wave_53.buttons_with_text",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "8d5e2e9191bf52c67aa53108c23e7afaff3c9c7e787dcd3a0a29ab8a06732c98"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [
+        "tools/test_databank_import_control_wave_53.py:114:tools.test_databank_import_control_wave_53.main"
+      ],
+      "calls_raw": [
+        "MODULE.read_text",
+        "any",
+        "ast.get_source_segment",
+        "ast.parse",
+        "ast.walk",
+        "isinstance",
+        "len",
+        "restorer_text.lower"
+      ],
+      "calls_resolved": [
+        "tools/test_databank_import_control_wave_53.py:19:tools.test_databank_import_control_wave_53.walk"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 76,
+      "feature": "other",
+      "file": "tools/test_databank_import_control_wave_53.py",
+      "file_paths": [],
+      "globals_read": [
+        "MODULE"
+      ],
+      "globals_written": [],
+      "id": "tools/test_databank_import_control_wave_53.py:36:tools.test_databank_import_control_wave_53.static_checks",
+      "imports_used": [
+        "ast"
+      ],
+      "kind": "function",
+      "line": 36,
+      "lines": 41,
+      "monkey_patches": [],
+      "name": "static_checks",
+      "parent": null,
+      "purpose": "Handles static checks for the other feature.",
+      "qualified_name": "tools.test_databank_import_control_wave_53.static_checks",
+      "risk": "backup",
+      "risk_flags": [
+        "backup",
+        "filesystem"
+      ],
+      "source_sha256": "3bc3a177d13fbb161bb017925b185b425ab2e04c3247be9d4b0463ee8da603e5"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [
+        "tools/test_databank_import_control_wave_53.py:114:tools.test_databank_import_control_wave_53.main"
+      ],
+      "calls_raw": [
+        "DummyApp",
+        "buttons.invoke",
+        "buttons_with_text",
+        "calls.append",
+        "databank._spina_v15_build_data_tab",
+        "getattr",
+        "len",
+        "print",
+        "root.destroy",
+        "root.geometry",
+        "root.update_idletasks",
+        "tk.Tk"
+      ],
+      "calls_resolved": [
+        "spina_app/databank_presentation.py:112:spina_app.databank_presentation._spina_v15_build_data_tab",
+        "tools/test_databank_import_control_wave_53.py:25:tools.test_databank_import_control_wave_53.buttons_with_text"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 111,
+      "feature": "other",
+      "file": "tools/test_databank_import_control_wave_53.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_import_control_wave_53.py:79:tools.test_databank_import_control_wave_53.widget_checks",
+      "imports_used": [
+        "spina_app.databank_presentation",
+        "tkinter",
+        "tools.test_databank_widget_smoke_wave_49.DummyApp"
+      ],
+      "kind": "function",
+      "line": 79,
+      "lines": 33,
+      "monkey_patches": [],
+      "name": "widget_checks",
+      "parent": null,
+      "purpose": "Handles widget checks for the other feature.",
+      "qualified_name": "tools.test_databank_import_control_wave_53.widget_checks",
+      "risk": "reports",
+      "risk_flags": [
+        "reports",
+        "ui_only"
+      ],
+      "source_sha256": "31f021d6422f371002afabe48b54e3cfa6bc1ac9066d9b5c5b052799c2aab4d5"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "static_checks",
+        "widget_checks"
+      ],
+      "calls_resolved": [
+        "tools/test_databank_import_control_wave_53.py:36:tools.test_databank_import_control_wave_53.static_checks",
+        "tools/test_databank_import_control_wave_53.py:79:tools.test_databank_import_control_wave_53.widget_checks"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 116,
+      "feature": "other",
+      "file": "tools/test_databank_import_control_wave_53.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_databank_import_control_wave_53.py:114:tools.test_databank_import_control_wave_53.main",
+      "imports_used": [],
+      "kind": "function",
+      "line": 114,
+      "lines": 3,
+      "monkey_patches": [],
+      "name": "main",
+      "parent": null,
+      "purpose": "Handles main for the other feature.",
+      "qualified_name": "tools.test_databank_import_control_wave_53.main",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "fbd409347a547063bfe867a4e2cfe2a2f7e3429c8de103b0bb4e6eecb2cfe815"
     },
     {
       "args": [

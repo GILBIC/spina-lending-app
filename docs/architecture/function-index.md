@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `ec4be9a8b2f39b353a645b8bdcd6a1bf70ea54db`.
+Generated from commit `7bb316dc74a102cbdbbef0422e33a376a80a33af`.
 
-Scanned **190 Python files**, **76,740 lines**, and **2,429 symbols**.
+Scanned **191 Python files**, **76,933 lines**, and **2,438 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -987,6 +987,10 @@ Scanned **190 Python files**, **76,740 lines**, and **2,429 symbols**.
 - **spina_app.databank_presentation._spina_v15_apply_ui_theme** (function, lines 316–326, 11 lines, risk `support`): Handles spina v15 apply ui theme for the settings feature.
 - **spina_app.databank_presentation._spina_v16_apply_bigger_payment_grid** (function, lines 328–348, 21 lines, risk `ui_only`): Make the Data Bank payment grid easier to read: bigger rows, wider client/area/day columns.
 - **spina_app.databank_presentation._spina_v16_refresh_data_grid** (function, lines 350–356, 7 lines, risk `support`): Handles spina v16 refresh data grid for the data bank feature.
+- **spina_app.databank_presentation._spina_v53_widget_text** (function, lines 364–368, 5 lines, risk `support`): Handles spina v53 widget text for the data bank feature.
+- **spina_app.databank_presentation._spina_v53_walk_widgets** (function, lines 371–378, 8 lines, risk `support`): Handles spina v53 walk widgets for the utilities feature.
+- **spina_app.databank_presentation._spina_v53_restore_databank_import_control** (function, lines 381–420, 40 lines, risk `backup`): Handles spina v53 restore databank import control for the data bank feature.
+- **spina_app.databank_presentation._spina_v53_build_data_tab_with_import_control** (function, lines 423–426, 4 lines, risk `backup`): Handles spina v53 build data tab with import control for the data bank feature.
 
 ## `spina_app/import_log_presentation.py`
 
@@ -2458,6 +2462,14 @@ Scanned **190 Python files**, **76,740 lines**, and **2,429 symbols**.
 - **tools.test_dashboard_visibility_wave_24.sample_rows** (function, lines 33–38, 6 lines, risk `support`): Handles sample rows for the other feature.
 - **tools.test_dashboard_visibility_wave_24.make_dummy** (function, lines 41–47, 7 lines, risk `support`): Handles make dummy for the other feature.
 - **tools.test_dashboard_visibility_wave_24.main** (function, lines 50–109, 60 lines, risk `filesystem`): Handles main for the other feature.
+
+## `tools/test_databank_import_control_wave_53.py`
+
+- **tools.test_databank_import_control_wave_53.walk** (function, lines 19–22, 4 lines, risk `support`): Handles walk for the other feature.
+- **tools.test_databank_import_control_wave_53.buttons_with_text** (function, lines 25–33, 9 lines, risk `ui_only`): Handles buttons with text for the other feature.
+- **tools.test_databank_import_control_wave_53.static_checks** (function, lines 36–76, 41 lines, risk `backup`): Handles static checks for the other feature.
+- **tools.test_databank_import_control_wave_53.widget_checks** (function, lines 79–111, 33 lines, risk `reports`): Handles widget checks for the other feature.
+- **tools.test_databank_import_control_wave_53.main** (function, lines 114–116, 3 lines, risk `support`): Handles main for the other feature.
 
 ## `tools/test_databank_presentation_wave_49.py`
 

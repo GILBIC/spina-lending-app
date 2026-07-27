@@ -1,8 +1,8 @@
 # SPINA Application Dependency Map
 
-Generated from commit `ec4be9a8b2f39b353a645b8bdcd6a1bf70ea54db`.
+Generated from commit `7bb316dc74a102cbdbbef0422e33a376a80a33af`.
 
-Scanned **190 Python files**, **76,740 lines**, and **2,429 symbols**.
+Scanned **191 Python files**, **76,933 lines**, and **2,438 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -832,6 +832,12 @@ Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spin
 
 Called by: `spina_app.client_form_presentation._app__client_form`
 
+### `spina_app.databank_presentation._spina_v15_build_data_tab`
+
+Calls: `spina_app.databank_presentation._spina_v15_stat_card`, `spina_app.databank_presentation._spina_v15_update_databank_cards`, `spina_app.databank_presentation._spina_v15_palette`, `spina_app.databank_presentation._spina_v15_setup_databank_styles`
+
+Called by: none resolved in application files
+
 ### `spina_app.import_log_presentation._show_import_log_window`
 
 Calls: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._log_suppressed_once`, `spina_app.import_log_presentation._show_import_log_window._make_tab`, `spina_app.import_log_presentation._show_import_log_window._refresh`, `spina_app.import_log_presentation._show_import_log_window._write_to`, `spina_app.import_log_presentation._show_import_log_window._classify`
@@ -1147,12 +1153,6 @@ Called by: `spina_app.calendar_presentation._CalendarRangePopup.__init__`, `spin
 ### `spina_app.dashboard_chart_presentation._spina_v18_draw_dashboard_charts`
 
 Calls: `spina_app.tabs.dashboard._spina_v18_patch_dashboard_chart_cards`, `spina_app.theme_palettes._spina_v18_dashboard_palette`, `spina_app.ui_helpers._spina_v18_draw_round_rect`, `spina_app.utilities.formatting._spina_v18_fmt_money_compact`
-
-Called by: none resolved in application files
-
-### `spina_app.databank_presentation._spina_v15_build_data_tab`
-
-Calls: `spina_app.databank_presentation._spina_v15_stat_card`, `spina_app.databank_presentation._spina_v15_update_databank_cards`, `spina_app.databank_presentation._spina_v15_palette`, `spina_app.databank_presentation._spina_v15_setup_databank_styles`
 
 Called by: none resolved in application files
 
@@ -2269,6 +2269,7 @@ Called by: none resolved in application files
 - `spina_app.dashboard_chart_presentation._spina_v20_draw_dashboard_charts` — spina_app/dashboard_chart_presentation.py:182
 - `spina_app.dashboard_chart_presentation._spina_v18_draw_dashboard_charts` — spina_app/dashboard_chart_presentation.py:38
 - `spina_app.databank_presentation.configure_databank_presentation_dependencies` — spina_app/databank_presentation.py:25
+- `spina_app.databank_presentation._spina_v53_build_data_tab_with_import_control` — spina_app/databank_presentation.py:423
 - `spina_app.linked_client_queries.configure_linked_client_query_dependencies` — spina_app/linked_client_queries.py:27
 - `spina_app.loan_context_queries.configure_loan_context_dependencies` — spina_app/loan_context_queries.py:5
 - `spina_app.long_task_presentation.configure_long_task_dependencies` — spina_app/long_task_presentation.py:21

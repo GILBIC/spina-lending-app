@@ -1,8 +1,8 @@
 # SPINA Application Feature Map
 
-Generated from commit `ec4be9a8b2f39b353a645b8bdcd6a1bf70ea54db`.
+Generated from commit `7bb316dc74a102cbdbbef0422e33a376a80a33af`.
 
-Scanned **190 Python files**, **76,740 lines**, and **2,429 symbols**.
+Scanned **191 Python files**, **76,933 lines**, and **2,438 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -172,9 +172,9 @@ Main files: `spina_app/tabs/dashboard.py` (26), `OFFICIAL_SPINA_APP_PostgreSQL_T
 
 ## Data Bank
 
-**94 symbols · 4,924 non-overlapping function lines**
+**97 symbols · 4,973 non-overlapping function lines**
 
-Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (77), `spina_app/databank_presentation.py` (9), `spina_app/tabs/data_bank_shell.py` (8)
+Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (77), `spina_app/databank_presentation.py` (12), `spina_app/tabs/data_bank_shell.py` (8)
 
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_dialog` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:8814 — Handles open databank close dialog for the data bank feature. Risk: **reports**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_entry_worker` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:14434 — Worker for _import_from_excel_entry (runs off the Tk main thread). Risk: **support**.
@@ -196,7 +196,7 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.import_from_excel_with_reasons._write` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:22394 — Handles write for the data bank feature. Risk: **database_write**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.set_databank_day_close` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:5639 — Updates set databank day close for the data bank feature. Risk: **database_write**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.open_databank_close_records_dialog._load_records` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:9603 — Loads load records for the data bank feature. Risk: **filesystem**.
-- …and 74 more application symbols in `architecture-map.json`.
+- …and 77 more application symbols in `architecture-map.json`.
 
 ## Database
 
@@ -424,7 +424,7 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 
 ## Utilities
 
-**52 symbols · 969 non-overlapping function lines**
+**53 symbols · 977 non-overlapping function lines**
 
 Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` (21), `spina_app/utilities/formatting.py` (8), `spina_app/utilities/dates.py` (5), `spina_app/ui_helpers.py` (4), `spina_app/area_hierarchy.py` (3), `spina_app/utilities/numbers.py` (3), `spina_app/note_editor_presentation.py` (2), `spina_app/utilities/text.py` (2)
 
@@ -448,4 +448,4 @@ Main files: `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._import_from_excel_core._parse_date_header` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:15272 — Handles parse date header for the utilities feature. Risk: **support**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.RenewDialog._parse_float` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:25054 — Handles parse float for the utilities feature. Risk: **filesystem**.
 - `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._parse_ymd` — OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1511 — Handles parse ymd for the utilities feature. Risk: **support**.
-- …and 32 more application symbols in `architecture-map.json`.
+- …and 33 more application symbols in `architecture-map.json`.
