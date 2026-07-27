@@ -47,7 +47,7 @@ def top_functions(tree: ast.Module, name: str) -> list[ast.FunctionDef]:
 
 def build_bindings(tree: ast.Module) -> list[tuple[int, str]]:
     rows = []
-    for node in tree.body:
+    for node in ast.walk(tree):
         if not isinstance(node, ast.Assign) or len(node.targets) != 1:
             continue
         target = node.targets[0]
