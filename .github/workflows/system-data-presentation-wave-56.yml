@@ -1,5 +1,6 @@
 name: System Data presentation Wave 56
 
+# Validates the exact clean Wave 56 PR head before desktop testing.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
