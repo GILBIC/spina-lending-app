@@ -17,7 +17,6 @@ on:
       - ".github/workflows/legacy-collector-cleanup-wave-52.yml"
 permissions:
   contents: write
-  issues: write
 concurrency:
   group: legacy-collector-cleanup-wave-52-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -53,11 +52,15 @@ jobs:
           }
           if (Test-Path tools/wave52_diagnostic.txt) {
             $diag = Get-Content tools/wave52_diagnostic.txt -Raw
-            $body = "Wave 52 bootstrap diagnostic for commit `${{ github.event.pull_request.head.sha }}`.`n`n```text`n$diag`n```"
-            $payload = @{ body = $body } | ConvertTo-Json -Depth 3
+            $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($diag))
+            $payload = @{
+              message = "Record Wave 52 diagnostic"
+              content = $encoded
+              branch = "agent/high-volume-wave-52"
+            } | ConvertTo-Json -Depth 3
             Invoke-RestMethod `
-              -Uri "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" `
-              -Method Post `
+              -Uri "https://api.github.com/repos/${{ github.repository }}/contents/tools/wave52_diagnostic.txt" `
+              -Method Put `
               -Headers @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = "application/vnd.github+json"; "X-GitHub-Api-Version" = "2022-11-28" } `
               -ContentType "application/json" `
               -Body $payload
