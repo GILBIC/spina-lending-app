@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# Wave 55 candidate inspection runs only on the feature branch.
 import ast
 import hashlib
 import json
