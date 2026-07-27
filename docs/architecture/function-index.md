@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `0d97703e0511971c80b9a669a3805ee87ccea0d9`.
+Generated from commit `241e2c1e1593f98377621d4134371724b55596b0`.
 
-Scanned **200 Python files**, **77,878 lines**, and **2,480 symbols**.
+Scanned **197 Python files**, **77,463 lines**, and **2,477 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1655,11 +1655,6 @@ Scanned **200 Python files**, **77,878 lines**, and **2,480 symbols**.
 - **tools.extract_cilog_value_formatter.apply_extraction** (function, lines 130–140, 11 lines, risk `support`): Handles apply extraction for the other feature.
 - **tools.extract_cilog_value_formatter.main** (function, lines 143–161, 19 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/extract_clients_tab_wave55_tmp.py`
-
-- **tools.extract_clients_tab_wave55_tmp.qualified_name** (function, lines 19–25, 7 lines, risk `support`): Handles qualified name for the other feature.
-- **tools.extract_clients_tab_wave55_tmp.main** (function, lines 28–365, 338 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/extract_date_display_helpers.py`
 
 - **tools.extract_date_display_helpers._line_source** (function, lines 32–37, 6 lines, risk `support`): Handles line source for the other feature.
@@ -1793,10 +1788,6 @@ Scanned **200 Python files**, **77,878 lines**, and **2,480 symbols**.
 - **tools.extract_text_normalizers._atomic_write** (function, lines 262–271, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
 - **tools.extract_text_normalizers.apply_extraction** (function, lines 274–283, 10 lines, risk `support`): Handles apply extraction for the other feature.
 - **tools.extract_text_normalizers.main** (function, lines 286–304, 19 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/finalize_clients_tab_wave55_tmp.py`
-
-- **tools.finalize_clients_tab_wave55_tmp.run** (function, lines 17–19, 3 lines, risk `reports`): Handles run for the other feature.
 
 ## `tools/inject_critical_path_logging.py`
 

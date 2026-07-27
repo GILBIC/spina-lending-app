@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "0d97703e0511971c80b9a669a3805ee87ccea0d9",
+  "generated_from_commit": "241e2c1e1593f98377621d4134371724b55596b0",
   "indexes": {
     "application_callbacks": [
       {
@@ -11348,7 +11348,6 @@
         "tools/extract_cilog_action_label.py:126:tools.extract_cilog_action_label.main",
         "tools/extract_cilog_diff_pairs.py:187:tools.extract_cilog_diff_pairs.main",
         "tools/extract_cilog_value_formatter.py:143:tools.extract_cilog_value_formatter.main",
-        "tools/extract_clients_tab_wave55_tmp.py:28:tools.extract_clients_tab_wave55_tmp.main",
         "tools/extract_date_display_helpers.py:236:tools.extract_date_display_helpers.main",
         "tools/extract_date_helpers_module.py:292:tools.extract_date_helpers_module.main",
         "tools/extract_display_formatters.py:219:tools.extract_display_formatters.main",
@@ -11619,7 +11618,6 @@
         "tools/audit_patch_chains.py:130:tools.audit_patch_chains.run",
         "tools/audit_shadowed_definitions.py:146:tools.audit_shadowed_definitions.run",
         "tools/cleanup_neutral_appclass_init_patch.py:130:tools.cleanup_neutral_appclass_init_patch.run",
-        "tools/finalize_clients_tab_wave55_tmp.py:17:tools.finalize_clients_tab_wave55_tmp.run",
         "tools/inject_silent_ui_logging.py:302:tools.inject_silent_ui_logging.run"
       ],
       "save": [
@@ -13090,8 +13088,6 @@
         "tools/extract_cilog_value_formatter.py:27:tools.extract_cilog_value_formatter._top_level_function",
         "tools/extract_cilog_value_formatter.py:34:tools.extract_cilog_value_formatter._local_names",
         "tools/extract_cilog_value_formatter.py:63:tools.extract_cilog_value_formatter.build_plan",
-        "tools/extract_clients_tab_wave55_tmp.py:19:tools.extract_clients_tab_wave55_tmp.qualified_name",
-        "tools/extract_clients_tab_wave55_tmp.py:28:tools.extract_clients_tab_wave55_tmp.main",
         "tools/extract_date_display_helpers.py:108:tools.extract_date_display_helpers._append_module_source",
         "tools/extract_date_display_helpers.py:117:tools.extract_date_display_helpers._patched_source",
         "tools/extract_date_display_helpers.py:128:tools.extract_date_display_helpers._state",
@@ -13190,7 +13186,6 @@
         "tools/extract_text_normalizers.py:75:tools.extract_text_normalizers._external_loaded_names",
         "tools/extract_text_normalizers.py:85:tools.extract_text_normalizers._import_bindings",
         "tools/extract_text_normalizers.py:99:tools.extract_text_normalizers._stdlib_roots",
-        "tools/finalize_clients_tab_wave55_tmp.py:17:tools.finalize_clients_tab_wave55_tmp.run",
         "tools/inject_critical_path_logging.py:137:tools.inject_critical_path_logging.remove_existing_block",
         "tools/inject_critical_path_logging.py:148:tools.inject_critical_path_logging.main",
         "tools/inject_reports_pdf_logging.py:138:tools.inject_reports_pdf_logging.remove_existing_block",
@@ -14318,9 +14313,6 @@
       "*.yml": [
         "tools/test_ci_acceleration.py:20:tools.test_ci_acceleration.main"
       ],
-      ".github/workflows/clients-tab-presentation-wave-55.yml": [
-        "tools/extract_clients_tab_wave55_tmp.py:28:tools.extract_clients_tab_wave55_tmp.main"
-      ],
       "ClientStatement_{}_{}_{}_to_{}_{}.pdf": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:13741:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.generate_pdf_selected"
       ],
@@ -14399,12 +14391,6 @@
       "access_prefs.json": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:201:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_json_table_for_path",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7097:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._access_prefs_path"
-      ],
-      "architecture-map.json": [
-        "tools/extract_clients_tab_wave55_tmp.py:28:tools.extract_clients_tab_wave55_tmp.main"
-      ],
-      "artifacts/wave-55-extraction.json": [
-        "tools/extract_clients_tab_wave55_tmp.py:28:tools.extract_clients_tab_wave55_tmp.main"
       ],
       "client_notes.json": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:2007:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._load_client_notes"
@@ -16791,7 +16777,6 @@
         "tools/extract_cilog_value_formatter.py:118:tools.extract_cilog_value_formatter._atomic_write",
         "tools/extract_cilog_value_formatter.py:143:tools.extract_cilog_value_formatter.main",
         "tools/extract_cilog_value_formatter.py:63:tools.extract_cilog_value_formatter.build_plan",
-        "tools/extract_clients_tab_wave55_tmp.py:28:tools.extract_clients_tab_wave55_tmp.main",
         "tools/extract_date_display_helpers.py:141:tools.extract_date_display_helpers.build_plan",
         "tools/extract_date_display_helpers.py:211:tools.extract_date_display_helpers._atomic_write",
         "tools/extract_date_display_helpers.py:236:tools.extract_date_display_helpers.main",
@@ -17122,7 +17107,6 @@
         "tools/cleanup_neutral_appclass_init_patch.py:164:tools.cleanup_neutral_appclass_init_patch.print_report",
         "tools/cleanup_neutral_appclass_init_patch.py:180:tools.cleanup_neutral_appclass_init_patch.main",
         "tools/disable_full_daily_ledger.py:349:tools.disable_full_daily_ledger._flush",
-        "tools/finalize_clients_tab_wave55_tmp.py:17:tools.finalize_clients_tab_wave55_tmp.run",
         "tools/inject_silent_ui_logging.py:333:tools.inject_silent_ui_logging.print_report",
         "tools/inject_silent_ui_logging.py:352:tools.inject_silent_ui_logging.main",
         "tools/plan_login_dialog_pass_only.py:195:tools.plan_login_dialog_pass_only.build_report",
@@ -17898,7 +17882,6 @@
         "tools/extract_cilog_value_formatter.py:27:tools.extract_cilog_value_formatter._top_level_function",
         "tools/extract_cilog_value_formatter.py:34:tools.extract_cilog_value_formatter._local_names",
         "tools/extract_cilog_value_formatter.py:48:tools.extract_cilog_value_formatter._validate",
-        "tools/extract_clients_tab_wave55_tmp.py:19:tools.extract_clients_tab_wave55_tmp.qualified_name",
         "tools/extract_date_display_helpers.py:108:tools.extract_date_display_helpers._append_module_source",
         "tools/extract_date_display_helpers.py:117:tools.extract_date_display_helpers._patched_source",
         "tools/extract_date_display_helpers.py:128:tools.extract_date_display_helpers._state",
@@ -21075,33 +21058,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/extract_clients_tab_wave55_tmp.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json",
-        "re": "re",
-        "textwrap": "textwrap"
-      },
-      "lines": 369,
-      "module": "tools.extract_clients_tab_wave55_tmp",
-      "module_globals": [
-        "EXPECTED_LINES",
-        "MAIN",
-        "MODULE",
-        "PERMANENT_WORKFLOW",
-        "TARGET",
-        "TEST_EXACT",
-        "TEST_WIDGET"
-      ],
-      "monkey_patches": [],
-      "sha256": "18fe97969e8b52000f9055043458858abc0092c6a74abe87aa92c7c9abbd6a1d",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/extract_date_display_helpers.py",
       "imports": {
         "Any": "typing.Any",
@@ -21358,42 +21314,6 @@
       ],
       "monkey_patches": [],
       "sha256": "0414abb5b6ade757f2698569235952434069e2726de03166d77d4d620afc12a8",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/finalize_clients_tab_wave55_tmp.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "subprocess": "subprocess"
-      },
-      "lines": 37,
-      "module": "tools.finalize_clients_tab_wave55_tmp",
-      "module_globals": [
-        "BRANCH",
-        "TEMP_PATHS"
-      ],
-      "monkey_patches": [],
-      "sha256": "474f920fdf0b6874915ade61655abcdb23977808c72006a2852a6686183a97bf",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/fix_clients_tab_wave55_hash_tmp.py",
-      "imports": {
-        "Path": "pathlib.Path"
-      },
-      "lines": 9,
-      "module": "tools.fix_clients_tab_wave55_hash_tmp",
-      "module_globals": [
-        "new",
-        "old",
-        "path",
-        "text"
-      ],
-      "monkey_patches": [],
-      "sha256": "ba39099fe384db6355c5b411a36b9b2b7ec03c78d62d2a8a508e9b442046cc20",
       "syntax_ok": true
     },
     {
@@ -24119,19 +24039,19 @@
     "classes": 103,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1443,
+    "functions": 1440,
     "methods": 544,
     "monkey_patches": 153,
     "nested_functions": 390,
     "parse_errors": 0,
     "possible_orphans": 130,
-    "python_files": 200,
+    "python_files": 197,
     "repository_database_tables": 19,
     "repository_duplicate_names": 283,
     "repository_possible_orphans": 271,
-    "resolved_call_edges": 3877,
-    "symbols": 2480,
-    "total_python_lines": 77878,
+    "resolved_call_edges": 3874,
+    "symbols": 2477,
+    "total_python_lines": 77463,
     "ui_callback_edges": 488
   },
   "symbols": [
@@ -98349,140 +98269,6 @@
     },
     {
       "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_clients_tab_wave55_tmp.py:19:tools.extract_clients_tab_wave55_tmp.qualified_name",
-        "tools/extract_clients_tab_wave55_tmp.py:28:tools.extract_clients_tab_wave55_tmp.main"
-      ],
-      "calls_raw": [
-        "isinstance",
-        "qualified_name"
-      ],
-      "calls_resolved": [
-        "tools/extract_clients_tab_wave55_tmp.py:19:tools.extract_clients_tab_wave55_tmp.qualified_name"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 25,
-      "feature": "other",
-      "file": "tools/extract_clients_tab_wave55_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_clients_tab_wave55_tmp.py:19:tools.extract_clients_tab_wave55_tmp.qualified_name",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 19,
-      "lines": 7,
-      "monkey_patches": [],
-      "name": "qualified_name",
-      "parent": null,
-      "purpose": "Handles qualified name for the other feature.",
-      "qualified_name": "tools.extract_clients_tab_wave55_tmp.qualified_name",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "23ad8bdf5f99464cf035c88767338a7d0e28a5b43a9432046d33aa4e6d1f2c24"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "MAIN.as_posix",
-        "MAIN.read_text",
-        "MAIN.write_text",
-        "MODULE.as_posix",
-        "MODULE.parent.mkdir",
-        "MODULE.write_text",
-        "PERMANENT_WORKFLOW.write_text",
-        "Path",
-        "Path.parent.mkdir",
-        "Path.write_text",
-        "SystemExit",
-        "TEST_EXACT.write_text",
-        "TEST_WIDGET.write_text",
-        "ast.parse",
-        "ast.walk",
-        "button_texts.append",
-        "c.endswith",
-        "dedented.encode",
-        "dedented.rstrip",
-        "dict.fromkeys",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "isinstance",
-        "join",
-        "json.dumps",
-        "label_texts.append",
-        "len",
-        "list",
-        "main_matches.start",
-        "name.endswith",
-        "name.lower",
-        "next",
-        "print",
-        "qualified_name",
-        "re.finditer",
-        "sorted",
-        "src.splitlines",
-        "textwrap.dedent"
-      ],
-      "calls_resolved": [
-        "tools/extract_clients_tab_wave55_tmp.py:19:tools.extract_clients_tab_wave55_tmp.qualified_name"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 365,
-      "feature": "other",
-      "file": "tools/extract_clients_tab_wave55_tmp.py",
-      "file_paths": [
-        ".github/workflows/clients-tab-presentation-wave-55.yml",
-        "architecture-map.json",
-        "artifacts/wave-55-extraction.json"
-      ],
-      "globals_read": [
-        "EXPECTED_LINES",
-        "MAIN",
-        "MODULE",
-        "PERMANENT_WORKFLOW",
-        "TARGET",
-        "TEST_EXACT",
-        "TEST_WIDGET"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_clients_tab_wave55_tmp.py:28:tools.extract_clients_tab_wave55_tmp.main",
-      "imports_used": [
-        "ast",
-        "hashlib",
-        "json",
-        "pathlib.Path",
-        "re",
-        "textwrap"
-      ],
-      "kind": "function",
-      "line": 28,
-      "lines": 338,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.extract_clients_tab_wave55_tmp.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports",
-        "ui_only"
-      ],
-      "source_sha256": "ea3217e9ff2a0c2f38282146c436a5280638957699f5939c3d0566382b16fd48"
-    },
-    {
-      "args": [
         "source",
         "node"
       ],
@@ -103368,50 +103154,6 @@
         "reports"
       ],
       "source_sha256": "2b892388260df7599a95b41278d4a6c00323538eea91bebaaf249eece29a3f88"
-    },
-    {
-      "args": [
-        "check",
-        "*args"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/finalize_clients_tab_wave55_tmp.py:17:tools.finalize_clients_tab_wave55_tmp.run"
-      ],
-      "calls_raw": [
-        "join",
-        "print",
-        "subprocess.run"
-      ],
-      "calls_resolved": [
-        "tools/finalize_clients_tab_wave55_tmp.py:17:tools.finalize_clients_tab_wave55_tmp.run"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 19,
-      "feature": "other",
-      "file": "tools/finalize_clients_tab_wave55_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/finalize_clients_tab_wave55_tmp.py:17:tools.finalize_clients_tab_wave55_tmp.run",
-      "imports_used": [
-        "subprocess"
-      ],
-      "kind": "function",
-      "line": 17,
-      "lines": 3,
-      "monkey_patches": [],
-      "name": "run",
-      "parent": null,
-      "purpose": "Handles run for the other feature.",
-      "qualified_name": "tools.finalize_clients_tab_wave55_tmp.run",
-      "risk": "reports",
-      "risk_flags": [
-        "reports"
-      ],
-      "source_sha256": "09024969c1df66075a90376ed014d20e330a7ba8a8ca755648f5c80a5494a74d"
     },
     {
       "args": [
