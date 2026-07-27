@@ -11286,9 +11286,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:23920:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.do_link"
       ],
       "dotted": [
-        "tools/extract_databank_grid_wave59_tmp.py:86:tools.extract_databank_grid_wave59_tmp.dotted",
-        "tools/plan_databank_grid_wave59_tmp.py:30:tools.plan_databank_grid_wave59_tmp.dotted",
-        "tools/plan_system_data_navigation_wave59_tmp.py:39:tools.plan_system_data_navigation_wave59_tmp.dotted",
         "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
         "tools/test_audit_presentation_wave_54.py:23:tools.test_audit_presentation_wave_54.dotted",
         "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted",
@@ -11491,7 +11488,6 @@
         "tools/extract_cilog_action_label.py:126:tools.extract_cilog_action_label.main",
         "tools/extract_cilog_diff_pairs.py:187:tools.extract_cilog_diff_pairs.main",
         "tools/extract_cilog_value_formatter.py:143:tools.extract_cilog_value_formatter.main",
-        "tools/extract_databank_grid_wave59_tmp.py:367:tools.extract_databank_grid_wave59_tmp.main",
         "tools/extract_date_display_helpers.py:236:tools.extract_date_display_helpers.main",
         "tools/extract_date_helpers_module.py:292:tools.extract_date_helpers_module.main",
         "tools/extract_display_formatters.py:219:tools.extract_display_formatters.main",
@@ -11508,7 +11504,6 @@
         "tools/inspect_blocking_ui_context.py:159:tools.inspect_blocking_ui_context.main",
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
-        "tools/plan_databank_grid_wave59_tmp.py:40:tools.plan_databank_grid_wave59_tmp.main",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_login_dialog_pass_only.py:243:tools.plan_login_dialog_pass_only.main",
         "tools/plan_modern_ui_pass_only_cleanup.py:199:tools.plan_modern_ui_pass_only_cleanup.main",
@@ -11516,7 +11511,6 @@
         "tools/plan_pure_login_dialog_ui_pass_only.py:227:tools.plan_pure_login_dialog_ui_pass_only.main",
         "tools/plan_queue_empty_pass_only.py:183:tools.plan_queue_empty_pass_only.main",
         "tools/plan_remaining_pass_only_groups.py:196:tools.plan_remaining_pass_only_groups.main",
-        "tools/plan_system_data_navigation_wave59_tmp.py:49:tools.plan_system_data_navigation_wave59_tmp.main",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
@@ -13261,12 +13255,6 @@
         "tools/extract_cilog_value_formatter.py:27:tools.extract_cilog_value_formatter._top_level_function",
         "tools/extract_cilog_value_formatter.py:34:tools.extract_cilog_value_formatter._local_names",
         "tools/extract_cilog_value_formatter.py:63:tools.extract_cilog_value_formatter.build_plan",
-        "tools/extract_databank_grid_wave59_tmp.py:112:tools.extract_databank_grid_wave59_tmp.render_module",
-        "tools/extract_databank_grid_wave59_tmp.py:142:tools.extract_databank_grid_wave59_tmp.render_exact_test",
-        "tools/extract_databank_grid_wave59_tmp.py:214:tools.extract_databank_grid_wave59_tmp.render_widget_test",
-        "tools/extract_databank_grid_wave59_tmp.py:367:tools.extract_databank_grid_wave59_tmp.main",
-        "tools/extract_databank_grid_wave59_tmp.py:86:tools.extract_databank_grid_wave59_tmp.dotted",
-        "tools/extract_databank_grid_wave59_tmp.py:96:tools.extract_databank_grid_wave59_tmp.find_targets",
         "tools/extract_date_display_helpers.py:108:tools.extract_date_display_helpers._append_module_source",
         "tools/extract_date_display_helpers.py:117:tools.extract_date_display_helpers._patched_source",
         "tools/extract_date_display_helpers.py:128:tools.extract_date_display_helpers._state",
@@ -13405,8 +13393,6 @@
         "tools/plan_app_lifecycle_window_pass_only.py:72:tools.plan_app_lifecycle_window_pass_only._context_text",
         "tools/plan_app_lifecycle_window_pass_only.py:76:tools.plan_app_lifecycle_window_pass_only._protected",
         "tools/plan_app_lifecycle_window_pass_only.py:80:tools.plan_app_lifecycle_window_pass_only._classify",
-        "tools/plan_databank_grid_wave59_tmp.py:30:tools.plan_databank_grid_wave59_tmp.dotted",
-        "tools/plan_databank_grid_wave59_tmp.py:40:tools.plan_databank_grid_wave59_tmp.main",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_logger_fallback_pass_only.py:54:tools.plan_logger_fallback_pass_only._handler_name",
         "tools/plan_logger_fallback_pass_only.py:71:tools.plan_logger_fallback_pass_only._context",
@@ -13453,8 +13439,6 @@
         "tools/plan_remaining_pass_only_groups.py:75:tools.plan_remaining_pass_only_groups.context_for",
         "tools/plan_remaining_pass_only_groups.py:81:tools.plan_remaining_pass_only_groups.has_protected_context",
         "tools/plan_remaining_pass_only_groups.py:86:tools.plan_remaining_pass_only_groups.classify",
-        "tools/plan_system_data_navigation_wave59_tmp.py:39:tools.plan_system_data_navigation_wave59_tmp.dotted",
-        "tools/plan_system_data_navigation_wave59_tmp.py:49:tools.plan_system_data_navigation_wave59_tmp.main",
         "tools/plan_ui_compatibility_pass_only.py:113:tools.plan_ui_compatibility_pass_only.read_lines",
         "tools/plan_ui_compatibility_pass_only.py:117:tools.plan_ui_compatibility_pass_only.handler_name",
         "tools/plan_ui_compatibility_pass_only.py:164:tools.plan_ui_compatibility_pass_only.line_window",
@@ -17062,7 +17046,6 @@
         "tools/extract_cilog_value_formatter.py:118:tools.extract_cilog_value_formatter._atomic_write",
         "tools/extract_cilog_value_formatter.py:143:tools.extract_cilog_value_formatter.main",
         "tools/extract_cilog_value_formatter.py:63:tools.extract_cilog_value_formatter.build_plan",
-        "tools/extract_databank_grid_wave59_tmp.py:367:tools.extract_databank_grid_wave59_tmp.main",
         "tools/extract_date_display_helpers.py:141:tools.extract_date_display_helpers.build_plan",
         "tools/extract_date_display_helpers.py:211:tools.extract_date_display_helpers._atomic_write",
         "tools/extract_date_display_helpers.py:236:tools.extract_date_display_helpers.main",
@@ -17105,7 +17088,6 @@
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
         "tools/plan_app_lifecycle_window_pass_only.py:160:tools.plan_app_lifecycle_window_pass_only.build_report",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
-        "tools/plan_databank_grid_wave59_tmp.py:40:tools.plan_databank_grid_wave59_tmp.main",
         "tools/plan_logger_fallback_pass_only.py:136:tools.plan_logger_fallback_pass_only.build_report",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_login_dialog_pass_only.py:243:tools.plan_login_dialog_pass_only.main",
@@ -17120,7 +17102,6 @@
         "tools/plan_queue_empty_pass_only.py:183:tools.plan_queue_empty_pass_only.main",
         "tools/plan_remaining_pass_only_groups.py:152:tools.plan_remaining_pass_only_groups.build_report",
         "tools/plan_remaining_pass_only_groups.py:196:tools.plan_remaining_pass_only_groups.main",
-        "tools/plan_system_data_navigation_wave59_tmp.py:49:tools.plan_system_data_navigation_wave59_tmp.main",
         "tools/plan_ui_compatibility_pass_only.py:113:tools.plan_ui_compatibility_pass_only.read_lines",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
@@ -18182,10 +18163,6 @@
         "tools/extract_cilog_value_formatter.py:27:tools.extract_cilog_value_formatter._top_level_function",
         "tools/extract_cilog_value_formatter.py:34:tools.extract_cilog_value_formatter._local_names",
         "tools/extract_cilog_value_formatter.py:48:tools.extract_cilog_value_formatter._validate",
-        "tools/extract_databank_grid_wave59_tmp.py:112:tools.extract_databank_grid_wave59_tmp.render_module",
-        "tools/extract_databank_grid_wave59_tmp.py:142:tools.extract_databank_grid_wave59_tmp.render_exact_test",
-        "tools/extract_databank_grid_wave59_tmp.py:86:tools.extract_databank_grid_wave59_tmp.dotted",
-        "tools/extract_databank_grid_wave59_tmp.py:96:tools.extract_databank_grid_wave59_tmp.find_targets",
         "tools/extract_date_display_helpers.py:108:tools.extract_date_display_helpers._append_module_source",
         "tools/extract_date_display_helpers.py:117:tools.extract_date_display_helpers._patched_source",
         "tools/extract_date_display_helpers.py:128:tools.extract_date_display_helpers._state",
@@ -18294,7 +18271,6 @@
         "tools/plan_app_lifecycle_window_pass_only.py:72:tools.plan_app_lifecycle_window_pass_only._context_text",
         "tools/plan_app_lifecycle_window_pass_only.py:76:tools.plan_app_lifecycle_window_pass_only._protected",
         "tools/plan_app_lifecycle_window_pass_only.py:80:tools.plan_app_lifecycle_window_pass_only._classify",
-        "tools/plan_databank_grid_wave59_tmp.py:30:tools.plan_databank_grid_wave59_tmp.dotted",
         "tools/plan_logger_fallback_pass_only.py:101:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_AsyncFunctionDef",
         "tools/plan_logger_fallback_pass_only.py:106:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_Try",
         "tools/plan_logger_fallback_pass_only.py:54:tools.plan_logger_fallback_pass_only._handler_name",
@@ -18364,7 +18340,6 @@
         "tools/plan_remaining_pass_only_groups.py:71:tools.plan_remaining_pass_only_groups.is_pass_only",
         "tools/plan_remaining_pass_only_groups.py:75:tools.plan_remaining_pass_only_groups.context_for",
         "tools/plan_remaining_pass_only_groups.py:81:tools.plan_remaining_pass_only_groups.has_protected_context",
-        "tools/plan_system_data_navigation_wave59_tmp.py:39:tools.plan_system_data_navigation_wave59_tmp.dotted",
         "tools/plan_ui_compatibility_pass_only.py:117:tools.plan_ui_compatibility_pass_only.handler_name",
         "tools/plan_ui_compatibility_pass_only.py:134:tools.plan_ui_compatibility_pass_only.is_pass_only",
         "tools/plan_ui_compatibility_pass_only.py:139:tools.plan_ui_compatibility_pass_only.PassOnlyVisitor.__init__",
@@ -19074,7 +19049,6 @@
         "spina_app/ui_helpers.py:54:spina_app.ui_helpers._spina_v24_cilog_set_card",
         "spina_app/ui_helpers.py:65:spina_app.ui_helpers._spina_v21_cash_set_card",
         "tools/disable_full_daily_ledger.py:376:tools.disable_full_daily_ledger._looks_like_legacy_button_line",
-        "tools/extract_databank_grid_wave59_tmp.py:214:tools.extract_databank_grid_wave59_tmp.render_widget_test",
         "tools/plan_remaining_pass_only_groups.py:86:tools.plan_remaining_pass_only_groups.classify",
         "tools/remove_databank_export_controls.py:380:tools.remove_databank_export_controls._looks_like_ui_line",
         "tools/test_audit_widget_smoke_wave_54.py:135:tools.test_audit_widget_smoke_wave_54.button_by_text",
@@ -21546,37 +21520,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/extract_databank_grid_wave59_tmp.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "codecs": "codecs",
-        "hashlib": "hashlib",
-        "json": "json",
-        "re": "re",
-        "textwrap": "textwrap"
-      },
-      "lines": 461,
-      "module": "tools.extract_databank_grid_wave59_tmp",
-      "module_globals": [
-        "APP",
-        "EXACT_TEST",
-        "MODULE",
-        "PROTECTED_APP_METHODS",
-        "PROTECTED_MARKERS",
-        "REPORT",
-        "ROOT",
-        "TARGETS",
-        "TARGET_CLASS",
-        "WIDGET_TEST"
-      ],
-      "monkey_patches": [],
-      "sha256": "97dc3145ac39a9a36f514c3d77c00d966770ebe3694a039edf77123abee1c522",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/extract_date_display_helpers.py",
       "imports": {
         "Any": "typing.Any",
@@ -21973,31 +21916,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/plan_databank_grid_wave59_tmp.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json"
-      },
-      "lines": 99,
-      "module": "tools.plan_databank_grid_wave59_tmp",
-      "module_globals": [
-        "APP",
-        "OUT",
-        "PROTECTED_MARKERS",
-        "ROOT",
-        "SOURCE_DIR",
-        "TARGETS",
-        "TARGET_CLASS"
-      ],
-      "monkey_patches": [],
-      "sha256": "a54bcdc78c36afd70b99d15673dbbc25ccb536065b63e817262ea576e219a483",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/plan_logger_fallback_pass_only.py",
       "imports": {
         "Any": "typing.Any",
@@ -22161,32 +22079,6 @@
       ],
       "monkey_patches": [],
       "sha256": "5f1cb905e985279c3b0cba29c9f1ecf02139bf00b99b0c0cf6d0245919939ae7",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/plan_system_data_navigation_wave59_tmp.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json"
-      },
-      "lines": 110,
-      "module": "tools.plan_system_data_navigation_wave59_tmp",
-      "module_globals": [
-        "APP",
-        "OUT",
-        "PREFERRED",
-        "PROTECTED_MARKERS",
-        "ROOT",
-        "SOURCE_DIR",
-        "TARGETS",
-        "TARGET_CLASS"
-      ],
-      "monkey_patches": [],
-      "sha256": "3ca9682f8b2bae5c41176e7b977f62919d767925edf0e3809a0e590e6d214d99",
       "syntax_ok": true
     },
     {
@@ -24761,19 +24653,19 @@
     "classes": 111,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1475,
+    "functions": 1465,
     "methods": 562,
     "monkey_patches": 162,
     "nested_functions": 390,
     "parse_errors": 0,
     "possible_orphans": 131,
-    "python_files": 212,
+    "python_files": 209,
     "repository_database_tables": 19,
     "repository_duplicate_names": 297,
     "repository_possible_orphans": 279,
-    "resolved_call_edges": 3914,
-    "symbols": 2538,
-    "total_python_lines": 78869,
+    "resolved_call_edges": 3907,
+    "symbols": 2528,
+    "total_python_lines": 78199,
     "ui_callback_edges": 488
   },
   "symbols": [
@@ -99105,300 +98997,6 @@
     },
     {
       "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_databank_grid_wave59_tmp.py:367:tools.extract_databank_grid_wave59_tmp.main"
-      ],
-      "calls_raw": [
-        "isinstance",
-        "join",
-        "parts.append",
-        "reversed"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 93,
-      "feature": "other",
-      "file": "tools/extract_databank_grid_wave59_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_databank_grid_wave59_tmp.py:86:tools.extract_databank_grid_wave59_tmp.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 86,
-      "lines": 8,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.extract_databank_grid_wave59_tmp.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "b5d0204dc980e523dbf809fd680134e37e034ffbf2f51f7de2d11a1b38b64b5c"
-    },
-    {
-      "args": [
-        "tree"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_databank_grid_wave59_tmp.py:367:tools.extract_databank_grid_wave59_tmp.main"
-      ],
-      "calls_raw": [
-        "SystemExit",
-        "isinstance",
-        "set",
-        "sorted"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 109,
-      "feature": "other",
-      "file": "tools/extract_databank_grid_wave59_tmp.py",
-      "file_paths": [],
-      "globals_read": [
-        "TARGETS",
-        "TARGET_CLASS"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_databank_grid_wave59_tmp.py:96:tools.extract_databank_grid_wave59_tmp.find_targets",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 96,
-      "lines": 14,
-      "monkey_patches": [],
-      "name": "find_targets",
-      "parent": null,
-      "purpose": "Retrieves find targets for the other feature.",
-      "qualified_name": "tools.extract_databank_grid_wave59_tmp.find_targets",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "873296970309c4e63f0b01e990b5b7e88b64cc30995adca95ebaa3bea2bfc3c5"
-    },
-    {
-      "args": [
-        "dedented_sources",
-        "metadata"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_databank_grid_wave59_tmp.py:367:tools.extract_databank_grid_wave59_tmp.main"
-      ],
-      "calls_raw": [
-        "dedented_sources.rstrip",
-        "join",
-        "lines.extend"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 139,
-      "feature": "other",
-      "file": "tools/extract_databank_grid_wave59_tmp.py",
-      "file_paths": [],
-      "globals_read": [
-        "TARGETS"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_databank_grid_wave59_tmp.py:112:tools.extract_databank_grid_wave59_tmp.render_module",
-      "imports_used": [],
-      "kind": "function",
-      "line": 112,
-      "lines": 28,
-      "monkey_patches": [],
-      "name": "render_module",
-      "parent": null,
-      "purpose": "Handles render module for the other feature.",
-      "qualified_name": "tools.extract_databank_grid_wave59_tmp.render_module",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "562724b3058eca6eb0a3aaefddce3cbac148f9914c2dab285a73f7b5368077e9"
-    },
-    {
-      "args": [
-        "metadata"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_databank_grid_wave59_tmp.py:367:tools.extract_databank_grid_wave59_tmp.main"
-      ],
-      "calls_raw": [],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 211,
-      "feature": "other",
-      "file": "tools/extract_databank_grid_wave59_tmp.py",
-      "file_paths": [],
-      "globals_read": [
-        "PROTECTED_APP_METHODS",
-        "PROTECTED_MARKERS",
-        "TARGETS"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_databank_grid_wave59_tmp.py:142:tools.extract_databank_grid_wave59_tmp.render_exact_test",
-      "imports_used": [],
-      "kind": "function",
-      "line": 142,
-      "lines": 70,
-      "monkey_patches": [],
-      "name": "render_exact_test",
-      "parent": null,
-      "purpose": "Handles render exact test for the other feature.",
-      "qualified_name": "tools.extract_databank_grid_wave59_tmp.render_exact_test",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "96e9352e5f75f99275974fc95bd116c46f0a0cb7707f7e1a7b8792fc760ffab5"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_databank_grid_wave59_tmp.py:367:tools.extract_databank_grid_wave59_tmp.main"
-      ],
-      "calls_raw": [],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 364,
-      "feature": "other",
-      "file": "tools/extract_databank_grid_wave59_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_databank_grid_wave59_tmp.py:214:tools.extract_databank_grid_wave59_tmp.render_widget_test",
-      "imports_used": [],
-      "kind": "function",
-      "line": 214,
-      "lines": 151,
-      "monkey_patches": [],
-      "name": "render_widget_test",
-      "parent": null,
-      "purpose": "Handles render widget test for the other feature.",
-      "qualified_name": "tools.extract_databank_grid_wave59_tmp.render_widget_test",
-      "risk": "ui_only",
-      "risk_flags": [
-        "ui_only"
-      ],
-      "source_sha256": "f9e516c64d66c9c32f9cbb76331075002035d1e696be0a1e2f8f242b83a88c93"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP.read_bytes",
-        "APP.write_bytes",
-        "EXACT_TEST.write_text",
-        "MODULE.parent.mkdir",
-        "MODULE.write_text",
-        "REPORT.parent.mkdir",
-        "REPORT.write_text",
-        "SystemExit",
-        "TARGETS.items",
-        "TARGETS.values",
-        "WIDGET_TEST.write_text",
-        "ast.parse",
-        "ast.unparse",
-        "ast.walk",
-        "call.startswith",
-        "dedented.encode",
-        "dotted",
-        "find_targets",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "int",
-        "isinstance",
-        "join",
-        "join.lower",
-        "json.dumps",
-        "len",
-        "list",
-        "matches.start",
-        "new_text.replace",
-        "original_text.replace",
-        "output.encode",
-        "print",
-        "ranges.append",
-        "raw.decode",
-        "raw.startswith",
-        "re.finditer",
-        "render_exact_test",
-        "render_module",
-        "render_widget_test",
-        "set",
-        "sorted",
-        "source.encode",
-        "str",
-        "sum",
-        "text.splitlines",
-        "textwrap.dedent"
-      ],
-      "calls_resolved": [
-        "tools/extract_databank_grid_wave59_tmp.py:112:tools.extract_databank_grid_wave59_tmp.render_module",
-        "tools/extract_databank_grid_wave59_tmp.py:142:tools.extract_databank_grid_wave59_tmp.render_exact_test",
-        "tools/extract_databank_grid_wave59_tmp.py:214:tools.extract_databank_grid_wave59_tmp.render_widget_test",
-        "tools/extract_databank_grid_wave59_tmp.py:86:tools.extract_databank_grid_wave59_tmp.dotted",
-        "tools/extract_databank_grid_wave59_tmp.py:96:tools.extract_databank_grid_wave59_tmp.find_targets"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 457,
-      "feature": "other",
-      "file": "tools/extract_databank_grid_wave59_tmp.py",
-      "file_paths": [],
-      "globals_read": [
-        "APP",
-        "EXACT_TEST",
-        "MODULE",
-        "PROTECTED_APP_METHODS",
-        "PROTECTED_MARKERS",
-        "REPORT",
-        "TARGETS",
-        "WIDGET_TEST"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_databank_grid_wave59_tmp.py:367:tools.extract_databank_grid_wave59_tmp.main",
-      "imports_used": [
-        "ast",
-        "codecs",
-        "hashlib",
-        "json",
-        "re",
-        "textwrap"
-      ],
-      "kind": "function",
-      "line": 367,
-      "lines": 91,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.extract_databank_grid_wave59_tmp.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "d8139580480c312d0a092e92659140873e3d228e1018d6e82aeef289f2e8e910"
-    },
-    {
-      "args": [
         "source",
         "node"
       ],
@@ -106408,122 +106006,6 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/plan_databank_grid_wave59_tmp.py:40:tools.plan_databank_grid_wave59_tmp.main"
-      ],
-      "calls_raw": [
-        "isinstance",
-        "join",
-        "parts.append",
-        "reversed"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 37,
-      "feature": "other",
-      "file": "tools/plan_databank_grid_wave59_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_databank_grid_wave59_tmp.py:30:tools.plan_databank_grid_wave59_tmp.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 30,
-      "lines": 8,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.plan_databank_grid_wave59_tmp.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "b5d0204dc980e523dbf809fd680134e37e034ffbf2f51f7de2d11a1b38b64b5c"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP.read_text",
-        "APP.read_text.replace",
-        "OUT.parent.mkdir",
-        "OUT.write_text",
-        "SOURCE_DIR.mkdir",
-        "SystemExit",
-        "all",
-        "ast.parse",
-        "ast.unparse",
-        "ast.walk",
-        "call.startswith",
-        "dotted",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "int",
-        "isinstance",
-        "join",
-        "join.lower",
-        "json.dumps",
-        "marker.lower",
-        "next",
-        "print",
-        "reports.append",
-        "set",
-        "sorted",
-        "source.encode",
-        "str",
-        "sum",
-        "text.splitlines",
-        "write_text"
-      ],
-      "calls_resolved": [
-        "tools/plan_databank_grid_wave59_tmp.py:30:tools.plan_databank_grid_wave59_tmp.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 95,
-      "feature": "other",
-      "file": "tools/plan_databank_grid_wave59_tmp.py",
-      "file_paths": [],
-      "globals_read": [
-        "APP",
-        "OUT",
-        "PROTECTED_MARKERS",
-        "SOURCE_DIR",
-        "TARGETS",
-        "TARGET_CLASS"
-      ],
-      "globals_written": [],
-      "id": "tools/plan_databank_grid_wave59_tmp.py:40:tools.plan_databank_grid_wave59_tmp.main",
-      "imports_used": [
-        "ast",
-        "hashlib",
-        "json"
-      ],
-      "kind": "function",
-      "line": 40,
-      "lines": 56,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.plan_databank_grid_wave59_tmp.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "dea02979bf4d9e7555ab1a140afda4458de6b095b42a99f16c8aca7ad8d9a786"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
         "tools/plan_logger_fallback_pass_only.py:106:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_Try"
       ],
       "calls_raw": [
@@ -110398,123 +109880,6 @@
         "reports"
       ],
       "source_sha256": "2f390693a2932a0c9d4d664015ecc6751e20100eb651a842cdd3825987ed4bc3"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_system_data_navigation_wave59_tmp.py:49:tools.plan_system_data_navigation_wave59_tmp.main"
-      ],
-      "calls_raw": [
-        "isinstance",
-        "join",
-        "parts.append",
-        "reversed"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 46,
-      "feature": "other",
-      "file": "tools/plan_system_data_navigation_wave59_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_system_data_navigation_wave59_tmp.py:39:tools.plan_system_data_navigation_wave59_tmp.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 39,
-      "lines": 8,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.plan_system_data_navigation_wave59_tmp.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "b5d0204dc980e523dbf809fd680134e37e034ffbf2f51f7de2d11a1b38b64b5c"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP.read_text",
-        "APP.read_text.replace",
-        "OUT.parent.mkdir",
-        "OUT.write_text",
-        "SOURCE_DIR.mkdir",
-        "SystemExit",
-        "all",
-        "ast.parse",
-        "ast.unparse",
-        "ast.walk",
-        "call.startswith",
-        "dotted",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "int",
-        "isinstance",
-        "join",
-        "join.lower",
-        "json.dumps",
-        "marker.lower",
-        "next",
-        "print",
-        "reports.append",
-        "set",
-        "sorted",
-        "source.encode",
-        "str",
-        "sum",
-        "text.splitlines",
-        "write_text"
-      ],
-      "calls_resolved": [
-        "tools/plan_system_data_navigation_wave59_tmp.py:39:tools.plan_system_data_navigation_wave59_tmp.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 106,
-      "feature": "other",
-      "file": "tools/plan_system_data_navigation_wave59_tmp.py",
-      "file_paths": [],
-      "globals_read": [
-        "APP",
-        "OUT",
-        "PREFERRED",
-        "PROTECTED_MARKERS",
-        "SOURCE_DIR",
-        "TARGETS",
-        "TARGET_CLASS"
-      ],
-      "globals_written": [],
-      "id": "tools/plan_system_data_navigation_wave59_tmp.py:49:tools.plan_system_data_navigation_wave59_tmp.main",
-      "imports_used": [
-        "ast",
-        "hashlib",
-        "json"
-      ],
-      "kind": "function",
-      "line": 49,
-      "lines": 58,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.plan_system_data_navigation_wave59_tmp.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "c2fa68d7ce8c72ae375d238ce35247c7d25166109a11152570ebbcc00e5f7347"
     },
     {
       "args": [

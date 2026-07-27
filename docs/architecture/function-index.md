@@ -2,7 +2,7 @@
 
 Generated from commit `06969e188598ee74e3d3d8e66566cc5063013d08`.
 
-Scanned **212 Python files**, **78,869 lines**, and **2,538 symbols**.
+Scanned **209 Python files**, **78,199 lines**, and **2,528 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1671,15 +1671,6 @@ Scanned **212 Python files**, **78,869 lines**, and **2,538 symbols**.
 - **tools.extract_cilog_value_formatter.apply_extraction** (function, lines 130–140, 11 lines, risk `support`): Handles apply extraction for the other feature.
 - **tools.extract_cilog_value_formatter.main** (function, lines 143–161, 19 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/extract_databank_grid_wave59_tmp.py`
-
-- **tools.extract_databank_grid_wave59_tmp.dotted** (function, lines 86–93, 8 lines, risk `support`): Handles dotted for the other feature.
-- **tools.extract_databank_grid_wave59_tmp.find_targets** (function, lines 96–109, 14 lines, risk `support`): Retrieves find targets for the other feature.
-- **tools.extract_databank_grid_wave59_tmp.render_module** (function, lines 112–139, 28 lines, risk `support`): Handles render module for the other feature.
-- **tools.extract_databank_grid_wave59_tmp.render_exact_test** (function, lines 142–211, 70 lines, risk `support`): Handles render exact test for the other feature.
-- **tools.extract_databank_grid_wave59_tmp.render_widget_test** (function, lines 214–364, 151 lines, risk `ui_only`): Handles render widget test for the other feature.
-- **tools.extract_databank_grid_wave59_tmp.main** (function, lines 367–457, 91 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/extract_date_display_helpers.py`
 
 - **tools.extract_date_display_helpers._line_source** (function, lines 32–37, 6 lines, risk `support`): Handles line source for the other feature.
@@ -1882,11 +1873,6 @@ Scanned **212 Python files**, **78,869 lines**, and **2,538 symbols**.
 - **tools.plan_app_lifecycle_window_pass_only.build_report** (function, lines 160–198, 39 lines, risk `filesystem`): Builds build report for the reports feature.
 - **tools.plan_app_lifecycle_window_pass_only.main** (function, lines 201–215, 15 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/plan_databank_grid_wave59_tmp.py`
-
-- **tools.plan_databank_grid_wave59_tmp.dotted** (function, lines 30–37, 8 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_databank_grid_wave59_tmp.main** (function, lines 40–95, 56 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/plan_logger_fallback_pass_only.py`
 
 - **tools.plan_logger_fallback_pass_only._handler_name** (function, lines 54–64, 11 lines, risk `support`): Handles handler name for the other feature.
@@ -2001,11 +1987,6 @@ Scanned **212 Python files**, **78,869 lines**, and **2,538 symbols**.
 - **tools.plan_remaining_pass_only_groups.PassOnlyVisitor.visit_ExceptHandler** (method, lines 130–149, 20 lines, risk `support`): Handles visit ExceptHandler for the payments feature.
 - **tools.plan_remaining_pass_only_groups.build_report** (function, lines 152–193, 42 lines, risk `filesystem`): Builds build report for the reports feature.
 - **tools.plan_remaining_pass_only_groups.main** (function, lines 196–209, 14 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/plan_system_data_navigation_wave59_tmp.py`
-
-- **tools.plan_system_data_navigation_wave59_tmp.dotted** (function, lines 39–46, 8 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_system_data_navigation_wave59_tmp.main** (function, lines 49–106, 58 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_ui_compatibility_pass_only.py`
 
