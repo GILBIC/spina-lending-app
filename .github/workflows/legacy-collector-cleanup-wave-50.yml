@@ -1,0 +1,69 @@
+name: Legacy collector cleanup Wave 50
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/collector_tab_presentation.py"
+      - "tools/test_collector_tab_presentation_wave_44.py"
+      - "tools/test_collector_tab_widget_smoke_wave_44.py"
+      - "tools/test_legacy_collector_cleanup_wave_50.py"
+      - "architecture-map.json"
+      - "docs/architecture/**"
+      - ".github/workflows/legacy-collector-cleanup-wave-50.yml"
+permissions:
+  contents: read
+jobs:
+  validate:
+    if: github.head_ref == 'agent/high-volume-presentation-wave-50'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 90
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Compile application, collector module, and tests
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app/collector_tab_presentation.py
+          python -m py_compile tools/test_legacy_collector_cleanup_wave_50.py
+          python -m py_compile tools/test_collector_tab_presentation_wave_44.py
+          python -m py_compile tools/test_collector_tab_widget_smoke_wave_44.py
+          python -m compileall -q spina_app
+      - name: Run exact legacy-cleanup regression
+        shell: cmd
+        run: python -m tools.test_legacy_collector_cleanup_wave_50
+      - name: Run active collector-tab source regression
+        shell: cmd
+        run: python -m tools.test_collector_tab_presentation_wave_44
+      - name: Run active Collector Route Tkinter smoke test
+        shell: cmd
+        run: python -m tools.test_collector_tab_widget_smoke_wave_44
+      - name: Run protected collector regressions
+        shell: cmd
+        run: |
+          python -m tools.test_collectors_editor_wave_26
+          python -m tools.test_collector_refresh_presentation_wave_39
+          python -m tools.test_collector_dialog_presentation_wave_43
+      - name: Run protected side-navigation regressions
+        shell: cmd
+        run: |
+          python -m tools.test_side_navigation_presentation_wave_48
+          python -m tools.test_side_navigation_widget_smoke_wave_48
+      - name: Validate permanent architecture map
+        shell: cmd
+        run: python -m tools.test_architecture_map
+      - name: Run repository audits
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools/redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-50-redundancy.json
+          python tools/spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts/wave-50-quality.json
+      - name: Upload Wave 50 reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-50-legacy-collector-cleanup-reports
+          path: artifacts/wave-50-*.json
