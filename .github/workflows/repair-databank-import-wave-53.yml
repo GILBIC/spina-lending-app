@@ -37,8 +37,12 @@ jobs:
       - name: Apply guarded import-control repair
         shell: cmd
         run: |
+          if not exist artifacts mkdir artifacts
           python -m py_compile tools\fix_databank_import_control_wave_53.py
-          python tools\fix_databank_import_control_wave_53.py
+          python tools\fix_databank_import_control_wave_53.py > artifacts\wave-53-import-repair-diagnostic.txt 2>&1
+          set REPAIR_RC=%ERRORLEVEL%
+          type artifacts\wave-53-import-repair-diagnostic.txt
+          exit /b %REPAIR_RC%
 
       - name: Commit repaired Data Bank presentation
         shell: cmd
@@ -97,5 +101,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wave-53-databank-import-repair
-          path: artifacts/wave-53-import-repair-*.json
+          path: artifacts/wave-53-import-repair-*
           if-no-files-found: warn
