@@ -27,6 +27,16 @@ jobs:
           ref: agent/high-volume-wave-55-clean
           fetch-depth: 0
           show-progress: false
+      - name: Correct dedented source hash guard
+        shell: powershell
+        run: |
+          $path = 'tools\extract_clients_tab_wave55_tmp.py'
+          $text = Get-Content $path -Raw
+          $old = '    digest = hashlib.sha256(source_text.encode("utf-8")).hexdigest()'
+          $new = "    dedented = textwrap.dedent(source_text)`r`n    digest = hashlib.sha256(dedented.encode(\"utf-8\")).hexdigest()"
+          if (-not $text.Contains($old)) { throw 'Expected digest line not found' }
+          $text = $text.Replace($old, $new)
+          Set-Content -Path $path -Value $text -Encoding UTF8
       - name: Extract guarded Clients-tab boundary
         shell: cmd
         run: python tools\extract_clients_tab_wave55_tmp.py
