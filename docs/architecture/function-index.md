@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `350c33feab7c485079e7ef409ca3f2023ff53362`.
+Generated from commit `c09256778fb513c7841fae69843cb2613e02dac1`.
 
-Scanned **195 Python files**, **77,620 lines**, and **2,467 symbols**.
+Scanned **194 Python files**, **77,290 lines**, and **2,462 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1619,18 +1619,6 @@ Scanned **195 Python files**, **77,620 lines**, and **2,467 symbols**.
 - **tools.extract_append_unique_text.apply_extraction** (function, lines 101–130, 30 lines, risk `filesystem`): Handles apply extraction for the other feature.
 - **tools.extract_append_unique_text.main** (function, lines 133–145, 13 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/extract_audit_presentation_wave_54.py`
-
-- **tools.extract_audit_presentation_wave_54.dotted** (function, lines 34–40, 7 lines, risk `support`): Handles dotted for the other feature.
-- **tools.extract_audit_presentation_wave_54.normalized** (function, lines 43–44, 2 lines, risk `support`): Handles normalized for the utilities feature.
-- **tools.extract_audit_presentation_wave_54.source_hash** (function, lines 47–48, 2 lines, risk `support`): Handles source hash for the other feature.
-- **tools.extract_audit_presentation_wave_54.identifier_names** (function, lines 51–56, 6 lines, risk `support`): Handles identifier names for the other feature.
-- **tools.extract_audit_presentation_wave_54.assert_presentation_only** (function, lines 59–69, 11 lines, risk `support`): Handles assert presentation only for the other feature.
-- **tools.extract_audit_presentation_wave_54.direct_app_methods** (function, lines 72–80, 9 lines, risk `support`): Handles direct app methods for the other feature.
-- **tools.extract_audit_presentation_wave_54.build_module** (function, lines 83–118, 36 lines, risk `support`): Builds build module for the other feature.
-- **tools.extract_audit_presentation_wave_54.build_test** (function, lines 121–223, 103 lines, risk `support`): Builds build test for the other feature.
-- **tools.extract_audit_presentation_wave_54.main** (function, lines 226–287, 62 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/extract_cilog_action_label.py`
 
 - **tools.extract_cilog_action_label._local_names** (function, lines 20–31, 12 lines, risk `support`): Handles local names for the other feature.
@@ -1865,23 +1853,6 @@ Scanned **195 Python files**, **77,620 lines**, and **2,467 symbols**.
 - **tools.plan_app_lifecycle_window_pass_only.build_report** (function, lines 160–198, 39 lines, risk `filesystem`): Builds build report for the reports feature.
 - **tools.plan_app_lifecycle_window_pass_only.main** (function, lines 201–215, 15 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/plan_high_volume_wave_54.py`
-
-- **tools.plan_high_volume_wave_54.dotted** (function, lines 43–49, 7 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_high_volume_wave_54.owner_name** (function, lines 52–54, 3 lines, risk `support`): Handles owner name for the other feature.
-- **tools.plan_high_volume_wave_54.identifier_names** (function, lines 57–62, 6 lines, risk `support`): Handles identifier names for the other feature.
-- **tools.plan_high_volume_wave_54.financial_operation_hits** (function, lines 65–71, 7 lines, risk `support`): Handles financial operation hits for the other feature.
-- **tools.plan_high_volume_wave_54.feature_group** (function, lines 74–94, 21 lines, risk `support`): Handles feature group for the other feature.
-- **tools.plan_high_volume_wave_54.Collector** (class, lines 97–137, 41 lines, risk `container`): Groups Collector for the collectors feature.
-- **tools.plan_high_volume_wave_54.Collector.__init__** (method, lines 98–103, 6 lines, risk `support`): Handles init for the collectors feature.
-- **tools.plan_high_volume_wave_54.Collector.visit_ClassDef** (method, lines 105–108, 4 lines, risk `support`): Handles visit ClassDef for the collectors feature.
-- **tools.plan_high_volume_wave_54.Collector._visit_function** (method, lines 110–115, 6 lines, risk `support`): Handles visit function for the collectors feature.
-- **tools.plan_high_volume_wave_54.Collector.visit_Name** (method, lines 120–123, 4 lines, risk `support`): Handles visit Name for the collectors feature.
-- **tools.plan_high_volume_wave_54.Collector.visit_Attribute** (method, lines 125–128, 4 lines, risk `support`): Handles visit Attribute for the collectors feature.
-- **tools.plan_high_volume_wave_54.Collector.visit_Assign** (method, lines 130–137, 8 lines, risk `support`): Handles visit Assign for the collectors feature.
-- **tools.plan_high_volume_wave_54.analyze_candidate** (function, lines 140–185, 46 lines, risk `support`): Handles analyze candidate for the other feature.
-- **tools.plan_high_volume_wave_54.main** (function, lines 188–256, 69 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/plan_logger_fallback_pass_only.py`
 
 - **tools.plan_logger_fallback_pass_only._handler_name** (function, lines 54–64, 11 lines, risk `support`): Handles handler name for the other feature.
@@ -2100,6 +2071,27 @@ Scanned **195 Python files**, **77,620 lines**, and **2,467 symbols**.
 - **tools.test_audit_presentation_wave_54.dotted** (function, lines 23–29, 7 lines, risk `support`): Handles dotted for the other feature.
 - **tools.test_audit_presentation_wave_54.functions** (function, lines 32–33, 2 lines, risk `support`): Handles functions for the other feature.
 - **tools.test_audit_presentation_wave_54.main** (function, lines 36–97, 62 lines, risk `filesystem`): Handles main for the other feature.
+
+## `tools/test_audit_widget_smoke_wave_54.py`
+
+- **tools.test_audit_widget_smoke_wave_54.walk** (function, lines 15–18, 4 lines, risk `support`): Handles walk for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.widget_texts** (function, lines 21–30, 10 lines, risk `support`): Handles widget texts for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.FakeDB** (class, lines 33–84, 52 lines, risk `container`): Groups FakeDB for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.FakeDB.__init__** (method, lines 34–76, 43 lines, risk `support`): Handles init for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.FakeDB.get_audit_new_loan_rows** (method, lines 78–80, 3 lines, risk `support`): Retrieves get audit new loan rows for the loans feature.
+- **tools.test_audit_widget_smoke_wave_54.FakeDB.get_audit_renewal_rows** (method, lines 82–84, 3 lines, risk `financial_calculation`): Retrieves get audit renewal rows for the loans feature.
+- **tools.test_audit_widget_smoke_wave_54.DummyAuditApp** (class, lines 87–132, 46 lines, risk `container`): Groups DummyAuditApp for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.DummyAuditApp.__init__** (method, lines 88–95, 8 lines, risk `ui_only`): Handles init for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_tree_factory** (method, lines 97–108, 12 lines, risk `ui_only`): Handles audit tree factory for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_show_selected** (method, lines 110–111, 2 lines, risk `support`): Handles audit show selected for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_today** (method, lines 113–114, 2 lines, risk `support`): Handles audit set today for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_last7** (method, lines 116–117, 2 lines, risk `support`): Handles audit set last7 for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_all** (method, lines 119–120, 2 lines, risk `support`): Handles audit set all for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_parse_date_filters** (method, lines 122–123, 2 lines, risk `support`): Handles audit parse date filters for the utilities feature.
+- **tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_money_text** (method, lines 125–129, 5 lines, risk `support`): Handles audit money text for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_detail_text** (method, lines 131–132, 2 lines, risk `support`): Handles audit set detail text for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.button_by_text** (function, lines 135–143, 9 lines, risk `ui_only`): Handles button by text for the other feature.
+- **tools.test_audit_widget_smoke_wave_54.main** (function, lines 146–217, 72 lines, risk `financial_calculation`): Handles main for the other feature.
 
 ## `tools/test_base_theme_palette_batch_11.py`
 

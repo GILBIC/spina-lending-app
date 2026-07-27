@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "350c33feab7c485079e7ef409ca3f2023ff53362",
+  "generated_from_commit": "c09256778fb513c7841fae69843cb2613e02dac1",
   "indexes": {
     "application_callbacks": [
       {
@@ -5348,6 +5348,9 @@
       }
     ],
     "application_possible_orphans": [
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10852:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_parse_date_filters",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10911:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_tree_factory",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10939:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_show_selected",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11483:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.toggle_theme",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11674:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._create_postgres_backup_file",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1173:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._init_logger",
@@ -5421,6 +5424,7 @@
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36242:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36291:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:495:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_patch_reportlab_canvas_save",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:5265:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_audit_renewal_rows",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:541:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__iter__",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:630:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatCursor.connection",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:6790:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_route_adv_marker_for",
@@ -9672,6 +9676,18 @@
       },
       {
         "kind": "command",
+        "line": 104,
+        "owner": "tools/test_audit_widget_smoke_wave_54.py:97:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_tree_factory",
+        "target": "tree.yview"
+      },
+      {
+        "kind": "yscrollcommand",
+        "line": 105,
+        "owner": "tools/test_audit_widget_smoke_wave_54.py:97:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_tree_factory",
+        "target": "scrollbar.set"
+      },
+      {
+        "kind": "command",
         "line": 38,
         "owner": "tools/test_collector_tab_widget_smoke_wave_44.py:36:tools.test_collector_tab_widget_smoke_wave_44._route_button",
         "target": "command"
@@ -9949,6 +9965,10 @@
         "tools/test_cash_control_feature_wave_21.py:30:tools.test_cash_control_feature_wave_21.FakeCanvas",
         "tools/test_ui_display_helper_batch.py:36:tools.test_ui_display_helper_batch.FakeCanvas"
       ],
+      "FakeDB": [
+        "tools/test_audit_widget_smoke_wave_54.py:33:tools.test_audit_widget_smoke_wave_54.FakeDB",
+        "tools/test_clients_feature_wave_19.py:57:tools.test_clients_feature_wave_19.FakeDB"
+      ],
       "FakeLabel": [
         "tools/test_clients_feature_wave_19.py:34:tools.test_clients_feature_wave_19.FakeLabel",
         "tools/test_display_ui_helper_batch_04.py:51:tools.test_display_ui_helper_batch_04.FakeLabel",
@@ -10071,7 +10091,6 @@
         "tools/audit_pg_backup_action_flow.py:94:tools.audit_pg_backup_action_flow.Visitor.__init__",
         "tools/inspect_blocking_ui_context.py:87:tools.inspect_blocking_ui_context.BlockingContextVisitor.__init__",
         "tools/plan_app_lifecycle_window_pass_only.py:107:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.__init__",
-        "tools/plan_high_volume_wave_54.py:98:tools.plan_high_volume_wave_54.Collector.__init__",
         "tools/plan_logger_fallback_pass_only.py:85:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.__init__",
         "tools/plan_login_dialog_pass_only.py:131:tools.plan_login_dialog_pass_only.PassOnlyVisitor.__init__",
         "tools/plan_modern_ui_pass_only_cleanup.py:100:tools.plan_modern_ui_pass_only_cleanup.PassOnlyVisitor.__init__",
@@ -10079,6 +10098,8 @@
         "tools/plan_queue_empty_pass_only.py:80:tools.plan_queue_empty_pass_only.PassOnlyVisitor.__init__",
         "tools/plan_remaining_pass_only_groups.py:109:tools.plan_remaining_pass_only_groups.PassOnlyVisitor.__init__",
         "tools/plan_ui_compatibility_pass_only.py:139:tools.plan_ui_compatibility_pass_only.PassOnlyVisitor.__init__",
+        "tools/test_audit_widget_smoke_wave_54.py:34:tools.test_audit_widget_smoke_wave_54.FakeDB.__init__",
+        "tools/test_audit_widget_smoke_wave_54.py:88:tools.test_audit_widget_smoke_wave_54.DummyAuditApp.__init__",
         "tools/test_base_theme_palette_batch_11.py:31:tools.test_base_theme_palette_batch_11.Holder.__init__",
         "tools/test_cash_control_feature_wave_21.py:31:tools.test_cash_control_feature_wave_21.FakeCanvas.__init__",
         "tools/test_cash_control_feature_wave_21.py:56:tools.test_cash_control_feature_wave_21.Dummy.__init__",
@@ -10164,6 +10185,38 @@
         "tools/extract_fmt_currency_module.py:100:tools.extract_fmt_currency_module._atomic_write",
         "tools/extract_numeric_parsers.py:197:tools.extract_numeric_parsers._atomic_write",
         "tools/extract_text_normalizers.py:262:tools.extract_text_normalizers._atomic_write"
+      ],
+      "_audit_money_text": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10843:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_money_text",
+        "tools/test_audit_widget_smoke_wave_54.py:125:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_money_text"
+      ],
+      "_audit_parse_date_filters": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10852:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_parse_date_filters",
+        "tools/test_audit_widget_smoke_wave_54.py:122:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_parse_date_filters"
+      ],
+      "_audit_set_all": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10903:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_all",
+        "tools/test_audit_widget_smoke_wave_54.py:119:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_all"
+      ],
+      "_audit_set_detail_text": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10930:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_detail_text",
+        "tools/test_audit_widget_smoke_wave_54.py:131:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_detail_text"
+      ],
+      "_audit_set_last7": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10892:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_last7",
+        "tools/test_audit_widget_smoke_wave_54.py:116:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_last7"
+      ],
+      "_audit_set_today": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10882:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_today",
+        "tools/test_audit_widget_smoke_wave_54.py:113:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_today"
+      ],
+      "_audit_show_selected": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10939:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_show_selected",
+        "tools/test_audit_widget_smoke_wave_54.py:110:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_show_selected"
+      ],
+      "_audit_tree_factory": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10911:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_tree_factory",
+        "tools/test_audit_widget_smoke_wave_54.py:97:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_tree_factory"
       ],
       "_behavior": [
         "tools/test_cilog_action_label_extraction.py:53:tools.test_cilog_action_label_extraction._behavior",
@@ -10856,10 +10909,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:7502:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._verify_login",
         "tools/test_login_dialog_widget_smoke_wave_45.py:53:tools.test_login_dialog_widget_smoke_wave_45.DummyApp._verify_login"
       ],
-      "_visit_function": [
-        "tools/audit_pg_backup_action_flow.py:111:tools.audit_pg_backup_action_flow.Visitor._visit_function",
-        "tools/plan_high_volume_wave_54.py:110:tools.plan_high_volume_wave_54.Collector._visit_function"
-      ],
       "_widget_summary": [
         "tools/test_cash_control_ui_controls_batch_09.py:147:tools.test_cash_control_ui_controls_batch_09._widget_summary",
         "tools/test_cilog_ui_controls_batch_10.py:143:tools.test_cilog_ui_controls_batch_10._widget_summary",
@@ -10927,10 +10976,6 @@
         "tools/extract_note_dict_helper.py:112:tools.extract_note_dict_helper.apply_extraction",
         "tools/extract_numeric_parsers.py:209:tools.extract_numeric_parsers.apply_extraction",
         "tools/extract_text_normalizers.py:274:tools.extract_text_normalizers.apply_extraction"
-      ],
-      "assert_presentation_only": [
-        "tools/extract_audit_presentation_wave_54.py:59:tools.extract_audit_presentation_wave_54.assert_presentation_only",
-        "tools/test_databank_presentation_wave_49.py:170:tools.test_databank_presentation_wave_49.assert_presentation_only"
       ],
       "atomic_write": [
         "tools/extract_append_unique_text.py:21:tools.extract_append_unique_text.atomic_write",
@@ -11100,8 +11145,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:24564:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.do_link"
       ],
       "dotted": [
-        "tools/extract_audit_presentation_wave_54.py:34:tools.extract_audit_presentation_wave_54.dotted",
-        "tools/plan_high_volume_wave_54.py:43:tools.plan_high_volume_wave_54.dotted",
         "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
         "tools/test_audit_presentation_wave_54.py:23:tools.test_audit_presentation_wave_54.dotted",
         "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted",
@@ -11173,6 +11216,14 @@
         "tools/test_databank_presentation_wave_49.py:185:tools.test_databank_presentation_wave_49.FakeVar.get",
         "tools/test_legacy_dashboard_controls_batch_15.py:38:tools.test_legacy_dashboard_controls_batch_15.FakeStringVar.get"
       ],
+      "get_audit_new_loan_rows": [
+        "spina_app/loan_context_queries.py:45:spina_app.loan_context_queries.get_audit_new_loan_rows",
+        "tools/test_audit_widget_smoke_wave_54.py:78:tools.test_audit_widget_smoke_wave_54.FakeDB.get_audit_new_loan_rows"
+      ],
+      "get_audit_renewal_rows": [
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:5265:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_audit_renewal_rows",
+        "tools/test_audit_widget_smoke_wave_54.py:82:tools.test_audit_widget_smoke_wave_54.FakeDB.get_audit_renewal_rows"
+      ],
       "get_children": [
         "tools/test_clients_feature_wave_19.py:53:tools.test_clients_feature_wave_19.FakeTree.get_children",
         "tools/test_collectors_editor_wave_26.py:78:tools.test_collectors_editor_wave_26.FakeTree.get_children",
@@ -11202,10 +11253,6 @@
       "hide": [
         "tools/test_dashboard_presentation_wave_28.py:83:tools.test_dashboard_presentation_wave_28.FakeNotebook.hide",
         "tools/test_navigation_databank_shell_wave_29.py:154:tools.test_navigation_databank_shell_wave_29.FakeNotebook.hide"
-      ],
-      "identifier_names": [
-        "tools/extract_audit_presentation_wave_54.py:51:tools.extract_audit_presentation_wave_54.identifier_names",
-        "tools/plan_high_volume_wave_54.py:57:tools.plan_high_volume_wave_54.identifier_names"
       ],
       "insert": [
         "spina_app/area_hierarchy_ui.py:413:spina_app.area_hierarchy_ui._select_parent_area.insert",
@@ -11273,7 +11320,6 @@
         "tools/cleanup_stale_databank_generated_blocks.py:337:tools.cleanup_stale_databank_generated_blocks.main",
         "tools/disable_full_daily_ledger.py:403:tools.disable_full_daily_ledger.main",
         "tools/extract_append_unique_text.py:133:tools.extract_append_unique_text.main",
-        "tools/extract_audit_presentation_wave_54.py:226:tools.extract_audit_presentation_wave_54.main",
         "tools/extract_cilog_action_label.py:126:tools.extract_cilog_action_label.main",
         "tools/extract_cilog_diff_pairs.py:187:tools.extract_cilog_diff_pairs.main",
         "tools/extract_cilog_value_formatter.py:143:tools.extract_cilog_value_formatter.main",
@@ -11293,7 +11339,6 @@
         "tools/inspect_blocking_ui_context.py:159:tools.inspect_blocking_ui_context.main",
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
-        "tools/plan_high_volume_wave_54.py:188:tools.plan_high_volume_wave_54.main",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_login_dialog_pass_only.py:243:tools.plan_login_dialog_pass_only.main",
         "tools/plan_modern_ui_pass_only_cleanup.py:199:tools.plan_modern_ui_pass_only_cleanup.main",
@@ -11313,6 +11358,7 @@
         "tools/test_architecture_map.py:29:tools.test_architecture_map.main",
         "tools/test_area_picker_presentation_wave_37.py:36:tools.test_area_picker_presentation_wave_37.main",
         "tools/test_audit_presentation_wave_54.py:36:tools.test_audit_presentation_wave_54.main",
+        "tools/test_audit_widget_smoke_wave_54.py:146:tools.test_audit_widget_smoke_wave_54.main",
         "tools/test_base_theme_palette_batch_11.py:151:tools.test_base_theme_palette_batch_11.main",
         "tools/test_calendar_presentation_wave_41.py:34:tools.test_calendar_presentation_wave_41.main",
         "tools/test_cash_control_feature_wave_21.py:62:tools.test_cash_control_feature_wave_21.main",
@@ -11412,7 +11458,6 @@
         "tools/test_databank_widget_smoke_wave_49.py:61:tools.test_databank_widget_smoke_wave_49.DummyApp.next_month"
       ],
       "normalized": [
-        "tools/extract_audit_presentation_wave_54.py:43:tools.extract_audit_presentation_wave_54.normalized",
         "tools/test_account_header_presentation_wave_46.py:45:tools.test_account_header_presentation_wave_46.normalized",
         "tools/test_area_picker_presentation_wave_37.py:18:tools.test_area_picker_presentation_wave_37.normalized",
         "tools/test_audit_presentation_wave_54.py:15:tools.test_audit_presentation_wave_54.normalized",
@@ -11586,7 +11631,6 @@
         "tools/test_ui_button_factories_wave_50.py:78:tools.test_ui_button_factories_wave_50.source_for"
       ],
       "source_hash": [
-        "tools/extract_audit_presentation_wave_54.py:47:tools.extract_audit_presentation_wave_54.source_hash",
         "tools/test_audit_presentation_wave_54.py:19:tools.test_audit_presentation_wave_54.source_hash",
         "tools/test_client_read_queries_wave_31.py:20:tools.test_client_read_queries_wave_31.source_hash",
         "tools/test_clients_read_presentation_wave_30.py:46:tools.test_clients_read_presentation_wave_30.source_hash",
@@ -11648,7 +11692,6 @@
         "tools/audit_pg_backup_action_flow.py:100:tools.audit_pg_backup_action_flow.Visitor.visit_ClassDef",
         "tools/inspect_blocking_ui_context.py:96:tools.inspect_blocking_ui_context.BlockingContextVisitor.visit_ClassDef",
         "tools/plan_app_lifecycle_window_pass_only.py:116:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_ClassDef",
-        "tools/plan_high_volume_wave_54.py:105:tools.plan_high_volume_wave_54.Collector.visit_ClassDef",
         "tools/plan_logger_fallback_pass_only.py:91:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_ClassDef",
         "tools/plan_login_dialog_pass_only.py:150:tools.plan_login_dialog_pass_only.PassOnlyVisitor.visit_ClassDef",
         "tools/plan_modern_ui_pass_only_cleanup.py:114:tools.plan_modern_ui_pass_only_cleanup.PassOnlyVisitor.visit_ClassDef",
@@ -11690,7 +11733,12 @@
         "spina_app/area_hierarchy_ui.py:93:spina_app.area_hierarchy_ui._refresh_folder_icons.walk",
         "spina_app/area_hierarchy_ui.py:105:spina_app.area_hierarchy_ui._set_all_folders.walk",
         "tools/audit_pass_only_exceptions.py:65:tools.audit_pass_only_exceptions.audit.walk",
+        "tools/test_audit_widget_smoke_wave_54.py:15:tools.test_audit_widget_smoke_wave_54.walk",
         "tools/test_databank_import_control_wave_53.py:19:tools.test_databank_import_control_wave_53.walk"
+      ],
+      "widget_texts": [
+        "tools/test_audit_widget_smoke_wave_54.py:21:tools.test_audit_widget_smoke_wave_54.widget_texts",
+        "tools/test_databank_widget_smoke_wave_49.py:15:tools.test_databank_widget_smoke_wave_49.widget_texts"
       ]
     },
     "features": {
@@ -12178,13 +12226,6 @@
         "spina_app/ui_controls.py:133:spina_app.ui_controls._spina_v27_style_route_trees",
         "spina_app/ui_controls.py:197:spina_app.ui_controls._spina_v27_route_button",
         "spina_app/utilities/text.py:16:spina_app.utilities.text._spina_route_notice_norm_name",
-        "tools/plan_high_volume_wave_54.py:105:tools.plan_high_volume_wave_54.Collector.visit_ClassDef",
-        "tools/plan_high_volume_wave_54.py:110:tools.plan_high_volume_wave_54.Collector._visit_function",
-        "tools/plan_high_volume_wave_54.py:120:tools.plan_high_volume_wave_54.Collector.visit_Name",
-        "tools/plan_high_volume_wave_54.py:125:tools.plan_high_volume_wave_54.Collector.visit_Attribute",
-        "tools/plan_high_volume_wave_54.py:130:tools.plan_high_volume_wave_54.Collector.visit_Assign",
-        "tools/plan_high_volume_wave_54.py:97:tools.plan_high_volume_wave_54.Collector",
-        "tools/plan_high_volume_wave_54.py:98:tools.plan_high_volume_wave_54.Collector.__init__",
         "tools/test_client_route_tree_style_batch_12.py:74:tools.test_client_route_tree_style_batch_12._route_palette",
         "tools/test_collector_route_card_batch_13.py:70:tools.test_collector_route_card_batch_13._route_palette",
         "tools/test_collector_tab_widget_smoke_wave_44.py:101:tools.test_collector_tab_widget_smoke_wave_44.FakeCollectorApp._show_unassigned_areas",
@@ -12467,7 +12508,9 @@
         "spina_app/loan_context_queries.py:33:spina_app.loan_context_queries.set_default_loan_type",
         "spina_app/loan_context_queries.py:40:spina_app.loan_context_queries._effective_lt",
         "spina_app/loan_context_queries.py:45:spina_app.loan_context_queries.get_audit_new_loan_rows",
-        "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies"
+        "spina_app/loan_context_queries.py:5:spina_app.loan_context_queries.configure_loan_context_dependencies",
+        "tools/test_audit_widget_smoke_wave_54.py:78:tools.test_audit_widget_smoke_wave_54.FakeDB.get_audit_new_loan_rows",
+        "tools/test_audit_widget_smoke_wave_54.py:82:tools.test_audit_widget_smoke_wave_54.FakeDB.get_audit_renewal_rows"
       ],
       "navigation": [
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:12240:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._build_header",
@@ -12995,14 +13038,6 @@
         "tools/extract_append_unique_text.py:33:tools.extract_append_unique_text.top_level_functions",
         "tools/extract_append_unique_text.py:38:tools.extract_append_unique_text.external_names",
         "tools/extract_append_unique_text.py:54:tools.extract_append_unique_text.build_plan",
-        "tools/extract_audit_presentation_wave_54.py:121:tools.extract_audit_presentation_wave_54.build_test",
-        "tools/extract_audit_presentation_wave_54.py:226:tools.extract_audit_presentation_wave_54.main",
-        "tools/extract_audit_presentation_wave_54.py:34:tools.extract_audit_presentation_wave_54.dotted",
-        "tools/extract_audit_presentation_wave_54.py:47:tools.extract_audit_presentation_wave_54.source_hash",
-        "tools/extract_audit_presentation_wave_54.py:51:tools.extract_audit_presentation_wave_54.identifier_names",
-        "tools/extract_audit_presentation_wave_54.py:59:tools.extract_audit_presentation_wave_54.assert_presentation_only",
-        "tools/extract_audit_presentation_wave_54.py:72:tools.extract_audit_presentation_wave_54.direct_app_methods",
-        "tools/extract_audit_presentation_wave_54.py:83:tools.extract_audit_presentation_wave_54.build_module",
         "tools/extract_cilog_action_label.py:114:tools.extract_cilog_action_label.apply",
         "tools/extract_cilog_action_label.py:126:tools.extract_cilog_action_label.main",
         "tools/extract_cilog_action_label.py:20:tools.extract_cilog_action_label._local_names",
@@ -13162,13 +13197,6 @@
         "tools/plan_app_lifecycle_window_pass_only.py:72:tools.plan_app_lifecycle_window_pass_only._context_text",
         "tools/plan_app_lifecycle_window_pass_only.py:76:tools.plan_app_lifecycle_window_pass_only._protected",
         "tools/plan_app_lifecycle_window_pass_only.py:80:tools.plan_app_lifecycle_window_pass_only._classify",
-        "tools/plan_high_volume_wave_54.py:140:tools.plan_high_volume_wave_54.analyze_candidate",
-        "tools/plan_high_volume_wave_54.py:188:tools.plan_high_volume_wave_54.main",
-        "tools/plan_high_volume_wave_54.py:43:tools.plan_high_volume_wave_54.dotted",
-        "tools/plan_high_volume_wave_54.py:52:tools.plan_high_volume_wave_54.owner_name",
-        "tools/plan_high_volume_wave_54.py:57:tools.plan_high_volume_wave_54.identifier_names",
-        "tools/plan_high_volume_wave_54.py:65:tools.plan_high_volume_wave_54.financial_operation_hits",
-        "tools/plan_high_volume_wave_54.py:74:tools.plan_high_volume_wave_54.feature_group",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_logger_fallback_pass_only.py:54:tools.plan_logger_fallback_pass_only._handler_name",
         "tools/plan_logger_fallback_pass_only.py:71:tools.plan_logger_fallback_pass_only._context",
@@ -13264,6 +13292,21 @@
         "tools/test_audit_presentation_wave_54.py:23:tools.test_audit_presentation_wave_54.dotted",
         "tools/test_audit_presentation_wave_54.py:32:tools.test_audit_presentation_wave_54.functions",
         "tools/test_audit_presentation_wave_54.py:36:tools.test_audit_presentation_wave_54.main",
+        "tools/test_audit_widget_smoke_wave_54.py:110:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_show_selected",
+        "tools/test_audit_widget_smoke_wave_54.py:113:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_today",
+        "tools/test_audit_widget_smoke_wave_54.py:116:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_last7",
+        "tools/test_audit_widget_smoke_wave_54.py:119:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_all",
+        "tools/test_audit_widget_smoke_wave_54.py:125:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_money_text",
+        "tools/test_audit_widget_smoke_wave_54.py:131:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_detail_text",
+        "tools/test_audit_widget_smoke_wave_54.py:135:tools.test_audit_widget_smoke_wave_54.button_by_text",
+        "tools/test_audit_widget_smoke_wave_54.py:146:tools.test_audit_widget_smoke_wave_54.main",
+        "tools/test_audit_widget_smoke_wave_54.py:15:tools.test_audit_widget_smoke_wave_54.walk",
+        "tools/test_audit_widget_smoke_wave_54.py:21:tools.test_audit_widget_smoke_wave_54.widget_texts",
+        "tools/test_audit_widget_smoke_wave_54.py:33:tools.test_audit_widget_smoke_wave_54.FakeDB",
+        "tools/test_audit_widget_smoke_wave_54.py:34:tools.test_audit_widget_smoke_wave_54.FakeDB.__init__",
+        "tools/test_audit_widget_smoke_wave_54.py:87:tools.test_audit_widget_smoke_wave_54.DummyAuditApp",
+        "tools/test_audit_widget_smoke_wave_54.py:88:tools.test_audit_widget_smoke_wave_54.DummyAuditApp.__init__",
+        "tools/test_audit_widget_smoke_wave_54.py:97:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_tree_factory",
         "tools/test_base_theme_palette_batch_11.py:112:tools.test_base_theme_palette_batch_11._capture_call",
         "tools/test_base_theme_palette_batch_11.py:128:tools.test_base_theme_palette_batch_11.capture_batch",
         "tools/test_base_theme_palette_batch_11.py:151:tools.test_base_theme_palette_batch_11.main",
@@ -14148,7 +14191,6 @@
         "tools/cleanup_stale_databank_generated_blocks.py:231:tools.cleanup_stale_databank_generated_blocks._candidate_range_for_reference",
         "tools/cleanup_stale_databank_generated_blocks.py:297:tools.cleanup_stale_databank_generated_blocks._format_terms",
         "tools/extract_append_unique_text.py:87:tools.extract_append_unique_text.validate_plan",
-        "tools/extract_audit_presentation_wave_54.py:43:tools.extract_audit_presentation_wave_54.normalized",
         "tools/extract_cilog_diff_pairs.py:59:tools.extract_cilog_diff_pairs._validate_node",
         "tools/extract_cilog_value_formatter.py:48:tools.extract_cilog_value_formatter._validate",
         "tools/extract_date_display_helpers.py:81:tools.extract_date_display_helpers._validate_signature",
@@ -14162,6 +14204,7 @@
         "tools/test_append_unique_text_extraction.py:36:tools.test_append_unique_text_extraction.load_helper",
         "tools/test_area_picker_presentation_wave_37.py:18:tools.test_area_picker_presentation_wave_37.normalized",
         "tools/test_audit_presentation_wave_54.py:15:tools.test_audit_presentation_wave_54.normalized",
+        "tools/test_audit_widget_smoke_wave_54.py:122:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_parse_date_filters",
         "tools/test_calendar_presentation_wave_41.py:20:tools.test_calendar_presentation_wave_41.normalized",
         "tools/test_client_form_presentation_wave_38.py:18:tools.test_client_form_presentation_wave_38.normalized",
         "tools/test_client_history_presentation_wave_36.py:19:tools.test_client_history_presentation_wave_36.normalized",
@@ -15912,6 +15955,9 @@
       }
     ],
     "possible_orphans": [
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10852:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_parse_date_filters",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10911:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_tree_factory",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10939:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_show_selected",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11483:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.toggle_theme",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:11674:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._create_postgres_backup_file",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:1173:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._init_logger",
@@ -15985,6 +16031,7 @@
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36242:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:36291:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:495:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_pg_patch_reportlab_canvas_save",
+      "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:5265:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_audit_renewal_rows",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:541:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatRow.__iter__",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:630:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._PgCompatCursor.connection",
       "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:6790:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_route_adv_marker_for",
@@ -16059,11 +16106,6 @@
       "tools/plan_app_lifecycle_window_pass_only.py:121:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_FunctionDef",
       "tools/plan_app_lifecycle_window_pass_only.py:126:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_AsyncFunctionDef",
       "tools/plan_app_lifecycle_window_pass_only.py:131:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_Try",
-      "tools/plan_high_volume_wave_54.py:105:tools.plan_high_volume_wave_54.Collector.visit_ClassDef",
-      "tools/plan_high_volume_wave_54.py:110:tools.plan_high_volume_wave_54.Collector._visit_function",
-      "tools/plan_high_volume_wave_54.py:120:tools.plan_high_volume_wave_54.Collector.visit_Name",
-      "tools/plan_high_volume_wave_54.py:125:tools.plan_high_volume_wave_54.Collector.visit_Attribute",
-      "tools/plan_high_volume_wave_54.py:130:tools.plan_high_volume_wave_54.Collector.visit_Assign",
       "tools/plan_logger_fallback_pass_only.py:101:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_AsyncFunctionDef",
       "tools/plan_logger_fallback_pass_only.py:106:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_Try",
       "tools/plan_logger_fallback_pass_only.py:91:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_ClassDef",
@@ -16096,6 +16138,12 @@
       "tools/spina_quality_audit.py:83:tools.spina_quality_audit._sql_literal",
       "tools/spina_quality_audit.py:95:tools.spina_quality_audit._risk_area",
       "tools/test_audit_presentation_wave_54.py:32:tools.test_audit_presentation_wave_54.functions",
+      "tools/test_audit_widget_smoke_wave_54.py:110:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_show_selected",
+      "tools/test_audit_widget_smoke_wave_54.py:122:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_parse_date_filters",
+      "tools/test_audit_widget_smoke_wave_54.py:125:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_money_text",
+      "tools/test_audit_widget_smoke_wave_54.py:131:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_detail_text",
+      "tools/test_audit_widget_smoke_wave_54.py:82:tools.test_audit_widget_smoke_wave_54.FakeDB.get_audit_renewal_rows",
+      "tools/test_audit_widget_smoke_wave_54.py:97:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_tree_factory",
       "tools/test_base_theme_palette_batch_11.py:37:tools.test_base_theme_palette_batch_11.BadString.__str__",
       "tools/test_cash_control_feature_wave_21.py:36:tools.test_cash_control_feature_wave_21.FakeCanvas.delete",
       "tools/test_cash_control_feature_wave_21.py:39:tools.test_cash_control_feature_wave_21.FakeCanvas.configure",
@@ -16299,7 +16347,6 @@
         "tools/cleanup_pure_login_dialog_ui_pass_only.py:92:tools.cleanup_pure_login_dialog_ui_pass_only.ParentSetter",
         "tools/inspect_blocking_ui_context.py:86:tools.inspect_blocking_ui_context.BlockingContextVisitor",
         "tools/plan_app_lifecycle_window_pass_only.py:106:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor",
-        "tools/plan_high_volume_wave_54.py:97:tools.plan_high_volume_wave_54.Collector",
         "tools/plan_logger_fallback_pass_only.py:84:tools.plan_logger_fallback_pass_only.PassOnlyVisitor",
         "tools/plan_login_dialog_pass_only.py:130:tools.plan_login_dialog_pass_only.PassOnlyVisitor",
         "tools/plan_modern_ui_pass_only_cleanup.py:99:tools.plan_modern_ui_pass_only_cleanup.PassOnlyVisitor",
@@ -16309,6 +16356,8 @@
         "tools/plan_ui_compatibility_pass_only.py:138:tools.plan_ui_compatibility_pass_only.PassOnlyVisitor",
         "tools/spina_startup_diagnostics.py:17:tools.spina_startup_diagnostics.CheckResult",
         "tools/test_account_header_widget_smoke_wave_46.py:14:tools.test_account_header_widget_smoke_wave_46.Harness",
+        "tools/test_audit_widget_smoke_wave_54.py:33:tools.test_audit_widget_smoke_wave_54.FakeDB",
+        "tools/test_audit_widget_smoke_wave_54.py:87:tools.test_audit_widget_smoke_wave_54.DummyAuditApp",
         "tools/test_base_theme_palette_batch_11.py:30:tools.test_base_theme_palette_batch_11.Holder",
         "tools/test_base_theme_palette_batch_11.py:36:tools.test_base_theme_palette_batch_11.BadString",
         "tools/test_cash_control_feature_wave_21.py:30:tools.test_cash_control_feature_wave_21.FakeCanvas",
@@ -16661,7 +16710,6 @@
         "tools/extract_append_unique_text.py:133:tools.extract_append_unique_text.main",
         "tools/extract_append_unique_text.py:21:tools.extract_append_unique_text.atomic_write",
         "tools/extract_append_unique_text.py:54:tools.extract_append_unique_text.build_plan",
-        "tools/extract_audit_presentation_wave_54.py:226:tools.extract_audit_presentation_wave_54.main",
         "tools/extract_cilog_action_label.py:126:tools.extract_cilog_action_label.main",
         "tools/extract_cilog_action_label.py:44:tools.extract_cilog_action_label._atomic_write",
         "tools/extract_cilog_action_label.py:56:tools.extract_cilog_action_label.build_plan",
@@ -16714,7 +16762,6 @@
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
         "tools/plan_app_lifecycle_window_pass_only.py:160:tools.plan_app_lifecycle_window_pass_only.build_report",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
-        "tools/plan_high_volume_wave_54.py:188:tools.plan_high_volume_wave_54.main",
         "tools/plan_logger_fallback_pass_only.py:136:tools.plan_logger_fallback_pass_only.build_report",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_login_dialog_pass_only.py:243:tools.plan_login_dialog_pass_only.main",
@@ -16919,7 +16966,9 @@
         "spina_app/audit_presentation.py:92:spina_app.audit_presentation.refresh_audit_tab",
         "spina_app/client_form_presentation.py:423:spina_app.client_form_presentation._app__client_form._compute_dates",
         "spina_app/client_form_presentation.py:479:spina_app.client_form_presentation._app__client_form.save",
-        "spina_app/dashboard_chart_presentation.py:182:spina_app.dashboard_chart_presentation._spina_v20_draw_dashboard_charts"
+        "spina_app/dashboard_chart_presentation.py:182:spina_app.dashboard_chart_presentation._spina_v20_draw_dashboard_charts",
+        "tools/test_audit_widget_smoke_wave_54.py:146:tools.test_audit_widget_smoke_wave_54.main",
+        "tools/test_audit_widget_smoke_wave_54.py:82:tools.test_audit_widget_smoke_wave_54.FakeDB.get_audit_renewal_rows"
       ],
       "network": [
         "tools/spina_startup_diagnostics.py:54:tools.spina_startup_diagnostics.check_tcp"
@@ -17759,14 +17808,6 @@
         "tools/extract_append_unique_text.py:33:tools.extract_append_unique_text.top_level_functions",
         "tools/extract_append_unique_text.py:38:tools.extract_append_unique_text.external_names",
         "tools/extract_append_unique_text.py:87:tools.extract_append_unique_text.validate_plan",
-        "tools/extract_audit_presentation_wave_54.py:121:tools.extract_audit_presentation_wave_54.build_test",
-        "tools/extract_audit_presentation_wave_54.py:34:tools.extract_audit_presentation_wave_54.dotted",
-        "tools/extract_audit_presentation_wave_54.py:43:tools.extract_audit_presentation_wave_54.normalized",
-        "tools/extract_audit_presentation_wave_54.py:47:tools.extract_audit_presentation_wave_54.source_hash",
-        "tools/extract_audit_presentation_wave_54.py:51:tools.extract_audit_presentation_wave_54.identifier_names",
-        "tools/extract_audit_presentation_wave_54.py:59:tools.extract_audit_presentation_wave_54.assert_presentation_only",
-        "tools/extract_audit_presentation_wave_54.py:72:tools.extract_audit_presentation_wave_54.direct_app_methods",
-        "tools/extract_audit_presentation_wave_54.py:83:tools.extract_audit_presentation_wave_54.build_module",
         "tools/extract_cilog_action_label.py:114:tools.extract_cilog_action_label.apply",
         "tools/extract_cilog_action_label.py:20:tools.extract_cilog_action_label._local_names",
         "tools/extract_cilog_action_label.py:34:tools.extract_cilog_action_label._find",
@@ -17888,18 +17929,6 @@
         "tools/plan_app_lifecycle_window_pass_only.py:72:tools.plan_app_lifecycle_window_pass_only._context_text",
         "tools/plan_app_lifecycle_window_pass_only.py:76:tools.plan_app_lifecycle_window_pass_only._protected",
         "tools/plan_app_lifecycle_window_pass_only.py:80:tools.plan_app_lifecycle_window_pass_only._classify",
-        "tools/plan_high_volume_wave_54.py:105:tools.plan_high_volume_wave_54.Collector.visit_ClassDef",
-        "tools/plan_high_volume_wave_54.py:110:tools.plan_high_volume_wave_54.Collector._visit_function",
-        "tools/plan_high_volume_wave_54.py:120:tools.plan_high_volume_wave_54.Collector.visit_Name",
-        "tools/plan_high_volume_wave_54.py:125:tools.plan_high_volume_wave_54.Collector.visit_Attribute",
-        "tools/plan_high_volume_wave_54.py:130:tools.plan_high_volume_wave_54.Collector.visit_Assign",
-        "tools/plan_high_volume_wave_54.py:140:tools.plan_high_volume_wave_54.analyze_candidate",
-        "tools/plan_high_volume_wave_54.py:43:tools.plan_high_volume_wave_54.dotted",
-        "tools/plan_high_volume_wave_54.py:52:tools.plan_high_volume_wave_54.owner_name",
-        "tools/plan_high_volume_wave_54.py:57:tools.plan_high_volume_wave_54.identifier_names",
-        "tools/plan_high_volume_wave_54.py:65:tools.plan_high_volume_wave_54.financial_operation_hits",
-        "tools/plan_high_volume_wave_54.py:74:tools.plan_high_volume_wave_54.feature_group",
-        "tools/plan_high_volume_wave_54.py:98:tools.plan_high_volume_wave_54.Collector.__init__",
         "tools/plan_logger_fallback_pass_only.py:101:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_AsyncFunctionDef",
         "tools/plan_logger_fallback_pass_only.py:106:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_Try",
         "tools/plan_logger_fallback_pass_only.py:54:tools.plan_logger_fallback_pass_only._handler_name",
@@ -18010,6 +18039,17 @@
         "tools/test_audit_presentation_wave_54.py:19:tools.test_audit_presentation_wave_54.source_hash",
         "tools/test_audit_presentation_wave_54.py:23:tools.test_audit_presentation_wave_54.dotted",
         "tools/test_audit_presentation_wave_54.py:32:tools.test_audit_presentation_wave_54.functions",
+        "tools/test_audit_widget_smoke_wave_54.py:110:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_show_selected",
+        "tools/test_audit_widget_smoke_wave_54.py:113:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_today",
+        "tools/test_audit_widget_smoke_wave_54.py:116:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_last7",
+        "tools/test_audit_widget_smoke_wave_54.py:119:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_all",
+        "tools/test_audit_widget_smoke_wave_54.py:122:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_parse_date_filters",
+        "tools/test_audit_widget_smoke_wave_54.py:125:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_money_text",
+        "tools/test_audit_widget_smoke_wave_54.py:131:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_detail_text",
+        "tools/test_audit_widget_smoke_wave_54.py:15:tools.test_audit_widget_smoke_wave_54.walk",
+        "tools/test_audit_widget_smoke_wave_54.py:21:tools.test_audit_widget_smoke_wave_54.widget_texts",
+        "tools/test_audit_widget_smoke_wave_54.py:34:tools.test_audit_widget_smoke_wave_54.FakeDB.__init__",
+        "tools/test_audit_widget_smoke_wave_54.py:78:tools.test_audit_widget_smoke_wave_54.FakeDB.get_audit_new_loan_rows",
         "tools/test_base_theme_palette_batch_11.py:112:tools.test_base_theme_palette_batch_11._capture_call",
         "tools/test_base_theme_palette_batch_11.py:128:tools.test_base_theme_palette_batch_11.capture_batch",
         "tools/test_base_theme_palette_batch_11.py:31:tools.test_base_theme_palette_batch_11.Holder.__init__",
@@ -18635,6 +18675,9 @@
         "tools/disable_full_daily_ledger.py:376:tools.disable_full_daily_ledger._looks_like_legacy_button_line",
         "tools/plan_remaining_pass_only_groups.py:86:tools.plan_remaining_pass_only_groups.classify",
         "tools/remove_databank_export_controls.py:380:tools.remove_databank_export_controls._looks_like_ui_line",
+        "tools/test_audit_widget_smoke_wave_54.py:135:tools.test_audit_widget_smoke_wave_54.button_by_text",
+        "tools/test_audit_widget_smoke_wave_54.py:88:tools.test_audit_widget_smoke_wave_54.DummyAuditApp.__init__",
+        "tools/test_audit_widget_smoke_wave_54.py:97:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_tree_factory",
         "tools/test_cash_control_ui_controls_batch_09.py:188:tools.test_cash_control_ui_controls_batch_09._capture_style",
         "tools/test_cash_control_ui_controls_batch_09.py:96:tools.test_cash_control_ui_controls_batch_09._reset_runtime",
         "tools/test_cilog_ui_controls_batch_10.py:176:tools.test_cilog_ui_controls_batch_10._capture_style",
@@ -20837,33 +20880,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/extract_audit_presentation_wave_54.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "textwrap": "textwrap"
-      },
-      "lines": 291,
-      "module": "tools.extract_audit_presentation_wave_54",
-      "module_globals": [
-        "DESKTOP",
-        "EXPECTED_LINES",
-        "FILESYSTEM_CALLS",
-        "FINANCIAL_NAMES",
-        "MODULE",
-        "PROTECTED_CALLS",
-        "ROOT",
-        "TARGETS",
-        "TEST"
-      ],
-      "monkey_patches": [],
-      "sha256": "5de803d22110eb280ceae1e7eb1ecc6089e13ba5f6f198d2dde29f354313506b",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/extract_cilog_action_label.py",
       "imports": {
         "Path": "pathlib.Path",
@@ -21337,36 +21353,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/plan_high_volume_wave_54.py",
-      "imports": {
-        "Counter": "collections.Counter",
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "defaultdict": "collections.defaultdict",
-        "json": "json",
-        "re": "re"
-      },
-      "lines": 260,
-      "module": "tools.plan_high_volume_wave_54",
-      "module_globals": [
-        "DESKTOP",
-        "FILESYSTEM_CALL_TAILS",
-        "FINANCIAL_IDENTIFIERS",
-        "JSON_OUT",
-        "MD_OUT",
-        "MIN_LINES",
-        "PROTECTED_CALL_TAILS",
-        "ROOT",
-        "SQL_RE",
-        "UI_CALL_TAILS"
-      ],
-      "monkey_patches": [],
-      "sha256": "76817897da308533653b3b41d3097feb93c55f9d4691015950fbd0db51c305f8",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/plan_logger_fallback_pass_only.py",
       "imports": {
         "Any": "typing.Any",
@@ -21818,6 +21804,26 @@
       ],
       "monkey_patches": [],
       "sha256": "4e48282929fb59e360002e19b89f14db2925bafcd2ce8529b5af59675729909c",
+      "syntax_ok": true
+    },
+    {
+      "application_file": false,
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "imports": {
+        "Path": "pathlib.Path",
+        "annotations": "__future__.annotations",
+        "audit": "spina_app.audit_presentation",
+        "sys": "sys",
+        "tk": "tkinter",
+        "ttk": "tkinter.ttk"
+      },
+      "lines": 221,
+      "module": "tools.test_audit_widget_smoke_wave_54",
+      "module_globals": [
+        "ROOT"
+      ],
+      "monkey_patches": [],
+      "sha256": "8596f995fa746c7d337d0aaaf5ba767a91c448c03a78b947d940663fbde2db37",
       "syntax_ok": true
     },
     {
@@ -23889,26 +23895,26 @@
   "summary": {
     "application_monkey_patches": 59,
     "application_python_files": 51,
-    "application_resolved_call_edges": 2701,
+    "application_resolved_call_edges": 2693,
     "application_symbols": 1201,
     "application_ui_callback_edges": 478,
-    "classes": 100,
+    "classes": 101,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1446,
-    "methods": 531,
+    "functions": 1434,
+    "methods": 537,
     "monkey_patches": 152,
     "nested_functions": 390,
     "parse_errors": 0,
-    "possible_orphans": 126,
-    "python_files": 195,
+    "possible_orphans": 130,
+    "python_files": 194,
     "repository_database_tables": 19,
-    "repository_duplicate_names": 273,
-    "repository_possible_orphans": 262,
-    "resolved_call_edges": 3881,
-    "symbols": 2467,
-    "total_python_lines": 77620,
-    "ui_callback_edges": 485
+    "repository_duplicate_names": 282,
+    "repository_possible_orphans": 267,
+    "resolved_call_edges": 3864,
+    "symbols": 2462,
+    "total_python_lines": 77290,
+    "ui_callback_edges": 487
   },
   "symbols": [
     {
@@ -31913,9 +31919,7 @@
         "limit"
       ],
       "callbacks": [],
-      "callers": [
-        "spina_app/audit_presentation.py:92:spina_app.audit_presentation.refresh_audit_tab"
-      ],
+      "callers": [],
       "calls_raw": [
         "cur.execute",
         "cur.execute.fetchall",
@@ -39920,8 +39924,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10939:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_show_selected",
-        "spina_app/audit_presentation.py:92:spina_app.audit_presentation.refresh_audit_tab"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10939:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_show_selected"
       ],
       "calls_raw": [
         "float",
@@ -39958,9 +39961,7 @@
         "self"
       ],
       "callbacks": [],
-      "callers": [
-        "spina_app/audit_presentation.py:92:spina_app.audit_presentation.refresh_audit_tab"
-      ],
+      "callers": [],
       "calls_raw": [
         "_dt.strptime",
         "_dt.strptime.strftime",
@@ -40142,9 +40143,7 @@
           "target": "hsb.set"
         }
       ],
-      "callers": [
-        "spina_app/audit_presentation.py:21:spina_app.audit_presentation._build_audit_tab"
-      ],
+      "callers": [],
       "calls_raw": [
         "hsb.grid",
         "parent.columnconfigure",
@@ -40196,8 +40195,7 @@
       ],
       "callbacks": [],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10939:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_show_selected",
-        "spina_app/audit_presentation.py:92:spina_app.audit_presentation.refresh_audit_tab"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10939:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_show_selected"
       ],
       "calls_raw": [
         "self.audit_detail_text.configure",
@@ -40236,10 +40234,7 @@
         "bucket"
       ],
       "callbacks": [],
-      "callers": [
-        "spina_app/audit_presentation.py:21:spina_app.audit_presentation._build_audit_tab",
-        "spina_app/audit_presentation.py:92:spina_app.audit_presentation.refresh_audit_tab"
-      ],
+      "callers": [],
       "calls_raw": [
         "join",
         "lines.extend",
@@ -68784,7 +68779,8 @@
         }
       ],
       "callers": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10997:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10997:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
+        "tools/test_audit_widget_smoke_wave_54.py:146:tools.test_audit_widget_smoke_wave_54.main"
       ],
       "calls_raw": [
         "_date.today",
@@ -68822,8 +68818,6 @@
         "ttk.Scrollbar"
       ],
       "calls_resolved": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10911:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_tree_factory",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10939:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_show_selected",
         "tools/test_collectors_editor_wave_26.py:54:tools.test_collectors_editor_wave_26.Widget.grid",
         "tools/test_legacy_dashboard_controls_batch_15.py:47:tools.test_legacy_dashboard_controls_batch_15.FakeTk.StringVar"
       ],
@@ -68863,7 +68857,8 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10882:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_today",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10892:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_last7",
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10903:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_all",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10997:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__"
+        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10997:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App.__init__",
+        "tools/test_audit_widget_smoke_wave_54.py:146:tools.test_audit_widget_smoke_wave_54.main"
       ],
       "calls_raw": [
         "enumerate",
@@ -68900,12 +68895,6 @@
         "strip.lower"
       ],
       "calls_resolved": [
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10843:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_money_text",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10852:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_parse_date_filters",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10930:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_set_detail_text",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:10939:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.App._audit_show_selected",
-        "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:5265:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.LoanDB.get_audit_renewal_rows",
-        "spina_app/loan_context_queries.py:45:spina_app.loan_context_queries.get_audit_new_loan_rows",
         "tools/test_collectors_editor_wave_26.py:112:tools.test_collectors_editor_wave_26.FakeListbox.selection_set",
         "tools/test_collectors_editor_wave_26.py:76:tools.test_collectors_editor_wave_26.FakeTree.focus"
       ],
@@ -76352,9 +76341,7 @@
         "limit"
       ],
       "callbacks": [],
-      "callers": [
-        "spina_app/audit_presentation.py:92:spina_app.audit_presentation.refresh_audit_tab"
-      ],
+      "callers": [],
       "calls_raw": [
         "cur.execute",
         "cur.execute.fetchall",
@@ -95132,7 +95119,6 @@
         "tools/cleanup_pure_login_dialog_ui_pass_only.py:93:tools.cleanup_pure_login_dialog_ui_pass_only.ParentSetter.visit",
         "tools/inspect_blocking_ui_context.py:133:tools.inspect_blocking_ui_context.inspect_source",
         "tools/plan_app_lifecycle_window_pass_only.py:160:tools.plan_app_lifecycle_window_pass_only.build_report",
-        "tools/plan_high_volume_wave_54.py:188:tools.plan_high_volume_wave_54.main",
         "tools/plan_logger_fallback_pass_only.py:136:tools.plan_logger_fallback_pass_only.build_report",
         "tools/plan_login_dialog_pass_only.py:195:tools.plan_login_dialog_pass_only.build_report",
         "tools/plan_modern_ui_pass_only_cleanup.py:160:tools.plan_modern_ui_pass_only_cleanup.build_plan",
@@ -97005,417 +96991,6 @@
         "reports"
       ],
       "source_sha256": "6909182a72a148a86248f9d9eb0c83ff589088f241613d381d320d0f05d64f6a"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_audit_presentation_wave_54.py:226:tools.extract_audit_presentation_wave_54.main",
-        "tools/extract_audit_presentation_wave_54.py:34:tools.extract_audit_presentation_wave_54.dotted",
-        "tools/extract_audit_presentation_wave_54.py:59:tools.extract_audit_presentation_wave_54.assert_presentation_only"
-      ],
-      "calls_raw": [
-        "dotted",
-        "isinstance"
-      ],
-      "calls_resolved": [
-        "tools/extract_audit_presentation_wave_54.py:34:tools.extract_audit_presentation_wave_54.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 40,
-      "feature": "other",
-      "file": "tools/extract_audit_presentation_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_audit_presentation_wave_54.py:34:tools.extract_audit_presentation_wave_54.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 34,
-      "lines": 7,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.extract_audit_presentation_wave_54.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "2a733f095eb1d3e1c88599d56fcec48d4da92732519a24a7e0ecc5f05a56886d"
-    },
-    {
-      "args": [
-        "source"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_audit_presentation_wave_54.py:226:tools.extract_audit_presentation_wave_54.main",
-        "tools/extract_audit_presentation_wave_54.py:47:tools.extract_audit_presentation_wave_54.source_hash"
-      ],
-      "calls_raw": [
-        "join",
-        "line.rstrip",
-        "source.strip",
-        "source.strip.splitlines"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 44,
-      "feature": "utilities",
-      "file": "tools/extract_audit_presentation_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_audit_presentation_wave_54.py:43:tools.extract_audit_presentation_wave_54.normalized",
-      "imports_used": [],
-      "kind": "function",
-      "line": 43,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "normalized",
-      "parent": null,
-      "purpose": "Handles normalized for the utilities feature.",
-      "qualified_name": "tools.extract_audit_presentation_wave_54.normalized",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "8c354f4addbbdf864982d3d5e152d51f37ea8ed1867cd94bac5d88cb97d092a8"
-    },
-    {
-      "args": [
-        "source"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_audit_presentation_wave_54.py:226:tools.extract_audit_presentation_wave_54.main"
-      ],
-      "calls_raw": [
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "normalized",
-        "normalized.encode"
-      ],
-      "calls_resolved": [
-        "tools/extract_audit_presentation_wave_54.py:43:tools.extract_audit_presentation_wave_54.normalized"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 48,
-      "feature": "other",
-      "file": "tools/extract_audit_presentation_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_audit_presentation_wave_54.py:47:tools.extract_audit_presentation_wave_54.source_hash",
-      "imports_used": [
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 47,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "source_hash",
-      "parent": null,
-      "purpose": "Handles source hash for the other feature.",
-      "qualified_name": "tools.extract_audit_presentation_wave_54.source_hash",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "a4ae1defad0295a3c98f9f91b20def3deb4d014d0ce8705fa12c93ac18303b95"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_audit_presentation_wave_54.py:59:tools.extract_audit_presentation_wave_54.assert_presentation_only"
-      ],
-      "calls_raw": [
-        "ast.walk",
-        "isinstance",
-        "part.attr.lower",
-        "part.id.lower"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 56,
-      "feature": "other",
-      "file": "tools/extract_audit_presentation_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_audit_presentation_wave_54.py:51:tools.extract_audit_presentation_wave_54.identifier_names",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 51,
-      "lines": 6,
-      "monkey_patches": [],
-      "name": "identifier_names",
-      "parent": null,
-      "purpose": "Handles identifier names for the other feature.",
-      "qualified_name": "tools.extract_audit_presentation_wave_54.identifier_names",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "547ce7594e3b08c897d59b0dddc6e4bd1afcce2826ee23ebe98fe16bcfcc0674"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_audit_presentation_wave_54.py:226:tools.extract_audit_presentation_wave_54.main"
-      ],
-      "calls_raw": [
-        "any",
-        "ast.walk",
-        "dotted",
-        "dotted.rsplit",
-        "identifier_names",
-        "isinstance",
-        "part.value.upper",
-        "sorted"
-      ],
-      "calls_resolved": [
-        "tools/extract_audit_presentation_wave_54.py:34:tools.extract_audit_presentation_wave_54.dotted",
-        "tools/extract_audit_presentation_wave_54.py:51:tools.extract_audit_presentation_wave_54.identifier_names"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 69,
-      "feature": "other",
-      "file": "tools/extract_audit_presentation_wave_54.py",
-      "file_paths": [],
-      "globals_read": [
-        "FILESYSTEM_CALLS",
-        "FINANCIAL_NAMES",
-        "PROTECTED_CALLS"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_audit_presentation_wave_54.py:59:tools.extract_audit_presentation_wave_54.assert_presentation_only",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 59,
-      "lines": 11,
-      "monkey_patches": [],
-      "name": "assert_presentation_only",
-      "parent": null,
-      "purpose": "Handles assert presentation only for the other feature.",
-      "qualified_name": "tools.extract_audit_presentation_wave_54.assert_presentation_only",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "09d0387ac17d7f4c8c4545d86eea2694d73a2eca7afefd127e2446fc28f3c6e6"
-    },
-    {
-      "args": [
-        "tree"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_audit_presentation_wave_54.py:226:tools.extract_audit_presentation_wave_54.main"
-      ],
-      "calls_raw": [
-        "isinstance",
-        "next",
-        "set"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 80,
-      "feature": "other",
-      "file": "tools/extract_audit_presentation_wave_54.py",
-      "file_paths": [],
-      "globals_read": [
-        "TARGETS"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_audit_presentation_wave_54.py:72:tools.extract_audit_presentation_wave_54.direct_app_methods",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 72,
-      "lines": 9,
-      "monkey_patches": [],
-      "name": "direct_app_methods",
-      "parent": null,
-      "purpose": "Handles direct app methods for the other feature.",
-      "qualified_name": "tools.extract_audit_presentation_wave_54.direct_app_methods",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "d7a6813749626fae119789301d20af0533f45a846f3dc5c306707441684954f1"
-    },
-    {
-      "args": [
-        "method_sources",
-        "metadata"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_audit_presentation_wave_54.py:226:tools.extract_audit_presentation_wave_54.main"
-      ],
-      "calls_raw": [
-        "blocks.append",
-        "int",
-        "join",
-        "join.rstrip",
-        "list",
-        "metadata.values",
-        "sum"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 118,
-      "feature": "other",
-      "file": "tools/extract_audit_presentation_wave_54.py",
-      "file_paths": [],
-      "globals_read": [
-        "TARGETS"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_audit_presentation_wave_54.py:83:tools.extract_audit_presentation_wave_54.build_module",
-      "imports_used": [],
-      "kind": "function",
-      "line": 83,
-      "lines": 36,
-      "monkey_patches": [],
-      "name": "build_module",
-      "parent": null,
-      "purpose": "Builds build module for the other feature.",
-      "qualified_name": "tools.extract_audit_presentation_wave_54.build_module",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "b3068739350e4bcd08f8fa249d54a7d4ad60ab38381cf6f797a9edf1452ddfa4"
-    },
-    {
-      "args": [
-        "metadata"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_audit_presentation_wave_54.py:226:tools.extract_audit_presentation_wave_54.main"
-      ],
-      "calls_raw": [],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 223,
-      "feature": "other",
-      "file": "tools/extract_audit_presentation_wave_54.py",
-      "file_paths": [],
-      "globals_read": [
-        "TARGETS"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_audit_presentation_wave_54.py:121:tools.extract_audit_presentation_wave_54.build_test",
-      "imports_used": [],
-      "kind": "function",
-      "line": 121,
-      "lines": 103,
-      "monkey_patches": [],
-      "name": "build_test",
-      "parent": null,
-      "purpose": "Builds build test for the other feature.",
-      "qualified_name": "tools.extract_audit_presentation_wave_54.build_test",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "b2ed5c6627b8833e5f9739a850d097761dec1d835ae9fffcd7f17d09bb081275"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "AssertionError",
-        "DESKTOP.read_text",
-        "DESKTOP.write_text",
-        "MODULE.parent.mkdir",
-        "MODULE.write_text",
-        "TEST.write_text",
-        "assert_presentation_only",
-        "ast.parse",
-        "ast.unparse",
-        "ast.walk",
-        "build_module",
-        "build_test",
-        "direct_app_methods",
-        "dotted",
-        "isinstance",
-        "join",
-        "len",
-        "list",
-        "methods.values",
-        "normalized",
-        "normalized.splitlines",
-        "print",
-        "sorted",
-        "source_hash",
-        "str",
-        "text.splitlines",
-        "textwrap.dedent"
-      ],
-      "calls_resolved": [
-        "tools/extract_audit_presentation_wave_54.py:121:tools.extract_audit_presentation_wave_54.build_test",
-        "tools/extract_audit_presentation_wave_54.py:34:tools.extract_audit_presentation_wave_54.dotted",
-        "tools/extract_audit_presentation_wave_54.py:43:tools.extract_audit_presentation_wave_54.normalized",
-        "tools/extract_audit_presentation_wave_54.py:47:tools.extract_audit_presentation_wave_54.source_hash",
-        "tools/extract_audit_presentation_wave_54.py:59:tools.extract_audit_presentation_wave_54.assert_presentation_only",
-        "tools/extract_audit_presentation_wave_54.py:72:tools.extract_audit_presentation_wave_54.direct_app_methods",
-        "tools/extract_audit_presentation_wave_54.py:83:tools.extract_audit_presentation_wave_54.build_module"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 287,
-      "feature": "other",
-      "file": "tools/extract_audit_presentation_wave_54.py",
-      "file_paths": [],
-      "globals_read": [
-        "DESKTOP",
-        "EXPECTED_LINES",
-        "MODULE",
-        "TARGETS",
-        "TEST"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_audit_presentation_wave_54.py:226:tools.extract_audit_presentation_wave_54.main",
-      "imports_used": [
-        "ast",
-        "textwrap"
-      ],
-      "kind": "function",
-      "line": 226,
-      "lines": 62,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.extract_audit_presentation_wave_54.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "935f4872eded67fee554c9b011c5e640afc7c21f513a782d4d03bab56c6866e1"
     },
     {
       "args": [
@@ -105523,607 +105098,6 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/plan_high_volume_wave_54.py:140:tools.plan_high_volume_wave_54.analyze_candidate",
-        "tools/plan_high_volume_wave_54.py:43:tools.plan_high_volume_wave_54.dotted"
-      ],
-      "calls_raw": [
-        "dotted",
-        "isinstance"
-      ],
-      "calls_resolved": [
-        "tools/plan_high_volume_wave_54.py:43:tools.plan_high_volume_wave_54.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 49,
-      "feature": "other",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:43:tools.plan_high_volume_wave_54.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 43,
-      "lines": 7,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "2a733f095eb1d3e1c88599d56fcec48d4da92732519a24a7e0ecc5f05a56886d"
-    },
-    {
-      "args": [
-        "stack",
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_high_volume_wave_54.py:110:tools.plan_high_volume_wave_54.Collector._visit_function"
-      ],
-      "calls_raw": [
-        "isinstance",
-        "join"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 54,
-      "feature": "other",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:52:tools.plan_high_volume_wave_54.owner_name",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 52,
-      "lines": 3,
-      "monkey_patches": [],
-      "name": "owner_name",
-      "parent": null,
-      "purpose": "Handles owner name for the other feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.owner_name",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "a25ecb0c784d263dbc1cacd0e62e1c04b99ae4b2429a1a39d58d036b4a6f5935"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_high_volume_wave_54.py:65:tools.plan_high_volume_wave_54.financial_operation_hits"
-      ],
-      "calls_raw": [
-        "ast.walk",
-        "isinstance",
-        "part.attr.lower",
-        "part.id.lower"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 62,
-      "feature": "other",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:57:tools.plan_high_volume_wave_54.identifier_names",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 57,
-      "lines": 6,
-      "monkey_patches": [],
-      "name": "identifier_names",
-      "parent": null,
-      "purpose": "Handles identifier names for the other feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.identifier_names",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "547ce7594e3b08c897d59b0dddc6e4bd1afcce2826ee23ebe98fe16bcfcc0674"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_high_volume_wave_54.py:140:tools.plan_high_volume_wave_54.analyze_candidate"
-      ],
-      "calls_raw": [
-        "ast.walk",
-        "hits.update",
-        "identifier_names",
-        "isinstance",
-        "set",
-        "sorted"
-      ],
-      "calls_resolved": [
-        "tools/plan_high_volume_wave_54.py:57:tools.plan_high_volume_wave_54.identifier_names"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 71,
-      "feature": "other",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [
-        "FINANCIAL_IDENTIFIERS"
-      ],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:65:tools.plan_high_volume_wave_54.financial_operation_hits",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 65,
-      "lines": 7,
-      "monkey_patches": [],
-      "name": "financial_operation_hits",
-      "parent": null,
-      "purpose": "Handles financial operation hits for the other feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.financial_operation_hits",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "8b36bfc034290e3466c7d656a3d7ae13f8f311faada5ae9764a65885393327cb"
-    },
-    {
-      "args": [
-        "name"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_high_volume_wave_54.py:140:tools.plan_high_volume_wave_54.analyze_candidate"
-      ],
-      "calls_raw": [
-        "any",
-        "name.lower"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 94,
-      "feature": "other",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:74:tools.plan_high_volume_wave_54.feature_group",
-      "imports_used": [],
-      "kind": "function",
-      "line": 74,
-      "lines": 21,
-      "monkey_patches": [],
-      "name": "feature_group",
-      "parent": null,
-      "purpose": "Handles feature group for the other feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.feature_group",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "bc130d739ddbd18f567ae687e024ce426248cb3d01627a5ee69b6fc331ae0e53"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_high_volume_wave_54.py:188:tools.plan_high_volume_wave_54.main"
-      ],
-      "calls_raw": [],
-      "calls_resolved": [],
-      "class_name": "Collector",
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 137,
-      "feature": "collectors",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:97:tools.plan_high_volume_wave_54.Collector",
-      "imports_used": [],
-      "kind": "class",
-      "line": 97,
-      "lines": 41,
-      "monkey_patches": [],
-      "name": "Collector",
-      "parent": null,
-      "purpose": "Groups Collector for the collectors feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.Collector",
-      "risk": "container",
-      "risk_flags": [],
-      "source_sha256": "6e0e4d6308993669b0b23e0c4ac017b4a7091f64d91c051c9f85acfdb3c25703"
-    },
-    {
-      "args": [
-        "self"
-      ],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "Counter",
-        "defaultdict"
-      ],
-      "calls_resolved": [],
-      "class_name": "Collector",
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 103,
-      "feature": "collectors",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:98:tools.plan_high_volume_wave_54.Collector.__init__",
-      "imports_used": [
-        "ast",
-        "collections.Counter",
-        "collections.defaultdict"
-      ],
-      "kind": "method",
-      "line": 98,
-      "lines": 6,
-      "monkey_patches": [],
-      "name": "__init__",
-      "parent": null,
-      "purpose": "Handles init for the collectors feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.Collector.__init__",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "381d87287f2cc1a48b00384d0cd4da060faab7692acfc239150500f78d0e8c1b"
-    },
-    {
-      "args": [
-        "self",
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "self.generic_visit",
-        "self.stack.append",
-        "self.stack.pop"
-      ],
-      "calls_resolved": [],
-      "class_name": "Collector",
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 108,
-      "feature": "collectors",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:105:tools.plan_high_volume_wave_54.Collector.visit_ClassDef",
-      "imports_used": [],
-      "kind": "method",
-      "line": 105,
-      "lines": 4,
-      "monkey_patches": [],
-      "name": "visit_ClassDef",
-      "parent": null,
-      "purpose": "Handles visit ClassDef for the collectors feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.Collector.visit_ClassDef",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "197703ce03c6152ed9a922ed0307c00c2eaffdf85c4719a3c0dde3fd19d31c37"
-    },
-    {
-      "args": [
-        "self",
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "isinstance",
-        "owner_name",
-        "self.functions.append",
-        "self.generic_visit",
-        "self.stack.append",
-        "self.stack.pop",
-        "sum"
-      ],
-      "calls_resolved": [
-        "tools/plan_high_volume_wave_54.py:52:tools.plan_high_volume_wave_54.owner_name"
-      ],
-      "class_name": "Collector",
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 115,
-      "feature": "collectors",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:110:tools.plan_high_volume_wave_54.Collector._visit_function",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "method",
-      "line": 110,
-      "lines": 6,
-      "monkey_patches": [],
-      "name": "_visit_function",
-      "parent": null,
-      "purpose": "Handles visit function for the collectors feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.Collector._visit_function",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "92221912e6d717c5f2f25395d523c05011c0c9cf32cd0f4ab8da5d89efac231b"
-    },
-    {
-      "args": [
-        "self",
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "isinstance",
-        "self.generic_visit"
-      ],
-      "calls_resolved": [],
-      "class_name": "Collector",
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 123,
-      "feature": "collectors",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:120:tools.plan_high_volume_wave_54.Collector.visit_Name",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "method",
-      "line": 120,
-      "lines": 4,
-      "monkey_patches": [],
-      "name": "visit_Name",
-      "parent": null,
-      "purpose": "Handles visit Name for the collectors feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.Collector.visit_Name",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "20b0f38de20515961a7304dc57757df1e259f3920a51ccce58c3ea2597a94d46"
-    },
-    {
-      "args": [
-        "self",
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "isinstance",
-        "self.generic_visit"
-      ],
-      "calls_resolved": [],
-      "class_name": "Collector",
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 128,
-      "feature": "collectors",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:125:tools.plan_high_volume_wave_54.Collector.visit_Attribute",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "method",
-      "line": 125,
-      "lines": 4,
-      "monkey_patches": [],
-      "name": "visit_Attribute",
-      "parent": null,
-      "purpose": "Handles visit Attribute for the collectors feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.Collector.visit_Attribute",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "e4aa1995eedce4fec73043683cf428e82f893eb763d484659980851df6390b88"
-    },
-    {
-      "args": [
-        "self",
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "ast.unparse",
-        "isinstance",
-        "self.assignments.append",
-        "self.generic_visit"
-      ],
-      "calls_resolved": [],
-      "class_name": "Collector",
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 137,
-      "feature": "collectors",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:130:tools.plan_high_volume_wave_54.Collector.visit_Assign",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "method",
-      "line": 130,
-      "lines": 8,
-      "monkey_patches": [],
-      "name": "visit_Assign",
-      "parent": null,
-      "purpose": "Handles visit Assign for the collectors feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.Collector.visit_Assign",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "86071bdee19f4eb6e001a94298acc77676373a9d1d04f8fe9faf51f81ed4c487"
-    },
-    {
-      "args": [
-        "name",
-        "node",
-        "depth",
-        "collector"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_high_volume_wave_54.py:188:tools.plan_high_volume_wave_54.main"
-      ],
-      "calls_raw": [
-        "SQL_RE.search",
-        "ast.walk",
-        "call.rsplit",
-        "collector.assignments.get",
-        "dotted",
-        "feature_group",
-        "financial_operation_hits",
-        "getattr",
-        "isinstance",
-        "len",
-        "name.rsplit",
-        "sorted",
-        "value.strip"
-      ],
-      "calls_resolved": [
-        "tools/plan_high_volume_wave_54.py:43:tools.plan_high_volume_wave_54.dotted",
-        "tools/plan_high_volume_wave_54.py:65:tools.plan_high_volume_wave_54.financial_operation_hits",
-        "tools/plan_high_volume_wave_54.py:74:tools.plan_high_volume_wave_54.feature_group"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 185,
-      "feature": "other",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [
-        "FILESYSTEM_CALL_TAILS",
-        "PROTECTED_CALL_TAILS",
-        "SQL_RE",
-        "UI_CALL_TAILS"
-      ],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:140:tools.plan_high_volume_wave_54.analyze_candidate",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 140,
-      "lines": 46,
-      "monkey_patches": [],
-      "name": "analyze_candidate",
-      "parent": null,
-      "purpose": "Handles analyze candidate for the other feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.analyze_candidate",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "0fea9fe1e0d184bfa0028a37ef10efccd55936180db0a82c0a9998ea702e91f9"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "Collector",
-        "DESKTOP.read_text",
-        "JSON_OUT.parent.mkdir",
-        "JSON_OUT.relative_to",
-        "JSON_OUT.write_text",
-        "MD_OUT.parent.mkdir",
-        "MD_OUT.relative_to",
-        "MD_OUT.write_text",
-        "analyze_candidate",
-        "ast.parse",
-        "collector.visit",
-        "defaultdict",
-        "evidence.append",
-        "getattr",
-        "groups.append",
-        "groups.items",
-        "int",
-        "join",
-        "json.dumps",
-        "len",
-        "md.append",
-        "md.extend",
-        "print",
-        "protected.sort",
-        "rows.append",
-        "rows.sort",
-        "sorted",
-        "str",
-        "sum"
-      ],
-      "calls_resolved": [
-        "tools/cleanup_pure_login_dialog_ui_pass_only.py:93:tools.cleanup_pure_login_dialog_ui_pass_only.ParentSetter.visit",
-        "tools/plan_high_volume_wave_54.py:140:tools.plan_high_volume_wave_54.analyze_candidate",
-        "tools/plan_high_volume_wave_54.py:97:tools.plan_high_volume_wave_54.Collector"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 256,
-      "feature": "other",
-      "file": "tools/plan_high_volume_wave_54.py",
-      "file_paths": [],
-      "globals_read": [
-        "DESKTOP",
-        "JSON_OUT",
-        "MD_OUT",
-        "MIN_LINES",
-        "ROOT"
-      ],
-      "globals_written": [],
-      "id": "tools/plan_high_volume_wave_54.py:188:tools.plan_high_volume_wave_54.main",
-      "imports_used": [
-        "ast",
-        "collections.defaultdict",
-        "json"
-      ],
-      "kind": "function",
-      "line": 188,
-      "lines": 69,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.plan_high_volume_wave_54.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "61ce9919f14ed8d9bae7d19bdb1bd14ff2f17da3e481a7ab184c8a2ad4b498f6"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
         "tools/plan_logger_fallback_pass_only.py:106:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_Try"
       ],
       "calls_raw": [
@@ -113026,6 +112000,698 @@
         "reports"
       ],
       "source_sha256": "9c9a7cee8ce6dd6b25a4ec054282cb197d502cffc5d4cf7550163353c252c19d"
+    },
+    {
+      "args": [
+        "widget"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_audit_widget_smoke_wave_54.py:135:tools.test_audit_widget_smoke_wave_54.button_by_text",
+        "tools/test_audit_widget_smoke_wave_54.py:15:tools.test_audit_widget_smoke_wave_54.walk",
+        "tools/test_audit_widget_smoke_wave_54.py:21:tools.test_audit_widget_smoke_wave_54.widget_texts"
+      ],
+      "calls_raw": [
+        "walk",
+        "widget.winfo_children"
+      ],
+      "calls_resolved": [
+        "tools/test_audit_widget_smoke_wave_54.py:15:tools.test_audit_widget_smoke_wave_54.walk"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 18,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:15:tools.test_audit_widget_smoke_wave_54.walk",
+      "imports_used": [],
+      "kind": "function",
+      "line": 15,
+      "lines": 4,
+      "monkey_patches": [],
+      "name": "walk",
+      "parent": null,
+      "purpose": "Handles walk for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.walk",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "0b63b889f2dd7515a6e9629ab48604ab2151ee4679da4c620e3fca80a037416d"
+    },
+    {
+      "args": [
+        "widget"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_audit_widget_smoke_wave_54.py:146:tools.test_audit_widget_smoke_wave_54.main"
+      ],
+      "calls_raw": [
+        "child.cget",
+        "str",
+        "values.append",
+        "walk"
+      ],
+      "calls_resolved": [
+        "tools/test_audit_widget_smoke_wave_54.py:15:tools.test_audit_widget_smoke_wave_54.walk"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 30,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:21:tools.test_audit_widget_smoke_wave_54.widget_texts",
+      "imports_used": [],
+      "kind": "function",
+      "line": 21,
+      "lines": 10,
+      "monkey_patches": [],
+      "name": "widget_texts",
+      "parent": null,
+      "purpose": "Handles widget texts for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.widget_texts",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "bced13ef0a3cdacaa2be85ab485b6fce002067406ee9f208bd8f996585be19ec"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [
+        "tools/test_audit_widget_smoke_wave_54.py:88:tools.test_audit_widget_smoke_wave_54.DummyAuditApp.__init__"
+      ],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "FakeDB",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 84,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:33:tools.test_audit_widget_smoke_wave_54.FakeDB",
+      "imports_used": [],
+      "kind": "class",
+      "line": 33,
+      "lines": 52,
+      "monkey_patches": [],
+      "name": "FakeDB",
+      "parent": null,
+      "purpose": "Groups FakeDB for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.FakeDB",
+      "risk": "container",
+      "risk_flags": [],
+      "source_sha256": "f171c10982885fbdceec7869272ca423a01391137187784fb5ce8157ab3aecce"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "FakeDB",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 76,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:34:tools.test_audit_widget_smoke_wave_54.FakeDB.__init__",
+      "imports_used": [],
+      "kind": "method",
+      "line": 34,
+      "lines": 43,
+      "monkey_patches": [],
+      "name": "__init__",
+      "parent": null,
+      "purpose": "Handles init for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.FakeDB.__init__",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "37ee274d78bd1bbe9462d27d6aaa367fc08ca367bef9dd9ee75bfd6345d830a9"
+    },
+    {
+      "args": [
+        "self",
+        "**kwargs"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "list",
+        "self.calls.append"
+      ],
+      "calls_resolved": [],
+      "class_name": "FakeDB",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 80,
+      "feature": "loans",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:78:tools.test_audit_widget_smoke_wave_54.FakeDB.get_audit_new_loan_rows",
+      "imports_used": [],
+      "kind": "method",
+      "line": 78,
+      "lines": 3,
+      "monkey_patches": [],
+      "name": "get_audit_new_loan_rows",
+      "parent": null,
+      "purpose": "Retrieves get audit new loan rows for the loans feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.FakeDB.get_audit_new_loan_rows",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "cbf0737dba1afce9039a9e89cf90cb98e261276e43392d94552a2857e8339c59"
+    },
+    {
+      "args": [
+        "self",
+        "**kwargs"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "list",
+        "self.calls.append"
+      ],
+      "calls_resolved": [],
+      "class_name": "FakeDB",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 84,
+      "feature": "loans",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:82:tools.test_audit_widget_smoke_wave_54.FakeDB.get_audit_renewal_rows",
+      "imports_used": [],
+      "kind": "method",
+      "line": 82,
+      "lines": 3,
+      "monkey_patches": [],
+      "name": "get_audit_renewal_rows",
+      "parent": null,
+      "purpose": "Retrieves get audit renewal rows for the loans feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.FakeDB.get_audit_renewal_rows",
+      "risk": "financial_calculation",
+      "risk_flags": [
+        "financial_calculation"
+      ],
+      "source_sha256": "f18fa948b2edea7fef8e3b7ee9f312d6ccca268a17df786a9d9d656d16997184"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [
+        "tools/test_audit_widget_smoke_wave_54.py:146:tools.test_audit_widget_smoke_wave_54.main"
+      ],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "DummyAuditApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 132,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:87:tools.test_audit_widget_smoke_wave_54.DummyAuditApp",
+      "imports_used": [],
+      "kind": "class",
+      "line": 87,
+      "lines": 46,
+      "monkey_patches": [],
+      "name": "DummyAuditApp",
+      "parent": null,
+      "purpose": "Groups DummyAuditApp for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.DummyAuditApp",
+      "risk": "container",
+      "risk_flags": [],
+      "source_sha256": "5cbe646a7aaaf5569b33ab43dde3a71cb99cab7507a01f0ef6915cfc374bb72a"
+    },
+    {
+      "args": [
+        "self",
+        "root"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "FakeDB",
+        "self.tab_audit.pack",
+        "ttk.Frame"
+      ],
+      "calls_resolved": [
+        "tools/test_audit_widget_smoke_wave_54.py:33:tools.test_audit_widget_smoke_wave_54.FakeDB"
+      ],
+      "class_name": "DummyAuditApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 95,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:88:tools.test_audit_widget_smoke_wave_54.DummyAuditApp.__init__",
+      "imports_used": [
+        "tkinter.ttk"
+      ],
+      "kind": "method",
+      "line": 88,
+      "lines": 8,
+      "monkey_patches": [],
+      "name": "__init__",
+      "parent": null,
+      "purpose": "Handles init for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.DummyAuditApp.__init__",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "3fbd53eaac1e8ff92bd43342c482a72a52cb0e891ac4c5b1445adf9553c51371"
+    },
+    {
+      "args": [
+        "self",
+        "parent",
+        "columns",
+        "headings",
+        "widths"
+      ],
+      "callbacks": [
+        {
+          "kind": "command",
+          "line": 104,
+          "target": "tree.yview"
+        },
+        {
+          "kind": "yscrollcommand",
+          "line": 105,
+          "target": "scrollbar.set"
+        }
+      ],
+      "callers": [],
+      "calls_raw": [
+        "frame.pack",
+        "scrollbar.pack",
+        "tree.column",
+        "tree.configure",
+        "tree.heading",
+        "tree.pack",
+        "ttk.Frame",
+        "ttk.Scrollbar",
+        "ttk.Treeview",
+        "zip"
+      ],
+      "calls_resolved": [
+        "tools/test_navigation_databank_shell_wave_29.py:172:tools.test_navigation_databank_shell_wave_29.FakeTree.heading"
+      ],
+      "class_name": "DummyAuditApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 108,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:97:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_tree_factory",
+      "imports_used": [
+        "tkinter.ttk"
+      ],
+      "kind": "method",
+      "line": 97,
+      "lines": 12,
+      "monkey_patches": [],
+      "name": "_audit_tree_factory",
+      "parent": null,
+      "purpose": "Handles audit tree factory for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_tree_factory",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "0c87e5d1ebb643cca78a4ebb2eacd5196c4c977fb66f6260b296f7f1a839916c"
+    },
+    {
+      "args": [
+        "self",
+        "kind"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self.selected.append"
+      ],
+      "calls_resolved": [],
+      "class_name": "DummyAuditApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 111,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:110:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_show_selected",
+      "imports_used": [],
+      "kind": "method",
+      "line": 110,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_audit_show_selected",
+      "parent": null,
+      "purpose": "Handles audit show selected for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_show_selected",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "ab0eea809bc9644e6d451999f6b331d397aba5c12a0cfed4ed394b8800838c6a"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self.filter_actions.append"
+      ],
+      "calls_resolved": [],
+      "class_name": "DummyAuditApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 114,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:113:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_today",
+      "imports_used": [],
+      "kind": "method",
+      "line": 113,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_audit_set_today",
+      "parent": null,
+      "purpose": "Handles audit set today for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_today",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "fbb686da904072f50b41af09f0f744456089b60fb23d5e19db52ab1b13809cf5"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self.filter_actions.append"
+      ],
+      "calls_resolved": [],
+      "class_name": "DummyAuditApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 117,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:116:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_last7",
+      "imports_used": [],
+      "kind": "method",
+      "line": 116,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_audit_set_last7",
+      "parent": null,
+      "purpose": "Handles audit set last7 for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_last7",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "0312a215ae5d221cb55e1d872b023ae04b5bf9d93a594173e726e1b7bc4f5575"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self.filter_actions.append"
+      ],
+      "calls_resolved": [],
+      "class_name": "DummyAuditApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 120,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:119:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_all",
+      "imports_used": [],
+      "kind": "method",
+      "line": 119,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_audit_set_all",
+      "parent": null,
+      "purpose": "Handles audit set all for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_all",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "972cebc6a5cd84789f3758ccec3f07a562b5042a84ec2bf5ff9ecc9d7b71acdd"
+    },
+    {
+      "args": [
+        "self"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [],
+      "calls_resolved": [],
+      "class_name": "DummyAuditApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 123,
+      "feature": "utilities",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:122:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_parse_date_filters",
+      "imports_used": [],
+      "kind": "method",
+      "line": 122,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_audit_parse_date_filters",
+      "parent": null,
+      "purpose": "Handles audit parse date filters for the utilities feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_parse_date_filters",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "bdd8dfd875b6e06f3172f8c92946019433fc7da7422887c083aa61a3f07a84b4"
+    },
+    {
+      "args": [
+        "self",
+        "value"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "float"
+      ],
+      "calls_resolved": [],
+      "class_name": "DummyAuditApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 129,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:125:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_money_text",
+      "imports_used": [],
+      "kind": "method",
+      "line": 125,
+      "lines": 5,
+      "monkey_patches": [],
+      "name": "_audit_money_text",
+      "parent": null,
+      "purpose": "Handles audit money text for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_money_text",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "0bcb10f82a5542eaa79111fb2561ca6defdf5f57549ed035891f34e6e84a3d9b"
+    },
+    {
+      "args": [
+        "self",
+        "text"
+      ],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "self.detail_messages.append",
+        "str"
+      ],
+      "calls_resolved": [],
+      "class_name": "DummyAuditApp",
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 132,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:131:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_detail_text",
+      "imports_used": [],
+      "kind": "method",
+      "line": 131,
+      "lines": 2,
+      "monkey_patches": [],
+      "name": "_audit_set_detail_text",
+      "parent": null,
+      "purpose": "Handles audit set detail text for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_set_detail_text",
+      "risk": "support",
+      "risk_flags": [],
+      "source_sha256": "6a5610b04d3b41441c3c1cec1fa5bf981dde8dccf7448aa2b9af083ceb2a0f97"
+    },
+    {
+      "args": [
+        "root",
+        "text"
+      ],
+      "callbacks": [],
+      "callers": [
+        "tools/test_audit_widget_smoke_wave_54.py:146:tools.test_audit_widget_smoke_wave_54.main"
+      ],
+      "calls_raw": [
+        "AssertionError",
+        "isinstance",
+        "str",
+        "walk",
+        "widget.cget"
+      ],
+      "calls_resolved": [
+        "tools/test_audit_widget_smoke_wave_54.py:15:tools.test_audit_widget_smoke_wave_54.walk"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 143,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:135:tools.test_audit_widget_smoke_wave_54.button_by_text",
+      "imports_used": [
+        "tkinter.ttk"
+      ],
+      "kind": "function",
+      "line": 135,
+      "lines": 9,
+      "monkey_patches": [],
+      "name": "button_by_text",
+      "parent": null,
+      "purpose": "Handles button by text for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.button_by_text",
+      "risk": "ui_only",
+      "risk_flags": [
+        "ui_only"
+      ],
+      "source_sha256": "2ea17b33f9ba347c2010ac3059e8e153f6ab63e6e9165310b14c0bba98b5f54a"
+    },
+    {
+      "args": [],
+      "callbacks": [],
+      "callers": [],
+      "calls_raw": [
+        "DummyAuditApp",
+        "app.audit_detail_text.cget",
+        "app.audit_name_var.set",
+        "app.audit_nb.tab",
+        "app.audit_new_tree.get_children",
+        "app.audit_new_tree.item",
+        "app.audit_renew_tree.get_children",
+        "app.audit_summary_var.get",
+        "audit._build_audit_tab",
+        "audit.refresh_audit_tab",
+        "button_by_text",
+        "button_by_text.invoke",
+        "len",
+        "print",
+        "root.destroy",
+        "root.geometry",
+        "root.update_idletasks",
+        "tk.Tk",
+        "widget_texts"
+      ],
+      "calls_resolved": [
+        "spina_app/audit_presentation.py:21:spina_app.audit_presentation._build_audit_tab",
+        "spina_app/audit_presentation.py:92:spina_app.audit_presentation.refresh_audit_tab",
+        "tools/test_audit_widget_smoke_wave_54.py:135:tools.test_audit_widget_smoke_wave_54.button_by_text",
+        "tools/test_audit_widget_smoke_wave_54.py:21:tools.test_audit_widget_smoke_wave_54.widget_texts",
+        "tools/test_audit_widget_smoke_wave_54.py:87:tools.test_audit_widget_smoke_wave_54.DummyAuditApp",
+        "tools/test_navigation_databank_shell_wave_29.py:144:tools.test_navigation_databank_shell_wave_29.FakeNotebook.tab"
+      ],
+      "class_name": null,
+      "database_tables": [],
+      "docstring": "",
+      "end_line": 217,
+      "feature": "other",
+      "file": "tools/test_audit_widget_smoke_wave_54.py",
+      "file_paths": [],
+      "globals_read": [],
+      "globals_written": [],
+      "id": "tools/test_audit_widget_smoke_wave_54.py:146:tools.test_audit_widget_smoke_wave_54.main",
+      "imports_used": [
+        "spina_app.audit_presentation",
+        "tkinter"
+      ],
+      "kind": "function",
+      "line": 146,
+      "lines": 72,
+      "monkey_patches": [],
+      "name": "main",
+      "parent": null,
+      "purpose": "Handles main for the other feature.",
+      "qualified_name": "tools.test_audit_widget_smoke_wave_54.main",
+      "risk": "financial_calculation",
+      "risk_flags": [
+        "financial_calculation",
+        "reports",
+        "ui_only"
+      ],
+      "source_sha256": "7d6391bee1aae5e9327d4320e777e0fb1e4547cb1265c8bcb0f8d7bcf7b848dd"
     },
     {
       "args": [],
@@ -136369,6 +136035,7 @@
         "spina_app/tabs/client_info_logs.py:202:spina_app.tabs.client_info_logs._spina_v24_build_client_info_logs_tab",
         "spina_app/tabs/client_info_logs.py:562:spina_app.tabs.client_info_logs._spina_build_client_info_logs_tab",
         "spina_app/tabs/data_bank_shell.py:119:spina_app.tabs.data_bank_shell._show_audit_tab",
+        "tools/test_audit_widget_smoke_wave_54.py:146:tools.test_audit_widget_smoke_wave_54.main",
         "tools/test_import_log_widget_smoke_wave_53.py:19:tools.test_import_log_widget_smoke_wave_53.main"
       ],
       "calls_raw": [],
@@ -136606,6 +136273,7 @@
         "spina_app/tabs/dashboard.py:705:spina_app.tabs.dashboard._spina_build_dashboard_tab",
         "spina_app/tabs/data_bank_shell.py:21:spina_app.tabs.data_bank_shell._looks_like_data_grid",
         "spina_app/tabs/reports.py:105:spina_app.tabs.reports._spina_v22_build_reports_tab",
+        "tools/test_audit_widget_smoke_wave_54.py:97:tools.test_audit_widget_smoke_wave_54.DummyAuditApp._audit_tree_factory",
         "tools/test_databank_widget_smoke_wave_49.py:73:tools.test_databank_widget_smoke_wave_49.DummyApp.refresh_data_grid"
       ],
       "calls_raw": [
