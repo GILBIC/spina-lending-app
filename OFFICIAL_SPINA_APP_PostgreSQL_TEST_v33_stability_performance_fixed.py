@@ -36552,35 +36552,11 @@ except Exception as __spina_exc:
 from spina_app.theme_palettes import _spina_v25_collector_colors
 
 
-def _spina_v25_collector_button(parent, text, command=None, kind="normal", width=None):
-    c = _spina_v25_collector_colors()
-    bg = c["card2"]
-    fg = c["fg"]
-    if kind == "primary":
-        bg, fg = c["blue"], "#ffffff"
-    elif kind == "success":
-        bg, fg = c["green"], "#ffffff"
-    elif kind == "danger":
-        bg, fg = c["red"], "#ffffff"
-    elif kind == "soft":
-        bg, fg = c["soft"], c["fg"]
-
-    return tk.Button(
-        parent,
-        text=text,
-        command=command,
-        bg=bg,
-        fg=fg,
-        activebackground=bg,
-        activeforeground=fg,
-        relief="flat",
-        bd=0,
-        padx=14,
-        pady=8,
-        font=("Segoe UI", 9, "bold"),
-        cursor="hand2",
-        width=width,
-    )
+from spina_app.ui_controls import (
+    _spina_v25_collector_button,
+    _spina_v27_route_button,
+    _spina_v32_login_button,
+)
 
 
 from spina_app.tabs.collectors import (
@@ -37020,36 +36996,6 @@ except Exception as __spina_exc:
 _spina_v27_route_colors = _spina_v25_collector_colors
 
 
-def _spina_v27_route_button(parent, text, command=None, kind="normal", width=None):
-    c = _spina_v27_route_colors()
-    bg, fg = c["card2"], c["fg"]
-    if kind == "primary":
-        bg, fg = c["blue"], "#ffffff"
-    elif kind == "success":
-        bg, fg = c["green"], "#ffffff"
-    elif kind == "danger":
-        bg, fg = c["red"], "#ffffff"
-    elif kind == "warning":
-        bg, fg = c["orange"], "#ffffff"
-    elif kind == "soft":
-        bg, fg = c["soft"], c["fg"]
-
-    return tk.Button(
-        parent,
-        text=text,
-        command=command,
-        bg=bg,
-        fg=fg,
-        activebackground=bg,
-        activeforeground=fg,
-        relief="flat",
-        bd=0,
-        padx=14,
-        pady=8,
-        font=("Segoe UI", 9, "bold"),
-        cursor="hand2",
-        width=width,
-    )
 
 
 from spina_app.ui_cards import _spina_v27_route_card
@@ -37197,34 +37143,6 @@ from spina_app.theme_palettes import _spina_v32_login_colors
 
 
 
-def _spina_v32_login_button(parent, text, command=None, kind="normal", width=None):
-    c = _spina_v32_login_colors()
-    bg, fg = c["card2"], c["fg"]
-    if kind == "primary":
-        bg, fg = c["blue"], "#ffffff"
-    elif kind == "success":
-        bg, fg = c["green"], "#ffffff"
-    elif kind == "danger":
-        bg, fg = c["red"], "#ffffff"
-    elif kind == "soft":
-        bg, fg = c["soft"], c["fg"]
-
-    return tk.Button(
-        parent,
-        text=text,
-        command=command,
-        bg=bg,
-        fg=fg,
-        activebackground=bg,
-        activeforeground=fg,
-        relief="flat",
-        bd=0,
-        padx=14,
-        pady=9,
-        font=("Segoe UI", 10, "bold"),
-        cursor="hand2",
-        width=width,
-    )
 
 
 def _spina_v32_account_default_name(username):

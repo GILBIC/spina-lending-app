@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `ea93c2d52564e681cc3c4af4d355805a394bb929`.
+Generated from commit `50a7957f58e8916718c4e638c2a813e3f17f41ba`.
 
-Scanned **181 Python files**, **75,980 lines**, and **2,395 symbols**.
+Scanned **184 Python files**, **76,486 lines**, and **2,418 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -737,22 +737,19 @@ Scanned **181 Python files**, **75,980 lines**, and **2,395 symbols**.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_client_form.cancel** (nested_function, lines 36313–36317, 5 lines, risk `support`): Handles cancel for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_add_client_dialog** (function, lines 36340–36389, 50 lines, risk `reports`): Handles spina v23 add client dialog for the clients feature.
 - **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v23_on_client_edit** (function, lines 36392–36458, 67 lines, risk `reports`): Handles spina v23 on client edit for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_collector_button** (function, lines 36555–36583, 29 lines, risk `ui_only`): Handles spina v25 collector button for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab** (function, lines 36600–36945, 346 lines, risk `ui_only`): Handles spina v25 build collectors tab for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_route_button** (function, lines 37023–37052, 30 lines, risk `ui_only`): Handles spina v27 route button for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_get_route_master_areas** (function, lines 37083–37114, 32 lines, risk `support`): Handles spina v27 get route master areas for the collectors feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_login_button** (function, lines 37200–37227, 28 lines, risk `authentication`): Handles spina v32 login button for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_default_name** (function, lines 37230–37238, 9 lines, risk `support`): Handles spina v32 account default name for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_display_name** (function, lines 37247–37257, 11 lines, risk `authentication`): Handles spina v32 account display name for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role** (function, lines 37260–37270, 11 lines, risk `authentication`): Handles spina v32 account role for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices** (function, lines 37273–37301, 29 lines, risk `authentication`): Handles spina v32 account choices for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user** (function, lines 37304–37309, 6 lines, risk `support`): Handles spina v32 selected label for user for the other feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based** (function, lines 37312–37366, 55 lines, risk `authentication`): Add account display metadata while preserving existing usernames/passwords/access.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account** (function, lines 37386–37443, 58 lines, risk `authentication`): Handles spina v32 switch account for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role** (function, lines 37446–37449, 4 lines, risk `authentication`): Handles spina v32 prompt user role for the authentication feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message** (function, lines 37481–37492, 12 lines, risk `reports`): Handles spina legacy client action removed message for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action** (function, lines 37495–37500, 6 lines, risk `filesystem`): Handles spina make removed legacy client action for the clients feature.
-- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action** (nested_function, lines 37496–37498, 3 lines, risk `support`): Handles spina removed action for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v25_build_collectors_tab** (function, lines 36576–36921, 346 lines, risk `ui_only`): Handles spina v25 build collectors tab for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v27_get_route_master_areas** (function, lines 37029–37060, 32 lines, risk `support`): Handles spina v27 get route master areas for the collectors feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_default_name** (function, lines 37148–37156, 9 lines, risk `support`): Handles spina v32 account default name for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_display_name** (function, lines 37165–37175, 11 lines, risk `authentication`): Handles spina v32 account display name for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_role** (function, lines 37178–37188, 11 lines, risk `authentication`): Handles spina v32 account role for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_account_choices** (function, lines 37191–37219, 29 lines, risk `authentication`): Handles spina v32 account choices for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_selected_label_for_user** (function, lines 37222–37227, 6 lines, risk `support`): Handles spina v32 selected label for user for the other feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_make_users_account_based** (function, lines 37230–37284, 55 lines, risk `authentication`): Add account display metadata while preserving existing usernames/passwords/access.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_switch_account** (function, lines 37304–37361, 58 lines, risk `authentication`): Handles spina v32 switch account for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_v32_prompt_user_role** (function, lines 37364–37367, 4 lines, risk `authentication`): Handles spina v32 prompt user role for the authentication feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_legacy_client_action_removed_message** (function, lines 37399–37410, 12 lines, risk `reports`): Handles spina legacy client action removed message for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action** (function, lines 37413–37418, 6 lines, risk `filesystem`): Handles spina make removed legacy client action for the clients feature.
+- **OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._spina_make_removed_legacy_client_action._spina_removed_action** (nested_function, lines 37414–37416, 3 lines, risk `support`): Handles spina removed action for the clients feature.
 
 ## `spina_app/account_header_presentation.py`
 
@@ -1257,14 +1254,17 @@ Scanned **181 Python files**, **75,980 lines**, and **2,395 symbols**.
 
 ## `spina_app/ui_controls.py`
 
-- **spina_app.ui_controls._spina_v21_build_labeled_entry** (function, lines 17–23, 7 lines, risk `ui_only`): Handles spina v21 build labeled entry for the other feature.
-- **spina_app.ui_controls._spina_v21_style_cash_table** (function, lines 26–48, 23 lines, risk `ui_only`): Handles spina v21 style cash table for the other feature.
-- **spina_app.ui_controls._spina_v24_cilog_button** (function, lines 51–79, 29 lines, risk `ui_only`): Handles spina v24 cilog button for the clients feature.
-- **spina_app.ui_controls._spina_v24_cilog_style_tree** (function, lines 82–104, 23 lines, risk `ui_only`): Handles spina v24 cilog style tree for the clients feature.
-- **spina_app.ui_controls._spina_v23_style_clients_tree** (function, lines 107–129, 23 lines, risk `ui_only`): Handles spina v23 style clients tree for the clients feature.
-- **spina_app.ui_controls._spina_v27_style_route_trees** (function, lines 132–154, 23 lines, risk `ui_only`): Handles spina v27 style route trees for the collectors feature.
-- **spina_app.ui_controls._spina_v17_update_filter_buttons** (function, lines 157–167, 11 lines, risk `ui_only`): Handles spina v17 update filter buttons for the other feature.
-- **spina_app.ui_controls._spina_v17_style_dashboard_table** (function, lines 170–193, 24 lines, risk `ui_only`): Handles spina v17 style dashboard table for the dashboard feature.
+- **spina_app.ui_controls._spina_v21_build_labeled_entry** (function, lines 19–25, 7 lines, risk `ui_only`): Handles spina v21 build labeled entry for the other feature.
+- **spina_app.ui_controls._spina_v21_style_cash_table** (function, lines 28–50, 23 lines, risk `ui_only`): Handles spina v21 style cash table for the other feature.
+- **spina_app.ui_controls._spina_v24_cilog_button** (function, lines 53–81, 29 lines, risk `ui_only`): Handles spina v24 cilog button for the clients feature.
+- **spina_app.ui_controls._spina_v24_cilog_style_tree** (function, lines 84–106, 23 lines, risk `ui_only`): Handles spina v24 cilog style tree for the clients feature.
+- **spina_app.ui_controls._spina_v23_style_clients_tree** (function, lines 109–131, 23 lines, risk `ui_only`): Handles spina v23 style clients tree for the clients feature.
+- **spina_app.ui_controls._spina_v27_style_route_trees** (function, lines 134–156, 23 lines, risk `ui_only`): Handles spina v27 style route trees for the collectors feature.
+- **spina_app.ui_controls._spina_v17_update_filter_buttons** (function, lines 159–169, 11 lines, risk `ui_only`): Handles spina v17 update filter buttons for the other feature.
+- **spina_app.ui_controls._spina_v17_style_dashboard_table** (function, lines 172–195, 24 lines, risk `ui_only`): Handles spina v17 style dashboard table for the dashboard feature.
+- **spina_app.ui_controls._spina_v25_collector_button** (function, lines 198–226, 29 lines, risk `ui_only`): Handles spina v25 collector button for the collectors feature.
+- **spina_app.ui_controls._spina_v27_route_button** (function, lines 228–257, 30 lines, risk `ui_only`): Handles spina v27 route button for the collectors feature.
+- **spina_app.ui_controls._spina_v32_login_button** (function, lines 259–286, 28 lines, risk `authentication`): Handles spina v32 login button for the authentication feature.
 
 ## `spina_app/ui_helpers.py`
 
@@ -1770,6 +1770,20 @@ Scanned **181 Python files**, **75,980 lines**, and **2,395 symbols**.
 - **tools.extract_text_normalizers._atomic_write** (function, lines 262–271, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
 - **tools.extract_text_normalizers.apply_extraction** (function, lines 274–283, 10 lines, risk `support`): Handles apply extraction for the other feature.
 - **tools.extract_text_normalizers.main** (function, lines 286–304, 19 lines, risk `filesystem`): Handles main for the other feature.
+
+## `tools/extract_ui_button_factories_wave_50.py`
+
+- **tools.extract_ui_button_factories_wave_50.dotted** (function, lines 58–64, 7 lines, risk `support`): Handles dotted for the other feature.
+- **tools.extract_ui_button_factories_wave_50.normalized** (function, lines 67–68, 2 lines, risk `support`): Handles normalized for the utilities feature.
+- **tools.extract_ui_button_factories_wave_50.plain_normalized** (function, lines 71–72, 2 lines, risk `support`): Handles plain normalized for the utilities feature.
+- **tools.extract_ui_button_factories_wave_50.source_hash** (function, lines 75–77, 3 lines, risk `support`): Handles source hash for the other feature.
+- **tools.extract_ui_button_factories_wave_50.top_function** (function, lines 80–83, 4 lines, risk `support`): Handles top function for the other feature.
+- **tools.extract_ui_button_factories_wave_50.source_for** (function, lines 86–89, 4 lines, risk `support`): Handles source for for the other feature.
+- **tools.extract_ui_button_factories_wave_50.calls_for** (function, lines 92–97, 6 lines, risk `support`): Handles calls for for the other feature.
+- **tools.extract_ui_button_factories_wave_50.verify_target** (function, lines 100–110, 11 lines, risk `support`): Handles verify target for the other feature.
+- **tools.extract_ui_button_factories_wave_50.verify_function_hash** (function, lines 113–122, 10 lines, risk `filesystem`): Handles verify function hash for the other feature.
+- **tools.extract_ui_button_factories_wave_50.rewrite_palette_import** (function, lines 125–154, 30 lines, risk `support`): Handles rewrite palette import for the other feature.
+- **tools.extract_ui_button_factories_wave_50.main** (function, lines 157–227, 71 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/inject_critical_path_logging.py`
 
@@ -2878,6 +2892,24 @@ Scanned **181 Python files**, **75,980 lines**, and **2,395 symbols**.
 - **tools.test_tk_shutdown_wave_46.child** (function, lines 37–77, 41 lines, risk `reports`): Handles child for the other feature.
 - **tools.test_tk_shutdown_wave_46.child.switch_theme_and_close** (nested_function, lines 65–70, 6 lines, risk `support`): Handles switch theme and close for the settings feature.
 - **tools.test_tk_shutdown_wave_46.parent** (function, lines 80–104, 25 lines, risk `filesystem`): Handles parent for the other feature.
+
+## `tools/test_ui_button_factories_wave_50.py`
+
+- **tools.test_ui_button_factories_wave_50.dotted** (function, lines 61–67, 7 lines, risk `support`): Handles dotted for the other feature.
+- **tools.test_ui_button_factories_wave_50.normalized** (function, lines 70–71, 2 lines, risk `support`): Handles normalized for the utilities feature.
+- **tools.test_ui_button_factories_wave_50.plain_normalized** (function, lines 74–75, 2 lines, risk `support`): Handles plain normalized for the utilities feature.
+- **tools.test_ui_button_factories_wave_50.source_hash** (function, lines 78–80, 3 lines, risk `support`): Handles source hash for the other feature.
+- **tools.test_ui_button_factories_wave_50.top_function** (function, lines 83–86, 4 lines, risk `support`): Handles top function for the other feature.
+- **tools.test_ui_button_factories_wave_50.source_for** (function, lines 89–92, 4 lines, risk `support`): Handles source for for the other feature.
+- **tools.test_ui_button_factories_wave_50.calls_for** (function, lines 95–100, 6 lines, risk `support`): Handles calls for for the other feature.
+- **tools.test_ui_button_factories_wave_50.verify_function** (function, lines 103–109, 7 lines, risk `filesystem`): Handles verify function for the other feature.
+- **tools.test_ui_button_factories_wave_50.main** (function, lines 112–169, 58 lines, risk `filesystem`): Handles main for the other feature.
+
+## `tools/test_ui_button_factories_widget_smoke_wave_50.py`
+
+- **tools.test_ui_button_factories_widget_smoke_wave_50.expected** (function, lines 24–35, 12 lines, risk `support`): Handles expected for the other feature.
+- **tools.test_ui_button_factories_widget_smoke_wave_50.verify_button** (function, lines 38–60, 23 lines, risk `ui_only`): Handles verify button for the other feature.
+- **tools.test_ui_button_factories_widget_smoke_wave_50.main** (function, lines 63–87, 25 lines, risk `reports`): Handles main for the other feature.
 
 ## `tools/test_ui_card_constructor_batch_08.py`
 

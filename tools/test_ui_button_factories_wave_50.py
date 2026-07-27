@@ -48,7 +48,7 @@ PALETTE_HASHES = {
     "_spina_v32_login_colors": "810a66f0d451c8410bc643dea96ad80cf69068e092482b4c772440304ed38a45",
 }
 PROTECTED_CALLERS = {
-    (DESKTOP, "_spina_v25_build_collectors_tab", "plain"): "f5b787feb012af35a41a6976af63684e01e958694d5b75e91df8d0b7a2af1c8",
+    (DESKTOP, "_spina_v25_build_collectors_tab", "plain"): "f5b787f580fd4202ebbc324e70da4a8c2adee5190e959c3af01b0e2402b32e92",
     (COLLECTOR_MODULE, "_spina_v27_build_collectors_tab", "newline"): "5ce718e8f43404331b044d2f3f43b81dc34b0782a15d45a317121e61da6701cb",
     (LOGIN_MODULE, "_spina_v32_prompt_login", "newline"): "0dc7c87e702bf93da77bbf6a9fc490a005114716e4ef487f10a203bfe75e48a3",
 }
