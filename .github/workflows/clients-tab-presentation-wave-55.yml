@@ -1,6 +1,7 @@
 name: Clients tab presentation Wave 55
 
 # Permanent read-only validation for the finalized Wave 55 branch.
+# Exact extraction, real Tk construction, protected regressions, maps, and audits.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
