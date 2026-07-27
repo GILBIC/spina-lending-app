@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/plan-high-volume-wave-55.yml"
       - "tools/extract_clients_tab_wave55_tmp.py"
+      - "tools/fix_clients_tab_wave55_hash_tmp.py"
   workflow_dispatch:
 
 permissions:
@@ -18,7 +19,7 @@ concurrency:
 jobs:
   extract:
     if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-55-clean'
-    runs-on: windows-latest
+    runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 60
     steps:
       - name: Check out exact branch head
@@ -28,15 +29,8 @@ jobs:
           fetch-depth: 0
           show-progress: false
       - name: Correct dedented source hash guard
-        shell: powershell
-        run: |
-          $path = 'tools\extract_clients_tab_wave55_tmp.py'
-          $text = Get-Content $path -Raw
-          $old = '    digest = hashlib.sha256(source_text.encode("utf-8")).hexdigest()'
-          $new = "    dedented = textwrap.dedent(source_text)`r`n    digest = hashlib.sha256(dedented.encode(\"utf-8\")).hexdigest()"
-          if (-not $text.Contains($old)) { throw 'Expected digest line not found' }
-          $text = $text.Replace($old, $new)
-          Set-Content -Path $path -Value $text -Encoding UTF8
+        shell: cmd
+        run: python tools\fix_clients_tab_wave55_hash_tmp.py
       - name: Extract guarded Clients-tab boundary
         shell: cmd
         run: python tools\extract_clients_tab_wave55_tmp.py
@@ -68,13 +62,14 @@ jobs:
           python -m tools.generate_architecture_map
           python -m tools.test_architecture_map
       - name: Finalize clean branch
-        shell: powershell
+        shell: cmd
         run: |
-          Remove-Item tools\extract_clients_tab_wave55_tmp.py -ErrorAction SilentlyContinue
-          Remove-Item .github\workflows\plan-high-volume-wave-55.yml -ErrorAction SilentlyContinue
-          Remove-Item docs\wave-55-candidate-report.md -ErrorAction SilentlyContinue
-          Remove-Item artifacts\wave-55-candidates.json -ErrorAction SilentlyContinue
-          Remove-Item artifacts\wave-55-extraction.json -ErrorAction SilentlyContinue
+          if exist tools\extract_clients_tab_wave55_tmp.py del /f /q tools\extract_clients_tab_wave55_tmp.py
+          if exist tools\fix_clients_tab_wave55_hash_tmp.py del /f /q tools\fix_clients_tab_wave55_hash_tmp.py
+          if exist .github\workflows\plan-high-volume-wave-55.yml del /f /q .github\workflows\plan-high-volume-wave-55.yml
+          if exist docs\wave-55-candidate-report.md del /f /q docs\wave-55-candidate-report.md
+          if exist artifacts\wave-55-candidates.json del /f /q artifacts\wave-55-candidates.json
+          if exist artifacts\wave-55-extraction.json del /f /q artifacts\wave-55-extraction.json
           git diff --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
