@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "7f074da81499cc67f05a61517d9a5d87cd0b2a8b",
+  "generated_from_commit": "1b9cc3a3d08c8163a6973da6ca5c1ce0d655d40d",
   "indexes": {
     "application_callbacks": [
       {
@@ -11356,8 +11356,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:23364:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.do_link"
       ],
       "dotted": [
-        "tools/extract_databank_cell_writes_wave61_tmp.py:41:tools.extract_databank_cell_writes_wave61_tmp.dotted",
-        "tools/plan_databank_writes_wave61_tmp.py:24:tools.plan_databank_writes_wave61_tmp.dotted",
         "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
         "tools/test_audit_presentation_wave_54.py:23:tools.test_audit_presentation_wave_54.dotted",
         "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted",
@@ -11560,12 +11558,10 @@
         "tools/cleanup_pure_login_dialog_ui_pass_only.py:304:tools.cleanup_pure_login_dialog_ui_pass_only.main",
         "tools/cleanup_stale_databank_generated_blocks.py:337:tools.cleanup_stale_databank_generated_blocks.main",
         "tools/disable_full_daily_ledger.py:403:tools.disable_full_daily_ledger.main",
-        "tools/dump_databank_writes_wave61_tmp.py:11:tools.dump_databank_writes_wave61_tmp.main",
         "tools/extract_append_unique_text.py:133:tools.extract_append_unique_text.main",
         "tools/extract_cilog_action_label.py:126:tools.extract_cilog_action_label.main",
         "tools/extract_cilog_diff_pairs.py:187:tools.extract_cilog_diff_pairs.main",
         "tools/extract_cilog_value_formatter.py:143:tools.extract_cilog_value_formatter.main",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:362:tools.extract_databank_cell_writes_wave61_tmp.main",
         "tools/extract_date_display_helpers.py:236:tools.extract_date_display_helpers.main",
         "tools/extract_date_helpers_module.py:292:tools.extract_date_helpers_module.main",
         "tools/extract_display_formatters.py:219:tools.extract_display_formatters.main",
@@ -11582,7 +11578,6 @@
         "tools/inspect_blocking_ui_context.py:159:tools.inspect_blocking_ui_context.main",
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
-        "tools/plan_databank_writes_wave61_tmp.py:41:tools.plan_databank_writes_wave61_tmp.main",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_login_dialog_pass_only.py:243:tools.plan_login_dialog_pass_only.main",
         "tools/plan_modern_ui_pass_only_cleanup.py:199:tools.plan_modern_ui_pass_only_cleanup.main",
@@ -11739,10 +11734,6 @@
       "normalized_hash": [
         "tools/test_account_permission_presentation_wave_47.py:38:tools.test_account_permission_presentation_wave_47.normalized_hash",
         "tools/test_login_cancel_startup_wave_46.py:21:tools.test_login_cancel_startup_wave_46.normalized_hash"
-      ],
-      "normalized_sha": [
-        "tools/extract_databank_cell_writes_wave61_tmp.py:37:tools.extract_databank_cell_writes_wave61_tmp.normalized_sha",
-        "tools/plan_databank_writes_wave61_tmp.py:37:tools.plan_databank_writes_wave61_tmp.normalized_sha"
       ],
       "normalized_source": [
         "tools/test_client_read_queries_wave_31.py:16:tools.test_client_read_queries_wave_31.normalized_source",
@@ -13325,7 +13316,6 @@
         "tools/disable_full_daily_ledger.py:376:tools.disable_full_daily_ledger._looks_like_legacy_button_line",
         "tools/disable_full_daily_ledger.py:392:tools.disable_full_daily_ledger.remove_static_legacy_button_lines",
         "tools/disable_full_daily_ledger.py:403:tools.disable_full_daily_ledger.main",
-        "tools/dump_databank_writes_wave61_tmp.py:11:tools.dump_databank_writes_wave61_tmp.main",
         "tools/extract_append_unique_text.py:101:tools.extract_append_unique_text.apply_extraction",
         "tools/extract_append_unique_text.py:133:tools.extract_append_unique_text.main",
         "tools/extract_append_unique_text.py:21:tools.extract_append_unique_text.atomic_write",
@@ -13353,12 +13343,6 @@
         "tools/extract_cilog_value_formatter.py:27:tools.extract_cilog_value_formatter._top_level_function",
         "tools/extract_cilog_value_formatter.py:34:tools.extract_cilog_value_formatter._local_names",
         "tools/extract_cilog_value_formatter.py:63:tools.extract_cilog_value_formatter.build_plan",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:181:tools.extract_databank_cell_writes_wave61_tmp.build_behavior_test",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:362:tools.extract_databank_cell_writes_wave61_tmp.main",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:41:tools.extract_databank_cell_writes_wave61_tmp.dotted",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:50:tools.extract_databank_cell_writes_wave61_tmp.method_metadata",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:68:tools.extract_databank_cell_writes_wave61_tmp.build_module",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:95:tools.extract_databank_cell_writes_wave61_tmp.build_static_test",
         "tools/extract_date_display_helpers.py:108:tools.extract_date_display_helpers._append_module_source",
         "tools/extract_date_display_helpers.py:117:tools.extract_date_display_helpers._patched_source",
         "tools/extract_date_display_helpers.py:128:tools.extract_date_display_helpers._state",
@@ -13497,9 +13481,6 @@
         "tools/plan_app_lifecycle_window_pass_only.py:72:tools.plan_app_lifecycle_window_pass_only._context_text",
         "tools/plan_app_lifecycle_window_pass_only.py:76:tools.plan_app_lifecycle_window_pass_only._protected",
         "tools/plan_app_lifecycle_window_pass_only.py:80:tools.plan_app_lifecycle_window_pass_only._classify",
-        "tools/plan_databank_writes_wave61_tmp.py:24:tools.plan_databank_writes_wave61_tmp.dotted",
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature",
-        "tools/plan_databank_writes_wave61_tmp.py:41:tools.plan_databank_writes_wave61_tmp.main",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_logger_fallback_pass_only.py:54:tools.plan_logger_fallback_pass_only._handler_name",
         "tools/plan_logger_fallback_pass_only.py:71:tools.plan_logger_fallback_pass_only._context",
@@ -14569,14 +14550,12 @@
         "tools/extract_append_unique_text.py:87:tools.extract_append_unique_text.validate_plan",
         "tools/extract_cilog_diff_pairs.py:59:tools.extract_cilog_diff_pairs._validate_node",
         "tools/extract_cilog_value_formatter.py:48:tools.extract_cilog_value_formatter._validate",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:37:tools.extract_databank_cell_writes_wave61_tmp.normalized_sha",
         "tools/extract_date_display_helpers.py:81:tools.extract_date_display_helpers._validate_signature",
         "tools/extract_date_display_helpers.py:87:tools.extract_date_display_helpers._validate_existing_module",
         "tools/extract_log_serialization_helper.py:47:tools.extract_log_serialization_helper._validate",
         "tools/extract_merge_note_dict.py:97:tools.extract_merge_note_dict.validate_plan",
         "tools/extract_note_dict_helper.py:98:tools.extract_note_dict_helper.validate_plan",
         "tools/extract_numeric_parsers.py:82:tools.extract_numeric_parsers._validate_function",
-        "tools/plan_databank_writes_wave61_tmp.py:37:tools.plan_databank_writes_wave61_tmp.normalized_sha",
         "tools/test_account_header_presentation_wave_46.py:45:tools.test_account_header_presentation_wave_46.normalized",
         "tools/test_account_permission_presentation_wave_47.py:38:tools.test_account_permission_presentation_wave_47.normalized_hash",
         "tools/test_append_unique_text_extraction.py:36:tools.test_append_unique_text_extraction.load_helper",
@@ -17240,7 +17219,6 @@
         "tools/cleanup_pure_login_dialog_ui_pass_only.py:304:tools.cleanup_pure_login_dialog_ui_pass_only.main",
         "tools/cleanup_stale_databank_generated_blocks.py:337:tools.cleanup_stale_databank_generated_blocks.main",
         "tools/disable_full_daily_ledger.py:403:tools.disable_full_daily_ledger.main",
-        "tools/dump_databank_writes_wave61_tmp.py:11:tools.dump_databank_writes_wave61_tmp.main",
         "tools/extract_append_unique_text.py:101:tools.extract_append_unique_text.apply_extraction",
         "tools/extract_append_unique_text.py:133:tools.extract_append_unique_text.main",
         "tools/extract_append_unique_text.py:21:tools.extract_append_unique_text.atomic_write",
@@ -17255,8 +17233,6 @@
         "tools/extract_cilog_value_formatter.py:118:tools.extract_cilog_value_formatter._atomic_write",
         "tools/extract_cilog_value_formatter.py:143:tools.extract_cilog_value_formatter.main",
         "tools/extract_cilog_value_formatter.py:63:tools.extract_cilog_value_formatter.build_plan",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:362:tools.extract_databank_cell_writes_wave61_tmp.main",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:37:tools.extract_databank_cell_writes_wave61_tmp.normalized_sha",
         "tools/extract_date_display_helpers.py:141:tools.extract_date_display_helpers.build_plan",
         "tools/extract_date_display_helpers.py:211:tools.extract_date_display_helpers._atomic_write",
         "tools/extract_date_display_helpers.py:236:tools.extract_date_display_helpers.main",
@@ -17299,8 +17275,6 @@
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
         "tools/plan_app_lifecycle_window_pass_only.py:160:tools.plan_app_lifecycle_window_pass_only.build_report",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
-        "tools/plan_databank_writes_wave61_tmp.py:37:tools.plan_databank_writes_wave61_tmp.normalized_sha",
-        "tools/plan_databank_writes_wave61_tmp.py:41:tools.plan_databank_writes_wave61_tmp.main",
         "tools/plan_logger_fallback_pass_only.py:136:tools.plan_logger_fallback_pass_only.build_report",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_login_dialog_pass_only.py:243:tools.plan_login_dialog_pass_only.main",
@@ -18384,11 +18358,6 @@
         "tools/extract_cilog_value_formatter.py:27:tools.extract_cilog_value_formatter._top_level_function",
         "tools/extract_cilog_value_formatter.py:34:tools.extract_cilog_value_formatter._local_names",
         "tools/extract_cilog_value_formatter.py:48:tools.extract_cilog_value_formatter._validate",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:181:tools.extract_databank_cell_writes_wave61_tmp.build_behavior_test",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:41:tools.extract_databank_cell_writes_wave61_tmp.dotted",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:50:tools.extract_databank_cell_writes_wave61_tmp.method_metadata",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:68:tools.extract_databank_cell_writes_wave61_tmp.build_module",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:95:tools.extract_databank_cell_writes_wave61_tmp.build_static_test",
         "tools/extract_date_display_helpers.py:108:tools.extract_date_display_helpers._append_module_source",
         "tools/extract_date_display_helpers.py:117:tools.extract_date_display_helpers._patched_source",
         "tools/extract_date_display_helpers.py:128:tools.extract_date_display_helpers._state",
@@ -18497,8 +18466,6 @@
         "tools/plan_app_lifecycle_window_pass_only.py:72:tools.plan_app_lifecycle_window_pass_only._context_text",
         "tools/plan_app_lifecycle_window_pass_only.py:76:tools.plan_app_lifecycle_window_pass_only._protected",
         "tools/plan_app_lifecycle_window_pass_only.py:80:tools.plan_app_lifecycle_window_pass_only._classify",
-        "tools/plan_databank_writes_wave61_tmp.py:24:tools.plan_databank_writes_wave61_tmp.dotted",
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature",
         "tools/plan_logger_fallback_pass_only.py:101:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_AsyncFunctionDef",
         "tools/plan_logger_fallback_pass_only.py:106:tools.plan_logger_fallback_pass_only.PassOnlyVisitor.visit_Try",
         "tools/plan_logger_fallback_pass_only.py:54:tools.plan_logger_fallback_pass_only._handler_name",
@@ -21750,25 +21717,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/dump_databank_writes_wave61_tmp.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast"
-      },
-      "lines": 27,
-      "module": "tools.dump_databank_writes_wave61_tmp",
-      "module_globals": [
-        "APP",
-        "OUT",
-        "TARGETS"
-      ],
-      "monkey_patches": [],
-      "sha256": "18a8f1d75563bf399099dfa539f26fdc8d670dbb3481d6bd0c1679db1f404c05",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/extract_append_unique_text.py",
       "imports": {
         "Path": "pathlib.Path",
@@ -21868,35 +21816,6 @@
       ],
       "monkey_patches": [],
       "sha256": "8d90e67b28289db34192684032075b5adefdafafea44783a21c82f692d99fafa",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/extract_databank_cell_writes_wave61_tmp.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json",
-        "textwrap": "textwrap"
-      },
-      "lines": 433,
-      "module": "tools.extract_databank_cell_writes_wave61_tmp",
-      "module_globals": [
-        "APP_PATH",
-        "BEHAVIOR_TEST_PATH",
-        "EXPECTED_DEDENTED_SHA",
-        "EXPECTED_LINES",
-        "EXPECTED_PROTECTED_SHA",
-        "EXPECTED_SIGNATURES",
-        "EXPECTED_SOURCE_SHA",
-        "MODULE_PATH",
-        "STATIC_TEST_PATH",
-        "TARGETS"
-      ],
-      "monkey_patches": [],
-      "sha256": "8a067bc4337b4991476b403e59ffc81a99df46658c25dee9e97ab9c3c54ec76c",
       "syntax_ok": true
     },
     {
@@ -22293,31 +22212,6 @@
       ],
       "monkey_patches": [],
       "sha256": "b47a2301bbe497c605feb6d3c24d78b8c190fbcd252a07a4369313ec4cb52147",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/plan_databank_writes_wave61_tmp.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json",
-        "textwrap": "textwrap"
-      },
-      "lines": 157,
-      "module": "tools.plan_databank_writes_wave61_tmp",
-      "module_globals": [
-        "APP_PATH",
-        "EXPECTED_LINES",
-        "OUT_PATH",
-        "PROTECTED",
-        "TARGETS",
-        "WRITE_MARKERS"
-      ],
-      "monkey_patches": [],
-      "sha256": "bf97e5308dddc69a23b12e3289cb84cf1aed77c597a678b1d2223c3c07220e32",
       "syntax_ok": true
     },
     {
@@ -25138,25 +25032,25 @@
   "summary": {
     "application_monkey_patches": 76,
     "application_python_files": 58,
-    "application_resolved_call_edges": 2759,
+    "application_resolved_call_edges": 2758,
     "application_symbols": 1208,
     "application_ui_callback_edges": 478,
     "classes": 116,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1497,
+    "functions": 1485,
     "methods": 570,
     "monkey_patches": 173,
     "nested_functions": 390,
     "parse_errors": 0,
     "possible_orphans": 133,
-    "python_files": 218,
+    "python_files": 215,
     "repository_database_tables": 19,
-    "repository_duplicate_names": 301,
+    "repository_duplicate_names": 300,
     "repository_possible_orphans": 286,
-    "resolved_call_edges": 4033,
-    "symbols": 2573,
-    "total_python_lines": 79355,
+    "resolved_call_edges": 4009,
+    "symbols": 2561,
+    "total_python_lines": 78738,
     "ui_callback_edges": 488
   },
   "symbols": [
@@ -78340,9 +78234,7 @@
         "sig.parameters.values",
         "work_fn"
       ],
-      "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature"
-      ],
+      "calls_resolved": [],
       "class_name": null,
       "database_tables": [],
       "docstring": "Call work_fn, optionally passing cancel_event if supported.",
@@ -98194,54 +98086,6 @@
       "source_sha256": "39072c04e89a325ffe7b14f6ca26ff349dff3060fcbe3b35b234cfec5d015def"
     },
     {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP.read_text",
-        "OUT.write_text",
-        "ast.parse",
-        "chunks.append",
-        "isinstance",
-        "join",
-        "next",
-        "print",
-        "text.splitlines"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 23,
-      "feature": "other",
-      "file": "tools/dump_databank_writes_wave61_tmp.py",
-      "file_paths": [],
-      "globals_read": [
-        "APP",
-        "OUT",
-        "TARGETS"
-      ],
-      "globals_written": [],
-      "id": "tools/dump_databank_writes_wave61_tmp.py:11:tools.dump_databank_writes_wave61_tmp.main",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 11,
-      "lines": 13,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.dump_databank_writes_wave61_tmp.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "e5ec913e2b4116df4b1b0078ad751d6905ca829a80722d4c6a0ebdf5f4edf271"
-    },
-    {
       "args": [
         "path",
         "text"
@@ -99673,323 +99517,6 @@
         "reports"
       ],
       "source_sha256": "075e73e5939f3966df8cb1198ebf8ecb641c53c52e95bd26ed48c5ec60ce40a2"
-    },
-    {
-      "args": [
-        "source"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_databank_cell_writes_wave61_tmp.py:362:tools.extract_databank_cell_writes_wave61_tmp.main",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:50:tools.extract_databank_cell_writes_wave61_tmp.method_metadata"
-      ],
-      "calls_raw": [
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "source.replace",
-        "source.replace.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 38,
-      "feature": "utilities",
-      "file": "tools/extract_databank_cell_writes_wave61_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_databank_cell_writes_wave61_tmp.py:37:tools.extract_databank_cell_writes_wave61_tmp.normalized_sha",
-      "imports_used": [
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 37,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "normalized_sha",
-      "parent": null,
-      "purpose": "Handles normalized sha for the utilities feature.",
-      "qualified_name": "tools.extract_databank_cell_writes_wave61_tmp.normalized_sha",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem"
-      ],
-      "source_sha256": "439307c1d5bfa0ef9bf2300a0858b807b1faa86889aec76dc6684f8ed875a4e2"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_databank_cell_writes_wave61_tmp.py:41:tools.extract_databank_cell_writes_wave61_tmp.dotted",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:50:tools.extract_databank_cell_writes_wave61_tmp.method_metadata"
-      ],
-      "calls_raw": [
-        "dotted",
-        "isinstance"
-      ],
-      "calls_resolved": [
-        "tools/extract_databank_cell_writes_wave61_tmp.py:41:tools.extract_databank_cell_writes_wave61_tmp.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 47,
-      "feature": "other",
-      "file": "tools/extract_databank_cell_writes_wave61_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_databank_cell_writes_wave61_tmp.py:41:tools.extract_databank_cell_writes_wave61_tmp.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 41,
-      "lines": 7,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.extract_databank_cell_writes_wave61_tmp.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "23fa5fb0abd919fc8fa6ea0c982b8a1b4eed2e824ec69ba79403a7fbed4b5c74"
-    },
-    {
-      "args": [
-        "node",
-        "source"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_databank_cell_writes_wave61_tmp.py:362:tools.extract_databank_cell_writes_wave61_tmp.main"
-      ],
-      "calls_raw": [
-        "ast.unparse",
-        "ast.walk",
-        "call.startswith",
-        "dotted",
-        "isinstance",
-        "normalized_sha",
-        "sorted",
-        "textwrap.dedent"
-      ],
-      "calls_resolved": [
-        "tools/extract_databank_cell_writes_wave61_tmp.py:37:tools.extract_databank_cell_writes_wave61_tmp.normalized_sha",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:41:tools.extract_databank_cell_writes_wave61_tmp.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 65,
-      "feature": "other",
-      "file": "tools/extract_databank_cell_writes_wave61_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_databank_cell_writes_wave61_tmp.py:50:tools.extract_databank_cell_writes_wave61_tmp.method_metadata",
-      "imports_used": [
-        "ast",
-        "textwrap"
-      ],
-      "kind": "function",
-      "line": 50,
-      "lines": 16,
-      "monkey_patches": [],
-      "name": "method_metadata",
-      "parent": null,
-      "purpose": "Handles method metadata for the other feature.",
-      "qualified_name": "tools.extract_databank_cell_writes_wave61_tmp.method_metadata",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "deed5b97e4674719fc7e004222eae878fe15445c720487264a0812e83daf7531"
-    },
-    {
-      "args": [
-        "metadata",
-        "sources"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_databank_cell_writes_wave61_tmp.py:362:tools.extract_databank_cell_writes_wave61_tmp.main"
-      ],
-      "calls_raw": [
-        "join",
-        "join.rstrip",
-        "parts.append",
-        "textwrap.dedent"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 92,
-      "feature": "other",
-      "file": "tools/extract_databank_cell_writes_wave61_tmp.py",
-      "file_paths": [],
-      "globals_read": [
-        "TARGETS"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_databank_cell_writes_wave61_tmp.py:68:tools.extract_databank_cell_writes_wave61_tmp.build_module",
-      "imports_used": [
-        "textwrap"
-      ],
-      "kind": "function",
-      "line": 68,
-      "lines": 25,
-      "monkey_patches": [],
-      "name": "build_module",
-      "parent": null,
-      "purpose": "Builds build module for the other feature.",
-      "qualified_name": "tools.extract_databank_cell_writes_wave61_tmp.build_module",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "62fc3ec2b5abd35518b7c533701777fcd08a47456ae73d5c9b094671271860b6"
-    },
-    {
-      "args": [
-        "metadata"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_databank_cell_writes_wave61_tmp.py:362:tools.extract_databank_cell_writes_wave61_tmp.main"
-      ],
-      "calls_raw": [],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 178,
-      "feature": "other",
-      "file": "tools/extract_databank_cell_writes_wave61_tmp.py",
-      "file_paths": [],
-      "globals_read": [
-        "EXPECTED_PROTECTED_SHA",
-        "TARGETS"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_databank_cell_writes_wave61_tmp.py:95:tools.extract_databank_cell_writes_wave61_tmp.build_static_test",
-      "imports_used": [],
-      "kind": "function",
-      "line": 95,
-      "lines": 84,
-      "monkey_patches": [],
-      "name": "build_static_test",
-      "parent": null,
-      "purpose": "Builds build static test for the other feature.",
-      "qualified_name": "tools.extract_databank_cell_writes_wave61_tmp.build_static_test",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "dab9fb3a0528a7fd75ab22ac8d7fce6f7e32942ad514098f80e08305c1854e90"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [
-        "tools/extract_databank_cell_writes_wave61_tmp.py:362:tools.extract_databank_cell_writes_wave61_tmp.main"
-      ],
-      "calls_raw": [],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 359,
-      "feature": "other",
-      "file": "tools/extract_databank_cell_writes_wave61_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/extract_databank_cell_writes_wave61_tmp.py:181:tools.extract_databank_cell_writes_wave61_tmp.build_behavior_test",
-      "imports_used": [],
-      "kind": "function",
-      "line": 181,
-      "lines": 179,
-      "monkey_patches": [],
-      "name": "build_behavior_test",
-      "parent": null,
-      "purpose": "Builds build behavior test for the other feature.",
-      "qualified_name": "tools.extract_databank_cell_writes_wave61_tmp.build_behavior_test",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "9f2dc08f6fe5242b25021d467477c4cb8bb5ddd0116803669afb2317f4089206"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP_PATH.read_text",
-        "APP_PATH.write_text",
-        "BEHAVIOR_TEST_PATH.write_text",
-        "MODULE_PATH.parent.mkdir",
-        "MODULE_PATH.write_text",
-        "STATIC_TEST_PATH.write_text",
-        "SystemExit",
-        "ast.parse",
-        "build_behavior_test",
-        "build_module",
-        "build_static_test",
-        "isinstance",
-        "join",
-        "json.dumps",
-        "method_metadata",
-        "new_text.replace",
-        "next",
-        "normalized_sha",
-        "print",
-        "sorted",
-        "text.splitlines"
-      ],
-      "calls_resolved": [
-        "tools/extract_databank_cell_writes_wave61_tmp.py:181:tools.extract_databank_cell_writes_wave61_tmp.build_behavior_test",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:37:tools.extract_databank_cell_writes_wave61_tmp.normalized_sha",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:50:tools.extract_databank_cell_writes_wave61_tmp.method_metadata",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:68:tools.extract_databank_cell_writes_wave61_tmp.build_module",
-        "tools/extract_databank_cell_writes_wave61_tmp.py:95:tools.extract_databank_cell_writes_wave61_tmp.build_static_test"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 429,
-      "feature": "other",
-      "file": "tools/extract_databank_cell_writes_wave61_tmp.py",
-      "file_paths": [],
-      "globals_read": [
-        "APP_PATH",
-        "BEHAVIOR_TEST_PATH",
-        "EXPECTED_DEDENTED_SHA",
-        "EXPECTED_LINES",
-        "EXPECTED_PROTECTED_SHA",
-        "EXPECTED_SIGNATURES",
-        "EXPECTED_SOURCE_SHA",
-        "MODULE_PATH",
-        "STATIC_TEST_PATH",
-        "TARGETS"
-      ],
-      "globals_written": [],
-      "id": "tools/extract_databank_cell_writes_wave61_tmp.py:362:tools.extract_databank_cell_writes_wave61_tmp.main",
-      "imports_used": [
-        "ast",
-        "json"
-      ],
-      "kind": "function",
-      "line": 362,
-      "lines": 68,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.extract_databank_cell_writes_wave61_tmp.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "7bea76cd80396cc8a41b9ee9f0e4257c6dd49305e728c5ad2496785df50f85e2"
     },
     {
       "args": [
@@ -106995,209 +106522,6 @@
         "reports"
       ],
       "source_sha256": "c34892d58d500fbdd612f33434def16f4671b86d94ee4c7b183d51a1cc13935e"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_databank_writes_wave61_tmp.py:24:tools.plan_databank_writes_wave61_tmp.dotted",
-        "tools/plan_databank_writes_wave61_tmp.py:41:tools.plan_databank_writes_wave61_tmp.main"
-      ],
-      "calls_raw": [
-        "dotted",
-        "isinstance"
-      ],
-      "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:24:tools.plan_databank_writes_wave61_tmp.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 30,
-      "feature": "other",
-      "file": "tools/plan_databank_writes_wave61_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_databank_writes_wave61_tmp.py:24:tools.plan_databank_writes_wave61_tmp.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 24,
-      "lines": 7,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.plan_databank_writes_wave61_tmp.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "23fa5fb0abd919fc8fa6ea0c982b8a1b4eed2e824ec69ba79403a7fbed4b5c74"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "spina_app/long_task_presentation.py:255:spina_app.long_task_presentation._run_long_task._call_work_fn",
-        "tools/plan_databank_writes_wave61_tmp.py:41:tools.plan_databank_writes_wave61_tmp.main",
-        "tools/test_cilog_action_label_extraction.py:53:tools.test_cilog_action_label_extraction._behavior",
-        "tools/test_cilog_money_formatter_extraction.py:53:tools.test_cilog_money_formatter_extraction._behavior",
-        "tools/test_cilog_value_formatter_extraction.py:66:tools.test_cilog_value_formatter_extraction._behavior",
-        "tools/test_date_display_helper_extraction.py:44:tools.test_date_display_helper_extraction._validate_signature",
-        "tools/test_date_helpers_extraction.py:50:tools.test_date_helpers_extraction._validate_signature",
-        "tools/test_display_formatter_extraction.py:43:tools.test_display_formatter_extraction._validate_signature",
-        "tools/test_import_log_presentation_wave_53.py:79:tools.test_import_log_presentation_wave_53.main",
-        "tools/test_log_serialization_helper_extraction.py:52:tools.test_log_serialization_helper_extraction._behavior",
-        "tools/test_long_task_presentation_wave_42.py:38:tools.test_long_task_presentation_wave_42.main",
-        "tools/test_numeric_parser_extraction.py:45:tools.test_numeric_parser_extraction._validate_signature",
-        "tools/test_text_normalizer_extraction.py:44:tools.test_text_normalizer_extraction._validate_signature"
-      ],
-      "calls_raw": [
-        "ast.unparse"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 34,
-      "feature": "other",
-      "file": "tools/plan_databank_writes_wave61_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 33,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "signature",
-      "parent": null,
-      "purpose": "Handles signature for the other feature.",
-      "qualified_name": "tools.plan_databank_writes_wave61_tmp.signature",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "e57250c2f4046e8e65a6b5f97aac42226f80f54a352bbca35cb221b7481f5335"
-    },
-    {
-      "args": [
-        "source"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_databank_writes_wave61_tmp.py:41:tools.plan_databank_writes_wave61_tmp.main"
-      ],
-      "calls_raw": [
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "source.replace",
-        "source.replace.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 38,
-      "feature": "utilities",
-      "file": "tools/plan_databank_writes_wave61_tmp.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_databank_writes_wave61_tmp.py:37:tools.plan_databank_writes_wave61_tmp.normalized_sha",
-      "imports_used": [
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 37,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "normalized_sha",
-      "parent": null,
-      "purpose": "Handles normalized sha for the utilities feature.",
-      "qualified_name": "tools.plan_databank_writes_wave61_tmp.normalized_sha",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem"
-      ],
-      "source_sha256": "439307c1d5bfa0ef9bf2300a0858b807b1faa86889aec76dc6684f8ed875a4e2"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP_PATH.read_text",
-        "OUT_PATH.parent.mkdir",
-        "OUT_PATH.write_text",
-        "SystemExit",
-        "any",
-        "ast.parse",
-        "ast.walk",
-        "call.lower",
-        "call.rsplit",
-        "call.startswith",
-        "dotted",
-        "isinstance",
-        "join",
-        "json.dumps",
-        "len",
-        "next",
-        "normalized_sha",
-        "out.extend",
-        "print",
-        "signature",
-        "sorted",
-        "text.splitlines",
-        "textwrap.dedent"
-      ],
-      "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:24:tools.plan_databank_writes_wave61_tmp.dotted",
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature",
-        "tools/plan_databank_writes_wave61_tmp.py:37:tools.plan_databank_writes_wave61_tmp.normalized_sha"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 153,
-      "feature": "other",
-      "file": "tools/plan_databank_writes_wave61_tmp.py",
-      "file_paths": [],
-      "globals_read": [
-        "APP_PATH",
-        "EXPECTED_LINES",
-        "OUT_PATH",
-        "PROTECTED",
-        "TARGETS",
-        "WRITE_MARKERS"
-      ],
-      "globals_written": [],
-      "id": "tools/plan_databank_writes_wave61_tmp.py:41:tools.plan_databank_writes_wave61_tmp.main",
-      "imports_used": [
-        "ast",
-        "json",
-        "textwrap"
-      ],
-      "kind": "function",
-      "line": 41,
-      "lines": 113,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.plan_databank_writes_wave61_tmp.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "e2ad8f1b15aa1534dad56c94dd6f060e0e12ab37a9042cae846b7364c3063d6b"
     },
     {
       "args": [
@@ -117385,7 +116709,6 @@
         "list"
       ],
       "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature",
         "tools/test_cilog_action_label_extraction.py:20:tools.test_cilog_action_label_extraction._cases",
         "tools/test_cilog_action_label_extraction.py:37:tools.test_cilog_action_label_extraction._capture"
       ],
@@ -117997,7 +117320,6 @@
         "len"
       ],
       "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature",
         "tools/test_cilog_money_formatter_extraction.py:20:tools.test_cilog_money_formatter_extraction._cases",
         "tools/test_cilog_money_formatter_extraction.py:37:tools.test_cilog_money_formatter_extraction._capture"
       ],
@@ -119230,7 +118552,6 @@
         "len"
       ],
       "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature",
         "tools/test_cilog_value_formatter_extraction.py:28:tools.test_cilog_value_formatter_extraction._cases",
         "tools/test_cilog_value_formatter_extraction.py:50:tools.test_cilog_value_formatter_extraction._capture"
       ],
@@ -132469,9 +131790,7 @@
         "len",
         "signature.parameters.values"
       ],
-      "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature"
-      ],
+      "calls_resolved": [],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
@@ -133083,9 +132402,7 @@
         "len",
         "signature.parameters.values"
       ],
-      "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature"
-      ],
+      "calls_resolved": [],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
@@ -134243,9 +133560,7 @@
         "len",
         "signature.parameters.values"
       ],
-      "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature"
-      ],
+      "calls_resolved": [],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
@@ -135938,7 +135253,6 @@
         "tuple"
       ],
       "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature",
         "tools/test_import_log_presentation_wave_53.py:37:tools.test_import_log_presentation_wave_53.normalized",
         "tools/test_import_log_presentation_wave_53.py:41:tools.test_import_log_presentation_wave_53.dotted",
         "tools/test_import_log_presentation_wave_53.py:50:tools.test_import_log_presentation_wave_53.desktop_callers"
@@ -138850,7 +138164,6 @@
         "len"
       ],
       "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature",
         "tools/test_log_serialization_helper_extraction.py:20:tools.test_log_serialization_helper_extraction._cases",
         "tools/test_log_serialization_helper_extraction.py:36:tools.test_log_serialization_helper_extraction._capture"
       ],
@@ -140649,7 +139962,6 @@
         "spec.loader.exec_module"
       ],
       "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature",
         "tools/test_long_task_presentation_wave_42.py:24:tools.test_long_task_presentation_wave_42.normalized",
         "tools/test_long_task_presentation_wave_42.py:28:tools.test_long_task_presentation_wave_42.call_chain"
       ],
@@ -142506,9 +141818,7 @@
         "len",
         "signature.parameters.values"
       ],
-      "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature"
-      ],
+      "calls_resolved": [],
       "class_name": null,
       "database_tables": [],
       "docstring": "",
@@ -145464,9 +144774,7 @@
         "len",
         "signature.parameters.values"
       ],
-      "calls_resolved": [
-        "tools/plan_databank_writes_wave61_tmp.py:33:tools.plan_databank_writes_wave61_tmp.signature"
-      ],
+      "calls_resolved": [],
       "class_name": null,
       "database_tables": [],
       "docstring": "",

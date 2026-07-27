@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `7f074da81499cc67f05a61517d9a5d87cd0b2a8b`.
+Generated from commit `1b9cc3a3d08c8163a6973da6ca5c1ce0d655d40d`.
 
-Scanned **218 Python files**, **79,355 lines**, and **2,573 symbols**.
+Scanned **215 Python files**, **78,738 lines**, and **2,561 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1637,10 +1637,6 @@ Scanned **218 Python files**, **79,355 lines**, and **2,573 symbols**.
 - **tools.disable_full_daily_ledger.remove_static_legacy_button_lines** (function, lines 392–400, 9 lines, risk `support`): Removes remove static legacy button lines for the other feature.
 - **tools.disable_full_daily_ledger.main** (function, lines 403–438, 36 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/dump_databank_writes_wave61_tmp.py`
-
-- **tools.dump_databank_writes_wave61_tmp.main** (function, lines 11–23, 13 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/extract_append_unique_text.py`
 
 - **tools.extract_append_unique_text.atomic_write** (function, lines 21–30, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
@@ -1682,16 +1678,6 @@ Scanned **218 Python files**, **79,355 lines**, and **2,573 symbols**.
 - **tools.extract_cilog_value_formatter._atomic_write** (function, lines 118–127, 10 lines, risk `filesystem`): Handles atomic write for the other feature.
 - **tools.extract_cilog_value_formatter.apply_extraction** (function, lines 130–140, 11 lines, risk `support`): Handles apply extraction for the other feature.
 - **tools.extract_cilog_value_formatter.main** (function, lines 143–161, 19 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/extract_databank_cell_writes_wave61_tmp.py`
-
-- **tools.extract_databank_cell_writes_wave61_tmp.normalized_sha** (function, lines 37–38, 2 lines, risk `filesystem`): Handles normalized sha for the utilities feature.
-- **tools.extract_databank_cell_writes_wave61_tmp.dotted** (function, lines 41–47, 7 lines, risk `support`): Handles dotted for the other feature.
-- **tools.extract_databank_cell_writes_wave61_tmp.method_metadata** (function, lines 50–65, 16 lines, risk `support`): Handles method metadata for the other feature.
-- **tools.extract_databank_cell_writes_wave61_tmp.build_module** (function, lines 68–92, 25 lines, risk `support`): Builds build module for the other feature.
-- **tools.extract_databank_cell_writes_wave61_tmp.build_static_test** (function, lines 95–178, 84 lines, risk `support`): Builds build static test for the other feature.
-- **tools.extract_databank_cell_writes_wave61_tmp.build_behavior_test** (function, lines 181–359, 179 lines, risk `support`): Builds build behavior test for the other feature.
-- **tools.extract_databank_cell_writes_wave61_tmp.main** (function, lines 362–429, 68 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/extract_date_display_helpers.py`
 
@@ -1894,13 +1880,6 @@ Scanned **218 Python files**, **79,355 lines**, and **2,573 symbols**.
 - **tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_Try** (method, lines 131–157, 27 lines, risk `support`): Handles visit Try for the payments feature.
 - **tools.plan_app_lifecycle_window_pass_only.build_report** (function, lines 160–198, 39 lines, risk `filesystem`): Builds build report for the reports feature.
 - **tools.plan_app_lifecycle_window_pass_only.main** (function, lines 201–215, 15 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/plan_databank_writes_wave61_tmp.py`
-
-- **tools.plan_databank_writes_wave61_tmp.dotted** (function, lines 24–30, 7 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_databank_writes_wave61_tmp.signature** (function, lines 33–34, 2 lines, risk `support`): Handles signature for the other feature.
-- **tools.plan_databank_writes_wave61_tmp.normalized_sha** (function, lines 37–38, 2 lines, risk `filesystem`): Handles normalized sha for the utilities feature.
-- **tools.plan_databank_writes_wave61_tmp.main** (function, lines 41–153, 113 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/plan_logger_fallback_pass_only.py`
 
