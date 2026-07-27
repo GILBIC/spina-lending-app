@@ -8,6 +8,7 @@ on:
       - "spina_app/collector_tab_presentation.py"
       - "spina_app/login_dialog_presentation.py"
       - "tools/apply_legacy_collector_cleanup_wave_52.py"
+      - "tools/wave52_diagnostic.txt"
       - "tools/test_legacy_collector_cleanup_wave_52.py"
       - "tools/test_ui_button_factories_wave_50.py"
       - "tools/test_ui_button_factories_widget_smoke_wave_50.py"
@@ -47,6 +48,13 @@ jobs:
             Get-Content artifacts/wave-52-bootstrap-console.txt
             exit $bootstrapCode
           }
+          if (Test-Path tools/wave52_diagnostic.txt) {
+            Get-Content tools/wave52_diagnostic.txt
+            git add -f tools/wave52_diagnostic.txt
+            git commit -m "Record Wave 52 tracked diagnostic"
+            git push origin "HEAD:refs/heads/agent/high-volume-wave-52"
+            exit 1
+          }
           Remove-Item tools/apply_legacy_collector_cleanup_wave_52.py
           Remove-Item artifacts/wave-52-bootstrap-console.txt -ErrorAction SilentlyContinue
           Remove-Item artifacts/wave-52-bootstrap.txt -ErrorAction SilentlyContinue
@@ -56,15 +64,6 @@ jobs:
           git add architecture-map.json docs/architecture
           git commit -m "Refresh architecture map for Wave 52"
           git push origin "HEAD:refs/heads/agent/high-volume-wave-52"
-      - name: Persist bootstrap diagnostic
-        if: ${{ failure() && hashFiles('tools/apply_legacy_collector_cleanup_wave_52.py') != '' }}
-        shell: cmd
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f artifacts
-          git commit -m "Record Wave 52 bootstrap diagnostic"
-          git push origin HEAD:refs/heads/agent/high-volume-wave-52
       - name: Compile application, modules, and tests
         shell: cmd
         run: |
