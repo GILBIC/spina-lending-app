@@ -7,24 +7,30 @@ on:
     paths:
       - "tools/extract_audit_presentation_wave_54.py"
       - ".github/workflows/extract-audit-presentation-wave-54.yml"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "tools/extract_audit_presentation_wave_54.py"
+      - ".github/workflows/extract-audit-presentation-wave-54.yml"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: extract-audit-presentation-wave-54
+  group: extract-audit-presentation-wave-54-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   extract:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-54'
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 90
     steps:
-      - name: Check out Wave 54 branch
+      - name: Check out exact Wave 54 head
         uses: actions/checkout@v4
         with:
-          ref: agent/high-volume-wave-54
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: true
           fetch-depth: 0
           show-progress: false
@@ -54,6 +60,7 @@ jobs:
           python -m tools.test_architecture_map
 
       - name: Commit extracted Audit presentation
+        if: github.event_name != 'pull_request'
         shell: cmd
         run: |
           git config user.name "github-actions[bot]"
