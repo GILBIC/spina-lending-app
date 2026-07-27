@@ -121,7 +121,7 @@ def main() -> None:
         ".App._access_prefs_path": "authentication",
         ".App._show_conflicts": "collectors",
         "._locate_data_tree": "data_bank",
-        "._walk_widgets": "data_bank",
+        "._walk_widgets": "utilities",
         ".NoteEditorDialog._save_note": "notes",
         "._spina_apply_dashboard_role": "dashboard",
         "._spina_v32_prompt_login": "authentication",
