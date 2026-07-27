@@ -9,6 +9,7 @@ on:
       - "spina_app/ui_helpers.py"
       - "tools/plan_high_volume_wave_51.py"
       - "tools/inspect_dashboard_charts_wave_51.py"
+      - "tools/diagnose_dashboard_chart_extraction_wave_51.py"
       - "tools/extract_dashboard_charts_wave_51.py"
       - "tools/test_dashboard_chart_presentation_wave_51.py"
       - "tools/test_dashboard_chart_widget_smoke_wave_51.py"
@@ -30,12 +31,22 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-      - name: Compile guarded extractor and tests
+      - name: Compile guarded extractor, diagnostic, and tests
         shell: cmd
         run: |
+          python -m py_compile tools/diagnose_dashboard_chart_extraction_wave_51.py
           python -m py_compile tools/extract_dashboard_charts_wave_51.py
           python -m py_compile tools/test_dashboard_chart_presentation_wave_51.py
           python -m py_compile tools/test_dashboard_chart_widget_smoke_wave_51.py
+      - name: Record extraction diagnostics
+        shell: cmd
+        run: python tools/diagnose_dashboard_chart_extraction_wave_51.py
+      - name: Upload extraction diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave-51-extraction-diagnostics
+          path: artifacts/wave-51-extraction-diagnostics.json
+          if-no-files-found: error
       - name: Apply guarded dashboard-chart extraction
         shell: cmd
         run: python tools/extract_dashboard_charts_wave_51.py
@@ -70,6 +81,7 @@ jobs:
         run: |
           git rm tools/plan_high_volume_wave_51.py
           git rm tools/inspect_dashboard_charts_wave_51.py
+          git rm tools/diagnose_dashboard_chart_extraction_wave_51.py
           git rm tools/extract_dashboard_charts_wave_51.py
           git rm .github/workflows/plan-high-volume-wave-51.yml
           git rm .github/workflows/extract-dashboard-charts-wave-51.yml
