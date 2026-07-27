@@ -7,7 +7,7 @@ BRANCH = "agent/high-volume-wave-55-clean"
 TEMP_PATHS = [
     Path("tools/extract_clients_tab_wave55_tmp.py"),
     Path("tools/fix_clients_tab_wave55_hash_tmp.py"),
-    Path(".github/workflows/plan-high-volume-wave-55.yml"),
+    Path(".github/workflows/clients-tab-presentation-wave-55.yml"),
     Path("docs/wave-55-candidate-report.md"),
     Path("artifacts/wave-55-candidates.json"),
     Path("artifacts/wave-55-extraction.json"),
