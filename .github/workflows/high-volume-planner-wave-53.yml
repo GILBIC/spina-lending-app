@@ -7,21 +7,28 @@ on:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
       - "tools/plan_high_volume_wave_53.py"
       - ".github/workflows/high-volume-planner-wave-53.yml"
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "tools/plan_high_volume_wave_53.py"
+      - ".github/workflows/high-volume-planner-wave-53.yml"
   workflow_dispatch:
 
 concurrency:
-  group: high-volume-planner-wave-53
+  group: high-volume-planner-wave-53-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   plan:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-53'
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 30
     steps:
-      - name: Check out Wave 53 branch
+      - name: Check out exact ref
         uses: actions/checkout@v4
         with:
-          ref: agent/high-volume-wave-53
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           show-progress: false
       - name: Compile planner
         shell: cmd
