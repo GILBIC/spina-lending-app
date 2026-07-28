@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "978df18342bbc4869054f5a8b527456bb9db794b",
+  "generated_from_commit": "a296431efe0336a886ac1b4add281a65329a92d1",
   "indexes": {
     "application_callbacks": [
       {
@@ -11459,8 +11459,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:21798:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.do_link"
       ],
       "dotted": [
-        "tools/inspect_wave69_collector_editor.py:15:tools.inspect_wave69_collector_editor.dotted",
-        "tools/plan_wave69_candidates.py:31:tools.plan_wave69_candidates.dotted",
         "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
         "tools/test_audit_presentation_wave_54.py:23:tools.test_audit_presentation_wave_54.dotted",
         "tools/test_backup_history_presentation_wave_68.py:20:tools.test_backup_history_presentation_wave_68.dotted",
@@ -11673,7 +11671,6 @@
         "tools/apply_client_area_uid_sync_phase2.py:60:tools.apply_client_area_uid_sync_phase2.main",
         "tools/apply_hierarchical_area_storage_phase1.py:75:tools.apply_hierarchical_area_storage_phase1.main",
         "tools/apply_hierarchical_area_ui_phase2.py:88:tools.apply_hierarchical_area_ui_phase2.main",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:260:tools.apply_wave69_legacy_collector_editor_cleanup.main",
         "tools/audit_bare_except_context.py:114:tools.audit_bare_except_context.main",
         "tools/audit_blocking_ui_calls.py:162:tools.audit_blocking_ui_calls.main",
         "tools/audit_dynamic_sql_context.py:211:tools.audit_dynamic_sql_context.main",
@@ -11692,8 +11689,6 @@
         "tools/cleanup_pg_json_read_dynamic_sql.py:142:tools.cleanup_pg_json_read_dynamic_sql.main",
         "tools/cleanup_pure_login_dialog_ui_pass_only.py:304:tools.cleanup_pure_login_dialog_ui_pass_only.main",
         "tools/cleanup_stale_databank_generated_blocks.py:337:tools.cleanup_stale_databank_generated_blocks.main",
-        "tools/debug_wave69_protected_collectors.py:11:tools.debug_wave69_protected_collectors.main",
-        "tools/debug_wave69_structural_cleanup.py:11:tools.debug_wave69_structural_cleanup.main",
         "tools/disable_full_daily_ledger.py:403:tools.disable_full_daily_ledger.main",
         "tools/extract_append_unique_text.py:133:tools.extract_append_unique_text.main",
         "tools/extract_cilog_action_label.py:126:tools.extract_cilog_action_label.main",
@@ -11714,9 +11709,6 @@
         "tools/inject_silent_ui_logging.py:352:tools.inject_silent_ui_logging.main",
         "tools/inspect_blocking_ui_context.py:159:tools.inspect_blocking_ui_context.main",
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
-        "tools/inspect_wave69_collector_editor.py:51:tools.inspect_wave69_collector_editor.main",
-        "tools/patch_wave69_generated_collector_tests.py:17:tools.patch_wave69_generated_collector_tests.main",
-        "tools/patch_wave69_wave26_protected_hashes.py:11:tools.patch_wave69_wave26_protected_hashes.main",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_login_dialog_pass_only.py:243:tools.plan_login_dialog_pass_only.main",
@@ -11726,7 +11718,6 @@
         "tools/plan_queue_empty_pass_only.py:183:tools.plan_queue_empty_pass_only.main",
         "tools/plan_remaining_pass_only_groups.py:196:tools.plan_remaining_pass_only_groups.main",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
-        "tools/plan_wave69_candidates.py:145:tools.plan_wave69_candidates.main",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
         "tools/spina_quality_audit.py:306:tools.spina_quality_audit.main",
@@ -11867,7 +11858,6 @@
         "tools/test_databank_widget_smoke_wave_49.py:61:tools.test_databank_widget_smoke_wave_49.DummyApp.next_month"
       ],
       "normalized": [
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:24:tools.apply_wave69_legacy_collector_editor_cleanup.normalized",
         "tools/test_account_header_presentation_wave_46.py:45:tools.test_account_header_presentation_wave_46.normalized",
         "tools/test_area_picker_presentation_wave_37.py:18:tools.test_area_picker_presentation_wave_37.normalized",
         "tools/test_audit_presentation_wave_54.py:15:tools.test_audit_presentation_wave_54.normalized",
@@ -12069,10 +12059,6 @@
         "tools/test_backup_history_widget_smoke_wave_68.py:19:tools.test_backup_history_widget_smoke_wave_68.Dialogs.showwarning",
         "tools/test_client_statement_generation_behavior_wave_67.py:19:tools.test_client_statement_generation_behavior_wave_67.MessageboxStub.showwarning"
       ],
-      "signature": [
-        "tools/inspect_wave69_collector_editor.py:24:tools.inspect_wave69_collector_editor.signature",
-        "tools/plan_wave69_candidates.py:40:tools.plan_wave69_candidates.signature"
-      ],
       "signature_text": [
         "tools/test_account_header_presentation_wave_46.py:58:tools.test_account_header_presentation_wave_46.signature_text",
         "tools/test_collector_tab_presentation_wave_44.py:45:tools.test_collector_tab_presentation_wave_44.signature_text"
@@ -12093,7 +12079,6 @@
         "tools/test_ui_button_factories_wave_50.py:78:tools.test_ui_button_factories_wave_50.source_for"
       ],
       "source_hash": [
-        "tools/plan_wave69_candidates.py:67:tools.plan_wave69_candidates.source_hash",
         "tools/test_audit_presentation_wave_54.py:19:tools.test_audit_presentation_wave_54.source_hash",
         "tools/test_client_read_queries_wave_31.py:20:tools.test_client_read_queries_wave_31.source_hash",
         "tools/test_clients_read_presentation_wave_30.py:46:tools.test_clients_read_presentation_wave_30.source_hash",
@@ -13408,11 +13393,6 @@
         "tools/apply_hierarchical_area_ui_phase2.py:33:tools.apply_hierarchical_area_ui_phase2.inspect",
         "tools/apply_hierarchical_area_ui_phase2.py:70:tools.apply_hierarchical_area_ui_phase2.apply",
         "tools/apply_hierarchical_area_ui_phase2.py:88:tools.apply_hierarchical_area_ui_phase2.main",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:163:tools.apply_wave69_legacy_collector_editor_cleanup.widget_test_source",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:260:tools.apply_wave69_legacy_collector_editor_cleanup.main",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:28:tools.apply_wave69_legacy_collector_editor_cleanup.method_callers",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:53:tools.apply_wave69_legacy_collector_editor_cleanup.patch_wave43_test",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:95:tools.apply_wave69_legacy_collector_editor_cleanup.structural_test_source",
         "tools/audit_bare_except_context.py:114:tools.audit_bare_except_context.main",
         "tools/audit_bare_except_context.py:23:tools.audit_bare_except_context._lines",
         "tools/audit_bare_except_context.py:27:tools.audit_bare_except_context._ctx",
@@ -13564,8 +13544,6 @@
         "tools/cleanup_stale_databank_generated_blocks.py:337:tools.cleanup_stale_databank_generated_blocks.main",
         "tools/cleanup_stale_databank_generated_blocks.py:91:tools.cleanup_stale_databank_generated_blocks._line_indent",
         "tools/cleanup_stale_databank_generated_blocks.py:95:tools.cleanup_stale_databank_generated_blocks._find_callback_definitions",
-        "tools/debug_wave69_protected_collectors.py:11:tools.debug_wave69_protected_collectors.main",
-        "tools/debug_wave69_structural_cleanup.py:11:tools.debug_wave69_structural_cleanup.main",
         "tools/disable_full_daily_ledger.py:349:tools.disable_full_daily_ledger._flush",
         "tools/disable_full_daily_ledger.py:353:tools.disable_full_daily_ledger.remove_existing_blocks",
         "tools/disable_full_daily_ledger.py:371:tools.disable_full_daily_ledger._contains_legacy_label",
@@ -13731,12 +13709,6 @@
         "tools/inspect_stale_databank_protected_context.py:22:tools.inspect_stale_databank_protected_context._load_cleanup_tool",
         "tools/inspect_stale_databank_protected_context.py:31:tools.inspect_stale_databank_protected_context._matching_terms",
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
-        "tools/inspect_wave69_collector_editor.py:15:tools.inspect_wave69_collector_editor.dotted",
-        "tools/inspect_wave69_collector_editor.py:24:tools.inspect_wave69_collector_editor.signature",
-        "tools/inspect_wave69_collector_editor.py:51:tools.inspect_wave69_collector_editor.main",
-        "tools/patch_wave69_generated_collector_tests.py:11:tools.patch_wave69_generated_collector_tests.replace_once",
-        "tools/patch_wave69_generated_collector_tests.py:17:tools.patch_wave69_generated_collector_tests.main",
-        "tools/patch_wave69_wave26_protected_hashes.py:11:tools.patch_wave69_wave26_protected_hashes.main",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
         "tools/plan_app_lifecycle_window_pass_only.py:48:tools.plan_app_lifecycle_window_pass_only._name",
         "tools/plan_app_lifecycle_window_pass_only.py:66:tools.plan_app_lifecycle_window_pass_only._context",
@@ -13796,11 +13768,6 @@
         "tools/plan_ui_compatibility_pass_only.py:176:tools.plan_ui_compatibility_pass_only.contains_any",
         "tools/plan_ui_compatibility_pass_only.py:180:tools.plan_ui_compatibility_pass_only.classify_ui_site",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
-        "tools/plan_wave69_candidates.py:145:tools.plan_wave69_candidates.main",
-        "tools/plan_wave69_candidates.py:31:tools.plan_wave69_candidates.dotted",
-        "tools/plan_wave69_candidates.py:40:tools.plan_wave69_candidates.signature",
-        "tools/plan_wave69_candidates.py:67:tools.plan_wave69_candidates.source_hash",
-        "tools/plan_wave69_candidates.py:73:tools.plan_wave69_candidates.analyze_method",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/redundancy_audit.py:19:tools.redundancy_audit.body_hash",
         "tools/redundancy_audit.py:33:tools.redundancy_audit.audit",
@@ -14905,7 +14872,6 @@
         "spina_app/utilities/records.py:6:spina_app.utilities.records._spina_perf_dict_rows",
         "spina_app/utilities/text.py:10:spina_app.utilities.text._spina_crc_norm_text",
         "spina_app/utilities/text.py:7:spina_app.utilities.text._oslp__norm_area_name",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:24:tools.apply_wave69_legacy_collector_editor_cleanup.normalized",
         "tools/audit_dynamic_sql_context.py:51:tools.audit_dynamic_sql_context.safe_unparse",
         "tools/cleanup_stale_databank_generated_blocks.py:231:tools.cleanup_stale_databank_generated_blocks._candidate_range_for_reference",
         "tools/cleanup_stale_databank_generated_blocks.py:297:tools.cleanup_stale_databank_generated_blocks._format_terms",
@@ -17700,8 +17666,6 @@
         "tools/apply_hierarchical_area_storage_phase1.py:62:tools.apply_hierarchical_area_storage_phase1.apply",
         "tools/apply_hierarchical_area_ui_phase2.py:70:tools.apply_hierarchical_area_ui_phase2.apply",
         "tools/apply_hierarchical_area_ui_phase2.py:88:tools.apply_hierarchical_area_ui_phase2.main",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:260:tools.apply_wave69_legacy_collector_editor_cleanup.main",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:53:tools.apply_wave69_legacy_collector_editor_cleanup.patch_wave43_test",
         "tools/audit_bare_except_context.py:114:tools.audit_bare_except_context.main",
         "tools/audit_bare_except_context.py:23:tools.audit_bare_except_context._lines",
         "tools/audit_blocking_ui_calls.py:138:tools.audit_blocking_ui_calls.build_report",
@@ -17787,10 +17751,6 @@
         "tools/inspect_blocking_ui_context.py:133:tools.inspect_blocking_ui_context.inspect_source",
         "tools/inspect_blocking_ui_context.py:159:tools.inspect_blocking_ui_context.main",
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
-        "tools/inspect_wave69_collector_editor.py:51:tools.inspect_wave69_collector_editor.main",
-        "tools/patch_wave69_generated_collector_tests.py:11:tools.patch_wave69_generated_collector_tests.replace_once",
-        "tools/patch_wave69_generated_collector_tests.py:17:tools.patch_wave69_generated_collector_tests.main",
-        "tools/patch_wave69_wave26_protected_hashes.py:11:tools.patch_wave69_wave26_protected_hashes.main",
         "tools/plan_app_lifecycle_window_pass_only.py:160:tools.plan_app_lifecycle_window_pass_only.build_report",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
         "tools/plan_logger_fallback_pass_only.py:136:tools.plan_logger_fallback_pass_only.build_report",
@@ -17809,7 +17769,6 @@
         "tools/plan_remaining_pass_only_groups.py:196:tools.plan_remaining_pass_only_groups.main",
         "tools/plan_ui_compatibility_pass_only.py:113:tools.plan_ui_compatibility_pass_only.read_lines",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
-        "tools/plan_wave69_candidates.py:145:tools.plan_wave69_candidates.main",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/redundancy_audit.py:33:tools.redundancy_audit.audit",
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
@@ -18105,8 +18064,6 @@
         "tools/audit_silent_ui_errors.py:209:tools.audit_silent_ui_errors.print_summary",
         "tools/cleanup_neutral_appclass_init_patch.py:164:tools.cleanup_neutral_appclass_init_patch.print_report",
         "tools/cleanup_neutral_appclass_init_patch.py:180:tools.cleanup_neutral_appclass_init_patch.main",
-        "tools/debug_wave69_protected_collectors.py:11:tools.debug_wave69_protected_collectors.main",
-        "tools/debug_wave69_structural_cleanup.py:11:tools.debug_wave69_structural_cleanup.main",
         "tools/disable_full_daily_ledger.py:349:tools.disable_full_daily_ledger._flush",
         "tools/inject_silent_ui_logging.py:333:tools.inject_silent_ui_logging.print_report",
         "tools/inject_silent_ui_logging.py:352:tools.inject_silent_ui_logging.main",
@@ -18768,9 +18725,6 @@
         "tools/apply_client_area_uid_sync_phase2.py:19:tools.apply_client_area_uid_sync_phase2._state",
         "tools/apply_hierarchical_area_ui_phase2.py:23:tools.apply_hierarchical_area_ui_phase2._between",
         "tools/apply_hierarchical_area_ui_phase2.py:33:tools.apply_hierarchical_area_ui_phase2.inspect",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:24:tools.apply_wave69_legacy_collector_editor_cleanup.normalized",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:28:tools.apply_wave69_legacy_collector_editor_cleanup.method_callers",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:95:tools.apply_wave69_legacy_collector_editor_cleanup.structural_test_source",
         "tools/audit_bare_except_context.py:27:tools.audit_bare_except_context._ctx",
         "tools/audit_bare_except_context.py:33:tools.audit_bare_except_context._count_by",
         "tools/audit_bare_except_context.py:42:tools.audit_bare_except_context.Visitor.__init__",
@@ -19011,8 +18965,6 @@
         "tools/inspect_blocking_ui_context.py:96:tools.inspect_blocking_ui_context.BlockingContextVisitor.visit_ClassDef",
         "tools/inspect_stale_databank_protected_context.py:22:tools.inspect_stale_databank_protected_context._load_cleanup_tool",
         "tools/inspect_stale_databank_protected_context.py:31:tools.inspect_stale_databank_protected_context._matching_terms",
-        "tools/inspect_wave69_collector_editor.py:15:tools.inspect_wave69_collector_editor.dotted",
-        "tools/inspect_wave69_collector_editor.py:24:tools.inspect_wave69_collector_editor.signature",
         "tools/plan_app_lifecycle_window_pass_only.py:107:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.__init__",
         "tools/plan_app_lifecycle_window_pass_only.py:113:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor._scope",
         "tools/plan_app_lifecycle_window_pass_only.py:116:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_ClassDef",
@@ -19105,10 +19057,6 @@
         "tools/plan_ui_compatibility_pass_only.py:170:tools.plan_ui_compatibility_pass_only.text_window",
         "tools/plan_ui_compatibility_pass_only.py:176:tools.plan_ui_compatibility_pass_only.contains_any",
         "tools/plan_ui_compatibility_pass_only.py:180:tools.plan_ui_compatibility_pass_only.classify_ui_site",
-        "tools/plan_wave69_candidates.py:31:tools.plan_wave69_candidates.dotted",
-        "tools/plan_wave69_candidates.py:40:tools.plan_wave69_candidates.signature",
-        "tools/plan_wave69_candidates.py:67:tools.plan_wave69_candidates.source_hash",
-        "tools/plan_wave69_candidates.py:73:tools.plan_wave69_candidates.analyze_method",
         "tools/redundancy_audit.py:19:tools.redundancy_audit.body_hash",
         "tools/remove_databank_export_controls.py:363:tools.remove_databank_export_controls.remove_existing_block",
         "tools/remove_databank_export_controls.py:375:tools.remove_databank_export_controls._contains_static_label",
@@ -19889,7 +19837,6 @@
         "spina_app/ui_helpers.py:43:spina_app.ui_helpers._spina_v17_set_card",
         "spina_app/ui_helpers.py:54:spina_app.ui_helpers._spina_v24_cilog_set_card",
         "spina_app/ui_helpers.py:65:spina_app.ui_helpers._spina_v21_cash_set_card",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:163:tools.apply_wave69_legacy_collector_editor_cleanup.widget_test_source",
         "tools/disable_full_daily_ledger.py:376:tools.disable_full_daily_ledger._looks_like_legacy_button_line",
         "tools/plan_remaining_pass_only_groups.py:86:tools.plan_remaining_pass_only_groups.classify",
         "tools/remove_databank_export_controls.py:380:tools.remove_databank_export_controls._looks_like_ui_line",
@@ -22065,38 +22012,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/apply_wave69_legacy_collector_editor_cleanup.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json",
-        "textwrap": "textwrap"
-      },
-      "lines": 331,
-      "module": "tools.apply_wave69_legacy_collector_editor_cleanup",
-      "module_globals": [
-        "ACTIVE_BINDING",
-        "ACTIVE_TARGET",
-        "CONFIGURE_CALL",
-        "DESKTOP",
-        "EXPECTED_LINES",
-        "EXPECTED_NORMALIZED_SHA256",
-        "EXPECTED_RAW_SHA256",
-        "EXPECTED_SIGNATURE",
-        "ROOT",
-        "TARGET",
-        "WAVE43_TEST",
-        "WAVE69_TEST",
-        "WAVE69_WIDGET_TEST"
-      ],
-      "monkey_patches": [],
-      "sha256": "6f04c11140dedd9e4f6024e77e6c24f8883e355279f9e558b792ac2b47aa181d",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/audit_bare_except_context.py",
       "imports": {
         "Any": "typing.Any",
@@ -22506,44 +22421,6 @@
       ],
       "monkey_patches": [],
       "sha256": "f0010134678979e002f3b649e088f12fdea4810af497a8fe3f445d529a6de3e7",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/debug_wave69_protected_collectors.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "runpy": "runpy",
-        "traceback": "traceback"
-      },
-      "lines": 27,
-      "module": "tools.debug_wave69_protected_collectors",
-      "module_globals": [
-        "ROOT",
-        "TEST"
-      ],
-      "monkey_patches": [],
-      "sha256": "6c652a5d51acfde7d7e4874fa7a58d6965dc99146b43b2c47bb586deda184753",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/debug_wave69_structural_cleanup.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "runpy": "runpy",
-        "traceback": "traceback"
-      },
-      "lines": 27,
-      "module": "tools.debug_wave69_structural_cleanup",
-      "module_globals": [
-        "ROOT",
-        "TEST"
-      ],
-      "monkey_patches": [],
-      "sha256": "dfb47fb40c45465681c18b761037d56f97acd85cb89635a27c0da5eded6fdcd3",
       "syntax_ok": true
     },
     {
@@ -23048,67 +22925,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/inspect_wave69_collector_editor.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json"
-      },
-      "lines": 97,
-      "module": "tools.inspect_wave69_collector_editor",
-      "module_globals": [
-        "APP",
-        "META_OUT",
-        "ROOT",
-        "SOURCE_OUT",
-        "TARGET"
-      ],
-      "monkey_patches": [],
-      "sha256": "daecd8a1804f6217c90cc87981eadea7ce30fd3ec7800cd55c1e63565530e463",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/patch_wave69_generated_collector_tests.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast"
-      },
-      "lines": 63,
-      "module": "tools.patch_wave69_generated_collector_tests",
-      "module_globals": [
-        "ROOT",
-        "WAVE43",
-        "WAVE69"
-      ],
-      "monkey_patches": [],
-      "sha256": "1914093794fe5bb548a42026eca27c31ed670fb2997ec1b68056ddf9aed10c7e",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/patch_wave69_wave26_protected_hashes.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast"
-      },
-      "lines": 22,
-      "module": "tools.patch_wave69_wave26_protected_hashes",
-      "module_globals": [
-        "ROOT",
-        "STALE",
-        "TEST"
-      ],
-      "monkey_patches": [],
-      "sha256": "7ba073ef9a758f97237aacc43787fc6fc7af51a9d9677c09305ff6f894214327",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/plan_app_lifecycle_window_pass_only.py",
       "imports": {
         "Any": "typing.Any",
@@ -23321,33 +23137,6 @@
       ],
       "monkey_patches": [],
       "sha256": "f8ce08c33264ae337ffc4e07ca20d6cd24526b2e6531a1739ee7181a80c98988",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/plan_wave69_candidates.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json",
-        "re": "re"
-      },
-      "lines": 188,
-      "module": "tools.plan_wave69_candidates",
-      "module_globals": [
-        "APP_PATH",
-        "FILESYSTEM_WRITE_NAMES",
-        "OUT_PATH",
-        "PROTECTED_TERMS",
-        "ROOT",
-        "SQL_WRITE_RE",
-        "UI_PREFIXES",
-        "WRITE_NAMES"
-      ],
-      "monkey_patches": [],
-      "sha256": "1ec11f76e15ae9398def0559a9060fc0ea721b9bc8739180ca2e8e18d5f8943c",
       "syntax_ok": true
     },
     {
@@ -26289,19 +26078,19 @@
     "classes": 134,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1557,
+    "functions": 1538,
     "methods": 630,
     "monkey_patches": 184,
     "nested_functions": 389,
     "parse_errors": 0,
     "possible_orphans": 136,
-    "python_files": 243,
+    "python_files": 236,
     "repository_database_tables": 19,
-    "repository_duplicate_names": 333,
+    "repository_duplicate_names": 332,
     "repository_possible_orphans": 321,
-    "resolved_call_edges": 4135,
-    "symbols": 2710,
-    "total_python_lines": 81297,
+    "resolved_call_edges": 4121,
+    "symbols": 2691,
+    "total_python_lines": 80542,
     "ui_callback_edges": 485
   },
   "symbols": [
@@ -91580,280 +91369,6 @@
     },
     {
       "args": [
-        "source"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:260:tools.apply_wave69_legacy_collector_editor_cleanup.main"
-      ],
-      "calls_raw": [
-        "textwrap.dedent",
-        "textwrap.dedent.strip"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 25,
-      "feature": "utilities",
-      "file": "tools/apply_wave69_legacy_collector_editor_cleanup.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/apply_wave69_legacy_collector_editor_cleanup.py:24:tools.apply_wave69_legacy_collector_editor_cleanup.normalized",
-      "imports_used": [
-        "textwrap"
-      ],
-      "kind": "function",
-      "line": 24,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "normalized",
-      "parent": null,
-      "purpose": "Handles normalized for the utilities feature.",
-      "qualified_name": "tools.apply_wave69_legacy_collector_editor_cleanup.normalized",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "212c4b0706345368a26ac5130c1cc5ea53765fba386bdd24087af11327ca5cf5"
-    },
-    {
-      "args": [
-        "app"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:260:tools.apply_wave69_legacy_collector_editor_cleanup.main"
-      ],
-      "calls_raw": [
-        "ast.walk",
-        "callers.append",
-        "isinstance",
-        "sorted"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 50,
-      "feature": "other",
-      "file": "tools/apply_wave69_legacy_collector_editor_cleanup.py",
-      "file_paths": [],
-      "globals_read": [
-        "TARGET"
-      ],
-      "globals_written": [],
-      "id": "tools/apply_wave69_legacy_collector_editor_cleanup.py:28:tools.apply_wave69_legacy_collector_editor_cleanup.method_callers",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 28,
-      "lines": 23,
-      "monkey_patches": [],
-      "name": "method_callers",
-      "parent": null,
-      "purpose": "Handles method callers for the other feature.",
-      "qualified_name": "tools.apply_wave69_legacy_collector_editor_cleanup.method_callers",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "4810c811ddbbce6eda6f6cb7e71661c2eb1e25f99b5a5748a8e075fd347ca4dc"
-    },
-    {
-      "args": [
-        "text"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:260:tools.apply_wave69_legacy_collector_editor_cleanup.main"
-      ],
-      "calls_raw": [
-        "RuntimeError",
-        "text.replace"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 92,
-      "feature": "other",
-      "file": "tools/apply_wave69_legacy_collector_editor_cleanup.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/apply_wave69_legacy_collector_editor_cleanup.py:53:tools.apply_wave69_legacy_collector_editor_cleanup.patch_wave43_test",
-      "imports_used": [],
-      "kind": "function",
-      "line": 53,
-      "lines": 40,
-      "monkey_patches": [],
-      "name": "patch_wave43_test",
-      "parent": null,
-      "purpose": "Handles patch wave43 test for the other feature.",
-      "qualified_name": "tools.apply_wave69_legacy_collector_editor_cleanup.patch_wave43_test",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem"
-      ],
-      "source_sha256": "aab13d4768454b1fa79928c8a664d9696730e2c9491570b0a93508e9a7015d2a"
-    },
-    {
-      "args": [
-        "callers"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:260:tools.apply_wave69_legacy_collector_editor_cleanup.main"
-      ],
-      "calls_raw": [],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 160,
-      "feature": "other",
-      "file": "tools/apply_wave69_legacy_collector_editor_cleanup.py",
-      "file_paths": [],
-      "globals_read": [
-        "ACTIVE_BINDING",
-        "ACTIVE_TARGET",
-        "CONFIGURE_CALL",
-        "TARGET"
-      ],
-      "globals_written": [],
-      "id": "tools/apply_wave69_legacy_collector_editor_cleanup.py:95:tools.apply_wave69_legacy_collector_editor_cleanup.structural_test_source",
-      "imports_used": [],
-      "kind": "function",
-      "line": 95,
-      "lines": 66,
-      "monkey_patches": [],
-      "name": "structural_test_source",
-      "parent": null,
-      "purpose": "Handles structural test source for the other feature.",
-      "qualified_name": "tools.apply_wave69_legacy_collector_editor_cleanup.structural_test_source",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "a70b2cf65ad6f7efb2e5c37cc6fdf5bd9ef68b1ec25990bcdb0b5e2ce49c9f7f"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:260:tools.apply_wave69_legacy_collector_editor_cleanup.main"
-      ],
-      "calls_raw": [],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 257,
-      "feature": "other",
-      "file": "tools/apply_wave69_legacy_collector_editor_cleanup.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/apply_wave69_legacy_collector_editor_cleanup.py:163:tools.apply_wave69_legacy_collector_editor_cleanup.widget_test_source",
-      "imports_used": [],
-      "kind": "function",
-      "line": 163,
-      "lines": 95,
-      "monkey_patches": [],
-      "name": "widget_test_source",
-      "parent": null,
-      "purpose": "Handles widget test source for the other feature.",
-      "qualified_name": "tools.apply_wave69_legacy_collector_editor_cleanup.widget_test_source",
-      "risk": "ui_only",
-      "risk_flags": [
-        "ui_only"
-      ],
-      "source_sha256": "89bfb22be42534d9d2b18a9597b69d142b9d999ef656b490795dccf5684f6086"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "DESKTOP.read_text",
-        "DESKTOP.write_text",
-        "RuntimeError",
-        "WAVE43_TEST.read_text",
-        "WAVE43_TEST.write_text",
-        "WAVE69_TEST.write_text",
-        "WAVE69_WIDGET_TEST.write_text",
-        "any",
-        "ast.parse",
-        "ast.unparse",
-        "desktop_text.count",
-        "desktop_text.splitlines",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "isinstance",
-        "join",
-        "json.dumps",
-        "len",
-        "lines.strip",
-        "method_callers",
-        "new_text.count",
-        "next",
-        "normalized",
-        "normalized.encode",
-        "patch_wave43_test",
-        "print",
-        "source.encode",
-        "str",
-        "structural_test_source",
-        "widget_test_source"
-      ],
-      "calls_resolved": [
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:163:tools.apply_wave69_legacy_collector_editor_cleanup.widget_test_source",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:24:tools.apply_wave69_legacy_collector_editor_cleanup.normalized",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:28:tools.apply_wave69_legacy_collector_editor_cleanup.method_callers",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:53:tools.apply_wave69_legacy_collector_editor_cleanup.patch_wave43_test",
-        "tools/apply_wave69_legacy_collector_editor_cleanup.py:95:tools.apply_wave69_legacy_collector_editor_cleanup.structural_test_source"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 327,
-      "feature": "other",
-      "file": "tools/apply_wave69_legacy_collector_editor_cleanup.py",
-      "file_paths": [],
-      "globals_read": [
-        "ACTIVE_BINDING",
-        "CONFIGURE_CALL",
-        "DESKTOP",
-        "EXPECTED_LINES",
-        "EXPECTED_NORMALIZED_SHA256",
-        "EXPECTED_RAW_SHA256",
-        "EXPECTED_SIGNATURE",
-        "TARGET",
-        "WAVE43_TEST",
-        "WAVE69_TEST",
-        "WAVE69_WIDGET_TEST"
-      ],
-      "globals_written": [],
-      "id": "tools/apply_wave69_legacy_collector_editor_cleanup.py:260:tools.apply_wave69_legacy_collector_editor_cleanup.main",
-      "imports_used": [
-        "ast",
-        "hashlib",
-        "json"
-      ],
-      "kind": "function",
-      "line": 260,
-      "lines": 68,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.apply_wave69_legacy_collector_editor_cleanup.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "97498931e9e0587946398c4a0f4caf498945c97cf49aa5da76e4a81388013fee"
-    },
-    {
-      "args": [
         "path"
       ],
       "callbacks": [],
@@ -99269,92 +98784,6 @@
         "reports"
       ],
       "source_sha256": "46025bd08782db973d140cda429ce1e89a13ee096041926765e96e8198709a55"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "SystemExit",
-        "print",
-        "runpy.run_path",
-        "str",
-        "traceback.extract_tb",
-        "type"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 23,
-      "feature": "other",
-      "file": "tools/debug_wave69_protected_collectors.py",
-      "file_paths": [],
-      "globals_read": [
-        "TEST"
-      ],
-      "globals_written": [],
-      "id": "tools/debug_wave69_protected_collectors.py:11:tools.debug_wave69_protected_collectors.main",
-      "imports_used": [
-        "runpy",
-        "traceback"
-      ],
-      "kind": "function",
-      "line": 11,
-      "lines": 13,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.debug_wave69_protected_collectors.main",
-      "risk": "reports",
-      "risk_flags": [
-        "reports"
-      ],
-      "source_sha256": "8c2d45c6edb6c385aab9440a6c916aef758c1880f31039b856ba67d80a9381dc"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "SystemExit",
-        "print",
-        "runpy.run_path",
-        "str",
-        "traceback.extract_tb",
-        "type"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 23,
-      "feature": "other",
-      "file": "tools/debug_wave69_structural_cleanup.py",
-      "file_paths": [],
-      "globals_read": [
-        "TEST"
-      ],
-      "globals_written": [],
-      "id": "tools/debug_wave69_structural_cleanup.py:11:tools.debug_wave69_structural_cleanup.main",
-      "imports_used": [
-        "runpy",
-        "traceback"
-      ],
-      "kind": "function",
-      "line": 11,
-      "lines": 13,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.debug_wave69_structural_cleanup.main",
-      "risk": "reports",
-      "risk_flags": [
-        "reports"
-      ],
-      "source_sha256": "2ee62945d2916a5b1c87f7075c6ab8c1309bef20c38af9f5fb2a5453540a5e0e"
     },
     {
       "args": [
@@ -107460,289 +106889,6 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/inspect_wave69_collector_editor.py:15:tools.inspect_wave69_collector_editor.dotted",
-        "tools/inspect_wave69_collector_editor.py:51:tools.inspect_wave69_collector_editor.main"
-      ],
-      "calls_raw": [
-        "dotted",
-        "isinstance"
-      ],
-      "calls_resolved": [
-        "tools/inspect_wave69_collector_editor.py:15:tools.inspect_wave69_collector_editor.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 21,
-      "feature": "other",
-      "file": "tools/inspect_wave69_collector_editor.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/inspect_wave69_collector_editor.py:15:tools.inspect_wave69_collector_editor.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 15,
-      "lines": 7,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.inspect_wave69_collector_editor.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "2a733f095eb1d3e1c88599d56fcec48d4da92732519a24a7e0ecc5f05a56886d"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/inspect_wave69_collector_editor.py:51:tools.inspect_wave69_collector_editor.main"
-      ],
-      "calls_raw": [
-        "ast.unparse",
-        "join",
-        "len",
-        "list",
-        "pieces.append",
-        "zip"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 48,
-      "feature": "other",
-      "file": "tools/inspect_wave69_collector_editor.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/inspect_wave69_collector_editor.py:24:tools.inspect_wave69_collector_editor.signature",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 24,
-      "lines": 25,
-      "monkey_patches": [],
-      "name": "signature",
-      "parent": null,
-      "purpose": "Handles signature for the other feature.",
-      "qualified_name": "tools.inspect_wave69_collector_editor.signature",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "eb04ffd6a9a46dd03516abcf7444d199aa7d569ee7fc36bcfcd9e01a22f3ca1c"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP.read_text",
-        "META_OUT.write_text",
-        "SOURCE_OUT.write_text",
-        "ast.parse",
-        "ast.walk",
-        "dotted",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "isinstance",
-        "join",
-        "json.dumps",
-        "name.startswith",
-        "next",
-        "print",
-        "signature",
-        "sorted",
-        "source.encode",
-        "str",
-        "text.splitlines"
-      ],
-      "calls_resolved": [
-        "tools/inspect_wave69_collector_editor.py:15:tools.inspect_wave69_collector_editor.dotted",
-        "tools/inspect_wave69_collector_editor.py:24:tools.inspect_wave69_collector_editor.signature"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 93,
-      "feature": "other",
-      "file": "tools/inspect_wave69_collector_editor.py",
-      "file_paths": [],
-      "globals_read": [
-        "APP",
-        "META_OUT",
-        "SOURCE_OUT",
-        "TARGET"
-      ],
-      "globals_written": [],
-      "id": "tools/inspect_wave69_collector_editor.py:51:tools.inspect_wave69_collector_editor.main",
-      "imports_used": [
-        "ast",
-        "hashlib",
-        "json"
-      ],
-      "kind": "function",
-      "line": 51,
-      "lines": 43,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.inspect_wave69_collector_editor.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "79b307bd4f6d3ab3d86ba1cb62908f0842d1a307660bca5bd7f41dd83883c859"
-    },
-    {
-      "args": [
-        "text",
-        "old",
-        "new",
-        "label"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/patch_wave69_generated_collector_tests.py:17:tools.patch_wave69_generated_collector_tests.main"
-      ],
-      "calls_raw": [
-        "RuntimeError",
-        "text.count",
-        "text.replace"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 14,
-      "feature": "other",
-      "file": "tools/patch_wave69_generated_collector_tests.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/patch_wave69_generated_collector_tests.py:11:tools.patch_wave69_generated_collector_tests.replace_once",
-      "imports_used": [],
-      "kind": "function",
-      "line": 11,
-      "lines": 4,
-      "monkey_patches": [],
-      "name": "replace_once",
-      "parent": null,
-      "purpose": "Handles replace once for the other feature.",
-      "qualified_name": "tools.patch_wave69_generated_collector_tests.replace_once",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem"
-      ],
-      "source_sha256": "5d020881bef646aae5110b5954197eac1c4772c3d888d9033def42496471ed84"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "WAVE43.read_text",
-        "WAVE43.write_text",
-        "WAVE69.read_text",
-        "WAVE69.write_text",
-        "ast.parse",
-        "print",
-        "replace_once",
-        "str"
-      ],
-      "calls_resolved": [
-        "tools/patch_wave69_generated_collector_tests.py:11:tools.patch_wave69_generated_collector_tests.replace_once"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 59,
-      "feature": "other",
-      "file": "tools/patch_wave69_generated_collector_tests.py",
-      "file_paths": [],
-      "globals_read": [
-        "WAVE43",
-        "WAVE69"
-      ],
-      "globals_written": [],
-      "id": "tools/patch_wave69_generated_collector_tests.py:17:tools.patch_wave69_generated_collector_tests.main",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 17,
-      "lines": 43,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.patch_wave69_generated_collector_tests.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "e605d385cdb51920f781f6450178f6759744bd5aa005c31d2913805002419d8c"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "RuntimeError",
-        "TEST.read_text",
-        "TEST.write_text",
-        "ast.parse",
-        "print",
-        "str",
-        "text.count",
-        "text.replace"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 18,
-      "feature": "other",
-      "file": "tools/patch_wave69_wave26_protected_hashes.py",
-      "file_paths": [],
-      "globals_read": [
-        "STALE",
-        "TEST"
-      ],
-      "globals_written": [],
-      "id": "tools/patch_wave69_wave26_protected_hashes.py:11:tools.patch_wave69_wave26_protected_hashes.main",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 11,
-      "lines": 8,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.patch_wave69_wave26_protected_hashes.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "f7db04f2d5730dfcee7eb228ad01a14c3d7722ed27a27eaeff5311fc160bd1f2"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
         "tools/plan_app_lifecycle_window_pass_only.py:131:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_Try",
         "tools/plan_app_lifecycle_window_pass_only.py:48:tools.plan_app_lifecycle_window_pass_only._name"
       ],
@@ -112833,257 +111979,6 @@
         "reports"
       ],
       "source_sha256": "465c43c2fa98e6fba82357d55fb65f8b08625537cd7bb5edabf298f03478e3f9"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave69_candidates.py:31:tools.plan_wave69_candidates.dotted",
-        "tools/plan_wave69_candidates.py:73:tools.plan_wave69_candidates.analyze_method"
-      ],
-      "calls_raw": [
-        "dotted",
-        "isinstance"
-      ],
-      "calls_resolved": [
-        "tools/plan_wave69_candidates.py:31:tools.plan_wave69_candidates.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 37,
-      "feature": "other",
-      "file": "tools/plan_wave69_candidates.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_wave69_candidates.py:31:tools.plan_wave69_candidates.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 31,
-      "lines": 7,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.plan_wave69_candidates.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "2a733f095eb1d3e1c88599d56fcec48d4da92732519a24a7e0ecc5f05a56886d"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave69_candidates.py:73:tools.plan_wave69_candidates.analyze_method"
-      ],
-      "calls_raw": [
-        "args.append",
-        "ast.unparse",
-        "join",
-        "len",
-        "list",
-        "zip"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 64,
-      "feature": "other",
-      "file": "tools/plan_wave69_candidates.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_wave69_candidates.py:40:tools.plan_wave69_candidates.signature",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 40,
-      "lines": 25,
-      "monkey_patches": [],
-      "name": "signature",
-      "parent": null,
-      "purpose": "Handles signature for the other feature.",
-      "qualified_name": "tools.plan_wave69_candidates.signature",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "d64df7aba0f3a39827ab5203d9974c024fcc98cc04e80783b0baa0209a52dcd2"
-    },
-    {
-      "args": [
-        "lines",
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave69_candidates.py:73:tools.plan_wave69_candidates.analyze_method"
-      ],
-      "calls_raw": [
-        "getattr",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "join",
-        "join.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 70,
-      "feature": "other",
-      "file": "tools/plan_wave69_candidates.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_wave69_candidates.py:67:tools.plan_wave69_candidates.source_hash",
-      "imports_used": [
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 67,
-      "lines": 4,
-      "monkey_patches": [],
-      "name": "source_hash",
-      "parent": null,
-      "purpose": "Handles source hash for the other feature.",
-      "qualified_name": "tools.plan_wave69_candidates.source_hash",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "992324311f01e29867ff8b7999ad39aa31abd4c4655fcc37e1ea0773d2676294"
-    },
-    {
-      "args": [
-        "lines",
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave69_candidates.py:145:tools.plan_wave69_candidates.main"
-      ],
-      "calls_raw": [
-        "SQL_WRITE_RE.search",
-        "any",
-        "ast.walk",
-        "bool",
-        "calls.append",
-        "db_calls.append",
-        "db_write_calls.append",
-        "dotted",
-        "filesystem_write_calls.append",
-        "isinstance",
-        "leaf.startswith",
-        "len",
-        "min",
-        "name.endswith",
-        "name.rsplit",
-        "name.rsplit.lower",
-        "name.startswith",
-        "node.name.lower",
-        "set",
-        "signature",
-        "sorted",
-        "source_hash",
-        "sql_write_literals.append",
-        "ui_calls.append"
-      ],
-      "calls_resolved": [
-        "tools/plan_wave69_candidates.py:31:tools.plan_wave69_candidates.dotted",
-        "tools/plan_wave69_candidates.py:40:tools.plan_wave69_candidates.signature",
-        "tools/plan_wave69_candidates.py:67:tools.plan_wave69_candidates.source_hash"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 142,
-      "feature": "other",
-      "file": "tools/plan_wave69_candidates.py",
-      "file_paths": [],
-      "globals_read": [
-        "FILESYSTEM_WRITE_NAMES",
-        "PROTECTED_TERMS",
-        "SQL_WRITE_RE",
-        "UI_PREFIXES",
-        "WRITE_NAMES"
-      ],
-      "globals_written": [],
-      "id": "tools/plan_wave69_candidates.py:73:tools.plan_wave69_candidates.analyze_method",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 73,
-      "lines": 70,
-      "monkey_patches": [],
-      "name": "analyze_method",
-      "parent": null,
-      "purpose": "Handles analyze method for the other feature.",
-      "qualified_name": "tools.plan_wave69_candidates.analyze_method",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "7a473d049db072fb8fceb465ca330db12e1f0325bf351e0b966396f6c34877dd"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP_PATH.read_text",
-        "OUT_PATH.parent.mkdir",
-        "OUT_PATH.write_text",
-        "analyze_method",
-        "ast.parse",
-        "candidates.append",
-        "candidates.sort",
-        "isinstance",
-        "json.dumps",
-        "len",
-        "next",
-        "print",
-        "str",
-        "text.splitlines"
-      ],
-      "calls_resolved": [
-        "tools/plan_wave69_candidates.py:73:tools.plan_wave69_candidates.analyze_method"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 184,
-      "feature": "other",
-      "file": "tools/plan_wave69_candidates.py",
-      "file_paths": [],
-      "globals_read": [
-        "APP_PATH",
-        "OUT_PATH"
-      ],
-      "globals_written": [],
-      "id": "tools/plan_wave69_candidates.py:145:tools.plan_wave69_candidates.main",
-      "imports_used": [
-        "ast",
-        "json"
-      ],
-      "kind": "function",
-      "line": 145,
-      "lines": 40,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.plan_wave69_candidates.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "501fb7e888ed60a88f86cc22fe0efe41ff08535a38bae73e6c69d254f5d8f3e5"
     },
     {
       "args": [

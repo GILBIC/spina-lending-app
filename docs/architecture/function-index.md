@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `978df18342bbc4869054f5a8b527456bb9db794b`.
+Generated from commit `a296431efe0336a886ac1b4add281a65329a92d1`.
 
-Scanned **243 Python files**, **81,297 lines**, and **2,710 symbols**.
+Scanned **236 Python files**, **80,542 lines**, and **2,691 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1423,15 +1423,6 @@ Scanned **243 Python files**, **81,297 lines**, and **2,710 symbols**.
 - **tools.apply_hierarchical_area_ui_phase2.apply** (function, lines 70–85, 16 lines, risk `filesystem`): Handles apply for the other feature.
 - **tools.apply_hierarchical_area_ui_phase2.main** (function, lines 88–101, 14 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/apply_wave69_legacy_collector_editor_cleanup.py`
-
-- **tools.apply_wave69_legacy_collector_editor_cleanup.normalized** (function, lines 24–25, 2 lines, risk `support`): Handles normalized for the utilities feature.
-- **tools.apply_wave69_legacy_collector_editor_cleanup.method_callers** (function, lines 28–50, 23 lines, risk `support`): Handles method callers for the other feature.
-- **tools.apply_wave69_legacy_collector_editor_cleanup.patch_wave43_test** (function, lines 53–92, 40 lines, risk `filesystem`): Handles patch wave43 test for the other feature.
-- **tools.apply_wave69_legacy_collector_editor_cleanup.structural_test_source** (function, lines 95–160, 66 lines, risk `support`): Handles structural test source for the other feature.
-- **tools.apply_wave69_legacy_collector_editor_cleanup.widget_test_source** (function, lines 163–257, 95 lines, risk `ui_only`): Handles widget test source for the other feature.
-- **tools.apply_wave69_legacy_collector_editor_cleanup.main** (function, lines 260–327, 68 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/audit_bare_except_context.py`
 
 - **tools.audit_bare_except_context._lines** (function, lines 23–24, 2 lines, risk `filesystem`): Handles lines for the other feature.
@@ -1655,14 +1646,6 @@ Scanned **243 Python files**, **81,297 lines**, and **2,710 symbols**.
 - **tools.cleanup_stale_databank_generated_blocks._format_terms** (function, lines 297–298, 2 lines, risk `support`): Handles format terms for the utilities feature.
 - **tools.cleanup_stale_databank_generated_blocks._safety_check_range** (function, lines 301–334, 34 lines, risk `support`): Handles safety check range for the other feature.
 - **tools.cleanup_stale_databank_generated_blocks.main** (function, lines 337–437, 101 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/debug_wave69_protected_collectors.py`
-
-- **tools.debug_wave69_protected_collectors.main** (function, lines 11–23, 13 lines, risk `reports`): Handles main for the other feature.
-
-## `tools/debug_wave69_structural_cleanup.py`
-
-- **tools.debug_wave69_structural_cleanup.main** (function, lines 11–23, 13 lines, risk `reports`): Handles main for the other feature.
 
 ## `tools/disable_full_daily_ledger.py`
 
@@ -1899,21 +1882,6 @@ Scanned **243 Python files**, **81,297 lines**, and **2,710 symbols**.
 - **tools.inspect_stale_databank_protected_context._matching_terms** (function, lines 31–33, 3 lines, risk `support`): Handles matching terms for the other feature.
 - **tools.inspect_stale_databank_protected_context.main** (function, lines 36–105, 70 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/inspect_wave69_collector_editor.py`
-
-- **tools.inspect_wave69_collector_editor.dotted** (function, lines 15–21, 7 lines, risk `support`): Handles dotted for the other feature.
-- **tools.inspect_wave69_collector_editor.signature** (function, lines 24–48, 25 lines, risk `support`): Handles signature for the other feature.
-- **tools.inspect_wave69_collector_editor.main** (function, lines 51–93, 43 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/patch_wave69_generated_collector_tests.py`
-
-- **tools.patch_wave69_generated_collector_tests.replace_once** (function, lines 11–14, 4 lines, risk `filesystem`): Handles replace once for the other feature.
-- **tools.patch_wave69_generated_collector_tests.main** (function, lines 17–59, 43 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/patch_wave69_wave26_protected_hashes.py`
-
-- **tools.patch_wave69_wave26_protected_hashes.main** (function, lines 11–18, 8 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/plan_app_lifecycle_window_pass_only.py`
 
 - **tools.plan_app_lifecycle_window_pass_only._name** (function, lines 48–59, 12 lines, risk `support`): Handles name for the other feature.
@@ -2064,14 +2032,6 @@ Scanned **243 Python files**, **81,297 lines**, and **2,710 symbols**.
 - **tools.plan_ui_compatibility_pass_only.classify_ui_site** (function, lines 180–193, 14 lines, risk `support`): Handles classify ui site for the other feature.
 - **tools.plan_ui_compatibility_pass_only.build_report** (function, lines 196–264, 69 lines, risk `reports`): Builds build report for the reports feature.
 - **tools.plan_ui_compatibility_pass_only.main** (function, lines 267–280, 14 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/plan_wave69_candidates.py`
-
-- **tools.plan_wave69_candidates.dotted** (function, lines 31–37, 7 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_wave69_candidates.signature** (function, lines 40–64, 25 lines, risk `support`): Handles signature for the other feature.
-- **tools.plan_wave69_candidates.source_hash** (function, lines 67–70, 4 lines, risk `support`): Handles source hash for the other feature.
-- **tools.plan_wave69_candidates.analyze_method** (function, lines 73–142, 70 lines, risk `support`): Handles analyze method for the other feature.
-- **tools.plan_wave69_candidates.main** (function, lines 145–184, 40 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/redundancy_audit.py`
 
