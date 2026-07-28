@@ -1,5 +1,6 @@
 name: Legacy Collector Editor Cleanup Wave 69
 
+# Permanent read-only exact-head validation for Wave 69.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
