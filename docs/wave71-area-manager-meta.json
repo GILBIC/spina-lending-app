@@ -1,0 +1,20 @@
+{
+  "binding_line": 22718,
+  "binding_value": "_spina_area_open_manager",
+  "direct_legacy_call_count": 0,
+  "legacy_ast_sha256": "7b8f145e8698706cfa6a986d535d23cb2b054be42b509d98328b2b654ba2be22",
+  "legacy_end_line": 12687,
+  "legacy_line_count": 162,
+  "legacy_method": "App.open_areas_manager",
+  "legacy_raw_sha256": "2b17e8a26daecce5f0d4a8098939c4bf2cf3fdc7be803a5e54faf0ff94c6d551",
+  "legacy_signature": "self",
+  "legacy_start_line": 12526,
+  "modern_ast_sha256": "3854a70a38acbcad2861b8f4866a81fc7fb6759fd92cfb59b49bb5ac55908359",
+  "modern_direct_call_count": 2,
+  "modern_end_line": 729,
+  "modern_function": "open_area_manager",
+  "modern_line_count": 271,
+  "modern_module": "spina_app/area_hierarchy_ui.py",
+  "modern_signature": "app, parent=None",
+  "modern_start_line": 459
+}
