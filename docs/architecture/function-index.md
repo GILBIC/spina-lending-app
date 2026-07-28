@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `ab297442b1f40947e9fb095dad808f4b68cc7b4f`.
+Generated from commit `ecc6c9b088650558d99d4ecc21bd60c8e0319c71`.
 
-Scanned **243 Python files**, **81,225 lines**, and **2,720 symbols**.
+Scanned **240 Python files**, **80,758 lines**, and **2,703 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1878,14 +1878,6 @@ Scanned **243 Python files**, **81,225 lines**, and **2,720 symbols**.
 - **tools.inspect_stale_databank_protected_context._matching_terms** (function, lines 31–33, 3 lines, risk `support`): Handles matching terms for the other feature.
 - **tools.inspect_stale_databank_protected_context.main** (function, lines 36–105, 70 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/inspect_wave71_legacy_area_manager.py`
-
-- **tools.inspect_wave71_legacy_area_manager.signature** (function, lines 22–42, 21 lines, risk `support`): Handles signature for the other feature.
-- **tools.inspect_wave71_legacy_area_manager.ast_sha** (function, lines 45–47, 3 lines, risk `support`): Handles ast sha for the other feature.
-- **tools.inspect_wave71_legacy_area_manager.raw_sha** (function, lines 50–52, 3 lines, risk `support`): Handles raw sha for the other feature.
-- **tools.inspect_wave71_legacy_area_manager.is_main_guard** (function, lines 55–63, 9 lines, risk `support`): Handles is main guard for the other feature.
-- **tools.inspect_wave71_legacy_area_manager.main** (function, lines 66–148, 83 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/plan_app_lifecycle_window_pass_only.py`
 
 - **tools.plan_app_lifecycle_window_pass_only._name** (function, lines 48–59, 12 lines, risk `support`): Handles name for the other feature.
@@ -2037,17 +2029,6 @@ Scanned **243 Python files**, **81,225 lines**, and **2,720 symbols**.
 - **tools.plan_ui_compatibility_pass_only.build_report** (function, lines 196–264, 69 lines, risk `reports`): Builds build report for the reports feature.
 - **tools.plan_ui_compatibility_pass_only.main** (function, lines 267–280, 14 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/plan_wave71_candidates.py`
-
-- **tools.plan_wave71_candidates.signature** (function, lines 33–53, 21 lines, risk `support`): Handles signature for the other feature.
-- **tools.plan_wave71_candidates.dotted** (function, lines 56–63, 8 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_wave71_candidates.source_hash** (function, lines 66–67, 2 lines, risk `support`): Handles source hash for the other feature.
-- **tools.plan_wave71_candidates.ast_hash** (function, lines 70–72, 3 lines, risk `support`): Handles ast hash for the other feature.
-- **tools.plan_wave71_candidates.top_level_app_bindings** (function, lines 75–87, 13 lines, risk `support`): Handles top level app bindings for the other feature.
-- **tools.plan_wave71_candidates.method_call_counts** (function, lines 90–95, 6 lines, risk `support`): Handles method call counts for the other feature.
-- **tools.plan_wave71_candidates.analyze_method** (function, lines 98–171, 74 lines, risk `support`): Handles analyze method for the other feature.
-- **tools.plan_wave71_candidates.main** (function, lines 174–212, 39 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/redundancy_audit.py`
 
 - **tools.redundancy_audit.body_hash** (function, lines 19–30, 12 lines, risk `support`): Handles body hash for the other feature.
@@ -2062,13 +2043,6 @@ Scanned **243 Python files**, **81,225 lines**, and **2,720 symbols**.
 - **tools.remove_databank_export_controls._looks_like_ui_line** (function, lines 380–391, 12 lines, risk `ui_only`): Handles looks like ui line for the other feature.
 - **tools.remove_databank_export_controls.remove_static_export_lines** (function, lines 394–402, 9 lines, risk `support`): Removes remove static export lines for the other feature.
 - **tools.remove_databank_export_controls.main** (function, lines 405–433, 29 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/remove_legacy_area_manager_wave_71.py`
-
-- **tools.remove_legacy_area_manager_wave_71.signature** (function, lines 18–38, 21 lines, risk `support`): Handles signature for the other feature.
-- **tools.remove_legacy_area_manager_wave_71.ast_sha** (function, lines 41–43, 3 lines, risk `support`): Handles ast sha for the other feature.
-- **tools.remove_legacy_area_manager_wave_71.raw_sha** (function, lines 46–48, 3 lines, risk `support`): Handles raw sha for the other feature.
-- **tools.remove_legacy_area_manager_wave_71.main** (function, lines 51–95, 45 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/spina_quality_audit.py`
 

@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "ab297442b1f40947e9fb095dad808f4b68cc7b4f",
+  "generated_from_commit": "ecc6c9b088650558d99d4ecc21bd60c8e0319c71",
   "indexes": {
     "application_callbacks": [
       {
@@ -11159,11 +11159,6 @@
         "tools/extract_numeric_parsers.py:209:tools.extract_numeric_parsers.apply_extraction",
         "tools/extract_text_normalizers.py:274:tools.extract_text_normalizers.apply_extraction"
       ],
-      "ast_sha": [
-        "tools/inspect_wave71_legacy_area_manager.py:45:tools.inspect_wave71_legacy_area_manager.ast_sha",
-        "tools/remove_legacy_area_manager_wave_71.py:41:tools.remove_legacy_area_manager_wave_71.ast_sha",
-        "tools/test_legacy_area_manager_cleanup_wave_71.py:41:tools.test_legacy_area_manager_cleanup_wave_71.ast_sha"
-      ],
       "atomic_write": [
         "tools/extract_append_unique_text.py:21:tools.extract_append_unique_text.atomic_write",
         "tools/extract_merge_note_dict.py:22:tools.extract_merge_note_dict.atomic_write",
@@ -11348,7 +11343,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:21512:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.do_link"
       ],
       "dotted": [
-        "tools/plan_wave71_candidates.py:56:tools.plan_wave71_candidates.dotted",
         "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
         "tools/test_audit_presentation_wave_54.py:23:tools.test_audit_presentation_wave_54.dotted",
         "tools/test_backup_history_presentation_wave_68.py:20:tools.test_backup_history_presentation_wave_68.dotted",
@@ -11517,10 +11511,6 @@
         "tools/apply_hierarchical_area_ui_phase2.py:33:tools.apply_hierarchical_area_ui_phase2.inspect",
         "tools/extract_pure_helper_batch.py:81:tools.extract_pure_helper_batch.inspect"
       ],
-      "is_main_guard": [
-        "tools/inspect_wave71_legacy_area_manager.py:55:tools.inspect_wave71_legacy_area_manager.is_main_guard",
-        "tools/test_legacy_area_manager_cleanup_wave_71.py:46:tools.test_legacy_area_manager_cleanup_wave_71.is_main_guard"
-      ],
       "is_pass_only": [
         "tools/plan_remaining_pass_only_groups.py:71:tools.plan_remaining_pass_only_groups.is_pass_only",
         "tools/plan_ui_compatibility_pass_only.py:134:tools.plan_ui_compatibility_pass_only.is_pass_only"
@@ -11605,7 +11595,6 @@
         "tools/inject_silent_ui_logging.py:352:tools.inject_silent_ui_logging.main",
         "tools/inspect_blocking_ui_context.py:159:tools.inspect_blocking_ui_context.main",
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
-        "tools/inspect_wave71_legacy_area_manager.py:66:tools.inspect_wave71_legacy_area_manager.main",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_login_dialog_pass_only.py:243:tools.plan_login_dialog_pass_only.main",
@@ -11615,10 +11604,8 @@
         "tools/plan_queue_empty_pass_only.py:183:tools.plan_queue_empty_pass_only.main",
         "tools/plan_remaining_pass_only_groups.py:196:tools.plan_remaining_pass_only_groups.main",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
-        "tools/plan_wave71_candidates.py:174:tools.plan_wave71_candidates.main",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
-        "tools/remove_legacy_area_manager_wave_71.py:51:tools.remove_legacy_area_manager_wave_71.main",
         "tools/spina_quality_audit.py:306:tools.spina_quality_audit.main",
         "tools/spina_startup_diagnostics.py:82:tools.spina_startup_diagnostics.main",
         "tools/test_account_header_presentation_wave_46.py:104:tools.test_account_header_presentation_wave_46.main",
@@ -11861,10 +11848,6 @@
         "tools/audit_dynamic_sql_context.py:112:tools.audit_dynamic_sql_context.qualname",
         "tools/audit_pg_backup_action_flow.py:38:tools.audit_pg_backup_action_flow.qualname"
       ],
-      "raw_sha": [
-        "tools/inspect_wave71_legacy_area_manager.py:50:tools.inspect_wave71_legacy_area_manager.raw_sha",
-        "tools/remove_legacy_area_manager_wave_71.py:46:tools.remove_legacy_area_manager_wave_71.raw_sha"
-      ],
       "read_lines": [
         "tools/audit_pg_backup_action_flow.py:34:tools.audit_pg_backup_action_flow.read_lines",
         "tools/plan_ui_compatibility_pass_only.py:113:tools.plan_ui_compatibility_pass_only.read_lines"
@@ -11962,9 +11945,6 @@
         "tools/test_client_statement_generation_behavior_wave_67.py:19:tools.test_client_statement_generation_behavior_wave_67.MessageboxStub.showwarning"
       ],
       "signature": [
-        "tools/inspect_wave71_legacy_area_manager.py:22:tools.inspect_wave71_legacy_area_manager.signature",
-        "tools/plan_wave71_candidates.py:33:tools.plan_wave71_candidates.signature",
-        "tools/remove_legacy_area_manager_wave_71.py:18:tools.remove_legacy_area_manager_wave_71.signature",
         "tools/test_client_new_status_wave_70.py:18:tools.test_client_new_status_wave_70.signature",
         "tools/test_legacy_area_manager_cleanup_wave_71.py:18:tools.test_legacy_area_manager_cleanup_wave_71.signature"
       ],
@@ -11988,7 +11968,6 @@
         "tools/test_ui_button_factories_wave_50.py:78:tools.test_ui_button_factories_wave_50.source_for"
       ],
       "source_hash": [
-        "tools/plan_wave71_candidates.py:66:tools.plan_wave71_candidates.source_hash",
         "tools/test_audit_presentation_wave_54.py:19:tools.test_audit_presentation_wave_54.source_hash",
         "tools/test_client_read_queries_wave_31.py:20:tools.test_client_read_queries_wave_31.source_hash",
         "tools/test_clients_read_presentation_wave_30.py:46:tools.test_clients_read_presentation_wave_30.source_hash",
@@ -13619,11 +13598,6 @@
         "tools/inspect_stale_databank_protected_context.py:22:tools.inspect_stale_databank_protected_context._load_cleanup_tool",
         "tools/inspect_stale_databank_protected_context.py:31:tools.inspect_stale_databank_protected_context._matching_terms",
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
-        "tools/inspect_wave71_legacy_area_manager.py:22:tools.inspect_wave71_legacy_area_manager.signature",
-        "tools/inspect_wave71_legacy_area_manager.py:45:tools.inspect_wave71_legacy_area_manager.ast_sha",
-        "tools/inspect_wave71_legacy_area_manager.py:50:tools.inspect_wave71_legacy_area_manager.raw_sha",
-        "tools/inspect_wave71_legacy_area_manager.py:55:tools.inspect_wave71_legacy_area_manager.is_main_guard",
-        "tools/inspect_wave71_legacy_area_manager.py:66:tools.inspect_wave71_legacy_area_manager.main",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
         "tools/plan_app_lifecycle_window_pass_only.py:48:tools.plan_app_lifecycle_window_pass_only._name",
         "tools/plan_app_lifecycle_window_pass_only.py:66:tools.plan_app_lifecycle_window_pass_only._context",
@@ -13683,14 +13657,6 @@
         "tools/plan_ui_compatibility_pass_only.py:176:tools.plan_ui_compatibility_pass_only.contains_any",
         "tools/plan_ui_compatibility_pass_only.py:180:tools.plan_ui_compatibility_pass_only.classify_ui_site",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
-        "tools/plan_wave71_candidates.py:174:tools.plan_wave71_candidates.main",
-        "tools/plan_wave71_candidates.py:33:tools.plan_wave71_candidates.signature",
-        "tools/plan_wave71_candidates.py:56:tools.plan_wave71_candidates.dotted",
-        "tools/plan_wave71_candidates.py:66:tools.plan_wave71_candidates.source_hash",
-        "tools/plan_wave71_candidates.py:70:tools.plan_wave71_candidates.ast_hash",
-        "tools/plan_wave71_candidates.py:75:tools.plan_wave71_candidates.top_level_app_bindings",
-        "tools/plan_wave71_candidates.py:90:tools.plan_wave71_candidates.method_call_counts",
-        "tools/plan_wave71_candidates.py:98:tools.plan_wave71_candidates.analyze_method",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/redundancy_audit.py:19:tools.redundancy_audit.body_hash",
         "tools/redundancy_audit.py:33:tools.redundancy_audit.audit",
@@ -13699,10 +13665,6 @@
         "tools/remove_databank_export_controls.py:380:tools.remove_databank_export_controls._looks_like_ui_line",
         "tools/remove_databank_export_controls.py:394:tools.remove_databank_export_controls.remove_static_export_lines",
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
-        "tools/remove_legacy_area_manager_wave_71.py:18:tools.remove_legacy_area_manager_wave_71.signature",
-        "tools/remove_legacy_area_manager_wave_71.py:41:tools.remove_legacy_area_manager_wave_71.ast_sha",
-        "tools/remove_legacy_area_manager_wave_71.py:46:tools.remove_legacy_area_manager_wave_71.raw_sha",
-        "tools/remove_legacy_area_manager_wave_71.py:51:tools.remove_legacy_area_manager_wave_71.main",
         "tools/spina_quality_audit.py:103:tools.spina_quality_audit._handler_has_visible_action",
         "tools/spina_quality_audit.py:116:tools.spina_quality_audit.audit",
         "tools/spina_quality_audit.py:306:tools.spina_quality_audit.main",
@@ -17707,7 +17669,6 @@
         "tools/inspect_blocking_ui_context.py:133:tools.inspect_blocking_ui_context.inspect_source",
         "tools/inspect_blocking_ui_context.py:159:tools.inspect_blocking_ui_context.main",
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
-        "tools/inspect_wave71_legacy_area_manager.py:66:tools.inspect_wave71_legacy_area_manager.main",
         "tools/plan_app_lifecycle_window_pass_only.py:160:tools.plan_app_lifecycle_window_pass_only.build_report",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
         "tools/plan_logger_fallback_pass_only.py:136:tools.plan_logger_fallback_pass_only.build_report",
@@ -17726,11 +17687,9 @@
         "tools/plan_remaining_pass_only_groups.py:196:tools.plan_remaining_pass_only_groups.main",
         "tools/plan_ui_compatibility_pass_only.py:113:tools.plan_ui_compatibility_pass_only.read_lines",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
-        "tools/plan_wave71_candidates.py:174:tools.plan_wave71_candidates.main",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/redundancy_audit.py:33:tools.redundancy_audit.audit",
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
-        "tools/remove_legacy_area_manager_wave_71.py:51:tools.remove_legacy_area_manager_wave_71.main",
         "tools/spina_quality_audit.py:116:tools.spina_quality_audit.audit",
         "tools/spina_quality_audit.py:306:tools.spina_quality_audit.main",
         "tools/spina_startup_diagnostics.py:27:tools.spina_startup_diagnostics.check_python",
@@ -18921,10 +18880,6 @@
         "tools/inspect_blocking_ui_context.py:96:tools.inspect_blocking_ui_context.BlockingContextVisitor.visit_ClassDef",
         "tools/inspect_stale_databank_protected_context.py:22:tools.inspect_stale_databank_protected_context._load_cleanup_tool",
         "tools/inspect_stale_databank_protected_context.py:31:tools.inspect_stale_databank_protected_context._matching_terms",
-        "tools/inspect_wave71_legacy_area_manager.py:22:tools.inspect_wave71_legacy_area_manager.signature",
-        "tools/inspect_wave71_legacy_area_manager.py:45:tools.inspect_wave71_legacy_area_manager.ast_sha",
-        "tools/inspect_wave71_legacy_area_manager.py:50:tools.inspect_wave71_legacy_area_manager.raw_sha",
-        "tools/inspect_wave71_legacy_area_manager.py:55:tools.inspect_wave71_legacy_area_manager.is_main_guard",
         "tools/plan_app_lifecycle_window_pass_only.py:107:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.__init__",
         "tools/plan_app_lifecycle_window_pass_only.py:113:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor._scope",
         "tools/plan_app_lifecycle_window_pass_only.py:116:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_ClassDef",
@@ -19017,20 +18972,10 @@
         "tools/plan_ui_compatibility_pass_only.py:170:tools.plan_ui_compatibility_pass_only.text_window",
         "tools/plan_ui_compatibility_pass_only.py:176:tools.plan_ui_compatibility_pass_only.contains_any",
         "tools/plan_ui_compatibility_pass_only.py:180:tools.plan_ui_compatibility_pass_only.classify_ui_site",
-        "tools/plan_wave71_candidates.py:33:tools.plan_wave71_candidates.signature",
-        "tools/plan_wave71_candidates.py:56:tools.plan_wave71_candidates.dotted",
-        "tools/plan_wave71_candidates.py:66:tools.plan_wave71_candidates.source_hash",
-        "tools/plan_wave71_candidates.py:70:tools.plan_wave71_candidates.ast_hash",
-        "tools/plan_wave71_candidates.py:75:tools.plan_wave71_candidates.top_level_app_bindings",
-        "tools/plan_wave71_candidates.py:90:tools.plan_wave71_candidates.method_call_counts",
-        "tools/plan_wave71_candidates.py:98:tools.plan_wave71_candidates.analyze_method",
         "tools/redundancy_audit.py:19:tools.redundancy_audit.body_hash",
         "tools/remove_databank_export_controls.py:363:tools.remove_databank_export_controls.remove_existing_block",
         "tools/remove_databank_export_controls.py:375:tools.remove_databank_export_controls._contains_static_label",
         "tools/remove_databank_export_controls.py:394:tools.remove_databank_export_controls.remove_static_export_lines",
-        "tools/remove_legacy_area_manager_wave_71.py:18:tools.remove_legacy_area_manager_wave_71.signature",
-        "tools/remove_legacy_area_manager_wave_71.py:41:tools.remove_legacy_area_manager_wave_71.ast_sha",
-        "tools/remove_legacy_area_manager_wave_71.py:46:tools.remove_legacy_area_manager_wave_71.raw_sha",
         "tools/spina_quality_audit.py:103:tools.spina_quality_audit._handler_has_visible_action",
         "tools/spina_quality_audit.py:60:tools.spina_quality_audit._name",
         "tools/spina_quality_audit.py:73:tools.spina_quality_audit._line_span",
@@ -22933,34 +22878,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/inspect_wave71_legacy_area_manager.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json"
-      },
-      "lines": 152,
-      "module": "tools.inspect_wave71_legacy_area_manager",
-      "module_globals": [
-        "APP_PATH",
-        "EXPECTED_AST_SHA256",
-        "EXPECTED_BINDING_VALUE",
-        "EXPECTED_LINES",
-        "EXPECTED_RAW_SHA256",
-        "EXPECTED_SIGNATURE",
-        "MODULE_PATH",
-        "OUTPUT_PATH",
-        "ROOT",
-        "TARGET"
-      ],
-      "monkey_patches": [],
-      "sha256": "3ddce42cfa156db96fc9e9c786b9d018cc1df7378b081cc4feb8cef77bc66ba2",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/plan_app_lifecycle_window_pass_only.py",
       "imports": {
         "Any": "typing.Any",
@@ -23177,32 +23094,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/plan_wave71_candidates.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json",
-        "re": "re"
-      },
-      "lines": 216,
-      "module": "tools.plan_wave71_candidates",
-      "module_globals": [
-        "APP_PATH",
-        "FILE_WRITE_NAMES",
-        "OUTPUT_PATH",
-        "PRESENTATION_TERMS",
-        "PROTECTED_TERMS",
-        "ROOT",
-        "SQL_WRITE_RE"
-      ],
-      "monkey_patches": [],
-      "sha256": "31cd87c30807c7b3453e1a050c7f296a4b9c33058334572a5a9cdfb4c059e679",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/redundancy_audit.py",
       "imports": {
         "Path": "pathlib.Path",
@@ -23242,31 +23133,6 @@
       ],
       "monkey_patches": [],
       "sha256": "6f2012c8b63a77d9ba1ab979ddf113da8087f94dfcb039f9f533a3afd13637ac",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/remove_legacy_area_manager_wave_71.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib"
-      },
-      "lines": 99,
-      "module": "tools.remove_legacy_area_manager_wave_71",
-      "module_globals": [
-        "APP_PATH",
-        "EXPECTED_AST_SHA256",
-        "EXPECTED_BINDING_VALUE",
-        "EXPECTED_LINES",
-        "EXPECTED_RAW_SHA256",
-        "EXPECTED_SIGNATURE",
-        "ROOT",
-        "TARGET"
-      ],
-      "monkey_patches": [],
-      "sha256": "ecace37cfd94e784f03f05240cb574e4c0f5c27f94cbd94c57f06fa584049b55",
       "syntax_ok": true
     },
     {
@@ -26234,19 +26100,19 @@
     "classes": 137,
     "database_tables": 19,
     "duplicate_names": 87,
-    "functions": 1566,
+    "functions": 1549,
     "methods": 635,
     "monkey_patches": 185,
     "nested_functions": 382,
     "parse_errors": 0,
     "possible_orphans": 139,
-    "python_files": 243,
+    "python_files": 240,
     "repository_database_tables": 19,
-    "repository_duplicate_names": 332,
+    "repository_duplicate_names": 329,
     "repository_possible_orphans": 329,
-    "resolved_call_edges": 4123,
-    "symbols": 2720,
-    "total_python_lines": 81225,
+    "resolved_call_edges": 4108,
+    "symbols": 2703,
+    "total_python_lines": 80758,
     "ui_callback_edges": 478
   },
   "symbols": [
@@ -106660,243 +106526,6 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/inspect_wave71_legacy_area_manager.py:66:tools.inspect_wave71_legacy_area_manager.main"
-      ],
-      "calls_raw": [
-        "ast.unparse",
-        "join",
-        "len",
-        "list",
-        "parts.append",
-        "zip"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 42,
-      "feature": "other",
-      "file": "tools/inspect_wave71_legacy_area_manager.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/inspect_wave71_legacy_area_manager.py:22:tools.inspect_wave71_legacy_area_manager.signature",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 22,
-      "lines": 21,
-      "monkey_patches": [],
-      "name": "signature",
-      "parent": null,
-      "purpose": "Handles signature for the other feature.",
-      "qualified_name": "tools.inspect_wave71_legacy_area_manager.signature",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "962568c969c87426f049edb43c9b8de5e6966512536f4e3142d38d4e03f3e84c"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/inspect_wave71_legacy_area_manager.py:66:tools.inspect_wave71_legacy_area_manager.main"
-      ],
-      "calls_raw": [
-        "ast.dump",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "normalized.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 47,
-      "feature": "other",
-      "file": "tools/inspect_wave71_legacy_area_manager.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/inspect_wave71_legacy_area_manager.py:45:tools.inspect_wave71_legacy_area_manager.ast_sha",
-      "imports_used": [
-        "ast",
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 45,
-      "lines": 3,
-      "monkey_patches": [],
-      "name": "ast_sha",
-      "parent": null,
-      "purpose": "Handles ast sha for the other feature.",
-      "qualified_name": "tools.inspect_wave71_legacy_area_manager.ast_sha",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "5f34c9ca79a9593036f81b9c148553809080aeed085eef29e8c6c65c7e2a1d59"
-    },
-    {
-      "args": [
-        "source",
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/inspect_wave71_legacy_area_manager.py:66:tools.inspect_wave71_legacy_area_manager.main"
-      ],
-      "calls_raw": [
-        "ast.get_source_segment",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "segment.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 52,
-      "feature": "other",
-      "file": "tools/inspect_wave71_legacy_area_manager.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/inspect_wave71_legacy_area_manager.py:50:tools.inspect_wave71_legacy_area_manager.raw_sha",
-      "imports_used": [
-        "ast",
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 50,
-      "lines": 3,
-      "monkey_patches": [],
-      "name": "raw_sha",
-      "parent": null,
-      "purpose": "Handles raw sha for the other feature.",
-      "qualified_name": "tools.inspect_wave71_legacy_area_manager.raw_sha",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "c8331a5223f5fe55ad1c9fa4402ec48f82e14c8be750aa15ceba26a74c974bc9"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/inspect_wave71_legacy_area_manager.py:66:tools.inspect_wave71_legacy_area_manager.main"
-      ],
-      "calls_raw": [
-        "any",
-        "ast.walk",
-        "isinstance"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 63,
-      "feature": "other",
-      "file": "tools/inspect_wave71_legacy_area_manager.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/inspect_wave71_legacy_area_manager.py:55:tools.inspect_wave71_legacy_area_manager.is_main_guard",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 55,
-      "lines": 9,
-      "monkey_patches": [],
-      "name": "is_main_guard",
-      "parent": null,
-      "purpose": "Handles is main guard for the other feature.",
-      "qualified_name": "tools.inspect_wave71_legacy_area_manager.is_main_guard",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "210cea0c8789354d0b067bd931333b3f7377349bc46255eafb2af680a91b4207"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP_PATH.read_text",
-        "MODULE_PATH.read_text",
-        "MODULE_PATH.relative_to",
-        "OUTPUT_PATH.parent.mkdir",
-        "OUTPUT_PATH.write_text",
-        "ast.parse",
-        "ast.unparse",
-        "ast.walk",
-        "ast_sha",
-        "bindings.append",
-        "is_main_guard",
-        "isinstance",
-        "json.dumps",
-        "len",
-        "max",
-        "next",
-        "print",
-        "raw_sha",
-        "signature",
-        "str",
-        "str.replace"
-      ],
-      "calls_resolved": [
-        "tools/inspect_wave71_legacy_area_manager.py:22:tools.inspect_wave71_legacy_area_manager.signature",
-        "tools/inspect_wave71_legacy_area_manager.py:45:tools.inspect_wave71_legacy_area_manager.ast_sha",
-        "tools/inspect_wave71_legacy_area_manager.py:50:tools.inspect_wave71_legacy_area_manager.raw_sha",
-        "tools/inspect_wave71_legacy_area_manager.py:55:tools.inspect_wave71_legacy_area_manager.is_main_guard"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 148,
-      "feature": "other",
-      "file": "tools/inspect_wave71_legacy_area_manager.py",
-      "file_paths": [],
-      "globals_read": [
-        "APP_PATH",
-        "EXPECTED_AST_SHA256",
-        "EXPECTED_BINDING_VALUE",
-        "EXPECTED_LINES",
-        "EXPECTED_RAW_SHA256",
-        "EXPECTED_SIGNATURE",
-        "MODULE_PATH",
-        "OUTPUT_PATH",
-        "ROOT",
-        "TARGET"
-      ],
-      "globals_written": [],
-      "id": "tools/inspect_wave71_legacy_area_manager.py:66:tools.inspect_wave71_legacy_area_manager.main",
-      "imports_used": [
-        "ast",
-        "json"
-      ],
-      "kind": "function",
-      "line": 66,
-      "lines": 83,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.inspect_wave71_legacy_area_manager.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "0b21306cf7fa175e60515a9515a34482959e6804e49991ddf241cd290bf1375f"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
         "tools/plan_app_lifecycle_window_pass_only.py:131:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_Try",
         "tools/plan_app_lifecycle_window_pass_only.py:48:tools.plan_app_lifecycle_window_pass_only._name"
       ],
@@ -111994,374 +111623,6 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/plan_wave71_candidates.py:98:tools.plan_wave71_candidates.analyze_method"
-      ],
-      "calls_raw": [
-        "ast.unparse",
-        "join",
-        "len",
-        "list",
-        "parts.append",
-        "zip"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 53,
-      "feature": "other",
-      "file": "tools/plan_wave71_candidates.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_wave71_candidates.py:33:tools.plan_wave71_candidates.signature",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 33,
-      "lines": 21,
-      "monkey_patches": [],
-      "name": "signature",
-      "parent": null,
-      "purpose": "Handles signature for the other feature.",
-      "qualified_name": "tools.plan_wave71_candidates.signature",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "962568c969c87426f049edb43c9b8de5e6966512536f4e3142d38d4e03f3e84c"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave71_candidates.py:98:tools.plan_wave71_candidates.analyze_method"
-      ],
-      "calls_raw": [
-        "isinstance",
-        "join",
-        "parts.append",
-        "reversed"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 63,
-      "feature": "other",
-      "file": "tools/plan_wave71_candidates.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_wave71_candidates.py:56:tools.plan_wave71_candidates.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 56,
-      "lines": 8,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.plan_wave71_candidates.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "b5d0204dc980e523dbf809fd680134e37e034ffbf2f51f7de2d11a1b38b64b5c"
-    },
-    {
-      "args": [
-        "text"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave71_candidates.py:174:tools.plan_wave71_candidates.main",
-        "tools/plan_wave71_candidates.py:98:tools.plan_wave71_candidates.analyze_method"
-      ],
-      "calls_raw": [
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "text.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 67,
-      "feature": "other",
-      "file": "tools/plan_wave71_candidates.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_wave71_candidates.py:66:tools.plan_wave71_candidates.source_hash",
-      "imports_used": [
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 66,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "source_hash",
-      "parent": null,
-      "purpose": "Handles source hash for the other feature.",
-      "qualified_name": "tools.plan_wave71_candidates.source_hash",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "19edf67f930adb48c888ce92df7d86213e2f68fae66be079ce5b65702e6a4f0f"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave71_candidates.py:98:tools.plan_wave71_candidates.analyze_method"
-      ],
-      "calls_raw": [
-        "ast.dump",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "normalized.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 72,
-      "feature": "other",
-      "file": "tools/plan_wave71_candidates.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_wave71_candidates.py:70:tools.plan_wave71_candidates.ast_hash",
-      "imports_used": [
-        "ast",
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 70,
-      "lines": 3,
-      "monkey_patches": [],
-      "name": "ast_hash",
-      "parent": null,
-      "purpose": "Handles ast hash for the other feature.",
-      "qualified_name": "tools.plan_wave71_candidates.ast_hash",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "526257a8486a3f1af90ceaa771e4a3e6c07d3366e2e147bb1c47a941a6cfe573"
-    },
-    {
-      "args": [
-        "tree"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave71_candidates.py:174:tools.plan_wave71_candidates.main"
-      ],
-      "calls_raw": [
-        "ast.unparse",
-        "bindings.setdefault",
-        "bindings.setdefault.append",
-        "isinstance"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 87,
-      "feature": "other",
-      "file": "tools/plan_wave71_candidates.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_wave71_candidates.py:75:tools.plan_wave71_candidates.top_level_app_bindings",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 75,
-      "lines": 13,
-      "monkey_patches": [],
-      "name": "top_level_app_bindings",
-      "parent": null,
-      "purpose": "Handles top level app bindings for the other feature.",
-      "qualified_name": "tools.plan_wave71_candidates.top_level_app_bindings",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "c421fa6c8f626d15683e15ddad360c7f6c01b6f7bcec8bec6ab2822f77432560"
-    },
-    {
-      "args": [
-        "tree"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave71_candidates.py:174:tools.plan_wave71_candidates.main"
-      ],
-      "calls_raw": [
-        "ast.walk",
-        "counts.get",
-        "isinstance"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 95,
-      "feature": "other",
-      "file": "tools/plan_wave71_candidates.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_wave71_candidates.py:90:tools.plan_wave71_candidates.method_call_counts",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 90,
-      "lines": 6,
-      "monkey_patches": [],
-      "name": "method_call_counts",
-      "parent": null,
-      "purpose": "Handles method call counts for the other feature.",
-      "qualified_name": "tools.plan_wave71_candidates.method_call_counts",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "94ff33dffa4ccd6a2c3f508a297e64872e0326d18387975a0d03f3beab71a6e0"
-    },
-    {
-      "args": [
-        "node",
-        "source",
-        "bindings",
-        "call_counts"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave71_candidates.py:174:tools.plan_wave71_candidates.main"
-      ],
-      "calls_raw": [
-        "SQL_WRITE_RE.search",
-        "ast.get_source_segment",
-        "ast.walk",
-        "ast_hash",
-        "bindings.get",
-        "bool",
-        "call_counts.get",
-        "dotted",
-        "isinstance",
-        "len",
-        "min",
-        "name.endswith",
-        "name.rsplit",
-        "segment.lower",
-        "signature",
-        "sorted",
-        "source_hash"
-      ],
-      "calls_resolved": [
-        "tools/plan_wave71_candidates.py:33:tools.plan_wave71_candidates.signature",
-        "tools/plan_wave71_candidates.py:56:tools.plan_wave71_candidates.dotted",
-        "tools/plan_wave71_candidates.py:66:tools.plan_wave71_candidates.source_hash",
-        "tools/plan_wave71_candidates.py:70:tools.plan_wave71_candidates.ast_hash"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 171,
-      "feature": "other",
-      "file": "tools/plan_wave71_candidates.py",
-      "file_paths": [],
-      "globals_read": [
-        "FILE_WRITE_NAMES",
-        "PRESENTATION_TERMS",
-        "PROTECTED_TERMS",
-        "SQL_WRITE_RE"
-      ],
-      "globals_written": [],
-      "id": "tools/plan_wave71_candidates.py:98:tools.plan_wave71_candidates.analyze_method",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 98,
-      "lines": 74,
-      "monkey_patches": [],
-      "name": "analyze_method",
-      "parent": null,
-      "purpose": "Handles analyze method for the other feature.",
-      "qualified_name": "tools.plan_wave71_candidates.analyze_method",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "efebe162edf1b5dc224ae5fd346224342a9503f50ef534d10f3549c3df078d0c"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP_PATH.read_text",
-        "OUTPUT_PATH.parent.mkdir",
-        "OUTPUT_PATH.write_text",
-        "analyze_method",
-        "ast.parse",
-        "int",
-        "isinstance",
-        "json.dumps",
-        "len",
-        "method_call_counts",
-        "next",
-        "print",
-        "sorted",
-        "source_hash",
-        "str",
-        "top_level_app_bindings"
-      ],
-      "calls_resolved": [
-        "tools/plan_wave71_candidates.py:66:tools.plan_wave71_candidates.source_hash",
-        "tools/plan_wave71_candidates.py:75:tools.plan_wave71_candidates.top_level_app_bindings",
-        "tools/plan_wave71_candidates.py:90:tools.plan_wave71_candidates.method_call_counts",
-        "tools/plan_wave71_candidates.py:98:tools.plan_wave71_candidates.analyze_method"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 212,
-      "feature": "other",
-      "file": "tools/plan_wave71_candidates.py",
-      "file_paths": [],
-      "globals_read": [
-        "APP_PATH",
-        "OUTPUT_PATH"
-      ],
-      "globals_written": [],
-      "id": "tools/plan_wave71_candidates.py:174:tools.plan_wave71_candidates.main",
-      "imports_used": [
-        "ast",
-        "json"
-      ],
-      "kind": "function",
-      "line": 174,
-      "lines": 39,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.plan_wave71_candidates.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "454fe21520a06f1ae92caf5123744bdd7bbb51b2a21f93a11426dec49f613bd3"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
         "tools/redundancy_audit.py:33:tools.redundancy_audit.audit"
       ],
       "calls_raw": [
@@ -112771,194 +112032,6 @@
         "reports"
       ],
       "source_sha256": "5bcb544e48cab1ea32c7b485c28763319d172a0e087c176c07b5601d47e48ad8"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/remove_legacy_area_manager_wave_71.py:51:tools.remove_legacy_area_manager_wave_71.main"
-      ],
-      "calls_raw": [
-        "ast.unparse",
-        "join",
-        "len",
-        "list",
-        "parts.append",
-        "zip"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 38,
-      "feature": "other",
-      "file": "tools/remove_legacy_area_manager_wave_71.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/remove_legacy_area_manager_wave_71.py:18:tools.remove_legacy_area_manager_wave_71.signature",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 18,
-      "lines": 21,
-      "monkey_patches": [],
-      "name": "signature",
-      "parent": null,
-      "purpose": "Handles signature for the other feature.",
-      "qualified_name": "tools.remove_legacy_area_manager_wave_71.signature",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "962568c969c87426f049edb43c9b8de5e6966512536f4e3142d38d4e03f3e84c"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/remove_legacy_area_manager_wave_71.py:51:tools.remove_legacy_area_manager_wave_71.main"
-      ],
-      "calls_raw": [
-        "ast.dump",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "normalized.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 43,
-      "feature": "other",
-      "file": "tools/remove_legacy_area_manager_wave_71.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/remove_legacy_area_manager_wave_71.py:41:tools.remove_legacy_area_manager_wave_71.ast_sha",
-      "imports_used": [
-        "ast",
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 41,
-      "lines": 3,
-      "monkey_patches": [],
-      "name": "ast_sha",
-      "parent": null,
-      "purpose": "Handles ast sha for the other feature.",
-      "qualified_name": "tools.remove_legacy_area_manager_wave_71.ast_sha",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "5f34c9ca79a9593036f81b9c148553809080aeed085eef29e8c6c65c7e2a1d59"
-    },
-    {
-      "args": [
-        "source",
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/remove_legacy_area_manager_wave_71.py:51:tools.remove_legacy_area_manager_wave_71.main"
-      ],
-      "calls_raw": [
-        "ast.get_source_segment",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "segment.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 48,
-      "feature": "other",
-      "file": "tools/remove_legacy_area_manager_wave_71.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/remove_legacy_area_manager_wave_71.py:46:tools.remove_legacy_area_manager_wave_71.raw_sha",
-      "imports_used": [
-        "ast",
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 46,
-      "lines": 3,
-      "monkey_patches": [],
-      "name": "raw_sha",
-      "parent": null,
-      "purpose": "Handles raw sha for the other feature.",
-      "qualified_name": "tools.remove_legacy_area_manager_wave_71.raw_sha",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "c8331a5223f5fe55ad1c9fa4402ec48f82e14c8be750aa15ceba26a74c974bc9"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP_PATH.read_text",
-        "APP_PATH.write_text",
-        "ast.parse",
-        "ast.unparse",
-        "ast.walk",
-        "ast_sha",
-        "bindings.append",
-        "isinstance",
-        "join",
-        "len",
-        "next",
-        "print",
-        "raw_sha",
-        "signature",
-        "source.splitlines",
-        "str"
-      ],
-      "calls_resolved": [
-        "tools/remove_legacy_area_manager_wave_71.py:18:tools.remove_legacy_area_manager_wave_71.signature",
-        "tools/remove_legacy_area_manager_wave_71.py:41:tools.remove_legacy_area_manager_wave_71.ast_sha",
-        "tools/remove_legacy_area_manager_wave_71.py:46:tools.remove_legacy_area_manager_wave_71.raw_sha"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 95,
-      "feature": "other",
-      "file": "tools/remove_legacy_area_manager_wave_71.py",
-      "file_paths": [],
-      "globals_read": [
-        "APP_PATH",
-        "EXPECTED_AST_SHA256",
-        "EXPECTED_BINDING_VALUE",
-        "EXPECTED_LINES",
-        "EXPECTED_RAW_SHA256",
-        "EXPECTED_SIGNATURE",
-        "TARGET"
-      ],
-      "globals_written": [],
-      "id": "tools/remove_legacy_area_manager_wave_71.py:51:tools.remove_legacy_area_manager_wave_71.main",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 51,
-      "lines": 45,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.remove_legacy_area_manager_wave_71.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "69b34b98251554838a6db21fabb5e30cccf3c3fff324c1bc7abf08a08cb0679e"
     },
     {
       "args": [
