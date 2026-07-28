@@ -1,0 +1,50 @@
+name: Wave 69 Target Inspector
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "tools/inspect_wave69_collector_editor.py"
+      - ".github/workflows/wave69-target-inspector.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wave69-target-inspector-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inspect:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-69'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 120
+    steps:
+      - name: Check out exact Wave 69 head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Compile inspector and desktop source
+        shell: cmd
+        run: |
+          python -m py_compile tools\inspect_wave69_collector_editor.py
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+
+      - name: Export exact collector editor boundary
+        shell: cmd
+        run: python -m tools.inspect_wave69_collector_editor
+
+      - name: Commit inspection files
+        if: github.event_name == 'pull_request'
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs\wave69-collector-editor-source.txt docs\wave69-collector-editor-meta.json
+          git diff --cached --quiet && exit /b 0
+          git commit -m "Add Wave 69 collector editor review files"
+          git push origin HEAD:${{ github.head_ref }}
