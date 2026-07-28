@@ -16,8 +16,6 @@ EXPECTED_SIGNATURE = "self, title='Collector', initial_name='', initial_areas=No
 EXPECTED_CALLBACKS = ['_panel', '_assigned_keys', '_refresh_lists', '_clean_assigned_display', '_add_selected', '_remove_selected', '_move_selected', '_move_top', '_move_bottom', '_add_all_visible', '_clear_assigned', '_save', '_cancel']
 EXPECTED_CALLS = ['_add_selected', '_assigned_keys', '_cancel', '_clean_assigned_display', '_move_selected', '_panel', '_refresh_lists', '_remove_selected', '_spina_v27_get_route_master_areas', '_spina_v27_route_button', '_spina_v27_route_colors', 'append', 'assigned_frame.pack', 'assigned_lb.bind', 'assigned_lb.configure', 'assigned_lb.curselection', 'assigned_lb.delete', 'assigned_lb.get', 'assigned_lb.insert', 'assigned_lb.pack', 'assigned_lb.see', 'assigned_lb.selection_clear', 'assigned_lb.selection_set', 'assigned_lb.size', 'assigned_panel.grid', 'assigned_vsb.pack', 'avail_frame.pack', 'avail_vsb.pack', 'available_lb.bind', 'available_lb.configure', 'available_lb.curselection', 'available_lb.delete', 'available_lb.get', 'available_lb.insert', 'available_lb.pack', 'available_lb.size', 'available_panel.grid', 'body.columnconfigure', 'body.pack', 'body.rowconfigure', 'clean.append', 'enumerate', 'footer.pack', 'header.pack', 'initial.append', 'insert', 'join', 'len', 'list', 'lower', 'master_areas.append', 'max', 'messagebox.askyesno', 'messagebox.showwarning', 'middle.grid', 'middle.grid_propagate', 'min', 'name_panel.pack', 'name_var.get', 'next', 'notes_panel.pack', 'notes_txt.get', 'notes_txt.insert', 'notes_txt.pack', 'pack', 'picks.append', 'pop', 'range', 're.sub', 'result.get', 'result.update', 's.lower', 's.split', 'search_a.pack', 'search_assigned_var.get', 'search_assigned_var.set', 'search_assigned_var.trace_add', 'search_available_var.get', 'search_available_var.set', 'search_available_var.trace_add', 'search_s.pack', 'seen.add', 'seen_init.add', 'self.root.winfo_height', 'self.root.winfo_rootx', 'self.root.winfo_rooty', 'self.root.winfo_width', 'set', 'split', 'status_var.set', 'str', 'strip', 'titlebox.pack', 'tk.Frame', 'tk.Label', 'tk.Listbox', 'tk.StringVar', 'tk.Text', 'tk.Toplevel', 'top.bind', 'top.configure', 'top.destroy', 'top.geometry', 'top.grab_release', 'top.grab_set', 'top.minsize', 'top.protocol', 'top.title', 'top.transient', 'top.wait_window', 'top.winfo_screenheight', 'top.winfo_screenwidth', 'ttk.Entry', 'ttk.Scrollbar', 'used.add']
 EXPECTED_HELPER_CALLS = ['_spina_v27_get_route_master_areas', '_spina_v27_route_button', '_spina_v27_route_colors', 'messagebox.askyesno', 'messagebox.showwarning']
-EXPECTED_OLD_APP_METHOD_LINES = 136
-EXPECTED_OLD_APP_METHOD_SHA256 = '3e8864685df23c9c8ac480be8ec411626a6b3680734209bf0a779c024c3b564a'
 FORBIDDEN_CALL_SUFFIXES = ['_save_client_notes', 'add_client', 'add_transaction', 'archive_client', 'close_databank_day', 'commit', 'delete_client', 'delete_transaction', 'dump', 'dumps', 'execute', 'executemany', 'remove', 'rename', 'renew_client', 'reopen_databank_day', 'replace', 'restore_client', 'rmtree', 'rollback', 'run_write', 'save_settings', 'set_client_note', 'set_transaction', 'unlink', 'update_client', 'update_transaction', 'write', 'write_bytes', 'write_text']
 SQL_WRITE = ('INSERT INTO', 'UPDATE ', 'DELETE FROM', 'CREATE TABLE', 'ALTER TABLE', 'DROP TABLE', 'TRUNCATE TABLE')
 
@@ -103,15 +101,15 @@ def main():
         n for n in app.body
         if isinstance(n, ast.FunctionDef) and n.name == "_collector_editor_dialog"
     ]
-    assert len(old_methods) == 1
-    old = old_methods[0]
-    dlines = desktop_text.splitlines(keepends=True)
-    old_source = source_for(old, dlines)
-    assert old.end_lineno - old.lineno + 1 == EXPECTED_OLD_APP_METHOD_LINES
-    assert hashlib.sha256(normalized(old_source).encode("utf-8")).hexdigest() == EXPECTED_OLD_APP_METHOD_SHA256
+    assert not old_methods, old_methods
 
     binding_line = desktop_text[:desktop_text.index(binding)].count("\n") + 1
-    assert old.end_lineno < binding_line
+    main_guards = [
+        node for node in dtree.body
+        if isinstance(node, ast.If) and "__name__" in ast.unparse(node.test) and "__main__" in ast.unparse(node.test)
+    ]
+    assert main_guards, "Top-level main guard missing"
+    assert binding_line < main_guards[-1].lineno
     print("Wave 43 collector dialog regression passed:", EXPECTED_LINES, EXPECTED_SHA256)
 
 
