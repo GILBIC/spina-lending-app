@@ -1,0 +1,46 @@
+name: Wave 66 Candidate Planner
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "tools/plan_wave66_candidates.py"
+      - ".github/workflows/wave66-candidate-planner.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wave66-candidate-planner-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-66'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact Wave 66 head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Compile and run high-volume planner
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python -m py_compile tools\plan_wave66_candidates.py
+          python tools\plan_wave66_candidates.py > artifacts\wave66-planner-output.txt 2>&1
+          type artifacts\wave66-planner-output.txt
+
+      - name: Upload candidate report
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave66-candidate-report
+          path: |
+            artifacts/wave66-candidates.json
+            artifacts/wave66-planner-output.txt
+          if-no-files-found: error
