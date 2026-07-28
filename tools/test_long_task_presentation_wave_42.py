@@ -89,7 +89,16 @@ def main():
     assert not originals
     assert "_configure_wave42_long_task(globals())" in desktop_text
     assert "App._run_long_task = _wave42_run_long_task" in desktop_text
-    assert desktop_text.count("self._run_long_task(") == EXPECTED_CALLER_COUNT
+
+    # Count protected callers across the desktop and extracted application modules.
+    # Later modularization waves may move callers out of the desktop class while
+    # preserving the same delegated long-task behavior.
+    caller_paths = [DESKTOP, *sorted((ROOT / "spina_app").rglob("*.py"))]
+    caller_count = sum(
+        path.read_text(encoding="utf-8").count("self._run_long_task(")
+        for path in caller_paths
+    )
+    assert caller_count == EXPECTED_CALLER_COUNT, caller_count
     print("Wave 42 long-task regression passed:", EXPECTED_LINES, EXPECTED_SHA256)
 
 
