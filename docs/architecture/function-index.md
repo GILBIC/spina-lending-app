@@ -2,7 +2,7 @@
 
 Generated from commit `989f1c49c618afabdebffa91b0264798a09d2aea`.
 
-Scanned **230 Python files**, **80,443 lines**, and **2,658 symbols**.
+Scanned **228 Python files**, **79,954 lines**, and **2,648 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1420,16 +1420,6 @@ Scanned **230 Python files**, **80,443 lines**, and **2,658 symbols**.
 - **tools.apply_hierarchical_area_ui_phase2.apply** (function, lines 70–85, 16 lines, risk `filesystem`): Handles apply for the other feature.
 - **tools.apply_hierarchical_area_ui_phase2.main** (function, lines 88–101, 14 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/apply_wave66_databank_close_records_extraction.py`
-
-- **tools.apply_wave66_databank_close_records_extraction.sha** (function, lines 22–23, 2 lines, risk `filesystem`): Handles sha for the other feature.
-- **tools.apply_wave66_databank_close_records_extraction.dotted** (function, lines 26–38, 13 lines, risk `support`): Handles dotted for the other feature.
-- **tools.apply_wave66_databank_close_records_extraction.find_method** (function, lines 41–51, 11 lines, risk `support`): Retrieves find method for the other feature.
-- **tools.apply_wave66_databank_close_records_extraction.build_module** (function, lines 54–86, 33 lines, risk `support`): Builds build module for the other feature.
-- **tools.apply_wave66_databank_close_records_extraction.build_structural_test** (function, lines 89–169, 81 lines, risk `support`): Builds build structural test for the other feature.
-- **tools.apply_wave66_databank_close_records_extraction.build_smoke_test** (function, lines 172–306, 135 lines, risk `ui_only`): Builds build smoke test for the other feature.
-- **tools.apply_wave66_databank_close_records_extraction.main** (function, lines 309–342, 34 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/audit_bare_except_context.py`
 
 - **tools.audit_bare_except_context._lines** (function, lines 23–24, 2 lines, risk `filesystem`): Handles lines for the other feature.
@@ -2039,12 +2029,6 @@ Scanned **230 Python files**, **80,443 lines**, and **2,658 symbols**.
 - **tools.plan_ui_compatibility_pass_only.classify_ui_site** (function, lines 180–193, 14 lines, risk `support`): Handles classify ui site for the other feature.
 - **tools.plan_ui_compatibility_pass_only.build_report** (function, lines 196–264, 69 lines, risk `reports`): Builds build report for the reports feature.
 - **tools.plan_ui_compatibility_pass_only.main** (function, lines 267–280, 14 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/plan_wave66_candidates.py`
-
-- **tools.plan_wave66_candidates.dotted** (function, lines 32–44, 13 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_wave66_candidates.sha** (function, lines 47–48, 2 lines, risk `filesystem`): Handles sha for the other feature.
-- **tools.plan_wave66_candidates.main** (function, lines 51–139, 89 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/redundancy_audit.py`
 

@@ -11458,8 +11458,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:22374:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.do_link"
       ],
       "dotted": [
-        "tools/apply_wave66_databank_close_records_extraction.py:26:tools.apply_wave66_databank_close_records_extraction.dotted",
-        "tools/plan_wave66_candidates.py:32:tools.plan_wave66_candidates.dotted",
         "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
         "tools/test_audit_presentation_wave_54.py:23:tools.test_audit_presentation_wave_54.dotted",
         "tools/test_collector_tab_presentation_wave_44.py:28:tools.test_collector_tab_presentation_wave_44.dotted",
@@ -11665,7 +11663,6 @@
         "tools/apply_client_area_uid_sync_phase2.py:60:tools.apply_client_area_uid_sync_phase2.main",
         "tools/apply_hierarchical_area_storage_phase1.py:75:tools.apply_hierarchical_area_storage_phase1.main",
         "tools/apply_hierarchical_area_ui_phase2.py:88:tools.apply_hierarchical_area_ui_phase2.main",
-        "tools/apply_wave66_databank_close_records_extraction.py:309:tools.apply_wave66_databank_close_records_extraction.main",
         "tools/audit_bare_except_context.py:114:tools.audit_bare_except_context.main",
         "tools/audit_blocking_ui_calls.py:162:tools.audit_blocking_ui_calls.main",
         "tools/audit_dynamic_sql_context.py:211:tools.audit_dynamic_sql_context.main",
@@ -11713,7 +11710,6 @@
         "tools/plan_queue_empty_pass_only.py:183:tools.plan_queue_empty_pass_only.main",
         "tools/plan_remaining_pass_only_groups.py:196:tools.plan_remaining_pass_only_groups.main",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
-        "tools/plan_wave66_candidates.py:51:tools.plan_wave66_candidates.main",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
         "tools/spina_quality_audit.py:306:tools.spina_quality_audit.main",
@@ -12035,8 +12031,6 @@
         "tools/test_settings_dialog_widget_smoke_wave_65.py:17:tools.test_settings_dialog_widget_smoke_wave_65.FakeApp.set_theme"
       ],
       "sha": [
-        "tools/apply_wave66_databank_close_records_extraction.py:22:tools.apply_wave66_databank_close_records_extraction.sha",
-        "tools/plan_wave66_candidates.py:47:tools.plan_wave66_candidates.sha",
         "tools/test_databank_cell_writes_wave_61.py:18:tools.test_databank_cell_writes_wave_61.sha",
         "tools/test_databank_close_records_presentation_wave_66.py:16:tools.test_databank_close_records_presentation_wave_66.sha",
         "tools/test_databank_delete_day_wave_62.py:20:tools.test_databank_delete_day_wave_62.sha",
@@ -13368,13 +13362,6 @@
         "tools/apply_hierarchical_area_ui_phase2.py:33:tools.apply_hierarchical_area_ui_phase2.inspect",
         "tools/apply_hierarchical_area_ui_phase2.py:70:tools.apply_hierarchical_area_ui_phase2.apply",
         "tools/apply_hierarchical_area_ui_phase2.py:88:tools.apply_hierarchical_area_ui_phase2.main",
-        "tools/apply_wave66_databank_close_records_extraction.py:172:tools.apply_wave66_databank_close_records_extraction.build_smoke_test",
-        "tools/apply_wave66_databank_close_records_extraction.py:22:tools.apply_wave66_databank_close_records_extraction.sha",
-        "tools/apply_wave66_databank_close_records_extraction.py:26:tools.apply_wave66_databank_close_records_extraction.dotted",
-        "tools/apply_wave66_databank_close_records_extraction.py:309:tools.apply_wave66_databank_close_records_extraction.main",
-        "tools/apply_wave66_databank_close_records_extraction.py:41:tools.apply_wave66_databank_close_records_extraction.find_method",
-        "tools/apply_wave66_databank_close_records_extraction.py:54:tools.apply_wave66_databank_close_records_extraction.build_module",
-        "tools/apply_wave66_databank_close_records_extraction.py:89:tools.apply_wave66_databank_close_records_extraction.build_structural_test",
         "tools/audit_bare_except_context.py:114:tools.audit_bare_except_context.main",
         "tools/audit_bare_except_context.py:23:tools.audit_bare_except_context._lines",
         "tools/audit_bare_except_context.py:27:tools.audit_bare_except_context._ctx",
@@ -13750,9 +13737,6 @@
         "tools/plan_ui_compatibility_pass_only.py:176:tools.plan_ui_compatibility_pass_only.contains_any",
         "tools/plan_ui_compatibility_pass_only.py:180:tools.plan_ui_compatibility_pass_only.classify_ui_site",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
-        "tools/plan_wave66_candidates.py:32:tools.plan_wave66_candidates.dotted",
-        "tools/plan_wave66_candidates.py:47:tools.plan_wave66_candidates.sha",
-        "tools/plan_wave66_candidates.py:51:tools.plan_wave66_candidates.main",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/redundancy_audit.py:19:tools.redundancy_audit.body_hash",
         "tools/redundancy_audit.py:33:tools.redundancy_audit.audit",
@@ -15066,10 +15050,6 @@
         "tools/test_clients_read_presentation_wave_30.py:142:tools.test_clients_read_presentation_wave_30.assert_focused_behavior"
       ],
       "self.db": [
-        "tools/apply_wave66_databank_close_records_extraction.py:309:tools.apply_wave66_databank_close_records_extraction.main",
-        "tools/apply_wave66_databank_close_records_extraction.py:54:tools.apply_wave66_databank_close_records_extraction.build_module",
-        "tools/apply_wave66_databank_close_records_extraction.py:89:tools.apply_wave66_databank_close_records_extraction.build_structural_test",
-        "tools/plan_wave66_candidates.py:51:tools.plan_wave66_candidates.main",
         "tools/test_account_header_presentation_wave_46.py:83:tools.test_account_header_presentation_wave_46.check_function",
         "tools/test_calendar_presentation_wave_41.py:34:tools.test_calendar_presentation_wave_41.main",
         "tools/test_collector_dialog_presentation_wave_43.py:47:tools.test_collector_dialog_presentation_wave_43.main",
@@ -17582,8 +17562,6 @@
         "tools/apply_hierarchical_area_storage_phase1.py:62:tools.apply_hierarchical_area_storage_phase1.apply",
         "tools/apply_hierarchical_area_ui_phase2.py:70:tools.apply_hierarchical_area_ui_phase2.apply",
         "tools/apply_hierarchical_area_ui_phase2.py:88:tools.apply_hierarchical_area_ui_phase2.main",
-        "tools/apply_wave66_databank_close_records_extraction.py:22:tools.apply_wave66_databank_close_records_extraction.sha",
-        "tools/apply_wave66_databank_close_records_extraction.py:309:tools.apply_wave66_databank_close_records_extraction.main",
         "tools/audit_bare_except_context.py:114:tools.audit_bare_except_context.main",
         "tools/audit_bare_except_context.py:23:tools.audit_bare_except_context._lines",
         "tools/audit_blocking_ui_calls.py:138:tools.audit_blocking_ui_calls.build_report",
@@ -17687,8 +17665,6 @@
         "tools/plan_remaining_pass_only_groups.py:196:tools.plan_remaining_pass_only_groups.main",
         "tools/plan_ui_compatibility_pass_only.py:113:tools.plan_ui_compatibility_pass_only.read_lines",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
-        "tools/plan_wave66_candidates.py:47:tools.plan_wave66_candidates.sha",
-        "tools/plan_wave66_candidates.py:51:tools.plan_wave66_candidates.main",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/redundancy_audit.py:33:tools.redundancy_audit.audit",
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
@@ -18640,10 +18616,6 @@
         "tools/apply_client_area_uid_sync_phase2.py:19:tools.apply_client_area_uid_sync_phase2._state",
         "tools/apply_hierarchical_area_ui_phase2.py:23:tools.apply_hierarchical_area_ui_phase2._between",
         "tools/apply_hierarchical_area_ui_phase2.py:33:tools.apply_hierarchical_area_ui_phase2.inspect",
-        "tools/apply_wave66_databank_close_records_extraction.py:26:tools.apply_wave66_databank_close_records_extraction.dotted",
-        "tools/apply_wave66_databank_close_records_extraction.py:41:tools.apply_wave66_databank_close_records_extraction.find_method",
-        "tools/apply_wave66_databank_close_records_extraction.py:54:tools.apply_wave66_databank_close_records_extraction.build_module",
-        "tools/apply_wave66_databank_close_records_extraction.py:89:tools.apply_wave66_databank_close_records_extraction.build_structural_test",
         "tools/audit_bare_except_context.py:27:tools.audit_bare_except_context._ctx",
         "tools/audit_bare_except_context.py:33:tools.audit_bare_except_context._count_by",
         "tools/audit_bare_except_context.py:42:tools.audit_bare_except_context.Visitor.__init__",
@@ -18976,7 +18948,6 @@
         "tools/plan_ui_compatibility_pass_only.py:170:tools.plan_ui_compatibility_pass_only.text_window",
         "tools/plan_ui_compatibility_pass_only.py:176:tools.plan_ui_compatibility_pass_only.contains_any",
         "tools/plan_ui_compatibility_pass_only.py:180:tools.plan_ui_compatibility_pass_only.classify_ui_site",
-        "tools/plan_wave66_candidates.py:32:tools.plan_wave66_candidates.dotted",
         "tools/redundancy_audit.py:19:tools.redundancy_audit.body_hash",
         "tools/remove_databank_export_controls.py:363:tools.remove_databank_export_controls.remove_existing_block",
         "tools/remove_databank_export_controls.py:375:tools.remove_databank_export_controls._contains_static_label",
@@ -19733,7 +19704,6 @@
         "spina_app/ui_helpers.py:43:spina_app.ui_helpers._spina_v17_set_card",
         "spina_app/ui_helpers.py:54:spina_app.ui_helpers._spina_v24_cilog_set_card",
         "spina_app/ui_helpers.py:65:spina_app.ui_helpers._spina_v21_cash_set_card",
-        "tools/apply_wave66_databank_close_records_extraction.py:172:tools.apply_wave66_databank_close_records_extraction.build_smoke_test",
         "tools/disable_full_daily_ledger.py:376:tools.disable_full_daily_ledger._looks_like_legacy_button_line",
         "tools/plan_remaining_pass_only_groups.py:86:tools.plan_remaining_pass_only_groups.classify",
         "tools/remove_databank_export_controls.py:380:tools.remove_databank_export_controls._looks_like_ui_line",
@@ -21857,35 +21827,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/apply_wave66_databank_close_records_extraction.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json",
-        "textwrap": "textwrap"
-      },
-      "lines": 346,
-      "module": "tools.apply_wave66_databank_close_records_extraction",
-      "module_globals": [
-        "APP",
-        "BINDING_BLOCK",
-        "EXPECTED_DB_CALLS",
-        "EXPECTED_LINES",
-        "EXPECTED_SIGNATURE",
-        "EXPECTED_SOURCE_SHA",
-        "MODULE",
-        "ROOT",
-        "SMOKE_TEST",
-        "STRUCT_TEST"
-      ],
-      "monkey_patches": [],
-      "sha256": "c32a48d3c4af2d378ab01aebfbd72089c7776d9ab8fcbb0f2c34bec24a9c4e76",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/audit_bare_except_context.py",
       "imports": {
         "Any": "typing.Any",
@@ -23011,30 +22952,6 @@
       ],
       "monkey_patches": [],
       "sha256": "f8ce08c33264ae337ffc4e07ca20d6cd24526b2e6531a1739ee7181a80c98988",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/plan_wave66_candidates.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json"
-      },
-      "lines": 143,
-      "module": "tools.plan_wave66_candidates",
-      "module_globals": [
-        "APP",
-        "HIGH_RISK_GROUPS",
-        "OUT",
-        "PRESENTATION_TERMS",
-        "ROOT",
-        "WRITE_TERMS"
-      ],
-      "monkey_patches": [],
-      "sha256": "044f5f0b419e49d0064e8fa1b3544b77fe0946196398ed299245f2b1ba9d9273",
       "syntax_ok": true
     },
     {
@@ -25847,19 +25764,19 @@
     "classes": 128,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1526,
+    "functions": 1516,
     "methods": 611,
     "monkey_patches": 182,
     "nested_functions": 393,
     "parse_errors": 0,
     "possible_orphans": 135,
-    "python_files": 230,
+    "python_files": 228,
     "repository_database_tables": 19,
     "repository_duplicate_names": 322,
     "repository_possible_orphans": 308,
-    "resolved_call_edges": 4043,
-    "symbols": 2658,
-    "total_python_lines": 80443,
+    "resolved_call_edges": 4031,
+    "symbols": 2648,
+    "total_python_lines": 79954,
     "ui_callback_edges": 488
   },
   "symbols": [
@@ -91280,326 +91197,6 @@
     },
     {
       "args": [
-        "text"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/apply_wave66_databank_close_records_extraction.py:309:tools.apply_wave66_databank_close_records_extraction.main",
-        "tools/apply_wave66_databank_close_records_extraction.py:54:tools.apply_wave66_databank_close_records_extraction.build_module"
-      ],
-      "calls_raw": [
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "text.replace",
-        "text.replace.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 23,
-      "feature": "other",
-      "file": "tools/apply_wave66_databank_close_records_extraction.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/apply_wave66_databank_close_records_extraction.py:22:tools.apply_wave66_databank_close_records_extraction.sha",
-      "imports_used": [
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 22,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "sha",
-      "parent": null,
-      "purpose": "Handles sha for the other feature.",
-      "qualified_name": "tools.apply_wave66_databank_close_records_extraction.sha",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem"
-      ],
-      "source_sha256": "9e0c24cc284eb0bc37745df2dfdb180ae9f6ebd136661f1cfa596d0584c5391b"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/apply_wave66_databank_close_records_extraction.py:26:tools.apply_wave66_databank_close_records_extraction.dotted",
-        "tools/apply_wave66_databank_close_records_extraction.py:309:tools.apply_wave66_databank_close_records_extraction.main",
-        "tools/apply_wave66_databank_close_records_extraction.py:54:tools.apply_wave66_databank_close_records_extraction.build_module"
-      ],
-      "calls_raw": [
-        "dotted",
-        "isinstance"
-      ],
-      "calls_resolved": [
-        "tools/apply_wave66_databank_close_records_extraction.py:26:tools.apply_wave66_databank_close_records_extraction.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 38,
-      "feature": "other",
-      "file": "tools/apply_wave66_databank_close_records_extraction.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/apply_wave66_databank_close_records_extraction.py:26:tools.apply_wave66_databank_close_records_extraction.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 26,
-      "lines": 13,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.apply_wave66_databank_close_records_extraction.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "f66f784f63ae19974118ff261c4fe951f35a8f258b6c35b52e90ee7a422c3cc2"
-    },
-    {
-      "args": [
-        "text"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/apply_wave66_databank_close_records_extraction.py:309:tools.apply_wave66_databank_close_records_extraction.main"
-      ],
-      "calls_raw": [
-        "ast.parse",
-        "isinstance",
-        "join",
-        "next",
-        "text.splitlines"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 51,
-      "feature": "other",
-      "file": "tools/apply_wave66_databank_close_records_extraction.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/apply_wave66_databank_close_records_extraction.py:41:tools.apply_wave66_databank_close_records_extraction.find_method",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 41,
-      "lines": 11,
-      "monkey_patches": [],
-      "name": "find_method",
-      "parent": null,
-      "purpose": "Retrieves find method for the other feature.",
-      "qualified_name": "tools.apply_wave66_databank_close_records_extraction.find_method",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "7a1ffb89a72137fa6c9d24096f82cf693b21fc7cc440b1722f54588b53a9092b"
-    },
-    {
-      "args": [
-        "node",
-        "source"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/apply_wave66_databank_close_records_extraction.py:309:tools.apply_wave66_databank_close_records_extraction.main"
-      ],
-      "calls_raw": [
-        "ast.unparse",
-        "ast.walk",
-        "c.startswith",
-        "dedented.rstrip",
-        "dotted",
-        "isinstance",
-        "json.dumps",
-        "sha",
-        "sorted",
-        "textwrap.dedent"
-      ],
-      "calls_resolved": [
-        "tools/apply_wave66_databank_close_records_extraction.py:22:tools.apply_wave66_databank_close_records_extraction.sha",
-        "tools/apply_wave66_databank_close_records_extraction.py:26:tools.apply_wave66_databank_close_records_extraction.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 86,
-      "feature": "other",
-      "file": "tools/apply_wave66_databank_close_records_extraction.py",
-      "file_paths": [
-        "self.db"
-      ],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/apply_wave66_databank_close_records_extraction.py:54:tools.apply_wave66_databank_close_records_extraction.build_module",
-      "imports_used": [
-        "ast",
-        "json",
-        "textwrap"
-      ],
-      "kind": "function",
-      "line": 54,
-      "lines": 33,
-      "monkey_patches": [],
-      "name": "build_module",
-      "parent": null,
-      "purpose": "Builds build module for the other feature.",
-      "qualified_name": "tools.apply_wave66_databank_close_records_extraction.build_module",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "ec02f935c8a3007bf3d40ca809bffb99d53177b224ba8fb894fd9d321627e07f"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [
-        "tools/apply_wave66_databank_close_records_extraction.py:309:tools.apply_wave66_databank_close_records_extraction.main"
-      ],
-      "calls_raw": [],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 169,
-      "feature": "other",
-      "file": "tools/apply_wave66_databank_close_records_extraction.py",
-      "file_paths": [
-        "self.db"
-      ],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/apply_wave66_databank_close_records_extraction.py:89:tools.apply_wave66_databank_close_records_extraction.build_structural_test",
-      "imports_used": [],
-      "kind": "function",
-      "line": 89,
-      "lines": 81,
-      "monkey_patches": [],
-      "name": "build_structural_test",
-      "parent": null,
-      "purpose": "Builds build structural test for the other feature.",
-      "qualified_name": "tools.apply_wave66_databank_close_records_extraction.build_structural_test",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "b57e20f6ddf666d7e6b986c7400d09b4826e3d171c7928c114970438289f9f60"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [
-        "tools/apply_wave66_databank_close_records_extraction.py:309:tools.apply_wave66_databank_close_records_extraction.main"
-      ],
-      "calls_raw": [],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 306,
-      "feature": "other",
-      "file": "tools/apply_wave66_databank_close_records_extraction.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/apply_wave66_databank_close_records_extraction.py:172:tools.apply_wave66_databank_close_records_extraction.build_smoke_test",
-      "imports_used": [],
-      "kind": "function",
-      "line": 172,
-      "lines": 135,
-      "monkey_patches": [],
-      "name": "build_smoke_test",
-      "parent": null,
-      "purpose": "Builds build smoke test for the other feature.",
-      "qualified_name": "tools.apply_wave66_databank_close_records_extraction.build_smoke_test",
-      "risk": "ui_only",
-      "risk_flags": [
-        "ui_only"
-      ],
-      "source_sha256": "3507c60dc51fb336333a32baf6faa0e71f8c821b6d9dac33185558a757edb9bd"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP.read_text",
-        "APP.write_text",
-        "MODULE.write_text",
-        "RuntimeError",
-        "SMOKE_TEST.write_text",
-        "STRUCT_TEST.write_text",
-        "ast.unparse",
-        "ast.walk",
-        "build_module",
-        "build_smoke_test",
-        "build_structural_test",
-        "c.startswith",
-        "dotted",
-        "find_method",
-        "isinstance",
-        "join",
-        "print",
-        "remaining.rfind",
-        "sha",
-        "sorted"
-      ],
-      "calls_resolved": [
-        "tools/apply_wave66_databank_close_records_extraction.py:172:tools.apply_wave66_databank_close_records_extraction.build_smoke_test",
-        "tools/apply_wave66_databank_close_records_extraction.py:22:tools.apply_wave66_databank_close_records_extraction.sha",
-        "tools/apply_wave66_databank_close_records_extraction.py:26:tools.apply_wave66_databank_close_records_extraction.dotted",
-        "tools/apply_wave66_databank_close_records_extraction.py:41:tools.apply_wave66_databank_close_records_extraction.find_method",
-        "tools/apply_wave66_databank_close_records_extraction.py:54:tools.apply_wave66_databank_close_records_extraction.build_module",
-        "tools/apply_wave66_databank_close_records_extraction.py:89:tools.apply_wave66_databank_close_records_extraction.build_structural_test"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 342,
-      "feature": "other",
-      "file": "tools/apply_wave66_databank_close_records_extraction.py",
-      "file_paths": [
-        "self.db"
-      ],
-      "globals_read": [
-        "APP",
-        "BINDING_BLOCK",
-        "EXPECTED_DB_CALLS",
-        "EXPECTED_LINES",
-        "EXPECTED_SIGNATURE",
-        "EXPECTED_SOURCE_SHA",
-        "MODULE",
-        "SMOKE_TEST",
-        "STRUCT_TEST"
-      ],
-      "globals_written": [],
-      "id": "tools/apply_wave66_databank_close_records_extraction.py:309:tools.apply_wave66_databank_close_records_extraction.main",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 309,
-      "lines": 34,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.apply_wave66_databank_close_records_extraction.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "c77ed1c28e091f2fc753ec129709516597d1394cce4a68dd5b38bf5cb831504a"
-    },
-    {
-      "args": [
         "path"
       ],
       "callbacks": [],
@@ -112210,166 +111807,6 @@
         "reports"
       ],
       "source_sha256": "465c43c2fa98e6fba82357d55fb65f8b08625537cd7bb5edabf298f03478e3f9"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave66_candidates.py:32:tools.plan_wave66_candidates.dotted",
-        "tools/plan_wave66_candidates.py:51:tools.plan_wave66_candidates.main"
-      ],
-      "calls_raw": [
-        "dotted",
-        "isinstance"
-      ],
-      "calls_resolved": [
-        "tools/plan_wave66_candidates.py:32:tools.plan_wave66_candidates.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 44,
-      "feature": "other",
-      "file": "tools/plan_wave66_candidates.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_wave66_candidates.py:32:tools.plan_wave66_candidates.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 32,
-      "lines": 13,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.plan_wave66_candidates.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "f66f784f63ae19974118ff261c4fe951f35a8f258b6c35b52e90ee7a422c3cc2"
-    },
-    {
-      "args": [
-        "text"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave66_candidates.py:51:tools.plan_wave66_candidates.main"
-      ],
-      "calls_raw": [
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "text.replace",
-        "text.replace.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 48,
-      "feature": "other",
-      "file": "tools/plan_wave66_candidates.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_wave66_candidates.py:47:tools.plan_wave66_candidates.sha",
-      "imports_used": [
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 47,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "sha",
-      "parent": null,
-      "purpose": "Handles sha for the other feature.",
-      "qualified_name": "tools.plan_wave66_candidates.sha",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem"
-      ],
-      "source_sha256": "9e0c24cc284eb0bc37745df2dfdb180ae9f6ebd136661f1cfa596d0584c5391b"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP.read_text",
-        "HIGH_RISK_GROUPS.items",
-        "OUT.parent.mkdir",
-        "OUT.write_text",
-        "a.lower",
-        "any",
-        "ast.parse",
-        "ast.unparse",
-        "ast.walk",
-        "blockers.append",
-        "bool",
-        "c.lower",
-        "c.lower.rsplit",
-        "c.startswith",
-        "candidates.append",
-        "candidates.sort",
-        "dotted",
-        "isinstance",
-        "join",
-        "json.dumps",
-        "len",
-        "next",
-        "node.name.lower",
-        "print",
-        "risk_hits.items",
-        "set",
-        "sha",
-        "sorted",
-        "text.splitlines",
-        "value.value.upper"
-      ],
-      "calls_resolved": [
-        "tools/plan_wave66_candidates.py:32:tools.plan_wave66_candidates.dotted",
-        "tools/plan_wave66_candidates.py:47:tools.plan_wave66_candidates.sha"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 139,
-      "feature": "other",
-      "file": "tools/plan_wave66_candidates.py",
-      "file_paths": [
-        "self.db"
-      ],
-      "globals_read": [
-        "APP",
-        "HIGH_RISK_GROUPS",
-        "OUT",
-        "PRESENTATION_TERMS",
-        "WRITE_TERMS"
-      ],
-      "globals_written": [],
-      "id": "tools/plan_wave66_candidates.py:51:tools.plan_wave66_candidates.main",
-      "imports_used": [
-        "ast",
-        "json"
-      ],
-      "kind": "function",
-      "line": 51,
-      "lines": 89,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.plan_wave66_candidates.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "f46ec48a38a1265564cffd3300307d9a67859d7f8355cb118aa0b9baecb1360a"
     },
     {
       "args": [
