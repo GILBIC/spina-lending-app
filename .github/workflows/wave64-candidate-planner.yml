@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   plan:
@@ -17,20 +17,42 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out exact PR head
+      - name: Check out Wave 64 branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: agent/high-volume-wave-64
           fetch-depth: 0
 
-      - name: Compile and run candidate planner
+      - name: Run candidate planner and capture diagnostics
+        shell: bash
         run: |
-          python -m py_compile tools/plan_wave64_candidates.py
-          python -m tools.plan_wave64_candidates
+          mkdir -p artifacts
+          set +e
+          python -m py_compile tools/plan_wave64_candidates.py > artifacts/wave64-planner-output.txt 2>&1
+          compile_status=$?
+          if [ "$compile_status" -eq 0 ]; then
+            python tools/plan_wave64_candidates.py >> artifacts/wave64-planner-output.txt 2>&1
+            plan_status=$?
+          else
+            plan_status=$compile_status
+          fi
+          echo "planner_exit=$plan_status" >> artifacts/wave64-planner-output.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f artifacts/wave64-planner-output.txt
+          if [ -f artifacts/wave64-candidates.json ]; then
+            git add -f artifacts/wave64-candidates.json
+          fi
+          git diff --cached --quiet || git commit -m "Record Wave 64 candidate planner output"
+          git push origin HEAD:agent/high-volume-wave-64
+          exit "$plan_status"
 
       - name: Upload candidate report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: wave64-candidate-report
-          path: artifacts/wave64-candidates.json
+          path: |
+            artifacts/wave64-candidates.json
+            artifacts/wave64-planner-output.txt
           if-no-files-found: error
