@@ -1,3 +1,4 @@
+# Exact-head rerun after removing the hosted fallback.
 name: Wave 68 Clean Map Refresh
 
 on:
