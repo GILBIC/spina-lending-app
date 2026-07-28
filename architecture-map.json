@@ -25149,7 +25149,7 @@
         "inspect": "inspect",
         "textwrap": "textwrap"
       },
-      "lines": 97,
+      "lines": 106,
       "module": "tools.test_long_task_presentation_wave_42",
       "module_globals": [
         "DESKTOP",
@@ -25166,7 +25166,7 @@
         "TARGET_CLASS"
       ],
       "monkey_patches": [],
-      "sha256": "15918e7c5a78d3f43291c82b66df6fa67f0fc0d8d96fc77b9693fc9ebf8d127b",
+      "sha256": "14a9e3db464c2bc2f2e2f25016f76f2006cee44dd5861724b46ba81bb66a7992",
       "syntax_ok": true
     },
     {
@@ -25918,7 +25918,7 @@
     "repository_possible_orphans": 310,
     "resolved_call_edges": 4183,
     "symbols": 2666,
-    "total_python_lines": 80236,
+    "total_python_lines": 80245,
     "ui_callback_edges": 488
   },
   "symbols": [
@@ -143772,7 +143772,6 @@
         "call_chain",
         "callable",
         "calls.add",
-        "desktop_text.count",
         "full.startswith",
         "hashlib.sha256",
         "hashlib.sha256.hexdigest",
@@ -143790,10 +143789,14 @@
         "normalized",
         "normalized.encode",
         "parts.lower",
+        "path.read_text",
+        "path.read_text.count",
         "print",
+        "rglob",
         "set",
         "sorted",
-        "spec.loader.exec_module"
+        "spec.loader.exec_module",
+        "sum"
       ],
       "calls_resolved": [
         "tools/test_long_task_presentation_wave_42.py:24:tools.test_long_task_presentation_wave_42.normalized",
@@ -143802,7 +143805,7 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 93,
+      "end_line": 102,
       "feature": "other",
       "file": "tools/test_long_task_presentation_wave_42.py",
       "file_paths": [
@@ -143818,6 +143821,7 @@
         "FORBIDDEN_CALL_SUFFIXES",
         "FORBIDDEN_SQL_TOKENS",
         "MODULE",
+        "ROOT",
         "TARGET",
         "TARGET_CLASS"
       ],
@@ -143831,7 +143835,7 @@
       ],
       "kind": "function",
       "line": 38,
-      "lines": 56,
+      "lines": 65,
       "monkey_patches": [],
       "name": "main",
       "parent": null,
@@ -143843,7 +143847,7 @@
         "reports",
         "ui_only"
       ],
-      "source_sha256": "679c36f324fe19bab9f294fad01d1406031c5603563d39f4b3037bce9dcc0141"
+      "source_sha256": "2827a6437910d06888075100c96a10090f856d9a15c0263bb6745cf7a2a7439d"
     },
     {
       "args": [],

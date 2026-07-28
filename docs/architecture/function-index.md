@@ -2,7 +2,7 @@
 
 Generated from commit `2b12a179bdf4ccf95c842125a8acc6318189adba`.
 
-Scanned **231 Python files**, **80,236 lines**, and **2,666 symbols**.
+Scanned **231 Python files**, **80,245 lines**, and **2,666 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -3039,7 +3039,7 @@ Scanned **231 Python files**, **80,236 lines**, and **2,666 symbols**.
 
 - **tools.test_long_task_presentation_wave_42.normalized** (function, lines 24–25, 2 lines, risk `support`): Handles normalized for the utilities feature.
 - **tools.test_long_task_presentation_wave_42.call_chain** (function, lines 28–35, 8 lines, risk `support`): Handles call chain for the other feature.
-- **tools.test_long_task_presentation_wave_42.main** (function, lines 38–93, 56 lines, risk `filesystem`): Handles main for the other feature.
+- **tools.test_long_task_presentation_wave_42.main** (function, lines 38–102, 65 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_merge_note_dict_extraction.py`
 
