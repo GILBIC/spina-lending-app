@@ -24,9 +24,13 @@ def main() -> None:
     main_line = desktop_text[:main_index].count("\\n") + 1
     assert binding_line < main_line
 ''',
-        '''    binding_index = desktop_text.index(binding)
-    startup_index = desktop_text.rfind('if __name__ == "__main__":')
-    assert startup_index > binding_index
+        '''    binding_line = desktop_text[:desktop_text.index(binding)].count("\\n") + 1
+    main_guards = [
+        node for node in dtree.body
+        if isinstance(node, ast.If) and "__name__" in ast.unparse(node.test) and "__main__" in ast.unparse(node.test)
+    ]
+    assert main_guards, "Top-level main guard missing"
+    assert binding_line < main_guards[-1].lineno
 ''',
         "Wave 43 startup assertion",
     )
@@ -40,9 +44,13 @@ def main() -> None:
     main_index = desktop_text.rfind("\\ndef main(")
     assert binding_index < main_index
 ''',
-        '''    binding_index = desktop_text.index(ACTIVE_BINDING)
-    startup_index = desktop_text.rfind('if __name__ == "__main__":')
-    assert startup_index > binding_index
+        '''    binding_line = desktop_text[:desktop_text.index(ACTIVE_BINDING)].count("\\n") + 1
+    main_guards = [
+        node for node in tree.body
+        if isinstance(node, ast.If) and "__name__" in ast.unparse(node.test) and "__main__" in ast.unparse(node.test)
+    ]
+    assert main_guards, "Top-level main guard missing"
+    assert binding_line < main_guards[-1].lineno
 ''',
         "Wave 69 startup assertion",
     )
