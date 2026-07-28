@@ -6,6 +6,7 @@ on:
     paths:
       - "tools/apply_wave69_legacy_collector_editor_cleanup.py"
       - "tools/patch_wave69_generated_collector_tests.py"
+      - "tools/patch_wave69_wave26_protected_hashes.py"
       - "tools/debug_wave69_structural_cleanup.py"
       - "tools/debug_wave69_protected_collectors.py"
       - ".github/workflows/wave69-legacy-collector-editor-cleanup.yml"
@@ -38,6 +39,8 @@ jobs:
           python -m tools.apply_wave69_legacy_collector_editor_cleanup >nul
           python -m py_compile tools\patch_wave69_generated_collector_tests.py
           python -m tools.patch_wave69_generated_collector_tests >nul
+          python -m py_compile tools\patch_wave69_wave26_protected_hashes.py
+          python -m tools.patch_wave69_wave26_protected_hashes >nul
           python -m py_compile tools\debug_wave69_structural_cleanup.py
           python -m tools.debug_wave69_structural_cleanup
           python -m py_compile tools\debug_wave69_protected_collectors.py
@@ -48,6 +51,7 @@ jobs:
         run: |
           python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
           python -m py_compile spina_app\collector_dialog_presentation.py
+          python -m py_compile spina_app\collector_tab_presentation.py
           python -m py_compile tools\test_collector_dialog_presentation_wave_43.py
           python -m py_compile tools\test_legacy_collector_editor_cleanup_wave_69.py
           python -m py_compile tools\test_collector_editor_widget_smoke_wave_69.py
@@ -91,6 +95,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
           git add tools\test_collector_dialog_presentation_wave_43.py
+          git add tools\test_collectors_editor_wave_26.py
           git add tools\test_legacy_collector_editor_cleanup_wave_69.py
           git add tools\test_collector_editor_widget_smoke_wave_69.py
           git add architecture-map.json docs\architecture
