@@ -1,0 +1,82 @@
+name: Client Statement Generation Wave 67
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/client_statement_generation.py"
+      - "tools/test_client_statement_generation_wave_67.py"
+      - "tools/test_client_statement_generation_behavior_wave_67.py"
+      - "architecture-map.json"
+      - "docs/architecture/**"
+      - ".github/workflows/client-statement-generation-wave-67.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: client-statement-generation-wave-67-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-67'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 120
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Compile application, module, tests, and package
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\client_statement_generation.py
+          python -m py_compile tools\test_client_statement_generation_wave_67.py
+          python -m py_compile tools\test_client_statement_generation_behavior_wave_67.py
+          python -m compileall -q spina_app
+
+      - name: Run Wave 67 exact extraction regression
+        shell: cmd
+        run: python -m tools.test_client_statement_generation_wave_67
+
+      - name: Run Wave 67 client statement behavior regression
+        shell: cmd
+        run: python -m tools.test_client_statement_generation_behavior_wave_67
+
+      - name: Run protected Reports and long-task regressions
+        shell: cmd
+        run: |
+          python -m tools.test_reports_tab_presentation_wave_64
+          python -m tools.test_reports_tab_widget_smoke_wave_64
+          python tools\test_long_task_presentation_wave_42.py
+
+      - name: Run protected client read-query regressions
+        shell: cmd
+        run: |
+          python -m tools.test_client_read_queries_wave_31
+          python -m tools.test_linked_client_queries_wave_32
+
+      - name: Validate permanent architecture map
+        uses: ./.github/actions/architecture-map-check
+
+      - name: Run repository audits
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools\redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts\wave-67-redundancy.json
+          python tools\spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts\wave-67-quality.json
+
+      - name: Upload Wave 67 reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-statement-generation-wave-67-reports
+          path: artifacts/wave-67-*.json
+          if-no-files-found: warn
