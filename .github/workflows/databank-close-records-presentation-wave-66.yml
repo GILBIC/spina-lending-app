@@ -1,0 +1,90 @@
+# Final exact-head validation after cleaned architecture refresh.
+name: Data Bank Close Records Presentation Wave 66
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/databank_close_records_presentation.py"
+      - "tools/test_databank_close_records_presentation_wave_66.py"
+      - "tools/test_databank_close_records_widget_smoke_wave_66.py"
+      - "architecture-map.json"
+      - "docs/architecture/**"
+      - ".github/workflows/databank-close-records-presentation-wave-66.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: databank-close-records-presentation-wave-66-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-66'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 120
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Compile application, module, and tests
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\databank_close_records_presentation.py
+          python -m py_compile tools\test_databank_close_records_presentation_wave_66.py
+          python -m py_compile tools\test_databank_close_records_widget_smoke_wave_66.py
+          python -m compileall -q spina_app
+
+      - name: Run Wave 66 exact extraction regression
+        shell: cmd
+        run: python -m tools.test_databank_close_records_presentation_wave_66
+
+      - name: Run Wave 66 real Tkinter regression
+        shell: cmd
+        run: python -m tools.test_databank_close_records_widget_smoke_wave_66
+
+      - name: Run protected Daily Close presentation regressions
+        shell: cmd
+        run: |
+          python -m tools.test_databank_close_history_presentation_wave_57
+          python -m tools.test_databank_close_history_widget_smoke_wave_57
+          python -m tools.test_settings_dialog_presentation_wave_65
+          python -m tools.test_settings_dialog_widget_smoke_wave_65
+
+      - name: Run protected Data Bank write and security regressions
+        shell: cmd
+        run: |
+          python -m tools.test_databank_grid_presentation_wave_59
+          python -m tools.test_databank_editor_presentation_wave_60
+          python -m tools.test_databank_editor_widget_smoke_wave_60
+          python -m tools.test_databank_cell_writes_wave_61
+          python -m tools.test_databank_cell_writes_behavior_wave_61
+          python -m tools.test_databank_delete_day_wave_62
+          python -m tools.test_databank_delete_day_behavior_wave_62
+          python -m tools.test_databank_delete_day_password_gate_wave_63
+
+      - name: Validate permanent architecture map
+        uses: ./.github/actions/architecture-map-check
+
+      - name: Run repository audits
+        shell: cmd
+        run: |
+          if not exist artifacts mkdir artifacts
+          python tools\redundancy_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts\wave-66-redundancy.json
+          python tools\spina_quality_audit.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py --json artifacts\wave-66-quality.json
+
+      - name: Upload Wave 66 reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: databank-close-records-presentation-wave-66-reports
+          path: artifacts/wave-66-*.json
+          if-no-files-found: warn
