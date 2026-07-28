@@ -1,4 +1,4 @@
-# Final exact-head validation after cleaned architecture-map refresh.
+# Final corrected exact-head validation after the Wave 42 binding guard fix.
 name: Client Statement Generation Wave 67
 
 on:
