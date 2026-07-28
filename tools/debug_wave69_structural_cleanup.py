@@ -17,9 +17,10 @@ def main() -> None:
         print(
             "WAVE69_STRUCTURAL_FAILURE "
             f"type={type(exc).__name__} line={last.lineno} "
-            f"code={last.line!r} message={exc!r}"
+            f"code={last.line!r} message={exc!r}",
+            flush=True,
         )
-        raise
+        raise SystemExit(1) from None
 
 
 if __name__ == "__main__":
