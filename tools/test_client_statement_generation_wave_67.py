@@ -73,8 +73,9 @@ def main() -> None:
     assert app_text.count("_configure_wave67_client_statement_generation(globals())") == 1
     assert app_text.count("App.generate_pdf_selected = _wave67_generate_pdf_selected") == 1
 
-    remaining = {n.name for n in app.body if isinstance(n, ast.FunctionDef)}
-    assert "_run_long_task" in remaining
+    # Wave 67 delegates background execution to the Wave 42 extracted helper.
+    assert "_configure_wave42_long_task(globals())" in app_text
+    assert "App._run_long_task = _wave42_run_long_task" in app_text
     print("Wave 67 client-statement generation structural regression passed")
 
 
