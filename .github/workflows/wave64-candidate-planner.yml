@@ -9,43 +9,28 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   plan:
     if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-64'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
     steps:
-      - name: Check out Wave 64 branch
+      - name: Check out exact PR head
         uses: actions/checkout@v4
         with:
-          ref: agent/high-volume-wave-64
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+          show-progress: false
 
-      - name: Run candidate planner and capture diagnostics
-        shell: bash
+      - name: Compile and run candidate planner
+        shell: cmd
         run: |
-          mkdir -p artifacts
-          set +e
-          python -m py_compile tools/plan_wave64_candidates.py > artifacts/wave64-planner-output.txt 2>&1
-          compile_status=$?
-          if [ "$compile_status" -eq 0 ]; then
-            python tools/plan_wave64_candidates.py >> artifacts/wave64-planner-output.txt 2>&1
-            plan_status=$?
-          else
-            plan_status=$compile_status
-          fi
-          echo "planner_exit=$plan_status" >> artifacts/wave64-planner-output.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f artifacts/wave64-planner-output.txt
-          if [ -f artifacts/wave64-candidates.json ]; then
-            git add -f artifacts/wave64-candidates.json
-          fi
-          git diff --cached --quiet || git commit -m "Record Wave 64 candidate planner output"
-          git push origin HEAD:agent/high-volume-wave-64
-          exit "$plan_status"
+          if not exist artifacts mkdir artifacts
+          python -m py_compile tools\plan_wave64_candidates.py
+          python tools\plan_wave64_candidates.py > artifacts\wave64-planner-output.txt 2>&1
+          type artifacts\wave64-planner-output.txt
 
       - name: Upload candidate report
         if: always()
