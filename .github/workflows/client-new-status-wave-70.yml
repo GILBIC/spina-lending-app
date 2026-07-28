@@ -1,4 +1,5 @@
 name: Client New Status Wave 70
+# Final exact-head revalidation after clean-map refresh and temporary workflow cleanup.
 
 on:
   pull_request:
