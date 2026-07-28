@@ -1,31 +1,7 @@
 {
   "source_file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
-  "app_method_count_over_90_lines": 17,
+  "app_method_count_over_90_lines": 16,
   "candidates": [
-    {
-      "name": "open_backup_history_window",
-      "start_line": 10868,
-      "end_line": 11049,
-      "lines": 182,
-      "signature": "self",
-      "source_sha256": "c05501298b2aa308c66f0f668bb482a96de8dc221b098f88705fa6d452c6d59f",
-      "nested_callbacks": [],
-      "db_calls": [],
-      "db_write_calls": [],
-      "direct_sql_calls": [],
-      "sql_write_literals": [],
-      "filesystem_write_calls": [],
-      "write_like_calls": [
-        "self._restore_backup_to_test_database",
-        "tree.delete",
-        "tree.insert"
-      ],
-      "ui_call_count": 10,
-      "presentation_like": true,
-      "read_only_db": false,
-      "no_db": true,
-      "score": 184
-    },
     {
       "name": "_collector_editor_dialog",
       "start_line": 9416,
@@ -116,8 +92,8 @@
     },
     {
       "name": "_build_header",
-      "start_line": 11116,
-      "end_line": 11284,
+      "start_line": 10934,
+      "end_line": 11102,
       "lines": 169,
       "signature": "self",
       "source_sha256": "3c248c2f227f021b0ccbda3ed21caeeece2d005fbe157a12bf252cbda3070b14",
@@ -213,8 +189,8 @@
     },
     {
       "name": "_import_encoder_batch",
-      "start_line": 12357,
-      "end_line": 12776,
+      "start_line": 12175,
+      "end_line": 12594,
       "lines": 420,
       "signature": "self, path: str",
       "source_sha256": "b1334b0a1f6774c972755364eeaeeb8b83fe593df7aad5a28e5eb5fe457e453b",
@@ -258,8 +234,8 @@
     },
     {
       "name": "refresh_reports",
-      "start_line": 11574,
-      "end_line": 11680,
+      "start_line": 11392,
+      "end_line": 11498,
       "lines": 107,
       "signature": "self",
       "source_sha256": "7ecb214f80965f594fc0f63ad117230c879bee2ee4d8a52158858d0526358cc1",
@@ -360,8 +336,8 @@
     },
     {
       "name": "_import_from_excel_entry_worker",
-      "start_line": 11959,
-      "end_line": 12355,
+      "start_line": 11777,
+      "end_line": 12173,
       "lines": 397,
       "signature": "self, paths",
       "source_sha256": "d37cb138944f3465847b77cdf0a0aa98c8c1e92c49dfed97864e202f8c6126e8",
@@ -401,8 +377,8 @@
     },
     {
       "name": "_import_from_excel_core",
-      "start_line": 12778,
-      "end_line": 12943,
+      "start_line": 12596,
+      "end_line": 12761,
       "lines": 166,
       "signature": "self, path, progress_cb=None",
       "source_sha256": "28d38a4c5ed5551fd8a2ffd58bbe97dfceabb8a262a4ec38410956187bf21280",
@@ -436,8 +412,8 @@
     },
     {
       "name": "open_areas_manager",
-      "start_line": 12968,
-      "end_line": 13129,
+      "start_line": 12786,
+      "end_line": 12947,
       "lines": 162,
       "signature": "self",
       "source_sha256": "2c1ed56ec0918a9118632be72a7b6c5b0ca7ab4be54e2b054f40709976c38434",
