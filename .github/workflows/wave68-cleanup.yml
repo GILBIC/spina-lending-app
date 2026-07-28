@@ -1,3 +1,4 @@
+# Repository-triggered rerun after the candidate report stabilized.
 name: Wave 68 Clean Finalizer
 
 on:
