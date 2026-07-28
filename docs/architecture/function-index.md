@@ -2,7 +2,7 @@
 
 Generated from commit `2b12a179bdf4ccf95c842125a8acc6318189adba`.
 
-Scanned **232 Python files**, **80,619 lines**, and **2,673 symbols**.
+Scanned **231 Python files**, **80,235 lines**, and **2,666 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1423,16 +1423,6 @@ Scanned **232 Python files**, **80,619 lines**, and **2,673 symbols**.
 - **tools.apply_hierarchical_area_ui_phase2.inspect** (function, lines 33–67, 35 lines, risk `support`): Handles inspect for the other feature.
 - **tools.apply_hierarchical_area_ui_phase2.apply** (function, lines 70–85, 16 lines, risk `filesystem`): Handles apply for the other feature.
 - **tools.apply_hierarchical_area_ui_phase2.main** (function, lines 88–101, 14 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/apply_wave67_client_statement_generation_extraction.py`
-
-- **tools.apply_wave67_client_statement_generation_extraction.sha** (function, lines 22–23, 2 lines, risk `filesystem`): Handles sha for the other feature.
-- **tools.apply_wave67_client_statement_generation_extraction.dotted** (function, lines 26–38, 13 lines, risk `support`): Handles dotted for the other feature.
-- **tools.apply_wave67_client_statement_generation_extraction.find_method** (function, lines 41–51, 11 lines, risk `support`): Retrieves find method for the other feature.
-- **tools.apply_wave67_client_statement_generation_extraction.build_module** (function, lines 54–86, 33 lines, risk `support`): Builds build module for the other feature.
-- **tools.apply_wave67_client_statement_generation_extraction.build_structural_test** (function, lines 89–172, 84 lines, risk `support`): Builds build structural test for the other feature.
-- **tools.apply_wave67_client_statement_generation_extraction.build_behavior_test** (function, lines 175–344, 170 lines, risk `ui_only`): Builds build behavior test for the other feature.
-- **tools.apply_wave67_client_statement_generation_extraction.main** (function, lines 347–380, 34 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/audit_bare_except_context.py`
 
