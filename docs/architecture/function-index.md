@@ -2,7 +2,7 @@
 
 Generated from commit `2b12a179bdf4ccf95c842125a8acc6318189adba`.
 
-Scanned **231 Python files**, **80,235 lines**, and **2,666 symbols**.
+Scanned **231 Python files**, **80,236 lines**, and **2,666 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -2361,7 +2361,7 @@ Scanned **231 Python files**, **80,235 lines**, and **2,666 symbols**.
 
 - **tools.test_client_statement_generation_wave_67.sha** (function, lines 16–17, 2 lines, risk `filesystem`): Handles sha for the other feature.
 - **tools.test_client_statement_generation_wave_67.dotted** (function, lines 20–32, 13 lines, risk `support`): Handles dotted for the other feature.
-- **tools.test_client_statement_generation_wave_67.main** (function, lines 35–78, 44 lines, risk `filesystem`): Handles main for the other feature.
+- **tools.test_client_statement_generation_wave_67.main** (function, lines 35–79, 45 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/test_clients_feature_wave_19.py`
 

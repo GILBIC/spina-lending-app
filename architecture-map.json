@@ -23794,7 +23794,7 @@
         "ast": "ast",
         "hashlib": "hashlib"
       },
-      "lines": 82,
+      "lines": 83,
       "module": "tools.test_client_statement_generation_wave_67",
       "module_globals": [
         "APP",
@@ -23806,7 +23806,7 @@
         "ROOT"
       ],
       "monkey_patches": [],
-      "sha256": "77c6fc1b2248aa7baa4741a89ff541b28dcb8aae8bb9331dacf06a9c15f57405",
+      "sha256": "e8059e9c9576662d9b798d8976b5b6965539a2b17163453e3f1a91d3a452eaf7",
       "syntax_ok": true
     },
     {
@@ -25918,7 +25918,7 @@
     "repository_possible_orphans": 310,
     "resolved_call_edges": 4183,
     "symbols": 2666,
-    "total_python_lines": 80235,
+    "total_python_lines": 80236,
     "ui_callback_edges": 488
   },
   "symbols": [
@@ -122339,7 +122339,7 @@
       "class_name": null,
       "database_tables": [],
       "docstring": "",
-      "end_line": 78,
+      "end_line": 79,
       "feature": "other",
       "file": "tools/test_client_statement_generation_wave_67.py",
       "file_paths": [
@@ -122360,7 +122360,7 @@
       ],
       "kind": "function",
       "line": 35,
-      "lines": 44,
+      "lines": 45,
       "monkey_patches": [],
       "name": "main",
       "parent": null,
@@ -122371,7 +122371,7 @@
         "filesystem",
         "reports"
       ],
-      "source_sha256": "0a2a6988cb9baa446f862ff451333873a980a7c42698fc99bb548924c142cfff"
+      "source_sha256": "ab830fc727f4387261cb226c5c4f189f8bb22aaef3ff585c032f02c243bb5be4"
     },
     {
       "args": [
