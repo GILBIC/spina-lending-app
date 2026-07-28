@@ -6,6 +6,7 @@ on:
     paths:
       - "tools/apply_wave69_legacy_collector_editor_cleanup.py"
       - "tools/patch_wave69_generated_collector_tests.py"
+      - "tools/debug_wave69_structural_cleanup.py"
       - ".github/workflows/wave69-legacy-collector-editor-cleanup.yml"
   workflow_dispatch:
 
@@ -36,6 +37,8 @@ jobs:
           python -m tools.apply_wave69_legacy_collector_editor_cleanup
           python -m py_compile tools\patch_wave69_generated_collector_tests.py
           python -m tools.patch_wave69_generated_collector_tests
+          python -m py_compile tools\debug_wave69_structural_cleanup.py
+          python -m tools.debug_wave69_structural_cleanup
 
       - name: Compile final application and tests
         shell: cmd
