@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `39cb64423a055701c6802785958cfa7933ebbb64`.
+Generated from commit `0b2ce43ae3bce3d2c3fd939a3ab86309c8815e98`.
 
-Scanned **242 Python files**, **81,263 lines**, and **2,720 symbols**.
+Scanned **239 Python files**, **80,800 lines**, and **2,707 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1702,12 +1702,6 @@ Scanned **242 Python files**, **81,263 lines**, and **2,720 symbols**.
 - **tools.extract_cilog_value_formatter.apply_extraction** (function, lines 130–140, 11 lines, risk `support`): Handles apply extraction for the other feature.
 - **tools.extract_cilog_value_formatter.main** (function, lines 143–161, 19 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/extract_client_new_status_wave_70.py`
-
-- **tools.extract_client_new_status_wave_70.signature** (function, lines 20–40, 21 lines, risk `support`): Handles signature for the other feature.
-- **tools.extract_client_new_status_wave_70.function_ast_hash** (function, lines 43–51, 9 lines, risk `filesystem`): Handles function ast hash for the other feature.
-- **tools.extract_client_new_status_wave_70.main** (function, lines 54–100, 47 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/extract_date_display_helpers.py`
 
 - **tools.extract_date_display_helpers._line_source** (function, lines 32–37, 6 lines, risk `support`): Handles line source for the other feature.
@@ -1892,12 +1886,6 @@ Scanned **242 Python files**, **81,263 lines**, and **2,720 symbols**.
 - **tools.inspect_stale_databank_protected_context._matching_terms** (function, lines 31–33, 3 lines, risk `support`): Handles matching terms for the other feature.
 - **tools.inspect_stale_databank_protected_context.main** (function, lines 36–105, 70 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/inspect_wave70_client_new.py`
-
-- **tools.inspect_wave70_client_new.dotted** (function, lines 27–33, 7 lines, risk `support`): Handles dotted for the other feature.
-- **tools.inspect_wave70_client_new.signature** (function, lines 36–56, 21 lines, risk `support`): Handles signature for the other feature.
-- **tools.inspect_wave70_client_new.main** (function, lines 59–148, 90 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/plan_app_lifecycle_window_pass_only.py`
 
 - **tools.plan_app_lifecycle_window_pass_only._name** (function, lines 48–59, 12 lines, risk `support`): Handles name for the other feature.
@@ -2048,16 +2036,6 @@ Scanned **242 Python files**, **81,263 lines**, and **2,720 symbols**.
 - **tools.plan_ui_compatibility_pass_only.classify_ui_site** (function, lines 180–193, 14 lines, risk `support`): Handles classify ui site for the other feature.
 - **tools.plan_ui_compatibility_pass_only.build_report** (function, lines 196–264, 69 lines, risk `reports`): Builds build report for the reports feature.
 - **tools.plan_ui_compatibility_pass_only.main** (function, lines 267–280, 14 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/plan_wave70_candidates.py`
-
-- **tools.plan_wave70_candidates.dotted** (function, lines 30–36, 7 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_wave70_candidates.signature** (function, lines 39–40, 2 lines, risk `support`): Handles signature for the other feature.
-- **tools.plan_wave70_candidates.node_source** (function, lines 43–44, 2 lines, risk `support`): Handles node source for the other feature.
-- **tools.plan_wave70_candidates.source_hash** (function, lines 47–48, 2 lines, risk `support`): Handles source hash for the other feature.
-- **tools.plan_wave70_candidates.top_level_app_bindings** (function, lines 51–71, 21 lines, risk `support`): Handles top level app bindings for the other feature.
-- **tools.plan_wave70_candidates.analyze_method** (function, lines 74–159, 86 lines, risk `ui_only`): Handles analyze method for the other feature.
-- **tools.plan_wave70_candidates.main** (function, lines 162–203, 42 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/redundancy_audit.py`
 

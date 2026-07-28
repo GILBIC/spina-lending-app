@@ -1,8 +1,8 @@
 # SPINA Application Database and File Access Map
 
-Generated from commit `39cb64423a055701c6802785958cfa7933ebbb64`.
+Generated from commit `0b2ce43ae3bce3d2c3fd939a3ab86309c8815e98`.
 
-Scanned **242 Python files**, **81,263 lines**, and **2,720 symbols**.
+Scanned **239 Python files**, **80,800 lines**, and **2,707 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
