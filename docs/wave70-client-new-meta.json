@@ -1,0 +1,44 @@
+{
+  "target": "App._is_client_new",
+  "start_line": 8007,
+  "end_line": 8130,
+  "lines": 124,
+  "signature": "self, name, ledger_date, days=None",
+  "raw_sha256": "8a9776860733a1df8a2630761c058a6cdca28b1f7db52a16e52ae24e0b9b4b03",
+  "ast_sha256": "8126404f3be36835e43194271e130c4e3477512e2871e5fa5b313753fd4629c1",
+  "calls": [
+    "_date.today",
+    "_load_ledger_prefs",
+    "conn.cursor",
+    "cur.execute",
+    "date",
+    "datetime.strptime",
+    "fetchone",
+    "get",
+    "getattr",
+    "int",
+    "isinstance",
+    "self._mode_filter",
+    "str",
+    "strip",
+    "timedelta"
+  ],
+  "db_calls": [
+    "conn.cursor",
+    "cur.execute"
+  ],
+  "db_write_calls": [],
+  "filesystem_write_calls": [],
+  "sql_write_literals": [],
+  "select_literals": [
+    "SELECT new_until, created_at, date_released FROM clients WHERE name=? AND loan_type=?"
+  ],
+  "caller_lines": [
+    15900,
+    16345,
+    24788,
+    25485
+  ],
+  "binding_lines": [],
+  "read_only_boundary": true
+}
