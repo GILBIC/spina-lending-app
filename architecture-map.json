@@ -1,5 +1,5 @@
 {
-  "generated_from_commit": "c4fe65d84c8b17342ebee9cd5c53fcd2554218b6",
+  "generated_from_commit": "80de4a22511fbc8d4e20249d649eb22f972d6ee1",
   "indexes": {
     "application_callbacks": [
       {
@@ -11515,9 +11515,6 @@
         "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py:21934:OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed._app_link_selected_client.do_link"
       ],
       "dotted": [
-        "tools/apply_wave68_backup_history_extraction.py:21:tools.apply_wave68_backup_history_extraction.dotted",
-        "tools/inspect_wave68_backup_history.py:17:tools.inspect_wave68_backup_history.dotted",
-        "tools/plan_wave68_candidates.py:28:tools.plan_wave68_candidates.dotted",
         "tools/test_account_header_presentation_wave_46.py:49:tools.test_account_header_presentation_wave_46.dotted",
         "tools/test_audit_presentation_wave_54.py:23:tools.test_audit_presentation_wave_54.dotted",
         "tools/test_backup_history_presentation_wave_68.py:20:tools.test_backup_history_presentation_wave_68.dotted",
@@ -11730,7 +11727,6 @@
         "tools/apply_client_area_uid_sync_phase2.py:60:tools.apply_client_area_uid_sync_phase2.main",
         "tools/apply_hierarchical_area_storage_phase1.py:75:tools.apply_hierarchical_area_storage_phase1.main",
         "tools/apply_hierarchical_area_ui_phase2.py:88:tools.apply_hierarchical_area_ui_phase2.main",
-        "tools/apply_wave68_backup_history_extraction.py:40:tools.apply_wave68_backup_history_extraction.main",
         "tools/audit_bare_except_context.py:114:tools.audit_bare_except_context.main",
         "tools/audit_blocking_ui_calls.py:162:tools.audit_blocking_ui_calls.main",
         "tools/audit_dynamic_sql_context.py:211:tools.audit_dynamic_sql_context.main",
@@ -11769,7 +11765,6 @@
         "tools/inject_silent_ui_logging.py:352:tools.inject_silent_ui_logging.main",
         "tools/inspect_blocking_ui_context.py:159:tools.inspect_blocking_ui_context.main",
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
-        "tools/inspect_wave68_backup_history.py:32:tools.inspect_wave68_backup_history.main",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
         "tools/plan_logger_fallback_pass_only.py:175:tools.plan_logger_fallback_pass_only.main",
         "tools/plan_login_dialog_pass_only.py:243:tools.plan_login_dialog_pass_only.main",
@@ -11779,7 +11774,6 @@
         "tools/plan_queue_empty_pass_only.py:183:tools.plan_queue_empty_pass_only.main",
         "tools/plan_remaining_pass_only_groups.py:196:tools.plan_remaining_pass_only_groups.main",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
-        "tools/plan_wave68_candidates.py:48:tools.plan_wave68_candidates.main",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
         "tools/spina_quality_audit.py:306:tools.spina_quality_audit.main",
@@ -11943,7 +11937,6 @@
         "tools/test_login_cancel_startup_wave_46.py:21:tools.test_login_cancel_startup_wave_46.normalized_hash"
       ],
       "normalized_source": [
-        "tools/plan_wave68_candidates.py:43:tools.plan_wave68_candidates.normalized_source",
         "tools/test_client_read_queries_wave_31.py:16:tools.test_client_read_queries_wave_31.normalized_source",
         "tools/test_linked_client_queries_wave_32.py:16:tools.test_linked_client_queries_wave_32.normalized_source",
         "tools/test_postgres_compat_wave_34.py:16:tools.test_postgres_compat_wave_34.normalized_source"
@@ -12106,7 +12099,6 @@
         "tools/test_settings_dialog_widget_smoke_wave_65.py:17:tools.test_settings_dialog_widget_smoke_wave_65.FakeApp.set_theme"
       ],
       "sha": [
-        "tools/apply_wave68_backup_history_extraction.py:36:tools.apply_wave68_backup_history_extraction.sha",
         "tools/test_backup_history_presentation_wave_68.py:16:tools.test_backup_history_presentation_wave_68.sha",
         "tools/test_client_statement_generation_wave_67.py:16:tools.test_client_statement_generation_wave_67.sha",
         "tools/test_databank_cell_writes_wave_61.py:18:tools.test_databank_cell_writes_wave_61.sha",
@@ -13461,9 +13453,6 @@
         "tools/apply_hierarchical_area_ui_phase2.py:33:tools.apply_hierarchical_area_ui_phase2.inspect",
         "tools/apply_hierarchical_area_ui_phase2.py:70:tools.apply_hierarchical_area_ui_phase2.apply",
         "tools/apply_hierarchical_area_ui_phase2.py:88:tools.apply_hierarchical_area_ui_phase2.main",
-        "tools/apply_wave68_backup_history_extraction.py:21:tools.apply_wave68_backup_history_extraction.dotted",
-        "tools/apply_wave68_backup_history_extraction.py:36:tools.apply_wave68_backup_history_extraction.sha",
-        "tools/apply_wave68_backup_history_extraction.py:40:tools.apply_wave68_backup_history_extraction.main",
         "tools/audit_bare_except_context.py:114:tools.audit_bare_except_context.main",
         "tools/audit_bare_except_context.py:23:tools.audit_bare_except_context._lines",
         "tools/audit_bare_except_context.py:27:tools.audit_bare_except_context._ctx",
@@ -13780,8 +13769,6 @@
         "tools/inspect_stale_databank_protected_context.py:22:tools.inspect_stale_databank_protected_context._load_cleanup_tool",
         "tools/inspect_stale_databank_protected_context.py:31:tools.inspect_stale_databank_protected_context._matching_terms",
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
-        "tools/inspect_wave68_backup_history.py:17:tools.inspect_wave68_backup_history.dotted",
-        "tools/inspect_wave68_backup_history.py:32:tools.inspect_wave68_backup_history.main",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
         "tools/plan_app_lifecycle_window_pass_only.py:48:tools.plan_app_lifecycle_window_pass_only._name",
         "tools/plan_app_lifecycle_window_pass_only.py:66:tools.plan_app_lifecycle_window_pass_only._context",
@@ -13841,8 +13828,6 @@
         "tools/plan_ui_compatibility_pass_only.py:176:tools.plan_ui_compatibility_pass_only.contains_any",
         "tools/plan_ui_compatibility_pass_only.py:180:tools.plan_ui_compatibility_pass_only.classify_ui_site",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
-        "tools/plan_wave68_candidates.py:28:tools.plan_wave68_candidates.dotted",
-        "tools/plan_wave68_candidates.py:48:tools.plan_wave68_candidates.main",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/redundancy_audit.py:19:tools.redundancy_audit.body_hash",
         "tools/redundancy_audit.py:33:tools.redundancy_audit.audit",
@@ -14951,7 +14936,6 @@
         "tools/extract_merge_note_dict.py:97:tools.extract_merge_note_dict.validate_plan",
         "tools/extract_note_dict_helper.py:98:tools.extract_note_dict_helper.validate_plan",
         "tools/extract_numeric_parsers.py:82:tools.extract_numeric_parsers._validate_function",
-        "tools/plan_wave68_candidates.py:43:tools.plan_wave68_candidates.normalized_source",
         "tools/test_account_header_presentation_wave_46.py:45:tools.test_account_header_presentation_wave_46.normalized",
         "tools/test_account_permission_presentation_wave_47.py:38:tools.test_account_permission_presentation_wave_47.normalized_hash",
         "tools/test_append_unique_text_extraction.py:36:tools.test_append_unique_text_extraction.load_helper",
@@ -15184,9 +15168,6 @@
         "tools/test_clients_read_presentation_wave_30.py:142:tools.test_clients_read_presentation_wave_30.assert_focused_behavior"
       ],
       "self.db": [
-        "tools/apply_wave68_backup_history_extraction.py:40:tools.apply_wave68_backup_history_extraction.main",
-        "tools/inspect_wave68_backup_history.py:32:tools.inspect_wave68_backup_history.main",
-        "tools/plan_wave68_candidates.py:48:tools.plan_wave68_candidates.main",
         "tools/test_account_header_presentation_wave_46.py:83:tools.test_account_header_presentation_wave_46.check_function",
         "tools/test_backup_history_presentation_wave_68.py:35:tools.test_backup_history_presentation_wave_68.main",
         "tools/test_calendar_presentation_wave_41.py:34:tools.test_calendar_presentation_wave_41.main",
@@ -17736,8 +17717,6 @@
         "tools/apply_hierarchical_area_storage_phase1.py:62:tools.apply_hierarchical_area_storage_phase1.apply",
         "tools/apply_hierarchical_area_ui_phase2.py:70:tools.apply_hierarchical_area_ui_phase2.apply",
         "tools/apply_hierarchical_area_ui_phase2.py:88:tools.apply_hierarchical_area_ui_phase2.main",
-        "tools/apply_wave68_backup_history_extraction.py:36:tools.apply_wave68_backup_history_extraction.sha",
-        "tools/apply_wave68_backup_history_extraction.py:40:tools.apply_wave68_backup_history_extraction.main",
         "tools/audit_bare_except_context.py:114:tools.audit_bare_except_context.main",
         "tools/audit_bare_except_context.py:23:tools.audit_bare_except_context._lines",
         "tools/audit_blocking_ui_calls.py:138:tools.audit_blocking_ui_calls.build_report",
@@ -17823,7 +17802,6 @@
         "tools/inspect_blocking_ui_context.py:133:tools.inspect_blocking_ui_context.inspect_source",
         "tools/inspect_blocking_ui_context.py:159:tools.inspect_blocking_ui_context.main",
         "tools/inspect_stale_databank_protected_context.py:36:tools.inspect_stale_databank_protected_context.main",
-        "tools/inspect_wave68_backup_history.py:32:tools.inspect_wave68_backup_history.main",
         "tools/plan_app_lifecycle_window_pass_only.py:160:tools.plan_app_lifecycle_window_pass_only.build_report",
         "tools/plan_app_lifecycle_window_pass_only.py:201:tools.plan_app_lifecycle_window_pass_only.main",
         "tools/plan_logger_fallback_pass_only.py:136:tools.plan_logger_fallback_pass_only.build_report",
@@ -17842,8 +17820,6 @@
         "tools/plan_remaining_pass_only_groups.py:196:tools.plan_remaining_pass_only_groups.main",
         "tools/plan_ui_compatibility_pass_only.py:113:tools.plan_ui_compatibility_pass_only.read_lines",
         "tools/plan_ui_compatibility_pass_only.py:267:tools.plan_ui_compatibility_pass_only.main",
-        "tools/plan_wave68_candidates.py:43:tools.plan_wave68_candidates.normalized_source",
-        "tools/plan_wave68_candidates.py:48:tools.plan_wave68_candidates.main",
         "tools/redundancy_audit.py:140:tools.redundancy_audit.main",
         "tools/redundancy_audit.py:33:tools.redundancy_audit.audit",
         "tools/remove_databank_export_controls.py:405:tools.remove_databank_export_controls.main",
@@ -18802,7 +18778,6 @@
         "tools/apply_client_area_uid_sync_phase2.py:19:tools.apply_client_area_uid_sync_phase2._state",
         "tools/apply_hierarchical_area_ui_phase2.py:23:tools.apply_hierarchical_area_ui_phase2._between",
         "tools/apply_hierarchical_area_ui_phase2.py:33:tools.apply_hierarchical_area_ui_phase2.inspect",
-        "tools/apply_wave68_backup_history_extraction.py:21:tools.apply_wave68_backup_history_extraction.dotted",
         "tools/audit_bare_except_context.py:27:tools.audit_bare_except_context._ctx",
         "tools/audit_bare_except_context.py:33:tools.audit_bare_except_context._count_by",
         "tools/audit_bare_except_context.py:42:tools.audit_bare_except_context.Visitor.__init__",
@@ -19043,7 +19018,6 @@
         "tools/inspect_blocking_ui_context.py:96:tools.inspect_blocking_ui_context.BlockingContextVisitor.visit_ClassDef",
         "tools/inspect_stale_databank_protected_context.py:22:tools.inspect_stale_databank_protected_context._load_cleanup_tool",
         "tools/inspect_stale_databank_protected_context.py:31:tools.inspect_stale_databank_protected_context._matching_terms",
-        "tools/inspect_wave68_backup_history.py:17:tools.inspect_wave68_backup_history.dotted",
         "tools/plan_app_lifecycle_window_pass_only.py:107:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.__init__",
         "tools/plan_app_lifecycle_window_pass_only.py:113:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor._scope",
         "tools/plan_app_lifecycle_window_pass_only.py:116:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_ClassDef",
@@ -19136,7 +19110,6 @@
         "tools/plan_ui_compatibility_pass_only.py:170:tools.plan_ui_compatibility_pass_only.text_window",
         "tools/plan_ui_compatibility_pass_only.py:176:tools.plan_ui_compatibility_pass_only.contains_any",
         "tools/plan_ui_compatibility_pass_only.py:180:tools.plan_ui_compatibility_pass_only.classify_ui_site",
-        "tools/plan_wave68_candidates.py:28:tools.plan_wave68_candidates.dotted",
         "tools/redundancy_audit.py:19:tools.redundancy_audit.body_hash",
         "tools/remove_databank_export_controls.py:363:tools.remove_databank_export_controls.remove_existing_block",
         "tools/remove_databank_export_controls.py:375:tools.remove_databank_export_controls._contains_static_label",
@@ -22087,37 +22060,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/apply_wave68_backup_history_extraction.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json",
-        "textwrap": "textwrap"
-      },
-      "lines": 385,
-      "module": "tools.apply_wave68_backup_history_extraction",
-      "module_globals": [
-        "APP",
-        "EXPECTED_LINES",
-        "EXPECTED_SHA256",
-        "EXPECTED_SIGNATURE",
-        "MODULE",
-        "REVIEW_SOURCE",
-        "ROOT",
-        "STRUCTURAL_TEST_SOURCE",
-        "STRUCT_TEST",
-        "TARGET",
-        "WIDGET_TEST",
-        "WIDGET_TEST_SOURCE"
-      ],
-      "monkey_patches": [],
-      "sha256": "9cc216147679d46f6bdf8883c6f1ab24be74ac9b8a37b69a95aef6acce07460e",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/audit_bare_except_context.py",
       "imports": {
         "Any": "typing.Any",
@@ -23031,31 +22973,6 @@
     },
     {
       "application_file": false,
-      "file": "tools/inspect_wave68_backup_history.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json"
-      },
-      "lines": 73,
-      "module": "tools.inspect_wave68_backup_history",
-      "module_globals": [
-        "APP",
-        "EXPECTED_LINES",
-        "EXPECTED_SHA256",
-        "META_OUT",
-        "ROOT",
-        "SOURCE_OUT",
-        "TARGET"
-      ],
-      "monkey_patches": [],
-      "sha256": "c5cfc0d5b0548df216bd34419486193f84ff3281e06d5cf6d4a1812a3c76981b",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
       "file": "tools/plan_app_lifecycle_window_pass_only.py",
       "imports": {
         "Any": "typing.Any",
@@ -23268,31 +23185,6 @@
       ],
       "monkey_patches": [],
       "sha256": "f8ce08c33264ae337ffc4e07ca20d6cd24526b2e6531a1739ee7181a80c98988",
-      "syntax_ok": true
-    },
-    {
-      "application_file": false,
-      "file": "tools/plan_wave68_candidates.py",
-      "imports": {
-        "Path": "pathlib.Path",
-        "annotations": "__future__.annotations",
-        "ast": "ast",
-        "hashlib": "hashlib",
-        "json": "json"
-      },
-      "lines": 146,
-      "module": "tools.plan_wave68_candidates",
-      "module_globals": [
-        "APP_PATH",
-        "FS_WRITE_SUFFIXES",
-        "OUT_PATH",
-        "ROOT",
-        "SQL_WRITE_TOKENS",
-        "UI_PREFIXES",
-        "WRITE_TERMS"
-      ],
-      "monkey_patches": [],
-      "sha256": "04d511d5573c24eaebff0dc649eb56148212fcf9c3d8342eb97e2aa0f647a9eb",
       "syntax_ok": true
     },
     {
@@ -26193,19 +26085,19 @@
     "classes": 133,
     "database_tables": 19,
     "duplicate_names": 91,
-    "functions": 1539,
+    "functions": 1531,
     "methods": 630,
     "monkey_patches": 184,
     "nested_functions": 393,
     "parse_errors": 0,
     "possible_orphans": 138,
-    "python_files": 237,
+    "python_files": 234,
     "repository_database_tables": 19,
     "repository_duplicate_names": 332,
     "repository_possible_orphans": 320,
-    "resolved_call_edges": 4133,
-    "symbols": 2695,
-    "total_python_lines": 81123,
+    "resolved_call_edges": 4125,
+    "symbols": 2687,
+    "total_python_lines": 80519,
     "ui_callback_edges": 488
   },
   "symbols": [
@@ -91748,167 +91640,6 @@
     },
     {
       "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/apply_wave68_backup_history_extraction.py:21:tools.apply_wave68_backup_history_extraction.dotted",
-        "tools/apply_wave68_backup_history_extraction.py:40:tools.apply_wave68_backup_history_extraction.main"
-      ],
-      "calls_raw": [
-        "dotted",
-        "isinstance"
-      ],
-      "calls_resolved": [
-        "tools/apply_wave68_backup_history_extraction.py:21:tools.apply_wave68_backup_history_extraction.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 33,
-      "feature": "other",
-      "file": "tools/apply_wave68_backup_history_extraction.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/apply_wave68_backup_history_extraction.py:21:tools.apply_wave68_backup_history_extraction.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 21,
-      "lines": 13,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.apply_wave68_backup_history_extraction.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "f66f784f63ae19974118ff261c4fe951f35a8f258b6c35b52e90ee7a422c3cc2"
-    },
-    {
-      "args": [
-        "text"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/apply_wave68_backup_history_extraction.py:40:tools.apply_wave68_backup_history_extraction.main"
-      ],
-      "calls_raw": [
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "text.replace",
-        "text.replace.encode"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 37,
-      "feature": "other",
-      "file": "tools/apply_wave68_backup_history_extraction.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/apply_wave68_backup_history_extraction.py:36:tools.apply_wave68_backup_history_extraction.sha",
-      "imports_used": [
-        "hashlib"
-      ],
-      "kind": "function",
-      "line": 36,
-      "lines": 2,
-      "monkey_patches": [],
-      "name": "sha",
-      "parent": null,
-      "purpose": "Handles sha for the other feature.",
-      "qualified_name": "tools.apply_wave68_backup_history_extraction.sha",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem"
-      ],
-      "source_sha256": "9e0c24cc284eb0bc37745df2dfdb180ae9f6ebd136661f1cfa596d0584c5391b"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP.read_text",
-        "APP.write_text",
-        "MODULE.write_text",
-        "REVIEW_SOURCE.read_text",
-        "REVIEW_SOURCE.read_text.replace",
-        "STRUCT_TEST.write_text",
-        "WIDGET_TEST.write_text",
-        "any",
-        "ast.parse",
-        "ast.unparse",
-        "ast.walk",
-        "binding.splitlines",
-        "c.startswith",
-        "dotted",
-        "isinstance",
-        "item.value.upper",
-        "item.value.upper.split",
-        "join",
-        "join.replace",
-        "next",
-        "print",
-        "sha",
-        "sorted",
-        "text.splitlines",
-        "textwrap.dedent"
-      ],
-      "calls_resolved": [
-        "tools/apply_wave68_backup_history_extraction.py:21:tools.apply_wave68_backup_history_extraction.dotted",
-        "tools/apply_wave68_backup_history_extraction.py:36:tools.apply_wave68_backup_history_extraction.sha"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 131,
-      "feature": "other",
-      "file": "tools/apply_wave68_backup_history_extraction.py",
-      "file_paths": [
-        "self.db"
-      ],
-      "globals_read": [
-        "APP",
-        "EXPECTED_LINES",
-        "EXPECTED_SHA256",
-        "EXPECTED_SIGNATURE",
-        "MODULE",
-        "REVIEW_SOURCE",
-        "STRUCTURAL_TEST_SOURCE",
-        "STRUCT_TEST",
-        "TARGET",
-        "WIDGET_TEST",
-        "WIDGET_TEST_SOURCE"
-      ],
-      "globals_written": [],
-      "id": "tools/apply_wave68_backup_history_extraction.py:40:tools.apply_wave68_backup_history_extraction.main",
-      "imports_used": [
-        "ast",
-        "textwrap"
-      ],
-      "kind": "function",
-      "line": 40,
-      "lines": 92,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.apply_wave68_backup_history_extraction.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "e764330d98e886e03f364f8c412592066ab03f31dd28e2e2798ffb2aa0c5792d"
-    },
-    {
-      "args": [
         "path"
       ],
       "callbacks": [],
@@ -107429,115 +107160,6 @@
       ],
       "callbacks": [],
       "callers": [
-        "tools/inspect_wave68_backup_history.py:17:tools.inspect_wave68_backup_history.dotted",
-        "tools/inspect_wave68_backup_history.py:32:tools.inspect_wave68_backup_history.main"
-      ],
-      "calls_raw": [
-        "dotted",
-        "isinstance"
-      ],
-      "calls_resolved": [
-        "tools/inspect_wave68_backup_history.py:17:tools.inspect_wave68_backup_history.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 29,
-      "feature": "other",
-      "file": "tools/inspect_wave68_backup_history.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/inspect_wave68_backup_history.py:17:tools.inspect_wave68_backup_history.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 17,
-      "lines": 13,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.inspect_wave68_backup_history.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "f66f784f63ae19974118ff261c4fe951f35a8f258b6c35b52e90ee7a422c3cc2"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP.read_text",
-        "META_OUT.write_text",
-        "SOURCE_OUT.write_text",
-        "ast.parse",
-        "ast.unparse",
-        "ast.walk",
-        "c.startswith",
-        "dotted",
-        "dotted.startswith",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "isinstance",
-        "join",
-        "join.replace",
-        "json.dumps",
-        "next",
-        "print",
-        "sorted",
-        "source.encode",
-        "text.splitlines"
-      ],
-      "calls_resolved": [
-        "tools/inspect_wave68_backup_history.py:17:tools.inspect_wave68_backup_history.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 69,
-      "feature": "other",
-      "file": "tools/inspect_wave68_backup_history.py",
-      "file_paths": [
-        "self.db"
-      ],
-      "globals_read": [
-        "APP",
-        "EXPECTED_LINES",
-        "EXPECTED_SHA256",
-        "META_OUT",
-        "SOURCE_OUT",
-        "TARGET"
-      ],
-      "globals_written": [],
-      "id": "tools/inspect_wave68_backup_history.py:32:tools.inspect_wave68_backup_history.main",
-      "imports_used": [
-        "ast",
-        "hashlib",
-        "json"
-      ],
-      "kind": "function",
-      "line": 32,
-      "lines": 38,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.inspect_wave68_backup_history.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "73a50aeaba3e54307bb4639b2356b7b18d7b0a7de372476cae76443f63c5ac56"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
         "tools/plan_app_lifecycle_window_pass_only.py:131:tools.plan_app_lifecycle_window_pass_only.PassOnlyVisitor.visit_Try",
         "tools/plan_app_lifecycle_window_pass_only.py:48:tools.plan_app_lifecycle_window_pass_only._name"
       ],
@@ -112628,167 +112250,6 @@
         "reports"
       ],
       "source_sha256": "465c43c2fa98e6fba82357d55fb65f8b08625537cd7bb5edabf298f03478e3f9"
-    },
-    {
-      "args": [
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave68_candidates.py:28:tools.plan_wave68_candidates.dotted",
-        "tools/plan_wave68_candidates.py:48:tools.plan_wave68_candidates.main"
-      ],
-      "calls_raw": [
-        "dotted",
-        "isinstance"
-      ],
-      "calls_resolved": [
-        "tools/plan_wave68_candidates.py:28:tools.plan_wave68_candidates.dotted"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 40,
-      "feature": "other",
-      "file": "tools/plan_wave68_candidates.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_wave68_candidates.py:28:tools.plan_wave68_candidates.dotted",
-      "imports_used": [
-        "ast"
-      ],
-      "kind": "function",
-      "line": 28,
-      "lines": 13,
-      "monkey_patches": [],
-      "name": "dotted",
-      "parent": null,
-      "purpose": "Handles dotted for the other feature.",
-      "qualified_name": "tools.plan_wave68_candidates.dotted",
-      "risk": "support",
-      "risk_flags": [],
-      "source_sha256": "f66f784f63ae19974118ff261c4fe951f35a8f258b6c35b52e90ee7a422c3cc2"
-    },
-    {
-      "args": [
-        "lines",
-        "node"
-      ],
-      "callbacks": [],
-      "callers": [
-        "tools/plan_wave68_candidates.py:48:tools.plan_wave68_candidates.main"
-      ],
-      "calls_raw": [
-        "join",
-        "text.replace"
-      ],
-      "calls_resolved": [],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 45,
-      "feature": "utilities",
-      "file": "tools/plan_wave68_candidates.py",
-      "file_paths": [],
-      "globals_read": [],
-      "globals_written": [],
-      "id": "tools/plan_wave68_candidates.py:43:tools.plan_wave68_candidates.normalized_source",
-      "imports_used": [],
-      "kind": "function",
-      "line": 43,
-      "lines": 3,
-      "monkey_patches": [],
-      "name": "normalized_source",
-      "parent": null,
-      "purpose": "Handles normalized source for the utilities feature.",
-      "qualified_name": "tools.plan_wave68_candidates.normalized_source",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem"
-      ],
-      "source_sha256": "37935876e13196167b7798405d553f947017a0e66fa3c1e46912d3d1def4fff9"
-    },
-    {
-      "args": [],
-      "callbacks": [],
-      "callers": [],
-      "calls_raw": [
-        "APP_PATH.read_text",
-        "OUT_PATH.write_text",
-        "any",
-        "ast.parse",
-        "ast.unparse",
-        "ast.walk",
-        "bool",
-        "c.endswith",
-        "c.lower",
-        "c.lower.split",
-        "c.startswith",
-        "candidates.append",
-        "candidates.sort",
-        "dotted",
-        "hashlib.sha256",
-        "hashlib.sha256.hexdigest",
-        "int",
-        "isinstance",
-        "item.value.upper",
-        "item.value.upper.split",
-        "join",
-        "json.dumps",
-        "len",
-        "max",
-        "next",
-        "normalized_source",
-        "print",
-        "set",
-        "sorted",
-        "source.encode",
-        "sql_write_literals.append",
-        "text.splitlines"
-      ],
-      "calls_resolved": [
-        "tools/plan_wave68_candidates.py:28:tools.plan_wave68_candidates.dotted",
-        "tools/plan_wave68_candidates.py:43:tools.plan_wave68_candidates.normalized_source"
-      ],
-      "class_name": null,
-      "database_tables": [],
-      "docstring": "",
-      "end_line": 142,
-      "feature": "other",
-      "file": "tools/plan_wave68_candidates.py",
-      "file_paths": [
-        "self.db"
-      ],
-      "globals_read": [
-        "APP_PATH",
-        "FS_WRITE_SUFFIXES",
-        "OUT_PATH",
-        "SQL_WRITE_TOKENS",
-        "UI_PREFIXES",
-        "WRITE_TERMS"
-      ],
-      "globals_written": [],
-      "id": "tools/plan_wave68_candidates.py:48:tools.plan_wave68_candidates.main",
-      "imports_used": [
-        "ast",
-        "hashlib",
-        "json"
-      ],
-      "kind": "function",
-      "line": 48,
-      "lines": 95,
-      "monkey_patches": [],
-      "name": "main",
-      "parent": null,
-      "purpose": "Handles main for the other feature.",
-      "qualified_name": "tools.plan_wave68_candidates.main",
-      "risk": "filesystem",
-      "risk_flags": [
-        "filesystem",
-        "reports"
-      ],
-      "source_sha256": "17bb24663ee6cd4954fc3f2ee3eb4396fc259ef04daca15b60220a92edd16a7a"
     },
     {
       "args": [

@@ -1,8 +1,8 @@
 # SPINA Function and Class Index
 
-Generated from commit `c4fe65d84c8b17342ebee9cd5c53fcd2554218b6`.
+Generated from commit `80de4a22511fbc8d4e20249d649eb22f972d6ee1`.
 
-Scanned **237 Python files**, **81,123 lines**, and **2,695 symbols**.
+Scanned **234 Python files**, **80,519 lines**, and **2,687 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1428,12 +1428,6 @@ Scanned **237 Python files**, **81,123 lines**, and **2,695 symbols**.
 - **tools.apply_hierarchical_area_ui_phase2.apply** (function, lines 70–85, 16 lines, risk `filesystem`): Handles apply for the other feature.
 - **tools.apply_hierarchical_area_ui_phase2.main** (function, lines 88–101, 14 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/apply_wave68_backup_history_extraction.py`
-
-- **tools.apply_wave68_backup_history_extraction.dotted** (function, lines 21–33, 13 lines, risk `support`): Handles dotted for the other feature.
-- **tools.apply_wave68_backup_history_extraction.sha** (function, lines 36–37, 2 lines, risk `filesystem`): Handles sha for the other feature.
-- **tools.apply_wave68_backup_history_extraction.main** (function, lines 40–131, 92 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/audit_bare_except_context.py`
 
 - **tools.audit_bare_except_context._lines** (function, lines 23–24, 2 lines, risk `filesystem`): Handles lines for the other feature.
@@ -1893,11 +1887,6 @@ Scanned **237 Python files**, **81,123 lines**, and **2,695 symbols**.
 - **tools.inspect_stale_databank_protected_context._matching_terms** (function, lines 31–33, 3 lines, risk `support`): Handles matching terms for the other feature.
 - **tools.inspect_stale_databank_protected_context.main** (function, lines 36–105, 70 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/inspect_wave68_backup_history.py`
-
-- **tools.inspect_wave68_backup_history.dotted** (function, lines 17–29, 13 lines, risk `support`): Handles dotted for the other feature.
-- **tools.inspect_wave68_backup_history.main** (function, lines 32–69, 38 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/plan_app_lifecycle_window_pass_only.py`
 
 - **tools.plan_app_lifecycle_window_pass_only._name** (function, lines 48–59, 12 lines, risk `support`): Handles name for the other feature.
@@ -2048,12 +2037,6 @@ Scanned **237 Python files**, **81,123 lines**, and **2,695 symbols**.
 - **tools.plan_ui_compatibility_pass_only.classify_ui_site** (function, lines 180–193, 14 lines, risk `support`): Handles classify ui site for the other feature.
 - **tools.plan_ui_compatibility_pass_only.build_report** (function, lines 196–264, 69 lines, risk `reports`): Builds build report for the reports feature.
 - **tools.plan_ui_compatibility_pass_only.main** (function, lines 267–280, 14 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/plan_wave68_candidates.py`
-
-- **tools.plan_wave68_candidates.dotted** (function, lines 28–40, 13 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_wave68_candidates.normalized_source** (function, lines 43–45, 3 lines, risk `filesystem`): Handles normalized source for the utilities feature.
-- **tools.plan_wave68_candidates.main** (function, lines 48–142, 95 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/redundancy_audit.py`
 
