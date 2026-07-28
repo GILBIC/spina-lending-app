@@ -2,7 +2,7 @@
 
 Generated from commit `395d55cdd3e115feb041988ae767d3865c0f3f63`.
 
-Scanned **227 Python files**, **80,224 lines**, and **2,643 symbols**.
+Scanned **225 Python files**, **79,711 lines**, and **2,633 symbols**.
 
 > This is a static architecture map. Runtime callbacks and dynamic monkey patches can still require desktop testing.
 
@@ -1416,16 +1416,6 @@ Scanned **227 Python files**, **80,224 lines**, and **2,643 symbols**.
 - **tools.apply_hierarchical_area_ui_phase2.apply** (function, lines 70–85, 16 lines, risk `filesystem`): Handles apply for the other feature.
 - **tools.apply_hierarchical_area_ui_phase2.main** (function, lines 88–101, 14 lines, risk `filesystem`): Handles main for the other feature.
 
-## `tools/apply_wave65_settings_dialog_extraction.py`
-
-- **tools.apply_wave65_settings_dialog_extraction.sha** (function, lines 21–22, 2 lines, risk `filesystem`): Handles sha for the other feature.
-- **tools.apply_wave65_settings_dialog_extraction.dotted** (function, lines 25–37, 13 lines, risk `support`): Handles dotted for the other feature.
-- **tools.apply_wave65_settings_dialog_extraction.find_method** (function, lines 40–49, 10 lines, risk `support`): Retrieves find method for the other feature.
-- **tools.apply_wave65_settings_dialog_extraction.build_module** (function, lines 52–83, 32 lines, risk `support`): Builds build module for the other feature.
-- **tools.apply_wave65_settings_dialog_extraction.build_structural_test** (function, lines 86–163, 78 lines, risk `support`): Builds build structural test for the other feature.
-- **tools.apply_wave65_settings_dialog_extraction.build_smoke_test** (function, lines 166–335, 170 lines, risk `ui_only`): Builds build smoke test for the other feature.
-- **tools.apply_wave65_settings_dialog_extraction.main** (function, lines 338–362, 25 lines, risk `filesystem`): Handles main for the other feature.
-
 ## `tools/audit_bare_except_context.py`
 
 - **tools.audit_bare_except_context._lines** (function, lines 23–24, 2 lines, risk `filesystem`): Handles lines for the other feature.
@@ -2035,12 +2025,6 @@ Scanned **227 Python files**, **80,224 lines**, and **2,643 symbols**.
 - **tools.plan_ui_compatibility_pass_only.classify_ui_site** (function, lines 180–193, 14 lines, risk `support`): Handles classify ui site for the other feature.
 - **tools.plan_ui_compatibility_pass_only.build_report** (function, lines 196–264, 69 lines, risk `reports`): Builds build report for the reports feature.
 - **tools.plan_ui_compatibility_pass_only.main** (function, lines 267–280, 14 lines, risk `filesystem`): Handles main for the other feature.
-
-## `tools/plan_wave65_candidates.py`
-
-- **tools.plan_wave65_candidates.dotted** (function, lines 30–42, 13 lines, risk `support`): Handles dotted for the other feature.
-- **tools.plan_wave65_candidates.sha** (function, lines 45–46, 2 lines, risk `filesystem`): Handles sha for the other feature.
-- **tools.plan_wave65_candidates.main** (function, lines 49–143, 95 lines, risk `filesystem`): Handles main for the other feature.
 
 ## `tools/redundancy_audit.py`
 
