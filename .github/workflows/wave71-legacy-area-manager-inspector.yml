@@ -1,0 +1,51 @@
+name: Wave 71 Legacy Area Manager Inspector
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "tools/inspect_wave71_legacy_area_manager.py"
+      - ".github/workflows/wave71-legacy-area-manager-inspector.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wave71-legacy-area-manager-inspector-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inspect:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-71'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 120
+    steps:
+      - name: Check out exact Wave 71 head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Compile inspector, application, and modern module
+        shell: cmd
+        run: |
+          python -m py_compile tools\inspect_wave71_legacy_area_manager.py
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\area_hierarchy_ui.py
+
+      - name: Inspect exact legacy and modern boundaries
+        shell: cmd
+        run: python -m tools.inspect_wave71_legacy_area_manager
+
+      - name: Commit exact inspection metadata
+        if: github.event_name == 'pull_request'
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs\wave71-area-manager-meta.json
+          git diff --cached --quiet && exit /b 0
+          git commit -m "Add Wave 71 area manager inspection metadata"
+          git push origin HEAD:${{ github.head_ref }}
