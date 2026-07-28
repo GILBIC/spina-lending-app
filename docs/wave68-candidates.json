@@ -1,0 +1,553 @@
+{
+  "source_file": "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py",
+  "app_method_count_over_90_lines": 17,
+  "candidates": [
+    {
+      "name": "open_backup_history_window",
+      "start_line": 10868,
+      "end_line": 11049,
+      "lines": 182,
+      "signature": "self",
+      "source_sha256": "c05501298b2aa308c66f0f668bb482a96de8dc221b098f88705fa6d452c6d59f",
+      "nested_callbacks": [],
+      "db_calls": [],
+      "db_write_calls": [],
+      "direct_sql_calls": [],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [],
+      "write_like_calls": [
+        "self._restore_backup_to_test_database",
+        "tree.delete",
+        "tree.insert"
+      ],
+      "ui_call_count": 10,
+      "presentation_like": true,
+      "read_only_db": false,
+      "no_db": true,
+      "score": 184
+    },
+    {
+      "name": "_collector_editor_dialog",
+      "start_line": 9416,
+      "end_line": 9551,
+      "lines": 136,
+      "signature": "self, title='Collector', initial_name='', initial_areas=None, initial_notes=''",
+      "source_sha256": "93e983bbcaa6f77022abea2233f6d0f8159a2be6bfd6a23da52f0448d8f5969d",
+      "nested_callbacks": [
+        "_summarize",
+        "choose_areas",
+        "on_ok",
+        "on_cancel"
+      ],
+      "db_calls": [],
+      "db_write_calls": [],
+      "direct_sql_calls": [],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [],
+      "write_like_calls": [
+        "notes.insert",
+        "result.update",
+        "top.update_idletasks"
+      ],
+      "ui_call_count": 10,
+      "presentation_like": true,
+      "read_only_db": false,
+      "no_db": true,
+      "score": 150
+    },
+    {
+      "name": "_prompt_login",
+      "start_line": 7582,
+      "end_line": 7707,
+      "lines": 126,
+      "signature": "self, default_user: str='admin'",
+      "source_sha256": "19e56177f0f7a743181bc1f034fceb3037f9b8e74a2b4135b51bdce7d4eee50b",
+      "nested_callbacks": [
+        "_ok",
+        "_cancel",
+        "_on_enter"
+      ],
+      "db_calls": [],
+      "db_write_calls": [],
+      "direct_sql_calls": [],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [],
+      "write_like_calls": [
+        "dlg.update_idletasks"
+      ],
+      "ui_call_count": 9,
+      "presentation_like": true,
+      "read_only_db": false,
+      "no_db": true,
+      "score": 147
+    },
+    {
+      "name": "print_databank_close_report",
+      "start_line": 8374,
+      "end_line": 8608,
+      "lines": 235,
+      "signature": "self, date_s=None",
+      "source_sha256": "10168b6dd965f8aa40c3c3e92efb9c1d29a5b0b229e4be1afbc51650444e6c09",
+      "nested_callbacks": [],
+      "db_calls": [
+        "self.db.conn.cursor",
+        "self.db.conn.cursor.execute",
+        "self.db.conn.cursor.execute.fetchone",
+        "self.db.get_databank_daily_total",
+        "self.db.get_databank_day_close",
+        "self.db.list_databank_day_collectors"
+      ],
+      "db_write_calls": [],
+      "direct_sql_calls": [
+        "self.db.conn.cursor.execute"
+      ],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [],
+      "write_like_calls": [
+        "c.save",
+        "filedialog.asksaveasfilename",
+        "os.remove"
+      ],
+      "ui_call_count": 3,
+      "presentation_like": true,
+      "read_only_db": false,
+      "no_db": false,
+      "score": 143
+    },
+    {
+      "name": "_build_header",
+      "start_line": 11116,
+      "end_line": 11284,
+      "lines": 169,
+      "signature": "self",
+      "source_sha256": "3c248c2f227f021b0ccbda3ed21caeeece2d005fbe157a12bf252cbda3070b14",
+      "nested_callbacks": [],
+      "db_calls": [],
+      "db_write_calls": [],
+      "direct_sql_calls": [],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [
+        "_img.copy"
+      ],
+      "write_like_calls": [
+        "self._set_mode"
+      ],
+      "ui_call_count": 6,
+      "presentation_like": true,
+      "read_only_db": false,
+      "no_db": true,
+      "score": 140
+    },
+    {
+      "name": "_setup_style",
+      "start_line": 10217,
+      "end_line": 10353,
+      "lines": 137,
+      "signature": "self",
+      "source_sha256": "55be812112d53a34a38717c1007da9f8a7c7fd4f231b30072721dee8c4091c02",
+      "nested_callbacks": [],
+      "db_calls": [],
+      "db_write_calls": [],
+      "direct_sql_calls": [],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [],
+      "write_like_calls": [
+        "self.root.option_add"
+      ],
+      "ui_call_count": 1,
+      "presentation_like": true,
+      "read_only_db": false,
+      "no_db": true,
+      "score": 133
+    },
+    {
+      "name": "_force_change_password_dialog",
+      "start_line": 7287,
+      "end_line": 7405,
+      "lines": 119,
+      "signature": "self, username: str, old_password: str=''",
+      "source_sha256": "973a1a2a28a5c3fbcf0952ef3b5c571d8668b2918f5f05aded03951366c50e5e",
+      "nested_callbacks": [
+        "_save",
+        "_cancel",
+        "_on_enter"
+      ],
+      "db_calls": [],
+      "db_write_calls": [],
+      "direct_sql_calls": [],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [],
+      "write_like_calls": [
+        "_save",
+        "dlg.update_idletasks",
+        "self._set_user_password"
+      ],
+      "ui_call_count": 8,
+      "presentation_like": true,
+      "read_only_db": false,
+      "no_db": true,
+      "score": 126
+    },
+    {
+      "name": "apply_role_access",
+      "start_line": 7869,
+      "end_line": 8005,
+      "lines": 137,
+      "signature": "self",
+      "source_sha256": "511995cc123a272dc03281121cbf46bef5f5ef816fd55392c4576e4e38f6f099",
+      "nested_callbacks": [],
+      "db_calls": [],
+      "db_write_calls": [],
+      "direct_sql_calls": [],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [],
+      "write_like_calls": [
+        "self._remove_role_overlays",
+        "self._restore_main_tabs"
+      ],
+      "ui_call_count": 0,
+      "presentation_like": false,
+      "read_only_db": false,
+      "no_db": true,
+      "score": 125
+    },
+    {
+      "name": "_import_encoder_batch",
+      "start_line": 12357,
+      "end_line": 12776,
+      "lines": 420,
+      "signature": "self, path: str",
+      "source_sha256": "b1334b0a1f6774c972755364eeaeeb8b83fe593df7aad5a28e5eb5fe457e453b",
+      "nested_callbacks": [
+        "_canon_lt",
+        "_is_date",
+        "_adv_tag_from_ranges",
+        "_ilog"
+      ],
+      "db_calls": [
+        "self.db._effective_lt",
+        "self.db.add_or_update_transaction",
+        "self.db.add_or_update_transaction_by_uid",
+        "self.db.find_clients_by_person_uid",
+        "self.db.get_client_by_person_uid_and_loan_type",
+        "self.db.get_client_by_uid",
+        "self.db.get_client_info",
+        "self.db.get_transaction",
+        "self.db.get_transaction_by_uid"
+      ],
+      "db_write_calls": [
+        "self.db.add_or_update_transaction",
+        "self.db.add_or_update_transaction_by_uid"
+      ],
+      "direct_sql_calls": [],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [
+        "strip.lower.replace"
+      ],
+      "write_like_calls": [
+        "_write_json_atomic",
+        "f.write",
+        "self.db.add_or_update_transaction",
+        "self.db.add_or_update_transaction_by_uid"
+      ],
+      "ui_call_count": 2,
+      "presentation_like": false,
+      "read_only_db": false,
+      "no_db": false,
+      "score": 109
+    },
+    {
+      "name": "refresh_reports",
+      "start_line": 11574,
+      "end_line": 11680,
+      "lines": 107,
+      "signature": "self",
+      "source_sha256": "7ecb214f80965f594fc0f63ad117230c879bee2ee4d8a52158858d0526358cc1",
+      "nested_callbacks": [
+        "_display_loan_type_label"
+      ],
+      "db_calls": [
+        "self.db.get_all_clients",
+        "self.db.get_client_info"
+      ],
+      "db_write_calls": [],
+      "direct_sql_calls": [],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [],
+      "write_like_calls": [
+        "self.reports_tree.delete",
+        "self.reports_tree.insert"
+      ],
+      "ui_call_count": 1,
+      "presentation_like": true,
+      "read_only_db": true,
+      "no_db": false,
+      "score": 100
+    },
+    {
+      "name": "_edit_selected_collector",
+      "start_line": 9553,
+      "end_line": 9644,
+      "lines": 92,
+      "signature": "self",
+      "source_sha256": "da8489a5b0a91aff911d513694fb54d7bd3f279a066da23df5f3c31be9da36b4",
+      "nested_callbacks": [],
+      "db_calls": [],
+      "db_write_calls": [],
+      "direct_sql_calls": [],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [],
+      "write_like_calls": [
+        "_write_json_atomic"
+      ],
+      "ui_call_count": 2,
+      "presentation_like": true,
+      "read_only_db": false,
+      "no_db": true,
+      "score": 90
+    },
+    {
+      "name": "_is_client_new",
+      "start_line": 8007,
+      "end_line": 8130,
+      "lines": 124,
+      "signature": "self, name, ledger_date, days=None",
+      "source_sha256": "8a9776860733a1df8a2630761c058a6cdca28b1f7db52a16e52ae24e0b9b4b03",
+      "nested_callbacks": [],
+      "db_calls": [],
+      "db_write_calls": [],
+      "direct_sql_calls": [
+        "cur.execute"
+      ],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [],
+      "write_like_calls": [],
+      "ui_call_count": 0,
+      "presentation_like": false,
+      "read_only_db": false,
+      "no_db": false,
+      "score": 44
+    },
+    {
+      "name": "__init__",
+      "start_line": 9873,
+      "end_line": 10033,
+      "lines": 161,
+      "signature": "self, root",
+      "source_sha256": "71f251ca29efe369ebbee201336abfe623c254192bd1ed69f9c288f8a4b7ef88",
+      "nested_callbacks": [],
+      "db_calls": [
+        "self.db.set_default_loan_type"
+      ],
+      "db_write_calls": [
+        "self.db.set_default_loan_type"
+      ],
+      "direct_sql_calls": [],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [],
+      "write_like_calls": [
+        "root.update_idletasks",
+        "self._save_last_user",
+        "self._save_user_role",
+        "self.db.set_default_loan_type",
+        "self.nb.add"
+      ],
+      "ui_call_count": 4,
+      "presentation_like": false,
+      "read_only_db": false,
+      "no_db": false,
+      "score": 5
+    },
+    {
+      "name": "_import_from_excel_entry_worker",
+      "start_line": 11959,
+      "end_line": 12355,
+      "lines": 397,
+      "signature": "self, paths",
+      "source_sha256": "d37cb138944f3465847b77cdf0a0aa98c8c1e92c49dfed97864e202f8c6126e8",
+      "nested_callbacks": [
+        "_norm",
+        "_looks_like_date_header",
+        "_parse_sheet"
+      ],
+      "db_calls": [
+        "self.db.add_or_update_transaction",
+        "self.db.get_client_info",
+        "self.db.get_transaction",
+        "self.db.update_client"
+      ],
+      "db_write_calls": [
+        "self.db.add_or_update_transaction",
+        "self.db.update_client"
+      ],
+      "direct_sql_calls": [],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [
+        "str.replace",
+        "str.strip.lower.replace",
+        "str.strip.lower.replace.replace",
+        "str.strip.lower.replace.replace.replace"
+      ],
+      "write_like_calls": [
+        "self.db.add_or_update_transaction",
+        "self.db.update_client",
+        "unknown.add"
+      ],
+      "ui_call_count": 2,
+      "presentation_like": false,
+      "read_only_db": false,
+      "no_db": false,
+      "score": -16
+    },
+    {
+      "name": "_import_from_excel_core",
+      "start_line": 12778,
+      "end_line": 12943,
+      "lines": 166,
+      "signature": "self, path, progress_cb=None",
+      "source_sha256": "28d38a4c5ed5551fd8a2ffd58bbe97dfceabb8a262a4ec38410956187bf21280",
+      "nested_callbacks": [
+        "_parse_date_header",
+        "_to_number",
+        "_is_text_reason"
+      ],
+      "db_calls": [
+        "self.db.add_or_update_transaction",
+        "self.db.conn.execute"
+      ],
+      "db_write_calls": [
+        "self.db.add_or_update_transaction"
+      ],
+      "direct_sql_calls": [
+        "self.db.conn.execute"
+      ],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [
+        "s.replace"
+      ],
+      "write_like_calls": [
+        "self.db.add_or_update_transaction"
+      ],
+      "ui_call_count": 0,
+      "presentation_like": false,
+      "read_only_db": false,
+      "no_db": false,
+      "score": -80
+    },
+    {
+      "name": "open_areas_manager",
+      "start_line": 12968,
+      "end_line": 13129,
+      "lines": 162,
+      "signature": "self",
+      "source_sha256": "2c1ed56ec0918a9118632be72a7b6c5b0ca7ab4be54e2b054f40709976c38434",
+      "nested_callbacks": [
+        "_refresh",
+        "_selected",
+        "_on_select",
+        "add_area",
+        "rename_area",
+        "delete_area",
+        "_on_close"
+      ],
+      "db_calls": [
+        "self.db.add_area",
+        "self.db.count_clients_in_area",
+        "self.db.delete_area",
+        "self.db.get_all_areas",
+        "self.db.rename_area"
+      ],
+      "db_write_calls": [
+        "self.db.add_area",
+        "self.db.delete_area",
+        "self.db.rename_area"
+      ],
+      "direct_sql_calls": [],
+      "sql_write_literals": [],
+      "filesystem_write_calls": [],
+      "write_like_calls": [
+        "self._areas_list.delete",
+        "self._areas_list.insert",
+        "self._refresh_area_dropdowns",
+        "self.db.add_area",
+        "self.db.delete_area",
+        "self.db.rename_area"
+      ],
+      "ui_call_count": 15,
+      "presentation_like": false,
+      "read_only_db": false,
+      "no_db": false,
+      "score": -225
+    },
+    {
+      "name": "open_databank_close_dialog",
+      "start_line": 8610,
+      "end_line": 9260,
+      "lines": 651,
+      "signature": "self, date_s=None",
+      "source_sha256": "3514a2cc90bde74837e20f87dfd3e29132340e67fee5e494c1fd9ebefbdef0c2",
+      "nested_callbacks": [
+        "_parse_amount",
+        "_fmt_amount",
+        "_variance_status",
+        "_default_workflow",
+        "_selected_split_index",
+        "_clear_split_editor",
+        "_refresh_split_tree",
+        "_load_split_editor_from_selection",
+        "_upsert_split_row",
+        "_remove_split_row",
+        "_load_route_collectors",
+        "_save_split",
+        "_apply_mode",
+        "_recalc",
+        "_load",
+        "_close_day",
+        "_reopen_day",
+        "_update_workflow",
+        "_print_report",
+        "_save_route_copy_now",
+        "_open_records_list"
+      ],
+      "db_calls": [
+        "self.db.get_databank_daily_total",
+        "self.db.get_databank_day_close",
+        "self.db.list_databank_day_collectors",
+        "self.db.reopen_databank_day",
+        "self.db.replace_databank_day_collectors",
+        "self.db.set_databank_day_close",
+        "self.db.set_databank_day_workflow"
+      ],
+      "db_write_calls": [
+        "self.db.reopen_databank_day",
+        "self.db.set_databank_day_close",
+        "self.db.set_databank_day_workflow"
+      ],
+      "direct_sql_calls": [],
+      "sql_write_literals": [
+        "UPDATE "
+      ],
+      "filesystem_write_calls": [
+        "str.replace"
+      ],
+      "write_like_calls": [
+        "actual_var.trace_add",
+        "self._update_data_toolbar",
+        "self.db.reopen_databank_day",
+        "self.db.set_databank_day_close",
+        "self.db.set_databank_day_workflow",
+        "self.open_databank_close_history_dialog",
+        "self.open_databank_close_records_dialog",
+        "self.print_databank_close_report",
+        "self.save_closed_collector_route_copy",
+        "split_tree.delete",
+        "split_tree.insert"
+      ],
+      "ui_call_count": 16,
+      "presentation_like": false,
+      "read_only_db": false,
+      "no_db": false,
+      "score": -397
+    }
+  ]
+}
