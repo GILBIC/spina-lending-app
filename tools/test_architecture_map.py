@@ -125,7 +125,7 @@ def main() -> None:
         ".NoteEditorDialog._save_note": "notes",
         "._spina_apply_dashboard_role": "dashboard",
         "._spina_v32_prompt_login": "authentication",
-        ".App.open_settings_dialog": "settings",
+        ".settings_dialog_presentation.open_settings_dialog": "settings",
         "._spina_cashctl_apply_role": "cash_control",
     }
     for suffix, expected in expected_features.items():
