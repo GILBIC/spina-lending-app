@@ -18,15 +18,15 @@ def configure_client_new_status_dependencies(namespace: Mapping[str, Any]) -> No
 def _is_client_new(self, name, ledger_date, days=None):
     """Return True if client is NEW.
 
-    Rules:
-    - If 'new_until' is explicitly set in the DB:
-        * If it's an empty string or unparsable -> treat as explicit OFF (return False).
-        * If it's a valid date -> return (ledger_date <= new_until). No fallback.
-    - Otherwise (no explicit 'new_until' value present):
-        * If 'days' is None/blank, default to prefs 'new_highlight_days' (default 7).
-        * If 'days' > 0, return (ledger_date <= (created_at or date_released) + days).
-        * Else False.
-    """
+        Rules:
+        - If 'new_until' is explicitly set in the DB:
+            * If it's an empty string or unparsable -> treat as explicit OFF (return False).
+            * If it's a valid date -> return (ledger_date <= new_until). No fallback.
+        - Otherwise (no explicit 'new_until' value present):
+            * If 'days' is None/blank, default to prefs 'new_highlight_days' (default 7).
+            * If 'days' > 0, return (ledger_date <= (created_at or date_released) + days).
+            * Else False.
+        """
     nm = (name or "").strip()
     if not nm:
         return False
