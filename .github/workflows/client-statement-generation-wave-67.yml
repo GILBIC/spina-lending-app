@@ -1,4 +1,4 @@
-# Final corrected exact-head validation after the Wave 42 binding guard fix.
+# Final exact-head validation after the module-aware long-task guard update.
 name: Client Statement Generation Wave 67
 
 on:
