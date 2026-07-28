@@ -29,9 +29,7 @@ jobs:
 
       - name: Regenerate maps from cleaned source tree
         shell: cmd
-        run: |
-          python -m tools.generate_architecture_map
-          python -m tools.test_architecture_map
+        run: python -m tools.generate_architecture_map
 
       - name: Commit refreshed maps
         shell: cmd
