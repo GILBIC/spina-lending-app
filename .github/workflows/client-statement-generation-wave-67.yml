@@ -1,4 +1,4 @@
-# Final exact-head validation after the module-aware long-task guard update.
+# Permanent exact-head validation for Wave 67 client statement generation.
 name: Client Statement Generation Wave 67
 
 on:
@@ -9,6 +9,7 @@ on:
       - "spina_app/client_statement_generation.py"
       - "tools/test_client_statement_generation_wave_67.py"
       - "tools/test_client_statement_generation_behavior_wave_67.py"
+      - "tools/test_long_task_presentation_wave_42.py"
       - "architecture-map.json"
       - "docs/architecture/**"
       - ".github/workflows/client-statement-generation-wave-67.yml"
