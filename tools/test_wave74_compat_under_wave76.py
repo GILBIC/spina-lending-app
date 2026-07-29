@@ -56,8 +56,8 @@ def test_static_delegation() -> None:
     for token in (
         "shift_due_date_for_renewal(",
         "allocation = allocate_x7_payments(",
-        'record["daily_interest"]',
-        'record["interest_basis_principal"]',
+        'rec["daily_interest"]',
+        'rec["interest_basis_principal"]',
     ):
         assert token in service_source, token
 
