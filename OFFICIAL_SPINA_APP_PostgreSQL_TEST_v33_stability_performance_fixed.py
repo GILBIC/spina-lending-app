@@ -17746,27 +17746,12 @@ def generate_client_pdf(db, client_name, start_date, end_date, out_path, note_te
     _x7_interest_arrears_end = 0.0
 
     if is_7x7 and principal > 0:
-        # Daily interest is STEP-based from BALANCE principal (1..1000=7/day, 1001..2000=14/day, ...)
-        def _x7_daily_interest_for_balance(_bal):
-            """Return 7x7 daily interest for a given remaining/balance principal.
-            Rule: 1..1000 = 7/day, 1001..2000 = 14/day, etc.
-            """
-            try:
-                b = float(_bal or 0.0)
-            except Exception:
-                b = 0.0
-            if b <= 0:
-                return 0.0
-            try:
-                # ceil(b/1000) without importing math
-                units = int((b + 999.999999) // 1000)
-            except Exception:
-                units = 0
-            if units < 1:
-                units = 1
-            return float(units) * 7.0
+        # Daily interest is fixed from the recorded loan principal for the whole cycle.
+        # Paying principal lowers the balance but does not lower this daily-interest basis.
+        def _x7_daily_interest_for_principal(_loan_principal):
+            return float(_wave74_x7_daily_interest(_loan_principal))
 
-        _x7_daily_interest = round(_x7_daily_interest_for_balance(principal), 2)
+        _x7_daily_interest = round(_x7_daily_interest_for_principal(principal), 2)
         # Parse report window dates (safe)
         try:
             _r_start_dt = _dt_soapatch.strptime(str(start_date)[:10], "%Y-%m-%d").date()
@@ -17818,7 +17803,7 @@ def generate_client_pdf(db, client_name, start_date, end_date, out_path, note_te
                 if gap <= 0:
                     gap = 1
 
-                _di = float(_x7_daily_interest_for_balance(rem))
+                _di = float(_x7_daily_interest_for_principal(principal))
 
                 interest_due = (_di * float(gap)) + float(arrears)
                 interest_paid = min(float(amt), float(interest_due))
@@ -17862,9 +17847,9 @@ def generate_client_pdf(db, client_name, start_date, end_date, out_path, note_te
         # _x7_balance_principal is already computed above from _cycle_splits
         # using _cycle_start -> end_date, so leave it unchanged here.
 
-        # Keep daily interest display in-sync with the CURRENT balance bracket
+        # Keep daily interest display fixed to the recorded loan principal.
         try:
-            _x7_daily_interest = round(_x7_daily_interest_for_balance(_x7_balance_principal), 2)
+            _x7_daily_interest = round(_x7_daily_interest_for_principal(principal), 2)
         except Exception as __spina_exc:
             _log_suppressed_once('excpass_0600', 'suppressed exception excpass_0600', __spina_exc)
             pass
@@ -18251,7 +18236,7 @@ def generate_client_pdf(db, client_name, start_date, end_date, out_path, note_te
                     _wr_days = 0
 
             try:
-                _wr_di = round(max(0.0, float(_x7_daily_interest_for_balance(principal))), 2)
+                _wr_di = round(max(0.0, float(_x7_daily_interest_for_principal(principal))), 2)
             except Exception:
                 _wr_di = round(max(0.0, float(_x7_daily_interest or 0.0)), 2)
 
@@ -19696,7 +19681,7 @@ class RenewDialog(simpledialog.Dialog):
                 renew_dt = None
 
             try:
-                daily_interest = float(_x7_daily_interest_for_balance(principal))
+                daily_interest = float(_x7_daily_interest_for_principal(principal))
             except Exception:
                 daily_interest = 0.0
 
@@ -27429,7 +27414,7 @@ def _spina_route_balance_like_generate_report(app, client_name, loan_type, asof_
                 gap = 1
             if gap <= 0:
                 gap = 1
-            interest_due = (_x7_daily_interest_for_balance(rem) * float(gap)) + float(arrears)
+            interest_due = (_x7_daily_interest_for_principal(principal) * float(gap)) + float(arrears)
             interest_paid = min(float(amt or 0.0), float(interest_due))
             principal_pay_raw = max(0.0, float(amt or 0.0) - float(interest_paid))
             apply_p = min(principal_pay_raw, rem) if rem > 0 else 0.0
