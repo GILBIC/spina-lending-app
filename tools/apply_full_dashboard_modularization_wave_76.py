@@ -16,6 +16,16 @@ INSTALL_START = "# --- BEGIN: Dashboard feature installer Wave 76 ---"
 INSTALL_END = "# --- END: Dashboard feature installer Wave 76 ---"
 
 INSTALL_BLOCK = f'''{INSTALL_START}
+# Shared calculation/formatting helpers remain available to non-Dashboard features
+# that historically received them from the old Dashboard block.
+from spina_app.calculation_rules import (
+    allocate_x7_payments as _wave74_allocate_x7_payments,
+    ceil_thousand_units as _wave74_ceil_thousand_units,
+    x7_daily_interest as _wave74_x7_daily_interest,
+)
+from spina_app.utilities.dates import _spina_dash__date_text
+from spina_app.utilities.formatting import _spina_dash__fmt_money
+
 from spina_app.features.dashboard import (
     install_dashboard_feature as _wave76_install_dashboard_feature,
 )
@@ -61,6 +71,11 @@ def replace_marked_block(
 def validate_result(source: str) -> None:
     required = (
         INSTALL_START,
+        "allocate_x7_payments as _wave74_allocate_x7_payments",
+        "ceil_thousand_units as _wave74_ceil_thousand_units",
+        "x7_daily_interest as _wave74_x7_daily_interest",
+        "from spina_app.utilities.dates import _spina_dash__date_text",
+        "from spina_app.utilities.formatting import _spina_dash__fmt_money",
         "from spina_app.features.dashboard import (",
         "_wave76_install_dashboard_feature(",
         MODERN_REMOVAL_BLOCK.splitlines()[0],
@@ -86,8 +101,17 @@ def validate_result(source: str) -> None:
 def main() -> None:
     source = APP.read_text(encoding="utf-8")
     if INSTALL_START in source:
-        validate_result(source)
-        print("Wave 76 full dashboard modularization already applied: changed=False")
+        updated = replace_marked_block(
+            source, INSTALL_START, INSTALL_END, INSTALL_BLOCK
+        )
+        validate_result(updated)
+        changed = updated != source
+        if changed:
+            APP.write_text(updated, encoding="utf-8")
+        print(
+            "Wave 76 full dashboard modularization already applied: "
+            f"changed={changed}"
+        )
         return
 
     source = replace_marked_block(source, CORE_START, CORE_END, INSTALL_BLOCK)
