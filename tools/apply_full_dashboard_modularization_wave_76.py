@@ -29,6 +29,9 @@ from spina_app.utilities.formatting import (
     _spina_v18_fmt_money_compact,
 )
 from spina_app.ui_helpers import _spina_v20_round_rect
+from spina_app.repositories.dashboard import (
+    fetch_dashboard_rows as _spina_dashboard_fetch_rows,
+)
 
 from spina_app.features.dashboard import (
     install_dashboard_feature as _wave76_install_dashboard_feature,
@@ -82,6 +85,7 @@ def validate_result(source: str) -> None:
         "_spina_dash__fmt_money,",
         "_spina_v18_fmt_money_compact,",
         "from spina_app.ui_helpers import _spina_v20_round_rect",
+        "fetch_dashboard_rows as _spina_dashboard_fetch_rows",
         "from spina_app.features.dashboard import (",
         "_wave76_install_dashboard_feature(",
         MODERN_REMOVAL_BLOCK.splitlines()[0],
