@@ -17746,27 +17746,12 @@ def generate_client_pdf(db, client_name, start_date, end_date, out_path, note_te
     _x7_interest_arrears_end = 0.0
 
     if is_7x7 and principal > 0:
-        # Daily interest is STEP-based from BALANCE principal (1..1000=7/day, 1001..2000=14/day, ...)
-        def _x7_daily_interest_for_balance(_bal):
-            """Return 7x7 daily interest for a given remaining/balance principal.
-            Rule: 1..1000 = 7/day, 1001..2000 = 14/day, etc.
-            """
-            try:
-                b = float(_bal or 0.0)
-            except Exception:
-                b = 0.0
-            if b <= 0:
-                return 0.0
-            try:
-                # ceil(b/1000) without importing math
-                units = int((b + 999.999999) // 1000)
-            except Exception:
-                units = 0
-            if units < 1:
-                units = 1
-            return float(units) * 7.0
+        # Daily interest is fixed from the recorded loan principal for the whole cycle.
+        # Paying principal lowers the balance but does not lower this daily-interest basis.
+        def _x7_daily_interest_for_principal(_loan_principal):
+            return float(_wave74_x7_daily_interest(_loan_principal))
 
-        _x7_daily_interest = round(_x7_daily_interest_for_balance(principal), 2)
+        _x7_daily_interest = round(_x7_daily_interest_for_principal(principal), 2)
         # Parse report window dates (safe)
         try:
             _r_start_dt = _dt_soapatch.strptime(str(start_date)[:10], "%Y-%m-%d").date()
@@ -17818,7 +17803,7 @@ def generate_client_pdf(db, client_name, start_date, end_date, out_path, note_te
                 if gap <= 0:
                     gap = 1
 
-                _di = float(_x7_daily_interest_for_balance(rem))
+                _di = float(_x7_daily_interest_for_principal(principal))
 
                 interest_due = (_di * float(gap)) + float(arrears)
                 interest_paid = min(float(amt), float(interest_due))
@@ -17862,9 +17847,9 @@ def generate_client_pdf(db, client_name, start_date, end_date, out_path, note_te
         # _x7_balance_principal is already computed above from _cycle_splits
         # using _cycle_start -> end_date, so leave it unchanged here.
 
-        # Keep daily interest display in-sync with the CURRENT balance bracket
+        # Keep daily interest display fixed to the recorded loan principal.
         try:
-            _x7_daily_interest = round(_x7_daily_interest_for_balance(_x7_balance_principal), 2)
+            _x7_daily_interest = round(_x7_daily_interest_for_principal(principal), 2)
         except Exception as __spina_exc:
             _log_suppressed_once('excpass_0600', 'suppressed exception excpass_0600', __spina_exc)
             pass
@@ -18251,7 +18236,7 @@ def generate_client_pdf(db, client_name, start_date, end_date, out_path, note_te
                     _wr_days = 0
 
             try:
-                _wr_di = round(max(0.0, float(_x7_daily_interest_for_balance(principal))), 2)
+                _wr_di = round(max(0.0, float(_x7_daily_interest_for_principal(principal))), 2)
             except Exception:
                 _wr_di = round(max(0.0, float(_x7_daily_interest or 0.0)), 2)
 
@@ -19696,7 +19681,7 @@ class RenewDialog(simpledialog.Dialog):
                 renew_dt = None
 
             try:
-                daily_interest = float(_x7_daily_interest_for_balance(principal))
+                daily_interest = float(_x7_daily_interest_for_principal(principal))
             except Exception:
                 daily_interest = 0.0
 
@@ -25454,6 +25439,17 @@ except Exception as __spina_exc:
 
 
 # --- BEGIN: Dashboard tab - finishing loans based on latest released date ---
+# Wave 74: shared calculation rules.
+from spina_app.calculation_rules import (
+    allocate_x7_payments as _wave74_allocate_x7_payments,
+    ceil_thousand_units as _wave74_ceil_thousand_units,
+    normalized_total_to_pay as _wave74_normalized_total_to_pay,
+    shift_due_date_for_renewal as _wave74_shift_due_date_for_renewal,
+    x7_daily_interest as _wave74_x7_daily_interest,
+)
+
+
+
 def _spina_dash__norm_lt(value):
     try:
         v = str(value or '').strip().lower().replace('×', 'x').replace(' ', '')
@@ -25598,11 +25594,12 @@ def _spina_dashboard_fetch_rows(self):
             area = str(_rv(r, 'area', 5, '') or '').strip()
             principal = _spina_dash__float(_rv(r, 'principal', 6, 0))
             interest = _spina_dash__float(_rv(r, 'interest_amount', 7, 0))
-            total_to_pay = _spina_dash__float(_rv(r, 'total_to_pay', 8, 0))
-            if total_to_pay <= 0 or (lt == 'Regular' and interest > 0 and abs(total_to_pay - principal) < 0.01):
-                total_to_pay = principal + interest
-            if lt == '7x7' and total_to_pay <= 0:
-                total_to_pay = principal
+            total_to_pay = _wave74_normalized_total_to_pay(
+                lt,
+                principal,
+                interest,
+                _spina_dash__float(_rv(r, 'total_to_pay', 8, 0)),
+            )
 
             base_release = _spina_dash__parse_date(_rv(r, 'date_released', 9, ''))
             original_due = _spina_dash__parse_date(_rv(r, 'due_date', 10, ''))
@@ -25620,15 +25617,10 @@ def _spina_dashboard_fetch_rows(self):
             off = 1 if off >= 1 else 0
             payment_start = latest_release + timedelta(days=off)
 
-            # Keep due date aligned with the latest release when renewals exist but due_date is stale.
-            due_date = original_due
-            if base_release and original_due and latest_release and latest_release > base_release:
-                try:
-                    cycle_days = (original_due - base_release).days
-                    if cycle_days > 0 and (due_date is None or due_date < latest_release):
-                        due_date = latest_release + timedelta(days=cycle_days)
-                except Exception:
-                    pass
+            # Preserve the original cycle length for every later renewal.
+            due_date = _wave74_shift_due_date_for_renewal(
+                base_release, original_due, latest_release
+            )
 
             days_left = None
             time_passed_pct = 0.0
@@ -25658,6 +25650,7 @@ def _spina_dashboard_fetch_rows(self):
                 'payment_start': payment_start,
                 'due_date': due_date,
                 'paid': 0.0,
+                '_x7_payments': [],
                 'completion_pct': 0.0,
                 'time_passed_pct': time_passed_pct,
                 'remaining': total_to_pay,
@@ -25716,7 +25709,10 @@ def _spina_dashboard_fetch_rows(self):
                         if rec is not None and tdate < rec.get('payment_start'):
                             rec = None
                     if rec is not None:
-                        rec['paid'] = float(rec.get('paid') or 0) + pay
+                        if _spina_dash__norm_lt(rec.get('loan_type')) == '7x7':
+                            rec.setdefault('_x7_payments', []).append((tdate, pay))
+                        else:
+                            rec['paid'] = float(rec.get('paid') or 0) + pay
                 except Exception:
                     continue
         except Exception as e:
@@ -25728,15 +25724,31 @@ def _spina_dashboard_fetch_rows(self):
     for rec in rows:
         try:
             total = float(rec.get('total_to_pay') or 0)
-            paid = float(rec.get('paid') or 0)
-            remaining = max(0.0, total - paid)
-            completion = (paid / total * 100.0) if total > 0 else 0.0
+            if _spina_dash__norm_lt(rec.get('loan_type')) == '7x7':
+                allocation = _wave74_allocate_x7_payments(
+                    rec.get('principal'),
+                    rec.get('payment_start'),
+                    rec.get('_x7_payments') or [],
+                    today,
+                )
+                paid = float(allocation.get('principal_paid') or 0.0)
+                remaining = float(allocation.get('remaining_principal') or 0.0)
+                completion = float(allocation.get('completion_pct') or 0.0)
+                rec['total_collected'] = float(allocation.get('total_collected') or 0.0)
+                rec['interest_paid'] = float(allocation.get('interest_paid') or 0.0)
+                rec['interest_arrears'] = float(allocation.get('interest_arrears') or 0.0)
+                rec['payoff_with_interest'] = float(allocation.get('payoff_with_interest') or 0.0)
+            else:
+                paid = float(rec.get('paid') or 0)
+                remaining = max(0.0, total - paid)
+                completion = (paid / total * 100.0) if total > 0 else 0.0
             status, priority = _spina_dash__status_for(completion, remaining, rec.get('days_left'))
             rec['paid'] = paid
             rec['remaining'] = remaining
             rec['completion_pct'] = completion
             rec['status'] = status
             rec['priority'] = priority
+            rec.pop('_x7_payments', None)
         except Exception:
             pass
 
@@ -26009,21 +26021,12 @@ def _spina_cashctl_get_average_collection(self, date_s, window_days=30):
 
 # --- BEGIN: Cash Control interest-aware renewal payoff helper ---
 def _spina_cashctl__ceil_thousand_units(_amount):
-    try:
-        b = float(_amount or 0.0)
-    except Exception:
-        b = 0.0
-    if b <= 0:
-        return 0
-    try:
-        return max(1, int((b + 999.999999) // 1000))
-    except Exception:
-        return 0
+    return _wave74_ceil_thousand_units(_amount)
 
 
 def _spina_cashctl__x7_daily_interest(_remaining_principal):
     """7x7 daily interest: 1..1000=7/day, 1001..2000=14/day, etc."""
-    return float(_spina_cashctl__ceil_thousand_units(_remaining_principal)) * 7.0
+    return _wave74_x7_daily_interest(_remaining_principal)
 
 
 def _spina_cashctl_estimated_payoff_with_interest(self, rec, as_of_date=None):
@@ -26109,42 +26112,10 @@ def _spina_cashctl_estimated_payoff_with_interest(self, rec, as_of_date=None):
     except Exception:
         payments = []
 
-    remaining_principal = float(principal)
-    interest_arrears = 0.0
-    prev_dt = start_dt - timedelta(days=1)
-
-    for pay_dt, amount in payments:
-        if pay_dt < start_dt:
-            continue
-        if pay_dt > end_dt:
-            break
-        try:
-            gap = (pay_dt - prev_dt).days
-        except Exception:
-            gap = 1
-        if gap <= 0:
-            gap = 1
-        daily_interest = _spina_cashctl__x7_daily_interest(remaining_principal)
-        interest_due = (daily_interest * float(gap)) + float(interest_arrears)
-        interest_paid = min(float(amount), float(interest_due))
-        principal_paid = max(0.0, float(amount) - float(interest_paid))
-        remaining_principal = max(0.0, float(remaining_principal) - float(principal_paid))
-        interest_arrears = max(0.0, float(interest_due) - float(interest_paid))
-        prev_dt = pay_dt
-        if remaining_principal <= 0.004 and interest_arrears <= 0.004:
-            remaining_principal = 0.0
-            interest_arrears = 0.0
-            break
-
-    if remaining_principal > 0:
-        try:
-            tail_gap = (end_dt - prev_dt).days
-        except Exception:
-            tail_gap = 0
-        if tail_gap > 0:
-            interest_arrears += _spina_cashctl__x7_daily_interest(remaining_principal) * float(tail_gap)
-
-    return round(max(0.0, float(remaining_principal) + float(interest_arrears)), 2)
+    allocation = _wave74_allocate_x7_payments(
+        principal, start_dt, payments, end_dt
+    )
+    return round(float(allocation.get('payoff_with_interest') or 0.0), 2)
 # --- END: Cash Control interest-aware renewal payoff helper ---
 
 def _spina_cashctl_reserve_rows(self, forecast_days=14):
@@ -27443,7 +27414,7 @@ def _spina_route_balance_like_generate_report(app, client_name, loan_type, asof_
                 gap = 1
             if gap <= 0:
                 gap = 1
-            interest_due = (_x7_daily_interest_for_balance(rem) * float(gap)) + float(arrears)
+            interest_due = (_x7_daily_interest_for_principal(principal) * float(gap)) + float(arrears)
             interest_paid = min(float(amt or 0.0), float(interest_due))
             principal_pay_raw = max(0.0, float(amt or 0.0) - float(interest_paid))
             apply_p = min(principal_pay_raw, rem) if rem > 0 else 0.0
