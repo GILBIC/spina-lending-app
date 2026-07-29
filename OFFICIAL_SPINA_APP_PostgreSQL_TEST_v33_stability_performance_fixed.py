@@ -25439,6 +25439,23 @@ except Exception as __spina_exc:
 
 
 # --- BEGIN: Dashboard feature installer Wave 76 ---
+# Shared helpers remain available to non-Dashboard features that historically
+# received them from the old Dashboard blocks.
+from spina_app.calculation_rules import (
+    allocate_x7_payments as _wave74_allocate_x7_payments,
+    ceil_thousand_units as _wave74_ceil_thousand_units,
+    x7_daily_interest as _wave74_x7_daily_interest,
+)
+from spina_app.utilities.dates import _spina_dash__date_text
+from spina_app.utilities.formatting import (
+    _spina_dash__fmt_money,
+    _spina_v18_fmt_money_compact,
+)
+from spina_app.ui_helpers import _spina_v20_round_rect
+from spina_app.repositories.dashboard import (
+    fetch_dashboard_rows as _spina_dashboard_fetch_rows,
+)
+
 from spina_app.features.dashboard import (
     install_dashboard_feature as _wave76_install_dashboard_feature,
 )
