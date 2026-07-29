@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import sqlite3
+import sys
 from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
@@ -187,9 +188,18 @@ def test_feature_installer() -> None:
     assert DummyApp.refresh_dashboard.__name__ == "_spina_v20_refresh_dashboard"
     assert DummyApp._populate_dashboard_tree.__name__ == "_spina_v20_populate_dashboard_tree"
     assert DummyApp._dashboard_visible_rows.__name__ == "_spina_v19_visible_dashboard_rows"
+
+    app_module = sys.modules[DummyApp.__module__]
+    normalizer = getattr(app_module, "_spina_dash__norm_lt")
+    assert normalizer("Emer") == "7x7"
+    assert normalizer("Emergency") == "7x7"
+    assert normalizer("7x7emer") == "7x7"
+    assert normalizer("Regular") == "Regular"
+
     first_init = DummyApp.__init__
     assert install_dashboard_feature(DummyApp)
     assert DummyApp.__init__ is first_init
+    assert getattr(app_module, "_spina_dash__norm_lt") is normalizer
 
 
 def test_static_extraction() -> None:
@@ -227,6 +237,7 @@ def test_static_extraction() -> None:
         "configure_legacy_dashboard_feature(",
         "app_class._build_dashboard_tab = _spina_v17_build_dashboard_tab",
         "app_class.refresh_dashboard = _spina_v20_refresh_dashboard",
+        'setattr(app_module, "_spina_dash__norm_lt", normalize_loan_type)',
     )
     for token in required_feature:
         assert token in feature_source, token
