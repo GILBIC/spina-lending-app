@@ -1,6 +1,13 @@
 name: Inspect Whole Function Wave 72
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "tools/inspect_whole_function_wave_72.py"
+      - ".github/workflows/inspect-whole-function-wave-72.yml"
   push:
     branches:
       - agent/high-volume-wave-72
@@ -31,6 +38,7 @@ jobs:
         run: python tools/inspect_whole_function_wave_72.py
 
       - name: Commit reviewed boundary metadata
+        if: github.event_name != 'pull_request'
         shell: powershell
         run: |
           git config user.name "github-actions[bot]"
