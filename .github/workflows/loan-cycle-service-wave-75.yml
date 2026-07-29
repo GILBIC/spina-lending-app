@@ -10,6 +10,7 @@ on:
       - "tools/apply_loan_cycle_service_wave_75.py"
       - "tools/test_loan_cycle_service_wave_75.py"
       - "tools/test_calculation_regressions_wave_74.py"
+      - "tools/test_wave74_compat_under_wave75.py"
       - ".github/workflows/loan-cycle-service-wave-75.yml"
   workflow_dispatch:
 
@@ -35,6 +36,7 @@ jobs:
           python -m py_compile spina_app\services\loan_cycles.py
           python -m py_compile tools\apply_loan_cycle_service_wave_75.py
           python -m py_compile tools\test_loan_cycle_service_wave_75.py
+          python -m py_compile tools\test_wave74_compat_under_wave75.py
 
       - name: Apply guarded loan cycle wiring
         shell: cmd
@@ -50,9 +52,9 @@ jobs:
         shell: cmd
         run: set "PYTHONPATH=%CD%" && python tools\test_loan_cycle_service_wave_75.py
 
-      - name: Run Wave 74 calculation regressions
+      - name: Run Wave 74 compatibility regressions
         shell: cmd
-        run: set "PYTHONPATH=%CD%" && python tools\test_calculation_regressions_wave_74.py
+        run: set "PYTHONPATH=%CD%" && python tools\test_wave74_compat_under_wave75.py
 
       - name: Run existing dashboard regression when available
         shell: cmd
