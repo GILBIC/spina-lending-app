@@ -154,15 +154,10 @@ def apply(source: str) -> tuple[str, str]:
     updated = _replace_once(updated, WAVE64_BLOCK, INSTALL_BLOCK, "Wave 64")
     updated = _replace_once(updated, WAVE67_BLOCK, "", "Wave 67")
 
-    required_main = (
-        INSTALL_START,
-        "install_reports_feature as _wave80_install_reports_feature",
-        "namespace=globals()",
-        INSTALL_END,
-    )
-    for token in required_main:
-        if updated.count(token) != 1:
-            raise AssertionError(f"Wave 80 installer token mismatch: {token!r}")
+    if updated.count(INSTALL_START) != 1 or updated.count(INSTALL_END) != 1:
+        raise AssertionError("Wave 80 installer markers are not unique")
+    if INSTALL_BLOCK not in updated:
+        raise AssertionError("Exact Wave 80 installer block was not inserted")
 
     forbidden_main = (
         ENGINE_START,
@@ -196,7 +191,6 @@ def apply(source: str) -> tuple[str, str]:
 def main() -> None:
     source = APP_PATH.read_text(encoding="utf-8")
     updated, engine = apply(source)
-    # Prove the application transformation is idempotent before writing.
     APP_PATH.write_text(updated, encoding="utf-8")
     ENGINE_PATH.write_text(engine, encoding="utf-8")
     second_updated, second_engine = apply(updated)
