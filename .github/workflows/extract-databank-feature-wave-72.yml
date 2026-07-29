@@ -61,7 +61,7 @@ jobs:
         run: python tools\inspect_databank_feature_wave_72.py
 
       - name: Generate module and remove exact desktop roots
-        run: python tools\extract_databank_feature_wave_72_v2.py
+        run: python -m tools.extract_databank_feature_wave_72_v2
 
       - name: Compile cleaned application and Data Bank modules
         run: |
