@@ -112,9 +112,11 @@ jobs:
         shell: cmd
         run: git diff --check
 
-      - name: Upload inspection report
+      - name: Upload generated Cash Control validation artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cash-control-wave-77-inspection
-          path: artifacts/cash_control_wave_77_inspection.json
+          name: cash-control-wave-77-generated
+          path: |
+            artifacts/cash_control_wave_77_inspection.json
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
           if-no-files-found: error
