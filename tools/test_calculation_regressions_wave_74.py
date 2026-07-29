@@ -13,6 +13,7 @@ from types import SimpleNamespace
 ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 SERVICE_PATH = ROOT / "spina_app" / "services" / "loan_cycles.py"
+REPORT_ENGINE_PATH = ROOT / "spina_app" / "report_engine.py"
 
 from spina_app.calculation_rules import (  # noqa: E402
     allocate_x7_payments,
@@ -81,7 +82,6 @@ def test_pure_rules() -> None:
     close(interest_only["interest_arrears"], 15)
     close(interest_only["payoff_with_interest"], 5015)
 
-    # Data Bank allows one effective payment per day; the latest positive value wins.
     same_day = allocate_x7_payments(
         5000,
         "2026-01-01",
@@ -195,7 +195,6 @@ def build_dashboard_db() -> sqlite3.Connection:
         "INSERT INTO renewals (client_uid, loan_type, renew_date) VALUES (?,?,?)",
         ("REG-1", "Regular", "2026-02-01"),
     )
-    # Old-cycle Regular payment must be ignored; current-cycle payment is counted.
     conn.execute(
         "INSERT INTO transactions (client_uid,name,loan_type,date,payment) VALUES (?,?,?,?,?)",
         ("REG-1", "Regular Test", "Regular", "2026-01-20", 1000),
@@ -237,8 +236,6 @@ def test_dashboard_integration(app_source: str) -> None:
     assert regular["due_date"] == date(2026, 6, 1), regular["due_date"]
 
     seven = by_uid["X7-1"]
-    # Each 100 payment pays 35 interest and 65 principal while the balance remains
-    # in the 5-thousand bracket. Total collected is not the principal-paid amount.
     close(seven["total_collected"], 200)
     close(seven["interest_paid"], 70)
     close(seven["paid"], 130)
@@ -271,7 +268,10 @@ def test_adv_and_pass_inputs(app_source: str) -> None:
         adv_strip.sub("", str(desc or "")).strip(),
         "",
     )
-    collect = extract_function(app_source, "_collect_day_flags_for_month", ns)
+    report_source = app_source
+    if "def _collect_day_flags_for_month(" not in report_source and REPORT_ENGINE_PATH.exists():
+        report_source = REPORT_ENGINE_PATH.read_text(encoding="utf-8")
+    collect = extract_function(report_source, "_collect_day_flags_for_month", ns)
 
     assert parser("[ADV:2026-07-02,2026-07-03,2026-07-05]") == [
         ("2026-07-02", "2026-07-03"),
@@ -293,8 +293,8 @@ def test_adv_and_pass_inputs(app_source: str) -> None:
     assert flags[date(2026, 7, 2)]["adv"] is True
     assert flags[date(2026, 7, 3)]["adv"] is True
     assert flags[date(2026, 7, 2)]["adv_paid_on"] == {"2026-07-01"}
-    assert date(2026, 7, 4) not in flags  # blank and uncovered: PASS candidate
-    assert flags[date(2026, 7, 6)]["paid"] == 150  # latest non-zero wins
+    assert date(2026, 7, 4) not in flags
+    assert flags[date(2026, 7, 6)]["paid"] == 150
 
 
 def test_static_wiring(app_source: str) -> None:
@@ -318,6 +318,12 @@ def test_static_wiring(app_source: str) -> None:
     ]
     for token in required_service:
         assert token in service_source, token
+
+    if "# --- BEGIN: Reports feature installer Wave 80 ---" in app_source:
+        report_source = REPORT_ENGINE_PATH.read_text(encoding="utf-8")
+        assert "def _collect_day_flags_for_month(" in report_source
+        assert "def generate_client_pdf(" in report_source
+        assert "_wave74_x7_daily_interest" in report_source
 
     assert "if cycle_days > 0 and (due_date is None or due_date < latest_release)" not in app_source
 
