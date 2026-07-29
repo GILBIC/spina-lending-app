@@ -6,13 +6,17 @@ on:
       - main
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/databank_feature.py"
       - "tools/inspect_databank_feature_wave_72.py"
+      - "tools/test_databank_feature_wave_72.py"
       - ".github/workflows/inspect-databank-feature-wave-72.yml"
   push:
     branches:
       - agent/high-volume-wave-72
     paths:
+      - "spina_app/databank_feature.py"
       - "tools/inspect_databank_feature_wave_72.py"
+      - "tools/test_databank_feature_wave_72.py"
       - ".github/workflows/inspect-databank-feature-wave-72.yml"
   workflow_dispatch:
 
@@ -39,13 +43,21 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Compile exact Data Bank inspector
-        run: python -m py_compile tools\inspect_databank_feature_wave_72.py
+      - name: Compile Wave 72 inspection guards
+        run: |
+          python -m py_compile tools\inspect_databank_feature_wave_72.py
+          python -m py_compile tools\test_databank_feature_wave_72.py
 
-      - name: Inspect and export complete Data Bank functions
+      - name: Inspect and export pre-extraction Data Bank functions
+        if: ${{ hashFiles('spina_app/databank_feature.py') == '' }}
         run: python tools\inspect_databank_feature_wave_72.py
 
+      - name: Validate the committed extracted Data Bank feature
+        if: ${{ hashFiles('spina_app/databank_feature.py') != '' }}
+        run: python -m tools.test_databank_feature_wave_72
+
       - name: Upload exact Data Bank inventory
+        if: ${{ hashFiles('wave72_databank_exact_inventory.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: wave72-databank-exact-inventory
