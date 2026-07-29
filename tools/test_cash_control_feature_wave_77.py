@@ -11,6 +11,15 @@ APP_PATH = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_
 FEATURE_PATH = ROOT / "spina_app" / "features" / "cash_control.py"
 TAB_PATH = ROOT / "spina_app" / "tabs" / "cash_control.py"
 
+LEGACY_START = (
+    "# --- BEGIN: Cash Control tab - percent buffer + net renewal cash forecast + "
+    "separated current/forecast safe amounts ---"
+)
+MODERN_START = (
+    "# --- BEGIN: v21 Modern Cash Control UI with graphs, labels, and explanation ---"
+)
+INSTALL_START = "# --- BEGIN: Cash Control feature installer Wave 77 ---"
+
 
 def test_installer_idempotence() -> None:
     class DummyApp:
@@ -55,13 +64,13 @@ def test_static_compatibility() -> None:
     assert "_spina_v21_cash_build_tab" in tab_source
     assert "_spina_v21_cash_draw_charts" in tab_source
 
-    # Production is intentionally unchanged until generated extraction validation passes.
-    assert app_source.count(
-        "# --- BEGIN: Cash Control tab - percent buffer + net renewal cash forecast + separated current/forecast safe amounts ---"
-    ) == 1
-    assert app_source.count(
-        "# --- BEGIN: v21 Modern Cash Control UI with graphs, labels, and explanation ---"
-    ) == 1
+    staged = app_source.count(LEGACY_START) == 1 and app_source.count(MODERN_START) == 1
+    extracted = (
+        app_source.count(INSTALL_START) == 1
+        and LEGACY_START not in app_source
+        and MODERN_START not in app_source
+    )
+    assert staged or extracted
 
 
 def main() -> None:
