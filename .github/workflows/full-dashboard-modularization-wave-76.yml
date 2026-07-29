@@ -14,6 +14,7 @@ on:
       - "tools/apply_full_dashboard_modularization_wave_76.py"
       - "tools/test_full_dashboard_modularization_wave_76.py"
       - "tools/test_wave28_compat_under_wave76.py"
+      - "tools/test_wave51_compat_under_wave76.py"
       - "tools/test_wave74_compat_under_wave76.py"
       - "tools/test_wave75_compat_under_wave76.py"
       - ".github/workflows/full-dashboard-modularization-wave-76.yml"
@@ -46,6 +47,7 @@ jobs:
           python -m py_compile tools\apply_full_dashboard_modularization_wave_76.py
           python -m py_compile tools\test_full_dashboard_modularization_wave_76.py
           python -m py_compile tools\test_wave28_compat_under_wave76.py
+          python -m py_compile tools\test_wave51_compat_under_wave76.py
           python -m py_compile tools\test_wave74_compat_under_wave76.py
           python -m py_compile tools\test_wave75_compat_under_wave76.py
 
@@ -75,9 +77,9 @@ jobs:
         shell: cmd
         run: set "PYTHONPATH=%CD%" && python tools\test_wave28_compat_under_wave76.py
 
-      - name: Run Dashboard chart regression when available
+      - name: Run Wave 51 chart compatibility
         shell: cmd
-        run: if exist tools\test_dashboard_chart_presentation_wave_51.py set "PYTHONPATH=%CD%" && python tools\test_dashboard_chart_presentation_wave_51.py
+        run: set "PYTHONPATH=%CD%" && python tools\test_wave51_compat_under_wave76.py
 
       - name: Check generated diff
         shell: cmd
