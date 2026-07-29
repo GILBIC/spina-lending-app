@@ -116,7 +116,7 @@ def main() -> None:
         ".LoanDB.delete_transaction": "payments",
         ".App._postgres_cfg": "database",
         "._side_nav_items": "navigation",
-        ".App._build_data_tab": "data_bank",
+        "._spina_v15_build_data_tab": "data_bank",
         "._adv_paid_on_dates_covering": "payments",
         ".App._access_prefs_path": "authentication",
         ".App._show_conflicts": "collectors",
