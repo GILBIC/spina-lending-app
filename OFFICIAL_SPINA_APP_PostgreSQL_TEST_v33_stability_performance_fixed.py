@@ -25448,6 +25448,13 @@ from spina_app.calculation_rules import (
     x7_daily_interest as _wave74_x7_daily_interest,
 )
 
+# Wave 75: reusable loan-cycle timing and finalization service.
+from spina_app.services.loan_cycles import (
+    build_cycle_timing as _wave75_build_cycle_timing,
+    cycle_sort_key as _wave75_cycle_sort_key,
+    finalize_cycle_record as _wave75_finalize_cycle_record,
+)
+
 
 
 def _spina_dash__norm_lt(value):
@@ -25601,40 +25608,20 @@ def _spina_dashboard_fetch_rows(self):
                 _spina_dash__float(_rv(r, 'total_to_pay', 8, 0)),
             )
 
-            base_release = _spina_dash__parse_date(_rv(r, 'date_released', 9, ''))
-            original_due = _spina_dash__parse_date(_rv(r, 'due_date', 10, ''))
             latest_renew = renew_latest.get((uid, lt)) if uid else None
-            latest_release = base_release
-            if latest_renew and (latest_release is None or latest_renew > latest_release):
-                latest_release = latest_renew
-            if latest_release is None:
-                latest_release = base_release or today
-
-            try:
-                off = int(_rv(r, 'pay_start_offset_days', 12, 1) or 0)
-            except Exception:
-                off = 1
-            off = 1 if off >= 1 else 0
-            payment_start = latest_release + timedelta(days=off)
-
-            # Preserve the original cycle length for every later renewal.
-            due_date = _wave74_shift_due_date_for_renewal(
-                base_release, original_due, latest_release
+            timing = _wave75_build_cycle_timing(
+                _rv(r, 'date_released', 9, ''),
+                _rv(r, 'due_date', 10, ''),
+                latest_renew,
+                _rv(r, 'pay_start_offset_days', 12, 1),
+                today,
             )
-
-            days_left = None
-            time_passed_pct = 0.0
-            if due_date:
-                try:
-                    days_left = (due_date - today).days
-                except Exception:
-                    days_left = None
-                try:
-                    cycle_days = max(1, (due_date - payment_start).days)
-                    elapsed = max(0, (today - payment_start).days)
-                    time_passed_pct = min(999.0, (elapsed / cycle_days) * 100.0)
-                except Exception:
-                    time_passed_pct = 0.0
+            base_release = timing.get('date_released')
+            latest_release = timing.get('latest_released')
+            payment_start = timing.get('payment_start')
+            due_date = timing.get('due_date')
+            days_left = timing.get('days_left')
+            time_passed_pct = timing.get('time_passed_pct', 0.0)
 
             rec = {
                 'client_uid': uid,
@@ -25721,38 +25708,19 @@ def _spina_dashboard_fetch_rows(self):
             except Exception:
                 pass
 
+    finalized_rows = []
     for rec in rows:
         try:
-            total = float(rec.get('total_to_pay') or 0)
-            if _spina_dash__norm_lt(rec.get('loan_type')) == '7x7':
-                allocation = _wave74_allocate_x7_payments(
-                    rec.get('principal'),
-                    rec.get('payment_start'),
-                    rec.get('_x7_payments') or [],
-                    today,
-                )
-                paid = float(allocation.get('principal_paid') or 0.0)
-                remaining = float(allocation.get('remaining_principal') or 0.0)
-                completion = float(allocation.get('completion_pct') or 0.0)
-                rec['total_collected'] = float(allocation.get('total_collected') or 0.0)
-                rec['interest_paid'] = float(allocation.get('interest_paid') or 0.0)
-                rec['interest_arrears'] = float(allocation.get('interest_arrears') or 0.0)
-                rec['payoff_with_interest'] = float(allocation.get('payoff_with_interest') or 0.0)
-            else:
-                paid = float(rec.get('paid') or 0)
-                remaining = max(0.0, total - paid)
-                completion = (paid / total * 100.0) if total > 0 else 0.0
-            status, priority = _spina_dash__status_for(completion, remaining, rec.get('days_left'))
-            rec['paid'] = paid
-            rec['remaining'] = remaining
-            rec['completion_pct'] = completion
-            rec['status'] = status
-            rec['priority'] = priority
-            rec.pop('_x7_payments', None)
+            finalized_rows.append(_wave75_finalize_cycle_record(rec, today))
         except Exception:
-            pass
+            try:
+                rec.pop('_x7_payments', None)
+            except Exception:
+                pass
+            finalized_rows.append(rec)
+    rows = finalized_rows
 
-    rows.sort(key=lambda x: (x.get('priority', 99), -float(x.get('principal') or 0), -float(x.get('completion_pct') or 0), str(x.get('name') or '')))
+    rows.sort(key=_wave75_cycle_sort_key)
     return rows
 
 

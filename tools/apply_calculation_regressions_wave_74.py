@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 MARKER = "# --- BEGIN: Dashboard tab - finishing loans based on latest released date ---"
 IMPORT_MARKER = "# Wave 74: shared calculation rules."
+WAVE75_TIMING_CALL = "_wave75_build_cycle_timing("
+WAVE75_FINALIZER_CALL = "_wave75_finalize_cycle_record("
 IMPORT_BLOCK = '''# Wave 74: shared calculation rules.
 from spina_app.calculation_rules import (
     allocate_x7_payments as _wave74_allocate_x7_payments,
@@ -76,9 +78,13 @@ def patch(source: str) -> str:
         "normalized total-to-pay",
     )
 
-    source = replace_once(
-        source,
-        '''            # Keep due date aligned with the latest release when renewals exist but due_date is stale.
+    # Wave 75 owns cycle timing. Keep the Wave 74 patcher idempotent when that
+    # service delegation is already installed instead of searching for removed
+    # inline due-date code.
+    if WAVE75_TIMING_CALL not in source:
+        source = replace_once(
+            source,
+            '''            # Keep due date aligned with the latest release when renewals exist but due_date is stale.
             due_date = original_due
             if base_release and original_due and latest_release and latest_release > base_release:
                 try:
@@ -88,13 +94,13 @@ def patch(source: str) -> str:
                 except Exception:
                     pass
 ''',
-        '''            # Preserve the original cycle length for every later renewal.
+            '''            # Preserve the original cycle length for every later renewal.
             due_date = _wave74_shift_due_date_for_renewal(
                 base_release, original_due, latest_release
             )
 ''',
-        "renewal due date",
-    )
+            "renewal due date",
+        )
 
     source = replace_once(
         source,
@@ -117,9 +123,12 @@ def patch(source: str) -> str:
         "transaction allocation",
     )
 
-    source = replace_once(
-        source,
-        '''    for rec in rows:
+    # Wave 75 owns record finalization. The remaining Wave 74 wiring still
+    # applies to older foundations, while newer foundations delegate safely.
+    if WAVE75_FINALIZER_CALL not in source:
+        source = replace_once(
+            source,
+            '''    for rec in rows:
         try:
             total = float(rec.get('total_to_pay') or 0)
             paid = float(rec.get('paid') or 0)
@@ -134,7 +143,7 @@ def patch(source: str) -> str:
         except Exception:
             pass
 ''',
-        '''    for rec in rows:
+            '''    for rec in rows:
         try:
             total = float(rec.get('total_to_pay') or 0)
             if _spina_dash__norm_lt(rec.get('loan_type')) == '7x7':
@@ -165,8 +174,8 @@ def patch(source: str) -> str:
         except Exception:
             pass
 ''',
-        "dashboard final calculation",
-    )
+            "dashboard final calculation",
+        )
 
     source = replace_top_level_function(
         source,

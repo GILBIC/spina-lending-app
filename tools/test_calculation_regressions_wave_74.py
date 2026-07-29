@@ -12,6 +12,7 @@ from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+SERVICE_PATH = ROOT / "spina_app" / "services" / "loan_cycles.py"
 
 from spina_app.calculation_rules import (  # noqa: E402
     allocate_x7_payments,
@@ -19,6 +20,11 @@ from spina_app.calculation_rules import (  # noqa: E402
     normalized_total_to_pay,
     shift_due_date_for_renewal,
     x7_daily_interest,
+)
+from spina_app.services.loan_cycles import (  # noqa: E402
+    build_cycle_timing,
+    cycle_sort_key,
+    finalize_cycle_record,
 )
 
 
@@ -124,6 +130,9 @@ def dashboard_namespace() -> dict:
         "_wave74_allocate_x7_payments": allocate_x7_payments,
         "_wave74_normalized_total_to_pay": normalized_total_to_pay,
         "_wave74_shift_due_date_for_renewal": shift_due_date_for_renewal,
+        "_wave75_build_cycle_timing": build_cycle_timing,
+        "_wave75_finalize_cycle_record": finalize_cycle_record,
+        "_wave75_cycle_sort_key": cycle_sort_key,
     }
 
 
@@ -289,17 +298,27 @@ def test_adv_and_pass_inputs(app_source: str) -> None:
 
 
 def test_static_wiring(app_source: str) -> None:
-    required = [
+    required_app = [
         "# Wave 74: shared calculation rules.",
         "_wave74_normalized_total_to_pay(",
-        "_wave74_shift_due_date_for_renewal(",
-        "_wave74_allocate_x7_payments(",
-        "rec['total_collected']",
-        "rec['interest_paid']",
-        "rec['interest_arrears']",
+        "_wave75_build_cycle_timing(",
+        "_wave75_finalize_cycle_record(",
+        "rows.sort(key=_wave75_cycle_sort_key)",
     ]
-    for token in required:
+    for token in required_app:
         assert token in app_source, token
+
+    service_source = SERVICE_PATH.read_text(encoding="utf-8")
+    required_service = [
+        "shift_due_date_for_renewal(",
+        "allocate_x7_payments(",
+        'rec["total_collected"]',
+        'rec["interest_paid"]',
+        'rec["interest_arrears"]',
+    ]
+    for token in required_service:
+        assert token in service_source, token
+
     assert "if cycle_days > 0 and (due_date is None or due_date < latest_release)" not in app_source
 
 
