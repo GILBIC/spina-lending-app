@@ -16,5 +16,8 @@ spec.loader.exec_module(implementation)
 # the active modern builder from spina_app.collector_tab_presentation.
 implementation.CLASS_METHODS.discard("_build_collectors_tab")
 
+# The final same-format closed-route adapter predates the route helper naming prefix.
+implementation.REPORT_EXPLICIT.add("_spina_save_closed_collector_route_copy_same_format")
+
 if __name__ == "__main__":
     implementation.main()
