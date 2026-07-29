@@ -1,0 +1,53 @@
+name: Clients modularization Wave 81
+
+on:
+  pull_request:
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/**/client*.py"
+      - "spina_app/tabs/clients.py"
+      - "spina_app/features/clients.py"
+      - "tools/*clients*wave_81.py"
+      - "docs/clients-modularization-wave-81.md"
+      - ".github/workflows/clients-modularization-wave-81.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: clients-wave-81-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    if: >-
+      github.actor == github.repository_owner &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.user.login == github.repository_owner))
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out exact Wave 81 head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Compile inventory tool
+        shell: cmd
+        run: python -m py_compile tools\inspect_clients_modularization_wave_81.py
+
+      - name: Inventory active Clients runtime
+        shell: cmd
+        run: python tools\inspect_clients_modularization_wave_81.py
+
+      - name: Upload Clients inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: clients-wave81-inventory
+          path: clients-wave81-inventory.json
+          if-no-files-found: error
