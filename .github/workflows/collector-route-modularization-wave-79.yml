@@ -1,0 +1,202 @@
+name: Collector Route modularization Wave 79
+
+on:
+  pull_request:
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/collector_route_controller.py"
+      - "spina_app/collector_route_report.py"
+      - "spina_app/features/collector_route.py"
+      - "spina_app/repositories/collector_route.py"
+      - "spina_app/services/collector_route.py"
+      - "spina_app/collector_refresh_presentation.py"
+      - "spina_app/collector_tab_presentation.py"
+      - "spina_app/collector_dialog_presentation.py"
+      - "spina_app/tabs/collector_route.py"
+      - "spina_app/tabs/collectors.py"
+      - "tools/apply_collector_route_modularization_wave_79.py"
+      - "tools/test_collector_route_layers_wave_79.py"
+      - "tools/test_collector_route_feature_wave_79.py"
+      - "tools/test_collector_route_extraction_wave_79.py"
+      - "docs/collector-route-modularization-wave-79.md"
+      - ".github/workflows/collector-route-modularization-wave-79.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: collector-route-wave-79-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: validate
+    if: >-
+      github.actor == github.repository_owner &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.user.login == github.repository_owner))
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      wave79: ${{ steps.architecture.outputs.wave79 }}
+
+    steps:
+      - name: Check out exact Wave 79 head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect committed Collector Route architecture
+        id: architecture
+        shell: cmd
+        run: |
+          python -c "import os; from pathlib import Path; source=Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py').read_text(encoding='utf-8'); value='true' if '# --- BEGIN: Collector Route feature installer Wave 79 ---' in source else 'false'; open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8').write(f'wave79={value}\n'); print(f'Wave 79 architecture detected: {value}')"
+
+      - name: Compile staged layers, generator, and current app
+        shell: cmd
+        run: |
+          python -m py_compile spina_app\repositories\collector_route.py
+          python -m py_compile spina_app\services\collector_route.py
+          python -m py_compile tools\apply_collector_route_modularization_wave_79.py
+          python -m py_compile tools\test_collector_route_layers_wave_79.py
+          python -m py_compile tools\test_collector_route_feature_wave_79.py
+          python -m py_compile tools\test_collector_route_extraction_wave_79.py
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+
+      - name: Run Collector Route repository and service regressions
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_collector_route_layers_wave_79.py
+
+      - name: Confirm committed source is clean before generation
+        if: steps.architecture.outputs.wave79 != 'true'
+        shell: cmd
+        run: git diff --exit-code -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+
+      - name: Apply guarded Collector Route extraction twice
+        if: steps.architecture.outputs.wave79 != 'true'
+        shell: cmd
+        run: |
+          python tools\apply_collector_route_modularization_wave_79.py
+          python tools\apply_collector_route_modularization_wave_79.py
+
+      - name: Compile generated Collector Route architecture
+        shell: cmd
+        run: |
+          python -m py_compile spina_app\collector_route_controller.py
+          python -m py_compile spina_app\collector_route_report.py
+          python -m py_compile spina_app\features\collector_route.py
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+
+      - name: Run Collector Route extraction regression
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_collector_route_extraction_wave_79.py
+
+      - name: Run Collector Route installer regression
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_collector_route_feature_wave_79.py
+
+      - name: Run protected Collector Route regressions
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_collectors_editor_wave_26.py
+          set "PYTHONPATH=%CD%" && python tools\test_collector_refresh_presentation_wave_39.py
+          set "PYTHONPATH=%CD%" && python tools\test_collector_tab_presentation_wave_44.py
+          set "PYTHONPATH=%CD%" && python tools\test_collector_tab_widget_smoke_wave_44.py
+          set "PYTHONPATH=%CD%" && python tools\test_legacy_collector_cleanup_wave_52.py
+
+      - name: Run Client Info Logs Wave 78 regressions
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_client_info_logs_layers_wave_78.py
+          set "PYTHONPATH=%CD%" && python tools\test_client_info_logs_feature_wave_78.py
+          set "PYTHONPATH=%CD%" && python tools\test_client_info_logs_extraction_wave_78.py
+
+      - name: Run Cash Control Wave 77 regressions
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_cash_control_layers_wave_77.py
+          set "PYTHONPATH=%CD%" && python tools\test_cash_control_feature_wave_77.py
+          set "PYTHONPATH=%CD%" && python tools\test_cash_control_extraction_wave_77.py
+
+      - name: Run Dashboard Wave 76 compatibility
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_full_dashboard_modularization_wave_76.py
+
+      - name: Run Wave 75 compatibility
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_wave75_compat_under_wave76.py
+
+      - name: Run Wave 74 compatibility
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_wave74_compat_under_wave76.py
+
+      - name: Check generated or committed tree
+        shell: cmd
+        run: git diff --check
+
+      - name: Upload validated Wave 79 architecture
+        if: steps.architecture.outputs.wave79 != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: collector-route-wave-79-generated
+          path: |
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+            spina_app/collector_route_controller.py
+            spina_app/collector_route_report.py
+            spina_app/features/collector_route.py
+          if-no-files-found: error
+
+  publish-generated:
+    name: publish-generated
+    needs: validate
+    if: >-
+      github.event_name == 'pull_request' &&
+      needs.validate.result == 'success' &&
+      needs.validate.outputs.wave79 != 'true' &&
+      github.actor == github.repository_owner &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out exact validated head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Download validated generated architecture
+        uses: actions/download-artifact@v4
+        with:
+          name: collector-route-wave-79-generated
+          path: generated-wave79
+
+      - name: Verify artifact and restrict publish scope
+        shell: cmd
+        run: |
+          python -c "from pathlib import Path; root=Path('generated-wave79'); app=Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py'); files=[app,Path('spina_app/collector_route_controller.py'),Path('spina_app/collector_route_report.py'),Path('spina_app/features/collector_route.py')]; [target.parent.mkdir(parents=True, exist_ok=True) for target in files]; [target.write_bytes((root/target).read_bytes()) for target in files]; source=app.read_text(encoding='utf-8'); assert source.count('# --- BEGIN: Collector Route feature installer Wave 79 ---') == 1; assert '# --- BEGIN: v27 Modern Collector Route Overview + Better Route Editor ---' not in source"
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\collector_route_controller.py
+          python -m py_compile spina_app\collector_route_report.py
+          python -m py_compile spina_app\features\collector_route.py
+          git diff --check
+          python -c "import subprocess; allowed={'OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py','spina_app/collector_route_controller.py','spina_app/collector_route_report.py','spina_app/features/collector_route.py'}; rows=subprocess.check_output(['git','status','--porcelain'], text=True).splitlines(); changed={row[3:].replace(chr(92),'/') for row in rows}; assert changed == allowed, (changed, allowed)"
+
+      - name: Commit validated production wiring
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app\collector_route_controller.py spina_app\collector_route_report.py spina_app\features\collector_route.py
+          git commit -m "Apply Collector Route modularization Wave 79"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
