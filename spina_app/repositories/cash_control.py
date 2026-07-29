@@ -231,7 +231,13 @@ def fetch_x7_cycle_payments(
         ]
         where = ["date(date) >= date(?)", "date(date) <= date(?)"]
         if "loan_type" in columns:
-            where.append("LOWER(REPLACE(IFNULL(loan_type,''),'×','x')) = '7x7'")
+            normalized_sql = (
+                "LOWER(REPLACE(REPLACE(TRIM(IFNULL(loan_type,'')),'×','x'),' ',''))"
+            )
+            where.append(
+                "(%s IN ('7x7','7x7emer','emer','emergency') OR %s LIKE '%%7x7%%')"
+                % (normalized_sql, normalized_sql)
+            )
         if client_uid and "client_uid" in columns:
             where.append("IFNULL(client_uid,'') = ?")
             params.append(client_uid)
