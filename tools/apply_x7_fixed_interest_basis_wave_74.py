@@ -57,7 +57,7 @@ def patch(source: str) -> str:
         (
             "_x7_daily_interest_for_balance(rem)",
             "_x7_daily_interest_for_principal(principal)",
-            1,
+            2,
             "payment allocation interest basis",
         ),
         (
