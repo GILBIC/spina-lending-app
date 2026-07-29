@@ -25664,164 +25664,17 @@ except Exception:
 
 
 
-# --- BEGIN: Easy Client Info Logs tab ---
-from spina_app.utilities.serialization import _spina_cilog_safe_json
-
-
-from spina_app.utilities.formatting import _spina_cilog_fmt_money
-
-
-from spina_app.utilities.formatting import _spina_cilog_fmt_value
-
-
-def _spina_cilog_field_label(field):
-    labels = {
-        'name': 'Client Name',
-        'loan_type': 'Loan Type',
-        'area': 'Area',
-        'principal': 'Principal',
-        'interest_rate': 'Interest Rate',
-        'interest_amount': 'Interest Amount',
-        'total_to_pay': 'Total To Pay',
-        'date_released': 'Released Date',
-        'due_date': 'Due Date',
-        'contact_number': 'Contact Number',
-        'payment_term': 'Payment Term',
-        'payment_amount': 'Payment Amount',
-        'payment_mode': 'Payment Mode',
-        'pay_start_offset_days': 'Payment Start Rule',
-        'due_weekday': 'Weekly Due Day',
-        'semi_due_day1': 'Semi Due Day 1',
-        'semi_due_day2': 'Semi Due Day 2',
-        'monthly_due_day': 'Monthly Due Day',
-        'new_until': 'New Highlight Until',
-        'person_uid': 'Link Group',
-        'link_opt_out': 'Link Opt-Out',
-        'archived': 'Archived',
-        'picture_path': 'Client Picture',
-        'last_cash_released': 'Last Cash Released',
-        'renew_count': 'Renew Count',
-        'last_renew_date': 'Last Renew Date',
-    }
-    f = str(field or '').strip()
-    return labels.get(f, f.replace('_', ' ').title())
-
-
-from spina_app.utilities.diffs import _spina_cilog_diff_pairs
-
-
-from spina_app.utilities.text import _spina_cilog_action_label
-
-
-def _spina_cilog_fetch_rows(db, limit=3000):
-    rows_out = []
-    try:
-        cur = db.conn.cursor()
-        try:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS client_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    client_uid TEXT,
-                    name_before TEXT,
-                    name_after TEXT,
-                    loan_type_before TEXT,
-                    loan_type_after TEXT,
-                    action TEXT,
-                    changed_at TEXT,
-                    old_json TEXT,
-                    new_json TEXT,
-                    source TEXT,
-                    note TEXT
-                )
-            """)
-            db.conn.commit()
-        except Exception:
-            pass
-        q = """SELECT * FROM client_history ORDER BY COALESCE(changed_at,'') DESC, id DESC LIMIT ?"""
-        raw = cur.execute(q, (int(limit or 3000),)).fetchall()
-    except Exception:
-        raw = []
-
-    for h in raw or []:
-        try:
-            r = dict(h)
-        except Exception:
-            try:
-                r = {k: h[k] for k in h.keys()}
-            except Exception:
-                continue
-        old_obj = _spina_cilog_safe_json(r.get('old_json') or r.get('before_json'))
-        new_obj = _spina_cilog_safe_json(r.get('new_json') or r.get('after_json'))
-        pairs = _spina_cilog_diff_pairs(old_obj, new_obj)
-        if not pairs:
-            pairs = [('Record', '', '')]
-        action = _spina_cilog_action_label(r.get('action'), r.get('source'))
-        client_name = (r.get('name_after') or r.get('name_before') or '')
-        loan_type = (r.get('loan_type_after') or r.get('loan_type_before') or '')
-        for field, before, after in pairs:
-            rows_out.append({
-                'id': r.get('id'),
-                'when': r.get('changed_at') or r.get('ts') or '',
-                'client': client_name,
-                'loan_type': loan_type,
-                'action': action,
-                'field': _spina_cilog_field_label(field),
-                'field_key': str(field or ''),
-                'before': _spina_cilog_fmt_value(field, before),
-                'after': _spina_cilog_fmt_value(field, after),
-                'source': r.get('source') or '',
-                'note': r.get('note') or '',
-            })
-    return rows_out
-
-
-# Wave 30: legacy Client Info Logs presentation wrappers.
-from spina_app.tabs.client_info_logs import (
-    configure_client_info_logs_dependencies as _configure_cilog_wave30_dependencies,
-    _spina_build_client_info_logs_tab,
-    _spina_render_client_info_logs,
-    _spina_refresh_client_info_logs,
+# --- BEGIN: Client Info Logs feature installer Wave 78 ---
+from spina_app.features.client_info_logs import (
+    install_client_info_logs_feature as _wave78_install_client_info_logs_feature,
 )
-_configure_cilog_wave30_dependencies(globals())
 
-
-
-
-
-
-try:
-    setattr(App, 'render_client_info_logs', _spina_render_client_info_logs)
-    setattr(App, 'refresh_client_info_logs', _spina_refresh_client_info_logs)
-    setattr(App, '_build_client_info_logs_tab', _spina_build_client_info_logs_tab)
-
-    _spina_orig_app_init_cilog = App.__init__
-    def _spina_app_init_with_client_info_logs(self, *args, **kwargs):
-        _spina_orig_app_init_cilog(self, *args, **kwargs)
-        try:
-            self._build_client_info_logs_tab()
-        except Exception as e:
-            try:
-                _log_exc('client_info_logs:init', e)
-            except Exception:
-                pass
-    App.__init__ = _spina_app_init_with_client_info_logs
-
-    _spina_orig_refresh_clients_cilog = getattr(App, 'refresh_clients', None)
-    if callable(_spina_orig_refresh_clients_cilog):
-        def _spina_refresh_clients_with_client_info_logs(self, *args, **kwargs):
-            res = _spina_orig_refresh_clients_cilog(self, *args, **kwargs)
-            try:
-                self.refresh_client_info_logs()
-            except Exception:
-                pass
-            return res
-        App.refresh_clients = _spina_refresh_clients_with_client_info_logs
-except Exception as __spina_exc:
-    try:
-        _log_suppressed_once('client_info_logs_patch_failed', 'client info logs runtime patch failed', __spina_exc)
-    except Exception:
-        pass
-# --- END: Easy Client Info Logs tab ---
+_wave78_install_client_info_logs_feature(
+    globals().get("App"),
+    log_exc=globals().get("_log_exc"),
+    log_suppressed_once=globals().get("_log_suppressed_once"),
+)
+# --- END: Client Info Logs feature installer Wave 78 ---
 
 
 # --- BEGIN: Configurable Auto Daily Close ---
@@ -28402,65 +28255,7 @@ except Exception as __spina_exc:
 
 
 
-# --- BEGIN: v24 Modern Client Info Logs UI ---
-from spina_app.theme_palettes import _spina_v24_cilog_colors
 
-
-from spina_app.ui_controls import _spina_v24_cilog_button
-
-
-from spina_app.ui_cards import _spina_v24_cilog_card
-
-
-from spina_app.ui_helpers import _spina_v24_cilog_round_rect
-
-
-from spina_app.ui_controls import _spina_v24_cilog_style_tree
-
-
-from spina_app.utilities.dates import _spina_v24_cilog_parse_day
-
-
-from spina_app.tabs.client_info_logs import (
-    configure_client_info_logs_dependencies,
-    _spina_v24_cilog_action_color,
-    _spina_v24_cilog_stats,
-    _spina_v24_cilog_draw_charts,
-    _spina_v24_cilog_update_cards,
-    _spina_v24_build_client_info_logs_tab,
-    _spina_v24_render_client_info_logs,
-    _spina_v24_refresh_client_info_logs,
-)
-
-_spina_v24_cilog_missing_dependencies = configure_client_info_logs_dependencies(globals())
-
-
-
-
-
-
-from spina_app.ui_helpers import _spina_v24_cilog_set_card
-
-
-
-
-
-
-
-
-
-
-try:
-    if "App" in globals():
-        App._build_client_info_logs_tab = _spina_v24_build_client_info_logs_tab
-        App.render_client_info_logs = _spina_v24_render_client_info_logs
-        App.refresh_client_info_logs = _spina_v24_refresh_client_info_logs
-except Exception as __spina_exc:
-    try:
-        _log_suppressed_once("v24_client_info_logs_bind_failed", "v24 client info logs modern patch failed", __spina_exc)
-    except Exception:
-        pass
-# --- END: v24 Modern Client Info Logs UI ---
 
 
 
