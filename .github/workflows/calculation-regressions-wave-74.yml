@@ -17,6 +17,10 @@ on:
       - ".github/workflows/calculation-regressions-wave-74.yml"
   workflow_dispatch:
 
+concurrency:
+  group: calculation-wave-74-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
