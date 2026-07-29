@@ -19,5 +19,22 @@ implementation.CLASS_METHODS.discard("_build_collectors_tab")
 # The final same-format closed-route adapter predates the route helper naming prefix.
 implementation.REPORT_EXPLICIT.add("_spina_save_closed_collector_route_copy_same_format")
 
+
+def _normalize_generated_text(path: Path) -> None:
+    """Remove trailing spaces without changing executable content."""
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    cleaned = "\n".join(line.rstrip(" \t") for line in lines) + "\n"
+    if cleaned != text:
+        path.write_text(cleaned, encoding="utf-8")
+
+
 if __name__ == "__main__":
     implementation.main()
+    for generated_path in (
+        implementation.APP_PATH,
+        implementation.CONTROLLER_PATH,
+        implementation.REPORT_PATH,
+        implementation.FEATURE_PATH,
+    ):
+        _normalize_generated_text(generated_path)
