@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
-      - "tools/inspect_whole_function_wave_72.py"
+      - "tools/inspect_whole-function-wave-72.py"
       - ".github/workflows/inspect-whole-function-wave-72.yml"
   push:
     branches:
@@ -24,6 +24,9 @@ jobs:
   inspect:
     if: github.actor != 'github-actions[bot]'
     runs-on: [self-hosted, Windows, X64]
+    defaults:
+      run:
+        shell: cmd
     steps:
       - name: Check out exact branch head
         uses: actions/checkout@v4
@@ -32,22 +35,22 @@ jobs:
           fetch-depth: 0
 
       - name: Compile inspector
-        run: python -m py_compile tools/inspect_whole_function_wave_72.py
+        run: python -m py_compile tools\inspect_whole_function_wave_72.py
 
       - name: Inspect complete active function
-        run: python tools/inspect_whole_function_wave_72.py
+        run: python tools\inspect_whole_function_wave_72.py
 
       - name: Commit reviewed boundary metadata
         if: github.event_name != 'pull_request'
-        shell: powershell
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add wave72_whole_function_report.json wave72_set_theme_source.py
-          if (-not (git diff --cached --quiet)) {
-            git commit -m "Record Wave 72 whole-function boundary"
-            git push origin HEAD:agent/high-volume-wave-72
-          }
+          git diff --cached --quiet
+          if errorlevel 1 git commit -m "Record Wave 72 whole-function boundary"
+          if errorlevel 1 exit /b 1
+          git status --porcelain | findstr /r "." >nul
+          git log -1 --pretty=%%an | findstr /x "github-actions[bot]" >nul && git push origin HEAD:agent/high-volume-wave-72
 
       - name: Upload inspector report
         uses: actions/upload-artifact@v4
