@@ -48,7 +48,7 @@ jobs:
 
       - name: Run existing dashboard regression when available
         shell: cmd
-        run: if exist tools\test_dashboard_presentation_wave_28.py python tools\test_dashboard_presentation_wave_28.py
+        run: if exist tools\test_dashboard_presentation_wave_28.py set "PYTHONPATH=%CD%" && python tools\test_dashboard_presentation_wave_28.py
 
       - name: Check generated diff
         shell: cmd
