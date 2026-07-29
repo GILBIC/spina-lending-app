@@ -44,7 +44,7 @@ jobs:
 
       - name: Run Wave 74 calculation regressions
         shell: cmd
-        run: python tools\test_calculation_regressions_wave_74.py
+        run: set "PYTHONPATH=%CD%" && python tools\test_calculation_regressions_wave_74.py
 
       - name: Run existing dashboard regression when available
         shell: cmd
