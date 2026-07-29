@@ -10,9 +10,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 MODULE_PATH = ROOT / "spina_app" / "databank_cell_writes.py"
+DELETE_DAY_MODULE_PATH = ROOT / "spina_app" / "databank_delete_day.py"
 TARGETS = ['_save_cell_edit', 'delete_selected_cell', '_mark_missed_for_selected']
 EXPECTED = {'_save_cell_edit': {'lines': 84, 'source_sha256': '3f421b85935c6bdb2f9a5e53a689a81a362a3332889104b858d2b5e3689c7410', 'dedented_sha256': '817aa342b4a960d1b53d0056589c2ce20ab7b26780c5675c7d76a4921337aead', 'signature': 'self, client, day, dt_str, ent_widget', 'calls': ['_log_suppressed_once', 'dict', 'ent_widget.destroy', 'ent_widget.get', 'float', 'get', 'getattr', 'messagebox.showerror', 'replace', 'row.keys', 'self._pick_missed_reason', 'self.db.add_or_update_transaction', 'self.db.get_transaction', 'self.refresh_data_grid', 'simpledialog.askstring', 'str', 'strip'], 'db_calls': ['self.db.add_or_update_transaction', 'self.db.get_transaction']}, 'delete_selected_cell': {'lines': 88, 'source_sha256': '218ac3dadc0dfd0540b27b1cac968da8a6cf1b2197f0973b90577810e7097d6a', 'dedented_sha256': '4d27860a520a0474b54ab11c46d3cdc67a0ff15ab3297dcba45c2813bcbf0df0', 'signature': 'self, *_', 'calls': ['_date', '_log_suppressed_once', 'getattr', 'hasattr', 'int', 'messagebox.showerror', 'messagebox.showinfo', 'self._update_data_toolbar', 'self.days_tree.get_children', 'self.days_tree.set', 'self.db.delete_transaction', 'self.db.get_transaction', 'self.refresh_data_grid', 'strftime'], 'db_calls': ['self.db.delete_transaction', 'self.db.get_transaction']}, '_mark_missed_for_selected': {'lines': 71, 'source_sha256': 'df6545048882965daf68fca634445086426e358ca0b39fa4f319d865c648be67', 'dedented_sha256': '77c06f387f8902b78b683074d302cea98569535181549167fb42a88a9e391342', 'signature': 'self', 'calls': ['_date', '_log_suppressed_once', 'dict', 'get', 'getattr', 'int', 'messagebox.showerror', 'messagebox.showinfo', 'replace', 'row.keys', 'self._mode_filter', 'self._pick_missed_reason', 'self.db.add_or_update_transaction', 'self.db.get_transaction', 'self.refresh_data_grid', 'simpledialog.askstring', 'str', 'strftime', 'strip'], 'db_calls': ['self.db.add_or_update_transaction', 'self.db.get_transaction']}}
-PROTECTED_SHA = 'b41b22e7c18f2e7f391f4cd400a9f0034c9ca535d2c7b10a9045db35af3d0407'
 
 
 def sha(source: str) -> str:
@@ -55,16 +55,28 @@ def main() -> None:
         assert sorted(call for call in calls if call.startswith("self.db.")) == data["db_calls"]
 
     app_text = APP_PATH.read_text(encoding="utf-8")
-    app_lines = app_text.splitlines(keepends=True)
     app_tree = ast.parse(app_text)
     app_class = next(node for node in app_tree.body if isinstance(node, ast.ClassDef) and node.name == "App")
     app_methods = {
         node.name: node for node in app_class.body if isinstance(node, ast.FunctionDef)
     }
     assert all(name not in app_methods for name in TARGETS)
-    protected = app_methods["open_delete_day_dialog"]
-    protected_source = "".join(app_lines[protected.lineno - 1: protected.end_lineno])
-    assert sha(protected_source) == PROTECTED_SHA
+    assert "open_delete_day_dialog" not in app_methods
+
+    # Waves 62-63 intentionally moved and hardened Delete Day after Wave 61.
+    # Protect its current module-owned boundary rather than expecting the old App method.
+    delete_day_text = DELETE_DAY_MODULE_PATH.read_text(encoding="utf-8")
+    delete_day_lines = delete_day_text.splitlines(keepends=True)
+    delete_day_tree = ast.parse(delete_day_text)
+    delete_day_functions = {
+        node.name: node for node in delete_day_tree.body if isinstance(node, ast.FunctionDef)
+    }
+    protected = delete_day_functions["open_delete_day_dialog"]
+    protected_source = "".join(delete_day_lines[protected.lineno - 1: protected.end_lineno])
+    delete_day_module = importlib.import_module("spina_app.databank_delete_day")
+    delete_day_metadata = delete_day_module.DATABANK_DELETE_DAY_METHOD
+    assert sha(protected_source) == delete_day_metadata["source_sha256"]
+    assert sha(textwrap.dedent(protected_source)) == delete_day_metadata["dedented_sha256"]
 
     assert app_text.count("configure_databank_cell_write_dependencies as _configure_wave61_databank_writes") == 1
     for name in TARGETS:
