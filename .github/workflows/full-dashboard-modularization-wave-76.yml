@@ -26,8 +26,13 @@ permissions:
 
 jobs:
   apply-and-validate:
-    # Pull-request code must run on an isolated, ephemeral GitHub-hosted runner.
-    runs-on: windows-latest
+    # Never execute fork or non-owner pull-request code on the persistent runner.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login == github.repository_owner &&
+       github.actor == github.repository_owner)
+    runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 30
 
     steps:
