@@ -1,0 +1,81 @@
+name: Quality safety fixes Wave 73
+
+on:
+  pull_request:
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/long_task_presentation.py"
+      - "tools/apply_quality_safety_wave_73.py"
+      - "tools/test_quality_safety_wave_73.py"
+      - ".github/workflows/quality-safety-wave-73.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  port-and-validate:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out Wave 73 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Fetch the reviewed PR 3 source
+        shell: pwsh
+        run: git fetch origin review/bugs-efficiency:refs/remotes/origin/review/bugs-efficiency
+
+      - name: Compile port tool and regression guard
+        shell: pwsh
+        run: |
+          python -m py_compile tools/apply_quality_safety_wave_73.py
+          python -m py_compile tools/test_quality_safety_wave_73.py
+
+      - name: Port focused fixes onto current main
+        shell: pwsh
+        run: python tools/apply_quality_safety_wave_73.py --fixed-ref origin/review/bugs-efficiency
+
+      - name: Compile updated application and long-task module
+        shell: pwsh
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app/long_task_presentation.py
+
+      - name: Run Wave 73 regression checks
+        shell: pwsh
+        run: python tools/test_quality_safety_wave_73.py
+
+      - name: Run existing long-task regression when available
+        shell: pwsh
+        run: |
+          if (Test-Path tools/test_long_task_presentation_wave_42.py) {
+            python tools/test_long_task_presentation_wave_42.py
+          }
+
+      - name: Check generated diff
+        shell: pwsh
+        run: git diff --check
+
+      - name: Commit validated source changes
+        shell: pwsh
+        env:
+          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          $changes = git status --porcelain -- `
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py `
+            spina_app/long_task_presentation.py
+          if (-not $changes) {
+            Write-Host "Wave 73 source is already applied."
+            exit 0
+          }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- `
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py `
+            spina_app/long_task_presentation.py
+          git commit -m "Apply quality safety fixes Wave 73"
+          git push origin "HEAD:$env:TARGET_BRANCH"
