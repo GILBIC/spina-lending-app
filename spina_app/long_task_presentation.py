@@ -27,8 +27,8 @@ def configure_long_task_dependencies(namespace):
 
 
 LONG_TASK_TARGET = '_run_long_task'
-LONG_TASK_SOURCE_LINES = 273
-LONG_TASK_SOURCE_SHA256 = '037194095a785211335844178a4f90675c08d7cede51fa7675db4a9ccc17ac21'
+LONG_TASK_SOURCE_LINES = 275
+LONG_TASK_SOURCE_SHA256 = '6773843dc8ec45c07f73d5c4fdcf48591ea91c8695032e248f7ca6358c51e4a1'
 LONG_TASK_NESTED_CALLBACKS = ['_cleanup_dialog', '_finish', '_request_cancel', '_watchdog', '_call_work_fn', '_worker']
 LONG_TASK_CALLS = ['TimeoutError', '_call_work_fn', '_cleanup_dialog', '_finish', '_inspect.signature', '_log_exc', '_log_suppressed_once', 'any', 'box.get', 'btn_cancel.config', 'btn_cancel.pack', 'cancel_event.is_set', 'cancel_event.set', 'dlg.destroy', 'dlg.geometry', 'dlg.grab_release', 'dlg.grab_set', 'dlg.protocol', 'dlg.resizable', 'dlg.title', 'dlg.transient', 'dlg.update_idletasks', 'dlg.winfo_exists', 'dlg.winfo_height', 'dlg.winfo_width', 'done.get', 'float', 'frm.pack', 'int', 'len', 'list', 'max', 'messagebox.showerror', 'on_error', 'on_success', 'pack', 'pb.pack', 'pb.start', 'pb.stop', 'self.root.after', 'self.root.winfo_height', 'self.root.winfo_rootx', 'self.root.winfo_rooty', 'self.root.winfo_width', 'sig.parameters.values', 'start', 'str', 'threading.Event', 'threading.Thread', 'time.time', 'tk.Toplevel', 'ttk.Button', 'ttk.Frame', 'ttk.Label', 'ttk.Progressbar', 'work_fn']
 LONG_TASK_CALLER_COUNT = 5
@@ -253,28 +253,30 @@ def _run_long_task(
         pass
 
     def _call_work_fn():
-        """Call work_fn, optionally passing cancel_event if supported."""
-        try:
-            import inspect as _inspect
-            try:
-                sig = _inspect.signature(work_fn)
-            except Exception:
-                sig = None
+        """Call work_fn once, optionally passing cancel_event when supported.
 
-            if sig:
-                params = list(sig.parameters.values())
-                has_varkw = any(p.kind == p.VAR_KEYWORD for p in params)
-                if has_varkw or ("cancel_event" in sig.parameters):
-                    return work_fn(cancel_event=cancel_event)
-                # If it accepts exactly 1 positional arg, pass cancel_event
-                pos = [p for p in params if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)]
-                if len(pos) == 1 and not any(p.kind == p.VAR_POSITIONAL for p in params):
-                    return work_fn(cancel_event)
-            # Default: no args
-            return work_fn()
+        Signature inspection errors fall back to a no-argument call. Exceptions
+        raised by the task itself are deliberately allowed to propagate to the
+        worker so a database write or import is never executed a second time.
+        """
+        import inspect as _inspect
+        try:
+            sig = _inspect.signature(work_fn)
         except Exception:
-            # If signature detection misfires (or work_fn hides signature), fall back
-            return work_fn()
+            sig = None
+
+        if sig:
+            params = list(sig.parameters.values())
+            has_varkw = any(p.kind == p.VAR_KEYWORD for p in params)
+            if has_varkw or ("cancel_event" in sig.parameters):
+                return work_fn(cancel_event=cancel_event)
+            pos = [
+                p for p in params
+                if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)
+            ]
+            if len(pos) == 1 and not any(p.kind == p.VAR_POSITIONAL for p in params):
+                return work_fn(cancel_event)
+        return work_fn()
 
     def _worker():
         try:
