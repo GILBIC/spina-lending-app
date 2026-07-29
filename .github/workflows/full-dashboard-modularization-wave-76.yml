@@ -1,4 +1,5 @@
 name: Full Dashboard modularization Wave 76
+# Revalidate the exact committed production extraction after guarded generation.
 
 on:
   pull_request:
