@@ -26,56 +26,48 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch the reviewed PR 3 source
-        shell: powershell
+        shell: cmd
         run: git fetch origin review/bugs-efficiency:refs/remotes/origin/review/bugs-efficiency
 
       - name: Compile port tool and regression guard
-        shell: powershell
+        shell: cmd
         run: |
-          python -m py_compile tools/apply_quality_safety_wave_73.py
-          python -m py_compile tools/test_quality_safety_wave_73.py
+          python -m py_compile tools\apply_quality_safety_wave_73.py
+          python -m py_compile tools\test_quality_safety_wave_73.py
 
       - name: Port focused fixes onto current main
-        shell: powershell
-        run: python tools/apply_quality_safety_wave_73.py --fixed-ref origin/review/bugs-efficiency
+        shell: cmd
+        run: python tools\apply_quality_safety_wave_73.py --fixed-ref origin/review/bugs-efficiency
 
       - name: Compile updated application and long-task module
-        shell: powershell
+        shell: cmd
         run: |
           python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
-          python -m py_compile spina_app/long_task_presentation.py
+          python -m py_compile spina_app\long_task_presentation.py
 
       - name: Run Wave 73 regression checks
-        shell: powershell
-        run: python tools/test_quality_safety_wave_73.py
+        shell: cmd
+        run: python tools\test_quality_safety_wave_73.py
 
       - name: Run existing long-task regression when available
-        shell: powershell
-        run: |
-          if (Test-Path tools/test_long_task_presentation_wave_42.py) {
-            python tools/test_long_task_presentation_wave_42.py
-          }
+        shell: cmd
+        run: if exist tools\test_long_task_presentation_wave_42.py python tools\test_long_task_presentation_wave_42.py
 
       - name: Check generated diff
-        shell: powershell
+        shell: cmd
         run: git diff --check
 
       - name: Commit validated source changes
-        shell: powershell
+        shell: cmd
         env:
           TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
-          $changes = git status --porcelain -- `
-            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py `
-            spina_app/long_task_presentation.py
-          if (-not $changes) {
-            Write-Host "Wave 73 source is already applied."
-            exit 0
-          }
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- `
-            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py `
-            spina_app/long_task_presentation.py
+          git add -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app\long_task_presentation.py
+          git diff --cached --quiet && goto no_changes
           git commit -m "Apply quality safety fixes Wave 73"
-          git push origin "HEAD:$env:TARGET_BRANCH"
+          git push origin HEAD:%TARGET_BRANCH%
+          exit /b 0
+          :no_changes
+          echo Wave 73 source is already applied.
