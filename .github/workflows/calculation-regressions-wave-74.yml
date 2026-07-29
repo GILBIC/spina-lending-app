@@ -1,0 +1,67 @@
+name: Calculation regressions Wave 74
+
+on:
+  pull_request:
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/calculation_rules.py"
+      - "tools/apply_calculation_regressions_wave_74.py"
+      - "tools/test_calculation_regressions_wave_74.py"
+      - ".github/workflows/calculation-regressions-wave-74.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out Wave 74 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Compile Wave 74 tools and rules
+        shell: cmd
+        run: |
+          python -m py_compile spina_app\calculation_rules.py
+          python -m py_compile tools\apply_calculation_regressions_wave_74.py
+          python -m py_compile tools\test_calculation_regressions_wave_74.py
+
+      - name: Apply calculation wiring and fixes
+        shell: cmd
+        run: python tools\apply_calculation_regressions_wave_74.py
+
+      - name: Compile updated desktop application
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\calculation_rules.py
+
+      - name: Run Wave 74 calculation regressions
+        shell: cmd
+        run: python tools\test_calculation_regressions_wave_74.py
+
+      - name: Run existing dashboard regression when available
+        shell: cmd
+        run: if exist tools\test_dashboard_presentation_wave_28.py python tools\test_dashboard_presentation_wave_28.py
+
+      - name: Check generated diff
+        shell: cmd
+        run: git diff --check
+
+      - name: Commit validated production wiring
+        shell: cmd
+        env:
+          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          git diff --quiet -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py && (echo Wave 74 production wiring is already applied. & exit /b 0)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          git commit -m "Apply calculation regressions Wave 74"
+          git push origin "HEAD:%TARGET_BRANCH%"
