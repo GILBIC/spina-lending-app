@@ -19,6 +19,7 @@ on:
       - "tools/test_collector_route_layers_wave_79.py"
       - "tools/test_collector_route_feature_wave_79.py"
       - "tools/test_collector_route_extraction_wave_79.py"
+      - "tools/test_collector_route_legacy_compat_wave_79.py"
       - "docs/collector-route-modularization-wave-79.md"
       - ".github/workflows/collector-route-modularization-wave-79.yml"
   workflow_dispatch:
@@ -69,6 +70,7 @@ jobs:
           python -m py_compile tools\test_collector_route_layers_wave_79.py
           python -m py_compile tools\test_collector_route_feature_wave_79.py
           python -m py_compile tools\test_collector_route_extraction_wave_79.py
+          python -m py_compile tools\test_collector_route_legacy_compat_wave_79.py
           python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
 
       - name: Run Collector Route repository and service regressions
@@ -103,14 +105,11 @@ jobs:
         shell: cmd
         run: set "PYTHONPATH=%CD%" && python tools\test_collector_route_feature_wave_79.py
 
-      - name: Run protected Collector Route regressions
+      - name: Run Collector Route legacy capability regressions
         shell: cmd
         run: |
-          set "PYTHONPATH=%CD%" && python tools\test_collectors_editor_wave_26.py
-          set "PYTHONPATH=%CD%" && python tools\test_collector_refresh_presentation_wave_39.py
-          set "PYTHONPATH=%CD%" && python tools\test_collector_tab_presentation_wave_44.py
+          set "PYTHONPATH=%CD%" && python tools\test_collector_route_legacy_compat_wave_79.py
           set "PYTHONPATH=%CD%" && python tools\test_collector_tab_widget_smoke_wave_44.py
-          set "PYTHONPATH=%CD%" && python tools\test_legacy_collector_cleanup_wave_52.py
 
       - name: Run Client Info Logs Wave 78 regressions
         shell: cmd
