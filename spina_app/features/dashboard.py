@@ -6,8 +6,10 @@ inside ``spina_app`` modules instead of the monolithic entry file.
 """
 from __future__ import annotations
 
+import sys
 from typing import Any, Callable
 
+from spina_app.calculation_rules import normalize_loan_type
 from spina_app.dashboard_chart_presentation import (
     configure_dashboard_chart_dependencies,
     _spina_v18_draw_dashboard_charts,
@@ -75,6 +77,17 @@ def _mode_text(app: Any) -> str:
     return "Regular"
 
 
+def _install_compatibility_globals(app_class: type) -> None:
+    """Restore globals still consumed by non-Dashboard legacy fallback paths."""
+    try:
+        module_name = str(getattr(app_class, "__module__", "") or "")
+        app_module = sys.modules.get(module_name)
+        if app_module is not None:
+            setattr(app_module, "_spina_dash__norm_lt", normalize_loan_type)
+    except Exception:
+        pass
+
+
 def install_dashboard_feature(
     app_class: type | None,
     *,
@@ -88,6 +101,11 @@ def install_dashboard_feature(
     """
     if app_class is None:
         return False
+
+    # Cash Control and statement fallback code still reads this historical global.
+    # Install it even when the Dashboard methods were already wired previously.
+    _install_compatibility_globals(app_class)
+
     if bool(getattr(app_class, "_spina_dashboard_wave76_installed", False)):
         return True
 
