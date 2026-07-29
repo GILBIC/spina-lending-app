@@ -1,4 +1,5 @@
 name: Calculation regressions Wave 74
+# Re-run on the committed production head after guarded generation.
 
 on:
   pull_request:
