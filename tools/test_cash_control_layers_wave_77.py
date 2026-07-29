@@ -26,6 +26,12 @@ APP_PATH = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_
 REPOSITORY_PATH = ROOT / "spina_app" / "repositories" / "cash_control.py"
 SERVICE_PATH = ROOT / "spina_app" / "services" / "cash_control.py"
 
+LEGACY_START = (
+    "# --- BEGIN: Cash Control tab - percent buffer + net renewal cash forecast + "
+    "separated current/forecast safe amounts ---"
+)
+INSTALL_START = "# --- BEGIN: Cash Control feature installer Wave 77 ---"
+
 
 def close(actual: float, expected: float, tolerance: float = 0.001) -> None:
     assert math.isclose(float(actual), float(expected), abs_tol=tolerance), (
@@ -207,10 +213,7 @@ def test_static_safety() -> None:
     repository_source = REPOSITORY_PATH.read_text(encoding="utf-8")
     service_source = SERVICE_PATH.read_text(encoding="utf-8")
 
-    # This stage adds tested layers but deliberately leaves production wiring intact.
-    assert app_source.count(
-        "# --- BEGIN: Cash Control tab - percent buffer + net renewal cash forecast + separated current/forecast safe amounts ---"
-    ) == 1
+    assert app_source.count(LEGACY_START) == 1 or app_source.count(INSTALL_START) == 1
     assert "def fetch_collection_totals(" in repository_source
     assert "def fetch_average_collection(" in repository_source
     assert "def fetch_x7_cycle_payments(" in repository_source
