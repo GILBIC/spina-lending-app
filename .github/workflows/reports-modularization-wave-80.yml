@@ -15,6 +15,7 @@ on:
       - "tools/test_reports_layers_wave_80.py"
       - "tools/test_reports_feature_wave_80.py"
       - "tools/test_reports_extraction_wave_80.py"
+      - "tools/test_reports_legacy_compat_wave_80.py"
       - "docs/reports-modularization-wave-80.md"
       - ".github/workflows/reports-modularization-wave-80.yml"
   workflow_dispatch:
@@ -82,6 +83,7 @@ jobs:
           python -m py_compile spina_app\features\reports.py
           python -m py_compile tools\test_reports_feature_wave_80.py
           python -m py_compile tools\test_reports_extraction_wave_80.py
+          python -m py_compile tools\test_reports_legacy_compat_wave_80.py
 
       - name: Run complete Reports regressions
         shell: cmd
@@ -90,12 +92,11 @@ jobs:
           set "PYTHONPATH=%CD%" && python tools\test_reports_feature_wave_80.py
           set "PYTHONPATH=%CD%" && python tools\test_reports_extraction_wave_80.py
 
-      - name: Run legacy Reports compatibility
+      - name: Run legacy Reports capability compatibility
         shell: cmd
         run: |
           if exist tools\test_reports_feature_wave_18.py set "PYTHONPATH=%CD%" && python tools\test_reports_feature_wave_18.py
-          if exist tools\test_reports_tab_presentation_wave_64.py set "PYTHONPATH=%CD%" && python tools\test_reports_tab_presentation_wave_64.py
-          if exist tools\test_client_statement_generation_wave_67.py set "PYTHONPATH=%CD%" && python tools\test_client_statement_generation_wave_67.py
+          set "PYTHONPATH=%CD%" && python tools\test_reports_legacy_compat_wave_80.py
 
       - name: Run Collector Route and financial compatibility
         shell: cmd
