@@ -33,7 +33,9 @@ def parse_percent(value: Any, default: float = 10.0) -> float:
 
 
 def _as_date(value: Any, fallback: date | None = None) -> date:
-    if hasattr(value, "year") and hasattr(value, "month") and hasattr(value, "day"):
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
         return value
     try:
         return datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
@@ -83,6 +85,15 @@ def _selected_date_from_app(app: Any) -> str:
     except Exception:
         pass
     return date.today().strftime("%Y-%m-%d")
+
+
+def _days_left_sort_value(value: Any) -> int:
+    try:
+        if value is None or str(value).strip() == "":
+            return 9999
+        return int(value)
+    except Exception:
+        return 9999
 
 
 def build_reserve_rows(
@@ -169,7 +180,7 @@ def build_reserve_rows(
         key=lambda item: (
             int(item.get("_cashctl_sort_priority") or item.get("priority") or 80),
             -float(item.get("reserve_amount") or 0.0),
-            int(item.get("days_left") or 9999),
+            _days_left_sort_value(item.get("days_left")),
             str(item.get("name") or ""),
         )
     )
