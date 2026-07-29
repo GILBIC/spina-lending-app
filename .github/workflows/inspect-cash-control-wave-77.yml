@@ -33,7 +33,6 @@ permissions:
 jobs:
   validate:
     name: inspect-and-test
-    # Persistent-runner execution is limited to owner-authored same-repository work.
     if: >-
       github.actor == github.repository_owner &&
       (github.event_name == 'workflow_dispatch' ||
@@ -144,7 +143,7 @@ jobs:
       github.actor == github.repository_owner &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.login == github.repository_owner
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 10
     permissions:
       contents: write
@@ -155,6 +154,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
+          persist-credentials: true
 
       - name: Download validated generated app
         uses: actions/download-artifact@v4
@@ -163,27 +163,18 @@ jobs:
           path: generated-wave77
 
       - name: Verify artifact and restrict publish scope
-        shell: bash
+        shell: cmd
         run: |
-          set -euo pipefail
-          app="OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
-          generated="generated-wave77/$app"
-          test -f "$generated"
-          grep -Fq '# --- BEGIN: Cash Control feature installer Wave 77 ---' "$generated"
-          ! grep -Fq '# --- BEGIN: Cash Control tab - percent buffer + net renewal cash forecast + separated current/forecast safe amounts ---' "$generated"
-          ! grep -Fq '# --- BEGIN: v21 Modern Cash Control UI with graphs, labels, and explanation ---' "$generated"
-          python -m py_compile "$generated"
-          cp "$generated" "$app"
+          python -c "from pathlib import Path; app=Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py'); generated=Path('generated-wave77')/app.name; source=generated.read_text(encoding='utf-8'); assert '# --- BEGIN: Cash Control feature installer Wave 77 ---' in source; assert '# --- BEGIN: Cash Control tab - percent buffer + net renewal cash forecast + separated current/forecast safe amounts ---' not in source; assert '# --- BEGIN: v21 Modern Cash Control UI with graphs, labels, and explanation ---' not in source; app.write_bytes(generated.read_bytes())"
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
           git diff --check
-          test "$(git diff --name-only)" = "$app"
+          python -c "import subprocess; app='OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py'; names=subprocess.check_output(['git','diff','--name-only'], text=True).splitlines(); assert names == [app], names"
 
       - name: Commit validated production wiring
-        shell: bash
+        shell: cmd
         run: |
-          set -euo pipefail
-          app="OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$app"
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
           git commit -m "Apply Cash Control modularization Wave 77"
-          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
