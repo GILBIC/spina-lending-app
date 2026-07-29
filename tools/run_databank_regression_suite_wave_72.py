@@ -23,16 +23,26 @@ def main() -> None:
 
     assert len(tests) >= 8, [path.name for path in tests]
 
+    failures = []
     print(f"Running {len(tests)} Data Bank regression files")
     for path in tests:
         module = ".".join(path.relative_to(ROOT).with_suffix("").parts)
         print(f"\n=== {module} ===", flush=True)
-        subprocess.run([sys.executable, "-m", module], cwd=ROOT, check=True)
+        result = subprocess.run([sys.executable, "-m", module], cwd=ROOT, check=False)
+        if result.returncode != 0:
+            failures.append((path.name, result.returncode))
 
-    print("\nAll discovered Data Bank regressions passed")
-    print("Executed:")
+    print("\nExecuted:")
     for path in tests:
         print(f"- {path.name}")
+
+    if failures:
+        print("\nData Bank regression failures:")
+        for name, returncode in failures:
+            print(f"- {name} (exit {returncode})")
+        raise SystemExit(1)
+
+    print("\nAll discovered Data Bank regressions passed")
 
 
 if __name__ == "__main__":
