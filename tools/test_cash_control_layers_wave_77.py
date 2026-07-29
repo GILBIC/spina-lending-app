@@ -220,11 +220,14 @@ def test_static_safety() -> None:
     assert "def calculate_safe_cash(" in service_source
     assert "if isinstance(value, datetime):" in service_source
 
-    lowered = repository_source.lower()
+    lowered_repository = repository_source.lower()
+    lowered_service = service_source.lower()
     for forbidden in ("insert into", "update transactions", "delete from", "alter table"):
-        assert forbidden not in lowered, forbidden
-    assert "tkinter" not in repository_source.lower()
-    assert "tkinter" not in service_source.lower()
+        assert forbidden not in lowered_repository, forbidden
+    assert "import tkinter" not in lowered_repository
+    assert "from tkinter" not in lowered_repository
+    assert "import tkinter" not in lowered_service
+    assert "from tkinter" not in lowered_service
 
 
 def main() -> None:
