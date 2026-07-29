@@ -23,6 +23,10 @@ on:
       - ".github/workflows/inspect-cash-control-wave-77.yml"
   workflow_dispatch:
 
+concurrency:
+  group: cash-control-wave-77-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
