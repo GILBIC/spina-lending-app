@@ -15,6 +15,7 @@ on:
       - "spina_app/tabs/collector_route.py"
       - "spina_app/tabs/collectors.py"
       - "tools/apply_collector_route_modularization_wave_79.py"
+      - "tools/run_collector_route_modularization_wave_79.py"
       - "tools/test_collector_route_layers_wave_79.py"
       - "tools/test_collector_route_feature_wave_79.py"
       - "tools/test_collector_route_extraction_wave_79.py"
@@ -64,6 +65,7 @@ jobs:
           python -m py_compile spina_app\repositories\collector_route.py
           python -m py_compile spina_app\services\collector_route.py
           python -m py_compile tools\apply_collector_route_modularization_wave_79.py
+          python -m py_compile tools\run_collector_route_modularization_wave_79.py
           python -m py_compile tools\test_collector_route_layers_wave_79.py
           python -m py_compile tools\test_collector_route_feature_wave_79.py
           python -m py_compile tools\test_collector_route_extraction_wave_79.py
@@ -82,8 +84,8 @@ jobs:
         if: steps.architecture.outputs.wave79 != 'true'
         shell: cmd
         run: |
-          python tools\apply_collector_route_modularization_wave_79.py
-          python tools\apply_collector_route_modularization_wave_79.py
+          python tools\run_collector_route_modularization_wave_79.py
+          python tools\run_collector_route_modularization_wave_79.py
 
       - name: Compile generated Collector Route architecture
         shell: cmd
