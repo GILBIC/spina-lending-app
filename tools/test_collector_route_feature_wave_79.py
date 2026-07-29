@@ -2,6 +2,7 @@
 """Installer regression for the generated Collector Route Wave 79 architecture."""
 from __future__ import annotations
 
+from spina_app import collector_tab_presentation as _tab_presentation
 from spina_app.features.collector_route import install_collector_route_feature
 
 
@@ -47,6 +48,19 @@ def main() -> None:
     )
     for name in required:
         assert callable(getattr(DummyApp, name, None)), name
+
+    # The modern tab calls these helpers as module globals. Wave 79 must bind all
+    # of them explicitly because their former main-file imports were extracted.
+    presentation_helpers = (
+        "_spina_v27_route_button",
+        "_spina_v27_route_card",
+        "_spina_v27_style_route_trees",
+        "_spina_v27_route_colors",
+        "_spina_v27_hidden_collector_widgets",
+        "_spina_v27_update_route_cards",
+    )
+    for name in presentation_helpers:
+        assert callable(getattr(_tab_presentation, name, None)), name
 
     first = {name: getattr(DummyApp, name) for name in required}
     first_refresh = DummyApp.refresh_collectors
