@@ -41,14 +41,9 @@ jobs:
 
       - name: Detect Dashboard architecture
         id: architecture
-        shell: pwsh
+        shell: cmd
         run: |
-          $path = "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
-          $source = Get-Content -Raw -LiteralPath $path
-          $isWave76 = $source.Contains("# --- BEGIN: Dashboard feature installer Wave 76 ---")
-          $value = $isWave76.ToString().ToLowerInvariant()
-          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "wave76=$value" -Encoding utf8
-          Write-Host "Wave 76 architecture detected: $value"
+          python -c "import os; from pathlib import Path; marker='# --- BEGIN: Dashboard feature installer Wave 76 ---'; source=Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py').read_text(encoding='utf-8'); value='true' if marker in source else 'false'; open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8').write(f'wave76={value}\n'); print(f'Wave 76 architecture detected: {value}')"
 
       - name: Compile Wave 74 tools and rules
         shell: cmd
