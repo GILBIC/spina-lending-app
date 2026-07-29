@@ -57,6 +57,7 @@ def test_static_delegation() -> None:
         "_spina_dash__fmt_money,",
         "_spina_v18_fmt_money_compact,",
         "from spina_app.ui_helpers import _spina_v20_round_rect",
+        "fetch_dashboard_rows as _spina_dashboard_fetch_rows",
     ):
         assert token in app_source, token
     for token in (
