@@ -1,0 +1,59 @@
+name: Inspect Cash Control Wave 77
+
+on:
+  pull_request:
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "tools/inspect_cash_control_wave_77.py"
+      - "docs/cash-control-modularization-wave-77.md"
+      - ".github/workflows/inspect-cash-control-wave-77.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    # Persistent-runner execution is limited to owner-authored same-repository work.
+    if: >-
+      github.actor == github.repository_owner &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.user.login == github.repository_owner))
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out Wave 77 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Compile inspection tool
+        shell: cmd
+        run: python -m py_compile tools\inspect_cash_control_wave_77.py
+
+      - name: Compile current desktop application
+        shell: cmd
+        run: python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+
+      - name: Inspect Cash Control boundary
+        shell: cmd
+        run: python tools\inspect_cash_control_wave_77.py
+
+      - name: Check repository diff
+        shell: cmd
+        run: git diff --check
+
+      - name: Confirm production source unchanged
+        shell: cmd
+        run: git diff --exit-code -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+
+      - name: Upload inspection report
+        uses: actions/upload-artifact@v4
+        with:
+          name: cash-control-wave-77-inspection
+          path: artifacts/cash_control_wave_77_inspection.json
+          if-no-files-found: error
