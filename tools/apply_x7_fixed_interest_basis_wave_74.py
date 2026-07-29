@@ -51,7 +51,7 @@ def patch(source: str) -> str:
         (
             "_x7_daily_interest_for_balance(principal)",
             "_x7_daily_interest_for_principal(principal)",
-            2,
+            3,
             "principal-based interest calls",
         ),
         (
