@@ -7,13 +7,20 @@ on:
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
       - "architecture-map.json"
+      - "spina_app/databank_feature.py"
       - "tools/plan_databank_feature_wave_72.py"
+      - "tools/test_databank_feature_wave_72.py"
+      - "tools/test_architecture_map.py"
       - ".github/workflows/plan-databank-feature-wave-72.yml"
   push:
     branches:
       - agent/high-volume-wave-72
     paths:
+      - "architecture-map.json"
+      - "spina_app/databank_feature.py"
       - "tools/plan_databank_feature_wave_72.py"
+      - "tools/test_databank_feature_wave_72.py"
+      - "tools/test_architecture_map.py"
       - ".github/workflows/plan-databank-feature-wave-72.yml"
   workflow_dispatch:
 
@@ -40,13 +47,24 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Compile Data Bank planner
-        run: python -m py_compile tools\plan_databank_feature_wave_72.py
+      - name: Compile Wave 72 planning guards
+        run: |
+          python -m py_compile tools\plan_databank_feature_wave_72.py
+          python -m py_compile tools\test_databank_feature_wave_72.py
+          python -m py_compile tools\test_architecture_map.py
 
-      - name: Inventory complete Data Bank feature
+      - name: Inventory the pre-extraction Data Bank feature
+        if: ${{ hashFiles('spina_app/databank_feature.py') == '' }}
         run: python tools\plan_databank_feature_wave_72.py
 
+      - name: Validate the committed Wave 72 plan result
+        if: ${{ hashFiles('spina_app/databank_feature.py') != '' }}
+        run: |
+          python -m tools.test_databank_feature_wave_72
+          python -m tools.test_architecture_map
+
       - name: Upload Data Bank feature plan
+        if: ${{ hashFiles('wave72_databank_feature_plan.json') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: wave72-databank-feature-plan
