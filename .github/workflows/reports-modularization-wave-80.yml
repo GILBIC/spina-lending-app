@@ -16,6 +16,8 @@ on:
       - "tools/test_reports_feature_wave_80.py"
       - "tools/test_reports_extraction_wave_80.py"
       - "tools/test_reports_legacy_compat_wave_80.py"
+      - "tools/test_calculation_regressions_wave_74.py"
+      - "tools/test_x7_fixed_interest_basis_wave_74.py"
       - "docs/reports-modularization-wave-80.md"
       - ".github/workflows/reports-modularization-wave-80.yml"
   workflow_dispatch:
@@ -61,6 +63,8 @@ jobs:
           python -m py_compile spina_app\services\reports.py
           python -m py_compile tools\apply_reports_modularization_wave_80.py
           python -m py_compile tools\test_reports_layers_wave_80.py
+          python -m py_compile tools\test_calculation_regressions_wave_74.py
+          python -m py_compile tools\test_x7_fixed_interest_basis_wave_74.py
 
       - name: Run staged Reports layer regressions
         shell: cmd
