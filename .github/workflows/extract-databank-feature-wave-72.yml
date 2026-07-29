@@ -11,6 +11,7 @@ on:
       - "spina_app/tabs/data_bank_shell.py"
       - "tools/inspect_databank_feature_wave_72.py"
       - "tools/extract_databank_feature_wave_72.py"
+      - "tools/extract_databank_feature_wave_72_v2.py"
       - "tools/test_databank_feature_wave_72.py"
       - "tools/run_databank_regression_suite_wave_72.py"
       - ".github/workflows/extract-databank-feature-wave-72.yml"
@@ -19,6 +20,7 @@ on:
       - agent/high-volume-wave-72
     paths:
       - "tools/extract_databank_feature_wave_72.py"
+      - "tools/extract_databank_feature_wave_72_v2.py"
       - "tools/test_databank_feature_wave_72.py"
       - "tools/run_databank_regression_suite_wave_72.py"
       - ".github/workflows/extract-databank-feature-wave-72.yml"
@@ -51,6 +53,7 @@ jobs:
         run: |
           python -m py_compile tools\inspect_databank_feature_wave_72.py
           python -m py_compile tools\extract_databank_feature_wave_72.py
+          python -m py_compile tools\extract_databank_feature_wave_72_v2.py
           python -m py_compile tools\test_databank_feature_wave_72.py
           python -m py_compile tools\run_databank_regression_suite_wave_72.py
 
@@ -58,7 +61,7 @@ jobs:
         run: python tools\inspect_databank_feature_wave_72.py
 
       - name: Generate module and remove exact desktop roots
-        run: python tools\extract_databank_feature_wave_72.py
+        run: python tools\extract_databank_feature_wave_72_v2.py
 
       - name: Compile cleaned application and Data Bank modules
         run: |
