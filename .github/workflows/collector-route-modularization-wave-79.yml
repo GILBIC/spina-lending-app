@@ -191,6 +191,7 @@ jobs:
           python -m py_compile spina_app\collector_route_report.py
           python -m py_compile spina_app\features\collector_route.py
           git diff --check
+          rmdir /s /q generated-wave79
           python -c "import subprocess; allowed={'OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py','spina_app/collector_route_controller.py','spina_app/collector_route_report.py','spina_app/features/collector_route.py'}; rows=subprocess.check_output(['git','status','--porcelain'], text=True).splitlines(); changed={row[3:].replace(chr(92),'/') for row in rows}; assert changed == allowed, (changed, allowed)"
 
       - name: Commit validated production wiring
