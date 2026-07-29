@@ -7,9 +7,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 MODULE = ROOT / "spina_app" / "databank_editor_presentation.py"
+CELL_WRITES_MODULE = ROOT / "spina_app" / "databank_cell_writes.py"
+DELETE_DAY_MODULE = ROOT / "spina_app" / "databank_delete_day.py"
 TARGETS = ('_pick_missed_reason', '_walk_widgets', '_begin_cell_edit', '_remember_cell_click')
 EXPECTED = {'_pick_missed_reason': {'lines': 145, 'source_sha256': 'e75ed29b15ad4f421b70289378b7f3d7b3a653cb712a1f6fed8cd1bcda5471ec', 'dedented_sha256': '3e40b963909160fe3887b1efa000a2f279ca830af51831fa13339bd88b6e08a3', 'signature': "self, parent, prefill_text=''", 'calls': ['_dt.strptime', '_log_suppressed_once', '_parse_any_date', '_re.fullmatch', 'adv_box.pack', 'adv_end_var.get', 'adv_end_var.set', 'adv_start_var.get', 'adv_start_var.set', 'advance_var.get', 'advance_var.trace_add', 'btns.pack', 'child.configure', 'd.strftime', 'date.today', 'enumerate', 'frm.pack', 'grid', 'hasattr', 'int', 'join', 'messagebox.showwarning', 'on_adv_toggle', 'on_cancel', 'on_ok', 'other_var.get', 'pack', 'parent.winfo_height', 'parent.winfo_rootx', 'parent.winfo_rooty', 'parent.winfo_width', 'picked.append', 's.split', 'set_enabled', 'strftime', 'strip', 't.startswith', 'tk.BooleanVar', 'tk.StringVar', 'tk.Toplevel', 'top.bind', 'top.destroy', 'top.geometry', 'top.grab_set', 'top.resizable', 'top.title', 'top.transient', 'top.update_idletasks', 'top.wait_window', 'top.winfo_height', 'top.winfo_width', 'ttk.Button', 'ttk.Checkbutton', 'ttk.Entry', 'ttk.Frame', 'ttk.Label', 'ttk.Labelframe', 'ttk.Separator', 'txt.startswith', 'v.get', 'vars_.append', 'widget.winfo_children'], 'db_calls': [], 'delegated_save': False}, '_walk_widgets': {'lines': 7, 'source_sha256': 'ebb27216245c3fa0d345c84a720dfdd79654b052024ee1c9adb9d202a051dc7c', 'dedented_sha256': '5bebfe0a0a4c45a619a630825f16c4cbc1d828f7a27bbd315af30707ad2dc6bc', 'signature': 'self, widget', 'calls': ['self._walk_widgets', 'widget.winfo_children'], 'db_calls': [], 'delegated_save': False}, '_begin_cell_edit': {'lines': 142, 'source_sha256': '7e2a682544179556392ed7f291dba538bed362d57979b0a0319115bf87b59bb7', 'dedented_sha256': 'fefbd3e586e7c5acd97aa381471ff49d898657c66af7bb550ee59a51ebb4ecba', 'signature': 'self, event=None', 'calls': ['_log_suppressed_once', 'cn.startswith', 'col_id.startswith', 'cur_txt.replace', 'cur_txt.strip', 'date', 'ent.bind', 'ent.destroy', 'ent.focus_set', 'ent.insert', 'ent.place', 'get', 'getattr', 'hasattr', 'head_txt.isdigit', 'int', 'isdigit', 'lower', 'self._mk_tk_entry', 'self._save_cell_edit', 'self.current_entry.destroy', 'self.root.bell', 'str', 'strftime', 'strip', 'tv.bbox', 'tv.get_children', 'tv.heading', 'tv.identify_column', 'tv.identify_row', 'tv.item', 'tv.see', 'tv.set', 'tv.update_idletasks'], 'db_calls': [], 'delegated_save': True}, '_remember_cell_click': {'lines': 19, 'source_sha256': 'b58c42ff67630fdaeb8a3dd8dc15392bec19a6163524db2f461fdb59ecaa1c1d', 'dedented_sha256': '5f9c3520c90f58fe98fb769fbc4547ff4d1dbe7c68b0cb969070d4898f14f156', 'signature': 'self, event', 'calls': ['col.startswith', 'getattr', 'hasattr', 'int', 'self._update_data_toolbar', 'tv.identify_column', 'tv.identify_row', 'tv.item'], 'db_calls': [], 'delegated_save': False}}
 PROTECTED_HASHES = {'_save_cell_edit': '3f421b85935c6bdb2f9a5e53a689a81a362a3332889104b858d2b5e3689c7410', 'delete_selected_cell': '218ac3dadc0dfd0540b27b1cac968da8a6cf1b2197f0973b90577810e7097d6a', '_mark_missed_for_selected': 'df6545048882965daf68fca634445086426e358ca0b39fa4f319d865c648be67', 'open_delete_day_dialog': 'b41b22e7c18f2e7f391f4cd400a9f0034c9ca535d2c7b10a9045db35af3d0407'}
+PROTECTED_MODULES = {
+    '_save_cell_edit': (CELL_WRITES_MODULE, 'DATABANK_CELL_WRITE_METHODS'),
+    'delete_selected_cell': (CELL_WRITES_MODULE, 'DATABANK_CELL_WRITE_METHODS'),
+    '_mark_missed_for_selected': (CELL_WRITES_MODULE, 'DATABANK_CELL_WRITE_METHODS'),
+    'open_delete_day_dialog': (DELETE_DAY_MODULE, 'DATABANK_DELETE_DAY_METHOD'),
+}
 BINDING_MARKER = '# Wave 60: Data Bank inline editor and missed-reason presentation.'
 
 
@@ -31,6 +39,14 @@ def _source_map(text: str, class_name: str | None = None) -> dict[str, str]:
     return out
 
 
+def _module_metadata(path: Path, variable: str, name: str) -> dict:
+    text = _norm(path)
+    namespace = {}
+    exec(compile(text, str(path), "exec"), namespace)
+    metadata = namespace[variable]
+    return metadata[name] if variable == 'DATABANK_CELL_WRITE_METHODS' else metadata
+
+
 def main() -> None:
     app_text = _norm(APP)
     module_text = _norm(MODULE)
@@ -47,9 +63,18 @@ def main() -> None:
         assert ast.unparse(node.args) == EXPECTED[name]["signature"]
 
     for name, expected_hash in PROTECTED_HASHES.items():
-        assert name in app_methods, f"protected method {name} missing"
-        actual = hashlib.sha256(app_methods[name].encode("utf-8")).hexdigest()
-        assert actual == expected_hash, f"protected method {name} changed"
+        if name in app_methods:
+            actual = hashlib.sha256(app_methods[name].encode("utf-8")).hexdigest()
+            assert actual == expected_hash, f"protected method {name} changed"
+            continue
+
+        protected_path, metadata_variable = PROTECTED_MODULES[name]
+        protected_text = _norm(protected_path)
+        protected_methods = _source_map(protected_text)
+        assert name in protected_methods, f"protected method {name} missing from module"
+        metadata = _module_metadata(protected_path, metadata_variable, name)
+        actual = hashlib.sha256(protected_methods[name].encode("utf-8")).hexdigest()
+        assert actual == metadata["dedented_sha256"], f"protected method {name} changed"
 
     assert BINDING_MARKER in app_text
     assert "configure_databank_editor_dependencies" in app_text
