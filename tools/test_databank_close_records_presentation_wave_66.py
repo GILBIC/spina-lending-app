@@ -9,7 +9,6 @@ APP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed
 MODULE = ROOT / "spina_app" / "databank_close_records_presentation.py"
 FEATURE_MODULE = ROOT / "spina_app" / "databank_feature.py"
 EXPECTED_LINES = 224
-EXPECTED_SOURCE_SHA = "2b3050213b1861f3a05cd2898b0eb677f02144ff7ee"
 EXPECTED_SOURCE_SHA = "2b3050213b1861f3b0a085742a1b9d277dd0cb2999337b8f5df83fc832435c74"
 EXPECTED_SIGNATURE = "self, start_date=None, end_date=None"
 EXPECTED_DB_CALLS = ["self.db.list_databank_day_close_records"]
