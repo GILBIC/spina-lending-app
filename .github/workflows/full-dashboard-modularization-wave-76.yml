@@ -22,11 +22,12 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   apply-and-validate:
-    runs-on: [self-hosted, Windows, X64]
+    # Pull-request code must run on an isolated, ephemeral GitHub-hosted runner.
+    runs-on: windows-latest
     timeout-minutes: 30
 
     steps:
@@ -85,15 +86,3 @@ jobs:
       - name: Check generated diff
         shell: cmd
         run: git diff --check
-
-      - name: Commit validated Dashboard extraction
-        shell: cmd
-        env:
-          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
-        run: |
-          git diff --quiet -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py && (echo Wave 76 Dashboard extraction is already applied. & exit /b 0)
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
-          git commit -m "Complete Dashboard modularization Wave 76"
-          git push origin "HEAD:%TARGET_BRANCH%"
