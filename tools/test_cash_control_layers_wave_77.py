@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import sqlite3
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -110,7 +110,7 @@ def test_payoff_behavior() -> None:
     record = {
         "loan_type": "7x7",
         "principal": 5000.0,
-        "payment_start": date(2026, 7, 1),
+        "payment_start": datetime(2026, 7, 1, 8, 30),
         "client_uid": "X7-3",
         "name": "Seven Client",
     }
@@ -218,6 +218,7 @@ def test_static_safety() -> None:
     assert "def estimated_payoff_with_interest(" in service_source
     assert "def build_reserve_rows(" in service_source
     assert "def calculate_safe_cash(" in service_source
+    assert "if isinstance(value, datetime):" in service_source
 
     lowered = repository_source.lower()
     for forbidden in ("insert into", "update transactions", "delete from", "alter table"):
