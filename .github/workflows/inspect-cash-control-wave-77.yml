@@ -40,6 +40,10 @@ jobs:
         github.event.pull_request.user.login == github.repository_owner))
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      wave77: ${{ steps.architecture.outputs.wave77 }}
 
     steps:
       - name: Check out Wave 77 branch
@@ -48,6 +52,12 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Detect committed Cash Control architecture
+        id: architecture
+        shell: cmd
+        run: |
+          python -c "import os; from pathlib import Path; marker='# --- BEGIN: Cash Control feature installer Wave 77 ---'; source=Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py').read_text(encoding='utf-8'); value='true' if marker in source else 'false'; open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8').write(f'wave77={value}\n'); print(f'Wave 77 architecture detected: {value}')"
 
       - name: Compile Wave 77 layers and tools
         shell: cmd
@@ -66,33 +76,35 @@ jobs:
         shell: cmd
         run: python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
 
-      - name: Inspect Cash Control boundary
+      - name: Inspect legacy Cash Control boundary
+        if: steps.architecture.outputs.wave77 != 'true'
         shell: cmd
         run: python tools\inspect_cash_control_wave_77.py
 
-      - name: Run staged Cash Control repository and service regressions
+      - name: Run Cash Control repository and service regressions
         shell: cmd
         run: set "PYTHONPATH=%CD%" && python tools\test_cash_control_layers_wave_77.py
 
-      - name: Run staged Cash Control installer regression
+      - name: Run Cash Control installer regression
         shell: cmd
         run: set "PYTHONPATH=%CD%" && python tools\test_cash_control_feature_wave_77.py
 
-      - name: Confirm committed production source is unchanged
+      - name: Confirm committed source is clean before generation
         shell: cmd
         run: git diff --exit-code -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
 
       - name: Apply guarded Cash Control extraction twice
+        if: steps.architecture.outputs.wave77 != 'true'
         shell: cmd
         run: |
           python tools\apply_cash_control_modularization_wave_77.py
           python tools\apply_cash_control_modularization_wave_77.py
 
-      - name: Compile generated desktop application
+      - name: Compile validated desktop application
         shell: cmd
         run: python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
 
-      - name: Run generated Cash Control extraction regression
+      - name: Run Cash Control extraction regression
         shell: cmd
         run: set "PYTHONPATH=%CD%" && python tools\test_cash_control_extraction_wave_77.py
 
@@ -108,11 +120,11 @@ jobs:
         shell: cmd
         run: set "PYTHONPATH=%CD%" && python tools\test_wave74_compat_under_wave76.py
 
-      - name: Check generated diff
+      - name: Check validated diff
         shell: cmd
         run: git diff --check
 
-      - name: Upload generated Cash Control validation artifacts
+      - name: Upload validated Cash Control artifacts
         uses: actions/upload-artifact@v4
         with:
           name: cash-control-wave-77-generated
@@ -120,3 +132,57 @@ jobs:
             artifacts/cash_control_wave_77_inspection.json
             OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
           if-no-files-found: error
+
+  publish-generated:
+    name: publish-generated
+    needs: inspect-and-test
+    if: >-
+      github.event_name == 'pull_request' &&
+      needs.inspect-and-test.result == 'success' &&
+      needs.inspect-and-test.outputs.wave77 != 'true' &&
+      github.actor == github.repository_owner &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out exact validated head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Download validated generated app
+        uses: actions/download-artifact@v4
+        with:
+          name: cash-control-wave-77-generated
+          path: generated-wave77
+
+      - name: Verify artifact and restrict publish scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+          generated="generated-wave77/$app"
+          test -f "$generated"
+          grep -Fq '# --- BEGIN: Cash Control feature installer Wave 77 ---' "$generated"
+          ! grep -Fq '# --- BEGIN: Cash Control tab - percent buffer + net renewal cash forecast + separated current/forecast safe amounts ---' "$generated"
+          ! grep -Fq '# --- BEGIN: v21 Modern Cash Control UI with graphs, labels, and explanation ---' "$generated"
+          python -m py_compile "$generated"
+          cp "$generated" "$app"
+          git diff --check
+          test "$(git diff --name-only)" = "$app"
+
+      - name: Commit validated production wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+          app="OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$app"
+          git commit -m "Apply Cash Control modularization Wave 77"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
