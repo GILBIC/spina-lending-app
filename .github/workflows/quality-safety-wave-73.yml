@@ -26,42 +26,42 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch the reviewed PR 3 source
-        shell: pwsh
+        shell: powershell
         run: git fetch origin review/bugs-efficiency:refs/remotes/origin/review/bugs-efficiency
 
       - name: Compile port tool and regression guard
-        shell: pwsh
+        shell: powershell
         run: |
           python -m py_compile tools/apply_quality_safety_wave_73.py
           python -m py_compile tools/test_quality_safety_wave_73.py
 
       - name: Port focused fixes onto current main
-        shell: pwsh
+        shell: powershell
         run: python tools/apply_quality_safety_wave_73.py --fixed-ref origin/review/bugs-efficiency
 
       - name: Compile updated application and long-task module
-        shell: pwsh
+        shell: powershell
         run: |
           python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
           python -m py_compile spina_app/long_task_presentation.py
 
       - name: Run Wave 73 regression checks
-        shell: pwsh
+        shell: powershell
         run: python tools/test_quality_safety_wave_73.py
 
       - name: Run existing long-task regression when available
-        shell: pwsh
+        shell: powershell
         run: |
           if (Test-Path tools/test_long_task_presentation_wave_42.py) {
             python tools/test_long_task_presentation_wave_42.py
           }
 
       - name: Check generated diff
-        shell: pwsh
+        shell: powershell
         run: git diff --check
 
       - name: Commit validated source changes
-        shell: pwsh
+        shell: powershell
         env:
           TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
