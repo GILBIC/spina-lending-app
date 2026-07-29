@@ -14,3 +14,7 @@ Wave 73 ports the four still-missing fixes from obsolete PR #3 onto the current 
 The workflow fetches the previously reviewed PR #3 branch, transplants only the four approved function blocks into current source locations, compiles the result, runs permanent regression checks, and commits the validated source changes to the Wave 73 branch.
 
 The old PR is not merged because it predates hundreds of later commits and is no longer mergeable.
+
+## Automated port result
+
+The source transplant compiled successfully. The Wave 73 safety regression and the updated Wave 42 exact-source regression both passed before the generated source commit was pushed. This documentation update triggers validation against the resulting human-authored PR head.
