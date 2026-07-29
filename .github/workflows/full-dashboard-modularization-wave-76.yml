@@ -21,6 +21,10 @@ on:
       - ".github/workflows/full-dashboard-modularization-wave-76.yml"
   workflow_dispatch:
 
+concurrency:
+  group: full-dashboard-wave-76-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -41,6 +45,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Compile Dashboard modules and tools
         shell: cmd
