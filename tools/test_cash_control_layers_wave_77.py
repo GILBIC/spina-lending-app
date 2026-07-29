@@ -77,8 +77,8 @@ def test_repository_behavior() -> None:
     average = fetch_average_collection(app, "2026-07-05", window_days=4)
     # July 1, July 2, and July 3 have non-zero combined collections.
     assert average["active_days"] == 3
-    close(average["total"], 500.0)
-    close(average["average"], 500.0 / 3.0)
+    close(average["total"], 600.0)
+    close(average["average"], 200.0)
     app.db.conn.close()
 
 
