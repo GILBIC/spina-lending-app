@@ -4,7 +4,14 @@ on:
   pull_request:
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
-      - "spina_app/**/client*.py"
+      - "spina_app/client_application.py"
+      - "spina_app/client_archive.py"
+      - "spina_app/client_controller.py"
+      - "spina_app/client_pictures.py"
+      - "spina_app/client_renewal.py"
+      - "spina_app/client_queries.py"
+      - "spina_app/linked_client_queries.py"
+      - "spina_app/services/clients.py"
       - "spina_app/tabs/clients.py"
       - "spina_app/features/clients.py"
       - "tools/*clients*wave_81.py"
@@ -20,14 +27,16 @@ permissions:
   contents: read
 
 jobs:
-  inventory:
+  validate:
     if: >-
       github.actor == github.repository_owner &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event.pull_request.head.repo.full_name == github.repository &&
         github.event.pull_request.user.login == github.repository_owner))
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 30
+    timeout-minutes: 60
+    outputs:
+      generated: ${{ steps.architecture.outputs.generated }}
 
     steps:
       - name: Check out exact Wave 81 head
@@ -37,17 +46,136 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Compile inventory tool
+      - name: Detect committed architecture
+        id: architecture
         shell: cmd
-        run: python -m py_compile tools\inspect_clients_modularization_wave_81.py
+        run: |
+          python -c "import os; from pathlib import Path; p=Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py'); s=p.read_text(encoding='utf-8'); v='false' if '# --- BEGIN: Clients feature installer Wave 81 ---' in s else 'true'; open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8').write('generated='+v+'\n'); print('Production generation required:',v)"
+
+      - name: Compile staged Clients installer and tools
+        shell: cmd
+        run: |
+          python -m py_compile spina_app\features\clients.py
+          python -m py_compile tools\inspect_clients_modularization_wave_81.py
+          python -m py_compile tools\apply_clients_modularization_wave_81.py
+          python -m py_compile tools\test_clients_feature_wave_81.py
 
       - name: Inventory active Clients runtime
+        if: steps.architecture.outputs.generated == 'true'
         shell: cmd
         run: python tools\inspect_clients_modularization_wave_81.py
 
-      - name: Upload Clients inventory
+      - name: Apply guarded Clients extraction twice
+        shell: cmd
+        run: |
+          python tools\apply_clients_modularization_wave_81.py
+          python tools\apply_clients_modularization_wave_81.py
+
+      - name: Compile complete Clients architecture
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\client_application.py
+          python -m py_compile spina_app\client_archive.py
+          python -m py_compile spina_app\client_controller.py
+          python -m py_compile spina_app\client_pictures.py
+          python -m py_compile spina_app\client_renewal.py
+          python -m py_compile spina_app\services\clients.py
+          python -m py_compile spina_app\tabs\clients.py
+          python -m py_compile spina_app\features\clients.py
+          python -m py_compile tools\test_clients_feature_wave_81.py
+
+      - name: Run complete Clients regressions
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_clients_feature_wave_81.py
+
+      - name: Run client query and presentation compatibility
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_client_read_queries_wave_31.py
+          set "PYTHONPATH=%CD%" && python tools\test_linked_client_queries_wave_32.py
+          set "PYTHONPATH=%CD%" && python tools\test_client_history_presentation_wave_36.py
+          set "PYTHONPATH=%CD%" && python tools\test_client_form_presentation_wave_38.py
+          set "PYTHONPATH=%CD%" && python tools\test_clients_tab_presentation_wave_55.py
+          set "PYTHONPATH=%CD%" && python tools\test_client_new_status_wave_70.py
+          set "PYTHONPATH=%CD%" && python tools\test_client_new_status_behavior_wave_70.py
+
+      - name: Run Reports Collector Route and financial compatibility
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_reports_feature_wave_80.py
+          set "PYTHONPATH=%CD%" && python tools\test_collector_route_feature_wave_79.py
+          set "PYTHONPATH=%CD%" && python tools\test_wave75_compat_under_wave76.py
+          set "PYTHONPATH=%CD%" && python tools\test_wave74_compat_under_wave76.py
+          set "PYTHONPATH=%CD%" && python tools\test_x7_fixed_interest_basis_wave_74.py
+
+      - name: Check generated diff
+        shell: cmd
+        run: git diff --check
+
+      - name: Upload validated generated Clients files
+        if: steps.architecture.outputs.generated == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: clients-wave81-inventory
-          path: clients-wave81-inventory.json
+          name: clients-wave-81-generated
+          path: |
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+            spina_app/client_application.py
+            spina_app/client_archive.py
+            spina_app/client_controller.py
+            spina_app/client_pictures.py
+            spina_app/client_renewal.py
+            spina_app/services/clients.py
           if-no-files-found: error
+
+  publish-generated:
+    needs: validate
+    if: >-
+      needs.validate.result == 'success' &&
+      needs.validate.outputs.generated == 'true' &&
+      github.event_name == 'pull_request' &&
+      github.actor == github.repository_owner &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out exact validated head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Download validated Clients files
+        uses: actions/download-artifact@v4
+        with:
+          name: clients-wave-81-generated
+          path: generated-wave81
+
+      - name: Copy and verify seven-file scope
+        shell: cmd
+        run: |
+          copy /Y generated-wave81\OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          if not exist spina_app mkdir spina_app
+          if not exist spina_app\services mkdir spina_app\services
+          copy /Y generated-wave81\spina_app\client_application.py spina_app\client_application.py
+          copy /Y generated-wave81\spina_app\client_archive.py spina_app\client_archive.py
+          copy /Y generated-wave81\spina_app\client_controller.py spina_app\client_controller.py
+          copy /Y generated-wave81\spina_app\client_pictures.py spina_app\client_pictures.py
+          copy /Y generated-wave81\spina_app\client_renewal.py spina_app\client_renewal.py
+          copy /Y generated-wave81\spina_app\services\clients.py spina_app\services\clients.py
+          rmdir /S /Q generated-wave81
+          python -c "import subprocess; allowed={'OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py','spina_app/client_application.py','spina_app/client_archive.py','spina_app/client_controller.py','spina_app/client_pictures.py','spina_app/client_renewal.py','spina_app/services/clients.py'}; changed={p.replace('\\','/') for line in subprocess.check_output(['git','status','--short'], text=True).splitlines() for p in [line[3:].strip()]}; assert changed == allowed, (changed, allowed); print('Validated publish scope:', sorted(changed))"
+
+      - name: Commit validated Clients architecture
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app/client_application.py spina_app/client_archive.py spina_app/client_controller.py spina_app/client_pictures.py spina_app/client_renewal.py spina_app/services/clients.py
+          git commit -m "Complete Clients modularization Wave 81"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
