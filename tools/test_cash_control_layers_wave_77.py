@@ -12,6 +12,7 @@ from spina_app.calculation_rules import allocate_x7_payments
 from spina_app.repositories.cash_control import (
     fetch_average_collection,
     fetch_collection_totals,
+    fetch_x7_cycle_payments,
 )
 from spina_app.services.cash_control import (
     build_reserve_rows,
@@ -79,6 +80,21 @@ def test_repository_behavior() -> None:
     assert average["active_days"] == 3
     close(average["total"], 600.0)
     close(average["average"], 200.0)
+
+    emer_payments = fetch_x7_cycle_payments(
+        app,
+        {"client_uid": "X7-1", "name": "Emergency Client"},
+        date(2026, 7, 1),
+        date(2026, 7, 1),
+    )
+    legacy_payments = fetch_x7_cycle_payments(
+        app,
+        {"client_uid": "X7-2", "name": "Legacy Seven"},
+        date(2026, 7, 1),
+        date(2026, 7, 1),
+    )
+    assert emer_payments == [(date(2026, 7, 1), 35.0)]
+    assert legacy_payments == [(date(2026, 7, 1), 15.0)]
     app.db.conn.close()
 
 
@@ -198,6 +214,7 @@ def test_static_safety() -> None:
     assert "def fetch_collection_totals(" in repository_source
     assert "def fetch_average_collection(" in repository_source
     assert "def fetch_x7_cycle_payments(" in repository_source
+    assert "'7x7emer','emer','emergency'" in repository_source
     assert "def estimated_payoff_with_interest(" in service_source
     assert "def build_reserve_rows(" in service_source
     assert "def calculate_safe_cash(" in service_source
