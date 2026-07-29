@@ -1,7 +1,7 @@
 """Pure lending calculations shared by dashboards, reports, and regression tests.
 
 Wave 74 centralizes the rules that previously lived inside large presentation
-functions.  The functions in this module do not access Tkinter or a database.
+functions. The functions in this module do not access Tkinter or a database.
 """
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ def normalized_total_to_pay(
     """Return the protected cycle target used for balance calculations.
 
     Regular loans use principal plus fixed interest when an older record stores
-    only principal in ``total_to_pay``.  7x7 completion is principal-based because
+    only principal in ``total_to_pay``. 7x7 completion is principal-based because
     its daily interest is allocated separately.
     """
     lt = normalize_loan_type(loan_type)
@@ -68,7 +68,7 @@ def shift_due_date_for_renewal(
     """Preserve the original cycle length when a loan is renewed.
 
     A renewal always starts a new cycle when ``latest_release`` is later than the
-    original release.  This avoids retaining a due date that is still in the
+    original release. This avoids retaining a due date that is still in the
     future but belongs to the old cycle.
     """
     base = _as_date(base_release)
@@ -91,9 +91,15 @@ def ceil_thousand_units(amount: Any) -> int:
     return max(1, int((value + 999.999999) // 1000))
 
 
-def x7_daily_interest(remaining_principal: Any) -> float:
-    """7x7 daily interest: 1..1000=7, 1001..2000=14, and so on."""
-    return float(ceil_thousand_units(remaining_principal)) * 7.0
+def x7_daily_interest(loan_principal: Any) -> float:
+    """Return fixed 7x7 daily interest from the loan's recorded principal.
+
+    Every started ₱1,000 of the current loan principal carries ₱7 per day.
+    The result remains fixed throughout that loan cycle even as payments reduce
+    the remaining principal. It changes only when the recorded principal is
+    deliberately updated or a new/renewed loan cycle uses a different principal.
+    """
+    return float(ceil_thousand_units(loan_principal)) * 7.0
 
 
 def _payment_parts(item: Any) -> tuple[Any, Any]:
@@ -114,10 +120,11 @@ def allocate_x7_payments(
     """Allocate effective daily 7x7 payments to interest first, then principal.
 
     The latest positive payment for a date wins, matching Data Bank's one-effective-
-    payment-per-day rule.  Daily interest continues to use the current thousand
-    bracket until principal actually crosses a bracket boundary.
+    payment-per-day rule. Daily interest is fixed from the recorded loan principal
+    for the whole cycle; a falling remaining balance does not lower it.
     """
     principal_f = max(0.0, _as_float(principal))
+    fixed_daily_interest = x7_daily_interest(principal_f)
     start = _as_date(payment_start) or date.today()
     end = _as_date(as_of_date) or date.today()
     if end < start:
@@ -142,7 +149,7 @@ def allocate_x7_payments(
     for pay_date in sorted(effective_by_day):
         amount = effective_by_day[pay_date]
         gap = max(1, (pay_date - previous_date).days)
-        interest_due = x7_daily_interest(remaining_principal) * float(gap) + interest_arrears
+        interest_due = fixed_daily_interest * float(gap) + interest_arrears
         interest_paid = min(amount, interest_due)
         principal_paid = min(remaining_principal, max(0.0, amount - interest_paid))
 
@@ -161,12 +168,14 @@ def allocate_x7_payments(
     if remaining_principal > 0.0:
         tail_gap = max(0, (end - previous_date).days)
         if tail_gap:
-            interest_arrears += x7_daily_interest(remaining_principal) * float(tail_gap)
+            interest_arrears += fixed_daily_interest * float(tail_gap)
 
     payoff = max(0.0, remaining_principal + interest_arrears)
     completion = (principal_paid_total / principal_f * 100.0) if principal_f > 0.0 else 0.0
     return {
         "principal": round(principal_f, 2),
+        "interest_basis_principal": round(principal_f, 2),
+        "daily_interest": round(fixed_daily_interest, 2),
         "total_collected": round(total_collected, 2),
         "interest_paid": round(interest_paid_total, 2),
         "principal_paid": round(principal_paid_total, 2),
