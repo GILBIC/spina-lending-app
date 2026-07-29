@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 MODULE = ROOT / "spina_app" / "databank_close_records_presentation.py"
+FEATURE_MODULE = ROOT / "spina_app" / "databank_feature.py"
 EXPECTED_LINES = 224
 EXPECTED_SOURCE_SHA = "2b3050213b1861f3b0a085742a1b9d277dd0cb2999337b8f5df83fc832435c74"
 EXPECTED_SIGNATURE = "self, start_date=None, end_date=None"
@@ -30,6 +31,16 @@ def dotted(node: ast.AST | None) -> str:
     if isinstance(node, ast.Subscript):
         return dotted(node.value)
     return ""
+
+
+def top_level_functions(path: Path) -> set[str]:
+    text = path.read_text(encoding="utf-8")
+    tree = ast.parse(text)
+    return {
+        node.name
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
 
 
 def main() -> None:
@@ -70,8 +81,12 @@ def main() -> None:
     assert app_text.count("App.open_databank_close_records_dialog = _wave66_open_databank_close_records_dialog") == 1
 
     remaining = {n.name for n in app.body if isinstance(n, ast.FunctionDef)}
-    assert "open_databank_close_dialog" in remaining
-    assert "print_databank_close_report" in remaining
+    protected = {"open_databank_close_dialog", "print_databank_close_report"}
+    if FEATURE_MODULE.exists():
+        assert protected <= top_level_functions(FEATURE_MODULE)
+    else:
+        assert protected <= remaining
+
     print("Wave 66 Data Bank close-records structural regression passed")
 
 

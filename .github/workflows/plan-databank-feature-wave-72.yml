@@ -1,0 +1,73 @@
+name: Plan Data Bank Feature Wave 72
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "architecture-map.json"
+      - "spina_app/databank_feature.py"
+      - "tools/plan_databank_feature_wave_72.py"
+      - "tools/test_databank_feature_wave_72.py"
+      - "tools/test_architecture_map.py"
+      - ".github/workflows/plan-databank-feature-wave-72.yml"
+  push:
+    branches:
+      - agent/high-volume-wave-72
+    paths:
+      - "architecture-map.json"
+      - "spina_app/databank_feature.py"
+      - "tools/plan_databank_feature_wave_72.py"
+      - "tools/test_databank_feature_wave_72.py"
+      - "tools/test_architecture_map.py"
+      - ".github/workflows/plan-databank-feature-wave-72.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plan-databank-feature-wave-72-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-72'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - name: Check out exact Wave 72 head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Compile Wave 72 planning guards
+        run: |
+          python -m py_compile tools\plan_databank_feature_wave_72.py
+          python -m py_compile tools\test_databank_feature_wave_72.py
+          python -m py_compile tools\test_architecture_map.py
+
+      - name: Inventory the pre-extraction Data Bank feature
+        if: ${{ hashFiles('spina_app/databank_feature.py') == '' }}
+        run: python tools\plan_databank_feature_wave_72.py
+
+      - name: Validate the committed Wave 72 plan result
+        if: ${{ hashFiles('spina_app/databank_feature.py') != '' }}
+        run: |
+          python -m tools.test_databank_feature_wave_72
+          python -m tools.test_architecture_map
+
+      - name: Upload Data Bank feature plan
+        if: ${{ hashFiles('wave72_databank_feature_plan.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave72-databank-feature-plan
+          path: |
+            wave72_databank_feature_plan.json
+            wave72_databank_feature_plan.md

@@ -1,0 +1,66 @@
+name: Inspect Data Bank Feature Wave 72
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/databank_feature.py"
+      - "tools/inspect_databank_feature_wave_72.py"
+      - "tools/test_databank_feature_wave_72.py"
+      - ".github/workflows/inspect-databank-feature-wave-72.yml"
+  push:
+    branches:
+      - agent/high-volume-wave-72
+    paths:
+      - "spina_app/databank_feature.py"
+      - "tools/inspect_databank_feature_wave_72.py"
+      - "tools/test_databank_feature_wave_72.py"
+      - ".github/workflows/inspect-databank-feature-wave-72.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: inspect-databank-feature-wave-72-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  inspect:
+    if: github.event_name != 'pull_request' || github.head_ref == 'agent/high-volume-wave-72'
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - name: Check out exact Wave 72 head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Compile Wave 72 inspection guards
+        run: |
+          python -m py_compile tools\inspect_databank_feature_wave_72.py
+          python -m py_compile tools\test_databank_feature_wave_72.py
+
+      - name: Inspect and export pre-extraction Data Bank functions
+        if: ${{ hashFiles('spina_app/databank_feature.py') == '' }}
+        run: python tools\inspect_databank_feature_wave_72.py
+
+      - name: Validate the committed extracted Data Bank feature
+        if: ${{ hashFiles('spina_app/databank_feature.py') != '' }}
+        run: python -m tools.test_databank_feature_wave_72
+
+      - name: Upload exact Data Bank inventory
+        if: ${{ hashFiles('wave72_databank_exact_inventory.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: wave72-databank-exact-inventory
+          path: |
+            wave72_databank_exact_inventory.json
+            wave72_databank_sources
