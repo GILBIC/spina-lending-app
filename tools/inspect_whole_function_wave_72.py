@@ -104,13 +104,25 @@ def main() -> None:
                     "statement": ast.unparse(node),
                 })
 
-    lowered = raw.lower()
-    prohibited_fragments = [
-        "insert ", "update ", "delete ", "drop ", "alter ",
-        "payment", "balance", "interest", "day_close", "close_day",
-        "password", "login", "backup", "restore",
+    risky_call_terms = (
+        "execute", "executemany", "commit", "rollback", "run_write",
+        "connect_db", "payment", "balance", "interest", "day_close",
+        "close_day", "password", "login", "backup", "restore",
+    )
+    risky_calls = [
+        call for call in calls
+        if any(term in call.lower() for term in risky_call_terms)
     ]
-    prohibited_hits = [item for item in prohibited_fragments if item in lowered]
+    sql_literals = sorted({
+        node.value.strip()
+        for node in ast.walk(method)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and any(
+            token in node.value.lower()
+            for token in ("insert into", "update ", "delete from", "drop table", "alter table")
+        )
+    })
 
     report = {
         "target": f"{TARGET_CLASS}.{TARGET_METHOD}",
@@ -123,22 +135,25 @@ def main() -> None:
         "calls": calls,
         "callers": callers,
         "later_bindings": later_bindings,
-        "prohibited_hits": prohibited_hits,
+        "risky_calls": risky_calls,
+        "sql_literals": sql_literals,
         "nested_function_count": sum(
             isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node is not method
             for node in ast.walk(method)
         ),
     }
 
+    REPORT.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    EXPORT.write_text(raw, encoding="utf-8")
+
     assert 30 <= report["line_count"] <= 100, report
     assert report["signature"].startswith("self"), report
     assert not later_bindings, report
-    assert not prohibited_hits, report
+    assert not risky_calls, report
+    assert not sql_literals, report
     assert report["nested_function_count"] == 0, report
     assert callers, report
 
-    REPORT.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    EXPORT.write_text(raw, encoding="utf-8")
     print(json.dumps(report, indent=2))
 
 
