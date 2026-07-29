@@ -7,7 +7,9 @@ on:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
       - "spina_app/calculation_rules.py"
       - "tools/apply_calculation_regressions_wave_74.py"
+      - "tools/apply_x7_fixed_interest_basis_wave_74.py"
       - "tools/test_calculation_regressions_wave_74.py"
+      - "tools/test_x7_fixed_interest_basis_wave_74.py"
       - ".github/workflows/calculation-regressions-wave-74.yml"
   workflow_dispatch:
 
@@ -31,11 +33,15 @@ jobs:
         run: |
           python -m py_compile spina_app\calculation_rules.py
           python -m py_compile tools\apply_calculation_regressions_wave_74.py
+          python -m py_compile tools\apply_x7_fixed_interest_basis_wave_74.py
           python -m py_compile tools\test_calculation_regressions_wave_74.py
+          python -m py_compile tools\test_x7_fixed_interest_basis_wave_74.py
 
       - name: Apply calculation wiring and fixes
         shell: cmd
-        run: python tools\apply_calculation_regressions_wave_74.py
+        run: |
+          python tools\apply_calculation_regressions_wave_74.py
+          python tools\apply_x7_fixed_interest_basis_wave_74.py
 
       - name: Compile updated desktop application
         shell: cmd
@@ -46,6 +52,10 @@ jobs:
       - name: Run Wave 74 calculation regressions
         shell: cmd
         run: set "PYTHONPATH=%CD%" && python tools\test_calculation_regressions_wave_74.py
+
+      - name: Run fixed-principal 7x7 interest tests
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_x7_fixed_interest_basis_wave_74.py
 
       - name: Run existing dashboard regression when available
         shell: cmd
@@ -64,5 +74,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
-          git commit -m "Apply calculation regressions Wave 74"
+          git commit -m "Apply fixed-principal 7x7 interest rule Wave 74"
           git push origin "HEAD:%TARGET_BRANCH%"
