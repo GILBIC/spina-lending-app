@@ -1,0 +1,93 @@
+name: Full Dashboard modularization Wave 76
+# Revalidate the exact committed production extraction after guarded generation.
+
+on:
+  pull_request:
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/calculation_rules.py"
+      - "spina_app/dashboard_chart_presentation.py"
+      - "spina_app/features/**"
+      - "spina_app/repositories/**"
+      - "spina_app/services/**"
+      - "spina_app/tabs/dashboard.py"
+      - "spina_app/utilities/dashboard.py"
+      - "tools/apply_full_dashboard_modularization_wave_76.py"
+      - "tools/test_full_dashboard_modularization_wave_76.py"
+      - "tools/test_wave28_compat_under_wave76.py"
+      - "tools/test_wave51_compat_under_wave76.py"
+      - "tools/test_wave74_compat_under_wave76.py"
+      - "tools/test_wave75_compat_under_wave76.py"
+      - ".github/workflows/full-dashboard-modularization-wave-76.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apply-and-validate:
+    # Never execute fork or non-owner pull-request code on the persistent runner.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login == github.repository_owner &&
+       github.actor == github.repository_owner)
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out Wave 76 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Compile Dashboard modules and tools
+        shell: cmd
+        run: |
+          python -m py_compile spina_app\features\__init__.py
+          python -m py_compile spina_app\features\dashboard.py
+          python -m py_compile spina_app\repositories\__init__.py
+          python -m py_compile spina_app\repositories\dashboard.py
+          python -m py_compile spina_app\services\loan_cycles.py
+          python -m py_compile spina_app\tabs\dashboard.py
+          python -m py_compile tools\apply_full_dashboard_modularization_wave_76.py
+          python -m py_compile tools\test_full_dashboard_modularization_wave_76.py
+          python -m py_compile tools\test_wave28_compat_under_wave76.py
+          python -m py_compile tools\test_wave51_compat_under_wave76.py
+          python -m py_compile tools\test_wave74_compat_under_wave76.py
+          python -m py_compile tools\test_wave75_compat_under_wave76.py
+
+      - name: Apply guarded full Dashboard extraction
+        shell: cmd
+        run: |
+          python tools\apply_full_dashboard_modularization_wave_76.py
+          python tools\apply_full_dashboard_modularization_wave_76.py
+
+      - name: Compile updated desktop application
+        shell: cmd
+        run: python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+
+      - name: Run Wave 76 full Dashboard tests
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_full_dashboard_modularization_wave_76.py
+
+      - name: Run Wave 75 compatibility
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_wave75_compat_under_wave76.py
+
+      - name: Run Wave 74 compatibility
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_wave74_compat_under_wave76.py
+
+      - name: Run Wave 28 compatibility
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_wave28_compat_under_wave76.py
+
+      - name: Run Wave 51 chart compatibility
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_wave51_compat_under_wave76.py
+
+      - name: Check generated diff
+        shell: cmd
+        run: git diff --check

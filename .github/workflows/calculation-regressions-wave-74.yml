@@ -1,23 +1,33 @@
 name: Calculation regressions Wave 74
-# Re-run on the committed production head after guarded generation.
+# Revalidate Wave 74 rules directly or through newer Dashboard layers.
 
 on:
   pull_request:
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
       - "spina_app/calculation_rules.py"
+      - "spina_app/repositories/**"
+      - "spina_app/services/**"
       - "tools/apply_calculation_regressions_wave_74.py"
       - "tools/apply_x7_fixed_interest_basis_wave_74.py"
       - "tools/test_calculation_regressions_wave_74.py"
       - "tools/test_x7_fixed_interest_basis_wave_74.py"
+      - "tools/test_wave74_compat_under_wave76.py"
+      - "tools/test_wave28_compat_under_wave76.py"
       - ".github/workflows/calculation-regressions-wave-74.yml"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   apply-and-validate:
+    # Persistent-runner execution is limited to the repository owner and trusted refs.
+    if: >-
+      github.actor == github.repository_owner &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.user.login == github.repository_owner))
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 30
 
@@ -27,6 +37,13 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect Dashboard architecture
+        id: architecture
+        shell: cmd
+        run: |
+          python -c "import os; from pathlib import Path; marker='# --- BEGIN: Dashboard feature installer Wave 76 ---'; source=Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py').read_text(encoding='utf-8'); value='true' if marker in source else 'false'; open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8').write(f'wave76={value}\n'); print(f'Wave 76 architecture detected: {value}')"
 
       - name: Compile Wave 74 tools and rules
         shell: cmd
@@ -36,12 +53,22 @@ jobs:
           python -m py_compile tools\apply_x7_fixed_interest_basis_wave_74.py
           python -m py_compile tools\test_calculation_regressions_wave_74.py
           python -m py_compile tools\test_x7_fixed_interest_basis_wave_74.py
+          if exist tools\test_wave74_compat_under_wave76.py python -m py_compile tools\test_wave74_compat_under_wave76.py
+          if exist tools\test_wave28_compat_under_wave76.py python -m py_compile tools\test_wave28_compat_under_wave76.py
 
-      - name: Apply calculation wiring and fixes
+      - name: Apply legacy Dashboard calculation wiring
+        if: steps.architecture.outputs.wave76 != 'true'
         shell: cmd
-        run: |
-          python tools\apply_calculation_regressions_wave_74.py
-          python tools\apply_x7_fixed_interest_basis_wave_74.py
+        run: python tools\apply_calculation_regressions_wave_74.py
+
+      - name: Confirm Wave 76 calculation delegation
+        if: steps.architecture.outputs.wave76 == 'true'
+        shell: cmd
+        run: echo Wave 76 already delegates Dashboard calculation wiring.
+
+      - name: Apply fixed-principal 7x7 report wiring
+        shell: cmd
+        run: python tools\apply_x7_fixed_interest_basis_wave_74.py
 
       - name: Compile updated desktop application
         shell: cmd
@@ -50,29 +77,33 @@ jobs:
           python -m py_compile spina_app\calculation_rules.py
 
       - name: Run Wave 74 calculation regressions
+        if: steps.architecture.outputs.wave76 != 'true'
         shell: cmd
         run: set "PYTHONPATH=%CD%" && python tools\test_calculation_regressions_wave_74.py
+
+      - name: Run Wave 74 compatibility under Wave 76
+        if: steps.architecture.outputs.wave76 == 'true'
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_wave74_compat_under_wave76.py
 
       - name: Run fixed-principal 7x7 interest tests
         shell: cmd
         run: set "PYTHONPATH=%CD%" && python tools\test_x7_fixed_interest_basis_wave_74.py
 
-      - name: Run existing dashboard regression when available
+      - name: Run legacy Dashboard presentation regression
+        if: steps.architecture.outputs.wave76 != 'true'
         shell: cmd
         run: if exist tools\test_dashboard_presentation_wave_28.py set "PYTHONPATH=%CD%" && python tools\test_dashboard_presentation_wave_28.py
+
+      - name: Run Dashboard presentation compatibility under Wave 76
+        if: steps.architecture.outputs.wave76 == 'true'
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_wave28_compat_under_wave76.py
 
       - name: Check generated diff
         shell: cmd
         run: git diff --check
 
-      - name: Commit validated production wiring
+      - name: Require committed production wiring
         shell: cmd
-        env:
-          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
-        run: |
-          git diff --quiet -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py && (echo Wave 74 production wiring is already applied. & exit /b 0)
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
-          git commit -m "Apply fixed-principal 7x7 interest rule Wave 74"
-          git push origin "HEAD:%TARGET_BRANCH%"
+        run: git diff --exit-code -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
