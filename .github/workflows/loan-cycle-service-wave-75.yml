@@ -1,4 +1,5 @@
 name: Loan cycle service Wave 75
+# Revalidate the exact committed production wiring after guarded generation.
 
 on:
   pull_request:
