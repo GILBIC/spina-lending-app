@@ -1,15 +1,19 @@
 name: Calculation regressions Wave 74
-# Re-run on the committed production head after guarded generation.
+# Revalidate Wave 74 rules directly or through newer Dashboard layers.
 
 on:
   pull_request:
     paths:
       - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
       - "spina_app/calculation_rules.py"
+      - "spina_app/repositories/**"
+      - "spina_app/services/**"
       - "tools/apply_calculation_regressions_wave_74.py"
       - "tools/apply_x7_fixed_interest_basis_wave_74.py"
       - "tools/test_calculation_regressions_wave_74.py"
       - "tools/test_x7_fixed_interest_basis_wave_74.py"
+      - "tools/test_wave74_compat_under_wave76.py"
+      - "tools/test_wave28_compat_under_wave76.py"
       - ".github/workflows/calculation-regressions-wave-74.yml"
   workflow_dispatch:
 
@@ -18,6 +22,12 @@ permissions:
 
 jobs:
   apply-and-validate:
+    # Persistent-runner execution is limited to owner-authored same-repository PRs.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login == github.repository_owner &&
+       github.actor == github.repository_owner)
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 30
 
@@ -28,6 +38,12 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
+      - name: Detect Dashboard architecture
+        shell: cmd
+        run: |
+          findstr /C:"# --- BEGIN: Dashboard feature installer Wave 76 ---" OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py >nul
+          if errorlevel 1 (echo SPINA_DASHBOARD_WAVE76=0>>"%GITHUB_ENV%") else (echo SPINA_DASHBOARD_WAVE76=1>>"%GITHUB_ENV%")
+
       - name: Compile Wave 74 tools and rules
         shell: cmd
         run: |
@@ -36,11 +52,13 @@ jobs:
           python -m py_compile tools\apply_x7_fixed_interest_basis_wave_74.py
           python -m py_compile tools\test_calculation_regressions_wave_74.py
           python -m py_compile tools\test_x7_fixed_interest_basis_wave_74.py
+          if exist tools\test_wave74_compat_under_wave76.py python -m py_compile tools\test_wave74_compat_under_wave76.py
+          if exist tools\test_wave28_compat_under_wave76.py python -m py_compile tools\test_wave28_compat_under_wave76.py
 
       - name: Apply calculation wiring and fixes
         shell: cmd
         run: |
-          python tools\apply_calculation_regressions_wave_74.py
+          if "%SPINA_DASHBOARD_WAVE76%"=="1" (echo Wave 76 already delegates Dashboard calculation wiring.) else (python tools\apply_calculation_regressions_wave_74.py)
           python tools\apply_x7_fixed_interest_basis_wave_74.py
 
       - name: Compile updated desktop application
@@ -51,15 +69,17 @@ jobs:
 
       - name: Run Wave 74 calculation regressions
         shell: cmd
-        run: set "PYTHONPATH=%CD%" && python tools\test_calculation_regressions_wave_74.py
+        run: |
+          if "%SPINA_DASHBOARD_WAVE76%"=="1" (set "PYTHONPATH=%CD%" && python tools\test_wave74_compat_under_wave76.py) else (set "PYTHONPATH=%CD%" && python tools\test_calculation_regressions_wave_74.py)
 
       - name: Run fixed-principal 7x7 interest tests
         shell: cmd
         run: set "PYTHONPATH=%CD%" && python tools\test_x7_fixed_interest_basis_wave_74.py
 
-      - name: Run existing dashboard regression when available
+      - name: Run Dashboard presentation compatibility
         shell: cmd
-        run: if exist tools\test_dashboard_presentation_wave_28.py set "PYTHONPATH=%CD%" && python tools\test_dashboard_presentation_wave_28.py
+        run: |
+          if "%SPINA_DASHBOARD_WAVE76%"=="1" (set "PYTHONPATH=%CD%" && python tools\test_wave28_compat_under_wave76.py) else (if exist tools\test_dashboard_presentation_wave_28.py set "PYTHONPATH=%CD%" && python tools\test_dashboard_presentation_wave_28.py)
 
       - name: Check generated diff
         shell: cmd
