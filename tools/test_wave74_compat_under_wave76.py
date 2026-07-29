@@ -47,13 +47,16 @@ def test_static_delegation() -> None:
 
     assert "_wave76_install_dashboard_feature(" in app_source
     assert "def _spina_dashboard_fetch_rows" not in app_source
-    # Cash Control and statement code still use these shared Wave 74 aliases.
+    # Other tabs still use these helpers that were historically imported by the
+    # Dashboard blocks, so full extraction must keep their aliases available.
     for token in (
         "allocate_x7_payments as _wave74_allocate_x7_payments",
         "ceil_thousand_units as _wave74_ceil_thousand_units",
         "x7_daily_interest as _wave74_x7_daily_interest",
         "from spina_app.utilities.dates import _spina_dash__date_text",
-        "from spina_app.utilities.formatting import _spina_dash__fmt_money",
+        "_spina_dash__fmt_money,",
+        "_spina_v18_fmt_money_compact,",
+        "from spina_app.ui_helpers import _spina_v20_round_rect",
     ):
         assert token in app_source, token
     for token in (
