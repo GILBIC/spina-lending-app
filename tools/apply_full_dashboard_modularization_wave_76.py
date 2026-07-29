@@ -16,15 +16,19 @@ INSTALL_START = "# --- BEGIN: Dashboard feature installer Wave 76 ---"
 INSTALL_END = "# --- END: Dashboard feature installer Wave 76 ---"
 
 INSTALL_BLOCK = f'''{INSTALL_START}
-# Shared calculation/formatting helpers remain available to non-Dashboard features
-# that historically received them from the old Dashboard block.
+# Shared helpers remain available to non-Dashboard features that historically
+# received them from the old Dashboard blocks.
 from spina_app.calculation_rules import (
     allocate_x7_payments as _wave74_allocate_x7_payments,
     ceil_thousand_units as _wave74_ceil_thousand_units,
     x7_daily_interest as _wave74_x7_daily_interest,
 )
 from spina_app.utilities.dates import _spina_dash__date_text
-from spina_app.utilities.formatting import _spina_dash__fmt_money
+from spina_app.utilities.formatting import (
+    _spina_dash__fmt_money,
+    _spina_v18_fmt_money_compact,
+)
+from spina_app.ui_helpers import _spina_v20_round_rect
 
 from spina_app.features.dashboard import (
     install_dashboard_feature as _wave76_install_dashboard_feature,
@@ -75,7 +79,9 @@ def validate_result(source: str) -> None:
         "ceil_thousand_units as _wave74_ceil_thousand_units",
         "x7_daily_interest as _wave74_x7_daily_interest",
         "from spina_app.utilities.dates import _spina_dash__date_text",
-        "from spina_app.utilities.formatting import _spina_dash__fmt_money",
+        "_spina_dash__fmt_money,",
+        "_spina_v18_fmt_money_compact,",
+        "from spina_app.ui_helpers import _spina_v20_round_rect",
         "from spina_app.features.dashboard import (",
         "_wave76_install_dashboard_feature(",
         MODERN_REMOVAL_BLOCK.splitlines()[0],
