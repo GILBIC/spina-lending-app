@@ -25,6 +25,11 @@ from spina_app.tabs.collector_route import (
 from spina_app import tabs as _tabs_package
 from spina_app.tabs import collectors as _editor
 from spina_app.theme_palettes import _spina_v25_collector_colors
+from spina_app.ui_cards import _spina_v27_route_card
+from spina_app.ui_controls import (
+    _spina_v27_route_button,
+    _spina_v27_style_route_trees,
+)
 
 _EDITOR_METHOD_NAMES = (
     "_collectors_get_selected_name",
@@ -95,6 +100,9 @@ def install_collector_route_feature(
         dependencies.update(
             {
                 "_spina_v27_route_colors": _spina_v25_collector_colors,
+                "_spina_v27_route_button": _spina_v27_route_button,
+                "_spina_v27_route_card": _spina_v27_route_card,
+                "_spina_v27_style_route_trees": _spina_v27_style_route_trees,
                 "_spina_v27_hidden_collector_widgets": _spina_v27_hidden_collector_widgets,
                 "_spina_v27_update_route_cards": _spina_v27_update_route_cards,
                 "_spina_v27_build_collectors_tab": _spina_v27_build_collectors_tab,
