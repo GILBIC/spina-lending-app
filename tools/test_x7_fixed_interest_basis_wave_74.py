@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 from spina_app.calculation_rules import allocate_x7_payments, x7_daily_interest  # noqa: E402
 
 APP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+REPORT_ENGINE = ROOT / "spina_app" / "report_engine.py"
 
 
 def close(actual: float, expected: float, tolerance: float = 0.001) -> None:
@@ -37,7 +38,6 @@ def main() -> None:
     close(allocation["principal_paid"], 1172)
     close(allocation["remaining_principal"], 828)
 
-    # A deliberately updated/new cycle principal changes the fixed daily basis.
     updated_cycle = allocate_x7_payments(
         1000,
         "2026-02-01",
@@ -48,7 +48,12 @@ def main() -> None:
     close(updated_cycle["interest_paid"], 7)
     close(updated_cycle["principal_paid"], 93)
 
-    source = APP.read_text(encoding="utf-8")
+    app_source = APP.read_text(encoding="utf-8")
+    source = app_source
+    if "# --- BEGIN: Reports feature installer Wave 80 ---" in app_source:
+        assert REPORT_ENGINE.exists()
+        source = REPORT_ENGINE.read_text(encoding="utf-8")
+
     assert "def _x7_daily_interest_for_principal(_loan_principal):" in source
     assert "_x7_daily_interest_for_principal(principal)" in source
     assert "_x7_daily_interest_for_balance(rem)" not in source
