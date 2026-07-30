@@ -53,6 +53,7 @@ jobs:
         run: |
           python -m py_compile tools\inspect_databank_modularization_wave_82.py
           python -m py_compile tools\apply_databank_modularization_wave_82.py
+          python -m py_compile tools\run_databank_extraction_wave_82.py
           python -m py_compile tools\test_data_bank_feature_wave_82.py
           python -m py_compile tools\test_data_bank_extraction_wave_82.py
           python -m py_compile spina_app\services\data_bank.py
@@ -67,7 +68,7 @@ jobs:
       - name: Apply guarded complete Data Bank extraction twice
         if: steps.architecture.outputs.generated == 'true'
         shell: cmd
-        run: python tools\apply_databank_modularization_wave_82.py
+        run: python tools\run_databank_extraction_wave_82.py
 
       - name: Compile complete Data Bank architecture
         shell: cmd
