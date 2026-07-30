@@ -131,6 +131,8 @@ def installer_checks() -> None:
     namespace = {
         "App": FakeApp,
         "LoanDB": FakeLoanDB,
+        "DATA_DIR": ".",
+        "_open_path": no_op,
         "_log_exc": no_op,
         "_log_suppressed_once": no_op,
         "_log_ignored": no_op,
@@ -158,7 +160,20 @@ def installer_checks() -> None:
     assert first_db == second_db
     assert FakeApp._spina_data_bank_wave82_base_update_toolbar is base_toolbar
     assert FakeApp._spina_data_bank_wave82_base_apply_theme is base_theme
+
+    # Wave 82 replaces nine old source-location aliases with one installer. These
+    # assertions preserve the same public capabilities at their modular owners.
     assert FakeApp.refresh_data_grid.__module__ == "spina_app.databank_feature"
+    assert FakeApp._build_data_tab.__module__ == "spina_app.databank_presentation"
+    assert FakeApp.goto_current_month.__module__ == "spina_app.databank_grid_presentation"
+    assert FakeApp._begin_cell_edit.__module__ == "spina_app.databank_editor_presentation"
+    assert FakeApp._save_cell_edit.__module__ == "spina_app.databank_cell_writes"
+    assert FakeApp.open_delete_day_dialog.__module__ == "spina_app.databank_delete_day"
+    assert FakeApp.open_databank_close_history_dialog.__module__ == "spina_app.databank_close_history_presentation"
+    assert FakeApp.open_databank_close_records_dialog.__module__ == "spina_app.databank_close_records_presentation"
+    assert FakeApp._ensure_databank_edit_bindings.__module__ == "spina_app.tabs.data_bank_shell"
+    assert FakeApp._build_audit_tab.__module__ == "spina_app.audit_presentation"
+    assert FakeApp._show_import_log_window.__module__ == "spina_app.import_log_presentation"
     assert FakeApp.export_range_template.__module__ == "spina_app.data_bank_exports"
     assert FakeApp._audit_show_selected.__module__ == "spina_app.data_bank_audit"
     assert FakeLoanDB.get_databank_daily_total.__module__ == "spina_app.repositories.data_bank"
