@@ -18,7 +18,9 @@ LEGACY_PATH = "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixe
 BIND_START = "# Bind optimized loaders after the normal app methods are installed."
 BIND_END = "# --- END: LARGE DATA PERFORMANCE PATCH (clients + databank) ---"
 WAVE81_INSTALL_MARKER = "# --- BEGIN: Clients feature installer Wave 81 ---"
+WAVE82_INSTALL_MARKER = "# --- BEGIN: Data Bank feature installer Wave 82 ---"
 LEGACY_CLIENT_REFRESH_BIND = '        setattr(App, "refresh_clients", _spina_perf_refresh_clients)\n'
+LEGACY_DATA_BANK_REFRESH_BIND = '        setattr(App, "refresh_data_grid", _spina_perf_refresh_data_grid)\n'
 
 
 def git_show(ref: str, path: str) -> str:
@@ -87,6 +89,17 @@ def replace_section(current: str, fixed: str, start_marker: str, end_marker: str
     return current[:current_start] + fixed_section + current[current_end:]
 
 
+def _remove_legacy_binding(current: str, marker: str, binding: str, label: str) -> str:
+    if marker not in current:
+        return current
+    count = current.count(binding)
+    if count != 1:
+        raise AssertionError(
+            f"Expected one legacy {label} binding under its feature installer, found {count}"
+        )
+    return current.replace(binding, "", 1)
+
+
 def patch_app(current: str, fixed: str) -> str:
     prefix = {}
     if "_SPINA_PERF_INDEXES_READY = False" not in current:
@@ -104,17 +117,22 @@ def patch_app(current: str, fixed: str) -> str:
     )
     current = replace_section(current, fixed, BIND_START, BIND_END)
 
-    # The reviewed legacy source predates the complete Clients feature boundary and
-    # therefore binds the optimized Clients refresh directly. Once Wave 81 owns the
-    # final App bindings, retaining that line restores redundant runtime ownership.
-    if WAVE81_INSTALL_MARKER in current:
-        count = current.count(LEGACY_CLIENT_REFRESH_BIND)
-        if count != 1:
-            raise AssertionError(
-                f"Expected one legacy Clients refresh binding under Wave 81, found {count}"
-            )
-        current = current.replace(LEGACY_CLIENT_REFRESH_BIND, "", 1)
-
+    # The reviewed legacy source predates the consolidated feature boundaries and
+    # directly binds both optimized refresh callbacks. Their feature installers now
+    # own the final App methods, so retaining either line restores duplicate runtime
+    # ownership after every Wave 73 run.
+    current = _remove_legacy_binding(
+        current,
+        WAVE81_INSTALL_MARKER,
+        LEGACY_CLIENT_REFRESH_BIND,
+        "Clients refresh",
+    )
+    current = _remove_legacy_binding(
+        current,
+        WAVE82_INSTALL_MARKER,
+        LEGACY_DATA_BANK_REFRESH_BIND,
+        "Data Bank refresh",
+    )
     return current
 
 
