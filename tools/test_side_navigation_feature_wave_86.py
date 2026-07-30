@@ -17,15 +17,6 @@ HEADER = ROOT / "spina_app" / "account_header_presentation.py"
 FEATURE = ROOT / "spina_app" / "features" / "side_navigation.py"
 
 
-def dotted(node: ast.AST) -> str:
-    if isinstance(node, ast.Name):
-        return node.id
-    if isinstance(node, ast.Attribute):
-        left = dotted(node.value)
-        return f"{left}.{node.attr}" if left else node.attr
-    return ""
-
-
 def check_architecture() -> None:
     desktop_text = DESKTOP.read_text(encoding="utf-8")
     header_text = HEADER.read_text(encoding="utf-8")
@@ -34,12 +25,18 @@ def check_architecture() -> None:
     assert "install_side_navigation_feature" in header_text
     assert 'namespace.get("App")' in header_text
     assert 'namespace.get("_log_suppressed_once")' in header_text
+    assert desktop_text.count("_wave46_configure_account_header_dependencies(globals())") == 1
 
-    legacy_end = desktop_text.index("# --- END: v13 side-tabs-only UI fix ---")
-    final_shell_hook = desktop_text.index(
-        "_wave46_configure_account_header_dependencies(globals())"
-    )
-    assert legacy_end < final_shell_hook
+    for removed in (
+        "# --- BEGIN: v13 side-tabs-only UI fix ---",
+        "# --- END: v13 side-tabs-only UI fix ---",
+        "# --- BEGIN: Modern sidebar nav refresh after role changes ---",
+        "# --- END: Modern sidebar nav refresh after role changes ---",
+        "_spina_v13_app_init",
+        "_spina_v13_apply_role_access",
+        "_spina_apply_role_access_modern_sidebar",
+    ):
+        assert removed not in desktop_text, removed
 
     tree = ast.parse(feature_text)
     installer = next(
@@ -49,10 +46,10 @@ def check_architecture() -> None:
     )
     source = ast.get_source_segment(feature_text, installer) or ""
     for token in (
-        '"_spina_v13_orig_init"',
-        '"_spina_v13_orig_setup_style"',
-        '"_spina_v13_orig_apply_theme"',
-        '"_spina_orig_apply_role_modern_sidebar"',
+        'fallback_attr="__init__"',
+        'fallback_attr="_setup_style"',
+        'fallback_attr="_apply_ui_theme"',
+        'fallback_attr="apply_role_access"',
         "app_class.__init__ = init_with_side_navigation",
         "app_class.apply_role_access = apply_role_with_side_navigation",
         "app_class._spina_side_navigation_wave86_installed = True",
