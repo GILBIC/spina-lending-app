@@ -7940,24 +7940,7 @@ def main():
 
 
 
-# --- BEGIN: Modern sidebar nav refresh after role changes ---
-try:
-    _spina_orig_apply_role_modern_sidebar = getattr(App, 'apply_role_access', None)
-    if _spina_orig_apply_role_modern_sidebar is not None:
-        def _spina_apply_role_access_modern_sidebar(self, *args, **kwargs):
-            result = _spina_orig_apply_role_modern_sidebar(self, *args, **kwargs)
-            try:
-                self._rebuild_side_nav()
-            except Exception:
-                try:
-                    self._refresh_side_nav_selection()
-                except Exception:
-                    pass
-            return result
-        App.apply_role_access = _spina_apply_role_access_modern_sidebar
-except Exception:
-    pass
-# --- END: Modern sidebar nav refresh after role changes ---
+# --- Legacy modern sidebar role wrapper removed Wave 87 ---
 
 if __name__ == '__main__':
     # Entry point moved to end of file so runtime patches load first
@@ -8239,76 +8222,7 @@ from spina_app.utilities.text import _spina_route_notice_norm_name
 # --- END: PostgreSQL TEST v7 Collector Route ADV UID/person_uid fallback ---
 
 
-# --- BEGIN: v13 side-tabs-only UI fix ---
-# This patch keeps ttk.Notebook internally, but removes the visible top tab row
-# and makes the left sidebar the only navigation for all main tabs, including
-# runtime-added tabs such as Dashboard, Cash Control, and Client Info Logs.
-try:
-    from spina_app.side_navigation_presentation import (
-        configure_side_navigation_dependencies as _wave48_configure_side_navigation_dependencies,
-        _spina_v13_hide_main_notebook_tabs as _wave48_spina_v13_hide_main_notebook_tabs,
-        _spina_v13_side_nav_items as _wave48_spina_v13_side_nav_items,
-        _spina_v13_rebuild_side_nav as _wave48_spina_v13_rebuild_side_nav,
-        _spina_v13_refresh_side_nav_selection as _wave48_spina_v13_refresh_side_nav_selection,
-        _spina_v13_setup_style as _wave48_spina_v13_setup_style,
-        _spina_v13_apply_ui_theme as _wave48_spina_v13_apply_ui_theme,
-    )
-    _spina_v13_hide_main_notebook_tabs = _wave48_spina_v13_hide_main_notebook_tabs
-    _spina_v13_side_nav_items = _wave48_spina_v13_side_nav_items
-    _spina_v13_rebuild_side_nav = _wave48_spina_v13_rebuild_side_nav
-    _spina_v13_refresh_side_nav_selection = _wave48_spina_v13_refresh_side_nav_selection
-    _spina_v13_setup_style = _wave48_spina_v13_setup_style
-    _spina_v13_apply_ui_theme = _wave48_spina_v13_apply_ui_theme
-
-
-    if 'App' in globals():
-        # Replace sidebar methods with dynamic all-tabs versions.
-        setattr(App, '_side_nav_items', _spina_v13_side_nav_items)
-        setattr(App, '_rebuild_side_nav', _spina_v13_rebuild_side_nav)
-        setattr(App, '_refresh_side_nav_selection', _spina_v13_refresh_side_nav_selection)
-        setattr(App, '_hide_main_notebook_tabs', _spina_v13_hide_main_notebook_tabs)
-
-        _spina_v13_orig_setup_style = getattr(App, '_setup_style', None)
-        _wave48_configure_side_navigation_dependencies(globals())
-        if callable(_spina_v13_orig_setup_style):
-            App._setup_style = _spina_v13_setup_style
-
-        _spina_v13_orig_apply_theme = getattr(App, '_apply_ui_theme', None)
-        _wave48_configure_side_navigation_dependencies(globals())
-        if callable(_spina_v13_orig_apply_theme):
-            App._apply_ui_theme = _spina_v13_apply_ui_theme
-
-        _spina_v13_orig_init = App.__init__
-        def _spina_v13_app_init(self, *args, **kwargs):
-            _spina_v13_orig_init(self, *args, **kwargs)
-            try:
-                _spina_v13_hide_main_notebook_tabs(self)
-            except Exception:
-                pass
-            try:
-                _spina_v13_rebuild_side_nav(self)
-            except Exception:
-                pass
-        App.__init__ = _spina_v13_app_init
-
-        _spina_v13_orig_apply_role = getattr(App, 'apply_role_access', None)
-        if callable(_spina_v13_orig_apply_role):
-            def _spina_v13_apply_role_access(self, *args, **kwargs):
-                res = _spina_v13_orig_apply_role(self, *args, **kwargs)
-                try:
-                    _spina_v13_hide_main_notebook_tabs(self)
-                except Exception:
-                    pass
-                try:
-                    _spina_v13_rebuild_side_nav(self)
-                except Exception:
-                    pass
-                return res
-            App.apply_role_access = _spina_v13_apply_role_access
-except Exception:
-    pass
-# --- END: v13 side-tabs-only UI fix ---
-
+# --- Legacy v13 sidebar wrapper removed Wave 87 ---
 
 # --- BEGIN: Dashboard legacy patch blocks removed Wave 76 ---
 # Dashboard presentation, charts, filters, role handling, and runtime hooks now

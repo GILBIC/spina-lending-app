@@ -11,7 +11,6 @@ WRAPPER_HASHES = {
     "_spina_app_init_with_cash_control": "cde95ced05cddfd8dbf68ed2ca93af2de90975d586ca3de76947ea997eb48bf8",
     "_spina_app_init_with_client_info_logs": "b21819a83b5f7df417f3868817fd2b1a43c54d7c113ac1425001094ae71a5f02",
     "_spina_app_init_with_auto_close": "ff1f545b3ee6c91c5380dd5c1ea5945c288ccf8c15d0dc3909769f6d666a5d30",
-    "_spina_v13_app_init": "bc37bc01645181f973f2e44556ecc60502e337419fdce2aeea4940b8e8e47f3b",
 }
 MODULAR_WRAPPERS = {
     "_spina_app_init_with_dashboard": (
@@ -33,6 +32,11 @@ MODULAR_WRAPPERS = {
         ROOT / "spina_app" / "features" / "data_bank.py",
         "_wave82_app_init",
         "self._schedule_auto_daily_close",
+    ),
+    "_spina_v13_app_init": (
+        ROOT / "spina_app" / "features" / "side_navigation.py",
+        "init_with_side_navigation",
+        "self._rebuild_side_nav",
     ),
 }
 
@@ -186,26 +190,26 @@ def main() -> None:
                 guarded.append(node)
     assert len(guarded) == 1, len(guarded)
 
-    for name, expected in WRAPPER_HASHES.items():
+    all_wrappers = set(WRAPPER_HASHES) | set(MODULAR_WRAPPERS)
+    for name in all_wrappers:
         matches = [
             node
             for node in ast.walk(tree)
             if isinstance(node, ast.FunctionDef) and node.name == name
         ]
         if matches:
+            assert name in WRAPPER_HASHES, (name, "unexpected legacy wrapper remains")
             assert len(matches) == 1, (name, len(matches))
             source = ast.get_source_segment(text, matches[0])
             assert source is not None
+            expected = WRAPPER_HASHES[name]
             assert normalized_hash(source) == expected, (
                 name,
                 normalized_hash(source),
                 expected,
             )
             continue
-        if name in MODULAR_WRAPPERS:
-            verify_modular_wrapper(name)
-            continue
-        raise AssertionError(f"Missing startup wrapper {name!r}")
+        verify_modular_wrapper(name)
 
     events = []
 
