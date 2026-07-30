@@ -70,6 +70,9 @@ def repository_checks() -> None:
         def __init__(self, connection):
             self.conn = connection
 
+        def _effective_lt(self, value):
+            return "7x7" if str(value or "").strip().lower().replace(" ", "") in {"7x7", "7×7"} else "Regular"
+
     data_bank.configure_data_bank_repository_dependencies({})
     db = FakeDB(conn)
     combined = data_bank.get_databank_daily_total(db, "2026-07-20", loan_type="__ALL__")
@@ -77,8 +80,6 @@ def repository_checks() -> None:
     x7 = data_bank.get_databank_daily_total(db, "2026-07-20", loan_type="7x7")
     assert round(float(combined), 2) == 149.00
     assert round(float(regular), 2) == 100.00
-    # Preserve the current query behavior; legacy Emergency compatibility is
-    # protected by the existing calculation/report suites.
     assert round(float(x7), 2) == 35.00
 
 
