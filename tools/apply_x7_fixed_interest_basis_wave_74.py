@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
-"""Apply the fixed-principal 7x7 daily-interest rule to legacy report code."""
+"""Apply or verify the fixed-principal 7x7 daily-interest report rule.
+
+Wave 74 originally patched the desktop monolith. Wave 80 moved the statement
+engine into ``spina_app/report_engine.py``. This tool supports both layouts and
+is intentionally idempotent.
+"""
 from __future__ import annotations
 
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+REPORT_ENGINE = ROOT / "spina_app" / "report_engine.py"
 
 OLD_HELPER = '''        # Daily interest is STEP-based from BALANCE principal (1..1000=7/day, 1001..2000=14/day, ...)
         def _x7_daily_interest_for_balance(_bal):
@@ -83,6 +89,19 @@ def patch(source: str) -> str:
             raise AssertionError(f"{label}: expected {expected} occurrence(s), found {count}")
         source = source.replace(old, new)
 
+    verify_fixed_principal(source)
+    return source
+
+
+def verify_fixed_principal(source: str) -> None:
+    required = (
+        "_x7_daily_interest_for_principal",
+        "_x7_daily_interest_for_principal(principal)",
+    )
+    for token in required:
+        if token not in source:
+            raise AssertionError(f"Fixed-principal 7x7 report token missing: {token}")
+
     forbidden = (
         "_x7_daily_interest_for_balance(rem)",
         "_x7_daily_interest_for_balance(_x7_balance_principal)",
@@ -91,15 +110,39 @@ def patch(source: str) -> str:
     for token in forbidden:
         if token in source:
             raise AssertionError(f"Declining-balance 7x7 interest logic remains: {token}")
-    return source
+
+
+def choose_target() -> Path:
+    """Return the active report source for legacy or Wave 80 architecture."""
+    if REPORT_ENGINE.exists():
+        engine = REPORT_ENGINE.read_text(encoding="utf-8")
+        if (
+            "_x7_daily_interest_for_principal" in engine
+            or OLD_HELPER in engine
+            or "_x7_daily_interest_for_balance(rem)" in engine
+        ):
+            return REPORT_ENGINE
+    return APP
 
 
 def main() -> None:
-    before = APP.read_text(encoding="utf-8")
-    after = patch(before)
+    target = choose_target()
+    before = target.read_text(encoding="utf-8")
+
+    # A modular Wave 80 engine that already contains the fixed-principal rule is
+    # validation-only. Do not require the removed legacy helper block.
+    if "_x7_daily_interest_for_principal" in before and OLD_HELPER not in before:
+        verify_fixed_principal(before)
+        after = before
+    else:
+        after = patch(before)
+
     if after != before:
-        APP.write_text(after, encoding="utf-8", newline="\n")
-    print(f"Wave 74 fixed-principal report patch applied: changed={after != before}")
+        target.write_text(after, encoding="utf-8", newline="\n")
+    print(
+        "Wave 74 fixed-principal report patch applied: "
+        f"target={target.relative_to(ROOT)} changed={after != before}"
+    )
 
 
 if __name__ == "__main__":
