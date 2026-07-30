@@ -262,7 +262,7 @@ def apply() -> bool:
         text,
         "# Wave 72: complete Data Bank feature/controller extraction.",
         "class App:",
-        "class App:",
+        "",
     )
     text = _remove_until(
         text,
