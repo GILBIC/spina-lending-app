@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 
+from spina_app import account_header_presentation
 from spina_app.features.accounts import install_accounts_feature
 from spina_app.services.accounts import (
     account_choices,
@@ -65,6 +66,14 @@ class DummyApp:
 
     def apply_role_access(self):
         self.permission_refreshes += 1
+
+
+class HookApp:
+    def _load_users_db(self):
+        return {"users": {"admin": {"role": "Admin"}}}
+
+    def _save_users_db(self, _database):
+        return True
 
 
 def prompt_login(self, default_user="admin"):
@@ -134,6 +143,20 @@ def main() -> None:
     )
     assert DummyApp._load_users_db is first_loader
     assert DummyApp.switch_account is first_switch
+
+    account_header_presentation.configure_account_header_dependencies(
+        {
+            "App": HookApp,
+            "_spina_v32_orig_build_header": build_header,
+            "_log_exc": lambda *_args, **_kwargs: None,
+            "_log_suppressed_once": lambda *_args, **_kwargs: None,
+        }
+    )
+    assert HookApp._spina_accounts_wave83_installed is True
+    assert HookApp._load_users_db.__module__ == "spina_app.features.accounts"
+    assert HookApp.switch_account.__module__ == "spina_app.features.accounts"
+    assert HookApp._refresh_user_header is account_header_presentation._spina_v32_refresh_user_header
+    assert HookApp._build_header is account_header_presentation._spina_v32_build_header
 
     print("Wave 83 accounts feature regression passed.")
 
