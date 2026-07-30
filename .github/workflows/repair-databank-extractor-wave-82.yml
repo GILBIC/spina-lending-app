@@ -29,7 +29,7 @@ jobs:
           python -c "from pathlib import Path; p=Path('tools/apply_databank_modularization_wave_82.py'); s=p.read_text(encoding='utf-8'); old='        \"class App:\",\n    )'; new='        \"\",\n    )'; c=s.count(old); assert c in (0,1), c; s=s.replace(old,new,1); p.write_text(s,encoding='utf-8',newline='\n'); print('repair needed:', bool(c))"
           python -m py_compile tools\apply_databank_modularization_wave_82.py
           git diff --check
-          python -c "import subprocess; changed={line[3:].strip().replace('\\','/') for line in subprocess.check_output(['git','status','--short'],text=True).splitlines()}; assert changed in ({set()},{'tools/apply_databank_modularization_wave_82.py'}), changed; print('scope:',changed)"
+          python -c "import subprocess; changed={line[3:].strip().replace('\\','/') for line in subprocess.check_output(['git','status','--short'],text=True).splitlines()}; assert (not changed) or changed == {'tools/apply_databank_modularization_wave_82.py'}, changed; print('scope:',changed)"
       - name: Commit repair when needed
         shell: cmd
         run: |
