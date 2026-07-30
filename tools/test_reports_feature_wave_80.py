@@ -29,8 +29,9 @@ def main() -> None:
         "_log_ignored": lambda *_args, **_kwargs: None,
         "pick_date": lambda *_args, **_kwargs: None,
         "pick_date_range": lambda *_args, **_kwargs: None,
-        "_spina__client_due_meta": lambda _info, as_of=None: ("Daily", True),
-        "_spina__fmt_client_money": lambda value: str(value),
+        # Intentionally omit _spina__client_due_meta and _spina__fmt_client_money.
+        # Reports must resolve these from modular service/utility modules even when
+        # Wave 80 runs before the Wave 81 Clients installer.
         "get_client_note": lambda *_args, **_kwargs: "",
         "set_client_note": lambda *_args, **_kwargs: None,
         "get_client_notes_in_range": lambda *_args, **_kwargs: [],
@@ -47,6 +48,8 @@ def main() -> None:
         "_normalize_client_name_for_lookup": lambda value: str(value or "").strip(),
         "fmt_currency": lambda value: str(value),
     }
+    assert "_spina__client_due_meta" not in namespace
+    assert "_spina__fmt_client_money" not in namespace
     assert install_reports_feature(DummyApp, namespace=namespace)
     assert DummyApp._spina_reports_wave80_installed is True
 
@@ -65,6 +68,13 @@ def main() -> None:
     )
     for name in required:
         assert callable(getattr(DummyApp, name, None)), name
+
+    # Reproduce the user-visible failure: a stale installed marker exists but the
+    # Generate Report callback is missing. The installer must repair the class.
+    delattr(DummyApp, "generate_pdf_selected")
+    DummyApp._spina_reports_wave80_installed = True
+    assert install_reports_feature(DummyApp, namespace=namespace)
+    assert callable(getattr(DummyApp, "generate_pdf_selected", None))
 
     first = {name: getattr(DummyApp, name) for name in required}
     assert install_reports_feature(DummyApp, namespace=namespace)
