@@ -23,4 +23,4 @@ After the cleanup, the installer selects the active methods through its fallback
 
 ## Validation
 
-The Windows workflow applies the guarded cleanup before validation, compiles the cleaned application, runs Waves 87, 86, and 48 sidebar regressions, Wave 29 navigation behavior, account header and Tkinter smoke tests, startup cancellation, shutdown checks, Waves 83-85 account compatibility, and the permanent architecture map.
+The generated desktop cleanup compiled and passed Waves 87, 86, and 48 sidebar regressions, Wave 29 navigation behavior, account header and Tkinter smoke tests, startup cancellation, shutdown checks, Waves 83-85 account compatibility, the permanent architecture map, and generated-diff validation before it was committed to the pull-request branch.
