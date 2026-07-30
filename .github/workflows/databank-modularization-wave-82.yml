@@ -10,6 +10,7 @@ on:
       - "spina_app/repositories/data_bank.py"
       - "spina_app/services/data_bank.py"
       - "tools/*databank*wave_82.py"
+      - "tools/*data_bank*wave_82.py"
       - "docs/databank-modularization-wave-82.md"
       - ".github/workflows/databank-modularization-wave-82.yml"
   workflow_dispatch:
@@ -22,14 +23,16 @@ permissions:
   contents: read
 
 jobs:
-  inventory:
+  validate:
     if: >-
       github.actor == github.repository_owner &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event.pull_request.head.repo.full_name == github.repository &&
         github.event.pull_request.user.login == github.repository_owner))
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 35
+    timeout-minutes: 70
+    outputs:
+      generated: ${{ steps.architecture.outputs.generated }}
 
     steps:
       - name: Check out exact Wave 82 head
@@ -39,24 +42,128 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Compile inventory tool and desktop application
+      - name: Detect committed Data Bank architecture
+        id: architecture
+        shell: cmd
+        run: |
+          python -c "import os; from pathlib import Path; p=Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py'); s=p.read_text(encoding='utf-8'); v='false' if '# --- BEGIN: Data Bank feature installer Wave 82 ---' in s else 'true'; open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8').write('generated='+v+'\n'); print('Production generation required:',v)"
+
+      - name: Compile staged Wave 82 tools and layers
         shell: cmd
         run: |
           python -m py_compile tools\inspect_databank_modularization_wave_82.py
+          python -m py_compile tools\apply_databank_modularization_wave_82.py
+          python -m py_compile tools\test_data_bank_feature_wave_82.py
+          python -m py_compile tools\test_data_bank_extraction_wave_82.py
+          python -m py_compile spina_app\services\data_bank.py
+          python -m py_compile spina_app\features\data_bank.py
           python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
-          python -m py_compile spina_app\tabs\data_bank_shell.py
 
       - name: Inventory active Data Bank runtime
+        if: steps.architecture.outputs.generated == 'true'
         shell: cmd
         run: python tools\inspect_databank_modularization_wave_82.py
 
-      - name: Check clean tree
+      - name: Apply guarded complete Data Bank extraction twice
+        if: steps.architecture.outputs.generated == 'true'
+        shell: cmd
+        run: python tools\apply_databank_modularization_wave_82.py
+
+      - name: Compile complete Data Bank architecture
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\repositories\data_bank.py
+          python -m py_compile spina_app\services\data_bank.py
+          python -m py_compile spina_app\data_bank_audit.py
+          python -m py_compile spina_app\data_bank_exports.py
+          python -m py_compile spina_app\data_bank_auto_close.py
+          python -m py_compile spina_app\features\data_bank.py
+          python -m py_compile tools\run_databank_regression_suite_wave_72.py
+          python -m py_compile tools\test_data_bank_feature_wave_82.py
+          python -m py_compile tools\test_data_bank_extraction_wave_82.py
+
+      - name: Run complete Data Bank regressions
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_data_bank_extraction_wave_82.py
+          set "PYTHONPATH=%CD%" && python tools\test_data_bank_feature_wave_82.py
+          set "PYTHONPATH=%CD%" && python tools\run_databank_regression_suite_wave_72.py
+
+      - name: Run Clients Reports Collector Route and financial compatibility
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_clients_feature_wave_81.py
+          set "PYTHONPATH=%CD%" && python tools\test_reports_feature_wave_80.py
+          set "PYTHONPATH=%CD%" && python tools\test_collector_route_feature_wave_79.py
+          set "PYTHONPATH=%CD%" && python tools\test_cash_control_feature_wave_77.py
+          set "PYTHONPATH=%CD%" && python tools\test_wave75_compat_under_wave76.py
+          set "PYTHONPATH=%CD%" && python tools\test_wave74_compat_under_wave76.py
+          set "PYTHONPATH=%CD%" && python tools\test_x7_fixed_interest_basis_wave_74.py
+
+      - name: Check generated diff
         shell: cmd
         run: git diff --check
 
-      - name: Upload Data Bank inventory
+      - name: Upload validated generated Data Bank files
+        if: steps.architecture.outputs.generated == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: databank-wave-82-inventory
-          path: artifacts/databank-wave-82-inventory.json
+          name: databank-wave-82-generated
+          path: |
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+            spina_app/repositories/data_bank.py
+            spina_app/data_bank_audit.py
+            spina_app/data_bank_exports.py
+            spina_app/data_bank_auto_close.py
           if-no-files-found: error
+
+  publish-generated:
+    needs: validate
+    if: >-
+      needs.validate.result == 'success' &&
+      needs.validate.outputs.generated == 'true' &&
+      github.event_name == 'pull_request' &&
+      github.actor == github.repository_owner &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out exact validated head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Download validated Data Bank files
+        uses: actions/download-artifact@v4
+        with:
+          name: databank-wave-82-generated
+          path: generated-wave82
+
+      - name: Copy and verify five-file scope
+        shell: cmd
+        run: |
+          copy /Y generated-wave82\OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          if not exist spina_app mkdir spina_app
+          if not exist spina_app\repositories mkdir spina_app\repositories
+          copy /Y generated-wave82\spina_app\repositories\data_bank.py spina_app\repositories\data_bank.py
+          copy /Y generated-wave82\spina_app\data_bank_audit.py spina_app\data_bank_audit.py
+          copy /Y generated-wave82\spina_app\data_bank_exports.py spina_app\data_bank_exports.py
+          copy /Y generated-wave82\spina_app\data_bank_auto_close.py spina_app\data_bank_auto_close.py
+          rmdir /S /Q generated-wave82
+          python -c "import subprocess; allowed={'OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py','spina_app/repositories/data_bank.py','spina_app/data_bank_audit.py','spina_app/data_bank_exports.py','spina_app/data_bank_auto_close.py'}; changed={p.replace('\\','/') for line in subprocess.check_output(['git','status','--short'], text=True).splitlines() for p in [line[3:].strip()]}; assert changed == allowed, (changed, allowed); print('Validated publish scope:', sorted(changed))"
+
+      - name: Commit validated Data Bank architecture
+        shell: cmd
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py spina_app/repositories/data_bank.py spina_app/data_bank_audit.py spina_app/data_bank_exports.py spina_app/data_bank_auto_close.py
+          git commit -m "Complete Data Bank modularization Wave 82"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
