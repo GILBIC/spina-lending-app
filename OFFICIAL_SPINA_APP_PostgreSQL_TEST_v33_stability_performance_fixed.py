@@ -10416,6 +10416,7 @@ try:
     if "App" in globals():
         # Index setup runs on the first real refresh using App's existing DB
         # connection, avoiding a second startup connection and schema pass.
+        setattr(App, "refresh_clients", _spina_perf_refresh_clients)
         setattr(App, "refresh_data_grid", _spina_perf_refresh_data_grid)
 except Exception as e:
     try:
