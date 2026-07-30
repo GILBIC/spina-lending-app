@@ -1,4 +1,4 @@
-name: Accounts cleanup Wave 84
+name: Accounts architecture validation Wave 85
 
 on:
   pull_request:
@@ -10,9 +10,9 @@ on:
       - "spina_app/account_header_presentation.py"
       - "spina_app/account_permission_presentation.py"
       - "spina_app/ui_controls.py"
-      - "tools/apply_accounts_cleanup_wave_84.py"
+      - "tools/test_accounts_feature_wave_83.py"
       - "tools/test_accounts_cleanup_wave_84.py"
-      - "tools/wave84_templates/**"
+      - "tools/test_accounts_validation_wave_85.py"
       - "tools/test_login_dialog_presentation_wave_45.py"
       - "tools/test_account_header_presentation_wave_46.py"
       - "tools/test_account_permission_presentation_wave_47.py"
@@ -21,10 +21,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply-and-validate:
+  validate:
     if: >-
       github.actor == github.repository_owner &&
       (github.event_name == 'workflow_dispatch' ||
@@ -34,18 +34,14 @@ jobs:
     timeout-minutes: 70
 
     steps:
-      - name: Check out exact Wave 84 branch
+      - name: Check out exact Wave 85 head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
-      - name: Apply redundant account cleanup
-        shell: cmd
-        run: python tools\apply_accounts_cleanup_wave_84.py
-
-      - name: Compile cleaned account architecture
+      - name: Compile account architecture
         shell: cmd
         run: |
           python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
@@ -54,15 +50,17 @@ jobs:
           python -m py_compile spina_app\login_dialog_presentation.py
           python -m py_compile spina_app\account_header_presentation.py
           python -m py_compile spina_app\account_permission_presentation.py
-          python -m py_compile tools\apply_accounts_cleanup_wave_84.py
+          python -m py_compile tools\test_accounts_feature_wave_83.py
           python -m py_compile tools\test_accounts_cleanup_wave_84.py
+          python -m py_compile tools\test_accounts_validation_wave_85.py
           python -m py_compile tools\test_login_dialog_presentation_wave_45.py
           python -m py_compile tools\test_account_header_presentation_wave_46.py
           python -m py_compile tools\test_account_permission_presentation_wave_47.py
 
-      - name: Run Wave 84 and Wave 83 account regressions
+      - name: Run permanent account architecture regressions
         shell: cmd
         run: |
+          set "PYTHONPATH=%CD%" && python tools\test_accounts_validation_wave_85.py
           set "PYTHONPATH=%CD%" && python tools\test_accounts_cleanup_wave_84.py
           set "PYTHONPATH=%CD%" && python tools\test_accounts_feature_wave_83.py
 
@@ -86,20 +84,9 @@ jobs:
           set "PYTHONPATH=%CD%" && python tools\test_account_permission_presentation_wave_47.py
           set "PYTHONPATH=%CD%" && python -m tools.test_architecture_map
 
-      - name: Check generated diff
-        shell: cmd
-        run: git diff --check
-
-      - name: Commit validated cleanup to PR branch
+      - name: Require clean committed tree
         shell: cmd
         run: |
-          git add -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py tools/test_login_dialog_presentation_wave_45.py tools/test_account_header_presentation_wave_46.py tools/test_account_permission_presentation_wave_47.py
-          git diff --cached --quiet
-          if errorlevel 1 (
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git commit -m "Apply account cleanup Wave 84"
-            git push origin "HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}"
-          ) else (
-            echo Wave 84 cleanup is already committed.
-          )
+          git diff --check
+          git diff --exit-code
+          git diff --cached --exit-code
