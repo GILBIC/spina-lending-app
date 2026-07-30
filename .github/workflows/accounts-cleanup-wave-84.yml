@@ -91,19 +91,15 @@ jobs:
         run: git diff --check
 
       - name: Commit validated cleanup to PR branch
-        shell: pwsh
+        shell: cmd
         run: |
-          git add -- `
-            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py `
-            tools/test_login_dialog_presentation_wave_45.py `
-            tools/test_account_header_presentation_wave_46.py `
-            tools/test_account_permission_presentation_wave_47.py
+          git add -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py tools/test_login_dialog_presentation_wave_45.py tools/test_account_header_presentation_wave_46.py tools/test_account_permission_presentation_wave_47.py
           git diff --cached --quiet
-          if ($LASTEXITCODE -ne 0) {
+          if errorlevel 1 (
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git commit -m "Apply account cleanup Wave 84"
             git push origin "HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}"
-          } else {
-            Write-Host "Wave 84 cleanup is already committed."
-          }
+          ) else (
+            echo Wave 84 cleanup is already committed.
+          )
