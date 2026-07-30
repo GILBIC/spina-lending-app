@@ -41,9 +41,18 @@ DATA_BANK_APP_METHODS = (
     "open_databank_close_history_dialog",
     "open_databank_close_records_dialog",
     "print_databank_close_report",
+    "export_range_template",
     "run_auto_daily_close",
     "_schedule_auto_daily_close",
     "save_closed_collector_route_copy",
+    "_audit_money_text",
+    "_audit_parse_date_filters",
+    "_audit_set_today",
+    "_audit_set_last7",
+    "_audit_set_all",
+    "_audit_tree_factory",
+    "_audit_set_detail_text",
+    "_audit_show_selected",
 )
 
 
@@ -77,8 +86,8 @@ def install_data_bank_feature(
 ) -> bool:
     """Configure all Data Bank layers and install one final runtime boundary.
 
-    Repeated calls refresh module dependencies and assignments without growing the
-    App wrapper chain. The only wrapper is the once-only auto-close startup hook.
+    Repeated calls refresh dependencies and assignments without growing wrapper
+    chains. Only the once-per-class auto-close startup hook wraps ``App.__init__``.
     """
     if app_cls is None:
         return False
@@ -95,14 +104,17 @@ def install_data_bank_feature(
         ns["_log_suppressed_once"] = log_suppressed_once
 
     from spina_app.repositories import data_bank as repository
-    from spina_app import data_bank_auto_close, databank_feature
     from spina_app import (
         audit_presentation,
+        data_bank_audit,
+        data_bank_auto_close,
+        data_bank_exports,
         databank_cell_writes,
         databank_close_history_presentation,
         databank_close_records_presentation,
         databank_delete_day,
         databank_editor_presentation,
+        databank_feature,
         databank_grid_presentation,
         databank_presentation,
         import_log_presentation,
@@ -112,26 +124,28 @@ def install_data_bank_feature(
     from spina_app.tabs import data_bank_shell
 
     repository.configure_data_bank_repository_dependencies(ns)
+    data_bank_audit.configure_data_bank_audit_dependencies(ns)
+    data_bank_exports.configure_data_bank_export_dependencies(ns)
     data_bank_auto_close.configure_data_bank_auto_close_dependencies(ns)
 
-    # Database ownership. The three small decision rules are pure services; all
-    # remaining methods are exact source moved from LoanDB by the guarded extractor.
     loan_db_cls._databank_day_close_bucket = _db_close_bucket
     loan_db_cls._dayclose_norm_workflow = _db_normalize_workflow
     loan_db_cls._dayclose_variance_status = _db_variance_status
     for name in DATA_BANK_DB_METHODS:
         setattr(loan_db_cls, name, getattr(repository, name))
 
+    # Compatibility globals required by the existing Wave 72 controller.
     _set(ns, "_spina_perf_month_transactions", repository._spina_perf_month_transactions)
+    _set(ns, "_spina_auto_close_after_days_value", data_bank_auto_close._spina_auto_close_after_days_value)
+    _set(ns, "_spina_auto_close_candidate_dates", data_bank_auto_close._spina_auto_close_candidate_dates)
     _set(ns, "import_from_excel_with_reasons", databank_feature.import_from_excel_with_reasons)
     _set(ns, "_spina_perf_refresh_data_grid", databank_feature._spina_perf_refresh_data_grid)
     _set(ns, "_spina_auto_close_one_day", databank_feature._spina_auto_close_one_day)
     _set(ns, "_spina_run_auto_daily_close", databank_feature._spina_run_auto_daily_close)
     _set(ns, "_spina_save_closed_collector_route_copy", databank_feature._spina_save_closed_collector_route_copy)
 
-    # Configure controller and focused presentation modules only after all prior
-    # features have loaded; this resolves Clients, Reports, route, theme and shell
-    # dependencies from the final application namespace.
+    # Configure the controller after the final Clients, Reports, route, theme and
+    # navigation dependencies are available at the end of the desktop module.
     databank_feature.configure_databank_feature_dependencies(ns)
     audit_presentation.configure_audit_presentation_dependencies(ns)
     system_data_presentation.configure_system_data_presentation_dependencies(ns)
@@ -148,11 +162,17 @@ def install_data_bank_feature(
         log_ignored=ns.get("_log_ignored"),
     )
 
-    # Modern Data Bank wrappers need the final non-Data-Bank implementations.
+    # Capture non-Data-Bank originals only once. Reinstalling must not capture the
+    # already wrapped callbacks and create recursion.
+    if not hasattr(app_cls, "_spina_data_bank_wave82_base_update_toolbar"):
+        app_cls._spina_data_bank_wave82_base_update_toolbar = getattr(app_cls, "_update_data_toolbar", None)
+    if not hasattr(app_cls, "_spina_data_bank_wave82_base_apply_theme"):
+        app_cls._spina_data_bank_wave82_base_apply_theme = getattr(app_cls, "_apply_ui_theme", None)
+
     _set(ns, "_spina_v15_orig_refresh_data_grid", databank_grid_presentation.refresh_data_grid)
     _set(ns, "_spina_v16_prev_refresh_data_grid", databank_presentation._spina_v15_refresh_data_grid)
-    _set(ns, "_spina_v15_orig_update_data_toolbar", getattr(app_cls, "_update_data_toolbar", None))
-    _set(ns, "_spina_v15_orig_apply_theme", getattr(app_cls, "_apply_ui_theme", None))
+    _set(ns, "_spina_v15_orig_update_data_toolbar", app_cls._spina_data_bank_wave82_base_update_toolbar)
+    _set(ns, "_spina_v15_orig_apply_theme", app_cls._spina_data_bank_wave82_base_apply_theme)
     databank_presentation.configure_databank_presentation_dependencies(ns)
 
     app_bindings = {
@@ -206,14 +226,22 @@ def install_data_bank_feature(
         "refresh_data_grid": databank_feature._spina_perf_refresh_data_grid,
         "_update_data_toolbar": databank_presentation._spina_v15_update_data_toolbar,
         "_apply_ui_theme": databank_presentation._spina_v15_apply_ui_theme,
+        "export_range_template": data_bank_exports.export_range_template,
         "run_auto_daily_close": databank_feature._spina_run_auto_daily_close,
         "_schedule_auto_daily_close": data_bank_auto_close._spina_schedule_auto_daily_close,
         "save_closed_collector_route_copy": databank_feature._spina_save_closed_collector_route_copy,
+        "_audit_money_text": data_bank_audit._audit_money_text,
+        "_audit_parse_date_filters": data_bank_audit._audit_parse_date_filters,
+        "_audit_set_today": data_bank_audit._audit_set_today,
+        "_audit_set_last7": data_bank_audit._audit_set_last7,
+        "_audit_set_all": data_bank_audit._audit_set_all,
+        "_audit_tree_factory": data_bank_audit._audit_tree_factory,
+        "_audit_set_detail_text": data_bank_audit._audit_set_detail_text,
+        "_audit_show_selected": data_bank_audit._audit_show_selected,
     }
     for name, callback in app_bindings.items():
         setattr(app_cls, name, callback)
 
-    # Preserve public globals consumed by legacy focused tests and helper modules.
     for name in (
         "_spina_v15_palette", "_spina_v15_setup_databank_styles",
         "_spina_v15_update_databank_cards", "_spina_v16_apply_bigger_payment_grid",
