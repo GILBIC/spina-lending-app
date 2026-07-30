@@ -22,3 +22,7 @@ Wave 84 removes account runtime definitions that became dead after Wave 83 estab
 - startup cancellation and Tk shutdown behavior
 
 The remaining desktop integration is a compact Wave 46 configuration call. That call installs the Wave 83 accounts boundary and supplies the login presentation with its theme and button dependencies.
+
+## Validation status
+
+The generated cleanup compiled and passed the Wave 84 architecture regression, Wave 83 account regression, protected Waves 45–47 login/header/permission tests, Tkinter smoke tests, startup cancellation, Tk shutdown, and architecture-map validation before it was committed to the pull-request branch.
