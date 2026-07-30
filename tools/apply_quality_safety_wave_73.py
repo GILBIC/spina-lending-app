@@ -115,24 +115,26 @@ def patch_app(current: str, fixed: str) -> str:
         ],
         prefix_by_name=prefix,
     )
-    current = replace_section(current, fixed, BIND_START, BIND_END)
 
-    # The reviewed legacy source predates the consolidated feature boundaries and
-    # directly binds both optimized refresh callbacks. Their feature installers now
-    # own the final App methods, so retaining either line restores duplicate runtime
-    # ownership after every Wave 73 run.
-    current = _remove_legacy_binding(
-        current,
-        WAVE81_INSTALL_MARKER,
-        LEGACY_CLIENT_REFRESH_BIND,
-        "Clients refresh",
-    )
-    current = _remove_legacy_binding(
-        current,
-        WAVE82_INSTALL_MARKER,
-        LEGACY_DATA_BANK_REFRESH_BIND,
-        "Data Bank refresh",
-    )
+    if WAVE82_INSTALL_MARKER in current:
+        # Wave 82 deliberately removes the entire legacy performance-binding
+        # section. Recreating it would restore both Clients and Data Bank runtime
+        # ownership outside their final installers.
+        if BIND_START in current:
+            raise AssertionError("Legacy performance-binding section remains under Wave 82")
+        if LEGACY_CLIENT_REFRESH_BIND.strip() in current:
+            raise AssertionError("Legacy Clients refresh binding remains under Wave 82")
+        if LEGACY_DATA_BANK_REFRESH_BIND.strip() in current:
+            raise AssertionError("Legacy Data Bank refresh binding remains under Wave 82")
+    else:
+        current = replace_section(current, fixed, BIND_START, BIND_END)
+        current = _remove_legacy_binding(
+            current,
+            WAVE81_INSTALL_MARKER,
+            LEGACY_CLIENT_REFRESH_BIND,
+            "Clients refresh",
+        )
+
     return current
 
 
