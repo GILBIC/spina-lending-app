@@ -138,6 +138,8 @@ def install_clients_feature(
     from spina_app.tabs import clients as clients_tab
 
     client_services.configure_client_service_dependencies(ns)
+    _set(ns, "_app__norm_lt_value", client_services._app__norm_lt_value)
+    _set(ns, "_app__other_lt", client_services._app__other_lt)
     _set(ns, "_spina__client_schedule_anchor", client_services._spina__client_schedule_anchor)
     _set(ns, "_spina__client_due_meta_base", client_services._spina__client_due_meta_base)
     _set(ns, "_spina__parse_flexible_due_rule", client_services._spina__parse_flexible_due_rule)
