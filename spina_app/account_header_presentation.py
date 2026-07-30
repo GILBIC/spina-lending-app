@@ -20,6 +20,34 @@ def configure_account_header_dependencies(namespace):
         if name not in _PROTECTED_GLOBALS:
             globals()[name] = value
 
+    # Wave 83 uses the existing Wave 46 configuration point as the final,
+    # idempotent account runtime installer. This runs after the desktop file has
+    # captured its original account loader and header builder.
+    try:
+        from spina_app.features.accounts import (
+            account_display_name,
+            install_accounts_feature,
+        )
+
+        globals()["_spina_v32_account_display_name"] = account_display_name
+        install_accounts_feature(
+            namespace.get("App"),
+            namespace=namespace,
+            refresh_header=globals().get("_spina_v32_refresh_user_header"),
+            build_header=globals().get("_spina_v32_build_header"),
+        )
+    except Exception as exc:
+        logger = namespace.get("_log_suppressed_once")
+        if callable(logger):
+            try:
+                logger(
+                    "accounts_wave83_install",
+                    "Wave 83 accounts feature installation failed",
+                    exc,
+                )
+            except Exception:
+                pass
+
 
 ACCOUNT_HEADER_TARGETS = ['_spina_v32_refresh_user_header', '_spina_v32_build_header']
 ACCOUNT_HEADER_SOURCE_LINES = {'_spina_v32_refresh_user_header': 14, '_spina_v32_build_header': 12}
