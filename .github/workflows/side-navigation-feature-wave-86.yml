@@ -1,0 +1,71 @@
+name: Side navigation feature Wave 86
+
+on:
+  pull_request:
+    paths:
+      - "spina_app/features/side_navigation.py"
+      - "spina_app/side_navigation_presentation.py"
+      - "spina_app/navigation.py"
+      - "spina_app/account_header_presentation.py"
+      - "tools/test_side_navigation_feature_wave_86.py"
+      - "tools/test_navigation_compatibility_wave_86.py"
+      - "tools/test_side_navigation_presentation_wave_48.py"
+      - "tools/test_navigation_databank_shell_wave_29.py"
+      - "docs/side-navigation-feature-wave-86.md"
+      - ".github/workflows/side-navigation-feature-wave-86.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 70
+
+    steps:
+      - name: Check out exact Wave 86 head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Compile side navigation architecture
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\features\side_navigation.py
+          python -m py_compile spina_app\side_navigation_presentation.py
+          python -m py_compile spina_app\navigation.py
+          python -m py_compile spina_app\account_header_presentation.py
+          python -m py_compile tools\test_side_navigation_feature_wave_86.py
+          python -m py_compile tools\test_navigation_compatibility_wave_86.py
+
+      - name: Run final side navigation regression
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_side_navigation_feature_wave_86.py
+
+      - name: Run protected navigation regressions
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_side_navigation_presentation_wave_48.py
+          set "PYTHONPATH=%CD%" && python tools\test_navigation_compatibility_wave_86.py
+
+      - name: Run account shell and startup compatibility
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_account_header_presentation_wave_46.py
+          set "PYTHONPATH=%CD%" && python tools\test_account_header_widget_smoke_wave_46.py
+          set "PYTHONPATH=%CD%" && python tools\test_login_cancel_startup_wave_46.py
+          set "PYTHONPATH=%CD%" && python tools\test_tk_shutdown_wave_46.py
+          set "PYTHONPATH=%CD%" && python tools\test_accounts_feature_wave_83.py
+          set "PYTHONPATH=%CD%" && python tools\test_accounts_cleanup_wave_84.py
+          set "PYTHONPATH=%CD%" && python tools\test_accounts_validation_wave_85.py
+
+      - name: Run architecture map
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python -m tools.test_architecture_map
+
+      - name: Require clean committed tree
+        shell: cmd
+        run: git diff --exit-code

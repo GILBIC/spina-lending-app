@@ -48,6 +48,30 @@ def configure_account_header_dependencies(namespace):
             except Exception:
                 pass
 
+    # Wave 86 uses the same late application-shell configuration point to replace
+    # stacked sidebar wrappers with one final, idempotent runtime boundary.
+    try:
+        from spina_app.features.side_navigation import (
+            install_side_navigation_feature,
+        )
+
+        install_side_navigation_feature(
+            namespace.get("App"),
+            namespace=namespace,
+            log_suppressed_once=namespace.get("_log_suppressed_once"),
+        )
+    except Exception as exc:
+        logger = namespace.get("_log_suppressed_once")
+        if callable(logger):
+            try:
+                logger(
+                    "side_navigation_wave86_install",
+                    "Wave 86 side-navigation installation failed",
+                    exc,
+                )
+            except Exception:
+                pass
+
 
 ACCOUNT_HEADER_TARGETS = ['_spina_v32_refresh_user_header', '_spina_v32_build_header']
 ACCOUNT_HEADER_SOURCE_LINES = {'_spina_v32_refresh_user_header': 14, '_spina_v32_build_header': 12}
