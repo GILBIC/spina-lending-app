@@ -19,3 +19,4 @@ Safety rules:
 - Preserve ADV/PASS display and import semantics.
 - Preserve fixed-principal 7x7 financial calculations.
 - Keep the production desktop source unchanged until generated extraction passes twice and all compatibility tests are green.
+- Validate Wave 74 fixed-principal report rules against either the legacy desktop report block or the Wave 80 modular `spina_app/report_engine.py` implementation; the compatibility porter must be idempotent for both layouts.
