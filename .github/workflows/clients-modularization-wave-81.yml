@@ -58,6 +58,7 @@ jobs:
           python -m py_compile spina_app\features\clients.py
           python -m py_compile tools\inspect_clients_modularization_wave_81.py
           python -m py_compile tools\apply_clients_modularization_wave_81.py
+          python -m py_compile tools\normalize_clients_weekday_regex_wave_81.py
           python -m py_compile tools\test_clients_feature_wave_81.py
 
       - name: Inventory active Clients runtime
@@ -70,6 +71,12 @@ jobs:
         run: |
           python tools\apply_clients_modularization_wave_81.py
           python tools\apply_clients_modularization_wave_81.py
+
+      - name: Normalize flexible weekday regex twice
+        shell: cmd
+        run: |
+          python tools\normalize_clients_weekday_regex_wave_81.py
+          python tools\normalize_clients_weekday_regex_wave_81.py
 
       - name: Compile complete Clients architecture
         shell: cmd
