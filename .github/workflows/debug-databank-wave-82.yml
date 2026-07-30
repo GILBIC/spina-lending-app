@@ -1,0 +1,40 @@
+name: Debug Data Bank Wave 82 extraction
+
+on:
+  pull_request:
+    paths:
+      - "tools/debug_apply_databank_modularization_wave_82.py"
+      - "tools/apply_databank_modularization_wave_82.py"
+      - ".github/workflows/debug-databank-wave-82.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: debug-databank-wave-82-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  debug:
+    if: >-
+      github.actor == github.repository_owner &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.user.login == github.repository_owner))
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Compile diagnostic extractor
+        shell: cmd
+        run: |
+          python -m py_compile tools\apply_databank_modularization_wave_82.py
+          python -m py_compile tools\debug_apply_databank_modularization_wave_82.py
+      - name: Print transformed syntax context
+        shell: cmd
+        run: python tools\debug_apply_databank_modularization_wave_82.py
