@@ -8,6 +8,7 @@ on:
       - "spina_app/navigation.py"
       - "spina_app/account_header_presentation.py"
       - "tools/test_side_navigation_feature_wave_86.py"
+      - "tools/test_navigation_compatibility_wave_86.py"
       - "tools/test_side_navigation_presentation_wave_48.py"
       - "tools/test_navigation_databank_shell_wave_29.py"
       - "docs/side-navigation-feature-wave-86.md"
@@ -38,6 +39,7 @@ jobs:
           python -m py_compile spina_app\navigation.py
           python -m py_compile spina_app\account_header_presentation.py
           python -m py_compile tools\test_side_navigation_feature_wave_86.py
+          python -m py_compile tools\test_navigation_compatibility_wave_86.py
 
       - name: Run final side navigation regression
         shell: cmd
@@ -47,7 +49,7 @@ jobs:
         shell: cmd
         run: |
           set "PYTHONPATH=%CD%" && python tools\test_side_navigation_presentation_wave_48.py
-          set "PYTHONPATH=%CD%" && python tools\test_navigation_databank_shell_wave_29.py
+          set "PYTHONPATH=%CD%" && python tools\test_navigation_compatibility_wave_86.py
 
       - name: Run account shell and startup compatibility
         shell: cmd
