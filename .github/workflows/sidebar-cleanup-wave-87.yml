@@ -1,0 +1,100 @@
+name: Sidebar cleanup Wave 87
+
+on:
+  pull_request:
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/features/side_navigation.py"
+      - "spina_app/side_navigation_presentation.py"
+      - "spina_app/account_header_presentation.py"
+      - "tools/apply_sidebar_cleanup_wave_87.py"
+      - "tools/test_sidebar_cleanup_wave_87.py"
+      - "tools/test_side_navigation_feature_wave_86.py"
+      - "tools/test_side_navigation_presentation_wave_48.py"
+      - "tools/test_navigation_wave_86.py"
+      - "docs/sidebar-cleanup-wave-87.md"
+      - ".github/workflows/sidebar-cleanup-wave-87.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    if: >-
+      github.actor == github.repository_owner &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.user.login == github.repository_owner))
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 70
+
+    steps:
+      - name: Check out exact Wave 87 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply redundant sidebar cleanup
+        shell: cmd
+        run: python tools\apply_sidebar_cleanup_wave_87.py
+
+      - name: Compile cleaned sidebar architecture
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\features\side_navigation.py
+          python -m py_compile spina_app\side_navigation_presentation.py
+          python -m py_compile spina_app\account_header_presentation.py
+          python -m py_compile tools\apply_sidebar_cleanup_wave_87.py
+          python -m py_compile tools\test_sidebar_cleanup_wave_87.py
+          python -m py_compile tools\test_side_navigation_feature_wave_86.py
+          python -m py_compile tools\test_side_navigation_presentation_wave_48.py
+          python -m py_compile tools\test_navigation_wave_86.py
+
+      - name: Run Waves 87 and 86 sidebar regressions
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_sidebar_cleanup_wave_87.py
+          set "PYTHONPATH=%CD%" && python tools\test_side_navigation_feature_wave_86.py
+
+      - name: Run protected navigation compatibility
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_side_navigation_presentation_wave_48.py
+          set "PYTHONPATH=%CD%" && python tools\test_navigation_wave_86.py
+
+      - name: Run account shell and startup compatibility
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_account_header_presentation_wave_46.py
+          set "PYTHONPATH=%CD%" && python tools\test_account_header_widget_smoke_wave_46.py
+          set "PYTHONPATH=%CD%" && python tools\test_login_cancel_startup_wave_46.py
+          set "PYTHONPATH=%CD%" && python tools\test_tk_shutdown_wave_46.py
+          set "PYTHONPATH=%CD%" && python tools\test_accounts_feature_wave_83.py
+          set "PYTHONPATH=%CD%" && python tools\test_accounts_cleanup_wave_84.py
+          set "PYTHONPATH=%CD%" && python tools\test_accounts_validation_wave_85.py
+
+      - name: Run permanent architecture map
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python -m tools.test_architecture_map
+
+      - name: Check generated diff
+        shell: cmd
+        run: git diff --check
+
+      - name: Commit validated cleanup to PR branch
+        shell: cmd
+        run: |
+          git add -- OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          git diff --cached --quiet
+          if errorlevel 1 (
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Apply sidebar cleanup Wave 87"
+            git push origin "HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}"
+          ) else (
+            echo Wave 87 cleanup is already committed.
+          )
