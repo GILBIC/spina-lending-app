@@ -1,0 +1,109 @@
+name: Accounts cleanup Wave 84
+
+on:
+  pull_request:
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/features/accounts.py"
+      - "spina_app/services/accounts.py"
+      - "spina_app/login_dialog_presentation.py"
+      - "spina_app/account_header_presentation.py"
+      - "spina_app/account_permission_presentation.py"
+      - "spina_app/ui_controls.py"
+      - "tools/apply_accounts_cleanup_wave_84.py"
+      - "tools/test_accounts_cleanup_wave_84.py"
+      - "tools/wave84_templates/**"
+      - "tools/test_login_dialog_presentation_wave_45.py"
+      - "tools/test_account_header_presentation_wave_46.py"
+      - "tools/test_account_permission_presentation_wave_47.py"
+      - "docs/accounts-cleanup-wave-84.md"
+      - ".github/workflows/accounts-cleanup-wave-84.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    if: >-
+      github.actor == github.repository_owner &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.user.login == github.repository_owner))
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 70
+
+    steps:
+      - name: Check out exact Wave 84 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply redundant account cleanup
+        shell: cmd
+        run: python tools\apply_accounts_cleanup_wave_84.py
+
+      - name: Compile cleaned account architecture
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\services\accounts.py
+          python -m py_compile spina_app\features\accounts.py
+          python -m py_compile spina_app\login_dialog_presentation.py
+          python -m py_compile spina_app\account_header_presentation.py
+          python -m py_compile spina_app\account_permission_presentation.py
+          python -m py_compile tools\apply_accounts_cleanup_wave_84.py
+          python -m py_compile tools\test_accounts_cleanup_wave_84.py
+          python -m py_compile tools\test_login_dialog_presentation_wave_45.py
+          python -m py_compile tools\test_account_header_presentation_wave_46.py
+          python -m py_compile tools\test_account_permission_presentation_wave_47.py
+
+      - name: Run Wave 84 and Wave 83 account regressions
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_accounts_cleanup_wave_84.py
+          set "PYTHONPATH=%CD%" && python tools\test_accounts_feature_wave_83.py
+
+      - name: Run protected login presentation regressions
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_login_dialog_presentation_wave_45.py
+          set "PYTHONPATH=%CD%" && python tools\test_login_dialog_widget_smoke_wave_45.py
+
+      - name: Run protected header and startup regressions
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_account_header_presentation_wave_46.py
+          set "PYTHONPATH=%CD%" && python tools\test_account_header_widget_smoke_wave_46.py
+          set "PYTHONPATH=%CD%" && python tools\test_tk_shutdown_wave_46.py
+          set "PYTHONPATH=%CD%" && python tools\test_login_cancel_startup_wave_46.py
+
+      - name: Run permission and architecture regressions
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_account_permission_presentation_wave_47.py
+          set "PYTHONPATH=%CD%" && python -m tools.test_architecture_map
+
+      - name: Check generated diff
+        shell: cmd
+        run: git diff --check
+
+      - name: Commit validated cleanup to PR branch
+        shell: pwsh
+        run: |
+          git add -- `
+            OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py `
+            tools/test_login_dialog_presentation_wave_45.py `
+            tools/test_account_header_presentation_wave_46.py `
+            tools/test_account_permission_presentation_wave_47.py
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Apply account cleanup Wave 84"
+            git push origin "HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}"
+          } else {
+            Write-Host "Wave 84 cleanup is already committed."
+          }
