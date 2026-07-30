@@ -11,6 +11,7 @@ on:
       - "spina_app/services/data_bank.py"
       - "tools/*databank*wave_82.py"
       - "tools/*data_bank*wave_82.py"
+      - "tools/run_databank_regression_suite_wave_72.py"
       - "docs/databank-modularization-wave-82.md"
       - ".github/workflows/databank-modularization-wave-82.yml"
   workflow_dispatch:
