@@ -1,0 +1,65 @@
+name: Clients normalizer binding hotfix
+
+on:
+  pull_request:
+    paths:
+      - "spina_app/features/clients.py"
+      - "spina_app/services/clients.py"
+      - "spina_app/tabs/clients.py"
+      - "tools/test_clients_normalizer_binding_hotfix.py"
+      - "tools/test_clients_feature_wave_81.py"
+      - ".github/workflows/clients-normalizer-binding-hotfix.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: clients-normalizer-hotfix-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: >-
+      github.actor == github.repository_owner &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.user.login == github.repository_owner))
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out exact hotfix head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Compile Clients modules and regressions
+        shell: cmd
+        run: |
+          python -m py_compile spina_app\features\clients.py
+          python -m py_compile spina_app\services\clients.py
+          python -m py_compile spina_app\tabs\clients.py
+          python -m py_compile tools\test_clients_normalizer_binding_hotfix.py
+          python -m py_compile tools\test_clients_feature_wave_81.py
+
+      - name: Reproduce and verify Edit Client selection path
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_clients_normalizer_binding_hotfix.py
+
+      - name: Run complete Clients Wave 81 regressions
+        shell: cmd
+        run: set "PYTHONPATH=%CD%" && python tools\test_clients_feature_wave_81.py
+
+      - name: Run Reports and financial compatibility
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_reports_feature_wave_80.py
+          set "PYTHONPATH=%CD%" && python tools\test_collector_route_feature_wave_79.py
+          set "PYTHONPATH=%CD%" && python tools\test_x7_fixed_interest_basis_wave_74.py
+
+      - name: Check clean diff
+        shell: cmd
+        run: git diff --check
