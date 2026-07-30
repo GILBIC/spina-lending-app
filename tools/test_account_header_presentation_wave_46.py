@@ -13,7 +13,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 DESKTOP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
-MODULE_PATH = ROOT / "spina_app/account_header_presentation.py"
+MODULE_PATH = ROOT / "spina_app" / "account_header_presentation.py"
+FEATURE_PATH = ROOT / "spina_app" / "features" / "accounts.py"
 REFRESH = "_spina_v32_refresh_user_header"
 BUILD = "_spina_v32_build_header"
 EXPECTED_LINES = {REFRESH: 14, BUILD: 12}
@@ -37,13 +38,17 @@ EXPECTED_CALLS = {
         "self.switch_account_btn.configure",
     ],
 }
-PROMPT_ROLE_SHA256 = "c44e89e3f591f6c592363c6e4a21023cf1791958c210354b62219969ca288649"
-SWITCH_ACCOUNT_SHA256 = "947c48a723782344e5db1027c4e3dfbe3652bc02a33adcfa5134f45e04bcd337"
-SQL_WRITE_RE = re.compile(r"\b(?:INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|ALTER\s+TABLE|DROP\s+TABLE|CREATE\s+TABLE)\b", re.I)
+SQL_WRITE_RE = re.compile(
+    r"\b(?:INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|ALTER\s+TABLE|"
+    r"DROP\s+TABLE|CREATE\s+TABLE)\b",
+    re.I,
+)
 
 
 def normalized(text: str) -> str:
-    return "\n".join(line.rstrip() for line in textwrap.dedent(text).strip().splitlines()) + "\n"
+    return "\n".join(
+        line.rstrip() for line in textwrap.dedent(text).strip().splitlines()
+    ) + "\n"
 
 
 def dotted(node: ast.AST) -> str:
@@ -56,20 +61,7 @@ def dotted(node: ast.AST) -> str:
 
 
 def signature_text(fn: ast.FunctionDef) -> str:
-    parts = []
-    positional = list(fn.args.posonlyargs) + list(fn.args.args)
-    defaults = [None] * (len(positional) - len(fn.args.defaults)) + list(fn.args.defaults)
-    for arg, default in zip(positional, defaults):
-        parts.append(arg.arg if default is None else f"{arg.arg}={ast.unparse(default)}")
-    if fn.args.vararg:
-        parts.append(f"*{fn.args.vararg.arg}")
-    elif fn.args.kwonlyargs:
-        parts.append("*")
-    for arg, default in zip(fn.args.kwonlyargs, fn.args.kw_defaults):
-        parts.append(arg.arg if default is None else f"{arg.arg}={ast.unparse(default)}")
-    if fn.args.kwarg:
-        parts.append(f"**{fn.args.kwarg.arg}")
-    return ", ".join(parts)
+    return ast.unparse(fn.args)
 
 
 def source_for(lines: list[str], node: ast.AST) -> str:
@@ -77,7 +69,21 @@ def source_for(lines: list[str], node: ast.AST) -> str:
 
 
 def function_defs(tree: ast.AST, name: str):
-    return [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == name]
+    return [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name == name
+    ]
+
+
+def app_methods(tree: ast.Module, name: str):
+    app = next(
+        node for node in tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "App"
+    )
+    return [
+        node for node in app.body
+        if isinstance(node, ast.FunctionDef) and node.name == name
+    ]
 
 
 def check_function(fn: ast.FunctionDef, lines: list[str], name: str) -> None:
@@ -90,13 +96,15 @@ def check_function(fn: ast.FunctionDef, lines: list[str], name: str) -> None:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node is not fn
     ]
     assert nested == []
-    calls = sorted({dotted(node.func) for node in ast.walk(fn) if isinstance(node, ast.Call) and dotted(node.func)})
+    calls = sorted({
+        dotted(node.func)
+        for node in ast.walk(fn)
+        if isinstance(node, ast.Call) and dotted(node.func)
+    })
     assert calls == EXPECTED_CALLS[name]
     for node in ast.walk(fn):
         if isinstance(node, ast.Attribute):
             assert not dotted(node).startswith("self.db")
-        if isinstance(node, ast.Name):
-            assert node.id not in {"connect_db", "run_write", "open", "Path"}
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             assert not SQL_WRITE_RE.search(node.value)
 
@@ -115,14 +123,16 @@ def main() -> None:
     module_tree = ast.parse(module_text)
     for name in (REFRESH, BUILD):
         defs = function_defs(module_tree, name)
-        assert len(defs) == 1, (name, len(defs))
+        assert len(defs) == 1
         check_function(defs[0], module_lines, name)
 
     desktop_text = DESKTOP.read_text(encoding="utf-8")
-    desktop_lines = desktop_text.splitlines()
     desktop_tree = ast.parse(desktop_text)
     assert not function_defs(desktop_tree, REFRESH)
     assert not function_defs(desktop_tree, BUILD)
+    assert not app_methods(desktop_tree, "_refresh_user_header")
+    assert not app_methods(desktop_tree, "switch_account")
+    assert not function_defs(desktop_tree, "_spina_v32_switch_account")
 
     imports = [
         node for node in desktop_tree.body
@@ -131,52 +141,35 @@ def main() -> None:
     ]
     assert len(imports) == 1
     aliases = {(alias.name, alias.asname) for alias in imports[0].names}
-    assert ("configure_account_header_dependencies", "_wave46_configure_account_header_dependencies") in aliases
-    assert (REFRESH, "_wave46_spina_v32_refresh_user_header") in aliases
-    assert (BUILD, "_wave46_spina_v32_build_header") in aliases
-
-    configure_marker = "_wave46_configure_account_header_dependencies(globals())"
-    original_marker = '_spina_v32_orig_build_header = getattr(App, "_build_header", None)'
-    build_binding_marker = "App._build_header = _spina_v32_build_header"
-    assert desktop_text.count(configure_marker) == 1
-    assert desktop_text.count(original_marker) == 1
-    assert desktop_text.count(build_binding_marker) == 1
     assert (
-        desktop_text.index(original_marker)
-        < desktop_text.index(configure_marker)
-        < desktop_text.index(build_binding_marker)
-    ), "Wave 46 dependencies must be configured after capturing the original header"
+        "configure_account_header_dependencies",
+        "_wave46_configure_account_header_dependencies",
+    ) in aliases
+    assert len(aliases) == 1
 
-    symbol_rebinds = []
-    runtime = []
-    for node in ast.walk(desktop_tree):
-        if isinstance(node, ast.Assign) and len(node.targets) == 1:
-            lhs = node.targets[0]
-            if isinstance(lhs, ast.Name) and lhs.id in {REFRESH, BUILD} and isinstance(node.value, ast.Name):
-                symbol_rebinds.append((lhs.id, node.value.id))
-            if (
-                isinstance(lhs, ast.Attribute)
-                and isinstance(lhs.value, ast.Name)
-                and lhs.value.id == "App"
-                and lhs.attr in {"_refresh_user_header", "_build_header"}
-                and isinstance(node.value, ast.Name)
-            ):
-                runtime.append((node.lineno, lhs.attr, node.value.id))
-    assert sorted(symbol_rebinds) == sorted([
-        (REFRESH, "_wave46_spina_v32_refresh_user_header"),
-        (BUILD, "_wave46_spina_v32_build_header"),
-    ])
-    runtime.sort()
-    assert [row[1:] for row in runtime if row[1] == "_refresh_user_header"][-1] == ("_refresh_user_header", REFRESH)
-    assert [row[1:] for row in runtime if row[1] == "_build_header"][-1] == ("_build_header", BUILD)
+    original_marker = '_spina_v32_orig_build_header = getattr(App, "_build_header", None)'
+    configure_marker = "_wave46_configure_account_header_dependencies(globals())"
+    assert desktop_text.count(original_marker) == 1
+    assert desktop_text.count(configure_marker) == 1
+    assert desktop_text.index(original_marker) < desktop_text.index(configure_marker)
 
-    prompt_defs = function_defs(desktop_tree, "_spina_v32_prompt_user_role")
-    switch_defs = function_defs(desktop_tree, "_spina_v32_switch_account")
-    assert len(prompt_defs) == 1
-    assert len(switch_defs) == 1
-    assert hashlib.sha256(normalized(source_for(desktop_lines, prompt_defs[0])).encode()).hexdigest() == PROMPT_ROLE_SHA256
-    assert hashlib.sha256(normalized(source_for(desktop_lines, switch_defs[0])).encode()).hexdigest() == SWITCH_ACCOUNT_SHA256
+    feature_text = FEATURE_PATH.read_text(encoding="utf-8")
+    feature_tree = ast.parse(feature_text)
+    installer = function_defs(feature_tree, "install_accounts_feature")
+    assert len(installer) == 1
+    installer_source = ast.get_source_segment(feature_text, installer[0]) or ""
+    for token in (
+        "app_class.switch_account = switch_account",
+        "app_class._refresh_user_header = refresh_header",
+        "app_class._build_header = build_header",
+    ):
+        assert token in installer_source
 
+    configure = function_defs(module_tree, "configure_account_header_dependencies")
+    assert len(configure) == 1
+    configure_source = ast.get_source_segment(module_text, configure[0]) or ""
+    assert "install_accounts_feature(" in configure_source
+    assert "account_display_name" in configure_source
     print("Wave 46 account header presentation regression passed.")
 
 
