@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Normalize the malformed weekday-regex word boundaries found during Wave 81."""
+"""Normalize and verify the malformed weekday-regex boundaries for Clients Wave 81.
+
+This guard also provides the owner-authored exact-head validation trigger after
+older compatibility publishers, such as Wave 73, finish reconciling the branch.
+"""
 from __future__ import annotations
 
 from pathlib import Path
