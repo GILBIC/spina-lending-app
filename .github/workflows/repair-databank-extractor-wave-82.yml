@@ -1,0 +1,41 @@
+name: Repair Data Bank Wave 82 extractor
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/repair-databank-extractor-wave-82.yml"
+      - "tools/apply_databank_modularization_wave_82.py"
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: >-
+      github.actor == github.repository_owner &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == github.repository_owner
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: true
+      - name: Repair duplicated App class replacement
+        shell: cmd
+        run: |
+          python -c "from pathlib import Path; p=Path('tools/apply_databank_modularization_wave_82.py'); s=p.read_text(encoding='utf-8'); old='        \"class App:\",\n    )'; new='        \"\",\n    )'; c=s.count(old); assert c in (0,1), c; s=s.replace(old,new,1); p.write_text(s,encoding='utf-8',newline='\n'); print('repair needed:', bool(c))"
+          python -m py_compile tools\apply_databank_modularization_wave_82.py
+          git diff --check
+          python -c "import subprocess; changed={line[3:].strip().replace('\\','/') for line in subprocess.check_output(['git','status','--short'],text=True).splitlines()}; assert changed in ({set()},{'tools/apply_databank_modularization_wave_82.py'}), changed; print('scope:',changed)"
+      - name: Commit repair when needed
+        shell: cmd
+        run: |
+          git diff --quiet && exit /b 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools\apply_databank_modularization_wave_82.py
+          git commit -m "Fix duplicated App class in Wave 82 extractor"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
