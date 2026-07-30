@@ -136,6 +136,7 @@ def install_clients_feature(
     )
     from spina_app.services import clients as client_services
     from spina_app.tabs import clients as clients_tab
+    from spina_app.utilities import formatting as client_formatting
 
     client_services.configure_client_service_dependencies(ns)
     _set(ns, "_app__norm_lt_value", client_services._app__norm_lt_value)
@@ -144,6 +145,8 @@ def install_clients_feature(
     _set(ns, "_spina__client_due_meta_base", client_services._spina__client_due_meta_base)
     _set(ns, "_spina__parse_flexible_due_rule", client_services._spina__parse_flexible_due_rule)
     _set(ns, "_spina__client_due_meta", client_services._spina__client_due_meta)
+    _set(ns, "_spina_v23_money", client_formatting._spina_v23_money)
+    _set(ns, "_spina_v23_percent", client_formatting._spina_v23_percent)
 
     client_controller.configure_client_controller_dependencies(ns)
     client_pictures.configure_client_picture_dependencies(ns)
