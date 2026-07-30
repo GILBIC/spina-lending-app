@@ -17,6 +17,8 @@ WAVE42_TEST_PATH = ROOT / "tools" / "test_long_task_presentation_wave_42.py"
 LEGACY_PATH = "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 BIND_START = "# Bind optimized loaders after the normal app methods are installed."
 BIND_END = "# --- END: LARGE DATA PERFORMANCE PATCH (clients + databank) ---"
+WAVE81_INSTALL_MARKER = "# --- BEGIN: Clients feature installer Wave 81 ---"
+LEGACY_CLIENT_REFRESH_BIND = '        setattr(App, "refresh_clients", _spina_perf_refresh_clients)\n'
 
 
 def git_show(ref: str, path: str) -> str:
@@ -100,7 +102,20 @@ def patch_app(current: str, fixed: str) -> str:
         ],
         prefix_by_name=prefix,
     )
-    return replace_section(current, fixed, BIND_START, BIND_END)
+    current = replace_section(current, fixed, BIND_START, BIND_END)
+
+    # The reviewed legacy source predates the complete Clients feature boundary and
+    # therefore binds the optimized Clients refresh directly. Once Wave 81 owns the
+    # final App bindings, retaining that line restores redundant runtime ownership.
+    if WAVE81_INSTALL_MARKER in current:
+        count = current.count(LEGACY_CLIENT_REFRESH_BIND)
+        if count != 1:
+            raise AssertionError(
+                f"Expected one legacy Clients refresh binding under Wave 81, found {count}"
+            )
+        current = current.replace(LEGACY_CLIENT_REFRESH_BIND, "", 1)
+
+    return current
 
 
 def patch_long_task(current: str, fixed_app: str) -> str:
