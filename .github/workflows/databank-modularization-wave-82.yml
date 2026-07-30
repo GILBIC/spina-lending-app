@@ -1,0 +1,86 @@
+name: Data Bank modularization Wave 82
+
+on:
+  pull_request:
+    paths:
+      - "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
+      - "spina_app/**/*databank*.py"
+      - "spina_app/**/*data_bank*.py"
+      - "spina_app/features/data_bank.py"
+      - "spina_app/repositories/data_bank.py"
+      - "spina_app/services/data_bank.py"
+      - "tools/*databank*wave_82.py"
+      - "tools/*data_bank*wave_82.py"
+      - "tools/run_databank_regression_suite_wave_72.py"
+      - "docs/databank-modularization-wave-82.md"
+      - ".github/workflows/databank-modularization-wave-82.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: databank-wave-82-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: >-
+      github.actor == github.repository_owner &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.user.login == github.repository_owner))
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 70
+
+    steps:
+      - name: Check out exact Wave 82 head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Require committed Data Bank architecture
+        shell: cmd
+        run: |
+          python -c "from pathlib import Path; p=Path('OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py'); s=p.read_text(encoding='utf-8'); assert s.count('# --- BEGIN: Data Bank feature installer Wave 82 ---') == 1; required=['spina_app/repositories/data_bank.py','spina_app/data_bank_audit.py','spina_app/data_bank_exports.py','spina_app/data_bank_auto_close.py']; assert all(Path(x).is_file() for x in required), required; print('Committed Wave 82 architecture confirmed')"
+
+      - name: Compile committed Data Bank architecture
+        shell: cmd
+        run: |
+          python -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py
+          python -m py_compile spina_app\repositories\data_bank.py
+          python -m py_compile spina_app\services\data_bank.py
+          python -m py_compile spina_app\data_bank_audit.py
+          python -m py_compile spina_app\data_bank_exports.py
+          python -m py_compile spina_app\data_bank_auto_close.py
+          python -m py_compile spina_app\features\data_bank.py
+          python -m py_compile tools\apply_databank_modularization_wave_82.py
+          python -m py_compile tools\run_databank_regression_suite_wave_72.py
+          python -m py_compile tools\test_data_bank_feature_wave_82.py
+          python -m py_compile tools\test_data_bank_extraction_wave_82.py
+
+      - name: Run complete Data Bank regressions
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_data_bank_extraction_wave_82.py
+          set "PYTHONPATH=%CD%" && python tools\test_data_bank_feature_wave_82.py
+          set "PYTHONPATH=%CD%" && python tools\run_databank_regression_suite_wave_72.py
+
+      - name: Run Clients Reports Collector Route and financial compatibility
+        shell: cmd
+        run: |
+          set "PYTHONPATH=%CD%" && python tools\test_clients_feature_wave_81.py
+          set "PYTHONPATH=%CD%" && python tools\test_reports_feature_wave_80.py
+          set "PYTHONPATH=%CD%" && python tools\test_collector_route_feature_wave_79.py
+          set "PYTHONPATH=%CD%" && python tools\test_cash_control_feature_wave_77.py
+          set "PYTHONPATH=%CD%" && python tools\test_wave75_compat_under_wave76.py
+          set "PYTHONPATH=%CD%" && python tools\test_wave74_compat_under_wave76.py
+          set "PYTHONPATH=%CD%" && python tools\test_x7_fixed_interest_basis_wave_74.py
+
+      - name: Check clean committed tree
+        shell: cmd
+        run: |
+          git diff --check
+          git diff --exit-code

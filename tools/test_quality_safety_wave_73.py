@@ -9,7 +9,9 @@ ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 LONG_TASK_PATH = ROOT / "spina_app" / "long_task_presentation.py"
 WAVE81_INSTALL_MARKER = "# --- BEGIN: Clients feature installer Wave 81 ---"
+WAVE82_INSTALL_MARKER = "# --- BEGIN: Data Bank feature installer Wave 82 ---"
 LEGACY_CLIENT_REFRESH_BIND = 'setattr(App, "refresh_clients", _spina_perf_refresh_clients)'
+LEGACY_DATA_BANK_REFRESH_BIND = 'setattr(App, "refresh_data_grid", _spina_perf_refresh_data_grid)'
 
 
 def parse(path: Path) -> tuple[str, ast.Module]:
@@ -98,6 +100,11 @@ assert "_spina_perf_ensure_indexes(LoanDB(DB_FILE))" not in app_source, (
 if WAVE81_INSTALL_MARKER in app_source:
     assert LEGACY_CLIENT_REFRESH_BIND not in app_source, (
         "Wave 73 restored redundant Clients refresh ownership under Wave 81"
+    )
+
+if WAVE82_INSTALL_MARKER in app_source:
+    assert LEGACY_DATA_BANK_REFRESH_BIND not in app_source, (
+        "Wave 73 restored redundant Data Bank refresh ownership under Wave 82"
     )
 
 print("Wave 73 quality safety regression checks passed")

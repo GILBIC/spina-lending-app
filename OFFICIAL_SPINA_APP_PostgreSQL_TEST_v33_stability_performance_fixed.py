@@ -291,18 +291,6 @@ _spina_pg_replace_qmarks = _wave34_spina_pg_replace_qmarks
 _spina_pg_escape_literal_percents = _wave34_spina_pg_escape_literal_percents
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 def _spina_pg_store_file_to_db(path, file_type=None, client_uid=None, person_uid=None, loan_type=None, collector=None, report_date=None):
     if not _spina_pg_ensure_storage_schema():
         return None
@@ -519,10 +507,6 @@ def _spina_pg_patch_reportlab_canvas_save(canvas_module):
 # =============================================================================
 
 
-
-
-
-
 class _PgCompatRow(dict):
     """SQLite Row-like object: supports row['name'], row[0], dict(row), row.get()."""
     __slots__ = ("_columns", "_values")
@@ -543,12 +527,6 @@ class _PgCompatRow(dict):
 
     def keys(self):
         return list(self._columns)
-
-
-
-
-
-
 
 
 def _spina_pg_sql(sql):
@@ -2864,15 +2842,11 @@ class LoanDB:
 
 
 
-
-
     def _norm_lt(self, lt):
         lt = (str(lt or '').strip() or '')
         if lt.lower().replace(' ', '') in ('7x7', '7×7'):
             return '7x7'
         return 'Regular'
-
-
 
 
 
@@ -3442,8 +3416,6 @@ class LoanDB:
         except Exception as __spina_exc:
             _log_suppressed_once('excpass_0101', 'suppressed exception excpass_0101', __spina_exc)
             pass
-
-
 
 
         # Add 'new_until' column if it doesn't exist
@@ -4315,8 +4287,6 @@ class LoanDB:
             return False
 
 
-
-
     def renew_client(self, name, released_cash, renew_date=None, new_principal=None, loan_type=None, interest_rate=None, note='', pay_start_offset_days=None):
         """Renew a client (reloan). Updates the client row to a new cycle and records an event.
 
@@ -4757,10 +4727,6 @@ class LoanDB:
 
 
 
-
-
-
-
     def get_unpaired_7x7_names(self, search=None, search_by='all'):
         """Return 7x7 client names that have NO Regular record and are NOT linked.
 
@@ -4957,8 +4923,6 @@ class LoanDB:
                 _log_suppressed_once('excpass_0146', 'suppressed exception excpass_0146', __spina_exc)
                 pass
             return False
-
-
 
 
 
@@ -5162,82 +5126,6 @@ class LoanDB:
     # Transaction history / Data Bank audit
 
 
-
-
-
-    def _log_transaction_history(self, client_uid, action, old_row=None, new_row=None, source='', note=''):
-        """Append-only audit entry for Data Bank transactions."""
-        uid = (client_uid or '').strip()
-        # Derive UID from rows if needed
-        if not uid:
-            try:
-                uid = ((new_row or old_row or {}).get("client_uid") or "").strip()
-            except Exception:
-                uid = ""
-        # Derive uid by (name, loan_type) if still missing
-        if not uid:
-            try:
-                nm = (new_row or old_row or {}).get("name")
-                lt = (new_row or old_row or {}).get("loan_type")
-                uid = (self.get_client_uid(nm, loan_type=lt) or "").strip()
-            except Exception:
-                uid = ""
-        # Still allow logging even if uid is missing (best-effort)
-        person_uid = ""
-        try:
-            if uid:
-                person_uid = (self.get_person_uid_for_client_uid(uid) or "").strip()
-        except Exception:
-            person_uid = ""
-
-        def _safe_json(obj):
-            try:
-                return json.dumps(obj, ensure_ascii=False, default=str, sort_keys=True)
-            except Exception:
-                try:
-                    return json.dumps(str(obj), ensure_ascii=False)
-                except Exception:
-                    return ""
-
-        # identity fields
-        nm = ""
-        lt = ""
-        dt = ""
-        try:
-            src_row = (new_row or old_row or {}) or {}
-            nm = (src_row.get("name") or "") if isinstance(src_row, dict) else ""
-            lt = (src_row.get("loan_type") or "") if isinstance(src_row, dict) else ""
-            dt = (src_row.get("date") or "") if isinstance(src_row, dict) else ""
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0151', 'suppressed exception excpass_0151', __spina_exc)
-            pass
-
-        cur = self.conn.cursor()
-        try:
-            cur.execute(
-                """INSERT INTO transaction_history
-                   (person_uid, client_uid, name, loan_type, date, action, changed_at, old_json, new_json, source, note)
-                   VALUES (?,?,?,?,?, ?, datetime('now'), ?,?,?,?)""",
-                (
-                    (person_uid or ""),
-                    (uid or ""),
-                    (nm or ""),
-                    (lt or ""),
-                    (dt or ""),
-                    (action or ""),
-                    _safe_json(old_row),
-                    _safe_json(new_row),
-                    (source or ""),
-                    (note or ""),
-                )
-            )
-            self.conn.commit()
-            return True
-        except Exception:
-            return False
-
-
-
     def _audit_parse_json_payload(self, raw_json):
         import json
         if isinstance(raw_json, dict):
@@ -5319,540 +5207,6 @@ class LoanDB:
                 'new_json': d.get('new_json') or '',
             })
         return out
-
-    def _databank_day_close_bucket(self, loan_type=None):
-        # Combined daily close bucket for all Data Bank loan types (Regular + 7x7).
-        return '__ALL__'
-
-    def _dayclose_norm_workflow(self, workflow_status, variance=0.0, is_closed=True):
-        wf = str(workflow_status or '').strip().title()
-        if wf in ('Open', 'Pending', 'Resolved'):
-            return wf
-        if not bool(is_closed):
-            return 'Open'
-        try:
-            vv = float(variance or 0.0)
-        except Exception:
-            vv = 0.0
-        return 'Resolved' if abs(vv) < 0.005 else 'Pending'
-
-    def _dayclose_variance_status(self, variance):
-        try:
-            vv = float(variance or 0.0)
-        except Exception:
-            vv = 0.0
-        if abs(vv) < 0.005:
-            return 'Balanced'
-        return 'Overage' if vv > 0 else 'Short'
-
-    def get_databank_daily_total(self, date_s, loan_type=None):
-        cur = self.conn.cursor()
-        raw_lt = (str(loan_type or '').strip())
-        try:
-            if (not raw_lt) or (raw_lt.upper() in ('ALL', 'COMBINED', '__ALL__')):
-                row = cur.execute(
-                    """
-                    SELECT COALESCE(SUM(COALESCE(payment, 0)), 0)
-                    FROM transactions
-                    WHERE date(date) = date(?)
-                    """,
-                    (date_s,),
-                ).fetchone()
-            else:
-                lt = self._effective_lt(raw_lt)
-                row = cur.execute(
-                    """
-                    SELECT COALESCE(SUM(COALESCE(payment, 0)), 0)
-                    FROM transactions
-                    WHERE date(date) = date(?)
-                      AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular') = IFNULL(NULLIF(TRIM(?),''),'Regular')
-                    """,
-                    (date_s, lt),
-                ).fetchone()
-            if not row:
-                return 0.0
-            try:
-                return float(row[0] or 0.0)
-            except Exception:
-                return 0.0
-        except Exception:
-            return 0.0
-
-    def get_databank_day_close(self, date_s, loan_type=None):
-        cur = self.conn.cursor()
-        bucket = self._databank_day_close_bucket(loan_type)
-        try:
-            row = cur.execute(
-                "SELECT * FROM databank_day_close WHERE close_date=? AND loan_type=? LIMIT 1",
-                (date_s, bucket),
-            ).fetchone()
-            if not row:
-                return None
-            d = dict(row)
-            try:
-                d['expected_amount'] = round(float(d.get('expected_amount') or 0.0), 2)
-            except Exception:
-                d['expected_amount'] = 0.0
-            try:
-                d['actual_cash'] = round(float(d.get('actual_cash') or 0.0), 2)
-            except Exception:
-                d['actual_cash'] = 0.0
-            try:
-                d['variance'] = round(float(d.get('variance') or 0.0), 2)
-            except Exception:
-                d['variance'] = round(float(d.get('actual_cash') or 0.0) - float(d.get('expected_amount') or 0.0), 2)
-            d['variance_status'] = (d.get('variance_status') or self._dayclose_variance_status(d.get('variance'))).strip() or 'Balanced'
-            d['variance_workflow_status'] = self._dayclose_norm_workflow(
-                d.get('variance_workflow_status'),
-                variance=d.get('variance'),
-                is_closed=bool(int(d.get('is_closed') or 0)),
-            )
-            return d
-        except Exception:
-            return None
-
-    def is_databank_day_closed(self, date_s, loan_type=None):
-        rec = self.get_databank_day_close(date_s, loan_type=loan_type) or {}
-        try:
-            return bool(int(rec.get('is_closed') or 0))
-        except Exception:
-            return False
-
-    def _append_databank_day_close_history(self, date_s, action, rec=None, actor='', note='', loan_type=None, source='databank:history', payload=None):
-        cur = self.conn.cursor()
-        bucket = self._databank_day_close_bucket(loan_type)
-        rr = dict(rec or {})
-        try:
-            payload_json = json.dumps(payload or {}, ensure_ascii=False, default=str, sort_keys=True)
-        except Exception:
-            payload_json = ''
-        try:
-            cur.execute(
-                """
-                INSERT INTO databank_day_close_history
-                    (close_date, loan_type, action, variance_status, workflow_status,
-                     expected_amount, actual_cash, variance, note, actor, event_at, source, payload_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?, ?)
-                """,
-                (
-                    date_s,
-                    bucket,
-                    str(action or '').strip() or 'update',
-                    (rr.get('variance_status') or '').strip(),
-                    self._dayclose_norm_workflow(rr.get('variance_workflow_status'), variance=rr.get('variance'), is_closed=bool(int(rr.get('is_closed') or 0)) if rr else True),
-                    round(float(rr.get('expected_amount') or 0.0), 2),
-                    round(float(rr.get('actual_cash') or 0.0), 2),
-                    round(float(rr.get('variance') or 0.0), 2),
-                    str(note if note is not None else rr.get('note') or ''),
-                    str(actor or '').strip(),
-                    source or 'databank:history',
-                    payload_json,
-                ),
-            )
-        except Exception as e:
-            try:
-                _log_exc('databank_day_close_history:insert', e)
-            except Exception:
-                pass
-
-    def list_databank_day_close_history(self, date_s, loan_type=None, limit=200):
-        cur = self.conn.cursor()
-        bucket = self._databank_day_close_bucket(loan_type)
-        try:
-            rows = cur.execute(
-                """
-                SELECT *
-                  FROM databank_day_close_history
-                 WHERE close_date=? AND loan_type=?
-                 ORDER BY datetime(event_at) DESC, id DESC
-                 LIMIT ?
-                """,
-                (date_s, bucket, int(limit or 200)),
-            ).fetchall()
-        except Exception:
-            return []
-        out = []
-        for r in (rows or []):
-            try:
-                d = dict(r)
-            except Exception:
-                d = {}
-            d['workflow_status'] = self._dayclose_norm_workflow(d.get('workflow_status'), variance=d.get('variance'), is_closed=True)
-            out.append(d)
-        return out
-
-    def list_databank_day_collectors(self, date_s, loan_type=None):
-        cur = self.conn.cursor()
-        bucket = self._databank_day_close_bucket(loan_type)
-        try:
-            rows = cur.execute(
-                """
-                SELECT *
-                  FROM databank_day_collector_close
-                 WHERE close_date=? AND loan_type=?
-                 ORDER BY sort_order ASC, collector_name COLLATE NOCASE ASC, id ASC
-                """,
-                (date_s, bucket),
-            ).fetchall()
-        except Exception:
-            return []
-        out = []
-        for r in (rows or []):
-            try:
-                d = dict(r)
-            except Exception:
-                d = {}
-            try:
-                d['expected_amount'] = round(float(d.get('expected_amount') or 0.0), 2)
-            except Exception:
-                d['expected_amount'] = 0.0
-            try:
-                d['actual_cash'] = round(float(d.get('actual_cash') or 0.0), 2)
-            except Exception:
-                d['actual_cash'] = 0.0
-            try:
-                d['variance'] = round(float(d.get('variance') or 0.0), 2)
-            except Exception:
-                d['variance'] = round(float(d.get('actual_cash') or 0.0) - float(d.get('expected_amount') or 0.0), 2)
-            out.append(d)
-        return out
-
-    def get_databank_day_collector_totals(self, date_s, loan_type=None):
-        rows = self.list_databank_day_collectors(date_s, loan_type=loan_type)
-        exp = 0.0
-        act = 0.0
-        for r in (rows or []):
-            try:
-                exp += float(r.get('expected_amount') or 0.0)
-            except Exception:
-                pass
-            try:
-                act += float(r.get('actual_cash') or 0.0)
-            except Exception:
-                pass
-        exp = round(exp, 2)
-        act = round(act, 2)
-        var = round(act - exp, 2)
-        if abs(var) < 0.005:
-            var = 0.0
-        return {
-            'rows': rows,
-            'expected_amount': exp,
-            'actual_cash': act,
-            'variance': var,
-            'variance_status': self._dayclose_variance_status(var),
-        }
-
-    def replace_databank_day_collectors(self, date_s, rows, changed_by='', loan_type=None, source='databank:collector_split'):
-        cur = self.conn.cursor()
-        bucket = self._databank_day_close_bucket(loan_type)
-        cleaned = []
-        seen = set()
-        for idx, row in enumerate(rows or []):
-            try:
-                name = str((row or {}).get('collector_name') or '').strip()
-            except Exception:
-                name = ''
-            if not name:
-                continue
-            key = name.lower()
-            if key in seen:
-                suffix = 2
-                while f"{key}__{suffix}" in seen:
-                    suffix += 1
-                seen.add(f"{key}__{suffix}")
-                name = f"{name} ({suffix})"
-            else:
-                seen.add(key)
-            try:
-                expected = round(float((row or {}).get('expected_amount') or 0.0), 2)
-            except Exception:
-                expected = 0.0
-            try:
-                actual = round(float((row or {}).get('actual_cash') or 0.0), 2)
-            except Exception:
-                actual = 0.0
-            variance = round(actual - expected, 2)
-            if abs(variance) < 0.005:
-                variance = 0.0
-            cleaned.append({
-                'collector_name': name,
-                'expected_amount': expected,
-                'actual_cash': actual,
-                'variance': variance,
-                'note': str((row or {}).get('note') or '').strip(),
-                'sort_order': idx,
-            })
-        try:
-            cur.execute("DELETE FROM databank_day_collector_close WHERE close_date=? AND loan_type=?", (date_s, bucket))
-            for row in cleaned:
-                cur.execute(
-                    """
-                    INSERT INTO databank_day_collector_close
-                        (close_date, loan_type, collector_name, expected_amount, actual_cash, variance,
-                         note, sort_order, updated_by, created_at, updated_at, source)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), ?)
-                    """,
-                    (
-                        date_s,
-                        bucket,
-                        row['collector_name'],
-                        row['expected_amount'],
-                        row['actual_cash'],
-                        row['variance'],
-                        row['note'],
-                        int(row.get('sort_order') or 0),
-                        str(changed_by or '').strip(),
-                        source or 'databank:collector_split',
-                    ),
-                )
-            self.conn.commit()
-        except Exception:
-            self.conn.rollback()
-            raise
-
-        rec = self.get_databank_day_close(date_s, loan_type=loan_type) or {
-            'close_date': date_s,
-            'loan_type': bucket,
-            'expected_amount': round(float(self.get_databank_daily_total(date_s, loan_type='__ALL__') or 0.0), 2),
-            'actual_cash': 0.0,
-            'variance': 0.0,
-            'variance_status': 'Balanced',
-            'variance_workflow_status': 'Open',
-            'is_closed': 0,
-            'note': '',
-        }
-        totals = self.get_databank_day_collector_totals(date_s, loan_type=loan_type)
-        self._append_databank_day_close_history(
-            date_s,
-            'collector_split_saved',
-            rec=rec,
-            actor=changed_by,
-            note=rec.get('note') or '',
-            loan_type=loan_type,
-            source=source,
-            payload={'collector_rows': cleaned, 'collector_totals': totals},
-        )
-        self.conn.commit()
-        return totals
-
-    def set_databank_day_close(self, date_s, actual_cash, note='', closed_by='', loan_type=None, source='databank:close', workflow_status=None, collector_rows=None):
-        cur = self.conn.cursor()
-        bucket = self._databank_day_close_bucket(loan_type)
-        before = self.get_databank_day_close(date_s, loan_type=loan_type)
-        expected = round(float(self.get_databank_daily_total(date_s, loan_type='__ALL__') or 0.0), 2)
-        actual = round(float(actual_cash or 0.0), 2)
-        variance = round(actual - expected, 2)
-        if abs(variance) < 0.005:
-            variance = 0.0
-        variance_status = self._dayclose_variance_status(variance)
-        workflow = self._dayclose_norm_workflow(workflow_status, variance=variance, is_closed=True)
-        try:
-            cur.execute(
-                """
-                INSERT INTO databank_day_close
-                    (close_date, loan_type, expected_amount, actual_cash, variance, variance_status,
-                     variance_workflow_status, is_closed, note, closed_by, closed_at, opened_by, opened_at, updated_at, source)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, datetime('now'), '', NULL, datetime('now'), ?)
-                ON CONFLICT(close_date, loan_type) DO UPDATE SET
-                    expected_amount=excluded.expected_amount,
-                    actual_cash=excluded.actual_cash,
-                    variance=excluded.variance,
-                    variance_status=excluded.variance_status,
-                    variance_workflow_status=excluded.variance_workflow_status,
-                    is_closed=1,
-                    note=excluded.note,
-                    closed_by=excluded.closed_by,
-                    closed_at=datetime('now'),
-                    updated_at=datetime('now'),
-                    source=excluded.source
-                """,
-                (
-                    date_s,
-                    bucket,
-                    expected,
-                    actual,
-                    variance,
-                    variance_status,
-                    workflow,
-                    note or '',
-                    closed_by or '',
-                    source or 'databank:close',
-                ),
-            )
-            if collector_rows is not None:
-                self.replace_databank_day_collectors(date_s, collector_rows, changed_by=closed_by, loan_type=loan_type, source=(source or 'databank:close') + ':collectors')
-            self.conn.commit()
-        except Exception:
-            self.conn.rollback()
-            raise
-        after = self.get_databank_day_close(date_s, loan_type=loan_type)
-        self._append_databank_day_close_history(
-            date_s,
-            'close',
-            rec=after,
-            actor=closed_by,
-            note=note or '',
-            loan_type=loan_type,
-            source=source,
-            payload={
-                'before': before or {},
-                'after': after or {},
-                'collector_totals': self.get_databank_day_collector_totals(date_s, loan_type=loan_type),
-            },
-        )
-        self.conn.commit()
-        return after
-
-    def reopen_databank_day(self, date_s, opened_by='', loan_type=None, source='databank:reopen'):
-        cur = self.conn.cursor()
-        bucket = self._databank_day_close_bucket(loan_type)
-        existing = self.get_databank_day_close(date_s, loan_type=loan_type)
-        if not existing:
-            expected = round(float(self.get_databank_daily_total(date_s, loan_type='__ALL__') or 0.0), 2)
-            cur.execute(
-                """
-                INSERT INTO databank_day_close
-                    (close_date, loan_type, expected_amount, actual_cash, variance, variance_status,
-                     variance_workflow_status, is_closed, note, closed_by, closed_at, opened_by, opened_at, updated_at, source)
-                VALUES (?, ?, ?, 0, 0, 'Balanced', 'Open', 0, '', '', NULL, ?, datetime('now'), datetime('now'), ?)
-                """,
-                (date_s, bucket, expected, opened_by or '', source or 'databank:reopen'),
-            )
-        else:
-            cur.execute(
-                """
-                UPDATE databank_day_close
-                   SET is_closed=0,
-                       variance_workflow_status='Open',
-                       opened_by=?,
-                       opened_at=datetime('now'),
-                       updated_at=datetime('now'),
-                       source=?
-                 WHERE close_date=? AND loan_type=?
-                """,
-                (opened_by or '', source or 'databank:reopen', date_s, bucket),
-            )
-        self.conn.commit()
-        after = self.get_databank_day_close(date_s, loan_type=loan_type)
-        self._append_databank_day_close_history(
-            date_s,
-            'reopen',
-            rec=after,
-            actor=opened_by,
-            note=(after or {}).get('note') or '',
-            loan_type=loan_type,
-            source=source,
-            payload={'after': after or {}},
-        )
-        self.conn.commit()
-        return after
-
-    def set_databank_day_workflow(self, date_s, workflow_status, note='', changed_by='', loan_type=None, source='databank:workflow'):
-        cur = self.conn.cursor()
-        bucket = self._databank_day_close_bucket(loan_type)
-        existing = self.get_databank_day_close(date_s, loan_type=loan_type)
-        if not existing:
-            expected = round(float(self.get_databank_daily_total(date_s, loan_type='__ALL__') or 0.0), 2)
-            actual = 0.0
-            variance = round(actual - expected, 2)
-            if abs(variance) < 0.005:
-                variance = 0.0
-            variance_status = self._dayclose_variance_status(variance)
-            workflow = self._dayclose_norm_workflow(workflow_status, variance=variance, is_closed=False)
-            cur.execute(
-                """
-                INSERT INTO databank_day_close
-                    (close_date, loan_type, expected_amount, actual_cash, variance, variance_status,
-                     variance_workflow_status, is_closed, note, closed_by, closed_at, opened_by, opened_at, updated_at, source)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, '', NULL, ?, datetime('now'), datetime('now'), ?)
-                """,
-                (date_s, bucket, expected, actual, variance, variance_status, workflow, note or '', changed_by or '', source or 'databank:workflow'),
-            )
-        else:
-            workflow = self._dayclose_norm_workflow(workflow_status, variance=existing.get('variance'), is_closed=bool(int(existing.get('is_closed') or 0)))
-            cur.execute(
-                """
-                UPDATE databank_day_close
-                   SET variance_workflow_status=?,
-                       note=?,
-                       updated_at=datetime('now'),
-                       source=?
-                 WHERE close_date=? AND loan_type=?
-                """,
-                (workflow, note or '', source or 'databank:workflow', date_s, bucket),
-            )
-        self.conn.commit()
-        after = self.get_databank_day_close(date_s, loan_type=loan_type)
-        self._append_databank_day_close_history(
-            date_s,
-            'workflow_update',
-            rec=after,
-            actor=changed_by,
-            note=note or '',
-            loan_type=loan_type,
-            source=source,
-            payload={'after': after or {}},
-        )
-        self.conn.commit()
-        return after
-
-    def list_databank_day_close_records(self, start_date=None, end_date=None, loan_type=None):
-        cur = self.conn.cursor()
-        bucket = self._databank_day_close_bucket(loan_type)
-        start_date = (str(start_date or '').strip())
-        end_date = (str(end_date or '').strip())
-        params = [bucket]
-        sql = [
-            "SELECT * FROM databank_day_close WHERE loan_type=?"
-        ]
-        if start_date:
-            sql.append("AND date(close_date) >= date(?)")
-            params.append(start_date)
-        if end_date:
-            sql.append("AND date(close_date) <= date(?)")
-            params.append(end_date)
-        sql.append("ORDER BY date(close_date) DESC, id DESC")
-        try:
-            rows = cur.execute(" ".join(sql), tuple(params)).fetchall()
-        except Exception:
-            return []
-        out = []
-        for r in (rows or []):
-            try:
-                d = dict(r)
-            except Exception:
-                d = {}
-            ds = (d.get('close_date') or '').strip()
-            try:
-                d['regular_total'] = round(float(self.get_databank_daily_total(ds, loan_type='Regular') or 0.0), 2)
-            except Exception:
-                d['regular_total'] = 0.0
-            try:
-                d['x7_total'] = round(float(self.get_databank_daily_total(ds, loan_type='7x7') or 0.0), 2)
-            except Exception:
-                d['x7_total'] = 0.0
-            try:
-                d['expected_amount'] = round(float(d.get('expected_amount') or 0.0), 2)
-            except Exception:
-                d['expected_amount'] = 0.0
-            try:
-                d['actual_cash'] = round(float(d.get('actual_cash') or 0.0), 2)
-            except Exception:
-                d['actual_cash'] = 0.0
-            try:
-                d['variance'] = round(float(d.get('variance') or 0.0), 2)
-            except Exception:
-                d['variance'] = round(float(d.get('actual_cash') or 0.0) - float(d.get('expected_amount') or 0.0), 2)
-            d['variance_status'] = (d.get('variance_status') or self._dayclose_variance_status(d.get('variance'))).strip() or 'Balanced'
-            d['variance_workflow_status'] = self._dayclose_norm_workflow(
-                d.get('variance_workflow_status'),
-                variance=d.get('variance'),
-                is_closed=bool(int(d.get('is_closed') or 0)),
-            )
-            out.append(d)
-        return out
-
 
 
 
@@ -5964,656 +5318,6 @@ class LoanDB:
             return False
 
 
-
-    def add_or_update_transaction(self, name, date_s, payment, description="", loan_type=None, source="databank"):
-        """Insert or update a transaction (Data Bank) row.
-
-        Key: prefer (client_uid, loan_type, date); fallback to legacy (name, loan_type, date)
-
-        - Populates `client_uid` when possible so linked profiles can see the same Data Bank rows.
-        - Writes an append-only audit row into `transaction_history`.
-        """
-        cur = self.conn.cursor()
-        now = datetime.now().isoformat(sep=' ', timespec='seconds')
-        lt = self._effective_lt(loan_type)
-        nm = (name or "").strip()
-
-        if self.is_databank_day_closed(date_s, loan_type=lt):
-            raise ValueError(f"{date_s} is already closed for the combined Data Bank day (Regular + 7x7). Reopen it with a password before changing Data Bank entries.")
-
-        # Resolve client_uid for this name/type (best-effort)
-        client_uid = None
-        try:
-            client_uid = self.get_client_uid(nm, loan_type=lt)
-        except Exception:
-            client_uid = None
-
-        # Stable-id path: prevents rename drift and duplicate same-day rows after a rename.
-        if client_uid:
-            return self.add_or_update_transaction_by_uid(
-                client_uid,
-                date_s,
-                payment,
-                description=description,
-                loan_type=lt,
-                source=source,
-            )
-
-        # Fetch old row for audit
-        old_row = None
-        try:
-            r0 = cur.execute(
-                "SELECT * FROM transactions WHERE name=? AND loan_type=? AND date=?",
-                (nm, lt, date_s)
-            ).fetchone()
-            if r0:
-                old_row = dict(r0)
-        except Exception:
-            old_row = None
-
-        # Upsert
-        cur.execute("SELECT id FROM transactions WHERE name = ? AND loan_type = ? AND date = ?", (nm, lt, date_s))
-        r = cur.fetchone()
-        if r:
-            try:
-                rid = r["id"] if isinstance(r, sqlite3.Row) else r[0]
-            except Exception:
-                rid = r[0]
-            # Prefer updating client_uid too (if column exists)
-            try:
-                cur.execute(
-                    "UPDATE transactions SET client_uid=?, payment=?, description=?, created_at=? WHERE id=?",
-                    (client_uid, float(payment or 0), description, now, rid)
-                )
-            except Exception:
-                cur.execute(
-                    "UPDATE transactions SET payment=?, description=?, created_at=? WHERE id=?",
-                    (float(payment or 0), description, now, rid)
-                )
-        else:
-            try:
-                cur.execute(
-                    "INSERT INTO transactions (client_uid, name, loan_type, date, payment, description, created_at) VALUES (?,?,?,?,?,?,?)",
-                    (client_uid, nm, lt, date_s, float(payment or 0), description, now)
-                )
-            except Exception:
-                cur.execute(
-                    "INSERT INTO transactions (name, loan_type, date, payment, description, created_at) VALUES (?,?,?,?,?,?)",
-                    (nm, lt, date_s, float(payment or 0), description, now)
-                )
-
-        self.conn.commit()
-
-        # Fetch new row and audit
-        new_row = None
-        try:
-            r1 = cur.execute(
-                "SELECT * FROM transactions WHERE name=? AND loan_type=? AND date=? ORDER BY id DESC LIMIT 1",
-                (nm, lt, date_s)
-            ).fetchone()
-            if r1:
-                new_row = dict(r1)
-        except Exception:
-            new_row = None
-
-        try:
-            self._log_transaction_history(
-                (client_uid or (new_row or {}).get("client_uid")),
-                "TX_UPDATE" if old_row else "TX_ADD",
-                old_row=old_row,
-                new_row=new_row,
-                source=(source or "databank"),
-            )
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0158', 'suppressed exception excpass_0158', __spina_exc)
-            pass
-
-    def delete_transaction(self, name, date_s, loan_type=None, source="databank"):
-        cur = self.conn.cursor()
-        lt = self._effective_lt(loan_type)
-        nm = (name or "").strip()
-
-        if self.is_databank_day_closed(date_s, loan_type=lt):
-            raise ValueError(f"{date_s} is already closed for the combined Data Bank day (Regular + 7x7). Reopen it with a password before deleting Data Bank entries.")
-
-        cuid = None
-        try:
-            cuid = self.get_client_uid(nm, loan_type=lt)
-        except Exception:
-            cuid = None
-
-        old_row = None
-        try:
-            if cuid:
-                r0 = cur.execute(
-                    "SELECT * FROM transactions WHERE client_uid=? AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular') = IFNULL(NULLIF(TRIM(?),''),'Regular') AND date=? ORDER BY id DESC LIMIT 1",
-                    (cuid, lt, date_s)
-                ).fetchone()
-            else:
-                r0 = cur.execute(
-                    "SELECT * FROM transactions WHERE name=? AND loan_type=? AND date=?",
-                    (nm, lt, date_s)
-                ).fetchone()
-            if r0:
-                old_row = dict(r0)
-        except Exception:
-            old_row = None
-
-        if cuid:
-            cur.execute(
-                "DELETE FROM transactions WHERE client_uid=? AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular') = IFNULL(NULLIF(TRIM(?),''),'Regular') AND date=?",
-                (cuid, lt, date_s)
-            )
-        else:
-            cur.execute("DELETE FROM transactions WHERE name = ? AND loan_type = ? AND date = ?", (nm, lt, date_s))
-        self.conn.commit()
-
-        try:
-            if old_row and not cuid:
-                cuid = (old_row.get("client_uid") or "").strip() or None
-            if not cuid:
-                cuid = self.get_client_uid(nm, loan_type=lt)
-            self._log_transaction_history(
-                cuid,
-                "TX_DELETE",
-                old_row=old_row,
-                new_row=None,
-                source=(source or "databank"),
-            )
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0159', 'suppressed exception excpass_0159', __spina_exc)
-            pass
-
-
-    def delete_transactions_for_day(self, date_s, changed_by='', source="databank:delete_day", reset_close=True):
-        """Delete ALL Data Bank transaction rows for one calendar date.
-
-        Safety behavior:
-          - Validates YYYY-MM-DD.
-          - Creates a JSON backup in data/day_delete_backups BEFORE deleting.
-          - Deletes both Regular and 7x7 transactions for that date.
-          - Clears the Data Bank close/collector-close lock rows for that date so the day can be re-imported.
-          - Writes append-only audit rows into transaction_history and databank_day_close_history.
-        """
-        from datetime import datetime as _dt
-        import os as _os
-        import json as _json
-
-        ds = str(date_s or "").strip()[:10]
-        try:
-            ds = _dt.strptime(ds, "%Y-%m-%d").strftime("%Y-%m-%d")
-        except Exception:
-            raise ValueError("Invalid date. Use YYYY-MM-DD.")
-
-        cur = self.conn.cursor()
-
-        # Load rows that will be deleted.
-        rows = cur.execute(
-            """
-            SELECT *
-              FROM transactions
-             WHERE date(date) = date(?)
-             ORDER BY IFNULL(NULLIF(TRIM(loan_type),''),'Regular') COLLATE NOCASE,
-                      name COLLATE NOCASE,
-                      id
-            """,
-            (ds,),
-        ).fetchall() or []
-
-        old_rows = []
-        for r in rows:
-            try:
-                old_rows.append(dict(r))
-            except Exception:
-                try:
-                    old_rows.append({k: r[k] for k in r.keys()})
-                except Exception:
-                    old_rows.append({})
-
-        # Also back up close records because they are reset for this day.
-        close_rows = []
-        collector_rows = []
-        try:
-            close_rows = [dict(r) for r in (cur.execute(
-                "SELECT * FROM databank_day_close WHERE close_date=? ORDER BY id",
-                (ds,),
-            ).fetchall() or [])]
-        except Exception:
-            close_rows = []
-        try:
-            collector_rows = [dict(r) for r in (cur.execute(
-                "SELECT * FROM databank_day_collector_close WHERE close_date=? ORDER BY sort_order, id",
-                (ds,),
-            ).fetchall() or [])]
-        except Exception:
-            collector_rows = []
-
-        # Import re-run safeguard:
-        # The encoder importer keeps a JSON dedupe log. Even though the importer is designed
-        # to re-import if the DB row was deleted, clearing entries for this exact date makes
-        # Delete Day deterministic: delete 2026-03-18 -> import 2026-03-18 again without
-        # stale "already imported" state.
-        import_log_path = ""
-        import_log_obj = {}
-        import_log_removed = {}
-        try:
-            import_log_path = data_path("encoder_import_log.json")
-            if import_log_path and _os.path.exists(import_log_path):
-                with open(import_log_path, "r", encoding="utf-8") as f:
-                    import_log_obj = _json.load(f) or {}
-                if not isinstance(import_log_obj, dict):
-                    import_log_obj = {}
-        except Exception:
-            import_log_obj = {}
-
-        try:
-            if isinstance(import_log_obj, dict):
-                for _k, _v in list(import_log_obj.items()):
-                    _hit = False
-                    try:
-                        # Current log format stores {"date": "YYYY-MM-DD", ...}
-                        if isinstance(_v, dict) and str(_v.get("date") or "").strip()[:10] == ds:
-                            _hit = True
-                    except Exception:
-                        _hit = False
-                    try:
-                        # Fallback for stable key format: YYYY-MM-DD|loan_type|client_uid
-                        if not _hit and str(_k or "").split("|", 1)[0] == ds:
-                            _hit = True
-                    except Exception:
-                        pass
-                    if _hit:
-                        import_log_removed[str(_k)] = _v
-        except Exception:
-            import_log_removed = {}
-
-        if not old_rows and not close_rows and not collector_rows and not import_log_removed:
-            return {
-                "date": ds,
-                "deleted": 0,
-                "backup_path": "",
-                "close_reset": False,
-                "import_log_cleared": 0,
-                "message": "No transactions, close records, or import-log entries found for that date.",
-            }
-
-        # Backup FIRST. If backup fails, abort deletion.
-        backup_dir = _os.path.join(DATA_DIR, "day_delete_backups")
-        try:
-            _os.makedirs(backup_dir, exist_ok=True)
-        except Exception:
-            pass
-        ts = _dt.now().strftime("%Y%m%d_%H%M%S")
-        backup_path = _os.path.join(backup_dir, f"delete_day_{ds}_{ts}.json")
-        payload = {
-            "action": "DELETE_DAY_BACKUP",
-            "date": ds,
-            "created_at": _dt.now().isoformat(sep=" ", timespec="seconds"),
-            "changed_by": str(changed_by or "").strip(),
-            "source": str(source or "databank:delete_day"),
-            "transactions_count": len(old_rows),
-            "transactions_total_payment": round(sum(float((r or {}).get("payment") or 0.0) for r in old_rows), 2),
-            "transactions": old_rows,
-            "databank_day_close": close_rows,
-            "databank_day_collector_close": collector_rows,
-            "encoder_import_log_path": import_log_path,
-            "encoder_import_log_removed_count": len(import_log_removed),
-            "encoder_import_log_removed": import_log_removed,
-        }
-        try:
-            tmp = backup_path + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
-                _json.dump(payload, f, ensure_ascii=False, indent=2, default=str)
-            _os.replace(tmp, backup_path)
-        except Exception as e:
-            raise IOError(f"Backup failed, so nothing was deleted. Error: {e}")
-
-        # Delete in one transaction.
-        try:
-            cur.execute("DELETE FROM transactions WHERE date(date)=date(?)", (ds,))
-
-            close_reset = False
-            if reset_close:
-                try:
-                    cur.execute("DELETE FROM databank_day_collector_close WHERE close_date=?", (ds,))
-                    cur.execute("DELETE FROM databank_day_close WHERE close_date=?", (ds,))
-                    close_reset = bool(close_rows or collector_rows)
-                except Exception:
-                    close_reset = False
-
-            self.conn.commit()
-        except Exception:
-            try:
-                self.conn.rollback()
-            except Exception:
-                pass
-            raise
-
-        # Clear stale encoder import-log entries for this date after the DB delete succeeds.
-        import_log_cleared = 0
-        try:
-            if import_log_removed and isinstance(import_log_obj, dict):
-                for _k in list(import_log_removed.keys()):
-                    import_log_obj.pop(_k, None)
-                if import_log_path:
-                    if _write_json_atomic(import_log_path, import_log_obj):
-                        import_log_cleared = len(import_log_removed)
-                    else:
-                        try:
-                            _log_exc("delete_day.clear_encoder_import_log", Exception("atomic write failed"))
-                        except Exception:
-                            pass
-        except Exception as e:
-            try:
-                _log_exc("delete_day.clear_encoder_import_log", e)
-            except Exception:
-                pass
-
-        # Append audit rows after successful deletion.
-        note = f"Delete Day {ds}. Backup: {backup_path}"
-        if import_log_cleared:
-            note += f" Import-log cleared: {import_log_cleared} entr(y/ies)."
-        for old in old_rows:
-            try:
-                self._log_transaction_history(
-                    (old.get("client_uid") or ""),
-                    "TX_DELETE_DAY",
-                    old_row=old,
-                    new_row=None,
-                    source=(source or "databank:delete_day"),
-                    note=note,
-                )
-            except Exception:
-                pass
-
-        try:
-            # Log the reset/clear of day close state in history.
-            rec = close_rows[0] if close_rows else {
-                "close_date": ds,
-                "loan_type": self._databank_day_close_bucket(None),
-                "expected_amount": 0.0,
-                "actual_cash": 0.0,
-                "variance": 0.0,
-                "variance_status": "Balanced",
-                "variance_workflow_status": "Open",
-                "is_closed": 0,
-                "note": "",
-            }
-            self._append_databank_day_close_history(
-                ds,
-                "delete_day_transactions",
-                rec=rec,
-                actor=str(changed_by or "").strip(),
-                note=note,
-                loan_type=None,
-                source=(source or "databank:delete_day"),
-                payload={
-                    "backup_path": backup_path,
-                    "deleted_transactions": len(old_rows),
-                    "deleted_close_records": len(close_rows),
-                    "deleted_collector_close_records": len(collector_rows),
-                    "encoder_import_log_removed": len(import_log_removed),
-                    "encoder_import_log_cleared": import_log_cleared,
-                },
-            )
-            self.conn.commit()
-        except Exception:
-            pass
-
-        return {
-            "date": ds,
-            "deleted": len(old_rows),
-            "backup_path": backup_path,
-            "close_reset": bool(close_rows or collector_rows),
-            "import_log_cleared": import_log_cleared,
-            "message": f"Deleted {len(old_rows)} transaction row(s) for {ds}.",
-        }
-
-
-    def get_transaction(self, name, date_s, loan_type=None):
-        cur = self.conn.cursor()
-        lt = self._effective_lt(loan_type)
-        nm = (name or '').strip()
-        try:
-            uid = self.get_client_uid(nm, loan_type=lt)
-        except Exception:
-            uid = None
-        if uid:
-            cur.execute(
-                "SELECT * FROM transactions WHERE client_uid=? AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular') = IFNULL(NULLIF(TRIM(?),''),'Regular') AND date = ? ORDER BY id DESC LIMIT 1",
-                (uid, lt, date_s)
-            )
-        else:
-            cur.execute("SELECT * FROM transactions WHERE name = ? AND loan_type = ? AND date = ?", (nm, lt, date_s))
-        return cur.fetchone()
-
-
-
-
-    def get_transaction_by_uid(self, client_uid, date_s, loan_type=None):
-        """Fetch a transaction by (client_uid, loan_type, date)."""
-        uid = (client_uid or "").strip()
-        if not uid:
-            return None
-        cur = self.conn.cursor()
-        lt = self._effective_lt(loan_type)
-        try:
-            cur.execute(
-                "SELECT * FROM transactions WHERE client_uid=? AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular') = IFNULL(NULLIF(TRIM(?),''),'Regular') AND date=?",
-                (uid, lt, date_s),
-            )
-            return cur.fetchone()
-        except Exception:
-            # Fallback: some old DBs may not have client_uid populated
-            return None
-
-    def add_or_update_transaction_by_uid(self, client_uid, date_s, payment, description="", loan_type=None, source="databank"):
-        """Insert or update a transaction using client_uid as the stable key.
-
-        Key: (client_uid, loan_type, date)
-
-        - Automatically pulls the current client name from clients table.
-        - Updates the stored `name` in transactions if the client was renamed.
-        - Writes append-only audit rows into transaction_history.
-        """
-        uid = (client_uid or "").strip()
-        if not uid:
-            # fallback to name-based if caller passes no uid
-            return self.add_or_update_transaction("", date_s, payment, description=description, loan_type=loan_type, source=source)
-
-        cur = self.conn.cursor()
-        now = datetime.now().isoformat(sep=' ', timespec='seconds')
-
-        # Resolve current client row/name
-        row = None
-        try:
-            row = self.get_client_by_uid(uid) or None
-        except Exception:
-            row = None
-
-        nm = ""
-        lt_row = None
-        try:
-            if isinstance(row, dict):
-                nm = (row.get("name") or "").strip()
-                lt_row = (row.get("loan_type") or "").strip()
-        except Exception:
-            nm = ""
-            lt_row = None
-
-        # Determine effective loan_type
-        lt = self._effective_lt(loan_type or lt_row or "Regular")
-
-        if self.is_databank_day_closed(date_s, loan_type=lt):
-            raise ValueError(f"{date_s} is already closed for the combined Data Bank day (Regular + 7x7). Reopen it with a password before changing Data Bank entries.")
-
-        # Fetch old row for audit
-        old_row = None
-        try:
-            r0 = cur.execute(
-                "SELECT * FROM transactions WHERE client_uid=? AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular') = IFNULL(NULLIF(TRIM(?),''),'Regular') AND date=?",
-                (uid, lt, date_s),
-            ).fetchone()
-            if r0:
-                old_row = dict(r0)
-        except Exception:
-            old_row = None
-
-        # Upsert by client_uid
-        try:
-            rid_row = cur.execute(
-                "SELECT id FROM transactions WHERE client_uid=? AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular') = IFNULL(NULLIF(TRIM(?),''),'Regular') AND date=?",
-                (uid, lt, date_s),
-            ).fetchone()
-        except Exception:
-            rid_row = None
-
-        if rid_row:
-            try:
-                rid = rid_row["id"] if isinstance(rid_row, sqlite3.Row) else rid_row[0]
-            except Exception:
-                rid = rid_row[0]
-            # Update payment/desc and keep name in sync
-            try:
-                cur.execute(
-                    "UPDATE transactions SET name=?, loan_type=?, payment=?, description=?, created_at=? WHERE id=?",
-                    (nm, lt, float(payment or 0), description, now, rid),
-                )
-            except Exception:
-                # minimal fallback
-                cur.execute(
-                    "UPDATE transactions SET payment=?, description=?, created_at=? WHERE id=?",
-                    (float(payment or 0), description, now, rid),
-                )
-        else:
-            try:
-                cur.execute(
-                    "INSERT INTO transactions (client_uid, name, loan_type, date, payment, description, created_at) VALUES (?,?,?,?,?,?,?)",
-                    (uid, nm, lt, date_s, float(payment or 0), description, now),
-                )
-            except Exception:
-                # fallback to legacy insert
-                cur.execute(
-                    "INSERT INTO transactions (name, loan_type, date, payment, description, created_at) VALUES (?,?,?,?,?,?)",
-                    (nm, lt, date_s, float(payment or 0), description, now),
-                )
-
-        self.conn.commit()
-
-        # Fetch new row and audit
-        new_row = None
-        try:
-            r1 = cur.execute(
-                "SELECT * FROM transactions WHERE client_uid=? AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular') = IFNULL(NULLIF(TRIM(?),''),'Regular') AND date=? ORDER BY id DESC LIMIT 1",
-                (uid, lt, date_s),
-            ).fetchone()
-            if r1:
-                new_row = dict(r1)
-        except Exception:
-            new_row = None
-
-        try:
-            self._log_transaction_history(
-                uid,
-                "TX_UPDATE" if old_row else "TX_ADD",
-                old_row=old_row,
-                new_row=new_row,
-                source=(source or "databank"),
-            )
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_tx_uid_audit', 'suppressed exception excpass_tx_uid_audit', __spina_exc)
-            pass
-
-
-
-
-    def import_missing_clients_from_transactions(self):
-        """Ensure every (name, loan_type) in transactions has a matching row in clients.
-
-        Older versions only tracked names (no loan_type). This version is multi-loan-type safe.
-        For 7x7 loans, we default interest_rate to 0.0.
-        """
-        cur = self.conn.cursor()
-
-        # Collect distinct (name, loan_type) from transactions
-        tx = set()
-        try:
-            cur.execute("SELECT DISTINCT name, loan_type FROM transactions")
-            for r in (cur.fetchall() or []):
-                try:
-                    nm = (r[0] or "").strip()
-                    lt = self._norm_lt(r[1] if len(r) > 1 else None)
-                    if nm:
-                        tx.add((nm, lt))
-                except Exception as __spina_exc:
-                    _log_suppressed_once('excpass_0160', 'suppressed exception excpass_0160', __spina_exc)
-                    pass
-        except Exception:
-            # Legacy fallback (no loan_type column)
-            try:
-                cur.execute("SELECT DISTINCT name FROM transactions")
-                for (nm,) in (cur.fetchall() or []):
-                    nm = (nm or "").strip()
-                    if nm:
-                        tx.add((nm, self._effective_lt(None)))
-            except Exception:
-                return 0
-
-        # Collect existing (name, loan_type) from clients
-        cl = set()
-        try:
-            cur.execute("SELECT name, loan_type FROM clients")
-            for r in (cur.fetchall() or []):
-                try:
-                    nm = (r[0] or "").strip()
-                    lt = self._norm_lt(r[1] if len(r) > 1 else None)
-                    if nm:
-                        cl.add((nm, lt))
-                except Exception as __spina_exc:
-                    _log_suppressed_once('excpass_0161', 'suppressed exception excpass_0161', __spina_exc)
-                    pass
-        except Exception:
-            try:
-                cur.execute("SELECT name FROM clients")
-                for (nm,) in (cur.fetchall() or []):
-                    nm = (nm or "").strip()
-                    if nm:
-                        cl.add((nm, self._effective_lt(None)))
-            except Exception as __spina_exc:
-                _log_suppressed_once('excpass_0162', 'suppressed exception excpass_0162', __spina_exc)
-                pass
-
-        miss = tx - cl
-        if not miss:
-            return 0
-
-        today_s = date.today().isoformat()
-        inserted = 0
-
-        for nm, lt in miss:
-            try:
-                lt_norm = self._norm_lt(lt)
-                is_7x7 = (lt_norm.lower().replace(" ", "") == "7x7")
-                ir = 0.0 if is_7x7 else 0.20
-                cur.execute(
-                    "INSERT INTO clients (name, created_at, loan_type, interest_rate) VALUES (?,?,?,?)",
-                    (nm, today_s, lt_norm, ir),
-                )
-                inserted += 1
-            except Exception:
-                # Try a minimal insert if schema differs
-                try:
-                    cur.execute(
-                        "INSERT INTO clients (name, created_at, loan_type) VALUES (?,?,?)",
-                        (nm, today_s, self._norm_lt(lt)),
-                    )
-                    inserted += 1
-                except Exception as __spina_exc:
-                    _log_suppressed_once('excpass_0163', 'suppressed exception excpass_0163', __spina_exc)
-                    pass
-
-        self.conn.commit()
-        return inserted
 
 # Wave 33: LoanDB context and read-only area/audit helpers.
 from spina_app.loan_context_queries import (
@@ -6745,15 +5449,7 @@ def _adv_paid_on_dates_covering(db, name: str, day_yyyy_mm_dd: str, loan_type: s
 
 
 
-
-
-
-
 from spina_app.utilities.formatting import fmt_currency
-
-
-
-
 
 
 def _getv(obj, key, default=None):
@@ -6926,16 +5622,6 @@ def draw_notes_aligned(c, x_label, y, max_w, note_text,
 # --- end aligned Note ---
 
 
-
-
-# Wave 72: complete Data Bank feature/controller extraction.
-import spina_app.databank_feature as _wave72_databank_feature
-import_from_excel_with_reasons = _wave72_databank_feature.import_from_excel_with_reasons
-_spina_perf_refresh_data_grid = _wave72_databank_feature._spina_perf_refresh_data_grid
-_spina_auto_close_one_day = _wave72_databank_feature._spina_auto_close_one_day
-_spina_run_auto_daily_close = _wave72_databank_feature._spina_run_auto_daily_close
-_spina_save_closed_collector_route_copy = _wave72_databank_feature._spina_save_closed_collector_route_copy
-
 class App:
 
 
@@ -6972,10 +5658,6 @@ class App:
         except Exception as __spina_exc:
             _log_suppressed_once('excpass_0170', 'suppressed exception excpass_0170', __spina_exc)
             pass
-
-
-
-
 
 
     # ---------------- Access Control (Admin / Encoder / Viewer / System) ----------------
@@ -7982,8 +6664,6 @@ class App:
             return
 
 
-
-
     def _open_note_dialog(self):
         name = self._get_selected_report_client()
         if not name:
@@ -8014,18 +6694,6 @@ class App:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     def _prompt_current_password(self, title='Password Required', prompt='Enter your password to continue.'):
         from tkinter import simpledialog, messagebox
         username = (getattr(self, 'user_name', '') or '').strip()
@@ -8041,196 +6709,6 @@ class App:
             return False
         return True
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def _audit_money_text(self, value):
-        try:
-            return fmt_currency(value)
-        except Exception:
-            try:
-                return f"PHP {float(value or 0):,.2f}"
-            except Exception:
-                return 'PHP 0.00'
-
-    def _audit_parse_date_filters(self):
-        from datetime import datetime as _dt
-        from tkinter import messagebox
-        start_s = ''
-        end_s = ''
-        try:
-            start_s = (self.audit_from_var.get() or '').strip()
-        except Exception:
-            start_s = ''
-        try:
-            end_s = (self.audit_to_var.get() or '').strip()
-        except Exception:
-            end_s = ''
-        if start_s:
-            try:
-                start_s = _dt.strptime(start_s[:10], '%Y-%m-%d').strftime('%Y-%m-%d')
-            except Exception:
-                messagebox.showerror('Audit', 'From date must use YYYY-MM-DD.')
-                return None
-        if end_s:
-            try:
-                end_s = _dt.strptime(end_s[:10], '%Y-%m-%d').strftime('%Y-%m-%d')
-            except Exception:
-                messagebox.showerror('Audit', 'To date must use YYYY-MM-DD.')
-                return None
-        if start_s and end_s and start_s > end_s:
-            messagebox.showerror('Audit', 'From date cannot be after To date.')
-            return None
-        return (start_s, end_s)
-
-    def _audit_set_today(self):
-        from datetime import date as _date
-        ds = _date.today().strftime('%Y-%m-%d')
-        try:
-            self.audit_from_var.set(ds)
-            self.audit_to_var.set(ds)
-        except Exception:
-            pass
-        self.refresh_audit_tab()
-
-    def _audit_set_last7(self):
-        from datetime import date as _date, timedelta as _td
-        end_s = _date.today().strftime('%Y-%m-%d')
-        start_s = (_date.today() - _td(days=6)).strftime('%Y-%m-%d')
-        try:
-            self.audit_from_var.set(start_s)
-            self.audit_to_var.set(end_s)
-        except Exception:
-            pass
-        self.refresh_audit_tab()
-
-    def _audit_set_all(self):
-        try:
-            self.audit_from_var.set('')
-            self.audit_to_var.set('')
-        except Exception:
-            pass
-        self.refresh_audit_tab()
-
-    def _audit_tree_factory(self, parent, columns, headings, widths):
-        import tkinter as tk
-        from tkinter import ttk
-        parent.columnconfigure(0, weight=1)
-        parent.rowconfigure(0, weight=1)
-        tree = ttk.Treeview(parent, columns=columns, show='headings', height=14)
-        vsb = ttk.Scrollbar(parent, orient='vertical', command=tree.yview)
-        hsb = ttk.Scrollbar(parent, orient='horizontal', command=tree.xview)
-        tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
-        tree.grid(row=0, column=0, sticky='nsew')
-        vsb.grid(row=0, column=1, sticky='ns')
-        hsb.grid(row=1, column=0, sticky='ew')
-        for col, head, width in zip(columns, headings, widths):
-            tree.heading(col, text=head)
-            anchor = 'e' if col in ('principal', 'payment_amount', 'released_cash', 'old_principal', 'new_principal') else 'w'
-            tree.column(col, width=width, stretch=True, anchor=anchor)
-        return tree
-
-
-    def _audit_set_detail_text(self, text):
-        try:
-            self.audit_detail_text.configure(state='normal')
-            self.audit_detail_text.delete('1.0', 'end')
-            self.audit_detail_text.insert('1.0', text or '')
-            self.audit_detail_text.configure(state='disabled')
-        except Exception:
-            pass
-
-    def _audit_show_selected(self, bucket):
-        row = None
-        try:
-            if bucket == 'renew':
-                sel = self.audit_renew_tree.selection()
-                if sel:
-                    row = self._audit_renew_rows_map.get(sel[0])
-            else:
-                sel = self.audit_new_tree.selection()
-                if sel:
-                    row = self._audit_new_rows_map.get(sel[0])
-        except Exception:
-            row = None
-
-        if not row:
-            self._audit_set_detail_text('')
-            return
-
-        lines = []
-        if bucket == 'renew':
-            lines.extend([
-                'Audit Type: Renewal',
-                f"Logged At: {row.get('ts') or ''}",
-                f"Client: {row.get('name') or ''}",
-                f"Loan Type: {row.get('loan_type') or ''}",
-                f"Renew Date: {row.get('renew_date') or ''}",
-                f"Old Start Date: {row.get('old_start_date') or ''}",
-                f"New Start Date: {row.get('new_start_date') or ''}",
-                f"Released Cash: {self._audit_money_text(row.get('released_cash'))}",
-                f"Old Principal: {self._audit_money_text(row.get('old_principal'))}",
-                f"New Principal: {self._audit_money_text(row.get('new_principal'))}",
-                f"Renew Count: {row.get('renew_count') or 0}",
-                f"Area: {row.get('area') or ''}",
-                f"Payment Term: {row.get('payment_term') or ''}",
-                f"Payment Amount: {self._audit_money_text(row.get('payment_amount'))}",
-                f"Source: {row.get('source') or ''}",
-                f"Note: {row.get('note') or ''}",
-                f"Client UID: {row.get('client_uid') or ''}",
-            ])
-        else:
-            lines.extend([
-                'Audit Type: New Loan',
-                f"Logged At: {row.get('ts') or ''}",
-                f"Client: {row.get('name') or ''}",
-                f"Loan Type: {row.get('loan_type') or ''}",
-                f"Release Date: {row.get('date_released') or ''}",
-                f"Payment Start Date: {row.get('payment_start_date') or ''}",
-                f"Principal: {self._audit_money_text(row.get('principal'))}",
-                f"Area: {row.get('area') or ''}",
-                f"Payment Term: {row.get('payment_term') or ''}",
-                f"Payment Amount: {self._audit_money_text(row.get('payment_amount'))}",
-                f"Source: {row.get('source') or ''}",
-                f"Note: {row.get('note') or ''}",
-                f"Client UID: {row.get('client_uid') or ''}",
-            ])
-        self._audit_set_detail_text('\n'.join(lines))
 
 
     def __init__(self, root):
@@ -8717,8 +7195,6 @@ class App:
 
 
 
-
-
     def toggle_theme(self):
         try:
             cur = getattr(self, "ui_theme", "light")
@@ -8786,8 +7262,6 @@ class App:
         except Exception as __spina_exc:
             _log_suppressed_once('modern_ui_pass_14982', 'modern UI shell theme refresh skipped', __spina_exc)
             pass
-
-
 
 
 
@@ -9249,8 +7723,6 @@ class App:
 
 
 
-
-
     # ---------------- Modern top bar + quick loan-type switch ----------------
 
     def _tk_button_hover(self, widget, normal_bg=None, hover_bg=None):
@@ -9290,8 +7762,6 @@ class App:
                 _log_suppressed_once('modern_mode_switch', 'modern mode switch failed', e)
             except Exception:
                 pass
-
-
 
 
     def _build_header(self):
@@ -9527,26 +7997,10 @@ class App:
     # ---------------- Data Bank ----------------
 
 
-
-
-
-
-
-
-
-
     # ---------------- Reports ----------------
 
 
-
-
     # ---------------- Clients ----------------
-
-
-
-
-
-
 
 
     # ---------------- Areas master / validation ----------------
@@ -9568,39 +8022,6 @@ class App:
         except Exception as __spina_exc:
             _log_suppressed_once('excpass_0451', 'suppressed exception excpass_0451', __spina_exc)
             pass
-
-# Wave 72: bind complete Data Bank App methods before later runtime patches.
-App._clear_preview = _wave72_databank_feature._clear_preview
-App._get_databank_focus_date = _wave72_databank_feature._get_databank_focus_date
-App._show_system_data_tab = _wave72_databank_feature._show_system_data_tab
-App._hide_system_data_tab = _wave72_databank_feature._hide_system_data_tab
-App._system_data_open_close = _wave72_databank_feature._system_data_open_close
-App._system_data_open_history = _wave72_databank_feature._system_data_open_history
-App._system_data_open_records = _wave72_databank_feature._system_data_open_records
-App._system_data_print_report = _wave72_databank_feature._system_data_print_report
-App._load_collectors_route_map = _wave72_databank_feature._load_collectors_route_map
-App._build_databank_collector_defaults_for_date = _wave72_databank_feature._build_databank_collector_defaults_for_date
-App.print_databank_close_report = _wave72_databank_feature.print_databank_close_report
-App.open_databank_close_dialog = _wave72_databank_feature.open_databank_close_dialog
-App.on_day_double = _wave72_databank_feature.on_day_double
-App._start_edit = _wave72_databank_feature._start_edit
-App._import_from_excel_entry = _wave72_databank_feature._import_from_excel_entry
-App._import_from_excel_entry_worker = _wave72_databank_feature._import_from_excel_entry_worker
-App._import_encoder_batch = _wave72_databank_feature._import_encoder_batch
-App._import_from_excel_core = _wave72_databank_feature._import_from_excel_core
-
-
-# --- Wave 54 Audit presentation wiring ---
-from spina_app.audit_presentation import (
-    configure_audit_presentation_dependencies as _wave54_configure_audit_presentation_dependencies,
-    _build_audit_tab as _wave54_build_audit_tab,
-    refresh_audit_tab as _wave54refresh_audit_tab,
-)
-_wave54_configure_audit_presentation_dependencies(globals())
-App._build_audit_tab = _wave54_build_audit_tab
-App.refresh_audit_tab = _wave54refresh_audit_tab
-# --- End Wave 54 Audit presentation wiring ---
-
 
 from spina_app.long_task_presentation import (
     configure_long_task_dependencies as _configure_wave42_long_task,
@@ -9640,7 +8061,7 @@ App._refresh_modern_shell_theme = _theme_wave35__refresh_modern_shell_theme
 App._refresh_header_theme = _theme_wave35__refresh_header_theme
 
 
-# Navigation + Data Bank shell helpers extracted in Wave 29.
+# Navigation helpers retained after complete Data Bank modularization Wave 82.
 from spina_app.navigation import (
     configure_navigation_dependencies as _wave29_configure_navigation,
     _update_data_toolbar as _wave29_nav_update_data_toolbar,
@@ -9655,25 +8076,10 @@ from spina_app.navigation import (
     _on_mousewheel_sync as _wave29_nav_on_mousewheel_sync,
     _update_toolbar_states as _wave29_nav_update_toolbar_states,
 )
-from spina_app.tabs.data_bank_shell import (
-    configure_data_bank_shell_dependencies as _wave29_configure_data_bank_shell,
-    _looks_like_data_grid as _wave29_dbshell_looks_like_data_grid,
-    _locate_data_tree as _wave29_dbshell_locate_data_tree,
-    _ensure_databank_edit_bindings as _wave29_dbshell_ensure_databank_edit_bindings,
-    _show_audit_tab as _wave29_dbshell_show_audit_tab,
-    _hide_audit_tab as _wave29_dbshell_hide_audit_tab,
-    _resize_databank_columns as _wave29_dbshell_resize_databank_columns,
-)
-
 _wave29_configure_navigation(
     log_suppressed_once=_log_suppressed_once,
     fmt_currency_callback=fmt_currency,
 )
-_wave29_configure_data_bank_shell(
-    log_suppressed_once=_log_suppressed_once,
-    log_ignored=_log_ignored,
-)
-
 App._update_data_toolbar = _wave29_nav_update_data_toolbar
 App._side_nav_items = _wave29_nav_side_nav_items
 App._rebuild_side_nav = _wave29_nav_rebuild_side_nav
@@ -9685,43 +8091,15 @@ App._vscroll = _wave29_nav_vscroll
 App._month_label = _wave29_nav_month_label
 App._on_mousewheel_sync = _wave29_nav_on_mousewheel_sync
 App._update_toolbar_states = _wave29_nav_update_toolbar_states
-App._looks_like_data_grid = _wave29_dbshell_looks_like_data_grid
-App._locate_data_tree = _wave29_dbshell_locate_data_tree
-App._ensure_databank_edit_bindings = _wave29_dbshell_ensure_databank_edit_bindings
-App._show_audit_tab = _wave29_dbshell_show_audit_tab
-App._hide_audit_tab = _wave29_dbshell_hide_audit_tab
-App._resize_databank_columns = _wave29_dbshell_resize_databank_columns
-
-
 
 # ---------- Collector Route UI helpers (selection + bulk + inline edit) ----------
-
-
-
-
-
-
-
-
-
-
 
 
 # ---- Inline edit ----
 
 
 
-
-
 # ---- Areas edit helpers ----
-
-
-
-
-
-
-
-
 
 
 from spina_app.utilities.dates import _spina__parse_day_ymd
@@ -9743,194 +8121,8 @@ from spina_app.utilities.dates import _spina__norm_dom
 
 # --- Injected safe export_range_template ---
 
-def export_range_template(self):
-    """Export an Excel template for payments over a chosen date range.
-    Presets: This Month / This Year / Custom (YYYY-MM-DD)."""
-    import datetime as _dt
-    import calendar as _cal
-    import tkinter as tk
-    from tkinter import ttk, messagebox, filedialog
-
-    try:
-        from openpyxl import Workbook
-    except Exception:
-        messagebox.showwarning("Missing", "Install openpyxl to export the Excel template.")
-        return
-
-    # --- Preset dialog ---
-    dlg = tk.Toplevel(self.root)
-    dlg.title("Choose Export Range")
-    dlg.transient(self.root)
-    dlg.grab_set()
-    dlg.resizable(False, False)
-
-    frm = ttk.Frame(dlg, padding=10)
-    frm.pack(fill="both", expand=True)
-
-    preset = tk.StringVar(value="month")  # 'month' | 'year' | 'custom'
-    ttk.Label(frm, text="Preset:").grid(row=0, column=0, sticky="w")
-    ttk.Radiobutton(frm, text="This Month", variable=preset, value="month").grid(row=0, column=1, sticky="w")
-    ttk.Radiobutton(frm, text="This Year",  variable=preset, value="year").grid(row=0, column=2, sticky="w")
-    ttk.Radiobutton(frm, text="Custom",     variable=preset, value="custom").grid(row=0, column=3, sticky="w")
-
-    # Custom date inputs (StringVars survive after the dialog closes)
-    sv_start = tk.StringVar()
-    sv_end   = tk.StringVar()
-
-    row1 = 1
-    ttk.Label(frm, text="Start (YYYY-MM-DD):").grid(row=row1, column=0, sticky="e", pady=(8,0))
-    e1 = ttk.Entry(frm, textvariable=sv_start, width=16); e1.grid(row=row1, column=1, sticky="w", pady=(8,0))
-    ttk.Label(frm, text="End (YYYY-MM-DD):").grid(row=row1, column=2, sticky="e", pady=(8,0))
-    e2 = ttk.Entry(frm, textvariable=sv_end, width=16);   e2.grid(row=row1, column=3, sticky="w", pady=(8,0))
-
-    def _today_parts():
-        t = _dt.date.today()
-        return t.year, t.month, t.day
-
-    def _apply_preset_fields(*_):
-        y, m, _d = _today_parts()
-        if preset.get() == "month":
-            first = _dt.date(y, m, 1)
-            import calendar as _cal2
-            last  = _dt.date(y, m, _cal2.monthrange(y, m)[1])
-            sv_start.set(first.strftime("%Y-%m-%d"))
-            sv_end.set(last.strftime("%Y-%m-%d"))
-            e1.configure(state="disabled"); e2.configure(state="disabled")
-        elif preset.get() == "year":
-            first = _dt.date(y, 1, 1)
-            last  = _dt.date(y, 12, 31)
-            sv_start.set(first.strftime("%Y-%m-%d"))
-            sv_end.set(last.strftime("%Y-%m-%d"))
-            e1.configure(state="disabled"); e2.configure(state="disabled")
-        else:
-            # custom
-            e1.configure(state="normal"); e2.configure(state="normal")
-            if not sv_start.get(): sv_start.set(_dt.date.today().strftime("%Y-%m-%d"))
-            if not sv_end.get():   sv_end.set(_dt.date.today().strftime("%Y-%m-%d"))
-
-    preset.trace_add("write", _apply_preset_fields)
-    _apply_preset_fields()
-
-    btns = ttk.Frame(frm); btns.grid(row=row1+1, column=0, columnspan=4, sticky="e", pady=(12,0))
-    result = {"start": None, "end": None}
-
-    def on_ok():
-        s0 = sv_start.get().strip()
-        s1 = sv_end.get().strip()
-        # Basic validation
-        try:
-            ds = _dt.datetime.strptime(s0, "%Y-%m-%d").date()
-            de = _dt.datetime.strptime(s1, "%Y-%m-%d").date()
-        except Exception:
-            messagebox.showwarning("Invalid date", "Use YYYY-MM-DD (e.g., 2025-10-15).")
-            return
-        if ds > de:
-            ds, de = de, ds
-        result["start"] = ds
-        result["end"] = de
-        dlg.destroy()
-
-    def on_cancel():
-        dlg.destroy()
-
-    ttk.Button(btns, text="Cancel", command=on_cancel).pack(side="right", padx=6)
-    ttk.Button(btns, text="OK", command=on_ok).pack(side="right")
-
-    dlg.bind("<Return>", lambda e: on_ok())
-    dlg.bind("<Escape>", lambda e: on_cancel())
-    dlg.wait_window()
-
-    # If cancelled
-    if not result["start"] or not result["end"]:
-        return
-
-    ds, de = result["start"], result["end"]
-
-    # Build the date list for headers (inclusive)
-    days = []
-    cur = ds
-    while cur <= de:
-        days.append(cur.strftime("%Y-%m-%d"))
-        cur += _dt.timedelta(days=1)
-
-    # Build workbook
-    from openpyxl import Workbook as _WB
-    wb = _WB()
-    ws = wb.active
-    ws.title = f"{ds.strftime('%Y-%m-%d')}..{de.strftime('%Y-%m-%d')}"
-
-    headers = ["Client Name"] + days
-    for c, h in enumerate(headers, start=1):
-        ws.cell(row=1, column=c, value=h)
-
-    # Client names (fallbacks to existing search if present)
-    term = ""
-    try:
-        search_term = getattr(self, "search_db_var", None)
-        term = search_term.get().strip() if search_term else ""
-    except Exception:
-        term = ""
-
-    try:
-        clients = self.db.get_all_clients(search=term if term else None, loan_type=self._mode_filter(), search_by='all')
-    except Exception:
-        # Fallback to other likely method names in user project
-        try:
-            clients = self.db.fetch_all_clients(loan_type=self._mode_filter())
-        except Exception:
-            clients = []
-
-    row = 2
-    for item in clients:
-        nm = item.get('name') if isinstance(item, dict) else str(item)
-        ws.cell(row=row, column=1, value=nm)
-        row += 1
-
-    # Ask save path with auto filename: Export_<start>_to_<end>.xlsx
-    default_name = f"Export_{ds.strftime('%Y-%m-%d')}_to_{de.strftime('%Y-%m-%d')}.xlsx"
-    try:
-        from tkinter import filedialog
-        path = filedialog.asksaveasfilename(
-            title="Save Excel Template",
-            initialfile=default_name,
-            defaultextension=".xlsx",
-            filetypes=[("Excel Workbook", "*.xlsx")]
-        )
-    except Exception:
-        path = default_name  # headless fallback
-
-    if not path:
-        return
-
-    try:
-        wb.save(path)
-    except Exception as e:
-        try:
-            from tkinter import messagebox as _mb
-            _mb.showerror("Save Error", str(e))
-        except Exception as __spina_exc:
-            _log_suppressed_once('excpass_0581', 'suppressed exception excpass_0581', __spina_exc)
-            pass
-        return
-
-    try:
-        from tkinter import messagebox as _mb2
-        _mb2.showinfo(
-            "Template Saved",
-            f"Excel template saved to:\n{path}\n\nFill payments and use 'Import from Excel' to load."
-        )
-    except Exception as __spina_exc:
-        _log_suppressed_once('excpass_0582', 'suppressed exception excpass_0582', __spina_exc)
-        pass
-
-
-
 
 # === Added: Excel importer that reads Amount + Reason per day ===
-
-
-
-
 
 
 def _ensure_prefs_file():
@@ -9958,14 +8150,6 @@ from spina_app.utilities.formatting import _spina__fmt_client_money
 
 # ---------------- Renew (Reloan) UI ----------------
 
-# Bind the independent date-range Excel export; Clients bindings are installed in Wave 81.
-try:
-    if 'App' in globals() and 'export_range_template' in globals():
-        setattr(App, 'export_range_template', export_range_template)
-except Exception as __spina_exc:
-    _log_suppressed_once('excpass_0664', 'suppressed exception excpass_0664', __spina_exc)
-    pass
-
 # === Phase 2: hierarchical Area manager override ===
 from spina_app.area_hierarchy_ui import open_area_manager as _spina_area_open_manager
 App.open_areas_manager = _spina_area_open_manager
@@ -9976,92 +8160,6 @@ class _SpinaStartupCancelled(Exception):
     """Internal signal used to stop layered App initialization after login cancellation."""
     pass
 
-
-
-
-
-
-# Wave 56: System Data tab construction presentation.
-from spina_app.system_data_presentation import (
-    configure_system_data_presentation_dependencies as _configure_wave56_system_data_presentation,
-    _build_system_data_tab as _wave56_build_system_data_tab,
-)
-_configure_wave56_system_data_presentation(globals())
-App._build_system_data_tab = _wave56_build_system_data_tab
-
-
-# Wave 57: Data Bank Close History dialog presentation.
-from spina_app.databank_close_history_presentation import (
-    configure_databank_close_history_presentation_dependencies as _configure_wave57_close_history_presentation,
-    open_databank_close_history_dialog as _wave57_open_databank_close_history_dialog,
-)
-_configure_wave57_close_history_presentation(globals())
-App.open_databank_close_history_dialog = _wave57_open_databank_close_history_dialog
-
-
-# Wave 58: System Data date and summary helpers.
-from spina_app.system_data_summary_presentation import (
-    configure_system_data_summary_dependencies as _configure_wave58_system_data_summary,
-    _system_data_get_date as _wave58_system_data_get_date,
-    _system_data_use_focus_date as _wave58_system_data_use_focus_date,
-    _system_data_refresh_summary as _wave58_system_data_refresh_summary,
-)
-_configure_wave58_system_data_summary(globals())
-App._system_data_get_date = _wave58_system_data_get_date
-App._system_data_use_focus_date = _wave58_system_data_use_focus_date
-App._system_data_refresh_summary = _wave58_system_data_refresh_summary
-
-
-
-# Wave 59: Data Bank month navigation and grid presentation.
-from spina_app.databank_grid_presentation import (
-    configure_databank_grid_dependencies as _configure_wave59_databank_grid,
-    goto_current_month as _wave59_goto_current_month,
-    prev_month as _wave59_prev_month,
-    next_month as _wave59_next_month,
-    refresh_data_grid as _wave59_refresh_data_grid,
-)
-_configure_wave59_databank_grid(globals())
-App.goto_current_month = _wave59_goto_current_month
-App.prev_month = _wave59_prev_month
-App.next_month = _wave59_next_month
-App.refresh_data_grid = _wave59_refresh_data_grid
-
-
-# Wave 60: Data Bank inline editor and missed-reason presentation.
-from spina_app.databank_editor_presentation import (
-    configure_databank_editor_dependencies as _configure_wave60_databank_editor,
-    _pick_missed_reason as _wave60_pick_missed_reason,
-    _walk_widgets as _wave60_walk_widgets,
-    _begin_cell_edit as _wave60_begin_cell_edit,
-    _remember_cell_click as _wave60_remember_cell_click,
-)
-_configure_wave60_databank_editor(globals())
-App._pick_missed_reason = _wave60_pick_missed_reason
-App._walk_widgets = _wave60_walk_widgets
-App._begin_cell_edit = _wave60_begin_cell_edit
-App._remember_cell_click = _wave60_remember_cell_click
-
-# Wave 61: Data Bank cell write actions.
-from spina_app.databank_cell_writes import (
-    configure_databank_cell_write_dependencies as _configure_wave61_databank_writes,
-    _save_cell_edit as _wave61_save_cell_edit,
-    delete_selected_cell as _wave61_delete_selected_cell,
-    _mark_missed_for_selected as _wave61_mark_missed_for_selected,
-)
-_configure_wave61_databank_writes(globals())
-App._save_cell_edit = _wave61_save_cell_edit
-App.delete_selected_cell = _wave61_delete_selected_cell
-App._mark_missed_for_selected = _wave61_mark_missed_for_selected
-
-
-# Wave 62: Data Bank Delete Day destructive workflow.
-from spina_app.databank_delete_day import (
-    configure_databank_delete_day_dependencies as _configure_wave62_databank_delete_day,
-    open_delete_day_dialog as _wave62_open_delete_day_dialog,
-)
-_configure_wave62_databank_delete_day(globals())
-App.open_delete_day_dialog = _wave62_open_delete_day_dialog
 
 # --- BEGIN: Reports feature installer Wave 80 ---
 from spina_app.features.reports import install_reports_feature as _wave80_install_reports_feature
@@ -10082,18 +8180,6 @@ from spina_app.settings_dialog_presentation import (
 )
 _configure_wave65_settings_dialog(globals())
 App.open_settings_dialog = _wave65_open_settings_dialog
-
-
-# Wave 66: Data Bank close-records presentation.
-from spina_app.databank_close_records_presentation import (
-    configure_databank_close_records_dependencies as _configure_wave66_databank_close_records,
-    open_databank_close_records_dialog as _wave66_open_databank_close_records_dialog,
-)
-_configure_wave66_databank_close_records(globals())
-App.open_databank_close_records_dialog = _wave66_open_databank_close_records_dialog
-
-
-
 
 
 from spina_app.backup_history_presentation import (
@@ -10156,32 +8242,14 @@ if __name__ == '__main__':
 # =====================
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 # --- Collector Route UI: missing method definitions (runtime stability) ---
 # These are defined at module level then bound onto App below.
-
-
 
 
 # --- Collector Route UI runtime fix: bind module-level helper defs to App ---
 
 # --- Collector Route UI FIXES (click/scroll + missing wrappers + safer refresh) ---
 # These are appended fixes to prevent crashes and to fix scroll/selection issues.
-
-
-
-
 
 
 
@@ -10233,8 +8301,6 @@ def _edit_selected_collector(self):
     except Exception:
         pass
     return
-
-
 
 
 # Attach the missing/overridden helpers to App BEFORE main() runs
@@ -10335,93 +8401,6 @@ def _spina_perf_norm_lt(v):
 from spina_app.utilities.records import _spina_perf_dict_rows
 
 
-
-
-def _spina_perf_month_transactions(db, client_rows, start_date, end_date, loan_type):
-    """Return {(row_key, yyyy-mm-dd): payment} for visible clients in the month using one range query."""
-    _spina_perf_ensure_indexes(db)
-    cur = db.conn.cursor()
-    lt = _spina_perf_norm_lt(loan_type)
-
-    uids = []
-    names = []
-    for r in client_rows or []:
-        try:
-            row_lt = _spina_perf_norm_lt(r.get("_spina_row_lt") or r.get("loan_type") or lt)
-            if row_lt != lt:
-                # Data Bank is current loan type only; skip 7x7 extras if ever present
-                continue
-            uid = str(r.get("client_uid") or "").strip()
-            nm = str(r.get("name") or "").strip()
-            if uid:
-                uids.append(uid)
-            elif nm:
-                names.append(nm)
-        except Exception:
-            pass
-
-    pay = {}
-    def _chunks(seq, n=850):
-        for i in range(0, len(seq), n):
-            yield seq[i:i+n]
-
-    # Prefer client_uid when available. Keep latest id for duplicate same-day records.
-    for chunk in _chunks(uids):
-        ph = ",".join(["?"] * len(chunk))
-        sql = f"""
-            SELECT client_uid, name, date, payment, id
-            FROM transactions
-            WHERE client_uid IN ({ph})
-              AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular')=?
-              AND date >= ? AND date <= ?
-            ORDER BY id ASC
-        """
-        for tr in cur.execute(sql, list(chunk) + [lt, start_date, end_date]).fetchall():
-            try:
-                uid = tr["client_uid"] if hasattr(tr, "keys") else tr[0]
-                ds = tr["date"] if hasattr(tr, "keys") else tr[2]
-                val = tr["payment"] if hasattr(tr, "keys") else tr[3]
-                pay[(str(uid), str(ds)[:10])] = val
-            except Exception:
-                pass
-
-    # Fallback for legacy rows without uid
-    for chunk in _chunks(names):
-        ph = ",".join(["?"] * len(chunk))
-        sql = f"""
-            SELECT name, date, payment, id
-            FROM transactions
-            WHERE name IN ({ph})
-              AND IFNULL(NULLIF(TRIM(loan_type),''),'Regular')=?
-              AND date >= ? AND date <= ?
-            ORDER BY id ASC
-        """
-        for tr in cur.execute(sql, list(chunk) + [lt, start_date, end_date]).fetchall():
-            try:
-                nm = tr["name"] if hasattr(tr, "keys") else tr[0]
-                ds = tr["date"] if hasattr(tr, "keys") else tr[1]
-                val = tr["payment"] if hasattr(tr, "keys") else tr[2]
-                pay[(str(nm).strip().lower(), str(ds)[:10])] = val
-            except Exception:
-                pass
-    return pay
-
-
-
-
-
-
-# Bind optimized loaders after the normal app methods are installed.
-try:
-    if "App" in globals():
-        # Index setup runs on the first real refresh using App's existing DB
-        # connection, avoiding a second startup connection and schema pass.
-        setattr(App, "refresh_data_grid", _spina_perf_refresh_data_grid)
-except Exception as e:
-    try:
-        _log_suppressed_once("perf_bind", "performance patch bind failed", e)
-    except Exception:
-        pass
 # --- END: LARGE DATA PERFORMANCE PATCH (clients + databank) ---
 
 
@@ -10477,8 +8456,6 @@ if __name__ == '__main__':
 # --- FIX: Collector Route selection handler must not fall through into route-print code ---
 
 
-
-
 # --- END FIX ---
 
 
@@ -10496,107 +8473,6 @@ _wave78_install_client_info_logs_feature(
 # --- END: Client Info Logs feature installer Wave 78 ---
 
 
-# --- BEGIN: Configurable Auto Daily Close ---
-def _spina_auto_close_after_days_value():
-    """Return the configured auto-close delay in days. 0 = disabled."""
-    try:
-        s = load_settings()
-    except Exception:
-        s = dict(_DEFAULT_SETTINGS)
-    try:
-        days = int(float(str(s.get('auto_close_after_days', 0) or 0).strip()))
-    except Exception:
-        days = 0
-    if days < 0:
-        days = 0
-    if days > 365:
-        days = 365
-    return days
-
-
-def _spina_auto_close_candidate_dates(db, cutoff_date_s):
-    """Return transaction dates up to cutoff that are not already closed."""
-    out = []
-    try:
-        cur = db.conn.cursor()
-        rows = cur.execute(
-            """
-            SELECT DISTINCT date(date) AS close_date
-              FROM transactions
-             WHERE date(date) <= date(?)
-               AND COALESCE(payment, 0) <> 0
-             ORDER BY date(date) ASC
-            """,
-            (cutoff_date_s,),
-        ).fetchall()
-    except Exception:
-        rows = []
-    for r in rows or []:
-        try:
-            ds = (r['close_date'] if hasattr(r, 'keys') else r[0])
-        except Exception:
-            ds = ''
-        ds = str(ds or '').strip()[:10]
-        if not ds:
-            continue
-        try:
-            rec = db.get_databank_day_close(ds)
-            if rec and bool(int(rec.get('is_closed') or 0)):
-                continue
-        except Exception:
-            pass
-        out.append(ds)
-    return out
-
-
-
-
-
-
-def _spina_schedule_auto_daily_close(self):
-    """Run auto close now and then check periodically while the app is open."""
-    try:
-        self.run_auto_daily_close(show_message=False)
-    except Exception as e:
-        try:
-            _log_exc('auto_daily_close.initial', e)
-        except Exception:
-            pass
-
-    try:
-        root = getattr(self, 'root', None)
-        if root is None:
-            return
-        # Check every hour. The date threshold comes from Settings each time.
-        root.after(60 * 60 * 1000, lambda: self._schedule_auto_daily_close())
-    except Exception:
-        pass
-
-
-try:
-    setattr(App, 'run_auto_daily_close', _spina_run_auto_daily_close)
-    setattr(App, '_schedule_auto_daily_close', _spina_schedule_auto_daily_close)
-    _spina_orig_app_init_autoclose = App.__init__
-
-    def _spina_app_init_with_auto_close(self, *args, **kwargs):
-        _spina_orig_app_init_autoclose(self, *args, **kwargs)
-        try:
-            self._schedule_auto_daily_close()
-        except Exception as e:
-            try:
-                _log_exc('auto_daily_close.init', e)
-            except Exception:
-                pass
-
-    App.__init__ = _spina_app_init_with_auto_close
-except Exception as __spina_exc:
-    try:
-        _log_suppressed_once('auto_daily_close_patch_failed', 'auto daily close runtime patch failed', __spina_exc)
-    except Exception:
-        pass
-# --- END: Configurable Auto Daily Close ---
-
-
 # --- BEGIN: Encoder next-day route notices ---
 # --- BEGIN: Separated today reason vs tomorrow route notice behavior ---
 # Today reason stays in imported payment/reason records and appears in Generate Report only.
@@ -10608,10 +8484,6 @@ ROUTE_NOTICES_FILE = data_path("route_notices.json")
 from spina_app.utilities.text import _spina_route_notice_norm_name
 
 
-
-
-
-
 # Client route-notice lookup is configured by Wave 81.
 # --- END: Encoder next-day route notices ---
 
@@ -10621,49 +8493,7 @@ from spina_app.utilities.text import _spina_route_notice_norm_name
 # --- END: Collector Route balance matched to Generate Report ---
 
 
-# --- BEGIN: Save Collector Route copy after Daily Close ---
-from spina_app.utilities.text import _spina_crc_norm_text
-
-
-
-
-from spina_app.utilities.formatting import _spina_crc_fmt_money
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-try:
-    setattr(App, 'save_closed_collector_route_copy', _spina_save_closed_collector_route_copy)
-except Exception as __spina_exc:
-    try:
-        _log_suppressed_once('closed_route_copy_patch_failed', 'closed collector route copy patch failed', __spina_exc)
-    except Exception:
-        pass
-# --- END: Save Collector Route copy after Daily Close ---
-
-
-
 # --- BEGIN: Closed route copy uses SAME Collector Route PDF format ---
-
-
 
 
 
@@ -10673,8 +8503,6 @@ except Exception as __spina_exc:
 
 # --- BEGIN: PostgreSQL TEST v7 Collector Route ADV UID/person_uid fallback ---
 # --- END: PostgreSQL TEST v7 Collector Route ADV UID/person_uid fallback ---
-
-
 
 
 # --- BEGIN: v13 side-tabs-only UI fix ---
@@ -10697,8 +8525,6 @@ try:
     _spina_v13_refresh_side_nav_selection = _wave48_spina_v13_refresh_side_nav_selection
     _spina_v13_setup_style = _wave48_spina_v13_setup_style
     _spina_v13_apply_ui_theme = _wave48_spina_v13_apply_ui_theme
-
-
 
 
     if 'App' in globals():
@@ -10750,84 +8576,10 @@ except Exception:
 # --- END: v13 side-tabs-only UI fix ---
 
 
-
-
-# --- BEGIN: v15 modern Data Bank UI ---
-try:
-    from spina_app.databank_presentation import (
-        configure_databank_presentation_dependencies as _wave49_configure_databank_presentation_dependencies,
-        _spina_v15_palette as _wave49_spina_v15_palette,
-        _spina_v15_setup_databank_styles as _wave49_spina_v15_setup_databank_styles,
-        _spina_v15_stat_card as _wave49_spina_v15_stat_card,
-        _spina_v15_build_data_tab as _wave49_spina_v15_build_data_tab,
-        _spina_v15_update_databank_cards as _wave49_spina_v15_update_databank_cards,
-        _spina_v15_refresh_data_grid as _wave49_spina_v15_refresh_data_grid,
-        _spina_v15_update_data_toolbar as _wave49_spina_v15_update_data_toolbar,
-        _spina_v15_apply_ui_theme as _wave49_spina_v15_apply_ui_theme,
-        _spina_v16_apply_bigger_payment_grid as _wave49_spina_v16_apply_bigger_payment_grid,
-        _spina_v16_refresh_data_grid as _wave49_spina_v16_refresh_data_grid,
-    )
-    _spina_v15_palette = _wave49_spina_v15_palette
-    _spina_v15_setup_databank_styles = _wave49_spina_v15_setup_databank_styles
-    _spina_v15_stat_card = _wave49_spina_v15_stat_card
-    _spina_v15_build_data_tab = _wave49_spina_v15_build_data_tab
-    _spina_v15_update_databank_cards = _wave49_spina_v15_update_databank_cards
-    _spina_v15_refresh_data_grid = _wave49_spina_v15_refresh_data_grid
-    _spina_v15_update_data_toolbar = _wave49_spina_v15_update_data_toolbar
-    _spina_v15_apply_ui_theme = _wave49_spina_v15_apply_ui_theme
-    _spina_v16_apply_bigger_payment_grid = _wave49_spina_v16_apply_bigger_payment_grid
-    _spina_v16_refresh_data_grid = _wave49_spina_v16_refresh_data_grid
-    _wave49_configure_databank_presentation_dependencies(globals())
-
-
-
-
-
-    if 'App' in globals():
-        App._build_data_tab = _spina_v15_build_data_tab
-        App._setup_databank_styles = _spina_v15_setup_databank_styles
-        App._update_databank_summary_cards = _spina_v15_update_databank_cards
-
-        _spina_v15_orig_refresh_data_grid = getattr(App, 'refresh_data_grid', None)
-        _wave49_configure_databank_presentation_dependencies(globals())
-        if callable(_spina_v15_orig_refresh_data_grid):
-            App.refresh_data_grid = _spina_v15_refresh_data_grid
-
-        _spina_v15_orig_update_data_toolbar = getattr(App, '_update_data_toolbar', None)
-        _wave49_configure_databank_presentation_dependencies(globals())
-        if callable(_spina_v15_orig_update_data_toolbar):
-            App._update_data_toolbar = _spina_v15_update_data_toolbar
-
-        _spina_v15_orig_apply_theme = getattr(App, '_apply_ui_theme', None)
-        _wave49_configure_databank_presentation_dependencies(globals())
-        if callable(_spina_v15_orig_apply_theme):
-            App._apply_ui_theme = _spina_v15_apply_ui_theme
-except Exception:
-    pass
-# --- END: v15 modern Data Bank UI ---
-
-
-# --- BEGIN: v16 bigger Data Bank payment grid tuning ---
-try:
-
-    if "App" in globals():
-        _spina_v16_prev_refresh_data_grid = getattr(App, "refresh_data_grid", None)
-        _wave49_configure_databank_presentation_dependencies(globals())
-        if callable(_spina_v16_prev_refresh_data_grid):
-            App.refresh_data_grid = _spina_v16_refresh_data_grid
-except Exception:
-    pass
-# --- END: v16 bigger Data Bank payment grid tuning ---
-
-
 # --- BEGIN: Dashboard legacy patch blocks removed Wave 76 ---
 # Dashboard presentation, charts, filters, role handling, and runtime hooks now
 # live behind spina_app.features.dashboard.install_dashboard_feature().
 # --- END: Dashboard legacy patch blocks removed Wave 76 ---
-
-
-
-
 
 
 
@@ -10897,30 +8649,8 @@ _wave79_install_collector_route_feature(
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # --- BEGIN: v32 Modern Account-Based Login ---
 from spina_app.theme_palettes import _spina_v32_login_colors
-
-
 
 
 
@@ -11196,19 +8926,17 @@ def _spina_make_removed_legacy_client_action(label):
     _spina_removed_action.__name__ = "_spina_removed_" + str(label).lower().replace(" ", "_")
     return _spina_removed_action
 
-# Wave 53: active Import Log viewer presentation extraction.
-from spina_app.import_log_presentation import (
-    configure_import_log_dependencies as _configure_wave53_import_log,
-    _show_import_log_window as _wave53_show_import_log_window,
+# --- BEGIN: Data Bank feature installer Wave 82 ---
+from spina_app.features.data_bank import install_data_bank_feature as _wave82_install_data_bank_feature
+
+_wave82_install_data_bank_feature(
+    globals().get("App"),
+    loan_db_cls=globals().get("LoanDB"),
+    namespace=globals(),
+    log_exc=globals().get("_log_exc"),
+    log_suppressed_once=globals().get("_log_suppressed_once"),
 )
-_configure_wave53_import_log(globals())
-App._show_import_log_window = _wave53_show_import_log_window
-
-
-
-
-# Refresh application-owned dependencies after all runtime patches load.
-_wave72_databank_feature.configure_databank_feature_dependencies(globals())
+# --- END: Data Bank feature installer Wave 82 ---
 
 if __name__ == '__main__':
     main()
