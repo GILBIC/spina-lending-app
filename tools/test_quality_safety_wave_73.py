@@ -8,6 +8,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 LONG_TASK_PATH = ROOT / "spina_app" / "long_task_presentation.py"
+WAVE81_INSTALL_MARKER = "# --- BEGIN: Clients feature installer Wave 81 ---"
+LEGACY_CLIENT_REFRESH_BIND = 'setattr(App, "refresh_clients", _spina_perf_refresh_clients)'
 
 
 def parse(path: Path) -> tuple[str, ast.Module]:
@@ -92,5 +94,10 @@ assert "_SPINA_PERF_INDEXES_READY" in perf_segment, "index setup has no one-time
 assert "_spina_perf_ensure_indexes(LoanDB(DB_FILE))" not in app_source, (
     "module-scope startup LoanDB connection remains"
 )
+
+if WAVE81_INSTALL_MARKER in app_source:
+    assert LEGACY_CLIENT_REFRESH_BIND not in app_source, (
+        "Wave 73 restored redundant Clients refresh ownership under Wave 81"
+    )
 
 print("Wave 73 quality safety regression checks passed")
