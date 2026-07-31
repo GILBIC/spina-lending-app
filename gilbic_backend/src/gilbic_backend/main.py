@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from . import __version__
+from .auth_api import create_auth_router
 from .config import get_settings
 from .database import database_ready
 
@@ -30,6 +31,7 @@ def create_app() -> FastAPI:
     def metadata() -> dict[str, str]:
         return {"service": "gilbic-backend", "version": __version__}
 
+    app.include_router(create_auth_router())
     return app
 
 
