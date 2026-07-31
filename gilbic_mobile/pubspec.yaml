@@ -1,7 +1,7 @@
 name: gilbic_mobile
 description: Role-based mobile application for the SPINA lending platform.
 publish_to: "none"
-version: 0.2.0+2
+version: 0.3.0+3
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -11,6 +11,8 @@ dependencies:
     sdk: flutter
   flutter_secure_storage: ^10.3.1
   http: ^1.6.0
+  path: ^1.9.1
+  sqflite_sqlcipher: ^3.4.0
 
 dev_dependencies:
   flutter_test:
