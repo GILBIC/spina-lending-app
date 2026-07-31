@@ -39,7 +39,9 @@ def check_architecture() -> None:
         node for node in desktop_tree.body
         if isinstance(node, ast.FunctionDef) and node.name == "main"
     ]
-    assert len(top_level_main) == 1
+    # Wave 90 may remove the historical compatibility implementation. Wave 89
+    # owns startup through its installer either way.
+    assert len(top_level_main) <= 1
 
     final_calls = []
     for node in desktop_tree.body:

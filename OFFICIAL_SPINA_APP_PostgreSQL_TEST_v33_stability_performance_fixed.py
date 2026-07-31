@@ -7923,28 +7923,11 @@ from spina_app.backup_history_presentation import (
 _configure_wave68_backup_history(globals())
 App.open_backup_history_window = _wave68_open_backup_history_window
 
-def main():
-    import tkinter as tk
-    root = tk.Tk()
-    try:
-        app = App(root)
-    except _SpinaStartupCancelled:
-        return
-    try:
-        _attach = globals().get('attach_direct_integration')
-        if callable(_attach):
-            _attach(app)
-    except Exception as __spina_exc:
-        _log_suppressed_once('excpass_0665', 'suppressed exception excpass_0665', __spina_exc)
-    root.mainloop()
-
-
+# --- Legacy desktop main implementation removed Wave 90 ---
 
 # --- Legacy modern sidebar role wrapper removed Wave 87 ---
 
-if __name__ == '__main__':
-    # Entry point moved to end of file so runtime patches load first
-    pass
+# --- Placeholder entry point removed Wave 90 ---
 
 # =====================
 
@@ -8166,9 +8149,7 @@ _wave77_install_cash_control_feature(
 # --- END: Cash Control feature installer Wave 77 ---
 
 # --- FINAL ENTRY POINT moved to the very end so all runtime patches load first ---
-if __name__ == '__main__':
-    pass
-
+# --- Placeholder entry point removed Wave 90 ---
 
 # --- FIX: Collector Route selection handler must not fall through into route-print code ---
 

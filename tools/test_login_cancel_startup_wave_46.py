@@ -2,9 +2,15 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from spina_app.features.startup_runtime import run_desktop_application
+
 DESKTOP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 WRAPPER_HASHES = {
     "_spina_app_init_with_dashboard": "1ef876d8fe7e09f7bb2e35f13ec0b50403a87b321e11b81e059ad7799982cc50",
@@ -61,25 +67,17 @@ def verify_modular_wrapper(legacy_name: str) -> None:
     module_text = module_path.read_text(encoding="utf-8")
     module_tree = ast.parse(module_text)
     wrappers = [
-        node
-        for node in ast.walk(module_tree)
+        node for node in ast.walk(module_tree)
         if isinstance(node, ast.FunctionDef) and node.name == wrapper_name
     ]
     assert len(wrappers) == 1, (legacy_name, wrapper_name, len(wrappers))
     wrapper = wrappers[0]
     assert wrapper.body, (legacy_name, "empty wrapper")
 
-    # The wrapped App.__init__ call must stay outside every local try/except. If
-    # login cancellation raises here, post-startup feature work is never entered.
     first_statement = wrapper.body[0]
     assert isinstance(first_statement, ast.Expr), (legacy_name, type(first_statement).__name__)
-    first_calls = [
-        call for call in ast.walk(first_statement) if isinstance(call, ast.Call)
-    ]
-    assert any(dotted(call.func) == "original_init" for call in first_calls), (
-        legacy_name,
-        [dotted(call.func) for call in first_calls],
-    )
+    first_calls = [call for call in ast.walk(first_statement) if isinstance(call, ast.Call)]
+    assert any(dotted(call.func) == "original_init" for call in first_calls), legacy_name
 
     post_init_calls = [
         dotted(call.func)
@@ -92,10 +90,32 @@ def verify_modular_wrapper(legacy_name: str) -> None:
         required_post_init_call,
         post_init_calls,
     )
-    assert any(isinstance(statement, ast.Try) for statement in wrapper.body[1:]), (
-        legacy_name,
-        "post-init work is not guarded",
+    assert any(isinstance(statement, ast.Try) for statement in wrapper.body[1:]), legacy_name
+
+
+def verify_runtime_cancellation() -> None:
+    events: list[str] = []
+
+    class Root:
+        def mainloop(self):
+            events.append("unexpected-mainloop")
+
+    class StartupCancelled(Exception):
+        pass
+
+    class CancelApp:
+        def __init__(self, root):
+            events.append("safe-destroy")
+            raise StartupCancelled()
+
+    result = run_desktop_application(
+        CancelApp,
+        startup_cancelled_cls=StartupCancelled,
+        root_factory=Root,
+        attach_direct_integration=lambda instance: events.append("unexpected-attach"),
     )
+    assert result is None
+    assert events == ["safe-destroy"], events
 
 
 def main() -> None:
@@ -103,18 +123,14 @@ def main() -> None:
     tree = ast.parse(text)
 
     exception = next(
-        node
-        for node in tree.body
+        node for node in tree.body
         if isinstance(node, ast.ClassDef) and node.name == "_SpinaStartupCancelled"
     )
     assert [dotted(base) for base in exception.bases] == ["Exception"]
 
-    app = next(
-        node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "App"
-    )
+    app = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "App")
     app_init = next(
-        node
-        for node in app.body
+        node for node in app.body
         if isinstance(node, ast.FunctionDef) and node.name == "__init__"
     )
     cancel_branches = []
@@ -133,68 +149,39 @@ def main() -> None:
     assert len(cancel_branches) == 1, [node.lineno for node in cancel_branches]
     branch = cancel_branches[0]
     destroy_index = next(
-        i
-        for i, stmt in enumerate(branch.body)
+        i for i, stmt in enumerate(branch.body)
         if any(
-            isinstance(call, ast.Call)
-            and dotted(call.func) == "self._destroy_root_safely"
+            isinstance(call, ast.Call) and dotted(call.func) == "self._destroy_root_safely"
             for call in ast.walk(stmt)
         )
     )
-    raise_index = next(
-        i for i, stmt in enumerate(branch.body) if isinstance(stmt, ast.Raise)
-    )
+    raise_index = next(i for i, stmt in enumerate(branch.body) if isinstance(stmt, ast.Raise))
     assert destroy_index < raise_index
     raised = branch.body[raise_index].exc
     assert isinstance(raised, ast.Call) and dotted(raised.func) == "_SpinaStartupCancelled"
 
-    # The login try must re-raise startup cancellation before its broad Exception fallback.
     login_tries = []
     for node in ast.walk(app_init):
         if not isinstance(node, ast.Try):
             continue
-        if not any(
+        if any(
             isinstance(call, ast.Call) and dotted(call.func) == "self._prompt_login"
             for stmt in node.body
             for call in ast.walk(stmt)
         ):
-            continue
-        login_tries.append(node)
+            login_tries.append(node)
     assert len(login_tries) == 1, [node.lineno for node in login_tries]
-    login_try = login_tries[0]
-    handler_names = [dotted(handler.type) for handler in login_try.handlers]
+    handler_names = [dotted(handler.type) for handler in login_tries[0].handlers]
     assert handler_names[:2] == ["_SpinaStartupCancelled", "Exception"], handler_names
-    startup_handler = login_try.handlers[0]
+    startup_handler = login_tries[0].handlers[0]
     assert len(startup_handler.body) == 1
     assert isinstance(startup_handler.body[0], ast.Raise)
     assert startup_handler.body[0].exc is None
 
-    main_fn = next(
-        node
-        for node in tree.body
-        if isinstance(node, ast.FunctionDef) and node.name == "main"
-    )
-    guarded = []
-    for node in ast.walk(main_fn):
-        if not isinstance(node, ast.Try):
-            continue
-        if not any(
-            isinstance(call, ast.Call) and dotted(call.func) == "App"
-            for stmt in node.body
-            for call in ast.walk(stmt)
-        ):
-            continue
-        for handler in node.handlers:
-            if dotted(handler.type) == "_SpinaStartupCancelled":
-                assert any(isinstance(stmt, ast.Return) for stmt in handler.body)
-                guarded.append(node)
-    assert len(guarded) == 1, len(guarded)
-
     all_wrappers = set(WRAPPER_HASHES) | set(MODULAR_WRAPPERS)
     for name in all_wrappers:
         matches = [
-            node
-            for node in ast.walk(tree)
+            node for node in ast.walk(tree)
             if isinstance(node, ast.FunctionDef) and node.name == name
         ]
         if matches:
@@ -202,38 +189,11 @@ def main() -> None:
             assert len(matches) == 1, (name, len(matches))
             source = ast.get_source_segment(text, matches[0])
             assert source is not None
-            expected = WRAPPER_HASHES[name]
-            assert normalized_hash(source) == expected, (
-                name,
-                normalized_hash(source),
-                expected,
-            )
+            assert normalized_hash(source) == WRAPPER_HASHES[name], name
             continue
         verify_modular_wrapper(name)
 
-    events = []
-
-    class StartupCancelled(Exception):
-        pass
-
-    def base_init():
-        events.append("safe_destroy")
-        raise StartupCancelled()
-
-    def client_logs_wrapper():
-        base_init()
-        events.append("client_info_logs")
-
-    def outer_wrapper():
-        client_logs_wrapper()
-        events.append("outer")
-
-    try:
-        outer_wrapper()
-    except StartupCancelled:
-        pass
-    assert events == ["safe_destroy"], events
-
+    verify_runtime_cancellation()
     print("Wave 46 login-cancel startup regression passed.")
 
 
