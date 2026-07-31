@@ -3,12 +3,22 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/auth_repository.dart';
+import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+DeviceIdentityProvider testDeviceIdentityProvider() {
+  return DeviceIdentityProvider(
+    store: MemoryDeviceIdentityStore(),
+    platformResolver: () => 'android',
+    appVersionResolver: () async => '0.4.0+4',
+    randomByteGenerator: (length) => List<int>.filled(length, 7),
+  );
+}
+
 void main() {
-  test('parses standard SPINA login response', () async {
+  test('parses standard SPINA login response and sends device identity', () async {
     final client = MockClient((request) async {
       expect(request.method, 'POST');
       expect(request.url.path, '/login');
@@ -17,6 +27,10 @@ void main() {
         <String, Object?>{
           'username': 'collector.one',
           'password': 'secret',
+          'device_id':
+              'gilbic-070707070707070707070707070707070707070707070707',
+          'platform': 'android',
+          'app_version': '0.4.0+4',
         },
       );
       return http.Response(
@@ -42,6 +56,7 @@ void main() {
       client: client,
       loginUri: Uri.parse('https://spina.test/login'),
       logoutUri: Uri.parse('https://spina.test/logout'),
+      deviceIdentityProvider: testDeviceIdentityProvider(),
     );
 
     final session = await repository.signIn(
@@ -72,6 +87,7 @@ void main() {
       }),
       loginUri: Uri.parse('https://spina.test/login'),
       logoutUri: Uri.parse('https://spina.test/logout'),
+      deviceIdentityProvider: testDeviceIdentityProvider(),
     );
 
     final session = await repository.signIn(
@@ -96,6 +112,7 @@ void main() {
       }),
       loginUri: Uri.parse('https://spina.test/login'),
       logoutUri: Uri.parse('https://spina.test/logout'),
+      deviceIdentityProvider: testDeviceIdentityProvider(),
     );
 
     await expectLater(

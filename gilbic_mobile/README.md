@@ -6,24 +6,26 @@ collectors, employees, and management.
 
 ## Current milestone
 
-- real username and password login through FastAPI
-- backend-assigned role mapping
+- real username and password login through the GitHub-first Gilbic FastAPI backend
+- Supabase Auth-backed sessions with backend-assigned Gilbic roles and permissions
 - encrypted token and session storage through platform secure storage
+- permanent app-generated installation ID stored separately from the login session
+- Android/iOS platform and app-version metadata sent during login
 - bearer-authenticated requests
 - read-only assigned collector route
 - SQLCipher-encrypted SQLite route snapshots
 - offline fallback to the last route saved for the authenticated collector
 - online/offline source label and last-synchronized timestamp
-- per-user cache removal during sign-out
+- per-user route-cache removal during sign-out
 - typed payment, ADV, and PASS submission contract
 - secure UUID version 4 idempotency keys
 - accepted, duplicate, conflict, and rejected server-result models
 - configurable collection-submission endpoint
-- automated authentication, route, cache, payment-contract, and widget tests
+- automated authentication, device-identity, route, cache, payment-contract, and widget tests
 
-No official loan, payment, accounting, billing, or tax record is written by this
-milestone. The collection repository exists as a tested protocol boundary but is
-not exposed by a mobile payment form or offline write queue.
+The collector payment form and offline payment queue remain disabled. Official
+collection writes will only be enabled after the backend collection integration
+and live PostgreSQL concurrency checks are complete.
 
 ## Prerequisites
 
@@ -47,43 +49,57 @@ compiled on macOS with Xcode.
 
 ## FastAPI configuration
 
-The default planned mobile endpoints are:
+The GitHub-first backend exposes mobile compatibility endpoints including:
 
 ```text
+POST /api/mobile/v1/auth/register
 POST /api/mobile/v1/auth/login
+POST /api/mobile/v1/auth/refresh
+GET  /api/mobile/v1/auth/me
 POST /api/mobile/v1/auth/logout
 GET  /api/mobile/v1/collector/routes/today
 POST /api/mobile/v1/collector/collections
 ```
 
-The existing SPINA backend source is not stored in this GitHub repository. If
-its current paths are different, set them with Dart defines when launching or
-building Gilbic. No Dart source change is required.
+The API address remains configurable with Dart defines so development, staging,
+and production can use different servers without changing source code.
 
 Android emulator example:
 
 ```powershell
 flutter run `
-  --dart-define=GILBIC_API_URL=http://10.0.2.2:8000 `
-  --dart-define=GILBIC_LOGIN_PATH=/staff/login `
-  --dart-define=GILBIC_LOGOUT_PATH=/staff/logout `
-  --dart-define=GILBIC_COLLECTOR_ROUTE_PATH=/staff/collector-route/today `
-  --dart-define=GILBIC_PAYMENT_SUBMISSION_PATH=/staff/collections
+  --dart-define=GILBIC_API_URL=http://10.0.2.2:8000
 ```
 
 Physical phone on the same network:
 
 ```powershell
 flutter run `
-  --dart-define=GILBIC_API_URL=http://YOUR-COMPUTER-IP:8000 `
-  --dart-define=GILBIC_LOGIN_PATH=/staff/login `
-  --dart-define=GILBIC_COLLECTOR_ROUTE_PATH=/staff/collector-route/today `
-  --dart-define=GILBIC_PAYMENT_SUBMISSION_PATH=/staff/collections
+  --dart-define=GILBIC_API_URL=http://YOUR-COMPUTER-IP:8000
 ```
 
-Production must use HTTPS. PostgreSQL or Supabase credentials must never be
-placed in Flutter. Gilbic sends authenticated requests to FastAPI, and FastAPI
-remains the only database and business-rule boundary.
+Production must use HTTPS. PostgreSQL/Supabase database credentials and secret
+service-role keys must never be placed in Flutter. Gilbic sends authenticated
+requests to FastAPI, and FastAPI remains the database and business-rule boundary.
+
+## Installation identity
+
+Gilbic does not use IMEI, advertising ID, serial number, phone number, or another
+hardware identifier as its device key.
+
+1. On first use, Gilbic generates a cryptographically random installation ID.
+2. The ID is stored through platform secure storage.
+3. The ID survives normal sign-out because it identifies the app installation,
+   not the authenticated session.
+4. Login sends the installation ID, platform (`android` or `ios`), and app
+   version to FastAPI.
+5. FastAPI hashes the installation ID before storing it in `core.devices`.
+6. Management can later revoke a registered installation without changing the
+   user's password or affecting another approved device.
+
+Reinstalling the application may create a new installation ID depending on the
+platform's secure-storage lifecycle. The server therefore treats devices as
+revocable installation registrations, not as permanent hardware identities.
 
 ## Offline route behavior
 
@@ -113,44 +129,46 @@ collection, so generating a replacement key after a timeout is prohibited.
 The full request, response, PostgreSQL transaction, duplicate, conflict, and
 rejection rules are documented in `docs/gilbic-mobile-payment-contract.md`.
 
-## Accepted login response shapes
-
-Preferred standard response:
+## Accepted login response shape
 
 ```json
 {
   "success": true,
   "data": {
     "access_token": "token",
-    "refresh_token": "optional-token",
+    "refresh_token": "refresh-token",
     "user": {
-      "account_id": 42,
+      "id": "user-id",
       "username": "collector.one",
       "full_name": "Collector One",
       "role": "Collector",
-      "permissions": ["route.view"]
+      "permissions": ["route.view"],
+      "device_registered": true
     }
   }
 }
 ```
 
-The compatibility parser also accepts direct fields such as `session_id`,
-`account_id`, `full_name`, `username`, and `role` from the current web portal.
+The parser retains compatibility with earlier SPINA response field names while
+migration to the new backend is in progress.
 
 ## Security rules
 
-- the server decides role, permissions, route assignment, eligibility, and balances
+- the server decides roles, permissions, route assignment, eligibility, and balances
+- public registration cannot choose Collector, Employee, or Management roles
 - collector routes are filtered by the authenticated collector on the server
-- tokens and the SQLCipher key are stored with secure device storage
-- mobile code never receives a PostgreSQL password
+- tokens, installation ID, and SQLCipher key use secure device storage
+- mobile code never receives a PostgreSQL password or Supabase secret key
+- device identifiers are app-generated and server-stored only as hashes
 - cached routes remain read-only and are removed for the account during sign-out
 - payment retries reuse one idempotency key
 - official balances and receipts come only from FastAPI
-- the payment repository is not exposed until the backend contract is implemented
+- the payment repository is not exposed until backend integration is verified
 
 ## Planned next milestone
 
-1. add the FastAPI collection endpoint and PostgreSQL idempotency migration to the repository
-2. verify the live backend against the mobile contract tests
-3. add an encrypted pending-payment queue
-4. add receipt storage, conflict review, and end-of-day reconciliation
+1. add management-only account provisioning and role assignment
+2. add management device listing and revocation
+3. build the collector route API against the new Supabase/PostgreSQL schema
+4. integrate the idempotent collection package with the new backend
+5. verify live duplicate concurrency before enabling the payment form
