@@ -5,6 +5,7 @@ from . import __version__
 from .auth_api import create_auth_router
 from .config import get_settings
 from .database import database_ready
+from .management_api import create_management_router
 
 
 def create_app() -> FastAPI:
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
         return {"service": "gilbic-backend", "version": __version__}
 
     app.include_router(create_auth_router())
+    app.include_router(create_management_router())
     return app
 
 

@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     )
     supabase_url: str = ""
     supabase_publishable_key: str = Field(default="", repr=False)
+    supabase_secret_key: str = Field(default="", repr=False)
+    staff_invite_redirect_url: str = ""
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     @property
@@ -32,6 +34,10 @@ class Settings(BaseSettings):
     @property
     def supabase_auth_configured(self) -> bool:
         return bool(self.supabase_url.strip() and self.supabase_publishable_key.strip())
+
+    @property
+    def supabase_admin_configured(self) -> bool:
+        return bool(self.supabase_url.strip() and self.supabase_secret_key.strip())
 
 
 @lru_cache(maxsize=1)
