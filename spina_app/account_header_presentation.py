@@ -72,6 +72,24 @@ def configure_account_header_dependencies(namespace):
             except Exception:
                 pass
 
+    # Wave 89 establishes one final owner for Tk root creation, startup
+    # cancellation, direct integration attachment, and the application mainloop.
+    try:
+        from spina_app.features.startup_runtime import install_startup_runtime
+
+        install_startup_runtime(namespace)
+    except Exception as exc:
+        logger = namespace.get("_log_suppressed_once")
+        if callable(logger):
+            try:
+                logger(
+                    "startup_runtime_wave89_install",
+                    "Wave 89 startup runtime installation failed",
+                    exc,
+                )
+            except Exception:
+                pass
+
 
 ACCOUNT_HEADER_TARGETS = ['_spina_v32_refresh_user_header', '_spina_v32_build_header']
 ACCOUNT_HEADER_SOURCE_LINES = {'_spina_v32_refresh_user_header': 14, '_spina_v32_build_header': 12}
