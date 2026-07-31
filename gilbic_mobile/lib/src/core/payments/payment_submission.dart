@@ -76,6 +76,7 @@ class PaymentSubmissionDraft {
         if (advanceFrom != null || advanceUntil != null) {
           return 'A normal payment cannot contain ADV coverage dates.';
         }
+        break;
       case CollectionEntryType.advance:
         if (amount == null || amount! <= 0) {
           return 'An ADV amount greater than zero is required.';
@@ -86,6 +87,7 @@ class PaymentSubmissionDraft {
         if (advanceUntil!.isBefore(advanceFrom!)) {
           return 'ADV coverage cannot end before it starts.';
         }
+        break;
       case CollectionEntryType.pass:
         if (amount != null && amount != 0) {
           return 'A PASS entry cannot contain a payment amount.';
@@ -93,6 +95,7 @@ class PaymentSubmissionDraft {
         if (advanceFrom != null || advanceUntil != null) {
           return 'A PASS entry cannot contain ADV coverage dates.';
         }
+        break;
     }
     return null;
   }
