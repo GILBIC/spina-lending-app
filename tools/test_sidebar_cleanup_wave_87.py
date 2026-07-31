@@ -14,6 +14,7 @@ from spina_app.features import side_navigation as feature
 
 DESKTOP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 HEADER = ROOT / "spina_app" / "account_header_presentation.py"
+SHELL = ROOT / "spina_app" / "features" / "application_shell.py"
 
 REMOVED_TEXT = (
     "# --- BEGIN: Modern sidebar nav refresh after role changes ---",
@@ -44,6 +45,7 @@ def dotted(node: ast.AST) -> str:
 def check_architecture() -> None:
     text = DESKTOP.read_text(encoding="utf-8")
     header = HEADER.read_text(encoding="utf-8")
+    shell = SHELL.read_text(encoding="utf-8")
     tree = ast.parse(text, filename=str(DESKTOP))
 
     for token in REMOVED_TEXT:
@@ -51,7 +53,10 @@ def check_architecture() -> None:
     assert text.count("# --- Legacy modern sidebar role wrapper removed Wave 87 ---") == 1
     assert text.count("# --- Legacy v13 sidebar wrapper removed Wave 87 ---") == 1
     assert text.count("_wave46_configure_account_header_dependencies(globals())") == 1
-    assert "install_side_navigation_feature" in header
+    assert "install_application_shell" in header
+    assert "install_side_navigation_feature" not in header
+    assert "install_side_navigation_feature" in shell
+    assert "side_navigation_installer(" in shell
 
     forbidden_bindings = []
     for node in tree.body:
