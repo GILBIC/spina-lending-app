@@ -19,6 +19,7 @@ This is the GitHub-first FastAPI backend for Gilbic.
 - access-token refresh, `/me`, and logout endpoints
 - management-only account invitation, role, account-status, and device administration
 - immutable audit events for account and device administration actions
+- one-time local/server CLI for bootstrapping the first Management account
 
 ## Required environment variables
 
@@ -34,9 +35,37 @@ GILBIC_STAFF_INVITE_REDIRECT_URL=https://your-app.example/set-password
 
 `GILBIC_SUPABASE_PUBLISHABLE_KEY` is used for normal authentication requests.
 
-`GILBIC_SUPABASE_SECRET_KEY` is required only by trusted FastAPI server code that sends staff invitations through the Supabase Auth Admin API. It must never be placed in Gilbic Flutter, browser JavaScript, a public repository, logs, or screenshots.
+`GILBIC_SUPABASE_SECRET_KEY` is required only by trusted FastAPI/server tooling that sends staff invitations through the Supabase Auth Admin API. It must never be placed in Gilbic Flutter, browser JavaScript, a public repository, logs, or screenshots.
 
 The backend never uses Supabase `user_metadata` as an authorization source. Application roles and permissions remain authoritative in private `core.*` tables.
+
+## First Management bootstrap
+
+The normal management API cannot create the very first administrator because every management route already requires authenticated management permission. Gilbic therefore provides a local/server-only bootstrap command.
+
+After installing the backend in a trusted environment with the required environment variables, run:
+
+```powershell
+gilbic-bootstrap-management `
+  --username manager.one `
+  --email manager@example.com `
+  --full-name "Manager One" `
+  --confirm-first-management
+```
+
+Bootstrap rules:
+
+- there is no public bootstrap HTTP endpoint
+- no password is accepted on the command line
+- Supabase Auth sends an invitation so the administrator sets their own password
+- the command uses a PostgreSQL advisory transaction lock to prevent two concurrent first managers
+- the database re-checks that no Management role exists before committing
+- the initial account is stored as `pending` until the invited administrator completes Auth setup and signs in
+- the bootstrap event is written to `core.audit_logs` with no fake actor identity
+- if the PostgreSQL write fails after an Auth invitation is created, Gilbic removes the newly invited Auth user before reporting failure
+- once any Management account exists, the bootstrap command refuses to create another one; all additional staff must use the authenticated management API
+
+`GILBIC_STAFF_INVITE_REDIRECT_URL`, when set, must be included in Supabase Auth's allowed Redirect URLs. Otherwise Supabase falls back to the configured Site URL.
 
 ## Authentication routes
 
@@ -87,10 +116,11 @@ Account safety rules:
 
 ## Next order
 
-1. Add per-request device enforcement so a revoked installation is rejected without waiting for the next login.
-2. Add the collector route API against the new database.
-3. Integrate the idempotent collection package in `spina_backend_mobile/`.
-4. Add client, employee, and management mobile screens.
-5. Add accounting, billing, taxation, risk, and compliance APIs.
+1. Bootstrap the first Management account in the development environment.
+2. Add per-request device enforcement so a revoked installation is rejected without waiting for the next login.
+3. Add the collector route API against the new database.
+4. Integrate the idempotent collection package in `spina_backend_mobile/`.
+5. Add client, employee, and management mobile screens.
+6. Add accounting, billing, taxation, risk, and compliance APIs.
 
 The old local FastAPI project is not required for this backend. Features can be migrated into this backend one by one after review.
