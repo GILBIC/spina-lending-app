@@ -61,8 +61,8 @@ void main() {
       cache: MemoryCollectorRouteCache(),
     );
 
-    expect(
-      () => loader.loadToday(session),
+    await expectLater(
+      loader.loadToday(session),
       throwsA(isA<SpinaApiException>()),
     );
   });
