@@ -20,19 +20,14 @@ def configure_account_header_dependencies(namespace):
         if name not in _PROTECTED_GLOBALS:
             globals()[name] = value
 
-    # Wave 83 uses the existing Wave 46 configuration point as the final,
-    # idempotent account runtime installer. This runs after the desktop file has
-    # captured its original account loader and header builder.
+    # Wave 92 keeps this historical configuration point as the desktop entry
+    # into one dedicated final application-shell installer.
     try:
-        from spina_app.features.accounts import (
-            account_display_name,
-            install_accounts_feature,
-        )
+        from spina_app.features.application_shell import install_application_shell
 
-        globals()["_spina_v32_account_display_name"] = account_display_name
-        install_accounts_feature(
-            namespace.get("App"),
-            namespace=namespace,
+        install_application_shell(
+            namespace,
+            presentation_namespace=globals(),
             refresh_header=globals().get("_spina_v32_refresh_user_header"),
             build_header=globals().get("_spina_v32_build_header"),
         )
@@ -41,50 +36,8 @@ def configure_account_header_dependencies(namespace):
         if callable(logger):
             try:
                 logger(
-                    "accounts_wave83_install",
-                    "Wave 83 accounts feature installation failed",
-                    exc,
-                )
-            except Exception:
-                pass
-
-    # Wave 86 uses the same late application-shell configuration point to replace
-    # stacked sidebar wrappers with one final, idempotent runtime boundary.
-    try:
-        from spina_app.features.side_navigation import (
-            install_side_navigation_feature,
-        )
-
-        install_side_navigation_feature(
-            namespace.get("App"),
-            namespace=namespace,
-            log_suppressed_once=namespace.get("_log_suppressed_once"),
-        )
-    except Exception as exc:
-        logger = namespace.get("_log_suppressed_once")
-        if callable(logger):
-            try:
-                logger(
-                    "side_navigation_wave86_install",
-                    "Wave 86 side-navigation installation failed",
-                    exc,
-                )
-            except Exception:
-                pass
-
-    # Wave 89 establishes one final owner for Tk root creation, startup
-    # cancellation, direct integration attachment, and the application mainloop.
-    try:
-        from spina_app.features.startup_runtime import install_startup_runtime
-
-        install_startup_runtime(namespace)
-    except Exception as exc:
-        logger = namespace.get("_log_suppressed_once")
-        if callable(logger):
-            try:
-                logger(
-                    "startup_runtime_wave89_install",
-                    "Wave 89 startup runtime installation failed",
+                    "application_shell_wave92_install",
+                    "Wave 92 application-shell installation failed",
                     exc,
                 )
             except Exception:
