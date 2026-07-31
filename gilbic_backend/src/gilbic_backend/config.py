@@ -1,0 +1,33 @@
+from __future__ import annotations
+
+from functools import lru_cache
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="GILBIC_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    app_name: str = "Gilbic API"
+    environment: str = "development"
+    api_prefix: str = "/api"
+    database_url: str = Field(
+        default="postgresql://127.0.0.1:5432/gilbic_dev",
+        repr=False,
+    )
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    return Settings()
