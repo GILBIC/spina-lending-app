@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from typing import Any
@@ -138,4 +138,8 @@ def _decimal_text(value: Decimal | None) -> str | None:
 def _utc_isoformat(value: datetime) -> str:
     if value.tzinfo is None:
         raise ValueError("datetime values must include a timezone")
-    return value.astimezone().isoformat(timespec="microseconds")
+    return (
+        value.astimezone(timezone.utc)
+        .isoformat(timespec="microseconds")
+        .replace("+00:00", "Z")
+    )
