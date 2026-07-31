@@ -1,26 +1,39 @@
 # Gilbic payment contract implementation checklist
 
-The FastAPI backend is ready for Gilbic payment writes only when every item below is verified.
+The collector payment form and encrypted pending queue remain disabled until the **live SPINA backend** section is complete.
 
-- [ ] Authenticated collector identity is derived from the session.
-- [ ] `collection.create` permission is checked server-side.
-- [ ] The device is registered and assigned to the collector.
-- [ ] `Idempotency-Key`, `X-Client-Transaction-Id`, and body `client_transaction_id` must match.
-- [ ] A unique PostgreSQL constraint protects the idempotency key.
-- [ ] A canonical request hash detects changed payload reuse.
-- [ ] Same key and same payload returns the original transaction and receipt.
-- [ ] Same key and different payload returns `409 idempotency_mismatch`.
-- [ ] Route entry, route revision, collector assignment, loan, and collection date are validated.
-- [ ] Closed-day and closed-route checks are enforced.
-- [ ] Payment, ADV, and PASS rules use existing SPINA server logic.
-- [ ] Official balance is calculated on the server.
-- [ ] Collection, balance update, receipt, audit log, and idempotency result commit atomically.
-- [ ] Failures roll back the complete PostgreSQL transaction.
-- [ ] Accepted responses return transaction ID, receipt number, official balance, and accepted time.
-- [ ] Conflict and rejection responses return stable machine-readable codes.
-- [ ] Network retries with the same key cannot create a second collection.
-- [ ] Automated backend tests cover concurrent duplicate submissions.
-- [ ] Automated integration tests use a disposable PostgreSQL database.
-- [ ] The mobile repository contract tests pass against the live endpoint.
+## Implemented in the repository package
 
-The collector payment form and encrypted pending queue must remain disabled until this checklist is complete.
+- [x] `collection.create` is checked against the authenticated `ActorContext`.
+- [x] `Idempotency-Key`, `X-Client-Transaction-Id`, and body `client_transaction_id` must match.
+- [x] The header, body, authenticated actor, and registered device IDs must match.
+- [x] A PostgreSQL migration creates a global unique idempotency-key constraint.
+- [x] A canonical SHA-256 request hash detects changed payload reuse.
+- [x] Same key and same payload returns the original transaction and receipt.
+- [x] Same key and different payload returns `409 idempotency_mismatch`.
+- [x] PostgreSQL advisory locking serializes work for one transaction key.
+- [x] Business conflicts and rejections leave the transaction scope and roll back.
+- [x] Accepted responses return transaction ID, receipt number, official balance, and accepted time.
+- [x] Conflict and rejection responses return stable machine-readable codes.
+- [x] Deterministic tests cover 32 concurrent retries and require one post.
+- [x] An opt-in disposable-PostgreSQL concurrency test is included.
+- [x] FastAPI router tests cover accepted, duplicate, conflict, and protocol-error responses.
+
+## Still required in the live SPINA backend
+
+- [ ] Store `C:\SPINA_ONLINE\spina_backend` source in GitHub or copy this reviewed package into that project.
+- [ ] Derive the collector identity from the real bearer session.
+- [ ] Resolve the registered device from the official server records.
+- [ ] Apply the migration to a reviewed development PostgreSQL database.
+- [ ] Implement `ExistingSpinaCollectionBridge` using the current payment, ADV, and PASS logic.
+- [ ] Validate route entry, route revision, collector assignment, loan, and collection date.
+- [ ] Enforce closed-day and closed-route rules.
+- [ ] Calculate the official balance only with existing SPINA server logic.
+- [ ] Create the official collection, balance update, receipt, audit log, and idempotency row in one transaction.
+- [ ] Run the opt-in concurrent test against a disposable PostgreSQL database.
+- [ ] Run mobile contract tests against the live FastAPI endpoint.
+- [ ] Review backup, rollback, and production deployment procedures.
+
+## Write-feature gate
+
+Do not add the collector payment form, encrypted pending-payment queue, automatic retry worker, or receipt persistence until every live-backend item is checked and the final endpoint is tested with non-production data.
