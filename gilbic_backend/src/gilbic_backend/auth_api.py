@@ -4,7 +4,7 @@ from collections.abc import Generator
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .account_repository import (
     AccountConflict,
@@ -16,7 +16,11 @@ from .account_repository import (
 from .auth_client import AuthSession, SupabaseAuthClient, SupabaseAuthError
 
 
-class RegisterRequest(BaseModel):
+class StrictRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class RegisterRequest(StrictRequest):
     username: str = Field(min_length=3, max_length=80)
     email: str = Field(min_length=5, max_length=320)
     full_name: str = Field(min_length=2, max_length=200)
@@ -44,7 +48,7 @@ class RegisterRequest(BaseModel):
         return " ".join(value.split())
 
 
-class LoginRequest(BaseModel):
+class LoginRequest(StrictRequest):
     username: str = Field(min_length=1, max_length=320)
     password: str = Field(min_length=1, max_length=200)
     device_id: str | None = Field(default=None, max_length=300)
@@ -57,7 +61,7 @@ class LoginRequest(BaseModel):
         return value.strip()
 
 
-class RefreshRequest(BaseModel):
+class RefreshRequest(StrictRequest):
     refresh_token: str = Field(min_length=10, max_length=4096)
 
 
