@@ -51,12 +51,18 @@ CREATE TABLE IF NOT EXISTS core.role_permissions (
     PRIMARY KEY (role_id, permission_code)
 );
 
+CREATE INDEX IF NOT EXISTS core_role_permissions_permission_idx
+    ON core.role_permissions(permission_code);
+
 CREATE TABLE IF NOT EXISTS core.user_roles (
     user_id UUID NOT NULL REFERENCES core.users(id) ON DELETE CASCADE,
     role_id UUID NOT NULL REFERENCES core.roles(id) ON DELETE RESTRICT,
     assigned_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (user_id, role_id)
 );
+
+CREATE INDEX IF NOT EXISTS core_user_roles_role_idx
+    ON core.user_roles(role_id);
 
 CREATE TABLE IF NOT EXISTS core.devices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -140,6 +146,9 @@ CREATE INDEX IF NOT EXISTS lending_loans_type_idx ON lending.loans(loan_type_id)
 CREATE INDEX IF NOT EXISTS lending_loans_status_idx ON lending.loans(status);
 CREATE INDEX IF NOT EXISTS lending_loans_legacy_idx ON lending.loans(legacy_loan_id)
     WHERE legacy_loan_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS lending_loans_created_by_user_idx
+    ON lending.loans(created_by_user_id)
+    WHERE created_by_user_id IS NOT NULL;
 
 INSERT INTO core.roles (code, name, description)
 VALUES
