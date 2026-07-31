@@ -21,11 +21,18 @@ class ApiConfig {
     defaultValue: '/api/mobile/v1/collector/routes/today',
   );
 
+  static const String paymentSubmissionPath = String.fromEnvironment(
+    'GILBIC_PAYMENT_SUBMISSION_PATH',
+    defaultValue: '/api/mobile/v1/collector/collections',
+  );
+
   static Uri get loginEndpoint => endpoint(loginPath);
 
   static Uri get logoutEndpoint => endpoint(logoutPath);
 
   static Uri get collectorRouteEndpoint => endpoint(collectorRoutePath);
+
+  static Uri get paymentSubmissionEndpoint => endpoint(paymentSubmissionPath);
 
   static Uri endpoint(String path) {
     final cleanBase = baseUrl.endsWith('/')
