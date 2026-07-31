@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/auth_repository.dart';
 import 'package:gilbic_mobile/src/core/auth/session_store.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
+import 'package:gilbic_mobile/src/core/collector/collector_route_cache.dart';
+import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/auth/login_page.dart';
@@ -12,12 +14,16 @@ class GilbicApp extends StatefulWidget {
     this.sessionStore,
     this.authRepository,
     this.collectorRouteRepository,
+    this.collectorRouteCache,
+    this.collectorRouteLoader,
     super.key,
   });
 
   final SessionStore? sessionStore;
   final AuthRepository? authRepository;
   final CollectorRouteRepository? collectorRouteRepository;
+  final CollectorRouteCache? collectorRouteCache;
+  final CollectorRouteLoader? collectorRouteLoader;
 
   @override
   State<GilbicApp> createState() => _GilbicAppState();
@@ -26,7 +32,8 @@ class GilbicApp extends StatefulWidget {
 class _GilbicAppState extends State<GilbicApp> {
   late final SessionStore _sessionStore;
   late final AuthRepository _authRepository;
-  late final CollectorRouteRepository _collectorRouteRepository;
+  late final CollectorRouteLoader _collectorRouteLoader;
+  CollectorRouteCache? _collectorRouteCache;
   UserSession? _session;
   bool _loading = true;
 
@@ -35,8 +42,20 @@ class _GilbicAppState extends State<GilbicApp> {
     super.initState();
     _sessionStore = widget.sessionStore ?? SecureSessionStore();
     _authRepository = widget.authRepository ?? SpinaAuthRepository();
-    _collectorRouteRepository = widget.collectorRouteRepository ??
-        SpinaCollectorRouteRepository();
+
+    final suppliedLoader = widget.collectorRouteLoader;
+    if (suppliedLoader != null) {
+      _collectorRouteLoader = suppliedLoader;
+      _collectorRouteCache = widget.collectorRouteCache;
+    } else {
+      final cache = widget.collectorRouteCache ?? SqlCipherCollectorRouteCache();
+      _collectorRouteCache = cache;
+      _collectorRouteLoader = CachedCollectorRouteLoader(
+        remote: widget.collectorRouteRepository ??
+            SpinaCollectorRouteRepository(),
+        cache: cache,
+      );
+    }
     _restoreSession();
   }
 
@@ -79,6 +98,11 @@ class _GilbicAppState extends State<GilbicApp> {
     final session = _session;
     if (session != null) {
       await _authRepository.signOut(session);
+      try {
+        await _collectorRouteCache?.clearForUser(session.userId);
+      } on Object {
+        // Session removal must continue even if the local cache is unavailable.
+      }
     }
     await _sessionStore.clear();
     if (!mounted) {
@@ -104,7 +128,7 @@ class _GilbicAppState extends State<GilbicApp> {
               : RoleDashboard(
                   session: _session!,
                   onSignOut: _signOut,
-                  collectorRouteRepository: _collectorRouteRepository,
+                  collectorRouteLoader: _collectorRouteLoader,
                 ),
     );
   }
