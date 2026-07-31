@@ -21,4 +21,6 @@ The final `if __name__ == '__main__': main()` call remains at the end of the des
 
 ## Validation
 
-The self-hosted Windows workflow applies the cleanup, compiles the reduced desktop application, runs Waves 90 and 89 startup tests, protected login-cancellation and Tk-shutdown tests, account/header compatibility, Waves 86–88 sidebar and navigation tests, the permanent architecture map, and a generated-diff check before committing the desktop cleanup to the pull-request branch.
+The self-hosted Windows workflow applied the cleanup to the actual desktop file, compiled the reduced application, and passed Waves 90 and 89 startup tests, protected login-cancellation and Tk-shutdown tests, account/header compatibility, Waves 86–88 sidebar and navigation tests, the permanent architecture map, and generated-diff validation before committing the desktop cleanup to the pull-request branch.
+
+The owner-authored validation commit preserves that generated desktop result and allows the normal protected workflows to run against the exact cleaned head.
