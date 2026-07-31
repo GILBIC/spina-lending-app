@@ -1,0 +1,67 @@
+name: Gilbic collection backend validation
+
+on:
+  pull_request:
+    paths:
+      - "spina_backend_mobile/**"
+      - "docs/gilbic-mobile-payment-contract*.md"
+      - ".github/workflows/gilbic-collection-backend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: >-
+      github.actor == github.repository_owner &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.user.login == github.repository_owner))
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out exact pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify Python runtime
+        shell: cmd
+        run: |
+          python --version || exit /b 1
+          python -c "import sys; assert sys.version_info >= (3, 11), sys.version" || exit /b 1
+
+      - name: Create isolated backend environment
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\gilbic-collection-backend-venv"
+          if exist "%VENV%" rmdir /s /q "%VENV%"
+          python -m venv "%VENV%" || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "fastapi>=0.115,<1" "pydantic>=2.10,<3" "psycopg[binary]>=3.2,<4" "httpx>=0.28,<1" "pytest>=8.3,<9" || exit /b 1
+
+      - name: Compile backend package
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\gilbic-collection-backend-venv"
+          set "PYTHONPATH=%CD%\spina_backend_mobile\src"
+          "%VENV%\Scripts\python.exe" -m compileall -q spina_backend_mobile\src || exit /b 1
+
+      - name: Test endpoint transaction and duplicate boundaries
+        shell: cmd
+        env:
+          GILBIC_TEST_DATABASE_URL: ${{ secrets.GILBIC_TEST_DATABASE_URL }}
+        run: |
+          set "VENV=%RUNNER_TEMP%\gilbic-collection-backend-venv"
+          set "PYTHONPATH=%CD%\spina_backend_mobile\src"
+          "%VENV%\Scripts\python.exe" -m pytest -q spina_backend_mobile\tests || exit /b 1
+
+      - name: Require clean committed tree
+        shell: cmd
+        run: |
+          git diff --check || exit /b 1
+          git diff --exit-code || exit /b 1
+          git diff --cached --exit-code || exit /b 1
