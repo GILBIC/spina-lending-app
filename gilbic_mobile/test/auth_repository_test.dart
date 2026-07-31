@@ -98,8 +98,8 @@ void main() {
       logoutUri: Uri.parse('https://spina.test/logout'),
     );
 
-    expect(
-      () => repository.signIn(username: 'unknown', password: 'wrong'),
+    await expectLater(
+      repository.signIn(username: 'unknown', password: 'wrong'),
       throwsA(
         isA<SpinaApiException>().having(
           (error) => error.message,
