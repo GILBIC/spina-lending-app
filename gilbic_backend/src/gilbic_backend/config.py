@@ -21,11 +21,17 @@ class Settings(BaseSettings):
         default="postgresql://127.0.0.1:5432/gilbic_dev",
         repr=False,
     )
+    supabase_url: str = ""
+    supabase_publishable_key: str = Field(default="", repr=False)
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     @property
     def cors_origin_list(self) -> list[str]:
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
+
+    @property
+    def supabase_auth_configured(self) -> bool:
+        return bool(self.supabase_url.strip() and self.supabase_publishable_key.strip())
 
 
 @lru_cache(maxsize=1)
