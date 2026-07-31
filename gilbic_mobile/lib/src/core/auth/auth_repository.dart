@@ -117,6 +117,7 @@ class SpinaAuthRepository implements AuthRepository {
             : 'The role "$rawRole" is not enabled in Gilbic yet.',
       );
     }
+    final authenticatedRoleName = rawRole!;
 
     final userId = firstNonEmptyString(<Object?>[
           source['id'],
@@ -163,7 +164,7 @@ class SpinaAuthRepository implements AuthRepository {
       username: returnedUsername,
       displayName: displayName,
       role: role,
-      rawRole: rawRole,
+      rawRole: authenticatedRoleName,
       accessToken: token,
       refreshToken: refreshToken,
       permissions: permissions,
