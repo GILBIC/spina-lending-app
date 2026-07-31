@@ -17,6 +17,7 @@ from spina_app.features.startup_runtime import (
 
 DESKTOP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 HEADER = ROOT / "spina_app" / "account_header_presentation.py"
+SHELL = ROOT / "spina_app" / "features" / "application_shell.py"
 FEATURE = ROOT / "spina_app" / "features" / "startup_runtime.py"
 
 
@@ -32,6 +33,7 @@ def dotted(node: ast.AST) -> str:
 def check_architecture() -> None:
     desktop_text = DESKTOP.read_text(encoding="utf-8")
     header_text = HEADER.read_text(encoding="utf-8")
+    shell_text = SHELL.read_text(encoding="utf-8")
     feature_text = FEATURE.read_text(encoding="utf-8")
 
     desktop_tree = ast.parse(desktop_text, filename=str(DESKTOP))
@@ -39,8 +41,6 @@ def check_architecture() -> None:
         node for node in desktop_tree.body
         if isinstance(node, ast.FunctionDef) and node.name == "main"
     ]
-    # Wave 90 may remove the historical compatibility implementation. Wave 89
-    # owns startup through its installer either way.
     assert len(top_level_main) <= 1
 
     final_calls = []
@@ -67,11 +67,24 @@ def check_architecture() -> None:
         and node.name == "configure_account_header_dependencies"
     )
     configure_source = ast.get_source_segment(header_text, configure) or ""
-    assert "install_startup_runtime" in configure_source
-    assert "install_startup_runtime(namespace)" in configure_source
-    assert "startup_runtime_wave89_install" in configure_source
-    assert configure_source.index("install_side_navigation_feature") < configure_source.index(
-        "install_startup_runtime"
+    assert "install_application_shell" in configure_source
+    assert "install_startup_runtime" not in configure_source
+
+    shell_tree = ast.parse(shell_text, filename=str(SHELL))
+    shell_installer = next(
+        node for node in shell_tree.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "install_application_shell"
+    )
+    shell_source = ast.get_source_segment(shell_text, shell_installer) or ""
+    assert "install_startup_runtime" in shell_source
+    assert "startup_installer(namespace)" in shell_source
+    assert "startup_runtime_wave89_install" in shell_source
+    assert shell_source.index("accounts_installer(") < shell_source.index(
+        "side_navigation_installer("
+    )
+    assert shell_source.index("side_navigation_installer(") < shell_source.index(
+        "startup_installer(namespace)"
     )
 
     feature_tree = ast.parse(feature_text, filename=str(FEATURE))
