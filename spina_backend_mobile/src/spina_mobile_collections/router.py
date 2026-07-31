@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header
@@ -81,18 +80,14 @@ def create_collection_router(
     @router.post("/collections", response_class=JSONResponse)
     def submit_collection(
         body: CollectionSubmissionBody,
-        actor: Annotated[ActorContext, Depends(get_actor)],
-        service: Annotated[CollectionSubmissionService, Depends(get_service)],
-        idempotency_key: Annotated[UUID, Header(alias="Idempotency-Key")],
-        client_transaction_id: Annotated[
-            UUID,
-            Header(alias="X-Client-Transaction-Id"),
-        ],
-        device_id: Annotated[str, Header(alias="X-Device-Id")],
-        contract_version: Annotated[
-            str,
-            Header(alias="X-Gilbic-Contract-Version"),
-        ],
+        idempotency_key: UUID = Header(alias="Idempotency-Key"),
+        client_transaction_id: UUID = Header(
+            alias="X-Client-Transaction-Id"
+        ),
+        device_id: str = Header(alias="X-Device-Id"),
+        contract_version: str = Header(alias="X-Gilbic-Contract-Version"),
+        actor: ActorContext = Depends(get_actor),
+        service: CollectionSubmissionService = Depends(get_service),
     ) -> JSONResponse:
         try:
             outcome = service.submit(
