@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/config/api_config.dart';
+import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:http/http.dart' as http;
 
@@ -20,13 +21,17 @@ class SpinaAuthRepository implements AuthRepository {
     http.Client? client,
     Uri? loginUri,
     Uri? logoutUri,
+    DeviceIdentityProvider? deviceIdentityProvider,
   })  : _client = client ?? http.Client(),
         _loginUri = loginUri ?? ApiConfig.loginEndpoint,
-        _logoutUri = logoutUri ?? ApiConfig.logoutEndpoint;
+        _logoutUri = logoutUri ?? ApiConfig.logoutEndpoint,
+        _deviceIdentityProvider =
+            deviceIdentityProvider ?? DeviceIdentityProvider();
 
   final http.Client _client;
   final Uri _loginUri;
   final Uri _logoutUri;
+  final DeviceIdentityProvider _deviceIdentityProvider;
 
   @override
   Future<UserSession> signIn({
@@ -38,6 +43,15 @@ class SpinaAuthRepository implements AuthRepository {
       throw const SpinaApiException('Enter your username and password.');
     }
 
+    late final DeviceIdentity deviceIdentity;
+    try {
+      deviceIdentity = await _deviceIdentityProvider.load();
+    } on Exception {
+      throw const SpinaApiException(
+        'Gilbic could not access this installation identity. Restart the app and try again.',
+      );
+    }
+
     late final http.Response response;
     try {
       response = await _client.post(
@@ -46,9 +60,12 @@ class SpinaAuthRepository implements AuthRepository {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode(<String, String>{
+        body: jsonEncode(<String, Object?>{
           'username': normalizedUsername,
           'password': password,
+          'device_id': deviceIdentity.installationId,
+          'platform': deviceIdentity.platform,
+          'app_version': deviceIdentity.appVersion,
         }),
       );
     } on Exception {
