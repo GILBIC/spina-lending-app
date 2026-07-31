@@ -15,6 +15,9 @@ dependencies = [
   "httpx>=0.28,<1",
 ]
 
+[project.scripts]
+gilbic-bootstrap-management = "gilbic_backend.bootstrap_management:main"
+
 [project.optional-dependencies]
 test = [
   "pytest>=8.3,<9",
