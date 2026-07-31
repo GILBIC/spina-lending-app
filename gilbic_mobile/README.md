@@ -15,13 +15,15 @@ collectors, employees, and management.
 - offline fallback to the last route saved for the authenticated collector
 - online/offline source label and last-synchronized timestamp
 - per-user cache removal during sign-out
-- compatibility with standard SPINA `{success, message, data}` responses
-- compatibility parsing for the existing direct staff-session response fields
-- automated authentication, route, cache, loader, and widget tests
+- typed payment, ADV, and PASS submission contract
+- secure UUID version 4 idempotency keys
+- accepted, duplicate, conflict, and rejected server-result models
+- configurable collection-submission endpoint
+- automated authentication, route, cache, payment-contract, and widget tests
 
 No official loan, payment, accounting, billing, or tax record is written by this
-milestone. The encrypted database contains only a read-only downloaded route
-snapshot. Payment synchronization remains disabled.
+milestone. The collection repository exists as a tested protocol boundary but is
+not exposed by a mobile payment form or offline write queue.
 
 ## Prerequisites
 
@@ -51,6 +53,7 @@ The default planned mobile endpoints are:
 POST /api/mobile/v1/auth/login
 POST /api/mobile/v1/auth/logout
 GET  /api/mobile/v1/collector/routes/today
+POST /api/mobile/v1/collector/collections
 ```
 
 The existing SPINA backend source is not stored in this GitHub repository. If
@@ -64,7 +67,8 @@ flutter run `
   --dart-define=GILBIC_API_URL=http://10.0.2.2:8000 `
   --dart-define=GILBIC_LOGIN_PATH=/staff/login `
   --dart-define=GILBIC_LOGOUT_PATH=/staff/logout `
-  --dart-define=GILBIC_COLLECTOR_ROUTE_PATH=/staff/collector-route/today
+  --dart-define=GILBIC_COLLECTOR_ROUTE_PATH=/staff/collector-route/today `
+  --dart-define=GILBIC_PAYMENT_SUBMISSION_PATH=/staff/collections
 ```
 
 Physical phone on the same network:
@@ -73,7 +77,8 @@ Physical phone on the same network:
 flutter run `
   --dart-define=GILBIC_API_URL=http://YOUR-COMPUTER-IP:8000 `
   --dart-define=GILBIC_LOGIN_PATH=/staff/login `
-  --dart-define=GILBIC_COLLECTOR_ROUTE_PATH=/staff/collector-route/today
+  --dart-define=GILBIC_COLLECTOR_ROUTE_PATH=/staff/collector-route/today `
+  --dart-define=GILBIC_PAYMENT_SUBMISSION_PATH=/staff/collections
 ```
 
 Production must use HTTPS. PostgreSQL or Supabase credentials must never be
@@ -93,6 +98,20 @@ remains the only database and business-rule boundary.
 
 The cached route may be older than the official server data. Gilbic therefore
 keeps the offline screen read-only and never recalculates balances locally.
+
+## Collection idempotency boundary
+
+Every future payment, ADV, or PASS draft receives one UUID transaction key. The
+same key is sent as `client_transaction_id`, `Idempotency-Key`, and
+`X-Client-Transaction-Id`.
+
+A retry must reuse that key. A successful replay returns the original server
+transaction and receipt as a duplicate success. Reusing a key with changed data
+must return a conflict. Network loss does not prove the server rejected the
+collection, so generating a replacement key after a timeout is prohibited.
+
+The full request, response, PostgreSQL transaction, duplicate, conflict, and
+rejection rules are documented in `docs/gilbic-mobile-payment-contract.md`.
 
 ## Accepted login response shapes
 
@@ -120,17 +139,18 @@ The compatibility parser also accepts direct fields such as `session_id`,
 
 ## Security rules
 
-- the server decides the role, permissions, route assignment, and balances
+- the server decides role, permissions, route assignment, eligibility, and balances
 - collector routes are filtered by the authenticated collector on the server
 - tokens and the SQLCipher key are stored with secure device storage
-- a route request sends `Authorization: Bearer <token>`
 - mobile code never receives a PostgreSQL password
-- the cached route is deleted for the account during sign-out
-- all future payment writes require idempotency and server-side validation
+- cached routes remain read-only and are removed for the account during sign-out
+- payment retries reuse one idempotency key
+- official balances and receipts come only from FastAPI
+- the payment repository is not exposed until the backend contract is implemented
 
 ## Planned next milestone
 
-1. confirm the live FastAPI endpoint paths against the backend source
-2. define an idempotent payment-submission contract
-3. add an encrypted pending-payment queue only after conflict rules are approved
-4. add synchronization receipts and end-of-day reconciliation
+1. add the FastAPI collection endpoint and PostgreSQL idempotency migration to the repository
+2. verify the live backend against the mobile contract tests
+3. add an encrypted pending-payment queue
+4. add receipt storage, conflict review, and end-of-day reconciliation
