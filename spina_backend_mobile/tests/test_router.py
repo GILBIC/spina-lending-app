@@ -136,21 +136,22 @@ def test_endpoint_accepts_then_replays_original_receipt() -> None:
         headers=request_headers(),
     )
 
-    assert accepted.status_code == 201
+    assert accepted.status_code == 201, accepted.json()
     assert accepted.json()["data"]["status"] == "accepted"
     assert accepted.json()["data"]["receipt_number"] == "OR-00009001"
-    assert replayed.status_code == 200
+    assert replayed.status_code == 200, replayed.json()
     assert replayed.json()["data"]["status"] == "duplicate"
     assert replayed.json()["data"]["receipt_number"] == "OR-00009001"
 
 
 def test_endpoint_rejects_changed_payload_with_same_key() -> None:
     client = build_client()
-    client.post(
+    initial = client.post(
         "/api/mobile/v1/collector/collections",
         json=body(),
         headers=request_headers(),
     )
+    assert initial.status_code == 201, initial.json()
 
     conflict = client.post(
         "/api/mobile/v1/collector/collections",
@@ -158,7 +159,7 @@ def test_endpoint_rejects_changed_payload_with_same_key() -> None:
         headers=request_headers(),
     )
 
-    assert conflict.status_code == 409
+    assert conflict.status_code == 409, conflict.json()
     assert conflict.json()["error"]["code"] == "idempotency_mismatch"
 
 
@@ -173,7 +174,7 @@ def test_endpoint_rejects_unsupported_contract_version() -> None:
         headers=changed_headers,
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 400, response.json()
     assert response.json()["error"]["code"] == "unsupported_contract_version"
 
 
@@ -190,5 +191,5 @@ def test_endpoint_rejects_header_and_body_key_mismatch() -> None:
         headers=request_headers(),
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 400, response.json()
     assert response.json()["error"]["code"] == "idempotency_key_mismatch"
