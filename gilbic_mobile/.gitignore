@@ -1,0 +1,32 @@
+# Dart and Flutter
+.dart_tool/
+.packages
+.pub/
+build/
+coverage/
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Android
+android/.gradle/
+android/local.properties
+**/android/key.properties
+*.jks
+*.keystore
+
+# iOS
+Pods/
+.symlinks/
+Flutter/ephemeral/
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+
+# Local environment
+.env
+.env.*
+!.env.example
