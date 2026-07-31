@@ -71,15 +71,16 @@ class SupabaseAuthAdminClient:
         )
 
     def invite_user(self, *, email: str) -> UUID:
-        payload: dict[str, str] = {"email": email.strip().lower()}
+        params: dict[str, str] = {}
         redirect_to = self._settings.staff_invite_redirect_url.strip()
         if redirect_to:
-            payload["redirect_to"] = redirect_to
+            params["redirect_to"] = redirect_to
         try:
             response = self._client.post(
                 "/auth/v1/invite",
+                params=params,
                 headers=self._headers(),
-                json=payload,
+                json={"email": email.strip().lower()},
             )
         except httpx.HTTPError as exc:
             raise SupabaseAuthError(
