@@ -23,5 +23,6 @@ test = [
 where = ["src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]ntestpaths = ["tests"]
+pythonpath = ["src"]
+testpaths = ["tests"]
 addopts = "-ra"
