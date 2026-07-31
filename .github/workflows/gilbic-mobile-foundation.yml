@@ -30,14 +30,12 @@ jobs:
           persist-credentials: false
 
       - name: Install Flutter 3.44.7
-        shell: powershell
+        shell: cmd
         run: |
-          $flutterRoot = Join-Path $env:RUNNER_TEMP "flutter-3.44.7"
-          if (Test-Path $flutterRoot) {
-            Remove-Item -Recurse -Force $flutterRoot
-          }
-          git clone --depth 1 --branch 3.44.7 https://github.com/flutter/flutter.git $flutterRoot
-          "$flutterRoot\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          set "FLUTTER_ROOT=%RUNNER_TEMP%\flutter-3.44.7"
+          if exist "%FLUTTER_ROOT%" rmdir /s /q "%FLUTTER_ROOT%"
+          git clone --depth 1 --branch 3.44.7 https://github.com/flutter/flutter.git "%FLUTTER_ROOT%" || exit /b 1
+          echo %FLUTTER_ROOT%\bin>>"%GITHUB_PATH%"
 
       - name: Show Flutter version
         shell: cmd
