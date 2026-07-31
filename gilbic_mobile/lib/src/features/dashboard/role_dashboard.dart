@@ -37,7 +37,8 @@ class RoleDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Gilbic foundation preview for ${session.role.label.toLowerCase()} operations.',
+              'Gilbic foundation preview for '
+              '${session.role.label.toLowerCase()} operations.',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 24),
@@ -47,7 +48,7 @@ class RoleDashboard extends StatelessWidget {
               itemCount: modules.length,
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 280,
-                mainAxisExtent: 150,
+                mainAxisExtent: 176,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
               ),
@@ -58,7 +59,9 @@ class RoleDashboard extends StatelessWidget {
                   child: InkWell(
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${module.title} is planned next.')),
+                        SnackBar(
+                          content: Text('${module.title} is planned next.'),
+                        ),
                       );
                     },
                     child: Padding(
@@ -67,16 +70,23 @@ class RoleDashboard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(module.icon, size: 32),
-                          const Spacer(),
+                          const SizedBox(height: 12),
                           Text(
                             module.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            module.description,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.topLeft,
+                              child: Text(
+                                module.description,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -103,30 +113,102 @@ class _DashboardModule {
 List<_DashboardModule> _modulesFor(AppRole role) {
   return switch (role) {
     AppRole.client => const [
-        _DashboardModule('My Loans', 'Balances, schedules, and loan history', Icons.account_balance_wallet),
-        _DashboardModule('Payments', 'Timeline, receipts, and payment proofs', Icons.receipt_long),
-        _DashboardModule('Renewal', 'Submit and monitor renewal requests', Icons.autorenew),
-        _DashboardModule('Support', 'Notices, corrections, and assistance', Icons.support_agent),
+        _DashboardModule(
+          'My Loans',
+          'Balances, schedules, and loan history',
+          Icons.account_balance_wallet,
+        ),
+        _DashboardModule(
+          'Payments',
+          'Timeline, receipts, and payment proofs',
+          Icons.receipt_long,
+        ),
+        _DashboardModule(
+          'Renewal',
+          'Submit and monitor renewal requests',
+          Icons.autorenew,
+        ),
+        _DashboardModule(
+          'Support',
+          'Notices, corrections, and assistance',
+          Icons.support_agent,
+        ),
       ],
     AppRole.collector => const [
-        _DashboardModule('Daily Route', 'Assigned areas and collection clients', Icons.route),
-        _DashboardModule('Record Payment', 'Full, partial, ADV, and PASS entries', Icons.payments),
-        _DashboardModule('Offline Sync', 'Pending transactions and conflict status', Icons.sync),
-        _DashboardModule('End of Day', 'Collection totals and cash accountability', Icons.summarize),
+        _DashboardModule(
+          'Daily Route',
+          'Assigned areas and collection clients',
+          Icons.route,
+        ),
+        _DashboardModule(
+          'Record Payment',
+          'Full, partial, ADV, and PASS entries',
+          Icons.payments,
+        ),
+        _DashboardModule(
+          'Offline Sync',
+          'Pending transactions and conflict status',
+          Icons.sync,
+        ),
+        _DashboardModule(
+          'End of Day',
+          'Collection totals and cash accountability',
+          Icons.summarize,
+        ),
       ],
     AppRole.employee => const [
-        _DashboardModule('Attendance', 'Time records and attendance history', Icons.schedule),
-        _DashboardModule('Payroll', 'Payslips and payroll summaries', Icons.price_check),
-        _DashboardModule('Tasks', 'Assigned work and announcements', Icons.task_alt),
-        _DashboardModule('Requests', 'Leave and internal service requests', Icons.assignment),
+        _DashboardModule(
+          'Attendance',
+          'Time records and attendance history',
+          Icons.schedule,
+        ),
+        _DashboardModule(
+          'Payroll',
+          'Payslips and payroll summaries',
+          Icons.price_check,
+        ),
+        _DashboardModule(
+          'Tasks',
+          'Assigned work and announcements',
+          Icons.task_alt,
+        ),
+        _DashboardModule(
+          'Requests',
+          'Leave and internal service requests',
+          Icons.assignment,
+        ),
       ],
     AppRole.management => const [
-        _DashboardModule('Loan Management', 'Products, approvals, releases, and renewals', Icons.account_balance),
-        _DashboardModule('Loan Operations', 'Collections, corrections, and portfolio monitoring', Icons.insights),
-        _DashboardModule('Financial Accounting', 'Ledgers, journals, and financial reports', Icons.calculate),
-        _DashboardModule('Billing & Taxation', 'Billing records and tax schedules', Icons.request_quote),
-        _DashboardModule('Risk & Compliance', 'KYC, alerts, incidents, and audit reviews', Icons.verified_user),
-        _DashboardModule('Administration', 'Users, roles, devices, and settings', Icons.admin_panel_settings),
+        _DashboardModule(
+          'Loan Management',
+          'Products, approvals, releases, and renewals',
+          Icons.account_balance,
+        ),
+        _DashboardModule(
+          'Loan Operations',
+          'Collections, corrections, and portfolio monitoring',
+          Icons.insights,
+        ),
+        _DashboardModule(
+          'Financial Accounting',
+          'Ledgers, journals, and financial reports',
+          Icons.calculate,
+        ),
+        _DashboardModule(
+          'Billing & Taxation',
+          'Billing records and tax schedules',
+          Icons.request_quote,
+        ),
+        _DashboardModule(
+          'Risk & Compliance',
+          'KYC, alerts, incidents, and audit reviews',
+          Icons.verified_user,
+        ),
+        _DashboardModule(
+          'Administration',
+          'Users, roles, devices, and settings',
+          Icons.admin_panel_settings,
+        ),
       ],
   };
 }
