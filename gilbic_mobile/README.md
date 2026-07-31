@@ -11,14 +11,17 @@ collectors, employees, and management.
 - encrypted token and session storage through platform secure storage
 - bearer-authenticated requests
 - read-only assigned collector route
+- SQLCipher-encrypted SQLite route snapshots
+- offline fallback to the last route saved for the authenticated collector
+- online/offline source label and last-synchronized timestamp
+- per-user cache removal during sign-out
 - compatibility with standard SPINA `{success, message, data}` responses
 - compatibility parsing for the existing direct staff-session response fields
-- Client, Collector, Employee, and Management dashboards
-- configurable API base URL and endpoint paths
-- automated authentication, role, route, and widget tests
+- automated authentication, route, cache, loader, and widget tests
 
 No official loan, payment, accounting, billing, or tax record is written by this
-milestone. The collector route is deliberately read-only.
+milestone. The encrypted database contains only a read-only downloaded route
+snapshot. Payment synchronization remains disabled.
 
 ## Prerequisites
 
@@ -35,8 +38,10 @@ cd gilbic_mobile
 .\tool\bootstrap_platforms.ps1
 ```
 
-The Flutter source is shared between both platforms. Android builds can run on
-Windows. The final iOS build must be compiled on macOS with Xcode.
+The bootstrap command creates the mobile platform folders and applies the
+SQLCipher Android ProGuard keep rule. The Flutter source is shared between both
+platforms. Android builds can run on Windows. The final iOS build must be
+compiled on macOS with Xcode.
 
 ## FastAPI configuration
 
@@ -75,6 +80,20 @@ Production must use HTTPS. PostgreSQL or Supabase credentials must never be
 placed in Flutter. Gilbic sends authenticated requests to FastAPI, and FastAPI
 remains the only database and business-rule boundary.
 
+## Offline route behavior
+
+1. Gilbic requests the assigned route from FastAPI.
+2. A successful response is displayed and saved as an encrypted SQLite snapshot.
+3. The SQLCipher password is generated randomly and stored separately through
+   Android Keystore or Apple Keychain-backed secure storage.
+4. If the next route request fails, Gilbic reads the most recent snapshot for
+   that authenticated user.
+5. Cached data is marked **Offline copy** and shows when it was last synchronized.
+6. Signing out removes that account's route snapshot.
+
+The cached route may be older than the official server data. Gilbic therefore
+keeps the offline screen read-only and never recalculates balances locally.
+
 ## Accepted login response shapes
 
 Preferred standard response:
@@ -101,16 +120,17 @@ The compatibility parser also accepts direct fields such as `session_id`,
 
 ## Security rules
 
-- the server decides the role and permissions
-- collector routes must be filtered by the authenticated collector on the server
-- the token is stored using Android Keystore or Apple Keychain-backed storage
+- the server decides the role, permissions, route assignment, and balances
+- collector routes are filtered by the authenticated collector on the server
+- tokens and the SQLCipher key are stored with secure device storage
 - a route request sends `Authorization: Bearer <token>`
 - mobile code never receives a PostgreSQL password
+- the cached route is deleted for the account during sign-out
 - all future payment writes require idempotency and server-side validation
 
 ## Planned next milestone
 
 1. confirm the live FastAPI endpoint paths against the backend source
-2. add encrypted SQLite route caching
-3. show offline and last-synchronized route status
-4. add idempotent payment synchronization behind server validation
+2. define an idempotent payment-submission contract
+3. add an encrypted pending-payment queue only after conflict rules are approved
+4. add synchronization receipts and end-of-day reconciliation

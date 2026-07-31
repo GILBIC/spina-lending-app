@@ -15,6 +15,18 @@ class CollectorRoute {
   final List<CollectorRouteEntry> entries;
   final double expectedTotal;
 
+  Map<String, Object?> toJson() {
+    return <String, Object?>{
+      'route_date': routeDate?.toIso8601String(),
+      'collector_name': collectorName,
+      'areas': areas,
+      'expected_total': expectedTotal,
+      'entries': entries
+          .map((entry) => entry.toJson())
+          .toList(growable: false),
+    };
+  }
+
   static CollectorRoute fromPayload(Object? value) {
     final outer = stringMap(value);
     final route = stringMap(outer['route']);
@@ -102,6 +114,24 @@ class CollectorRouteEntry {
   final DateTime? lastPaymentDate;
   final DateTime? advanceUntil;
   final String note;
+
+  Map<String, Object?> toJson() {
+    return <String, Object?>{
+      'id': id,
+      'client_id': clientId,
+      'loan_id': loanId,
+      'client_name': clientName,
+      'area': area,
+      'loan_type': loanType,
+      'daily_amount': dailyAmount,
+      'balance': balance,
+      'status': status,
+      'pass_count': passCount,
+      'last_payment_date': lastPaymentDate?.toIso8601String(),
+      'advance_until': advanceUntil?.toIso8601String(),
+      'note': note,
+    };
+  }
 
   static CollectorRouteEntry? fromPayload(Object? value) {
     final data = stringMap(value);
