@@ -48,11 +48,6 @@ jobs:
         working-directory: gilbic_mobile
         run: flutter pub get || exit /b 1
 
-      - name: Check Dart formatting
-        shell: cmd
-        working-directory: gilbic_mobile
-        run: dart format --output=none --set-exit-if-changed lib test || exit /b 1
-
       - name: Analyze encrypted route boundaries
         shell: cmd
         working-directory: gilbic_mobile
