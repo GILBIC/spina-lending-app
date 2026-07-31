@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     api_prefix: str = "/api"
     database_url: str = Field(
-        default="postgresql://postgres:postgres@127.0.0.1:5432/gilbic_dev",
+        default="postgresql://127.0.0.1:5432/gilbic_dev",
         repr=False,
     )
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
