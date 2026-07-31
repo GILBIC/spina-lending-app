@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
-import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart';
+import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 
 class RoleDashboard extends StatelessWidget {
   const RoleDashboard({
     required this.session,
     required this.onSignOut,
-    required this.collectorRouteRepository,
+    required this.collectorRouteLoader,
     super.key,
   });
 
   final UserSession session;
   final Future<void> Function() onSignOut;
-  final CollectorRouteRepository collectorRouteRepository;
+  final CollectorRouteLoader collectorRouteLoader;
 
   void _openModule(BuildContext context, _DashboardModule module) {
     if (session.role == AppRole.collector && module.action == 'daily-route') {
@@ -22,7 +22,7 @@ class RoleDashboard extends StatelessWidget {
         MaterialPageRoute<void>(
           builder: (context) => CollectorRoutePage(
             session: session,
-            repository: collectorRouteRepository,
+            loader: collectorRouteLoader,
           ),
         ),
       );
@@ -159,7 +159,7 @@ List<_DashboardModule> _modulesFor(AppRole role) {
     AppRole.collector => const [
         _DashboardModule(
           'Daily Route',
-          'Assigned areas and collection clients',
+          'Online route with encrypted offline fallback',
           Icons.route,
           action: 'daily-route',
         ),
@@ -170,7 +170,7 @@ List<_DashboardModule> _modulesFor(AppRole role) {
         ),
         _DashboardModule(
           'Offline Sync',
-          'Pending transactions and conflict status',
+          'Cached route status; payment sync remains disabled',
           Icons.sync,
         ),
         _DashboardModule(
