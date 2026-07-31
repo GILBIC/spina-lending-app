@@ -16,6 +16,34 @@ def test_liveness_endpoint() -> None:
     }
 
 
+def test_readiness_endpoint_when_database_is_ready(monkeypatch) -> None:
+    monkeypatch.setattr("gilbic_backend.main.database_ready", lambda settings: True)
+    client = TestClient(create_app())
+
+    response = client.get("/health/ready")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ready",
+        "service": "gilbic-backend",
+        "database": "ok",
+    }
+
+
+def test_readiness_endpoint_when_database_is_unavailable(monkeypatch) -> None:
+    monkeypatch.setattr("gilbic_backend.main.database_ready", lambda settings: False)
+    client = TestClient(create_app())
+
+    response = client.get("/health/ready")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "status": "unavailable",
+        "service": "gilbic-backend",
+        "database": "unavailable",
+    }
+
+
 def test_metadata_endpoint() -> None:
     client = TestClient(create_app())
 
