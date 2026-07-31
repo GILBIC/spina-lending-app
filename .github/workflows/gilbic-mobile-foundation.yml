@@ -1,10 +1,11 @@
-name: Gilbic mobile foundation
+name: Gilbic mobile validation
 
 on:
   pull_request:
     paths:
       - "gilbic_mobile/**"
       - "docs/gilbic-mobile-foundation.md"
+      - "docs/gilbic-mobile-auth-route.md"
       - ".github/workflows/gilbic-mobile-foundation.yml"
   workflow_dispatch:
 
@@ -41,20 +42,20 @@ jobs:
         shell: cmd
         run: flutter --version
 
-      - name: Resolve packages
+      - name: Resolve pinned packages
         shell: cmd
         working-directory: gilbic_mobile
-        run: flutter pub get
+        run: flutter pub get || exit /b 1
 
-      - name: Analyze Gilbic
+      - name: Analyze authenticated mobile boundaries
         shell: cmd
         working-directory: gilbic_mobile
-        run: flutter analyze --fatal-infos
+        run: flutter analyze --fatal-infos || exit /b 1
 
-      - name: Test Gilbic
+      - name: Test authentication and collector route
         shell: cmd
         working-directory: gilbic_mobile
-        run: flutter test
+        run: flutter test || exit /b 1
 
       - name: Require clean committed tree
         shell: cmd
