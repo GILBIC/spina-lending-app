@@ -1,16 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
+import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 
 class RoleDashboard extends StatelessWidget {
   const RoleDashboard({
     required this.session,
     required this.onSignOut,
+    required this.collectorRouteRepository,
     super.key,
   });
 
   final UserSession session;
   final Future<void> Function() onSignOut;
+  final CollectorRouteRepository collectorRouteRepository;
+
+  void _openModule(BuildContext context, _DashboardModule module) {
+    if (session.role == AppRole.collector && module.action == 'daily-route') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => CollectorRoutePage(
+            session: session,
+            repository: collectorRouteRepository,
+          ),
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${module.title} is planned next.')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,8 +59,7 @@ class RoleDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Gilbic foundation preview for '
-              '${session.role.label.toLowerCase()} operations.',
+              '${session.rawRole} account • permissions enforced by SPINA',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 24),
@@ -57,13 +78,8 @@ class RoleDashboard extends StatelessWidget {
                 return Card(
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${module.title} is planned next.'),
-                        ),
-                      );
-                    },
+                    key: module.action == null ? null : Key(module.action!),
+                    onTap: () => _openModule(context, module),
                     child: Padding(
                       padding: const EdgeInsets.all(18),
                       child: Column(
@@ -103,11 +119,17 @@ class RoleDashboard extends StatelessWidget {
 }
 
 class _DashboardModule {
-  const _DashboardModule(this.title, this.description, this.icon);
+  const _DashboardModule(
+    this.title,
+    this.description,
+    this.icon, {
+    this.action,
+  });
 
   final String title;
   final String description;
   final IconData icon;
+  final String? action;
 }
 
 List<_DashboardModule> _modulesFor(AppRole role) {
@@ -139,6 +161,7 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Daily Route',
           'Assigned areas and collection clients',
           Icons.route,
+          action: 'daily-route',
         ),
         _DashboardModule(
           'Record Payment',
