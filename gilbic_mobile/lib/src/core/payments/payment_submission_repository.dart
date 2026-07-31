@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/config/api_config.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/payments/payment_contract_version.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 import 'package:http/http.dart' as http;
 
@@ -49,6 +50,7 @@ class SpinaPaymentSubmissionRepository
           'Idempotency-Key': draft.idempotencyKey,
           'X-Client-Transaction-Id': draft.idempotencyKey,
           'X-Device-Id': draft.deviceId,
+          'X-Gilbic-Contract-Version': PaymentContractVersion.value,
         },
         body: jsonEncode(draft.toJson()),
       );
