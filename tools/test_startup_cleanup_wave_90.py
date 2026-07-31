@@ -14,6 +14,7 @@ from spina_app.features.startup_runtime import install_startup_runtime
 
 DESKTOP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 HEADER = ROOT / "spina_app" / "account_header_presentation.py"
+SHELL = ROOT / "spina_app" / "features" / "application_shell.py"
 
 
 def dotted(node: ast.AST) -> str:
@@ -79,7 +80,11 @@ def check_architecture() -> None:
     )
 
     header = HEADER.read_text(encoding="utf-8")
-    assert "install_startup_runtime(namespace)" in header
+    shell = SHELL.read_text(encoding="utf-8")
+    assert "install_application_shell" in header
+    assert "install_startup_runtime" not in header
+    assert "install_startup_runtime" in shell
+    assert "startup_installer(namespace)" in shell
 
 
 def check_runtime_install_without_legacy_main() -> None:
