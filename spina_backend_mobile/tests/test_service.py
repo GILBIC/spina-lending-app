@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any
@@ -196,14 +197,12 @@ def test_rejects_unregistered_device() -> None:
     assert caught.value.status_code == 403
 
 
-def test_validates_pass_and_advance_shapes() -> None:
+def test_validates_pass_shape() -> None:
     service = CollectionSubmissionService(ThreadSafeExecutor())
-    invalid_pass = CollectionCommand(
-        **{
-            **command().__dict__,
-            "entry_type": CollectionEntryType.PASS,
-            "amount": Decimal("200"),
-        }
+    invalid_pass = replace(
+        command(),
+        entry_type=CollectionEntryType.PASS,
+        amount=Decimal("200"),
     )
 
     with pytest.raises(CollectionProtocolError) as caught:
