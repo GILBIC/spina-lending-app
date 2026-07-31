@@ -18,12 +18,10 @@ def test_invite_uses_server_secret_and_redirect() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
         assert request.url.path == "/auth/v1/invite"
+        assert request.url.params["redirect_to"] == "https://gilbic.example.com/set-password"
         assert request.headers["apikey"] == "sb_secret_test"
         assert request.headers["authorization"] == "Bearer sb_secret_test"
-        assert json.loads(request.content) == {
-            "email": "collector@example.com",
-            "redirect_to": "https://gilbic.example.com/set-password",
-        }
+        assert json.loads(request.content) == {"email": "collector@example.com"}
         return httpx.Response(
             200,
             json={"id": str(INVITED_ID), "email": "collector@example.com"},
