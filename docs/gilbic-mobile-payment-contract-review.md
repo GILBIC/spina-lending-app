@@ -1,8 +1,8 @@
 # Gilbic payment contract review boundary
 
-This milestone is intentionally protocol-only.
+The mobile collection contract and a reusable backend integration package now exist in this repository.
 
-Approved in mobile code:
+## Approved mobile boundary
 
 - request validation for payment, ADV, and PASS drafts
 - UUID version 4 idempotency key generation
@@ -11,14 +11,28 @@ Approved in mobile code:
 - safe retry wording that requires the same transaction key
 - tests protecting the disabled collector-facing payment boundary
 
-Still blocked:
+## Approved backend package boundary
 
-- FastAPI endpoint implementation
-- PostgreSQL idempotency migration
+- dependency-injected FastAPI collection router
+- canonical request hashing
+- PostgreSQL advisory locking and globally unique UUID migration
+- original receipt replay
+- changed-payload conflict handling
+- rollback-safe SPINA posting bridge
+- deterministic concurrent retry tests
+- optional disposable-PostgreSQL integration test
+
+## Still blocked in production
+
+- mounting the package into `C:\SPINA_ONLINE\spina_backend`
+- implementing the live session and registered-device dependencies
+- connecting the bridge to existing SPINA payment, ADV, PASS, balance, receipt, and audit logic
+- applying and verifying the migration in a development database
+- running concurrent submissions against disposable PostgreSQL
 - collector payment form
 - encrypted pending-payment queue
 - automatic retry worker
 - receipt persistence
 - conflict-review workflow
 
-The next write-capable implementation must begin in the FastAPI backend or add that backend source to this repository. Mobile UI wiring is not an acceptable substitute for the missing server transaction and duplicate-protection logic.
+Mobile UI wiring remains prohibited until the live backend items in `gilbic-mobile-payment-contract-checklist.md` are completed.

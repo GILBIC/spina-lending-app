@@ -1,0 +1,145 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date, datetime, timezone
+from decimal import Decimal
+from enum import Enum
+from typing import Any
+from uuid import UUID
+
+
+class CollectionEntryType(str, Enum):
+    PAYMENT = "payment"
+    ADVANCE = "advance"
+    PASS = "pass"
+
+
+class CollectionStatus(str, Enum):
+    ACCEPTED = "accepted"
+    DUPLICATE = "duplicate"
+    CONFLICT = "conflict"
+    REJECTED = "rejected"
+
+
+@dataclass(frozen=True, slots=True)
+class ActorContext:
+    account_id: str
+    device_id: str
+    permissions: frozenset[str]
+
+    def can_create_collection(self) -> bool:
+        return "collection.create" in self.permissions
+
+
+@dataclass(frozen=True, slots=True)
+class CollectionCommand:
+    idempotency_key: UUID
+    route_entry_id: str
+    client_id: str
+    loan_id: str
+    collection_date: date
+    entry_type: CollectionEntryType
+    recorded_at: datetime
+    device_id: str
+    device_sequence: int
+    amount: Decimal | None = None
+    advance_from: date | None = None
+    advance_until: date | None = None
+    note: str = ""
+    route_revision: str | None = None
+
+    def canonical_payload(self) -> dict[str, Any]:
+        return {
+            "client_transaction_id": str(self.idempotency_key),
+            "route_entry_id": self.route_entry_id,
+            "client_id": self.client_id,
+            "loan_id": self.loan_id,
+            "collection_date": self.collection_date.isoformat(),
+            "entry_type": self.entry_type.value,
+            "amount": _decimal_text(self.amount),
+            "advance_from": self.advance_from.isoformat()
+            if self.advance_from
+            else None,
+            "advance_until": self.advance_until.isoformat()
+            if self.advance_until
+            else None,
+            "recorded_at": _utc_isoformat(self.recorded_at),
+            "device_id": self.device_id,
+            "device_sequence": self.device_sequence,
+            "note": self.note.strip(),
+            "route_revision": self.route_revision,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class PostedCollection:
+    server_transaction_id: str
+    receipt_number: str
+    official_balance: Decimal
+    accepted_at: datetime
+    route_revision: str | None = None
+    message: str = "Collection accepted"
+
+    def response_payload(
+        self,
+        *,
+        idempotency_key: UUID,
+        duplicate: bool,
+    ) -> dict[str, Any]:
+        return {
+            "status": (
+                CollectionStatus.DUPLICATE.value
+                if duplicate
+                else CollectionStatus.ACCEPTED.value
+            ),
+            "duplicate": duplicate,
+            "client_transaction_id": str(idempotency_key),
+            "transaction_id": self.server_transaction_id,
+            "receipt_number": self.receipt_number,
+            "official_balance": float(self.official_balance),
+            "accepted_at": _utc_isoformat(self.accepted_at),
+            "route_revision": self.route_revision,
+            "message": (
+                "Previously accepted" if duplicate else self.message
+            ),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class CollectionOutcome:
+    status: CollectionStatus
+    idempotency_key: UUID
+    message: str
+    code: str | None = None
+    posted: PostedCollection | None = None
+
+    def response_payload(self) -> dict[str, Any]:
+        if self.posted is not None:
+            return self.posted.response_payload(
+                idempotency_key=self.idempotency_key,
+                duplicate=self.status is CollectionStatus.DUPLICATE,
+            )
+        return {
+            "status": self.status.value,
+            "client_transaction_id": str(self.idempotency_key),
+            "message": self.message,
+            "code": self.code,
+        }
+
+
+def _decimal_text(value: Decimal | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.normalize()
+    text = format(normalized, "f")
+    return "0" if text in {"-0", ""} else text
+
+
+def _utc_isoformat(value: datetime) -> str:
+    if value.tzinfo is None:
+        raise ValueError("datetime values must include a timezone")
+    return (
+        value.astimezone(timezone.utc)
+        .isoformat(timespec="microseconds")
+        .replace("+00:00", "Z")
+    )
