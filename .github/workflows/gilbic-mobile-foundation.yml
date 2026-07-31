@@ -1,4 +1,4 @@
-name: Gilbic mobile encrypted route validation
+name: Gilbic mobile payment contract validation
 
 on:
   pull_request:
@@ -7,6 +7,7 @@ on:
       - "docs/gilbic-mobile-foundation.md"
       - "docs/gilbic-mobile-auth-route.md"
       - "docs/gilbic-mobile-encrypted-route-cache.md"
+      - "docs/gilbic-mobile-payment-contract.md"
       - ".github/workflows/gilbic-mobile-foundation.yml"
   workflow_dispatch:
 
@@ -48,12 +49,12 @@ jobs:
         working-directory: gilbic_mobile
         run: flutter pub get || exit /b 1
 
-      - name: Analyze encrypted route boundaries
+      - name: Analyze payment contract boundaries
         shell: cmd
         working-directory: gilbic_mobile
         run: flutter analyze --fatal-infos || exit /b 1
 
-      - name: Test authentication and offline route behavior
+      - name: Test authentication cache and payment contract
         shell: cmd
         working-directory: gilbic_mobile
         run: flutter test || exit /b 1
