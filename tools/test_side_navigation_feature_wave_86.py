@@ -14,17 +14,22 @@ from spina_app.features import side_navigation as feature
 
 DESKTOP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 HEADER = ROOT / "spina_app" / "account_header_presentation.py"
+SHELL = ROOT / "spina_app" / "features" / "application_shell.py"
 FEATURE = ROOT / "spina_app" / "features" / "side_navigation.py"
 
 
 def check_architecture() -> None:
     desktop_text = DESKTOP.read_text(encoding="utf-8")
     header_text = HEADER.read_text(encoding="utf-8")
+    shell_text = SHELL.read_text(encoding="utf-8")
     feature_text = FEATURE.read_text(encoding="utf-8")
 
-    assert "install_side_navigation_feature" in header_text
-    assert 'namespace.get("App")' in header_text
-    assert 'namespace.get("_log_suppressed_once")' in header_text
+    assert "install_application_shell" in header_text
+    assert "install_side_navigation_feature" not in header_text
+    assert "install_side_navigation_feature" in shell_text
+    assert "side_navigation_installer(" in shell_text
+    assert 'namespace.get("App")' not in header_text
+    assert 'namespace.get("_log_suppressed_once")' in shell_text
     assert desktop_text.count("_wave46_configure_account_header_dependencies(globals())") == 1
 
     for removed in (
