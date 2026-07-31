@@ -100,13 +100,15 @@ def headers() -> SubmissionHeaders:
 
 
 def prepare_database() -> None:
+    assert DATABASE_URL is not None
     migration = (
         Path(__file__).parents[1]
         / "migrations"
         / "0001_gilbic_collection_idempotency.sql"
     ).read_text(encoding="utf-8")
-    with connection_factory() as connection:
+    with psycopg.connect(DATABASE_URL, autocommit=True) as connection:
         connection.execute(migration)
+    with connection_factory() as connection:
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS mobile.gilbic_test_postings (
