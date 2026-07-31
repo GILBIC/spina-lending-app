@@ -1,0 +1,52 @@
+name: Gilbic mobile foundation
+
+on:
+  pull_request:
+    paths:
+      - "gilbic_mobile/**"
+      - "docs/gilbic-mobile-foundation.md"
+      - ".github/workflows/gilbic-mobile-foundation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out exact pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Install Flutter 3.44.7
+        shell: bash
+        run: |
+          git clone --depth 1 --branch 3.44.7 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Resolve packages
+        working-directory: gilbic_mobile
+        run: flutter pub get
+
+      - name: Analyze Gilbic
+        working-directory: gilbic_mobile
+        run: flutter analyze --fatal-infos
+
+      - name: Test Gilbic
+        working-directory: gilbic_mobile
+        run: flutter test
+
+      - name: Require clean committed tree
+        shell: bash
+        run: |
+          git diff --check
+          git diff --exit-code
+          git diff --cached --exit-code
