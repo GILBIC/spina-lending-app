@@ -14,7 +14,8 @@ if str(ROOT) not in sys.path:
 
 DESKTOP = ROOT / "OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py"
 MODULE_PATH = ROOT / "spina_app" / "account_header_presentation.py"
-FEATURE_PATH = ROOT / "spina_app" / "features" / "accounts.py"
+ACCOUNT_FEATURE_PATH = ROOT / "spina_app" / "features" / "accounts.py"
+SHELL_PATH = ROOT / "spina_app" / "features" / "application_shell.py"
 REFRESH = "_spina_v32_refresh_user_header"
 BUILD = "_spina_v32_build_header"
 EXPECTED_LINES = {REFRESH: 14, BUILD: 12}
@@ -153,7 +154,7 @@ def main() -> None:
     assert desktop_text.count(configure_marker) == 1
     assert desktop_text.index(original_marker) < desktop_text.index(configure_marker)
 
-    feature_text = FEATURE_PATH.read_text(encoding="utf-8")
+    feature_text = ACCOUNT_FEATURE_PATH.read_text(encoding="utf-8")
     feature_tree = ast.parse(feature_text)
     installer = function_defs(feature_tree, "install_accounts_feature")
     assert len(installer) == 1
@@ -168,8 +169,19 @@ def main() -> None:
     configure = function_defs(module_tree, "configure_account_header_dependencies")
     assert len(configure) == 1
     configure_source = ast.get_source_segment(module_text, configure[0]) or ""
-    assert "install_accounts_feature(" in configure_source
-    assert "account_display_name" in configure_source
+    assert "install_application_shell(" in configure_source
+    assert "presentation_namespace=globals()" in configure_source
+    assert "install_accounts_feature" not in configure_source
+
+    shell_text = SHELL_PATH.read_text(encoding="utf-8")
+    shell_tree = ast.parse(shell_text)
+    shell_installer = function_defs(shell_tree, "install_application_shell")
+    assert len(shell_installer) == 1
+    shell_source = ast.get_source_segment(shell_text, shell_installer[0]) or ""
+    assert "install_accounts_feature" in shell_source
+    assert "account_display_name" in shell_source
+    assert "refresh_header=refresh_header" in shell_source
+    assert "build_header=build_header" in shell_source
     print("Wave 46 account header presentation regression passed.")
 
 
