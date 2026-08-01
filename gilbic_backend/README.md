@@ -9,7 +9,7 @@ This is the GitHub-first FastAPI backend for Gilbic.
 - liveness endpoint: `/health/live`
 - database readiness endpoint: `/health/ready`
 - API metadata endpoint: `/api/v1/meta`
-- private `core` and `lending` schemas
+- private `core`, `lending`, and `mobile` schemas
 - users, roles, permissions, devices, clients, loan types, and loans
 - Supabase Auth password/session integration
 - public Client-only registration
@@ -21,6 +21,19 @@ This is the GitHub-first FastAPI backend for Gilbic.
 - management-only account invitation, role, account-status, and device administration
 - immutable audit events for account and device administration actions
 - one-time local/server CLI for bootstrapping the first Management account
+- Supabase/PostgreSQL-backed collector routes
+- atomic and idempotent payment, ADV, and PASS collection writes
+- exact decimal balance and receipt responses
+
+## Local installation
+
+The collection contract is a shared package in this monorepo. Install it before
+the backend:
+
+```bash
+python -m pip install -e ./spina_backend_mobile
+python -m pip install -e './gilbic_backend[test]'
+```
 
 ## Required environment variables
 
@@ -95,7 +108,7 @@ Authorization: Bearer <access-token>
 X-Device-Id: <raw app installation ID>
 ```
 
-FastAPI validates the bearer token with Supabase Auth, loads the authoritative Gilbic account, hashes `X-Device-Id`, and requires a matching active device row for that account. The raw installation ID is never stored in PostgreSQL.
+FastAPI validates the bearer token with Supabase Auth, loads the authoritative Gilbic account, hashes `X-Device-Id`, and requires a matching active device row for that account. The raw installation ID is request-only and is not stored in PostgreSQL collection records.
 
 Enforcement rules:
 
@@ -105,9 +118,87 @@ Enforcement rules:
 - a locked or inactive account is rejected before permission checks
 - successful protected requests update the device's `last_seen_at`
 - refresh requests also require an active registered device, preventing a revoked installation from extending its session
-- new collector route, collection, employee, client, and management endpoints must use the shared device guard
+- collector route, collection, employee, client, and management endpoints use the shared device guard
 
 Logout remains available with a valid bearer session so a client can remove its local session even if device state changed.
+
+## Collector route
+
+```text
+GET /api/v1/collector/routes/today
+GET /api/mobile/v1/collector/routes/today
+```
+
+The route is filtered by server-side area assignments. Each loan entry includes an optimistic `route_revision` plus clear readiness fields:
+
+- `can_collect_mobile`
+- `can_enter_payment`
+- `collection_message`
+
+A collector can still see a loan that requires SPINA desktop handling. The API marks it as **Needs review** or **Desktop only** instead of silently removing it from the route.
+
+## Official mobile collections
+
+```text
+POST /api/v1/collector/collections
+POST /api/mobile/v1/collector/collections
+```
+
+Required headers:
+
+```text
+Authorization: Bearer <access-token>
+Idempotency-Key: <one UUID for the draft>
+X-Client-Transaction-Id: <the same UUID>
+X-Device-Id: <registered installation ID>
+X-Gilbic-Contract-Version: gilbic-collection-v1
+```
+
+One PostgreSQL transaction contains all official effects:
+
+- payment, ADV, or PASS transaction
+- authoritative `loan_collection_state` update
+- receipt number
+- loan status change to `paid` when the balance reaches zero
+- audit event
+- replayable idempotency result
+
+If any step fails, all writes roll back together. Retrying the same request and UUID returns the original receipt without creating another payment. Reusing the UUID for changed data returns a conflict.
+
+Additional safeguards:
+
+- the current route revision must match the locked loan state
+- one device sequence number can be used only once
+- only one PASS can be recorded for a loan and date
+- PASS is rejected when that date is already covered by ADV
+- an amount above the official remaining balance is rejected
+- only reconciled loan state can be changed
+- raw installation IDs are not persisted
+- money is returned as exact two-decimal strings
+
+### Enabling a loan type safely
+
+Mobile writes are disabled by default. A loan type must explicitly include:
+
+```json
+{
+  "mobile_collections_enabled": true,
+  "mobile_balance_mode": "direct_remaining_balance"
+}
+```
+
+`direct_remaining_balance` means the reconciled server balance can safely be reduced by the accepted payment amount. Do not enable this for a loan type whose payment must be split between principal, interest, penalties, or another schedule unless that allocation has already been verified.
+
+For 7x7, the fixed daily interest rule remains protected. Mobile payment and ADV should stay disabled until the dedicated 7x7 allocation strategy is implemented and tested against SPINA desktop results. PASS can be enabled only after the loan type itself is approved for mobile use.
+
+User-facing outcomes use plain language:
+
+- **Payment saved.**
+- **ADV saved.**
+- **PASS saved.**
+- **Already recorded. No duplicate payment was created.**
+- **Refresh the route and review the entry.**
+- **Use the SPINA desktop app for this loan type.**
 
 ## Management administration routes
 
@@ -140,9 +231,10 @@ Account safety rules:
 
 ## Next order
 
-1. Add the collector route API against the new database and use the shared device guard.
-2. Integrate the idempotent collection package in `spina_backend_mobile/` with the same authenticated device context.
-3. Add client, employee, and management mobile screens.
-4. Add accounting, billing, taxation, risk, and compliance APIs.
+1. Build the collector collection form with clear Payment, ADV, and PASS modes.
+2. Add an encrypted offline outbox that reuses the original idempotency key and device sequence.
+3. Implement and verify the dedicated 7x7 payment allocation strategy.
+4. Add client, employee, and management mobile screens.
+5. Add accounting, billing, taxation, risk, and compliance APIs.
 
 The old local FastAPI project is not required for this backend. Features can be migrated into this backend one by one after review.
