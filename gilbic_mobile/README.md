@@ -12,6 +12,8 @@ collectors, employees, and management.
 - permanent app-generated installation ID stored separately from the login session
 - Android/iOS platform and app-version metadata sent during login
 - bearer-authenticated requests
+- `X-Device-Id` sent on protected collector requests
+- immediate server rejection after an installation is revoked
 - read-only assigned collector route
 - SQLCipher-encrypted SQLite route snapshots
 - offline fallback to the last route saved for the authenticated collector
@@ -94,8 +96,12 @@ hardware identifier as its device key.
 4. Login sends the installation ID, platform (`android` or `ios`), and app
    version to FastAPI.
 5. FastAPI hashes the installation ID before storing it in `core.devices`.
-6. Management can later revoke a registered installation without changing the
-   user's password or affecting another approved device.
+6. Protected requests send the same raw installation ID in `X-Device-Id`.
+7. FastAPI hashes the request value and requires the device row to remain active.
+8. Management can revoke a registered installation without changing the user's
+   password or affecting another approved device.
+9. A revoked installation is rejected on its next protected request even when
+   its bearer access token has not expired.
 
 Reinstalling the application may create a new installation ID depending on the
 platform's secure-storage lifecycle. The server therefore treats devices as
@@ -103,7 +109,8 @@ revocable installation registrations, not as permanent hardware identities.
 
 ## Offline route behavior
 
-1. Gilbic requests the assigned route from FastAPI.
+1. Gilbic requests the assigned route from FastAPI with its bearer token and
+   `X-Device-Id` installation header.
 2. A successful response is displayed and saved as an encrypted SQLite snapshot.
 3. The SQLCipher password is generated randomly and stored separately through
    Android Keystore or Apple Keychain-backed secure storage.
@@ -125,6 +132,10 @@ A retry must reuse that key. A successful replay returns the original server
 transaction and receipt as a duplicate success. Reusing a key with changed data
 must return a conflict. Network loss does not prove the server rejected the
 collection, so generating a replacement key after a timeout is prohibited.
+
+The collection request also sends `X-Device-Id`. The integrated FastAPI actor
+dependency must validate that the installation is still active before the
+idempotent posting transaction begins.
 
 The full request, response, PostgreSQL transaction, duplicate, conflict, and
 rejection rules are documented in `docs/gilbic-mobile-payment-contract.md`.
@@ -157,6 +168,8 @@ migration to the new backend is in progress.
 - the server decides roles, permissions, route assignment, eligibility, and balances
 - public registration cannot choose Collector, Employee, or Management roles
 - collector routes are filtered by the authenticated collector on the server
+- protected requests carry both the bearer token and app installation ID
+- revoked installations are rejected without waiting for access-token expiry
 - tokens, installation ID, and SQLCipher key use secure device storage
 - mobile code never receives a PostgreSQL password or Supabase secret key
 - device identifiers are app-generated and server-stored only as hashes
@@ -167,8 +180,8 @@ migration to the new backend is in progress.
 
 ## Planned next milestone
 
-1. add management-only account provisioning and role assignment
-2. add management device listing and revocation
-3. build the collector route API against the new Supabase/PostgreSQL schema
-4. integrate the idempotent collection package with the new backend
-5. verify live duplicate concurrency before enabling the payment form
+1. build the collector route API against the new Supabase/PostgreSQL schema
+2. use the shared authenticated-device guard on the route actor
+3. integrate the idempotent collection package with the same actor boundary
+4. verify live duplicate concurrency before enabling the payment form
+5. add client, employee, and management mobile screens
