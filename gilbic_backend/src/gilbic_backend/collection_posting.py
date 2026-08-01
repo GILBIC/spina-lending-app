@@ -52,6 +52,11 @@ class PostgresCollectionPostingBridge:
                 "This route entry no longer matches the loan. Refresh the route.",
                 code="route_entry_changed",
             )
+        if not (command.route_revision or "").strip():
+            raise CollectionRejected(
+                "Refresh the route before saving this entry.",
+                code="route_revision_required",
+            )
 
         with connection.cursor(row_factory=dict_row) as cursor:
             self._lock_device_sequence(
@@ -139,7 +144,7 @@ class PostgresCollectionPostingBridge:
                 )
 
             settings = loan["settings"] if isinstance(loan["settings"], dict) else {}
-            if settings.get("mobile_collections_enabled") is not True:
+            if not self._setting_enabled(settings.get("mobile_collections_enabled")):
                 raise CollectionRejected(
                     "Mobile collection is not enabled for this loan type yet. "
                     "Please use the SPINA desktop app.",
@@ -150,7 +155,7 @@ class PostgresCollectionPostingBridge:
                 loan_id=loan_id,
                 state_version=int(loan["state_version"]),
             )
-            if command.route_revision and command.route_revision != current_revision:
+            if command.route_revision != current_revision:
                 raise CollectionConflict(
                     "The loan changed after this route was loaded. Refresh the route "
                     "and review the entry.",
@@ -251,6 +256,7 @@ class PostgresCollectionPostingBridge:
                 "loan_type_code": str(loan["loan_type_code"]),
                 "loan_type_name": str(loan["loan_type_name"]),
                 "calculation_mode": str(loan["calculation_mode"]),
+                "mobile_balance_mode": str(settings.get("mobile_balance_mode") or ""),
                 "state_version_before": int(loan["state_version"]),
                 "state_version_after": next_version,
             }
@@ -365,6 +371,12 @@ class PostgresCollectionPostingBridge:
         return Decimal(value).quantize(MONEY, rounding=ROUND_HALF_UP)
 
     @staticmethod
+    def _setting_enabled(value: object) -> bool:
+        if value is True:
+            return True
+        return str(value or "").strip().lower() in {"true", "1", "yes", "on"}
+
+    @staticmethod
     def _route_revision(*, loan_id: UUID, state_version: int) -> str:
         return f"loan:{loan_id}:v{state_version}"
 
@@ -477,7 +489,8 @@ class PostgresCollectionPostingBridge:
                 "This client is not assigned to your route. Refresh the route.",
                 code="route_not_assigned",
             )
-        if command.collection_date < loan["last_payment_date"] if loan["last_payment_date"] else False:
+        last_payment_date: date | None = loan["last_payment_date"]
+        if last_payment_date is not None and command.collection_date < last_payment_date:
             raise CollectionRejected(
                 "This date is earlier than the latest recorded payment. Refresh the "
                 "route and review the entry.",
