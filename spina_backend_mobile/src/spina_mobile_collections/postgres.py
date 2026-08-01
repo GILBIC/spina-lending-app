@@ -176,6 +176,11 @@ class PostgresCollectionExecutor:
         request_hash: str,
         posted: PostedCollection,
     ) -> None:
+        stored_payload = {
+            key: value
+            for key, value in canonical_payload.items()
+            if key != "device_id"
+        }
         cursor.execute(
             """
             INSERT INTO mobile.gilbic_collection_idempotency (
@@ -201,7 +206,7 @@ class PostgresCollectionExecutor:
                 actor.account_id,
                 actor.storage_device_id,
                 request_hash,
-                Jsonb(canonical_payload),
+                Jsonb(stored_payload),
                 posted.server_transaction_id,
                 posted.receipt_number,
                 posted.official_balance,
