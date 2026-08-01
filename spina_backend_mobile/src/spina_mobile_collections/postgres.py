@@ -18,7 +18,7 @@ from .service import CollectionConflict, CollectionRejected
 
 
 class CollectionPostingBridge(Protocol):
-    """Calls the existing SPINA business rules using the supplied transaction."""
+    """Apply official SPINA collection rules inside the supplied transaction."""
 
     def post_collection(
         self,
@@ -138,13 +138,16 @@ class PostgresCollectionExecutor:
     ) -> CollectionOutcome:
         same_owner = (
             str(existing["collector_account_id"]) == actor.account_id
-            and str(existing["registered_device_id"]) == actor.device_id
+            and str(existing["registered_device_id"]) == actor.storage_device_id
         )
         if not same_owner or existing["canonical_request_hash"] != request_hash:
             return CollectionOutcome(
                 status=CollectionStatus.CONFLICT,
                 idempotency_key=command.idempotency_key,
-                message="This transaction key was already used for different collection data.",
+                message=(
+                    "This collection number was already used for different data. "
+                    "Refresh the route and review the entry."
+                ),
                 code="idempotency_mismatch",
             )
 
@@ -154,12 +157,12 @@ class PostgresCollectionExecutor:
             official_balance=existing["official_balance"],
             accepted_at=existing["accepted_at"],
             route_revision=existing["route_revision"],
-            message="Previously accepted",
+            message="Already recorded. No duplicate payment was created.",
         )
         return CollectionOutcome(
             status=CollectionStatus.DUPLICATE,
             idempotency_key=command.idempotency_key,
-            message="Previously accepted",
+            message="Already recorded. No duplicate payment was created.",
             posted=posted,
         )
 
@@ -173,6 +176,11 @@ class PostgresCollectionExecutor:
         request_hash: str,
         posted: PostedCollection,
     ) -> None:
+        stored_payload = {
+            key: value
+            for key, value in canonical_payload.items()
+            if key != "device_id"
+        }
         cursor.execute(
             """
             INSERT INTO mobile.gilbic_collection_idempotency (
@@ -196,9 +204,9 @@ class PostgresCollectionExecutor:
             (
                 command.idempotency_key,
                 actor.account_id,
-                actor.device_id,
+                actor.storage_device_id,
                 request_hash,
-                Jsonb(canonical_payload),
+                Jsonb(stored_payload),
                 posted.server_transaction_id,
                 posted.receipt_number,
                 posted.official_balance,

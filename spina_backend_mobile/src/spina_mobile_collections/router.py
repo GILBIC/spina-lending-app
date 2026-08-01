@@ -68,16 +68,21 @@ def create_collection_router(
     get_actor: ActorDependency,
     get_service: ServiceDependency,
 ) -> APIRouter:
-    """Create the mobile collection route using live SPINA dependencies.
+    """Create the official payment, ADV, and PASS endpoints.
 
-    ``get_actor`` must authenticate the bearer session and resolve the registered
-    collector device. ``get_service`` must return a service backed by
-    ``PostgresCollectionExecutor`` and the existing SPINA posting bridge.
+    ``get_actor`` authenticates the bearer session and resolves the active
+    registered device. ``get_service`` supplies the PostgreSQL idempotency
+    executor and official SPINA posting bridge.
     """
 
-    router = APIRouter(prefix="/api/mobile/v1/collector", tags=["Gilbic"])
+    router = APIRouter(tags=["collector collections"])
 
-    @router.post("/collections", response_class=JSONResponse)
+    @router.post("/api/v1/collector/collections", response_class=JSONResponse)
+    @router.post(
+        "/api/mobile/v1/collector/collections",
+        response_class=JSONResponse,
+        include_in_schema=False,
+    )
     def submit_collection(
         body: CollectionSubmissionBody,
         idempotency_key: UUID = Header(alias="Idempotency-Key"),

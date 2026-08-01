@@ -26,9 +26,22 @@ class ActorContext:
     account_id: str
     device_id: str
     permissions: frozenset[str]
+    registered_device_id: str | None = None
 
     def can_create_collection(self) -> bool:
         return "collection.create" in self.permissions
+
+    @property
+    def storage_device_id(self) -> str:
+        """Return the server-side device record ID when available.
+
+        ``device_id`` is the raw installation identifier supplied by the app and
+        is used only to bind the request to the authenticated installation.
+        PostgreSQL persistence should use ``registered_device_id`` so the raw
+        installation identifier is never written to the database.
+        """
+
+        return (self.registered_device_id or self.device_id).strip()
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,7 +91,7 @@ class PostedCollection:
     official_balance: Decimal
     accepted_at: datetime
     route_revision: str | None = None
-    message: str = "Collection accepted"
+    message: str = "Payment saved."
 
     def response_payload(
         self,
@@ -96,11 +109,13 @@ class PostedCollection:
             "client_transaction_id": str(idempotency_key),
             "transaction_id": self.server_transaction_id,
             "receipt_number": self.receipt_number,
-            "official_balance": float(self.official_balance),
+            "official_balance": _money_text(self.official_balance),
             "accepted_at": _utc_isoformat(self.accepted_at),
             "route_revision": self.route_revision,
             "message": (
-                "Previously accepted" if duplicate else self.message
+                "Already recorded. No duplicate payment was created."
+                if duplicate
+                else self.message
             ),
         }
 
@@ -133,6 +148,10 @@ def _decimal_text(value: Decimal | None) -> str | None:
     normalized = value.normalize()
     text = format(normalized, "f")
     return "0" if text in {"-0", ""} else text
+
+
+def _money_text(value: Decimal) -> str:
+    return format(value.quantize(Decimal("0.01")), "f")
 
 
 def _utc_isoformat(value: datetime) -> str:

@@ -49,6 +49,7 @@ class AccountContext:
     roles: tuple[str, ...]
     permissions: tuple[str, ...]
     device_registered: bool = False
+    registered_device_id: UUID | None = None
 
     @property
     def primary_role_code(self) -> str:
@@ -168,6 +169,7 @@ class PostgresAccountRepository:
                         )
 
                     registered = False
+                    registered_device_id: UUID | None = None
                     if device_identifier:
                         normalized_platform = (platform or "").strip().lower()
                         if normalized_platform not in {"android", "ios", "web", "desktop"}:
@@ -186,6 +188,7 @@ class PostgresAccountRepository:
                         if device and device[1] == "revoked":
                             raise DeviceRevoked("This device has been revoked.")
                         if device:
+                            registered_device_id = device[0]
                             cursor.execute(
                                 """
                                 update core.devices
@@ -195,7 +198,7 @@ class PostgresAccountRepository:
                                     last_seen_at = now()
                                 where id = %s
                                 """,
-                                (normalized_platform, app_version, device[0]),
+                                (normalized_platform, app_version, registered_device_id),
                             )
                         else:
                             cursor.execute(
@@ -204,6 +207,7 @@ class PostgresAccountRepository:
                                     user_id, device_identifier_hash, platform,
                                     app_version, status, last_seen_at
                                 ) values (%s, %s, %s, %s, 'active', now())
+                                returning id
                                 """,
                                 (
                                     user_id,
@@ -212,6 +216,7 @@ class PostgresAccountRepository:
                                     app_version,
                                 ),
                             )
+                            registered_device_id = cursor.fetchone()[0]
                         registered = True
 
                 context = self._load_context(connection, auth_user_id)
@@ -225,6 +230,7 @@ class PostgresAccountRepository:
                     roles=context.roles,
                     permissions=context.permissions,
                     device_registered=registered,
+                    registered_device_id=registered_device_id,
                 )
 
     def get_context(self, auth_user_id: UUID) -> AccountContext:
@@ -282,6 +288,7 @@ class PostgresAccountRepository:
                     roles=context.roles,
                     permissions=context.permissions,
                     device_registered=True,
+                    registered_device_id=device[0],
                 )
 
     @staticmethod

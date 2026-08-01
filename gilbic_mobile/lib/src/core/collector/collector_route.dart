@@ -99,6 +99,10 @@ class CollectorRouteEntry {
     this.lastPaymentDate,
     this.advanceUntil,
     this.note = '',
+    this.routeRevision,
+    this.canCollectMobile = true,
+    this.canEnterPayment = true,
+    this.collectionMessage = '',
   });
 
   final String id;
@@ -114,6 +118,10 @@ class CollectorRouteEntry {
   final DateTime? lastPaymentDate;
   final DateTime? advanceUntil;
   final String note;
+  final String? routeRevision;
+  final bool canCollectMobile;
+  final bool canEnterPayment;
+  final String collectionMessage;
 
   Map<String, Object?> toJson() {
     return <String, Object?>{
@@ -130,6 +138,10 @@ class CollectorRouteEntry {
       'last_payment_date': lastPaymentDate?.toIso8601String(),
       'advance_until': advanceUntil?.toIso8601String(),
       'note': note,
+      'route_revision': routeRevision,
+      'can_collect_mobile': canCollectMobile,
+      'can_enter_payment': canEnterPayment,
+      'collection_message': collectionMessage,
     };
   }
 
@@ -236,6 +248,37 @@ class CollectorRouteEntry {
             data['tomorrow_note'],
           ]) ??
           '',
+      routeRevision: firstNonEmptyString(<Object?>[
+        data['route_revision'],
+        loan['route_revision'],
+      ]),
+      canCollectMobile: _boolValue(
+        data['can_collect_mobile'],
+        fallback: true,
+      ),
+      canEnterPayment: _boolValue(
+        data['can_enter_payment'],
+        fallback: true,
+      ),
+      collectionMessage: firstNonEmptyString(<Object?>[
+            data['collection_message'],
+            data['status_message'],
+          ]) ??
+          '',
     );
   }
+}
+
+bool _boolValue(Object? value, {required bool fallback}) {
+  if (value is bool) {
+    return value;
+  }
+  final normalized = value?.toString().trim().toLowerCase();
+  if (normalized == 'true' || normalized == '1' || normalized == 'yes') {
+    return true;
+  }
+  if (normalized == 'false' || normalized == '0' || normalized == 'no') {
+    return false;
+  }
+  return fallback;
 }

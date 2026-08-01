@@ -1,14 +1,15 @@
 # Gilbic mobile collection submission contract
 
-This document defines the first write-capable boundary between Gilbic and the SPINA FastAPI backend. It does not enable a payment screen or an offline write queue. It defines the protocol that must be implemented and verified before those features are exposed.
+This document defines the write-capable boundary between Gilbic and the SPINA FastAPI backend. The backend route, PostgreSQL transaction, device enforcement, and idempotency storage are implemented. The visual payment form and encrypted offline outbox remain disabled until their user experience is complete.
 
-## Endpoint
+## Endpoints
 
 ```text
+POST /api/v1/collector/collections
 POST /api/mobile/v1/collector/collections
 ```
 
-The path is configurable in Flutter through `GILBIC_PAYMENT_SUBMISSION_PATH`.
+The mobile path is configurable in Flutter through `GILBIC_PAYMENT_SUBMISSION_PATH`.
 
 ## Required authentication and headers
 
@@ -16,30 +17,31 @@ The path is configurable in Flutter through `GILBIC_PAYMENT_SUBMISSION_PATH`.
 Authorization: Bearer <session token>
 Idempotency-Key: <client transaction ID>
 X-Client-Transaction-Id: <same client transaction ID>
-X-Device-Id: <registered device ID>
+X-Device-Id: <raw installation ID registered during login>
+X-Gilbic-Contract-Version: gilbic-collection-v1
 Content-Type: application/json
 ```
 
-The backend must derive the collector account from the authenticated session. Flutter must not submit a trusted collector ID, role, permission, balance, interest calculation, or receipt number.
+The backend derives the collector account and internal device record from the authenticated session and device header. Flutter must not submit a trusted collector ID, role, permission, balance, interest calculation, or receipt number. The raw installation ID is used to bind the request and is not stored in official collection records.
 
 ## Request body
 
 ```json
 {
   "client_transaction_id": "6cb93829-dccd-4d43-a25c-a1f31859cc1b",
-  "route_entry_id": "route-entry-304",
-  "client_id": "client-304",
-  "loan_id": "loan-815",
-  "collection_date": "2026-07-31",
+  "route_entry_id": "44444444-4444-4444-8444-444444444444",
+  "client_id": "33333333-3333-4333-8333-333333333333",
+  "loan_id": "44444444-4444-4444-8444-444444444444",
+  "collection_date": "2026-08-01",
   "entry_type": "payment",
-  "amount": 200.0,
+  "amount": "200.00",
   "advance_from": null,
   "advance_until": null,
-  "recorded_at": "2026-07-31T05:15:00.000Z",
-  "device_id": "collector-phone-15",
-  "device_sequence": 45,
+  "recorded_at": "2026-08-01T02:29:00.000Z",
+  "device_id": "gilbic-installation-one",
+  "device_sequence": 8,
   "note": "Paid at home",
-  "route_revision": "route-v3"
+  "route_revision": "loan:44444444-4444-4444-8444-444444444444:v7"
 }
 ```
 
@@ -49,65 +51,106 @@ Supported `entry_type` values:
 - `advance`: requires an amount greater than zero plus `advance_from` and `advance_until`.
 - `pass`: contains no amount and no ADV dates.
 
-The server must validate all SPINA rules. Flutter validation only prevents clearly incomplete requests.
+The server validates all official SPINA rules. Flutter validation only prevents clearly incomplete requests.
+
+## Route revision
+
+Every route entry contains a revision derived from the locked loan state:
+
+```text
+loan:<loan UUID>:v<state version>
+```
+
+The request must include that exact value. A changed balance, PASS count, ADV state, or other official update increments the version. A stale revision returns HTTP `409` and tells the collector to refresh the route.
 
 ## Idempotency rule
 
 `client_transaction_id`, `Idempotency-Key`, and `X-Client-Transaction-Id` must contain the same UUID value.
 
-The client creates this key once when the collection draft is created. Every retry of that same collection must reuse the same key.
+The client creates this key once when the collection draft is created. Every retry of that same collection reuses the same key.
 
-The backend must enforce a unique database constraint on the idempotency key. Recommended behavior:
+The backend behavior is:
 
 1. No matching key exists: validate and post the collection in one database transaction.
 2. Matching key exists with the same canonical request payload: return the original successful transaction and receipt with `duplicate: true`.
-3. Matching key exists with a different payload: return HTTP `409` with code `idempotency_mismatch`.
+3. Matching key exists with a different payload or owner: return HTTP `409` with code `idempotency_mismatch`.
 4. The client loses the response after the server commits: the retry returns the original receipt instead of creating a second payment.
 
-The server should store a canonical request hash with the idempotency record so mismatched reuse can be detected.
+The server stores a SHA-256 canonical request hash. The stored request payload omits the raw installation ID.
+
+## Device sequence
+
+Each installation keeps a positive, increasing `device_sequence`. The pair `(registered_device_id, device_sequence)` is unique in PostgreSQL. Reusing a sequence with a new transaction key returns `device_sequence_reused`.
+
+The future encrypted outbox must preserve both the original idempotency key and device sequence across every retry.
 
 ## Server transaction
 
-A successful submission must be atomic. Within one PostgreSQL transaction, FastAPI should:
+A successful submission is atomic. Within one PostgreSQL transaction, FastAPI:
 
-1. Authenticate the account and verify `collection.create` permission.
-2. Verify the registered device and collector assignment.
-3. Lock or otherwise protect the targeted loan and collection-day records.
-4. Verify the route entry, route revision, collection date, and day-close state.
-5. Recalculate eligibility, amount rules, ADV coverage, PASS rules, and official balance using SPINA server logic.
-6. Create the payment, ADV, or PASS record.
-7. Update the official loan balance and related collection records.
-8. Create the receipt and audit log.
-9. Save the idempotency result and canonical request hash.
-10. Commit all records together.
+1. Authenticates the account and verifies `collection.create` permission.
+2. Resolves and rechecks the active registered device.
+3. Locks the idempotency key, device sequence, loan, and collection date.
+4. Verifies collector area assignment, client status, loan status, route entry, and route revision.
+5. Requires a reconciled `loan_collection_state`.
+6. Requires the loan type to be explicitly approved for mobile collection.
+7. Applies payment, ADV, or PASS rules to the authoritative state.
+8. Creates the immutable collection transaction and receipt.
+9. Updates balance, PASS count, ADV coverage, and state version.
+10. Marks the loan `paid` when the balance reaches zero.
+11. Creates the audit event.
+12. Saves the replayable idempotency result and canonical request hash.
+13. Commits all records together.
 
-A partial payment record without its balance update, receipt, audit record, and idempotency result must never be committed.
+A partial transaction without its balance update, receipt, audit record, and idempotency result is never committed.
+
+## Loan readiness
+
+Mobile writes are disabled by default. A loan must have:
+
+```text
+loan_collection_state.is_reconciled = true
+```
+
+The loan type must explicitly contain:
+
+```json
+{
+  "mobile_collections_enabled": true,
+  "mobile_balance_mode": "direct_remaining_balance"
+}
+```
+
+`direct_remaining_balance` is required for payment and ADV. It means subtracting the accepted amount from the reconciled official balance is the verified rule for that loan type.
+
+Do not enable direct balance mode for a loan requiring principal/interest/penalty allocation unless that allocator is already verified. The 7x7 fixed daily interest rule remains disabled for mobile payment and ADV until its dedicated allocation strategy is implemented and tested against SPINA desktop results.
 
 ## Accepted response
 
-Recommended status: HTTP `201`.
+Status: HTTP `201`.
 
 ```json
 {
   "success": true,
   "data": {
     "status": "accepted",
+    "duplicate": false,
     "client_transaction_id": "6cb93829-dccd-4d43-a25c-a1f31859cc1b",
-    "transaction_id": "collection-9001",
-    "receipt_number": "OR-00009001",
-    "official_balance": 4600.0,
-    "accepted_at": "2026-07-31T05:16:02Z",
-    "route_revision": "route-v4",
-    "message": "Collection accepted"
+    "transaction_id": "55555555-5555-4555-8555-555555555555",
+    "receipt_number": "GBC-20260801-00000001",
+    "official_balance": "800.00",
+    "accepted_at": "2026-08-01T02:30:00.000000Z",
+    "route_revision": "loan:44444444-4444-4444-8444-444444444444:v8",
+    "message": "Payment saved."
   }
 }
 ```
 
-The mobile app must display the official server balance and receipt. It must not subtract the payment locally and treat that result as official.
+Money is returned as an exact two-decimal string. The mobile app displays the official server balance and receipt. It never subtracts the payment locally and treats that result as official.
 
 ## Duplicate replay response
 
-Recommended status: HTTP `200`.
+Status: HTTP `200`.
 
 ```json
 {
@@ -116,113 +159,105 @@ Recommended status: HTTP `200`.
     "status": "duplicate",
     "duplicate": true,
     "client_transaction_id": "6cb93829-dccd-4d43-a25c-a1f31859cc1b",
-    "transaction_id": "collection-9001",
-    "receipt_number": "OR-00009001",
-    "official_balance": 4600.0,
-    "accepted_at": "2026-07-31T05:16:02Z",
-    "message": "Previously accepted"
+    "transaction_id": "55555555-5555-4555-8555-555555555555",
+    "receipt_number": "GBC-20260801-00000001",
+    "official_balance": "800.00",
+    "accepted_at": "2026-08-01T02:30:00.000000Z",
+    "route_revision": "loan:44444444-4444-4444-8444-444444444444:v8",
+    "message": "Already recorded. No duplicate payment was created."
   }
 }
 ```
 
-A duplicate replay is a final success. The mobile app should remove the matching pending item only after saving this returned receipt information.
+A duplicate replay is a final success. The mobile app saves and displays the original receipt, then removes the matching pending item.
 
 ## Conflict response
 
-Recommended status: HTTP `409`.
+Status: HTTP `409`.
 
-```json
-{
-  "success": false,
-  "message": "The route changed after download.",
-  "error": {
-    "code": "stale_route"
-  },
-  "route_revision": "route-v4"
-}
-```
-
-Recommended conflict codes:
+Important conflict codes:
 
 - `idempotency_mismatch`
-- `stale_route`
-- `already_collected`
-- `day_closed`
-- `route_closed`
-- `client_not_assigned`
-- `collector_changed`
-- `advance_overlap`
-- `server_state_changed`
+- `route_revision_changed`
+- `device_sequence_reused`
+- `pass_already_recorded`
 
-Conflicts must remain in a review state. The mobile app must not silently create a replacement transaction with a new idempotency key.
+Conflicts remain in a review state. The mobile app does not silently create a replacement transaction with a new idempotency key.
 
 ## Business-rule rejection
 
-Recommended status: HTTP `422`.
+Status: HTTP `422` unless authentication or permission rules require another status.
 
-Recommended codes:
+Important codes:
 
-- `loan_closed`
+- `route_revision_required`
 - `loan_not_found`
-- `invalid_amount`
-- `invalid_advance_range`
-- `invalid_pass`
-- `collection_date_not_allowed`
-- `permission_denied`
+- `loan_not_active`
+- `client_not_active`
+- `route_not_assigned`
+- `loan_state_not_reconciled`
+- `loan_type_mobile_disabled`
+- `loan_calculation_not_ready`
+- `amount_exceeds_balance`
+- `advance_already_covers_date`
+- `collection_date_out_of_order`
 - `device_not_registered`
 
-Rejected entries require correction or staff review and must not be retried forever without a change.
+The API returns plain-language messages such as **Refresh the route**, **Use the SPINA desktop app**, or **This date is already covered by ADV**. Raw database errors and stack traces are not user-facing messages.
 
 ## Authentication and server errors
 
 - HTTP `401`: session expired or invalid.
-- HTTP `403`: authenticated account lacks permission.
+- HTTP `403`: account, permission, or device access is not valid.
 - HTTP `429`: temporary rate limit; retry the same key later.
-- HTTP `500` or `503`: uncertain server outcome; query or retry using the same key.
+- HTTP `500` or `503`: uncertain server outcome; retry using the same key.
 - Network timeout or lost connection: uncertain outcome; retry using the same key.
 
 A timeout does not prove failure. The server may already have committed the collection.
 
 ## Database boundary
 
-The official PostgreSQL database should contain an idempotency table or equivalent fields with at least:
+Official records are stored in:
 
 ```text
-idempotency_key          unique
-collector_account_id
-registered_device_id
-canonical_request_hash
-request_payload
-result_status
-server_transaction_id
-receipt_number
-official_balance
-accepted_at
-created_at
-updated_at
+lending.collection_transactions
+lending.loan_collection_state
+mobile.gilbic_collection_idempotency
+core.audit_logs
 ```
 
-The idempotency row and collection result must be written inside the same transaction.
+Important unique boundaries include:
 
-## Mobile boundary in this milestone
+```text
+idempotency_key
+registered_device_id + device_sequence
+loan_id + collection_date for PASS
+receipt_number
+```
 
-Implemented now:
+The idempotency row and official collection result are written inside the same transaction.
+
+## Current mobile boundary
+
+Implemented:
 
 - typed payment, ADV, and PASS request models
 - secure UUID version 4 idempotency key generator
 - configurable FastAPI endpoint
-- bearer-authenticated repository boundary
+- bearer and active-device authorization
+- route revisions and readiness metadata
 - accepted, duplicate, conflict, and rejected result models
-- request and response compatibility tests
-- network-error rule requiring reuse of the same key
+- atomic PostgreSQL collection, balance, receipt, audit, and idempotency writes
+- network-error rule requiring reuse of the same key and sequence
+- backend and contract tests
 
-Not implemented yet:
+Still disabled in the app:
 
-- collector payment form
-- encrypted pending-payment queue
+- collector collection form
+- encrypted pending-collection outbox
 - automatic synchronization
 - receipt screen
 - conflict-review screen
-- backend FastAPI route or PostgreSQL migration
+- dedicated 7x7 payment allocator
 
-The next milestone may add the encrypted pending-payment queue only after the live FastAPI backend implements this contract or its exact equivalent.
+The next milestone is the simple collector form, followed by the encrypted outbox.

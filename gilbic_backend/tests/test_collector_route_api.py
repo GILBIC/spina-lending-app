@@ -107,6 +107,10 @@ class FakeRoutes:
                     advance_until=None,
                     status="Pass",
                     note="Call before visiting",
+                    state_version=7,
+                    is_reconciled=True,
+                    mobile_collections_enabled=True,
+                    mobile_balance_mode="direct_remaining_balance",
                 ),
             ),
         )
@@ -158,6 +162,10 @@ def test_collector_receives_only_server_assigned_route() -> None:
             "advance_until": None,
             "status": "Pass",
             "note": "Call before visiting",
+            "route_revision": f"loan:{LOAN_ID}:v7",
+            "can_collect_mobile": True,
+            "can_enter_payment": True,
+            "collection_message": "Ready for mobile collection.",
         }
     ]
     assert accounts.seen_device == "gilbic-installation-one"

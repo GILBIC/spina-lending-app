@@ -15,6 +15,7 @@ collectors, employees, and management.
 - `X-Device-Id` sent on protected collector requests
 - immediate server rejection after an installation is revoked
 - read-only assigned collector route
+- route revision and clear mobile-readiness information per loan
 - SQLCipher-encrypted SQLite route snapshots
 - offline fallback to the last route saved for the authenticated collector
 - online/offline source label and last-synchronized timestamp
@@ -22,12 +23,10 @@ collectors, employees, and management.
 - typed payment, ADV, and PASS submission contract
 - secure UUID version 4 idempotency keys
 - accepted, duplicate, conflict, and rejected server-result models
-- configurable collection-submission endpoint
+- live FastAPI/PostgreSQL collection endpoint with atomic balance, receipt, audit, and idempotency writes
 - automated authentication, device-identity, route, cache, payment-contract, and widget tests
 
-The collector payment form and offline payment queue remain disabled. Official
-collection writes will only be enabled after the backend collection integration
-and live PostgreSQL concurrency checks are complete.
+The visual collector payment form and encrypted offline outbox remain disabled. The backend write boundary now exists, but the form will be enabled only after the collector experience clearly prevents unsupported loan types and makes retries easy to understand.
 
 ## Prerequisites
 
@@ -96,21 +95,35 @@ hardware identifier as its device key.
 4. Login sends the installation ID, platform (`android` or `ios`), and app
    version to FastAPI.
 5. FastAPI hashes the installation ID before storing it in `core.devices`.
-6. Protected requests send the same raw installation ID in `X-Device-Id`.
-7. FastAPI hashes the request value and requires the device row to remain active.
-8. Management can revoke a registered installation without changing the user's
-   password or affecting another approved device.
-9. A revoked installation is rejected on its next protected request even when
-   its bearer access token has not expired.
+6. Protected requests send the raw installation ID only as `X-Device-Id`.
+7. Collection records store the server-side device record ID, not the raw installation ID.
+8. Management can revoke a registered installation without changing the user's password or affecting another approved device.
 
 Reinstalling the application may create a new installation ID depending on the
 platform's secure-storage lifecycle. The server therefore treats devices as
 revocable installation registrations, not as permanent hardware identities.
 
+## Collector route clarity
+
+Each route entry can now include:
+
+```text
+route_revision
+can_collect_mobile
+can_enter_payment
+collection_message
+```
+
+These fields keep the screen simple:
+
+- **Ready for mobile collection** means the official state is reconciled.
+- **Checking against SPINA records** means the collector should not enter a mobile transaction yet.
+- **Use SPINA desktop** means the loan type or calculation is not enabled for mobile.
+- A route entry remains visible even when mobile collection is unavailable, so the collector does not accidentally miss the client.
+
 ## Offline route behavior
 
-1. Gilbic requests the assigned route from FastAPI with its bearer token and
-   `X-Device-Id` installation header.
+1. Gilbic requests the assigned route from FastAPI.
 2. A successful response is displayed and saved as an encrypted SQLite snapshot.
 3. The SQLCipher password is generated randomly and stored separately through
    Android Keystore or Apple Keychain-backed secure storage.
@@ -120,7 +133,7 @@ revocable installation registrations, not as permanent hardware identities.
 6. Signing out removes that account's route snapshot.
 
 The cached route may be older than the official server data. Gilbic therefore
-keeps the offline screen read-only and never recalculates balances locally.
+keeps the offline screen read-only until the encrypted outbox is implemented. A stale `route_revision` is rejected by the server with a clear instruction to refresh.
 
 ## Collection idempotency boundary
 
@@ -130,15 +143,33 @@ same key is sent as `client_transaction_id`, `Idempotency-Key`, and
 
 A retry must reuse that key. A successful replay returns the original server
 transaction and receipt as a duplicate success. Reusing a key with changed data
-must return a conflict. Network loss does not prove the server rejected the
+returns a conflict. Network loss does not prove the server rejected the
 collection, so generating a replacement key after a timeout is prohibited.
 
-The collection request also sends `X-Device-Id`. The integrated FastAPI actor
-dependency must validate that the installation is still active before the
-idempotent posting transaction begins.
+The server also requires:
+
+- the latest route revision
+- an active registered device
+- an unused device sequence number
+- a reconciled loan state
+- a server-approved loan calculation mode
 
 The full request, response, PostgreSQL transaction, duplicate, conflict, and
 rejection rules are documented in `docs/gilbic-mobile-payment-contract.md`.
+
+## Collector-friendly results
+
+The app should translate server results into short actions:
+
+- **Payment saved** — show the receipt and new balance.
+- **ADV saved** — show the covered-through date and receipt.
+- **PASS saved** — return to the route.
+- **Already recorded** — show the original receipt; do not ask the collector to enter it again.
+- **Refresh route** — reload the loan before retrying.
+- **Use SPINA desktop** — do not expose technical calculation errors.
+- **Device access removed** — sign out and ask Management to review the device.
+
+Raw PostgreSQL, stack-trace, or API wording must never be shown to collectors.
 
 ## Accepted login response shape
 
@@ -165,23 +196,21 @@ migration to the new backend is in progress.
 
 ## Security rules
 
-- the server decides roles, permissions, route assignment, eligibility, and balances
+- the server decides roles, permissions, route assignment, eligibility, balances, and receipts
 - public registration cannot choose Collector, Employee, or Management roles
 - collector routes are filtered by the authenticated collector on the server
-- protected requests carry both the bearer token and app installation ID
-- revoked installations are rejected without waiting for access-token expiry
 - tokens, installation ID, and SQLCipher key use secure device storage
 - mobile code never receives a PostgreSQL password or Supabase secret key
-- device identifiers are app-generated and server-stored only as hashes
+- device identifiers are app-generated and server-stored only as hashes or internal record IDs
 - cached routes remain read-only and are removed for the account during sign-out
 - payment retries reuse one idempotency key
 - official balances and receipts come only from FastAPI
-- the payment repository is not exposed until backend integration is verified
+- unsupported calculation rules stay disabled instead of using a guessed formula
 
 ## Planned next milestone
 
-1. build the collector route API against the new Supabase/PostgreSQL schema
-2. use the shared authenticated-device guard on the route actor
-3. integrate the idempotent collection package with the same actor boundary
-4. verify live duplicate concurrency before enabling the payment form
+1. build the simple Payment / ADV / PASS collector form
+2. show route readiness and plain-language explanations in the form
+3. add an encrypted offline outbox that preserves idempotency keys and device sequence numbers
+4. implement and verify the dedicated 7x7 payment allocator
 5. add client, employee, and management mobile screens

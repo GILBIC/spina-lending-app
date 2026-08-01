@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "gilbic_backend/**"
+      - "spina_backend_mobile/**"
       - ".github/workflows/gilbic-database-foundation.yml"
   workflow_dispatch:
 
@@ -40,13 +41,14 @@ jobs:
           set "VENV=%RUNNER_TEMP%\gilbic-database-foundation-venv"
           if exist "%VENV%" rmdir /s /q "%VENV%"
           python -m venv "%VENV%" || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile" || exit /b 1
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\gilbic_backend[test]" || exit /b 1
 
       - name: Compile backend
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\gilbic-database-foundation-venv"
-          "%VENV%\Scripts\python.exe" -m compileall -q gilbic_backend\src || exit /b 1
+          "%VENV%\Scripts\python.exe" -m compileall -q gilbic_backend\src spina_backend_mobile\src || exit /b 1
 
       - name: Run backend tests
         shell: cmd

@@ -25,6 +25,32 @@ class CollectorRouteEntryRecord:
     advance_until: date | None
     status: str
     note: str
+    state_version: int = 0
+    is_reconciled: bool = False
+    mobile_collections_enabled: bool = False
+    mobile_balance_mode: str = ""
+
+    @property
+    def route_revision(self) -> str:
+        return f"loan:{self.loan_id}:v{self.state_version}"
+
+    @property
+    def can_collect_mobile(self) -> bool:
+        return self.is_reconciled and self.mobile_collections_enabled
+
+    @property
+    def can_enter_payment(self) -> bool:
+        return self.can_collect_mobile and self.mobile_balance_mode == "direct_remaining_balance"
+
+    @property
+    def collection_message(self) -> str:
+        if not self.is_reconciled:
+            return "Checking this loan against SPINA records."
+        if not self.mobile_collections_enabled:
+            return "Use the SPINA desktop app for this loan type."
+        if not self.can_enter_payment:
+            return "PASS is available, but payments and ADV still use SPINA desktop."
+        return "Ready for mobile collection."
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,7 +71,8 @@ class PostgresCollectorRouteRepository:
     Area ownership is server-side in ``lending.collector_area_assignments``.
     Balance, pass, advance, and note values are read from the authoritative
     ``lending.loan_collection_state`` row. Before imported loans are exposed to
-    mobile, that state must be reconciled with the desktop source of truth.
+    mobile collection, that state must be reconciled with the desktop source of
+    truth.
     """
 
     def get_today_route(
@@ -85,13 +112,23 @@ class PostgresCollectorRouteRepository:
                         s.last_payment_date,
                         s.advance_until,
                         case
+                            when coalesce(s.is_reconciled, false) = false
+                                then 'Needs review'
+                            when lower(coalesce(lt.settings->>'mobile_collections_enabled', ''))
+                                 not in ('true', '1', 'yes', 'on')
+                                then 'Desktop only'
                             when s.advance_until is not null and s.advance_until >= %s
                                 then 'Advance'
                             when coalesce(s.pass_count, 0) > 0
                                 then 'Pass'
                             else 'Pending'
                         end as collection_status,
-                        coalesce(s.note, '') as note
+                        coalesce(s.note, '') as note,
+                        coalesce(s.state_version, 0) as state_version,
+                        coalesce(s.is_reconciled, false) as is_reconciled,
+                        lower(coalesce(lt.settings->>'mobile_collections_enabled', ''))
+                            in ('true', '1', 'yes', 'on') as mobile_collections_enabled,
+                        coalesce(lt.settings->>'mobile_balance_mode', '') as mobile_balance_mode
                     from lending.collector_area_assignments a
                     join lending.clients c
                       on lower(btrim(c.area)) = lower(btrim(a.area))
@@ -132,6 +169,10 @@ class PostgresCollectorRouteRepository:
                 advance_until=row["advance_until"],
                 status=row["collection_status"],
                 note=row["note"],
+                state_version=int(row["state_version"]),
+                is_reconciled=bool(row["is_reconciled"]),
+                mobile_collections_enabled=bool(row["mobile_collections_enabled"]),
+                mobile_balance_mode=str(row["mobile_balance_mode"] or ""),
             )
             for row in rows
         )
