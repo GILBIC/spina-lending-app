@@ -30,7 +30,10 @@ void main() {
 
     expect(find.text('200.00'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('submit-collection-entry')));
+    final submitButton = find.byKey(const Key('submit-collection-entry'));
+    await tester.ensureVisible(submitButton);
+    await tester.pumpAndSettle();
+    await tester.tap(submitButton);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('confirm-collection-entry')));
     await tester.pumpAndSettle();
@@ -38,7 +41,9 @@ void main() {
     expect(find.text('Retry same entry'), findsOneWidget);
     expect(find.textContaining('could not reach'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('submit-collection-entry')));
+    await tester.ensureVisible(submitButton);
+    await tester.pumpAndSettle();
+    await tester.tap(submitButton);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('confirm-collection-entry')));
     await tester.pumpAndSettle();
