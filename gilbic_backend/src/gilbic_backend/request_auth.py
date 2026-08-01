@@ -31,10 +31,16 @@ def active_device_context(
     device_identifier: str | None,
     accounts: PostgresAccountRepository,
 ) -> AccountContext:
+    normalized_device = (device_identifier or "").strip()
+    if not normalized_device:
+        raise HTTPException(status_code=400, detail="X-Device-Id is required.")
+    if len(normalized_device) > 300:
+        raise HTTPException(status_code=400, detail="X-Device-Id is invalid.")
+
     try:
         return accounts.get_context_for_device(
             auth_user_id=auth_user_id,
-            device_identifier=device_identifier,
+            device_identifier=normalized_device,
         )
     except DeviceRequired as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
