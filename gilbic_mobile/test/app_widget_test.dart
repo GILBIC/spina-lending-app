@@ -46,7 +46,14 @@ void main() {
     expect(find.textContaining('Last synchronized'), findsOneWidget);
     expect(find.text('Ana Client'), findsOneWidget);
     expect(find.textContaining('Expected collection'), findsOneWidget);
-    expect(find.textContaining('Read-only route'), findsOneWidget);
+
+    final footer = find.textContaining('Read-only route');
+    await tester.dragUntilVisible(
+      footer,
+      find.byType(ListView),
+      const Offset(0, -250),
+    );
+    expect(footer, findsOneWidget);
   });
 
   testWidgets('labels cached route data as an offline copy', (tester) async {
