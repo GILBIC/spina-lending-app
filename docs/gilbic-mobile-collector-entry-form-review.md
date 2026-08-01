@@ -1,0 +1,21 @@
+# Collector Entry Form Review Checklist
+
+- [ ] Flutter 3.44.7 dependency resolution succeeds.
+- [ ] `flutter analyze --fatal-infos` succeeds.
+- [ ] Full `flutter test` suite succeeds.
+- [ ] Online Regular loan shows the entry button.
+- [ ] Offline route copy disables the entry button.
+- [ ] Missing `collection.create` disables the entry button.
+- [ ] Missing route revision disables the entry button.
+- [ ] Server-disabled loan shows `collection_message`.
+- [ ] 7x7 loan cannot open or submit the entry form.
+- [ ] Payment defaults to the server daily amount.
+- [ ] ADV requires valid coverage dates.
+- [ ] PASS sends no amount or ADV dates.
+- [ ] Confirmation appears before the first write.
+- [ ] Network uncertainty shows **Retry same entry**.
+- [ ] Retry reuses the same idempotency key and device sequence.
+- [ ] Editing after uncertainty creates a new draft on the next submission.
+- [ ] Accepted and duplicate results show the server receipt and balance.
+- [ ] Successful completion refreshes the route.
+- [ ] No automatic retry worker or offline payment outbox is enabled.
