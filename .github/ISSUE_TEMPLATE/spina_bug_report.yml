@@ -1,0 +1,181 @@
+name: SPINA cross-layer bug report
+description: Report a Desktop, Mobile, API, database, authentication, CI, or deployment problem with debugging evidence.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form to trace the problem to the correct layer. Do not include passwords, access or refresh tokens, database URLs, Supabase secret keys, raw installation IDs, or unrelated private client documents.
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where is the problem visible?
+      options:
+        - SPINA Desktop
+        - Gilbic Mobile
+        - FastAPI backend
+        - PostgreSQL / Supabase database
+        - Supabase Auth
+        - GitHub Actions / self-hosted runner
+        - Deployment / network
+        - Earlier local Client or Staff Portal
+        - Multiple layers / unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: feature
+    attributes:
+      label: Affected feature
+      options:
+        - Startup / application shell
+        - Login / session / account
+        - Role / permission / device access
+        - Dashboard
+        - Data Bank / payment grid
+        - Clients / renewal / linking
+        - Reports / statement / PDF
+        - Collector Route
+        - Payment / ADV / PASS
+        - Offline route / synchronization
+        - 7x7 calculation
+        - Cash Control
+        - Backup / restore
+        - Management administration
+        - CI / architecture map
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: timestamp
+    attributes:
+      label: Date and time of the problem
+      description: Include timezone. Asia/Manila is preferred.
+      placeholder: "2026-08-01 11:45 Asia/Manila"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Build, branch, commit, or pull request
+      description: Provide the exact version when known.
+      placeholder: "main @ abc1234, PR #225, or app version 1.0.0+12"
+    validations:
+      required: true
+
+  - type: input
+    id: role
+    attributes:
+      label: Account role and safe identity
+      description: Include role and internal username/user ID only. Do not include a password or token.
+      placeholder: "Collector, username collector.one, user ID ..."
+
+  - type: dropdown
+    id: connectivity
+    attributes:
+      label: Connection state
+      options:
+        - Online
+        - Mobile showed Offline copy
+        - Intermittent / timed out
+        - Unknown / not applicable
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Include the exact user-visible message and what you were trying to do.
+      placeholder: |
+        I opened Daily Route, selected Ana Client, entered a Payment, and tapped Confirm.
+        The app showed: "Refresh the route and review the entry."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Sign in as ...
+        2. Open ...
+        3. Select ...
+        4. Enter ...
+        5. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+
+  - type: textarea
+    id: identifiers
+    attributes:
+      label: Safe trace identifiers
+      description: Include only identifiers relevant to this event. Redact secrets and unrelated client data.
+      placeholder: |
+        Endpoint / HTTP status / safe error code:
+        Client ID:
+        Loan ID:
+        Route revision:
+        Idempotency or client transaction UUID:
+        Device sequence:
+        Server transaction ID:
+        Receipt number:
+        Workflow run/job ID:
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized logs, screenshots, or database evidence
+      description: Remove tokens, passwords, database URLs, secret keys, and raw installation IDs.
+      render: shell
+
+  - type: textarea
+    id: comparison
+    attributes:
+      label: Comparison and scope
+      placeholder: |
+        Does it happen after refresh or restart?
+        Does it happen on another approved device/account?
+        Does Desktop show the same balance/state?
+        Can it be reproduced with disposable test data?
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical - data loss, duplicate money, unauthorized access, or production unavailable
+        - High - official write blocked or materially wrong
+        - Medium - feature broken with workaround
+        - Low - presentation, wording, or minor inconvenience
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I removed passwords, tokens, database credentials, Supabase secrets, and raw installation IDs.
+          required: true
+        - label: I did not use destructive production data solely to reproduce this bug.
+          required: true
