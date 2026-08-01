@@ -12,7 +12,8 @@ def test_collection_migration_preserves_atomic_and_unique_boundaries() -> None:
     assert "lending.collection_transactions" in migration
     assert "mobile.gilbic_collection_idempotency" in migration
     assert "registered_device_id UUID" in migration
-    assert "UNIQUE (idempotency_key)" in migration
+    assert "idempotency_key UUID NOT NULL UNIQUE" in migration
+    assert "idempotency_key UUID PRIMARY KEY" in migration
     assert "lending_collection_device_sequence_uidx" in migration
     assert "lending_collection_one_pass_per_day_uidx" in migration
     assert "is_reconciled BOOLEAN NOT NULL DEFAULT false" in migration
