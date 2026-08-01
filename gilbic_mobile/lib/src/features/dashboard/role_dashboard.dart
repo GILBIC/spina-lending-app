@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
+import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
+import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 
 class RoleDashboard extends StatelessWidget {
@@ -9,20 +12,31 @@ class RoleDashboard extends StatelessWidget {
     required this.session,
     required this.onSignOut,
     required this.collectorRouteLoader,
+    required this.paymentSubmissionRepository,
+    required this.deviceIdentityProvider,
+    required this.collectionDeviceSequence,
     super.key,
   });
 
   final UserSession session;
   final Future<void> Function() onSignOut;
   final CollectorRouteLoader collectorRouteLoader;
+  final PaymentSubmissionRepository paymentSubmissionRepository;
+  final DeviceIdentityProvider deviceIdentityProvider;
+  final CollectionDeviceSequence collectionDeviceSequence;
 
   void _openModule(BuildContext context, _DashboardModule module) {
-    if (session.role == AppRole.collector && module.action == 'daily-route') {
+    final collectorRouteAction =
+        module.action == 'daily-route' || module.action == 'record-payment';
+    if (session.role == AppRole.collector && collectorRouteAction) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => CollectorRoutePage(
             session: session,
             loader: collectorRouteLoader,
+            paymentRepository: paymentSubmissionRepository,
+            deviceIdentityProvider: deviceIdentityProvider,
+            deviceSequence: collectionDeviceSequence,
           ),
         ),
       );
@@ -37,7 +51,6 @@ class RoleDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final modules = _modulesFor(session.role);
-
     return Scaffold(
       appBar: AppBar(
         title: Text('${session.role.label} Dashboard'),
@@ -119,12 +132,7 @@ class RoleDashboard extends StatelessWidget {
 }
 
 class _DashboardModule {
-  const _DashboardModule(
-    this.title,
-    this.description,
-    this.icon, {
-    this.action,
-  });
+  const _DashboardModule(this.title, this.description, this.icon, {this.action});
 
   final String title;
   final String description;
@@ -165,12 +173,13 @@ List<_DashboardModule> _modulesFor(AppRole role) {
         ),
         _DashboardModule(
           'Record Payment',
-          'Full, partial, ADV, and PASS entries',
+          'Open the route and record Payment, ADV, or PASS',
           Icons.payments,
+          action: 'record-payment',
         ),
         _DashboardModule(
           'Offline Sync',
-          'Cached route status; payment sync remains disabled',
+          'Route cache only; collection outbox remains disabled',
           Icons.sync,
         ),
         _DashboardModule(
