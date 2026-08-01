@@ -109,7 +109,7 @@ class PostedCollection:
             "client_transaction_id": str(idempotency_key),
             "transaction_id": self.server_transaction_id,
             "receipt_number": self.receipt_number,
-            "official_balance": _decimal_text(self.official_balance),
+            "official_balance": _money_text(self.official_balance),
             "accepted_at": _utc_isoformat(self.accepted_at),
             "route_revision": self.route_revision,
             "message": (
@@ -148,6 +148,10 @@ def _decimal_text(value: Decimal | None) -> str | None:
     normalized = value.normalize()
     text = format(normalized, "f")
     return "0" if text in {"-0", ""} else text
+
+
+def _money_text(value: Decimal) -> str:
+    return format(value.quantize(Decimal("0.01")), "f")
 
 
 def _utc_isoformat(value: datetime) -> str:
