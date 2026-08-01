@@ -26,6 +26,14 @@ class AccountDisabled(AccountError):
     code = "account_disabled"
 
 
+class DeviceRequired(AccountError):
+    code = "device_required"
+
+
+class DeviceNotRegistered(AccountError):
+    code = "device_not_registered"
+
+
 class DeviceRevoked(AccountError):
     code = "device_revoked"
 
@@ -222,6 +230,59 @@ class PostgresAccountRepository:
     def get_context(self, auth_user_id: UUID) -> AccountContext:
         with open_connection() as connection:
             return self._load_context(connection, auth_user_id)
+
+    def get_context_for_device(
+        self,
+        *,
+        auth_user_id: UUID,
+        device_identifier: str | None,
+    ) -> AccountContext:
+        normalized_device = (device_identifier or "").strip()
+        if not normalized_device:
+            raise DeviceRequired("X-Device-Id is required.")
+        if len(normalized_device) > 300:
+            raise DeviceRequired("X-Device-Id is invalid.")
+
+        with open_connection() as connection:
+            with connection.transaction():
+                context = self._load_context(connection, auth_user_id)
+                if context.status != "active":
+                    raise AccountDisabled("This Gilbic account is not active.")
+
+                identifier_hash = self.device_hash(normalized_device)
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        select id, status
+                        from core.devices
+                        where user_id = %s and device_identifier_hash = %s
+                        for update
+                        """,
+                        (context.user_id, identifier_hash),
+                    )
+                    device = cursor.fetchone()
+                    if not device:
+                        raise DeviceNotRegistered(
+                            "This device is not registered. Sign in again on this device."
+                        )
+                    if device[1] != "active":
+                        raise DeviceRevoked("This device has been revoked.")
+                    cursor.execute(
+                        "update core.devices set last_seen_at = now() where id = %s",
+                        (device[0],),
+                    )
+
+                return AccountContext(
+                    user_id=context.user_id,
+                    auth_user_id=context.auth_user_id,
+                    username=context.username,
+                    email=context.email,
+                    full_name=context.full_name,
+                    status=context.status,
+                    roles=context.roles,
+                    permissions=context.permissions,
+                    device_registered=True,
+                )
 
     @staticmethod
     def _load_context(connection, auth_user_id: UUID) -> AccountContext:
