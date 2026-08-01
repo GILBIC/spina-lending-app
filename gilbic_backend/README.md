@@ -16,6 +16,7 @@ This is the GitHub-first FastAPI backend for Gilbic.
 - username-or-email login compatibility for the Flutter app
 - server-side roles and permissions
 - device registration and revocation records
+- per-request active-device enforcement for authenticated APIs
 - access-token refresh, `/me`, and logout endpoints
 - management-only account invitation, role, account-status, and device administration
 - immutable audit events for account and device administration actions
@@ -85,9 +86,32 @@ Public registration always creates a `client` role. Collector, Employee, and Man
 
 Supabase Auth owns password hashing and authentication sessions. The private Gilbic `core.users`, `core.user_roles`, `core.role_permissions`, and `core.devices` tables remain authoritative for application access.
 
+## Per-request device enforcement
+
+Login registers or refreshes an app installation in `core.devices`. Authenticated protected requests must then send both:
+
+```text
+Authorization: Bearer <access-token>
+X-Device-Id: <raw app installation ID>
+```
+
+FastAPI validates the bearer token with Supabase Auth, loads the authoritative Gilbic account, hashes `X-Device-Id`, and requires a matching active device row for that account. The raw installation ID is never stored in PostgreSQL.
+
+Enforcement rules:
+
+- a missing or malformed device header is rejected
+- an unknown installation must sign in before using protected APIs
+- a revoked installation is rejected immediately even when its access token has not expired
+- a locked or inactive account is rejected before permission checks
+- successful protected requests update the device's `last_seen_at`
+- refresh requests also require an active registered device, preventing a revoked installation from extending its session
+- new collector route, collection, employee, client, and management endpoints must use the shared device guard
+
+Logout remains available with a valid bearer session so a client can remove its local session even if device state changed.
+
 ## Management administration routes
 
-These routes require an authenticated account with the appropriate server-side management permission.
+These routes require an authenticated active device and the appropriate server-side management permission.
 
 ```text
 GET   /api/v1/management/accounts
@@ -116,11 +140,9 @@ Account safety rules:
 
 ## Next order
 
-1. Bootstrap the first Management account in the development environment.
-2. Add per-request device enforcement so a revoked installation is rejected without waiting for the next login.
-3. Add the collector route API against the new database.
-4. Integrate the idempotent collection package in `spina_backend_mobile/`.
-5. Add client, employee, and management mobile screens.
-6. Add accounting, billing, taxation, risk, and compliance APIs.
+1. Add the collector route API against the new database and use the shared device guard.
+2. Integrate the idempotent collection package in `spina_backend_mobile/` with the same authenticated device context.
+3. Add client, employee, and management mobile screens.
+4. Add accounting, billing, taxation, risk, and compliance APIs.
 
 The old local FastAPI project is not required for this backend. Features can be migrated into this backend one by one after review.
