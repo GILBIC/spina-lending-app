@@ -24,7 +24,7 @@ flowchart LR
 
 ## Current critical path
 
-1. **PR #225:** exact-head Flutter validation passed in GitHub Actions run #30; complete the real emulator or phone acceptance test.
+1. **PR #225:** exact-head Flutter validation passed in GitHub Actions run #31; complete the real emulator or phone acceptance test.
 2. Merge only after the online Regular-loan flow, confirmation, safe retry, official receipt/balance display, offline read-only behavior, and 7x7 block are manually verified.
 3. Build the encrypted offline outbox while preserving the original idempotency key and device sequence.
 4. Reconcile legacy loan state and implement the dedicated 7x7 allocator before enabling 7x7 mobile payments or ADV.
@@ -48,7 +48,7 @@ flowchart LR
 | Collector route mobile | **Complete** | Server-assigned route, readiness fields, route revision, SQLCipher offline snapshot, online/offline labeling | Legacy loan-state reconciliation coverage |
 | Collection contract | **Complete** | Typed Payment/ADV/PASS drafts, UUID idempotency, conflict/duplicate/rejection parsing, retry rules | Offline outbox not yet implemented |
 | Official collection backend | **Complete** | Atomic PostgreSQL transaction, receipt, balance/state update, audit, duplicate replay, locks, stale-route and device-sequence protection | Production migration/reconciliation and monitored rollout |
-| Collector entry form | **In progress** | Implemented on draft PR #225 with online-only safety gates, safe manual retry, and exact-head Flutter CI passing in run #30 | Real emulator or phone acceptance test remains pending; PR is unmerged |
+| Collector entry form | **In progress** | Implemented on draft PR #225 with online-only safety gates, safe manual retry, and exact-head Flutter CI passing in run #31 | Real emulator or phone acceptance test remains pending; PR is unmerged |
 | Encrypted collection outbox | **Planned** | Contract rules already require preservation of key and sequence | Design encrypted queue, conflict handling, user-visible pending states, and retry worker |
 | 7x7 mobile allocation | **Blocked** | Desktop 7x7 rule is protected and understood | Implement server allocator, reconcile test cases, prove parity, then selectively enable |
 | Client mobile experience | **Planned** | Role shell exists | Loans, statements, receipts, renewal, notifications, profile/support APIs and screens |
@@ -84,7 +84,7 @@ flowchart LR
 | #222 | Active-device enforcement on protected APIs | Merged |
 | #223 | Supabase/PostgreSQL collector route API | Merged |
 | #224 | Atomic and user-friendly official mobile collections | Merged |
-| #225 | Guarded collector Payment/ADV/PASS form | **Open draft; CI passed; manual acceptance pending** |
+| #225 | Guarded collector Payment/ADV/PASS form | **Open draft; exact-head CI passed; manual acceptance pending** |
 
 ## Known blockers and intentional safety gates
 
@@ -122,7 +122,7 @@ The old local backend and portals are not fully represented in the GitHub-first 
 
 Definition of done:
 
-- PR #225 checks pass on the exact head. **Passed in run #30.**
+- PR #225 checks pass on the exact head. **Passed in run #31.**
 - Payment, ADV, PASS, duplicate replay, stale route, rejected entry, revoked device, and network uncertainty are tested.
 - Regular-loan test entries match Desktop balances and receipts.
 - 7x7 remains blocked.
