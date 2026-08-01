@@ -51,6 +51,10 @@ class FakeConnection:
                     "advance_until": None,
                     "collection_status": "Pass",
                     "note": "Morning visit",
+                    "state_version": 7,
+                    "is_reconciled": True,
+                    "mobile_collections_enabled": True,
+                    "mobile_balance_mode": "direct_remaining_balance",
                 }
             ]
         )
@@ -92,6 +96,10 @@ def test_repository_returns_assigned_areas_and_authoritative_state(monkeypatch) 
     assert entry.pass_count == 2
     assert entry.status == "Pass"
     assert entry.note == "Morning visit"
+    assert entry.route_revision == f"loan:{LOAN_ID}:v7"
+    assert entry.can_collect_mobile is True
+    assert entry.can_enter_payment is True
+    assert entry.collection_message == "Ready for mobile collection."
 
     area_parameters = connection.area_cursor.executions[0][1]
     entry_parameters = connection.entry_cursor.executions[0][1]
