@@ -39,6 +39,10 @@ def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
         "advance_until": entry.advance_until.isoformat() if entry.advance_until else None,
         "status": entry.status,
         "note": entry.note,
+        "route_revision": entry.route_revision,
+        "can_collect_mobile": entry.can_collect_mobile,
+        "can_enter_payment": entry.can_enter_payment,
+        "collection_message": entry.collection_message,
     }
 
 
