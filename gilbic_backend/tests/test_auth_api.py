@@ -5,7 +5,12 @@ from uuid import UUID
 
 from fastapi.testclient import TestClient
 
-from gilbic_backend.account_repository import AccountContext, AccountNotFound
+from gilbic_backend.account_repository import (
+    AccountContext,
+    AccountNotFound,
+    DeviceNotRegistered,
+    DeviceRevoked,
+)
 from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
 from gilbic_backend.auth_client import AuthSession
 from gilbic_backend.main import create_app
@@ -13,6 +18,7 @@ from gilbic_backend.main import create_app
 
 AUTH_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 GILBIC_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
+DEVICE_ID = "gilbic-test-device"
 
 
 def session(*, signed_in: bool = True) -> AuthSession:
@@ -89,6 +95,8 @@ class FakeAccounts:
         self.username_taken = False
         self.login_context = context()
         self.registered_device: tuple[str | None, str | None, str | None] | None = None
+        self.checked_device: str | None = None
+        self.device_error: Exception | None = None
 
     def username_exists(self, username: str) -> bool:
         assert username
@@ -151,6 +159,29 @@ class FakeAccounts:
         assert auth_user_id == AUTH_USER_ID
         return self.login_context
 
+    def get_context_for_device(
+        self,
+        *,
+        auth_user_id: UUID,
+        device_identifier: str | None,
+    ) -> AccountContext:
+        assert auth_user_id == AUTH_USER_ID
+        self.checked_device = device_identifier
+        if self.device_error is not None:
+            raise self.device_error
+        value = self.login_context
+        return AccountContext(
+            user_id=value.user_id,
+            auth_user_id=value.auth_user_id,
+            username=value.username,
+            email=value.email,
+            full_name=value.full_name,
+            status=value.status,
+            roles=value.roles,
+            permissions=value.permissions,
+            device_registered=True,
+        )
+
 
 def client_with_fakes() -> tuple[TestClient, FakeAuthClient, FakeAccounts]:
     auth = FakeAuthClient()
@@ -159,6 +190,13 @@ def client_with_fakes() -> tuple[TestClient, FakeAuthClient, FakeAccounts]:
     app.dependency_overrides[auth_client_dependency] = lambda: auth
     app.dependency_overrides[account_repository_dependency] = lambda: accounts
     return TestClient(app), auth, accounts
+
+
+def device_headers() -> dict[str, str]:
+    return {
+        "Authorization": "Bearer access-token",
+        "X-Device-Id": DEVICE_ID,
+    }
 
 
 def test_public_registration_is_client_only() -> None:
@@ -248,7 +286,20 @@ def test_unknown_username_returns_generic_credential_error() -> None:
     assert response.json()["detail"] == "Invalid username or password."
 
 
-def test_me_uses_bearer_identity_then_gilbic_permissions() -> None:
+def test_me_requires_active_registered_device() -> None:
+    client, _, accounts = client_with_fakes()
+
+    response = client.get("/api/v1/auth/me", headers=device_headers())
+
+    assert response.status_code == 200
+    user = response.json()["data"]["user"]
+    assert user["role"] == "Collector"
+    assert user["device_registered"] is True
+    assert "collection.create" in user["permissions"]
+    assert accounts.checked_device == DEVICE_ID
+
+
+def test_me_rejects_missing_device_header() -> None:
     client, _, _ = client_with_fakes()
 
     response = client.get(
@@ -256,23 +307,60 @@ def test_me_uses_bearer_identity_then_gilbic_permissions() -> None:
         headers={"Authorization": "Bearer access-token"},
     )
 
-    assert response.status_code == 200
-    user = response.json()["data"]["user"]
-    assert user["role"] == "Collector"
-    assert "collection.create" in user["permissions"]
+    assert response.status_code == 400
+    assert response.json()["detail"] == "X-Device-Id is required."
 
 
-def test_refresh_returns_new_session_with_server_permissions() -> None:
-    client, _, _ = client_with_fakes()
+def test_me_rejects_unregistered_device() -> None:
+    client, _, accounts = client_with_fakes()
+    accounts.device_error = DeviceNotRegistered(
+        "This device is not registered. Sign in again on this device."
+    )
+
+    response = client.get("/api/v1/auth/me", headers=device_headers())
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == (
+        "This device is not registered. Sign in again on this device."
+    )
+
+
+def test_me_rejects_revoked_device_with_existing_token() -> None:
+    client, _, accounts = client_with_fakes()
+    accounts.device_error = DeviceRevoked("This device has been revoked.")
+
+    response = client.get("/api/v1/auth/me", headers=device_headers())
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "This device has been revoked."
+
+
+def test_refresh_requires_active_device() -> None:
+    client, _, accounts = client_with_fakes()
 
     response = client.post(
         "/api/v1/auth/refresh",
+        headers={"X-Device-Id": DEVICE_ID},
         json={"refresh_token": "refresh-token-12345"},
     )
 
     assert response.status_code == 200
     assert response.json()["data"]["access_token"] == "access-token"
     assert response.json()["data"]["user"]["role"] == "Collector"
+    assert accounts.checked_device == DEVICE_ID
+
+
+def test_refresh_rejects_revoked_device() -> None:
+    client, _, accounts = client_with_fakes()
+    accounts.device_error = DeviceRevoked("This device has been revoked.")
+
+    response = client.post(
+        "/api/v1/auth/refresh",
+        headers={"X-Device-Id": DEVICE_ID},
+        json={"refresh_token": "refresh-token-12345"},
+    )
+
+    assert response.status_code == 403
 
 
 def test_logout_revokes_supabase_session() -> None:
