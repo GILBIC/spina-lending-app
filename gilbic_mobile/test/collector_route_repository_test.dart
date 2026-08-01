@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart';
+import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -17,12 +18,20 @@ void main() {
     accessToken: 'token-123',
   );
 
-  test('downloads only the authenticated collector route', () async {
+  test('downloads only the authenticated collector route from active device', () async {
+    final deviceStore = MemoryDeviceIdentityStore()
+      ..value = 'gilbic-route-device';
     final repository = SpinaCollectorRouteRepository(
       routeUri: Uri.parse('https://spina.test/route'),
+      deviceIdentityProvider: DeviceIdentityProvider(
+        store: deviceStore,
+        platformResolver: () => 'android',
+        appVersionResolver: () async => '0.4.0+4',
+      ),
       client: MockClient((request) async {
         expect(request.method, 'GET');
         expect(request.headers['authorization'], 'Bearer token-123');
+        expect(request.headers['x-device-id'], 'gilbic-route-device');
         return http.Response(
           jsonEncode(<String, Object?>{
             'success': true,

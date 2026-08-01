@@ -14,6 +14,11 @@ from .account_repository import (
     PostgresAccountRepository,
 )
 from .auth_client import AuthSession, SupabaseAuthClient, SupabaseAuthError
+from .request_auth import (
+    active_device_context,
+    authenticated_device_context,
+    bearer_token,
+)
 
 
 class StrictRequest(BaseModel):
@@ -75,15 +80,6 @@ def auth_client_dependency() -> Generator[SupabaseAuthClient, None, None]:
 
 def account_repository_dependency() -> PostgresAccountRepository:
     return PostgresAccountRepository()
-
-
-def _bearer_token(authorization: str | None) -> str:
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authentication required.")
-    scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer" or not token.strip():
-        raise HTTPException(status_code=401, detail="Authentication required.")
-    return token.strip()
 
 
 def _user_payload(context) -> dict[str, object]:
@@ -190,35 +186,35 @@ def create_auth_router() -> APIRouter:
     @router.post("/api/mobile/v1/auth/refresh", include_in_schema=False)
     def refresh(
         request: RefreshRequest,
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
     ) -> dict[str, object]:
         try:
             session = auth.refresh(refresh_token=request.refresh_token)
-            context = accounts.get_context(session.auth_user_id)
         except SupabaseAuthError as exc:
             raise _auth_exception(exc, login=True) from exc
-        except AccountNotFound as exc:
-            raise HTTPException(status_code=401, detail="Account is no longer available.") from exc
+        context = active_device_context(
+            auth_user_id=session.auth_user_id,
+            device_identifier=x_device_id,
+            accounts=accounts,
+        )
         return {"success": True, "data": _session_payload(session, context)}
 
     @router.get("/api/v1/auth/me")
     @router.get("/api/mobile/v1/auth/me", include_in_schema=False)
     def me(
         authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
     ) -> dict[str, object]:
-        token = _bearer_token(authorization)
-        try:
-            identity = auth.get_user(access_token=token)
-            context = accounts.get_context(identity.auth_user_id)
-        except SupabaseAuthError as exc:
-            raise _auth_exception(exc, login=True) from exc
-        except AccountNotFound as exc:
-            raise HTTPException(status_code=401, detail="Account is no longer available.") from exc
-        if context.status in {"inactive", "locked"}:
-            raise HTTPException(status_code=403, detail="This Gilbic account is not active.")
+        context = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
         return {"success": True, "data": {"user": _user_payload(context)}}
 
     @router.post("/api/v1/auth/logout")
@@ -227,7 +223,7 @@ def create_auth_router() -> APIRouter:
         authorization: str | None = Header(default=None, alias="Authorization"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
     ) -> dict[str, bool]:
-        token = _bearer_token(authorization)
+        token = bearer_token(authorization)
         try:
             auth.sign_out(access_token=token)
         except SupabaseAuthError as exc:

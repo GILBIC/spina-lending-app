@@ -9,7 +9,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .account_repository import (
     AccountConflict,
-    AccountDisabled,
     AccountNotFound,
     PostgresAccountRepository,
 )
@@ -20,6 +19,7 @@ from .management_repository import (
     DeviceAdminRecord,
     PostgresManagementRepository,
 )
+from .request_auth import authenticated_device_context
 
 
 class StrictManagementRequest(BaseModel):
@@ -90,38 +90,22 @@ def management_repository_dependency() -> PostgresManagementRepository:
     return PostgresManagementRepository()
 
 
-def _bearer_token(authorization: str | None) -> str:
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authentication required.")
-    scheme, _, token = authorization.partition(" ")
-    if scheme.lower() != "bearer" or not token.strip():
-        raise HTTPException(status_code=401, detail="Authentication required.")
-    return token.strip()
-
-
 def _management_actor(
     *,
     authorization: str | None,
+    device_identifier: str | None,
     permission: str,
     auth: SupabaseAuthClient,
     accounts: PostgresAccountRepository,
 ):
-    token = _bearer_token(authorization)
-    try:
-        identity = auth.get_user(access_token=token)
-        context = accounts.get_context(identity.auth_user_id)
-    except SupabaseAuthError as exc:
-        if exc.status_code == 503:
-            raise HTTPException(status_code=503, detail="Authentication service is unavailable.") from exc
-        raise HTTPException(status_code=401, detail="Authentication required.") from exc
-    except AccountNotFound as exc:
-        raise HTTPException(status_code=401, detail="Account is no longer available.") from exc
-
-    if context.status != "active":
-        raise HTTPException(status_code=403, detail="This Gilbic account is not active.")
-    if permission not in context.permissions:
-        raise HTTPException(status_code=403, detail="Management permission is required.")
-    return context
+    return authenticated_device_context(
+        authorization=authorization,
+        device_identifier=device_identifier,
+        auth=auth,
+        accounts=accounts,
+        permission=permission,
+        permission_error="Management permission is required.",
+    )
 
 
 def _account_payload(record: AccountAdminRecord) -> dict[str, object]:
@@ -154,7 +138,7 @@ def _device_payload(record: DeviceAdminRecord) -> dict[str, object]:
 def _repository_exception(exc: Exception) -> HTTPException:
     if isinstance(exc, AccountNotFound):
         return HTTPException(status_code=404, detail=str(exc))
-    if isinstance(exc, (AccountConflict, AccountDisabled)):
+    if isinstance(exc, AccountConflict):
         return HTTPException(status_code=409, detail=str(exc))
     return HTTPException(status_code=500, detail="Account administration could not be completed.")
 
@@ -165,6 +149,7 @@ def create_management_router() -> APIRouter:
     @router.get("/accounts")
     def list_accounts(
         authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         limit: int = Query(default=100, ge=1, le=200),
         offset: int = Query(default=0, ge=0),
         auth: SupabaseAuthClient = Depends(management_auth_client_dependency),
@@ -173,6 +158,7 @@ def create_management_router() -> APIRouter:
     ) -> dict[str, object]:
         _management_actor(
             authorization=authorization,
+            device_identifier=x_device_id,
             permission="account.manage",
             auth=auth,
             accounts=accounts,
@@ -184,6 +170,7 @@ def create_management_router() -> APIRouter:
     def invite_account(
         request: InviteStaffRequest,
         authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(management_auth_client_dependency),
         auth_admin: SupabaseAuthAdminClient = Depends(management_auth_admin_dependency),
         accounts: PostgresAccountRepository = Depends(management_account_repository_dependency),
@@ -191,6 +178,7 @@ def create_management_router() -> APIRouter:
     ) -> dict[str, object]:
         actor = _management_actor(
             authorization=authorization,
+            device_identifier=x_device_id,
             permission="account.manage",
             auth=auth,
             accounts=accounts,
@@ -198,6 +186,7 @@ def create_management_router() -> APIRouter:
         if accounts.username_exists(request.username):
             raise HTTPException(status_code=409, detail="Username is already in use.")
 
+        auth_user_id: UUID | None = None
         try:
             auth_user_id = auth_admin.invite_user(email=request.email)
             record = management.create_staff_profile(
@@ -215,10 +204,11 @@ def create_management_router() -> APIRouter:
                 raise HTTPException(status_code=409, detail="That email already has an authentication account.") from exc
             raise HTTPException(status_code=502, detail="Staff invitation could not be created.") from exc
         except (AccountConflict, AccountNotFound) as exc:
-            try:
-                auth_admin.delete_user(auth_user_id=auth_user_id)
-            except (SupabaseAuthError, UnboundLocalError):
-                pass
+            if auth_user_id is not None:
+                try:
+                    auth_admin.delete_user(auth_user_id=auth_user_id)
+                except SupabaseAuthError:
+                    pass
             raise _repository_exception(exc) from exc
 
         return {
@@ -234,12 +224,14 @@ def create_management_router() -> APIRouter:
         target_user_id: UUID,
         request: RoleChangeRequest,
         authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(management_auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(management_account_repository_dependency),
         management: PostgresManagementRepository = Depends(management_repository_dependency),
     ) -> dict[str, object]:
         actor = _management_actor(
             authorization=authorization,
+            device_identifier=x_device_id,
             permission="account.manage",
             auth=auth,
             accounts=accounts,
@@ -259,12 +251,14 @@ def create_management_router() -> APIRouter:
         target_user_id: UUID,
         request: AccountStatusRequest,
         authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(management_auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(management_account_repository_dependency),
         management: PostgresManagementRepository = Depends(management_repository_dependency),
     ) -> dict[str, object]:
         actor = _management_actor(
             authorization=authorization,
+            device_identifier=x_device_id,
             permission="account.manage",
             auth=auth,
             accounts=accounts,
@@ -283,12 +277,14 @@ def create_management_router() -> APIRouter:
     def list_devices(
         target_user_id: UUID,
         authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(management_auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(management_account_repository_dependency),
         management: PostgresManagementRepository = Depends(management_repository_dependency),
     ) -> dict[str, object]:
         _management_actor(
             authorization=authorization,
+            device_identifier=x_device_id,
             permission="device.manage",
             auth=auth,
             accounts=accounts,
@@ -304,12 +300,14 @@ def create_management_router() -> APIRouter:
         device_id: UUID,
         request: DeviceStatusRequest,
         authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(management_auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(management_account_repository_dependency),
         management: PostgresManagementRepository = Depends(management_repository_dependency),
     ) -> dict[str, object]:
         actor = _management_actor(
             authorization=authorization,
+            device_identifier=x_device_id,
             permission="device.manage",
             auth=auth,
             accounts=accounts,

@@ -5,7 +5,11 @@ from uuid import UUID
 
 from fastapi.testclient import TestClient
 
-from gilbic_backend.account_repository import AccountConflict, AccountContext
+from gilbic_backend.account_repository import (
+    AccountConflict,
+    AccountContext,
+    DeviceRevoked,
+)
 from gilbic_backend.auth_client import AuthSession
 from gilbic_backend.main import create_app
 from gilbic_backend.management_api import (
@@ -22,6 +26,7 @@ ACTOR_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
 TARGET_USER_ID = UUID("33333333-3333-4333-8333-333333333333")
 TARGET_AUTH_ID = UUID("44444444-4444-4444-8444-444444444444")
 DEVICE_ID = UUID("55555555-5555-4555-8555-555555555555")
+INSTALLATION_ID = "gilbic-management-device"
 NOW = datetime(2026, 7, 31, 10, 0, tzinfo=UTC)
 
 
@@ -37,6 +42,7 @@ def management_context(*, permissions: tuple[str, ...] | None = None) -> Account
         permissions=permissions
         if permissions is not None
         else ("account.manage", "device.manage", "management.dashboard.view"),
+        device_registered=True,
     )
 
 
@@ -84,9 +90,23 @@ class FakeAccounts:
     def __init__(self) -> None:
         self.context = management_context()
         self.username_taken = False
+        self.checked_device: str | None = None
+        self.device_error: Exception | None = None
 
     def get_context(self, auth_user_id: UUID) -> AccountContext:
         assert auth_user_id == AUTH_USER_ID
+        return self.context
+
+    def get_context_for_device(
+        self,
+        *,
+        auth_user_id: UUID,
+        device_identifier: str | None,
+    ) -> AccountContext:
+        assert auth_user_id == AUTH_USER_ID
+        self.checked_device = device_identifier
+        if self.device_error is not None:
+            raise self.device_error
         return self.context
 
     def username_exists(self, username: str) -> bool:
@@ -172,7 +192,32 @@ def client_with_fakes():
 
 
 def headers() -> dict[str, str]:
-    return {"Authorization": "Bearer management-token"}
+    return {
+        "Authorization": "Bearer management-token",
+        "X-Device-Id": INSTALLATION_ID,
+    }
+
+
+def test_management_device_header_is_required() -> None:
+    client, _, _, _ = client_with_fakes()
+
+    response = client.get(
+        "/api/v1/management/accounts",
+        headers={"Authorization": "Bearer management-token"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "X-Device-Id is required."
+
+
+def test_management_rejects_revoked_device_with_existing_token() -> None:
+    client, accounts, _, _ = client_with_fakes()
+    accounts.device_error = DeviceRevoked("This device has been revoked.")
+
+    response = client.get("/api/v1/management/accounts", headers=headers())
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "This device has been revoked."
 
 
 def test_management_permission_is_required() -> None:
@@ -186,7 +231,7 @@ def test_management_permission_is_required() -> None:
 
 
 def test_management_can_list_accounts() -> None:
-    client, _, _, _ = client_with_fakes()
+    client, accounts, _, _ = client_with_fakes()
 
     response = client.get("/api/v1/management/accounts", headers=headers())
 
@@ -195,6 +240,7 @@ def test_management_can_list_accounts() -> None:
     assert item["username"] == "collector.one"
     assert item["roles"] == ["collector"]
     assert item["device_count"] == 1
+    assert accounts.checked_device == INSTALLATION_ID
 
 
 def test_management_can_invite_collector_without_password() -> None:
