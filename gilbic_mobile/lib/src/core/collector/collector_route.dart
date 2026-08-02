@@ -105,6 +105,7 @@ class CollectorRouteEntry {
     this.collectionMessage = '',
     this.processedToday = false,
     this.todayEntryType = '',
+    this.todayCollectorName = '',
   });
 
   final String id;
@@ -126,6 +127,7 @@ class CollectorRouteEntry {
   final String collectionMessage;
   final bool processedToday;
   final String todayEntryType;
+  final String todayCollectorName;
 
   Map<String, Object?> toJson() {
     return <String, Object?>{
@@ -148,6 +150,7 @@ class CollectorRouteEntry {
       'collection_message': collectionMessage,
       'processed_today': processedToday,
       'today_entry_type': todayEntryType,
+      'today_collector_name': todayCollectorName,
     };
   }
 
@@ -278,6 +281,12 @@ class CollectorRouteEntry {
       todayEntryType: firstNonEmptyString(<Object?>[
             data['today_entry_type'],
             data['entry_type_today'],
+          ]) ??
+          '',
+      todayCollectorName: firstNonEmptyString(<Object?>[
+            data['today_collector_name'],
+            data['recorded_by'],
+            data['collector_name_today'],
           ]) ??
           '',
     );
