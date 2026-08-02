@@ -40,6 +40,11 @@ def _money(value: Decimal) -> str:
 def _notification_payload(
     notification: RemittanceNotificationRecord,
 ) -> dict[str, object]:
+    photo_url = (
+        f"/api/mobile/v1/remittances/{notification.remittance_id}/handover-photo"
+        if notification.has_handover_photo
+        else None
+    )
     return {
         "notification_id": str(notification.notification_id),
         "notification_type": "remittance_acceptance",
@@ -64,6 +69,15 @@ def _notification_payload(
             if notification.accepted_at
             else None
         ),
+        "has_handover_photo": notification.has_handover_photo,
+        "handover_photo_version": notification.handover_photo_version,
+        "handover_photo_content_type": notification.handover_photo_content_type,
+        "handover_photo_uploaded_at": (
+            notification.handover_photo_uploaded_at.isoformat()
+            if notification.handover_photo_uploaded_at
+            else None
+        ),
+        "handover_photo_url": photo_url,
         "custody_message": (
             "Money is now under your custody."
             if not notification.is_pending
