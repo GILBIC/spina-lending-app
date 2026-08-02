@@ -130,10 +130,11 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
       builder: (context) => AlertDialog(
         title: const Text('Submit remittance?'),
         content: Text(
-          'Give ${_money(summary.totalAmount)} to ${recipient.fullName}?\n\n'
+          'Prepare ${_money(summary.totalAmount)} for ${recipient.fullName}?\n\n'
           '${summary.clientCount} clients • ${summary.transactionCount} entries\n\n'
-          'After submission, every included collection is permanently locked. '
-          'You will no longer be able to edit those entries.',
+          'After submission, the included entries are permanently locked and '
+          '${recipient.fullName} receives an Accept Remittance notification. '
+          'The cash remains under your custody until that notification is accepted.',
         ),
         actions: [
           TextButton(
@@ -143,7 +144,7 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
           FilledButton(
             key: const Key('confirm-remittance-submission'),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Submit and lock'),
+            child: const Text('Submit and notify'),
           ),
         ],
       ),
@@ -292,16 +293,16 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Icon(Icons.lock_outline),
+              : const Icon(Icons.notifications_active_outlined),
           label: Text(
             _submitting
                 ? 'Submitting...'
-                : 'Submit ${_money(summary.totalAmount)} and lock entries',
+                : 'Submit ${_money(summary.totalAmount)} and notify recipient',
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'The server recalculates all totals before submission. The phone cannot change the remittance total.',
+          'The server recalculates all totals. Submission locks the entries, but cash custody transfers only after the selected recipient accepts the notification.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall,
         ),
@@ -392,10 +393,10 @@ class _SubmittedRemittance extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Icon(Icons.lock, size: 58),
+        const Icon(Icons.notifications_active, size: 58),
         const SizedBox(height: 12),
         Text(
-          'Remittance submitted',
+          'Remittance notification sent',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.headlineSmall,
         ),
@@ -416,14 +417,16 @@ class _SubmittedRemittance extends StatelessWidget {
                 Text('Total: ${_money(record.summary.totalAmount)}'),
                 Text('Clients: ${record.summary.clientCount}'),
                 Text('Entries: ${record.summary.transactionCount}'),
-                Text('Status: Awaiting recipient confirmation'),
+                Text(
+                  'Status: Waiting for ${record.recipientName} to accept',
+                ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 12),
         const Text(
-          'All included collection entries are now permanently locked. Corrections must go through an authorized management adjustment.',
+          'The collection entries are locked, but the cash is still under your custody. Custody transfers to the selected recipient only after they tap Accept Remittance.',
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 18),
