@@ -29,6 +29,14 @@ void main() {
     expect(find.text('2026-08-02'), findsWidgets);
     expect(find.text('2026-08-04'), findsOneWidget);
     expect(find.text('2026-08-03'), findsNothing);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('correction-reason')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
     expect(find.byKey(const Key('correction-reason')), findsOneWidget);
     expect(find.byKey(const Key('submit-collection-correction')), findsOneWidget);
   });
