@@ -75,20 +75,6 @@ jobs:
         shell: cmd
         run: flutter --version || exit /b 1
 
-      - name: Generate deterministic Android host
-        shell: cmd
-        run: |
-          set "HOST=%RUNNER_TEMP%\gilbic-android-host"
-          if exist "%HOST%" rmdir /s /q "%HOST%"
-          mkdir "%HOST%" || exit /b 1
-          pushd "%HOST%"
-          flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile . || exit /b 1
-          popd
-          xcopy /e /i /y "%HOST%\android" "%GITHUB_WORKSPACE%\gilbic_mobile\android" >nul || exit /b 1
-          copy /y "%HOST%\.metadata" "%GITHUB_WORKSPACE%\gilbic_mobile\.metadata" >nul || exit /b 1
-          if not exist "gilbic_mobile\android\app\build.gradle.kts" exit /b 1
-          if not exist "gilbic_mobile\.metadata" exit /b 1
-
       - name: Resolve Flutter packages
         shell: cmd
         working-directory: gilbic_mobile
@@ -104,16 +90,27 @@ jobs:
         working-directory: gilbic_mobile
         run: flutter test || exit /b 1
 
-      - name: Build Android debug APK
+      - name: Generate Android host and build debug APK
         shell: cmd
-        working-directory: gilbic_mobile
         run: |
-          echo apply from: "build.gradle.kts">"android\app\build.gradle"
-          if not exist "android\app\build.gradle" exit /b 1
-          type "android\app\build.gradle"
+          set "HOST=%RUNNER_TEMP%\gilbic-android-host"
+          if exist "%HOST%" rmdir /s /q "%HOST%"
+          if exist "gilbic_mobile\android" rmdir /s /q "gilbic_mobile\android"
+          if exist "gilbic_mobile\.metadata" del /f /q "gilbic_mobile\.metadata"
+          mkdir "%HOST%" || exit /b 1
+          pushd "%HOST%"
+          flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile . || exit /b 1
+          popd
+          xcopy /e /i /y "%HOST%\android" "%GITHUB_WORKSPACE%\gilbic_mobile\android" >nul || exit /b 1
+          copy /y "%HOST%\.metadata" "%GITHUB_WORKSPACE%\gilbic_mobile\.metadata" >nul || exit /b 1
+          if not exist "gilbic_mobile\android\app\build.gradle.kts" exit /b 1
+          echo apply from: "build.gradle.kts">"gilbic_mobile\android\app\build.gradle"
+          if not exist "gilbic_mobile\android\app\build.gradle" exit /b 1
+          pushd "gilbic_mobile"
           flutter build apk --debug --no-pub || exit /b 1
           if not exist "build\app\outputs\flutter-apk\app-debug.apk" exit /b 1
           for %%I in ("build\app\outputs\flutter-apk\app-debug.apk") do echo APK size: %%~zI bytes
+          popd
 
       - name: Upload Android debug APK
         uses: actions/upload-artifact@v4
