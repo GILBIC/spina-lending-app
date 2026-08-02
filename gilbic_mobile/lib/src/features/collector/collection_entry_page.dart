@@ -33,23 +33,44 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   late final TextEditingController _amountController;
   late final TextEditingController _noteController;
   late final DateTime _collectionDate;
-  late DateTime _advanceFrom;
-  late DateTime _advanceUntil;
+  late DateTime _coveredFrom;
+  late DateTime _coveredUntil;
+  late DateTime _unableDate;
 
   CollectionEntryType _entryType = CollectionEntryType.payment;
   PaymentSubmissionDraft? _pendingDraft;
   PaymentSubmissionResult? _result;
   String? _errorMessage;
+  String? _selectedReason;
   bool _submitting = false;
 
   bool get _isSevenBySeven => _isSevenBySevenLoan(widget.entry.loanType);
+  bool get _isUnableToPay => _entryType == CollectionEntryType.pass;
+
+  int get _coveredDays => _coveredUntil.difference(_coveredFrom).inDays + 1;
+
+  double get _suggestedAmount => widget.entry.dailyAmount * _coveredDays;
+
+  bool get _isSingleToday =>
+      _sameDate(_coveredFrom, _collectionDate) &&
+      _sameDate(_coveredUntil, _collectionDate);
+
+  CollectionEntryType get _submissionEntryType {
+    if (_isUnableToPay) {
+      return CollectionEntryType.pass;
+    }
+    return _isSingleToday
+        ? CollectionEntryType.payment
+        : CollectionEntryType.advance;
+  }
 
   @override
   void initState() {
     super.initState();
     _collectionDate = _dateOnly(widget.collectionDate ?? DateTime.now());
-    _advanceFrom = _collectionDate;
-    _advanceUntil = _collectionDate;
+    _coveredFrom = _collectionDate;
+    _coveredUntil = _collectionDate;
+    _unableDate = _collectionDate;
     _amountController = TextEditingController(
       text: widget.entry.dailyAmount > 0
           ? widget.entry.dailyAmount.toStringAsFixed(2)
@@ -65,49 +86,84 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     super.dispose();
   }
 
+  void _clearSubmissionState() {
+    _pendingDraft = null;
+    _result = null;
+    _errorMessage = null;
+  }
+
   void _invalidatePendingDraft() {
     if (_pendingDraft == null && _result == null && _errorMessage == null) {
       return;
     }
-    setState(() {
-      _pendingDraft = null;
-      _result = null;
-      _errorMessage = null;
-    });
+    setState(_clearSubmissionState);
   }
 
   void _changeEntryType(CollectionEntryType type) {
     setState(() {
       _entryType = type;
-      _pendingDraft = null;
-      _result = null;
-      _errorMessage = null;
+      _clearSubmissionState();
     });
   }
 
-  Future<void> _selectAdvanceDate({required bool isStart}) async {
-    final current = isStart ? _advanceFrom : _advanceUntil;
+  void _setCoverage(DateTime from, DateTime until) {
+    final normalizedFrom = _dateOnly(from);
+    final normalizedUntil = _dateOnly(until);
+    setState(() {
+      _coveredFrom = normalizedFrom;
+      _coveredUntil = normalizedUntil.isBefore(normalizedFrom)
+          ? normalizedFrom
+          : normalizedUntil;
+      _amountController.text = _suggestedAmount.toStringAsFixed(2);
+      _clearSubmissionState();
+    });
+  }
+
+  Future<void> _selectCoveredDate({required bool isStart}) async {
+    final current = isStart ? _coveredFrom : _coveredUntil;
     final selected = await showDatePicker(
       context: context,
       initialDate: current,
       firstDate: _collectionDate.subtract(const Duration(days: 365)),
       lastDate: _collectionDate.add(const Duration(days: 730)),
+      helpText: isStart ? 'First covered date' : 'Last covered date',
+    );
+    if (selected == null || !mounted) {
+      return;
+    }
+    if (isStart) {
+      _setCoverage(selected, _coveredUntil);
+    } else {
+      _setCoverage(_coveredFrom, selected);
+    }
+  }
+
+  Future<void> _selectUnableDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _unableDate,
+      firstDate: _collectionDate.subtract(const Duration(days: 365)),
+      lastDate: _collectionDate,
+      helpText: 'Date client could not pay',
     );
     if (selected == null || !mounted) {
       return;
     }
     setState(() {
-      if (isStart) {
-        _advanceFrom = _dateOnly(selected);
-        if (_advanceUntil.isBefore(_advanceFrom)) {
-          _advanceUntil = _advanceFrom;
-        }
+      _unableDate = _dateOnly(selected);
+      _clearSubmissionState();
+    });
+  }
+
+  void _selectReason(String reason) {
+    setState(() {
+      _selectedReason = reason;
+      if (reason == 'Other') {
+        _noteController.clear();
       } else {
-        _advanceUntil = _dateOnly(selected);
+        _noteController.text = reason;
       }
-      _pendingDraft = null;
-      _result = null;
-      _errorMessage = null;
+      _clearSubmissionState();
     });
   }
 
@@ -116,7 +172,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
       return;
     }
 
-    final amount = _entryType == CollectionEntryType.pass
+    final amount = _isUnableToPay
         ? null
         : double.tryParse(_amountController.text.replaceAll(',', '').trim());
     final localError = _validateForm(amount);
@@ -178,13 +234,14 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   }
 
   String? _validateForm(double? amount) {
-    if (_entryType != CollectionEntryType.pass &&
-        (amount == null || amount <= 0)) {
+    if (!_isUnableToPay && (amount == null || amount <= 0)) {
       return 'Enter an amount greater than zero.';
     }
-    if (_entryType == CollectionEntryType.advance &&
-        _advanceUntil.isBefore(_advanceFrom)) {
-      return 'ADV coverage cannot end before it starts.';
+    if (!_isUnableToPay && _coveredUntil.isBefore(_coveredFrom)) {
+      return 'The last covered date cannot be before the first covered date.';
+    }
+    if (_isUnableToPay && _noteController.text.trim().isEmpty) {
+      return 'Enter the reason the client could not pay.';
     }
     return null;
   }
@@ -192,42 +249,40 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   Future<PaymentSubmissionDraft> _buildDraft(double? amount) async {
     final identity = await widget.deviceIdentityProvider.load();
     final sequence = await widget.deviceSequence.next();
+    final submissionType = _submissionEntryType;
     return PaymentSubmissionDraft(
       idempotencyKey: SecureIdempotencyKeyGenerator().generate(),
       routeEntryId: widget.entry.id,
       clientId: widget.entry.clientId,
       loanId: widget.entry.loanId,
-      collectionDate: _collectionDate,
-      entryType: _entryType,
+      collectionDate: _isUnableToPay ? _unableDate : _collectionDate,
+      entryType: submissionType,
       amount: amount,
       advanceFrom:
-          _entryType == CollectionEntryType.advance ? _advanceFrom : null,
+          submissionType == CollectionEntryType.advance ? _coveredFrom : null,
       advanceUntil:
-          _entryType == CollectionEntryType.advance ? _advanceUntil : null,
+          submissionType == CollectionEntryType.advance ? _coveredUntil : null,
       recordedAt: DateTime.now().toUtc(),
       deviceId: identity.installationId,
       deviceSequence: sequence,
-      note: _noteController.text,
+      note: _noteController.text.trim(),
       routeRevision: widget.entry.routeRevision,
     );
   }
 
   Future<bool?> _confirmSubmission(double? amount) {
-    final action = switch (_entryType) {
-      CollectionEntryType.payment => 'save this payment',
-      CollectionEntryType.advance => 'save this ADV entry',
-      CollectionEntryType.pass => 'record PASS for this client',
-    };
     final amountText = amount == null ? null : _money(amount);
+    final message = _isUnableToPay
+        ? 'Record that ${widget.entry.clientName} could not pay on '
+            '${_date(_unableDate)}?\n\nReason: ${_noteController.text.trim()}'
+        : 'Save ${amountText ?? 'this payment'} for '
+            '${widget.entry.clientName} covering ${_coverageLabel()}?';
 
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm collection entry'),
-        content: Text(
-          'Do you want to $action for ${widget.entry.clientName}'
-          '${amountText == null ? '' : ' in the amount of $amountText'}?',
-        ),
+        content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -241,6 +296,23 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
         ],
       ),
     );
+  }
+
+  String _coverageLabel() {
+    if (_sameDate(_coveredFrom, _coveredUntil)) {
+      return _date(_coveredFrom);
+    }
+    return '${_date(_coveredFrom)} to ${_date(_coveredUntil)}';
+  }
+
+  String _successMessage() {
+    if (_isUnableToPay) {
+      return 'Unable-to-pay reason saved.';
+    }
+    if (_submissionEntryType == CollectionEntryType.advance) {
+      return 'Covered payment saved.';
+    }
+    return 'Payment saved.';
   }
 
   @override
@@ -268,14 +340,9 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                     icon: Icon(Icons.payments_outlined),
                   ),
                   ButtonSegment(
-                    value: CollectionEntryType.advance,
-                    label: Text('ADV'),
-                    icon: Icon(Icons.fast_forward),
-                  ),
-                  ButtonSegment(
                     value: CollectionEntryType.pass,
-                    label: Text('PASS'),
-                    icon: Icon(Icons.skip_next),
+                    label: Text('Unable to pay'),
+                    icon: Icon(Icons.event_busy_outlined),
                   ),
                 ],
                 selected: <CollectionEntryType>{_entryType},
@@ -284,7 +351,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                     : (selection) => _changeEntryType(selection.first),
               ),
               const SizedBox(height: 16),
-              if (_entryType != CollectionEntryType.pass)
+              if (!_isUnableToPay) ...[
                 TextField(
                   key: const Key('collection-amount'),
                   controller: _amountController,
@@ -293,51 +360,163 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                     decimal: true,
                   ),
                   decoration: const InputDecoration(
-                    labelText: 'Amount',
+                    labelText: 'Amount received',
                     prefixText: '₱ ',
                   ),
                   onChanged: (_) => _invalidatePendingDraft(),
                 ),
-              if (_entryType == CollectionEntryType.advance) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
+                Text(
+                  'Covered dates',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ActionChip(
+                      label: const Text('Today'),
+                      onPressed: _submitting
+                          ? null
+                          : () => _setCoverage(
+                                _collectionDate,
+                                _collectionDate,
+                              ),
+                    ),
+                    ActionChip(
+                      label: const Text('Previous + today'),
+                      onPressed: _submitting
+                          ? null
+                          : () => _setCoverage(
+                                _collectionDate.subtract(
+                                  const Duration(days: 1),
+                                ),
+                                _collectionDate,
+                              ),
+                    ),
+                    ActionChip(
+                      label: const Text('Today + tomorrow'),
+                      onPressed: _submitting
+                          ? null
+                          : () => _setCoverage(
+                                _collectionDate,
+                                _collectionDate.add(
+                                  const Duration(days: 1),
+                                ),
+                              ),
+                    ),
+                    ActionChip(
+                      label: const Text('Triple'),
+                      onPressed: _submitting
+                          ? null
+                          : () => _setCoverage(
+                                _collectionDate.subtract(
+                                  const Duration(days: 1),
+                                ),
+                                _collectionDate.add(
+                                  const Duration(days: 1),
+                                ),
+                              ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        key: const Key('advance-from'),
+                        key: const Key('covered-from'),
                         onPressed: _submitting
                             ? null
-                            : () => _selectAdvanceDate(isStart: true),
+                            : () => _selectCoveredDate(isStart: true),
                         icon: const Icon(Icons.calendar_today),
-                        label: Text('From ${_date(_advanceFrom)}'),
+                        label: Text('From ${_date(_coveredFrom)}'),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: OutlinedButton.icon(
-                        key: const Key('advance-until'),
+                        key: const Key('covered-until'),
                         onPressed: _submitting
                             ? null
-                            : () => _selectAdvanceDate(isStart: false),
+                            : () => _selectCoveredDate(isStart: false),
                         icon: const Icon(Icons.event_available),
-                        label: Text('Until ${_date(_advanceUntil)}'),
+                        label: Text('Until ${_date(_coveredUntil)}'),
                       ),
                     ),
                   ],
                 ),
-              ],
-              const SizedBox(height: 12),
-              TextField(
-                key: const Key('collection-note'),
-                controller: _noteController,
-                enabled: !_submitting,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Note (optional)',
-                  alignLabelWithHint: true,
+                const SizedBox(height: 8),
+                Text(
+                  '$_coveredDays covered day${_coveredDays == 1 ? '' : 's'} • '
+                  'Suggested amount ${_money(_suggestedAmount)}',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
-                onChanged: (_) => _invalidatePendingDraft(),
-              ),
+                const SizedBox(height: 12),
+                TextField(
+                  key: const Key('collection-note'),
+                  controller: _noteController,
+                  enabled: !_submitting,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Payment note (optional)',
+                    alignLabelWithHint: true,
+                  ),
+                  onChanged: (_) => _invalidatePendingDraft(),
+                ),
+              ] else ...[
+                OutlinedButton.icon(
+                  key: const Key('unable-date'),
+                  onPressed: _submitting ? null : _selectUnableDate,
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text('Unable to pay date: ${_date(_unableDate)}'),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Reason',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final reason in const [
+                      'No cash',
+                      'Not home',
+                      'Sick',
+                      'Emergency',
+                      'Will pay tomorrow',
+                      'Will pay double tomorrow',
+                      'Other',
+                    ])
+                      ChoiceChip(
+                        label: Text(reason),
+                        selected: _selectedReason == reason,
+                        onSelected:
+                            _submitting ? null : (_) => _selectReason(reason),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  key: const Key('collection-note'),
+                  controller: _noteController,
+                  enabled: !_submitting,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Reason client cannot pay (required)',
+                    alignLabelWithHint: true,
+                  ),
+                  onChanged: (_) {
+                    setState(() {
+                      _selectedReason = null;
+                      _clearSubmissionState();
+                    });
+                  },
+                ),
+              ],
               const SizedBox(height: 16),
               if (_errorMessage != null)
                 _SafetyNotice(
@@ -345,7 +524,10 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                   message: _errorMessage!,
                 ),
               if (_result != null) ...[
-                _ResultCard(result: _result!),
+                _ResultCard(
+                  result: _result!,
+                  successMessage: _successMessage(),
+                ),
                 const SizedBox(height: 12),
               ],
               FilledButton.icon(
@@ -363,7 +545,10 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                   _submitting
                       ? 'Saving...'
                       : _pendingDraft == null
-                          ? _submitLabel(_entryType)
+                          ? _submitLabel(
+                              unableToPay: _isUnableToPay,
+                              coveredMultipleDates: !_isSingleToday,
+                            )
                           : 'Retry same entry',
                 ),
               ),
@@ -377,7 +562,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
               ],
               const SizedBox(height: 10),
               Text(
-                'Official balance, receipt, and acceptance time come only from the SPINA server. Offline payment sync remains disabled.',
+                'Official balance, receipt, covered dates, and acceptance time come from the SPINA server. Offline collection remains read-only.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
@@ -407,13 +592,15 @@ class _ClientSummary extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 4),
-            Text([entry.area, entry.loanType]
-                .where((value) => value.isNotEmpty)
-                .join(' • ')),
+            Text(
+              [entry.area, entry.loanType]
+                  .where((value) => value.isNotEmpty)
+                  .join(' • '),
+            ),
             const Divider(height: 24),
             Text('Daily amount: ${_money(entry.dailyAmount)}'),
             Text('Server balance: ${_money(entry.balance)}'),
-            Text('PASS count: ${entry.passCount}'),
+            Text('Unable-to-pay count: ${entry.passCount}'),
           ],
         ),
       ),
@@ -446,9 +633,13 @@ class _SafetyNotice extends StatelessWidget {
 }
 
 class _ResultCard extends StatelessWidget {
-  const _ResultCard({required this.result});
+  const _ResultCard({
+    required this.result,
+    required this.successMessage,
+  });
 
   final PaymentSubmissionResult result;
+  final String successMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -465,7 +656,7 @@ class _ResultCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    result.message,
+                    success ? successMessage : result.message,
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ),
@@ -495,15 +686,26 @@ bool _isSevenBySevenLoan(String value) {
   return normalized.contains('7x7') || normalized.contains('7×7');
 }
 
-String _submitLabel(CollectionEntryType type) {
-  return switch (type) {
-    CollectionEntryType.payment => 'Save payment',
-    CollectionEntryType.advance => 'Save ADV',
-    CollectionEntryType.pass => 'Save PASS',
-  };
+String _submitLabel({
+  required bool unableToPay,
+  required bool coveredMultipleDates,
+}) {
+  if (unableToPay) {
+    return 'Save unable-to-pay reason';
+  }
+  if (coveredMultipleDates) {
+    return 'Save covered payment';
+  }
+  return 'Save payment';
 }
 
-DateTime _dateOnly(DateTime value) => DateTime(value.year, value.month, value.day);
+DateTime _dateOnly(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
+
+bool _sameDate(DateTime first, DateTime second) =>
+    first.year == second.year &&
+    first.month == second.month &&
+    first.day == second.day;
 
 String _date(DateTime value) {
   return '${value.year.toString().padLeft(4, '0')}-'
