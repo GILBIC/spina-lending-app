@@ -110,6 +110,9 @@ class CollectorRouteEntry {
     this.todayTransactionId,
     this.todayIsLocked = false,
     this.canEditToday = false,
+    this.todayAmount = 0,
+    this.todayNote = '',
+    this.todayCoveredDates = const <DateTime>[],
   });
 
   final String id;
@@ -136,6 +139,9 @@ class CollectorRouteEntry {
   final String? todayTransactionId;
   final bool todayIsLocked;
   final bool canEditToday;
+  final double todayAmount;
+  final String todayNote;
+  final List<DateTime> todayCoveredDates;
 
   Map<String, Object?> toJson() {
     return <String, Object?>{
@@ -165,6 +171,11 @@ class CollectorRouteEntry {
       'today_transaction_id': todayTransactionId,
       'today_is_locked': todayIsLocked,
       'can_edit_today': canEditToday,
+      'today_amount': todayAmount,
+      'today_note': todayNote,
+      'today_covered_dates': todayCoveredDates
+          .map((value) => value.toIso8601String())
+          .toList(growable: false),
     };
   }
 
@@ -316,6 +327,17 @@ class CollectorRouteEntry {
         data['can_edit_today'],
         fallback: false,
       ),
+      todayAmount: firstNumber(<Object?>[
+            data['today_amount'],
+            data['recorded_amount_today'],
+          ])?.toDouble() ??
+          0,
+      todayNote: firstNonEmptyString(<Object?>[
+            data['today_note'],
+            data['recorded_note_today'],
+          ]) ??
+          '',
+      todayCoveredDates: _dateList(data['today_covered_dates']),
     );
   }
 }
