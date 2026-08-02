@@ -77,11 +77,15 @@ jobs:
 
       - name: Generate deterministic Android host
         shell: cmd
-        working-directory: gilbic_mobile
         run: |
+          set "HOST=%RUNNER_TEMP%\gilbic-android-host"
+          if exist "%HOST%" rmdir /s /q "%HOST%"
+          mkdir "%HOST%" || exit /b 1
+          pushd "%HOST%"
           flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile . || exit /b 1
-          git checkout -- . || exit /b 1
-          if not exist "android\app\build.gradle" if not exist "android\app\build.gradle.kts" exit /b 1
+          popd
+          xcopy /e /i /y "%HOST%\android" "%GITHUB_WORKSPACE%\gilbic_mobile\android" >nul || exit /b 1
+          if not exist "gilbic_mobile\android\app\build.gradle" if not exist "gilbic_mobile\android\app\build.gradle.kts" exit /b 1
 
       - name: Resolve Flutter packages
         shell: cmd
