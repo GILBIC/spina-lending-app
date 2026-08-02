@@ -8,6 +8,7 @@ from .collector_route_api import create_collector_route_router
 from .config import get_settings
 from .database import database_ready
 from .management_api import create_management_router
+from .remittance_api import create_remittance_router
 
 
 def create_app() -> FastAPI:
@@ -38,6 +39,7 @@ def create_app() -> FastAPI:
     app.include_router(create_management_router())
     app.include_router(create_collector_route_router())
     app.include_router(create_collection_api_router())
+    app.include_router(create_remittance_router())
     return app
 
 
