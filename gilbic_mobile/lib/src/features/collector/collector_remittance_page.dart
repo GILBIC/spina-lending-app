@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/remittance/remittance.dart';
 import 'package:gilbic_mobile/src/core/remittance/remittance_repository.dart';
+import 'package:gilbic_mobile/src/features/collector/remittance_handover_photo_page.dart';
 
 class CollectorRemittancePage extends StatefulWidget {
   const CollectorRemittancePage({
@@ -202,7 +203,11 @@ class _CollectorRemittancePageState extends State<CollectorRemittancePage> {
         child: _loading && _summary == null
             ? const Center(child: CircularProgressIndicator())
             : _submitted != null
-                ? _SubmittedRemittance(record: _submitted!)
+                ? _SubmittedRemittance(
+                    record: _submitted!,
+                    session: widget.session,
+                    deviceIdentityProvider: widget.deviceIdentityProvider,
+                  )
                 : _buildReview(context),
       ),
     );
@@ -384,9 +389,36 @@ class _RemittanceItemTile extends StatelessWidget {
 }
 
 class _SubmittedRemittance extends StatelessWidget {
-  const _SubmittedRemittance({required this.record});
+  const _SubmittedRemittance({
+    required this.record,
+    required this.session,
+    required this.deviceIdentityProvider,
+  });
 
   final RemittanceRecord record;
+  final UserSession session;
+  final DeviceIdentityProvider deviceIdentityProvider;
+
+  Future<void> _openPhoto(BuildContext context) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (context) => RemittanceHandoverPhotoPage(
+          session: session,
+          remittance: record,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      ),
+    );
+    if (saved == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Handover photo saved. The recipient can view it before accepting.',
+          ),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -430,6 +462,13 @@ class _SubmittedRemittance extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 18),
+        OutlinedButton.icon(
+          key: const Key('add-handover-photo'),
+          onPressed: () => _openPhoto(context),
+          icon: const Icon(Icons.add_a_photo_outlined),
+          label: const Text('Add Handover Photo'),
+        ),
+        const SizedBox(height: 10),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
           child: const Text('Done'),
