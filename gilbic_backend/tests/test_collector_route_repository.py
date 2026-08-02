@@ -49,14 +49,15 @@ class FakeConnection:
                     "pass_count": 2,
                     "last_payment_date": date(2026, 7, 30),
                     "advance_until": None,
-                    "collection_status": "Missed payment",
+                    "collection_status": "Recorded today",
                     "note": "Morning visit",
                     "state_version": 7,
                     "is_reconciled": True,
                     "mobile_collections_enabled": True,
                     "mobile_balance_mode": "direct_remaining_balance",
-                    "processed_today": False,
-                    "today_entry_type": "",
+                    "processed_today": True,
+                    "today_entry_type": "payment",
+                    "today_collector_name": "Collector Two",
                 }
             ]
         )
@@ -96,14 +97,15 @@ def test_repository_returns_assigned_areas_and_authoritative_state(monkeypatch) 
     assert entry.route_entry_id == LOAN_ID
     assert entry.remaining_balance == Decimal("4800.00")
     assert entry.pass_count == 2
-    assert entry.status == "Missed payment"
+    assert entry.status == "Recorded today"
     assert entry.note == "Morning visit"
     assert entry.route_revision == f"loan:{LOAN_ID}:v7"
     assert entry.can_collect_mobile is True
     assert entry.can_enter_payment is True
-    assert entry.collection_message == "Ready for mobile collection."
-    assert entry.processed_today is False
-    assert entry.today_entry_type == ""
+    assert entry.collection_message == "Today's collection has already been recorded."
+    assert entry.processed_today is True
+    assert entry.today_entry_type == "payment"
+    assert entry.today_collector_name == "Collector Two"
 
     area_parameters = connection.area_cursor.executions[0][1]
     entry_parameters = connection.entry_cursor.executions[0][1]
