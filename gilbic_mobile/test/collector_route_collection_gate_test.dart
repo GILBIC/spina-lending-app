@@ -22,6 +22,11 @@ void main() {
       find.byKey(const Key('record-collection-entry-1')),
     );
     expect(button.onPressed, isNull);
+    expect(find.textContaining('Offline route copies are read-only'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('route-client-client-1')));
+    await tester.pumpAndSettle();
+
     expect(find.textContaining('Offline route copies are read-only'), findsOneWidget);
   });
 
@@ -40,6 +45,7 @@ void main() {
       find.byKey(const Key('record-collection-entry-1')),
     );
     expect(button.onPressed, isNotNull);
+    expect(find.text('Pay'), findsOneWidget);
   });
 }
 
