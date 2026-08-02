@@ -12,6 +12,7 @@ from gilbic_backend.collector_route_repository import PostgresCollectorRouteRepo
 COLLECTOR_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 CLIENT_ID = UUID("22222222-2222-4222-8222-222222222222")
 LOAN_ID = UUID("33333333-3333-4333-8333-333333333333")
+TRANSACTION_ID = UUID("44444444-4444-4444-8444-444444444444")
 
 
 class FakeCursor:
@@ -47,8 +48,8 @@ class FakeConnection:
                     "daily_amount": Decimal("200.00"),
                     "remaining_balance": Decimal("4800.00"),
                     "pass_count": 2,
-                    "last_payment_date": date(2026, 7, 30),
-                    "advance_until": None,
+                    "last_payment_date": date(2026, 8, 1),
+                    "advance_until": date(2026, 8, 3),
                     "collection_status": "Recorded today",
                     "note": "Morning visit",
                     "state_version": 7,
@@ -56,8 +57,21 @@ class FakeConnection:
                     "mobile_collections_enabled": True,
                     "mobile_balance_mode": "direct_remaining_balance",
                     "processed_today": True,
-                    "today_entry_type": "payment",
-                    "today_collector_name": "Collector Two",
+                    "today_entry_type": "advance",
+                    "today_collector_name": "Collector One",
+                    "today_transaction_id": TRANSACTION_ID,
+                    "today_collector_user_id": COLLECTOR_USER_ID,
+                    "today_is_locked": False,
+                    "today_amount": Decimal("600.00"),
+                    "today_note": "Selected dates only",
+                    "today_covered_dates": (
+                        date(2026, 8, 1),
+                        date(2026, 8, 3),
+                    ),
+                    "covered_dates": (
+                        date(2026, 8, 1),
+                        date(2026, 8, 3),
+                    ),
                 }
             ]
         )
@@ -104,10 +118,24 @@ def test_repository_returns_assigned_areas_and_authoritative_state(monkeypatch) 
     assert entry.can_enter_payment is True
     assert entry.collection_message == "Today's collection has already been recorded."
     assert entry.processed_today is True
-    assert entry.today_entry_type == "payment"
-    assert entry.today_collector_name == "Collector Two"
+    assert entry.today_entry_type == "advance"
+    assert entry.today_collector_name == "Collector One"
+    assert entry.today_transaction_id == TRANSACTION_ID
+    assert entry.today_amount == Decimal("600.00")
+    assert entry.today_note == "Selected dates only"
+    assert entry.today_covered_dates == (
+        date(2026, 8, 1),
+        date(2026, 8, 3),
+    )
+    assert entry.can_edit_today is True
+    assert entry.today_is_locked is False
 
     area_parameters = connection.area_cursor.executions[0][1]
     entry_parameters = connection.entry_cursor.executions[0][1]
     assert area_parameters == (COLLECTOR_USER_ID,)
-    assert entry_parameters == (route_date, route_date, COLLECTOR_USER_ID)
+    assert entry_parameters == (
+        route_date,
+        route_date,
+        route_date,
+        COLLECTOR_USER_ID,
+    )
