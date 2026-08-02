@@ -43,6 +43,8 @@ def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
         "can_collect_mobile": entry.can_collect_mobile,
         "can_enter_payment": entry.can_enter_payment,
         "collection_message": entry.collection_message,
+        "processed_today": entry.processed_today,
+        "today_entry_type": entry.today_entry_type,
     }
 
 
