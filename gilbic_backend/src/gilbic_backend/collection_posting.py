@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 from uuid import UUID, uuid4
@@ -28,8 +28,8 @@ class PostgresCollectionPostingBridge:
     The idempotency executor opens and owns the PostgreSQL transaction. This
     bridge locks the loan and device sequence, validates route ownership, updates
     the authoritative collection state, creates an immutable transaction and
-    receipt, records an audit event, and returns the replayable result. Any
-    exception rolls every write back together.
+    receipt, records exact covered dates and an audit event, and returns the
+    replayable result. Any exception rolls every write back together.
     """
 
     def post_collection(
@@ -46,6 +46,7 @@ class PostgresCollectionPostingBridge:
         loan_id = self._uuid(command.loan_id, "loan")
         client_id = self._uuid(command.client_id, "client")
         route_entry_id = self._uuid(command.route_entry_id, "route entry")
+        covered_dates = self._covered_dates(command)
 
         if route_entry_id != loan_id:
             raise CollectionRejected(
@@ -173,7 +174,6 @@ class PostgresCollectionPostingBridge:
                     cursor,
                     loan_id=loan_id,
                     collection_date=command.collection_date,
-                    advance_until=loan["advance_until"],
                 )
                 pass_count_after += 1
             else:
@@ -190,18 +190,24 @@ class PostgresCollectionPostingBridge:
                         "route and check the payment.",
                         code="amount_exceeds_balance",
                     )
+                self._verify_covered_dates_available(
+                    cursor,
+                    loan_id=loan_id,
+                    covered_dates=covered_dates,
+                )
                 official_balance = self._money(previous_balance - amount)
                 pass_count_after = 0
                 last_payment_date = command.collection_date
                 if command.entry_type is CollectionEntryType.ADVANCE:
-                    if command.advance_until is None:
+                    if not covered_dates:
                         raise CollectionRejected(
-                            "Choose the last date covered by ADV.",
-                            code="advance_date_required",
+                            "Choose at least one covered date.",
+                            code="covered_date_required",
                         )
+                    latest_selected = covered_dates[-1]
                     advance_until_after = max(
                         date_value
-                        for date_value in (loan["advance_until"], command.advance_until)
+                        for date_value in (loan["advance_until"], latest_selected)
                         if date_value is not None
                     )
 
@@ -259,6 +265,7 @@ class PostgresCollectionPostingBridge:
                 "mobile_balance_mode": str(settings.get("mobile_balance_mode") or ""),
                 "state_version_before": int(loan["state_version"]),
                 "state_version_after": next_version,
+                "covered_dates": [value.isoformat() for value in covered_dates],
             }
             cursor.execute(
                 """
@@ -318,6 +325,16 @@ class PostgresCollectionPostingBridge:
                     Jsonb(details),
                 ),
             )
+            for covered_date in covered_dates:
+                cursor.execute(
+                    """
+                    insert into lending.collection_covered_dates (
+                        transaction_id, loan_id, covered_date
+                    ) values (%s, %s, %s)
+                    """,
+                    (transaction_id, loan_id, covered_date),
+                )
+
             cursor.execute(
                 """
                 insert into core.audit_logs (
@@ -341,6 +358,9 @@ class PostgresCollectionPostingBridge:
                             "receipt_number": receipt_number,
                             "amount": str(amount),
                             "official_balance": str(official_balance),
+                            "covered_dates": [
+                                value.isoformat() for value in covered_dates
+                            ],
                         }
                     ),
                     accepted_at,
@@ -379,6 +399,25 @@ class PostgresCollectionPostingBridge:
     @staticmethod
     def _route_revision(*, loan_id: UUID, state_version: int) -> str:
         return f"loan:{loan_id}:v{state_version}"
+
+    @staticmethod
+    def _covered_dates(command: CollectionCommand) -> tuple[date, ...]:
+        selected = tuple(sorted(set(command.covered_dates)))
+        if selected:
+            return selected
+        if command.entry_type is CollectionEntryType.PAYMENT:
+            return (command.collection_date,)
+        if (
+            command.entry_type is CollectionEntryType.ADVANCE
+            and command.advance_from is not None
+            and command.advance_until is not None
+        ):
+            days = (command.advance_until - command.advance_from).days
+            return tuple(
+                command.advance_from + timedelta(days=offset)
+                for offset in range(days + 1)
+            )
+        return ()
 
     @staticmethod
     def _lock_device_sequence(
@@ -498,17 +537,53 @@ class PostgresCollectionPostingBridge:
             )
 
     @staticmethod
+    def _verify_covered_dates_available(
+        cursor: Any,
+        *,
+        loan_id: UUID,
+        covered_dates: tuple[date, ...],
+    ) -> None:
+        if not covered_dates:
+            return
+        cursor.execute(
+            """
+            select covered_date
+            from lending.collection_covered_dates
+            where loan_id = %s
+              and covered_date = any(%s)
+            order by covered_date
+            limit 1
+            """,
+            (loan_id, list(covered_dates)),
+        )
+        overlap = cursor.fetchone()
+        if overlap:
+            value = overlap["covered_date"]
+            raise CollectionConflict(
+                f"{value.isoformat()} is already covered by another payment.",
+                code="covered_date_already_used",
+            )
+
+    @staticmethod
     def _apply_pass_rules(
         cursor: Any,
         *,
         loan_id: UUID,
         collection_date: date,
-        advance_until: date | None,
     ) -> None:
-        if advance_until is not None and advance_until >= collection_date:
+        cursor.execute(
+            """
+            select transaction_id
+            from lending.collection_covered_dates
+            where loan_id = %s and covered_date = %s
+            limit 1
+            """,
+            (loan_id, collection_date),
+        )
+        if cursor.fetchone():
             raise CollectionRejected(
-                "This date is already covered by ADV, so PASS is not needed.",
-                code="advance_already_covers_date",
+                "This date is already covered by a payment, so unable-to-pay is not needed.",
+                code="covered_date_already_used",
             )
         cursor.execute(
             """
@@ -523,7 +598,7 @@ class PostgresCollectionPostingBridge:
         )
         if cursor.fetchone():
             raise CollectionConflict(
-                "PASS was already recorded for this client on this date.",
+                "Unable-to-pay was already recorded for this client on this date.",
                 code="pass_already_recorded",
             )
 
@@ -536,7 +611,7 @@ class PostgresCollectionPostingBridge:
     @staticmethod
     def _success_message(entry_type: CollectionEntryType) -> str:
         if entry_type is CollectionEntryType.ADVANCE:
-            return "ADV saved."
+            return "Covered-date payment saved."
         if entry_type is CollectionEntryType.PASS:
-            return "PASS saved."
+            return "Unable-to-pay reason saved."
         return "Payment saved."
