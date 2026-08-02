@@ -99,3 +99,23 @@ def test_remittance_notification_acceptance_transfers_cash_custody() -> None:
     assert "Accept only after the cash is physically received" in migration
     assert "status = 'accepted'" in migration
     assert "Accepting a remittance transfers cash custody" in migration
+
+
+def test_optional_handover_photos_are_private_versioned_and_immutable() -> None:
+    migration = (
+        SQL_DIR / "0011_add_remittance_handover_photos.sql"
+    ).read_text(encoding="utf-8")
+
+    assert "BEGIN;" in migration and "COMMIT;" in migration
+    assert "lending.remittance_handover_photos" in migration
+    assert "UNIQUE (remittance_id, version)" in migration
+    assert "UNIQUE (remittance_id, sha256_hex)" in migration
+    assert "byte_size > 0 AND byte_size <= 5242880" in migration
+    assert "image/jpeg" in migration
+    assert "image/png" in migration
+    assert "image/webp" in migration
+    assert "TG_OP <> 'INSERT'" in migration
+    assert "Handover photo versions are immutable" in migration
+    assert "Handover evidence is locked after remittance acceptance" in migration
+    assert "Only the collector who submitted the remittance" in migration
+    assert "Private image bytes" in migration
