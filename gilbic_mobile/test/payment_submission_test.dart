@@ -21,10 +21,11 @@ void main() {
     );
   });
 
-  test('serializes a normal payment without calculating server values', () {
+  test('serializes a normal payment with the collection date', () {
     final draft = _draft(
       entryType: CollectionEntryType.payment,
       amount: 200,
+      coveredDates: <DateTime>[DateTime(2026, 7, 31)],
     );
 
     expect(draft.validate(), isNull);
@@ -35,33 +36,70 @@ void main() {
     expect(draft.toJson(), containsPair('collection_date', '2026-07-31'));
     expect(draft.toJson(), containsPair('entry_type', 'payment'));
     expect(draft.toJson(), containsPair('amount', 200));
+    expect(
+      draft.toJson(),
+      containsPair('covered_dates', <String>['2026-07-31']),
+    );
     expect(draft.toJson(), containsPair('route_revision', 'route-v3'));
   });
 
-  test('requires ADV coverage and rejects reversed dates', () {
+  test('serializes only individually selected covered dates', () {
+    final draft = _draft(
+      entryType: CollectionEntryType.advance,
+      amount: 600,
+      advanceFrom: DateTime(2026, 7, 31),
+      advanceUntil: DateTime(2026, 8, 3),
+      coveredDates: <DateTime>[
+        DateTime(2026, 8, 3),
+        DateTime(2026, 7, 31),
+        DateTime(2026, 8, 2),
+      ],
+    );
+
+    expect(draft.validate(), isNull);
+    expect(
+      draft.toJson()['covered_dates'],
+      <String>['2026-07-31', '2026-08-02', '2026-08-03'],
+    );
+    expect(
+      (draft.toJson()['covered_dates'] as List<Object?>).contains('2026-08-01'),
+      isFalse,
+    );
+  });
+
+  test('requires exact covered dates and matching bounds', () {
     final missingCoverage = _draft(
       entryType: CollectionEntryType.advance,
       amount: 400,
     );
-    final reversedCoverage = _draft(
+    final mismatchedBounds = _draft(
       entryType: CollectionEntryType.advance,
       amount: 400,
-      advanceFrom: DateTime(2026, 8, 2),
-      advanceUntil: DateTime(2026, 8, 1),
+      advanceFrom: DateTime(2026, 8, 1),
+      advanceUntil: DateTime(2026, 8, 3),
+      coveredDates: <DateTime>[
+        DateTime(2026, 8, 2),
+        DateTime(2026, 8, 3),
+      ],
     );
 
-    expect(missingCoverage.validate(), contains('coverage'));
-    expect(reversedCoverage.validate(), contains('cannot end before'));
+    expect(missingCoverage.validate(), contains('Choose at least one'));
+    expect(mismatchedBounds.validate(), contains('earliest selected date'));
   });
 
-  test('PASS entries cannot contain money or ADV dates', () {
+  test('unable-to-pay entries cannot contain money or covered dates', () {
     final passWithAmount = _draft(
       entryType: CollectionEntryType.pass,
       amount: 200,
     );
+    final passWithDate = _draft(
+      entryType: CollectionEntryType.pass,
+      coveredDates: <DateTime>[DateTime(2026, 7, 31)],
+    );
     final validPass = _draft(entryType: CollectionEntryType.pass);
 
     expect(passWithAmount.validate(), contains('cannot contain'));
+    expect(passWithDate.validate(), contains('cannot contain'));
     expect(validPass.validate(), isNull);
   });
 
@@ -94,6 +132,7 @@ PaymentSubmissionDraft _draft({
   double? amount,
   DateTime? advanceFrom,
   DateTime? advanceUntil,
+  List<DateTime> coveredDates = const <DateTime>[],
 }) {
   return PaymentSubmissionDraft(
     idempotencyKey: 'transaction-1',
@@ -105,6 +144,7 @@ PaymentSubmissionDraft _draft({
     amount: amount,
     advanceFrom: advanceFrom,
     advanceUntil: advanceUntil,
+    coveredDates: coveredDates,
     recordedAt: DateTime.utc(2026, 7, 31, 5, 15),
     deviceId: 'device-1',
     deviceSequence: 12,
