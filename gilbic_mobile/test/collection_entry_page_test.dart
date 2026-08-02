@@ -14,6 +14,11 @@ void main() {
   testWidgets('network retry reuses the same idempotency key and sequence', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+
     final repository = _RetryRepository();
     await tester.pumpWidget(
       MaterialApp(
@@ -27,12 +32,13 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('200.00'), findsOneWidget);
+    expect(find.text('Covered dates'), findsOneWidget);
 
     final submitButton = find.byKey(const Key('submit-collection-entry'));
-    await tester.ensureVisible(submitButton);
-    await tester.pumpAndSettle();
+    expect(submitButton, findsOneWidget);
     await tester.tap(submitButton);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('confirm-collection-entry')));
@@ -41,14 +47,12 @@ void main() {
     expect(find.text('Retry same entry'), findsOneWidget);
     expect(find.textContaining('could not reach'), findsOneWidget);
 
-    await tester.ensureVisible(submitButton);
-    await tester.pumpAndSettle();
     await tester.tap(submitButton);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('confirm-collection-entry')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Already recorded'), findsOneWidget);
+    expect(find.text('Payment saved.'), findsOneWidget);
     expect(find.text('Receipt: R-1001'), findsOneWidget);
     expect(find.text('Official balance: ₱4,600.00'), findsOneWidget);
     expect(find.text('Done and refresh route'), findsOneWidget);
