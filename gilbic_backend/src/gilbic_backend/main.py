@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from . import __version__
 from .auth_api import create_auth_router
 from .collection_api import create_collection_api_router
+from .collection_correction_api import create_collection_correction_router
 from .collector_route_api import create_collector_route_router
 from .config import get_settings
 from .database import database_ready
@@ -39,6 +40,7 @@ def create_app() -> FastAPI:
     app.include_router(create_management_router())
     app.include_router(create_collector_route_router())
     app.include_router(create_collection_api_router())
+    app.include_router(create_collection_correction_router())
     app.include_router(create_remittance_router())
     return app
 
