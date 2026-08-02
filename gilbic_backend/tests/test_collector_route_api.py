@@ -111,6 +111,8 @@ class FakeRoutes:
                     is_reconciled=True,
                     mobile_collections_enabled=True,
                     mobile_balance_mode="direct_remaining_balance",
+                    processed_today=False,
+                    today_entry_type="",
                 ),
             ),
         )
@@ -166,6 +168,8 @@ def test_collector_receives_only_server_assigned_route() -> None:
             "can_collect_mobile": True,
             "can_enter_payment": True,
             "collection_message": "Ready for mobile collection.",
+            "processed_today": False,
+            "today_entry_type": "",
         }
     ]
     assert accounts.seen_device == "gilbic-installation-one"
