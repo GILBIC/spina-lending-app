@@ -29,6 +29,8 @@ class CollectorRouteEntryRecord:
     is_reconciled: bool = False
     mobile_collections_enabled: bool = False
     mobile_balance_mode: str = ""
+    processed_today: bool = False
+    today_entry_type: str = ""
 
     @property
     def route_revision(self) -> str:
@@ -44,12 +46,14 @@ class CollectorRouteEntryRecord:
 
     @property
     def collection_message(self) -> str:
+        if self.processed_today:
+            return "Today's collection has already been recorded."
         if not self.is_reconciled:
             return "Checking this loan against SPINA records."
         if not self.mobile_collections_enabled:
             return "Use the SPINA desktop app for this loan type."
         if not self.can_enter_payment:
-            return "PASS is available, but payments and ADV still use SPINA desktop."
+            return "Unable-to-pay is available, but payments still use SPINA desktop."
         return "Ready for mobile collection."
 
 
@@ -69,10 +73,10 @@ class PostgresCollectorRouteRepository:
     """Read the live route for one authenticated collector.
 
     Area ownership is server-side in ``lending.collector_area_assignments``.
-    Balance, pass, advance, and note values are read from the authoritative
-    ``lending.loan_collection_state`` row. Before imported loans are exposed to
-    mobile collection, that state must be reconciled with the desktop source of
-    truth.
+    Balance, missed-payment count, covered dates, and notes are read from the
+    authoritative ``lending.loan_collection_state`` row. Before imported loans
+    are exposed to mobile collection, that state must be reconciled with the
+    desktop source of truth.
     """
 
     def get_today_route(
@@ -112,15 +116,19 @@ class PostgresCollectorRouteRepository:
                         s.last_payment_date,
                         s.advance_until,
                         case
+                            when today.entry_type = 'pass'
+                                then 'Unable to pay'
+                            when today.entry_type is not null
+                                then 'Recorded today'
                             when coalesce(s.is_reconciled, false) = false
                                 then 'Needs review'
                             when lower(coalesce(lt.settings->>'mobile_collections_enabled', ''))
                                  not in ('true', '1', 'yes', 'on')
                                 then 'Desktop only'
                             when s.advance_until is not null and s.advance_until >= %s
-                                then 'Advance'
+                                then 'Covered'
                             when coalesce(s.pass_count, 0) > 0
-                                then 'Pass'
+                                then 'Missed payment'
                             else 'Pending'
                         end as collection_status,
                         coalesce(s.note, '') as note,
@@ -128,7 +136,9 @@ class PostgresCollectorRouteRepository:
                         coalesce(s.is_reconciled, false) as is_reconciled,
                         lower(coalesce(lt.settings->>'mobile_collections_enabled', ''))
                             in ('true', '1', 'yes', 'on') as mobile_collections_enabled,
-                        coalesce(lt.settings->>'mobile_balance_mode', '') as mobile_balance_mode
+                        coalesce(lt.settings->>'mobile_balance_mode', '') as mobile_balance_mode,
+                        today.entry_type is not null as processed_today,
+                        coalesce(today.entry_type, '') as today_entry_type
                     from lending.collector_area_assignments a
                     join lending.clients c
                       on lower(btrim(c.area)) = lower(btrim(a.area))
@@ -141,6 +151,14 @@ class PostgresCollectorRouteRepository:
                      and lt.is_active = true
                     left join lending.loan_collection_state s
                       on s.loan_id = l.id
+                    left join lateral (
+                        select t.entry_type
+                        from lending.collection_transactions t
+                        where t.loan_id = l.id
+                          and t.collection_date = %s
+                        order by t.accepted_at desc, t.id desc
+                        limit 1
+                    ) today on true
                     where a.collector_user_id = %s
                       and a.is_active = true
                       and coalesce(s.remaining_balance, l.principal) > 0
@@ -150,7 +168,7 @@ class PostgresCollectorRouteRepository:
                         l.date_released,
                         l.id
                     """,
-                    (route_date, collector_user_id),
+                    (route_date, route_date, collector_user_id),
                 )
                 rows = cursor.fetchall()
 
@@ -173,6 +191,8 @@ class PostgresCollectorRouteRepository:
                 is_reconciled=bool(row["is_reconciled"]),
                 mobile_collections_enabled=bool(row["mobile_collections_enabled"]),
                 mobile_balance_mode=str(row["mobile_balance_mode"] or ""),
+                processed_today=bool(row["processed_today"]),
+                today_entry_type=str(row["today_entry_type"] or ""),
             )
             for row in rows
         )

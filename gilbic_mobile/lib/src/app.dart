@@ -5,7 +5,10 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_cache.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart';
+import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
+import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/auth/login_page.dart';
 import 'package:gilbic_mobile/src/features/dashboard/role_dashboard.dart';
 
@@ -16,6 +19,9 @@ class GilbicApp extends StatefulWidget {
     this.collectorRouteRepository,
     this.collectorRouteCache,
     this.collectorRouteLoader,
+    this.paymentSubmissionRepository,
+    this.deviceIdentityProvider,
+    this.collectionDeviceSequence,
     super.key,
   });
 
@@ -24,6 +30,9 @@ class GilbicApp extends StatefulWidget {
   final CollectorRouteRepository? collectorRouteRepository;
   final CollectorRouteCache? collectorRouteCache;
   final CollectorRouteLoader? collectorRouteLoader;
+  final PaymentSubmissionRepository? paymentSubmissionRepository;
+  final DeviceIdentityProvider? deviceIdentityProvider;
+  final CollectionDeviceSequence? collectionDeviceSequence;
 
   @override
   State<GilbicApp> createState() => _GilbicAppState();
@@ -33,6 +42,9 @@ class _GilbicAppState extends State<GilbicApp> {
   late final SessionStore _sessionStore;
   late final AuthRepository _authRepository;
   late final CollectorRouteLoader _collectorRouteLoader;
+  late final PaymentSubmissionRepository _paymentSubmissionRepository;
+  late final DeviceIdentityProvider _deviceIdentityProvider;
+  late final CollectionDeviceSequence _collectionDeviceSequence;
   CollectorRouteCache? _collectorRouteCache;
   UserSession? _session;
   bool _loading = true;
@@ -42,6 +54,12 @@ class _GilbicAppState extends State<GilbicApp> {
     super.initState();
     _sessionStore = widget.sessionStore ?? SecureSessionStore();
     _authRepository = widget.authRepository ?? SpinaAuthRepository();
+    _paymentSubmissionRepository = widget.paymentSubmissionRepository ??
+        SpinaPaymentSubmissionRepository();
+    _deviceIdentityProvider =
+        widget.deviceIdentityProvider ?? DeviceIdentityProvider();
+    _collectionDeviceSequence = widget.collectionDeviceSequence ??
+        SecureCollectionDeviceSequence();
 
     final suppliedLoader = widget.collectorRouteLoader;
     if (suppliedLoader != null) {
@@ -129,6 +147,9 @@ class _GilbicAppState extends State<GilbicApp> {
                   session: _session!,
                   onSignOut: _signOut,
                   collectorRouteLoader: _collectorRouteLoader,
+                  paymentSubmissionRepository: _paymentSubmissionRepository,
+                  deviceIdentityProvider: _deviceIdentityProvider,
+                  collectionDeviceSequence: _collectionDeviceSequence,
                 ),
     );
   }

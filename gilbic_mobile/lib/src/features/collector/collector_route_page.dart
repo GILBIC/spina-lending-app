@@ -2,22 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
+import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
+import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
+import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
 
 class CollectorRoutePage extends StatefulWidget {
   const CollectorRoutePage({
     required this.session,
     required this.loader,
+    this.paymentRepository,
+    this.deviceIdentityProvider,
+    this.deviceSequence,
     super.key,
   });
 
   final UserSession session;
   final CollectorRouteLoader loader;
+  final PaymentSubmissionRepository? paymentRepository;
+  final DeviceIdentityProvider? deviceIdentityProvider;
+  final CollectionDeviceSequence? deviceSequence;
 
   @override
   State<CollectorRoutePage> createState() => _CollectorRoutePageState();
 }
 
 class _CollectorRoutePageState extends State<CollectorRoutePage> {
+  late final PaymentSubmissionRepository _paymentRepository;
+  late final DeviceIdentityProvider _deviceIdentityProvider;
+  late final CollectionDeviceSequence _deviceSequence;
+
   CollectorRouteLoadResult? _result;
   Object? _error;
   bool _loading = true;
@@ -25,6 +39,12 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
   @override
   void initState() {
     super.initState();
+    _paymentRepository =
+        widget.paymentRepository ?? SpinaPaymentSubmissionRepository();
+    _deviceIdentityProvider =
+        widget.deviceIdentityProvider ?? DeviceIdentityProvider();
+    _deviceSequence =
+        widget.deviceSequence ?? SecureCollectionDeviceSequence();
     _loadRoute();
   }
 
@@ -49,6 +69,62 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         setState(() => _loading = false);
       }
     }
+  }
+
+  Future<void> _openCollection(
+    CollectorRouteLoadResult loaded,
+    CollectorRouteEntry entry,
+  ) async {
+    final blockedReason = _collectionBlockedReason(loaded, entry);
+    if (blockedReason != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(blockedReason)),
+      );
+      return;
+    }
+
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (context) => CollectionEntryPage(
+          session: widget.session,
+          entry: entry,
+          repository: _paymentRepository,
+          deviceIdentityProvider: _deviceIdentityProvider,
+          deviceSequence: _deviceSequence,
+          collectionDate: loaded.route.routeDate,
+        ),
+      ),
+    );
+    if (saved == true && mounted) {
+      await _loadRoute();
+    }
+  }
+
+  String? _collectionBlockedReason(
+    CollectorRouteLoadResult loaded,
+    CollectorRouteEntry entry,
+  ) {
+    if (loaded.isFromCache) {
+      return 'Offline route copies are read-only. Reconnect and refresh before recording a collection.';
+    }
+    if (!widget.session.permissions.contains('collection.create')) {
+      return 'This account does not have permission to record collections.';
+    }
+    if (entry.processedToday) {
+      return "Today's collection has already been recorded.";
+    }
+    if (_isSevenBySevenLoan(entry.loanType)) {
+      return '7x7 mobile collection is disabled. Use SPINA desktop until the dedicated allocator is verified.';
+    }
+    if (!entry.canCollectMobile || !entry.canEnterPayment) {
+      return entry.collectionMessage.isNotEmpty
+          ? entry.collectionMessage
+          : 'Use SPINA desktop for this loan.';
+    }
+    if (entry.loanId.trim().isEmpty || entry.routeRevision == null) {
+      return 'Refresh the route before recording this collection.';
+    }
+    return null;
   }
 
   @override
@@ -145,15 +221,20 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
               ),
             )
           else
-            ...route.entries.map(
-              (entry) => Padding(
+            ...route.entries.map((entry) {
+              final blockedReason = _collectionBlockedReason(loaded, entry);
+              return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: _RouteEntryCard(entry: entry),
-              ),
-            ),
+                child: _RouteEntryCard(
+                  entry: entry,
+                  blockedReason: blockedReason,
+                  onRecord: () => _openCollection(loaded, entry),
+                ),
+              );
+            }),
           const SizedBox(height: 8),
           Text(
-            'Read-only route. Cached information may be older than the SPINA server. Payments, balances, and permissions remain server-controlled.',
+            'Offline routes are view-only. Online payments, covered dates, and unable-to-pay reasons are sent directly to SPINA. Official balances and receipts remain server-controlled.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -210,26 +291,12 @@ class _RouteSyncStatus extends StatelessWidget {
                   ],
                 ),
               ),
-              if (_loadingIndicatorNeeded(result))
-                Padding(
-                  padding: const EdgeInsets.only(left: 8),
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: foreground,
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
       ),
     );
   }
-
-  bool _loadingIndicatorNeeded(CollectorRouteLoadResult result) => false;
 }
 
 class _RouteHeader extends StatelessWidget {
@@ -253,7 +320,7 @@ class _RouteHeader extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 4),
-            Text('$dateText • ${route.entries.length} clients'),
+            Text('$dateText • ${route.entries.length} loan entries'),
             if (route.areas.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text('Areas: ${route.areas.join(', ')}'),
@@ -271,9 +338,15 @@ class _RouteHeader extends StatelessWidget {
 }
 
 class _RouteEntryCard extends StatelessWidget {
-  const _RouteEntryCard({required this.entry});
+  const _RouteEntryCard({
+    required this.entry,
+    required this.blockedReason,
+    required this.onRecord,
+  });
 
   final CollectorRouteEntry entry;
+  final String? blockedReason;
+  final VoidCallback onRecord;
 
   @override
   Widget build(BuildContext context) {
@@ -308,20 +381,47 @@ class _RouteEntryCard extends StatelessWidget {
               children: [
                 _AmountLabel(label: 'Daily', value: entry.dailyAmount),
                 _AmountLabel(label: 'Balance', value: entry.balance),
-                Text('PASS: ${entry.passCount}'),
+                Text('Missed: ${entry.passCount}'),
               ],
             ),
             if (entry.advanceUntil != null) ...[
               const SizedBox(height: 8),
-              Text('Advance covered until ${_date(entry.advanceUntil!)}'),
+              Text('Covered through ${_date(entry.advanceUntil!)}'),
             ],
             if (entry.lastPaymentDate != null) ...[
               const SizedBox(height: 4),
               Text('Last payment: ${_date(entry.lastPaymentDate!)}'),
             ],
+            if (entry.processedToday) ...[
+              const SizedBox(height: 6),
+              Text(_todayResultLabel(entry.todayEntryType)),
+            ],
             if (entry.note.isNotEmpty) ...[
               const Divider(height: 20),
               Text('Note: ${entry.note}'),
+            ],
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                key: Key('record-collection-${entry.id}'),
+                onPressed: blockedReason == null ? onRecord : null,
+                icon: const Icon(Icons.payments_outlined),
+                label: const Text('Record collection'),
+              ),
+            ),
+            if (blockedReason != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                blockedReason!,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ] else if (entry.collectionMessage.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                entry.collectionMessage,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
           ],
         ),
@@ -340,6 +440,19 @@ class _AmountLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text('$label: ${_money(value)}');
   }
+}
+
+String _todayResultLabel(String value) {
+  return switch (value.trim().toLowerCase()) {
+    'pass' => 'Unable-to-pay reason recorded today.',
+    'advance' => 'Covered-date payment recorded today.',
+    _ => 'Payment recorded today.',
+  };
+}
+
+bool _isSevenBySevenLoan(String value) {
+  final normalized = value.toLowerCase().replaceAll(' ', '');
+  return normalized.contains('7x7') || normalized.contains('7×7');
 }
 
 String _date(DateTime value) {

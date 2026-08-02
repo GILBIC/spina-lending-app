@@ -103,6 +103,8 @@ class CollectorRouteEntry {
     this.canCollectMobile = true,
     this.canEnterPayment = true,
     this.collectionMessage = '',
+    this.processedToday = false,
+    this.todayEntryType = '',
   });
 
   final String id;
@@ -122,6 +124,8 @@ class CollectorRouteEntry {
   final bool canCollectMobile;
   final bool canEnterPayment;
   final String collectionMessage;
+  final bool processedToday;
+  final String todayEntryType;
 
   Map<String, Object?> toJson() {
     return <String, Object?>{
@@ -142,6 +146,8 @@ class CollectorRouteEntry {
       'can_collect_mobile': canCollectMobile,
       'can_enter_payment': canEnterPayment,
       'collection_message': collectionMessage,
+      'processed_today': processedToday,
+      'today_entry_type': todayEntryType,
     };
   }
 
@@ -263,6 +269,15 @@ class CollectorRouteEntry {
       collectionMessage: firstNonEmptyString(<Object?>[
             data['collection_message'],
             data['status_message'],
+          ]) ??
+          '',
+      processedToday: _boolValue(
+        data['processed_today'],
+        fallback: false,
+      ),
+      todayEntryType: firstNonEmptyString(<Object?>[
+            data['today_entry_type'],
+            data['entry_type_today'],
           ]) ??
           '',
     );
