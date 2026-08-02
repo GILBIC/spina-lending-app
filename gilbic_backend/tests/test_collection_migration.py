@@ -80,3 +80,22 @@ def test_remitted_collection_rows_become_fully_immutable() -> None:
     assert "permanently locked" in migration
     assert "authorized supervisor adjustment" in migration
     assert "lending_collection_transaction_lock_guard" in migration
+
+
+def test_remittance_notification_acceptance_transfers_cash_custody() -> None:
+    migration = (
+        SQL_DIR / "0010_add_remittance_acceptance_notifications.sql"
+    ).read_text(encoding="utf-8")
+
+    assert "BEGIN;" in migration and "COMMIT;" in migration
+    assert "core.user_notifications" in migration
+    assert "action_code TEXT NOT NULL DEFAULT 'accept_remittance'" in migration
+    assert "custody_user_id UUID" in migration
+    assert "custody_transferred_at TIMESTAMPTZ" in migration
+    assert "Only the selected remittance recipient may accept custody" in migration
+    assert "NEW.custody_user_id := OLD.recipient_user_id" in migration
+    assert "NEW.custody_transferred_at := NEW.received_at" in migration
+    assert "Remittance awaiting acceptance" in migration
+    assert "Accept only after the cash is physically received" in migration
+    assert "status = 'accepted'" in migration
+    assert "Accepting a remittance transfers cash custody" in migration
