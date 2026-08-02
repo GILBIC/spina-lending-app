@@ -45,6 +45,8 @@ void main() {
     expect(find.text('Online route'), findsOneWidget);
     expect(find.textContaining('Last synchronized'), findsOneWidget);
     expect(find.text('Ana Client'), findsOneWidget);
+    expect(find.text('Regular'), findsOneWidget);
+    expect(find.text('7x7'), findsOneWidget);
     expect(find.textContaining('Expected collection'), findsOneWidget);
 
     final footer = find.textContaining('Offline routes are view-only');
@@ -121,7 +123,7 @@ CollectorRoute _route() {
     routeDate: DateTime.utc(2026, 7, 31),
     collectorName: 'Test Collector',
     areas: const <String>['Cardona'],
-    expectedTotal: 200,
+    expectedTotal: 275,
     entries: const <CollectorRouteEntry>[
       CollectorRouteEntry(
         id: 'entry-1',
@@ -134,6 +136,21 @@ CollectorRoute _route() {
         balance: 4800,
         status: 'Pending',
         passCount: 0,
+      ),
+      CollectorRouteEntry(
+        id: 'entry-2',
+        clientId: 'client-1',
+        loanId: 'loan-2',
+        clientName: 'Ana Client',
+        area: 'Cardona',
+        loanType: '7x7',
+        dailyAmount: 75,
+        balance: 3000,
+        status: 'Desktop only',
+        passCount: 0,
+        canCollectMobile: false,
+        canEnterPayment: false,
+        collectionMessage: 'Use SPINA desktop for this loan.',
       ),
     ],
   );

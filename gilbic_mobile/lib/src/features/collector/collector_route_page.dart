@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
+import 'package:gilbic_mobile/src/core/collector/collector_route_grouping.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
@@ -179,6 +180,12 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
 
     final loaded = result!;
     final route = loaded.route;
+    final areaGroups = groupCollectorRoute(route);
+    final clientCount = areaGroups.fold<int>(
+      0,
+      (total, group) => total + group.clientCount,
+    );
+
     return RefreshIndicator(
       onRefresh: _loadRoute,
       child: ListView(
@@ -187,7 +194,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         children: [
           _RouteSyncStatus(result: loaded),
           const SizedBox(height: 12),
-          _RouteHeader(route: route),
+          _RouteHeader(route: route, clientCount: clientCount),
           if (loaded.warning != null) ...[
             const SizedBox(height: 12),
             MaterialBanner(
@@ -221,18 +228,16 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
               ),
             )
           else
-            ...route.entries.map((entry) {
-              final blockedReason = _collectionBlockedReason(loaded, entry);
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _RouteEntryCard(
-                  entry: entry,
-                  blockedReason: blockedReason,
-                  onRecord: () => _openCollection(loaded, entry),
-                ),
-              );
-            }),
-          const SizedBox(height: 8),
+            for (final group in areaGroups) ...[
+              _AreaLedgerSection(
+                group: group,
+                blockedReasonFor: (entry) =>
+                    _collectionBlockedReason(loaded, entry),
+                onRecord: (entry) => _openCollection(loaded, entry),
+              ),
+              const SizedBox(height: 12),
+            ],
+          const SizedBox(height: 4),
           Text(
             'Offline routes are view-only. Online payments, covered dates, and unable-to-pay reasons are sent directly to SPINA. Official balances and receipts remain server-controlled.',
             textAlign: TextAlign.center,
@@ -300,14 +305,17 @@ class _RouteSyncStatus extends StatelessWidget {
 }
 
 class _RouteHeader extends StatelessWidget {
-  const _RouteHeader({required this.route});
+  const _RouteHeader({required this.route, required this.clientCount});
 
   final CollectorRoute route;
+  final int clientCount;
 
   @override
   Widget build(BuildContext context) {
     final routeDate = route.routeDate;
     final dateText = routeDate == null ? 'Saved route' : _date(routeDate);
+    final recordedCount =
+        route.entries.where((entry) => entry.processedToday).length;
 
     return Card(
       child: Padding(
@@ -320,7 +328,9 @@ class _RouteHeader extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 4),
-            Text('$dateText • ${route.entries.length} loan entries'),
+            Text(
+              '$dateText • $clientCount clients • ${route.entries.length} loans',
+            ),
             if (route.areas.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text('Areas: ${route.areas.join(', ')}'),
@@ -330,6 +340,8 @@ class _RouteHeader extends StatelessWidget {
               'Expected collection: ${_money(route.expectedTotal)}',
               style: Theme.of(context).textTheme.titleMedium,
             ),
+            const SizedBox(height: 4),
+            Text('Recorded loan entries today: $recordedCount'),
           ],
         ),
       ),
@@ -337,8 +349,133 @@ class _RouteHeader extends StatelessWidget {
   }
 }
 
-class _RouteEntryCard extends StatelessWidget {
-  const _RouteEntryCard({
+class _AreaLedgerSection extends StatelessWidget {
+  const _AreaLedgerSection({
+    required this.group,
+    required this.blockedReasonFor,
+    required this.onRecord,
+  });
+
+  final CollectorRouteAreaGroup group;
+  final String? Function(CollectorRouteEntry entry) blockedReasonFor;
+  final void Function(CollectorRouteEntry entry) onRecord;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            color: scheme.primaryContainer,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'AREA: ${group.area.toUpperCase()}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: scheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ),
+                Text(
+                  '${group.clientCount} clients',
+                  style: TextStyle(color: scheme.onPrimaryContainer),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            color: scheme.surfaceContainerHighest,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Text(
+              '${group.loanCount} loans • Expected ${_money(group.expectedTotal)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          for (var index = 0; index < group.clients.length; index++) ...[
+            if (index > 0) const Divider(height: 1),
+            _ClientLedgerBlock(
+              sequence: index + 1,
+              client: group.clients[index],
+              blockedReasonFor: blockedReasonFor,
+              onRecord: onRecord,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ClientLedgerBlock extends StatelessWidget {
+  const _ClientLedgerBlock({
+    required this.sequence,
+    required this.client,
+    required this.blockedReasonFor,
+    required this.onRecord,
+  });
+
+  final int sequence;
+  final CollectorRouteClientGroup client;
+  final String? Function(CollectorRouteEntry entry) blockedReasonFor;
+  final void Function(CollectorRouteEntry entry) onRecord;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: Key('route-client-${client.clientId}'),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 28,
+                child: Text(
+                  '$sequence.',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  client.clientName,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${client.processedLoanCount}/${client.loans.length} recorded',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (var index = 0; index < client.loans.length; index++) ...[
+            if (index > 0) const Divider(height: 18),
+            _LoanLedgerRow(
+              entry: client.loans[index],
+              blockedReason: blockedReasonFor(client.loans[index]),
+              onRecord: () => onRecord(client.loans[index]),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LoanLedgerRow extends StatelessWidget {
+  const _LoanLedgerRow({
     required this.entry,
     required this.blockedReason,
     required this.onRecord,
@@ -350,95 +487,84 @@ class _RouteEntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    entry.clientName,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+    return Padding(
+      padding: const EdgeInsets.only(left: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  entry.loanType,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
-                const SizedBox(width: 8),
-                Chip(label: Text(entry.status)),
-              ],
-            ),
-            Text(
-              [entry.area, entry.loanType]
-                  .where((value) => value.isNotEmpty)
-                  .join(' • '),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 18,
-              runSpacing: 8,
-              children: [
-                _AmountLabel(label: 'Daily', value: entry.dailyAmount),
-                _AmountLabel(label: 'Balance', value: entry.balance),
-                Text('Missed: ${entry.passCount}'),
-              ],
-            ),
-            if (entry.advanceUntil != null) ...[
-              const SizedBox(height: 8),
-              Text('Covered through ${_date(entry.advanceUntil!)}'),
-            ],
-            if (entry.lastPaymentDate != null) ...[
-              const SizedBox(height: 4),
-              Text('Last payment: ${_date(entry.lastPaymentDate!)}'),
-            ],
-            if (entry.processedToday) ...[
-              const SizedBox(height: 6),
-              Text(_todayResultLabel(entry.todayEntryType)),
-            ],
-            if (entry.note.isNotEmpty) ...[
-              const Divider(height: 20),
-              Text('Note: ${entry.note}'),
-            ],
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                key: Key('record-collection-${entry.id}'),
-                onPressed: blockedReason == null ? onRecord : null,
-                icon: const Icon(Icons.payments_outlined),
-                label: const Text('Record collection'),
               ),
-            ),
-            if (blockedReason != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                blockedReason!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ] else if (entry.collectionMessage.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                entry.collectionMessage,
-                style: Theme.of(context).textTheme.bodySmall,
+              const SizedBox(width: 8),
+              Chip(
+                visualDensity: VisualDensity.compact,
+                label: Text(entry.status),
               ),
             ],
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
+            children: [
+              Text('Daily ${_money(entry.dailyAmount)}'),
+              Text('Balance ${_money(entry.balance)}'),
+              Text('Missed ${entry.passCount}'),
+            ],
+          ),
+          if (entry.advanceUntil != null) ...[
+            const SizedBox(height: 4),
+            Text('Covered through ${_date(entry.advanceUntil!)}'),
           ],
-        ),
+          if (entry.lastPaymentDate != null) ...[
+            const SizedBox(height: 4),
+            Text('Last payment ${_date(entry.lastPaymentDate!)}'),
+          ],
+          if (entry.processedToday) ...[
+            const SizedBox(height: 4),
+            Text(
+              _todayResultLabel(entry.todayEntryType),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          if (entry.note.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('Reason / note: ${entry.note}'),
+          ],
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.tonalIcon(
+              key: Key('record-collection-${entry.id}'),
+              onPressed: blockedReason == null ? onRecord : null,
+              icon: const Icon(Icons.payments_outlined),
+              label: const Text('Record collection'),
+            ),
+          ),
+          if (blockedReason != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              blockedReason!,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ] else if (entry.collectionMessage.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              entry.collectionMessage,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ],
       ),
     );
-  }
-}
-
-class _AmountLabel extends StatelessWidget {
-  const _AmountLabel({required this.label, required this.value});
-
-  final String label;
-  final double value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text('$label: ${_money(value)}');
   }
 }
 
