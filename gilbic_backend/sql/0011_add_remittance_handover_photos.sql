@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS lending.remittance_handover_photos (
 CREATE INDEX IF NOT EXISTS remittance_handover_photos_latest_idx
     ON lending.remittance_handover_photos (remittance_id, version DESC);
 
-CREATE OR REPLACE FUNCTION lending.prevent_accepted_remittance_photo_change()
+CREATE OR REPLACE FUNCTION lending.guard_remittance_handover_photo()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
@@ -29,6 +29,11 @@ DECLARE
     remittance_status TEXT;
     remittance_collector UUID;
 BEGIN
+    IF TG_OP <> 'INSERT' THEN
+        RAISE EXCEPTION 'Handover photo versions are immutable. Upload a new version before acceptance instead.'
+            USING ERRCODE = '55000';
+    END IF;
+
     SELECT status, collector_user_id
     INTO remittance_status, remittance_collector
     FROM lending.collection_remittances
@@ -59,7 +64,7 @@ DROP TRIGGER IF EXISTS lending_remittance_handover_photo_guard
 CREATE TRIGGER lending_remittance_handover_photo_guard
 BEFORE INSERT OR UPDATE OR DELETE ON lending.remittance_handover_photos
 FOR EACH ROW
-EXECUTE FUNCTION lending.prevent_accepted_remittance_photo_change();
+EXECUTE FUNCTION lending.guard_remittance_handover_photo();
 
 COMMENT ON TABLE lending.remittance_handover_photos IS
     'Immutable versioned photos supplied by the collector as optional evidence of the physical cash handover.';
