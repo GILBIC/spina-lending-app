@@ -17,6 +17,11 @@ class RemittanceNotification {
     required this.custodyMessage,
     this.readAt,
     this.acceptedAt,
+    this.hasHandoverPhoto = false,
+    this.handoverPhotoVersion = 0,
+    this.handoverPhotoContentType = '',
+    this.handoverPhotoUploadedAt,
+    this.handoverPhotoUrl = '',
   });
 
   final String notificationId;
@@ -34,6 +39,11 @@ class RemittanceNotification {
   final DateTime? readAt;
   final DateTime? acceptedAt;
   final String custodyMessage;
+  final bool hasHandoverPhoto;
+  final int handoverPhotoVersion;
+  final String handoverPhotoContentType;
+  final DateTime? handoverPhotoUploadedAt;
+  final String handoverPhotoUrl;
 
   bool get isPending => status.trim().toLowerCase() == 'pending';
 
@@ -84,6 +94,20 @@ class RemittanceNotification {
             data['custody_message'],
           ]) ??
           'Accept only after you physically receive the cash.',
+      hasHandoverPhoto: _boolValue(data['has_handover_photo']),
+      handoverPhotoVersion:
+          firstNumber(<Object?>[data['handover_photo_version']])?.toInt() ?? 0,
+      handoverPhotoContentType: firstNonEmptyString(<Object?>[
+            data['handover_photo_content_type'],
+          ]) ??
+          '',
+      handoverPhotoUploadedAt: DateTime.tryParse(
+        firstNonEmptyString(<Object?>[data['handover_photo_uploaded_at']]) ?? '',
+      ),
+      handoverPhotoUrl: firstNonEmptyString(<Object?>[
+            data['handover_photo_url'],
+          ]) ??
+          '',
     );
   }
 }
@@ -137,4 +161,12 @@ class RemittanceAcceptanceResult {
       ),
     );
   }
+}
+
+bool _boolValue(Object? value) {
+  if (value is bool) {
+    return value;
+  }
+  final normalized = value?.toString().trim().toLowerCase();
+  return normalized == 'true' || normalized == '1' || normalized == 'yes';
 }
