@@ -90,6 +90,22 @@ jobs:
         working-directory: gilbic_mobile
         run: flutter test || exit /b 1
 
+      - name: Build Android debug APK
+        shell: cmd
+        working-directory: gilbic_mobile
+        run: |
+          flutter build apk --debug --no-pub || exit /b 1
+          if not exist "build\app\outputs\flutter-apk\app-debug.apk" exit /b 1
+          for %%I in ("build\app\outputs\flutter-apk\app-debug.apk") do echo APK size: %%~zI bytes
+
+      - name: Upload Android debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: gilbic-mobile-debug-${{ github.sha }}
+          path: gilbic_mobile/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Require a clean committed tree
         shell: cmd
         run: |
