@@ -1,0 +1,98 @@
+name: SPINA unified validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spina-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.actor == github.repository_owner &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login == github.repository_owner)
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 75
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify Python runtime
+        shell: cmd
+        run: |
+          python --version || exit /b 1
+          python -c "import sys; assert sys.version_info >= (3, 11), sys.version" || exit /b 1
+
+      - name: Create isolated Python environment
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          if exist "%VENV%" rmdir /s /q "%VENV%"
+          python -m venv "%VENV%" || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile" || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\gilbic_backend[test]" || exit /b 1
+
+      - name: Compile desktop and backend Python
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          "%VENV%\Scripts\python.exe" -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m compileall -q spina_app gilbic_backend\src spina_backend_mobile\src || exit /b 1
+
+      - name: Run backend and database tests
+        shell: cmd
+        env:
+          GILBIC_TEST_DATABASE_URL: ${{ secrets.GILBIC_TEST_DATABASE_URL }}
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          "%VENV%\Scripts\python.exe" -m pytest -q gilbic_backend\tests spina_backend_mobile\tests || exit /b 1
+
+      - name: Install Flutter 3.44.7
+        shell: cmd
+        run: |
+          set "FLUTTER_ROOT=%RUNNER_TEMP%\flutter-3.44.7"
+          if exist "%FLUTTER_ROOT%" rmdir /s /q "%FLUTTER_ROOT%"
+          git clone --depth 1 --branch 3.44.7 https://github.com/flutter/flutter.git "%FLUTTER_ROOT%" || exit /b 1
+          echo %FLUTTER_ROOT%\bin>>"%GITHUB_PATH%"
+
+      - name: Verify Flutter runtime
+        shell: cmd
+        run: flutter --version || exit /b 1
+
+      - name: Resolve Flutter packages
+        shell: cmd
+        working-directory: gilbic_mobile
+        run: flutter pub get || exit /b 1
+
+      - name: Analyze Flutter application
+        shell: cmd
+        working-directory: gilbic_mobile
+        run: flutter analyze --fatal-infos || exit /b 1
+
+      - name: Run Flutter tests
+        shell: cmd
+        working-directory: gilbic_mobile
+        run: flutter test || exit /b 1
+
+      - name: Require a clean committed tree
+        shell: cmd
+        run: |
+          git diff --check || exit /b 1
+          git diff --exit-code || exit /b 1
+          git diff --cached --exit-code || exit /b 1
