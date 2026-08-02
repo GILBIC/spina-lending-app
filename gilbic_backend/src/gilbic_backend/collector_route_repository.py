@@ -36,6 +36,9 @@ class CollectorRouteEntryRecord:
     today_collector_user_id: UUID | None = None
     today_is_locked: bool = False
     can_edit_today: bool = False
+    today_amount: Decimal = Decimal("0.00")
+    today_note: str = ""
+    today_covered_dates: tuple[date, ...] = ()
     covered_dates: tuple[date, ...] = ()
 
     @property
@@ -78,13 +81,7 @@ class CollectorRouteRecord:
 
 
 class PostgresCollectorRouteRepository:
-    """Read the live route for one authenticated collector.
-
-    Area ownership is server-side in ``lending.collector_area_assignments``.
-    Balance, missed-payment count, exact covered dates, and notes are read from
-    the authoritative lending tables. Imported loans must remain reconciled with
-    the desktop source of truth before mobile collection is enabled.
-    """
+    """Read the live route for one authenticated collector."""
 
     def get_today_route(
         self,
@@ -150,6 +147,9 @@ class PostgresCollectorRouteRepository:
                         today.transaction_id as today_transaction_id,
                         today.collector_user_id as today_collector_user_id,
                         coalesce(today.is_locked, false) as today_is_locked,
+                        coalesce(today.amount, 0) as today_amount,
+                        coalesce(today.note, '') as today_note,
+                        coalesce(today.covered_dates, ARRAY[]::date[]) as today_covered_dates,
                         coalesce(coverage.covered_dates, ARRAY[]::date[]) as covered_dates
                     from lending.collector_area_assignments a
                     join lending.clients c
@@ -178,8 +178,19 @@ class PostgresCollectorRouteRepository:
                         select
                             t.id as transaction_id,
                             t.entry_type,
+                            t.amount,
+                            t.note,
                             t.collector_user_id,
                             t.is_locked,
+                            coalesce(
+                                array(
+                                    select cd.covered_date
+                                    from lending.collection_covered_dates cd
+                                    where cd.transaction_id = t.id
+                                    order by cd.covered_date
+                                ),
+                                ARRAY[]::date[]
+                            ) as covered_dates,
                             coalesce(
                                 nullif(btrim(u.full_name), ''),
                                 nullif(btrim(u.username), ''),
@@ -236,6 +247,9 @@ class PostgresCollectorRouteRepository:
                     and row["today_collector_user_id"] == collector_user_id
                     and not bool(row["today_is_locked"])
                 ),
+                today_amount=Decimal(row["today_amount"]),
+                today_note=str(row["today_note"] or ""),
+                today_covered_dates=tuple(row["today_covered_dates"] or ()),
                 covered_dates=tuple(row["covered_dates"] or ()),
             )
             for row in rows
