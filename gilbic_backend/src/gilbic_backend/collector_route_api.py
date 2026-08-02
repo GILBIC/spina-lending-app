@@ -45,6 +45,7 @@ def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
         "collection_message": entry.collection_message,
         "processed_today": entry.processed_today,
         "today_entry_type": entry.today_entry_type,
+        "today_collector_name": entry.today_collector_name,
     }
 
 
