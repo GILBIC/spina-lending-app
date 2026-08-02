@@ -30,3 +30,29 @@ def test_registered_device_foreign_key_has_covering_index() -> None:
     assert "BEGIN;" in migration and "COMMIT;" in migration
     assert "mobile_collection_registered_device_idx" in migration
     assert "mobile.gilbic_collection_idempotency (registered_device_id)" in migration
+
+
+def test_remittance_migration_adds_exact_dates_audited_edits_and_locking() -> None:
+    migration = (SQL_DIR / "0007_add_collection_remittances.sql").read_text(
+        encoding="utf-8"
+    )
+
+    assert "BEGIN;" in migration and "COMMIT;" in migration
+    assert "collection.correct.own_unremitted" in migration
+    assert "collection.correct.locked" in migration
+    assert "lending.collection_remittances" in migration
+    assert "collector_user_id UUID NOT NULL" in migration
+    assert "recipient_user_id UUID NOT NULL" in migration
+    assert "transaction_count = payment_count + unable_to_pay_count" in migration
+    assert "lending.collection_remittance_items" in migration
+    assert "transaction_id UUID NOT NULL UNIQUE" in migration
+    assert "lending.collection_covered_dates" in migration
+    assert "UNIQUE (loan_id, covered_date)" in migration
+    assert "lending.collection_transaction_edits" in migration
+    assert "previous_snapshot JSONB NOT NULL" in migration
+    assert "replacement_snapshot JSONB NOT NULL" in migration
+    assert "lending.collection_supervisor_adjustments" in migration
+    assert "is_locked BOOLEAN NOT NULL DEFAULT false" in migration
+    assert "prevent_locked_collection_mutation" in migration
+    assert "Covered dates for a remitted collection are locked" in migration
+    assert "Server-calculated collector cash handovers" in migration
