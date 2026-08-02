@@ -119,3 +119,17 @@ def test_optional_handover_photos_are_private_versioned_and_immutable() -> None:
     assert "Handover evidence is locked after remittance acceptance" in migration
     assert "Only the collector who submitted the remittance" in migration
     assert "Private image bytes" in migration
+
+
+def test_covered_date_delete_guard_uses_old_row_safely() -> None:
+    migration = (
+        SQL_DIR / "0012_fix_covered_date_delete_guard.sql"
+    ).read_text(encoding="utf-8")
+
+    assert "BEGIN;" in migration and "COMMIT;" in migration
+    assert "IF TG_OP = 'DELETE' THEN" in migration
+    assert "target_transaction_id := OLD.transaction_id" in migration
+    assert "target_transaction_id := NEW.transaction_id" in migration
+    assert "Covered dates for a remitted collection are locked" in migration
+    assert "RETURN OLD" in migration
+    assert "RETURN NEW" in migration
