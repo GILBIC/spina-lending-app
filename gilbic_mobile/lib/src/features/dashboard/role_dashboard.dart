@@ -7,7 +7,7 @@ import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart'
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
-import 'package:gilbic_mobile/src/features/remittance/remittance_history_page.dart';
+import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 
 class RoleDashboard extends StatelessWidget {
   const RoleDashboard({
@@ -57,12 +57,12 @@ class RoleDashboard extends StatelessWidget {
       return;
     }
 
-    if (module.action == 'remittance-inbox' &&
+    if (module.action == 'remittance-notifications' &&
         (session.role == AppRole.employee ||
             session.role == AppRole.management)) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (context) => RemittanceHistoryPage(
+          builder: (context) => RemittanceNotificationsPage(
             session: session,
             deviceIdentityProvider: deviceIdentityProvider,
           ),
@@ -212,7 +212,7 @@ List<_DashboardModule> _modulesFor(AppRole role) {
         ),
         _DashboardModule(
           'Remittance',
-          'Review totals, choose recipient, submit, and lock entries',
+          'Submit the cash handover and wait for recipient acceptance',
           Icons.summarize,
           action: 'remittance',
         ),
@@ -234,10 +234,10 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           Icons.task_alt,
         ),
         _DashboardModule(
-          'Remittances',
-          'Review assigned cash handovers and confirm receipt',
-          Icons.move_to_inbox,
-          action: 'remittance-inbox',
+          'Notifications',
+          'Accept assigned remittances after receiving the cash',
+          Icons.notifications_active,
+          action: 'remittance-notifications',
         ),
       ],
     AppRole.management => const [
@@ -252,10 +252,10 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           Icons.insights,
         ),
         _DashboardModule(
-          'Remittances',
-          'Review assigned handovers and confirm cash received',
-          Icons.move_to_inbox,
-          action: 'remittance-inbox',
+          'Notifications',
+          'Accept assigned remittances after receiving the cash',
+          Icons.notifications_active,
+          action: 'remittance-notifications',
         ),
         _DashboardModule(
           'Financial Accounting',
