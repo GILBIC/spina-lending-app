@@ -51,7 +51,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Recorded by: Collector Two'), findsOneWidget);
-    expect(find.text('Reason / note: Paid at the route'), findsOneWidget);
+    expect(find.text('Entry note: Paid at the route'), findsOneWidget);
 
     final footer = find.textContaining('Tap a client to show notes');
     await tester.dragUntilVisible(
@@ -143,6 +143,9 @@ CollectorRoute _route() {
         processedToday: true,
         todayEntryType: 'payment',
         todayCollectorName: 'Collector Two',
+        todayAmount: 200,
+        todayNote: 'Paid at the route',
+        todayCoveredDates: <DateTime>[],
       ),
       CollectorRouteEntry(
         id: 'entry-2',
