@@ -52,6 +52,11 @@ def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
         ),
         "today_is_locked": entry.today_is_locked,
         "can_edit_today": entry.can_edit_today,
+        "today_amount": str(entry.today_amount),
+        "today_note": entry.today_note,
+        "today_covered_dates": [
+            value.isoformat() for value in entry.today_covered_dates
+        ],
     }
 
 
