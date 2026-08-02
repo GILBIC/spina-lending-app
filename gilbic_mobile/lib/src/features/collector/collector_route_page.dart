@@ -110,6 +110,9 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     if (!widget.session.permissions.contains('collection.create')) {
       return 'This account does not have permission to record collections.';
     }
+    if (entry.processedToday) {
+      return "Today's collection has already been recorded.";
+    }
     if (_isSevenBySevenLoan(entry.loanType)) {
       return '7x7 mobile collection is disabled. Use SPINA desktop until the dedicated allocator is verified.';
     }
@@ -231,7 +234,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
             }),
           const SizedBox(height: 8),
           Text(
-            'Read-only route when offline. Online Payment, ADV, and PASS entries are sent directly to SPINA. Official balances and receipts remain server-controlled.',
+            'Offline routes are view-only. Online payments, covered dates, and unable-to-pay reasons are sent directly to SPINA. Official balances and receipts remain server-controlled.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -317,7 +320,7 @@ class _RouteHeader extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 4),
-            Text('$dateText • ${route.entries.length} clients'),
+            Text('$dateText • ${route.entries.length} loan entries'),
             if (route.areas.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text('Areas: ${route.areas.join(', ')}'),
@@ -378,16 +381,20 @@ class _RouteEntryCard extends StatelessWidget {
               children: [
                 _AmountLabel(label: 'Daily', value: entry.dailyAmount),
                 _AmountLabel(label: 'Balance', value: entry.balance),
-                Text('PASS: ${entry.passCount}'),
+                Text('Missed: ${entry.passCount}'),
               ],
             ),
             if (entry.advanceUntil != null) ...[
               const SizedBox(height: 8),
-              Text('Advance covered until ${_date(entry.advanceUntil!)}'),
+              Text('Covered through ${_date(entry.advanceUntil!)}'),
             ],
             if (entry.lastPaymentDate != null) ...[
               const SizedBox(height: 4),
               Text('Last payment: ${_date(entry.lastPaymentDate!)}'),
+            ],
+            if (entry.processedToday) ...[
+              const SizedBox(height: 6),
+              Text(_todayResultLabel(entry.todayEntryType)),
             ],
             if (entry.note.isNotEmpty) ...[
               const Divider(height: 20),
@@ -400,7 +407,7 @@ class _RouteEntryCard extends StatelessWidget {
                 key: Key('record-collection-${entry.id}'),
                 onPressed: blockedReason == null ? onRecord : null,
                 icon: const Icon(Icons.payments_outlined),
-                label: const Text('Record Payment / ADV / PASS'),
+                label: const Text('Record collection'),
               ),
             ),
             if (blockedReason != null) ...[
@@ -433,6 +440,14 @@ class _AmountLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text('$label: ${_money(value)}');
   }
+}
+
+String _todayResultLabel(String value) {
+  return switch (value.trim().toLowerCase()) {
+    'pass' => 'Unable-to-pay reason recorded today.',
+    'advance' => 'Covered-date payment recorded today.',
+    _ => 'Payment recorded today.',
+  };
 }
 
 bool _isSevenBySevenLoan(String value) {
