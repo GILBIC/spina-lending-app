@@ -58,6 +58,7 @@ class CollectionCommand:
     amount: Decimal | None = None
     advance_from: date | None = None
     advance_until: date | None = None
+    covered_dates: tuple[date, ...] = ()
     note: str = ""
     route_revision: str | None = None
 
@@ -76,6 +77,7 @@ class CollectionCommand:
             "advance_until": self.advance_until.isoformat()
             if self.advance_until
             else None,
+            "covered_dates": [value.isoformat() for value in sorted(self.covered_dates)],
             "recorded_at": _utc_isoformat(self.recorded_at),
             "device_id": self.device_id,
             "device_sequence": self.device_sequence,
