@@ -31,6 +31,7 @@ class CollectorRouteEntryRecord:
     mobile_balance_mode: str = ""
     processed_today: bool = False
     today_entry_type: str = ""
+    today_collector_name: str = ""
 
     @property
     def route_revision(self) -> str:
@@ -138,7 +139,8 @@ class PostgresCollectorRouteRepository:
                             in ('true', '1', 'yes', 'on') as mobile_collections_enabled,
                         coalesce(lt.settings->>'mobile_balance_mode', '') as mobile_balance_mode,
                         today.entry_type is not null as processed_today,
-                        coalesce(today.entry_type, '') as today_entry_type
+                        coalesce(today.entry_type, '') as today_entry_type,
+                        coalesce(today.collector_name, '') as today_collector_name
                     from lending.collector_area_assignments a
                     join lending.clients c
                       on lower(btrim(c.area)) = lower(btrim(a.area))
@@ -152,8 +154,16 @@ class PostgresCollectorRouteRepository:
                     left join lending.loan_collection_state s
                       on s.loan_id = l.id
                     left join lateral (
-                        select t.entry_type
+                        select
+                            t.entry_type,
+                            coalesce(
+                                nullif(btrim(u.full_name), ''),
+                                nullif(btrim(u.username), ''),
+                                'Collector'
+                            ) as collector_name
                         from lending.collection_transactions t
+                        left join core.users u
+                          on u.id = t.collector_user_id
                         where t.loan_id = l.id
                           and t.collection_date = %s
                         order by t.accepted_at desc, t.id desc
@@ -193,6 +203,7 @@ class PostgresCollectorRouteRepository:
                 mobile_balance_mode=str(row["mobile_balance_mode"] or ""),
                 processed_today=bool(row["processed_today"]),
                 today_entry_type=str(row["today_entry_type"] or ""),
+                today_collector_name=str(row["today_collector_name"] or ""),
             )
             for row in rows
         )
