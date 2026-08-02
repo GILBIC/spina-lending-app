@@ -56,3 +56,27 @@ def test_remittance_migration_adds_exact_dates_audited_edits_and_locking() -> No
     assert "prevent_locked_collection_mutation" in migration
     assert "Covered dates for a remitted collection are locked" in migration
     assert "Server-calculated collector cash handovers" in migration
+
+
+def test_legacy_ranges_are_backfilled_as_individual_covered_dates() -> None:
+    migration = (
+        SQL_DIR / "0008_backfill_collection_covered_dates.sql"
+    ).read_text(encoding="utf-8")
+
+    assert "BEGIN;" in migration and "COMMIT;" in migration
+    assert "generate_series" in migration
+    assert "lending.collection_covered_dates" in migration
+    assert "transaction.entry_type IN ('payment', 'advance')" in migration
+    assert "ON CONFLICT DO NOTHING" in migration
+
+
+def test_remitted_collection_rows_become_fully_immutable() -> None:
+    migration = (
+        SQL_DIR / "0009_harden_remitted_collection_immutability.sql"
+    ).read_text(encoding="utf-8")
+
+    assert "BEGIN;" in migration and "COMMIT;" in migration
+    assert "IF OLD.is_locked AND NEW IS DISTINCT FROM OLD" in migration
+    assert "permanently locked" in migration
+    assert "authorized supervisor adjustment" in migration
+    assert "lending_collection_transaction_lock_guard" in migration
