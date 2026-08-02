@@ -90,26 +90,24 @@ jobs:
         working-directory: gilbic_mobile
         run: flutter test || exit /b 1
 
-      - name: Generate Android host and build debug APK
+      - name: Build Android debug APK in generated host
         shell: cmd
         run: |
           set "HOST=%RUNNER_TEMP%\gilbic-android-host"
+          set "APK_OUT=%GITHUB_WORKSPACE%\gilbic_mobile\build\app\outputs\flutter-apk"
           if exist "%HOST%" rmdir /s /q "%HOST%"
-          if exist "gilbic_mobile\android" rmdir /s /q "gilbic_mobile\android"
-          if exist "gilbic_mobile\.metadata" del /f /q "gilbic_mobile\.metadata"
           mkdir "%HOST%" || exit /b 1
           pushd "%HOST%"
           call flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile . || exit /b 1
-          popd
-          xcopy /e /i /y "%HOST%\android" "%GITHUB_WORKSPACE%\gilbic_mobile\android" >nul || exit /b 1
-          copy /y "%HOST%\.metadata" "%GITHUB_WORKSPACE%\gilbic_mobile\.metadata" >nul || exit /b 1
-          if not exist "gilbic_mobile\android\app\build.gradle.kts" exit /b 1
-          echo apply from: "build.gradle.kts">"gilbic_mobile\android\app\build.gradle"
-          if not exist "gilbic_mobile\android\app\build.gradle" exit /b 1
-          pushd "gilbic_mobile"
+          if exist "lib" rmdir /s /q "lib"
+          xcopy /e /i /y "%GITHUB_WORKSPACE%\gilbic_mobile\lib" "lib" >nul || exit /b 1
+          copy /y "%GITHUB_WORKSPACE%\gilbic_mobile\pubspec.yaml" "pubspec.yaml" >nul || exit /b 1
+          call flutter pub get || exit /b 1
           call flutter build apk --debug --no-pub || exit /b 1
           if not exist "build\app\outputs\flutter-apk\app-debug.apk" exit /b 1
-          for %%I in ("build\app\outputs\flutter-apk\app-debug.apk") do echo APK size: %%~zI bytes
+          if not exist "%APK_OUT%" mkdir "%APK_OUT%" || exit /b 1
+          copy /y "build\app\outputs\flutter-apk\app-debug.apk" "%APK_OUT%\app-debug.apk" >nul || exit /b 1
+          for %%I in ("%APK_OUT%\app-debug.apk") do echo APK size: %%~zI bytes
           popd
 
       - name: Upload Android debug APK
