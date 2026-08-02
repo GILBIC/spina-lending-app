@@ -40,10 +40,17 @@ class RemittanceNotificationRecord:
     client_count: int
     transaction_count: int
     collection_date: date
+    handover_photo_version: int = 0
+    handover_photo_content_type: str = ""
+    handover_photo_uploaded_at: datetime | None = None
 
     @property
     def is_pending(self) -> bool:
         return self.status == "pending"
+
+    @property
+    def has_handover_photo(self) -> bool:
+        return self.handover_photo_version > 0
 
 
 class PostgresNotificationRepository:
@@ -72,12 +79,22 @@ class PostgresNotificationRepository:
                         remittance.total_amount,
                         remittance.client_count,
                         remittance.transaction_count,
-                        remittance.collection_date
+                        remittance.collection_date,
+                        coalesce(photo.version, 0) as handover_photo_version,
+                        coalesce(photo.content_type, '') as handover_photo_content_type,
+                        photo.uploaded_at as handover_photo_uploaded_at
                     from core.user_notifications notification
                     join lending.collection_remittances remittance
                       on remittance.id = notification.remittance_id
                     join core.users collector
                       on collector.id = remittance.collector_user_id
+                    left join lateral (
+                        select version, content_type, uploaded_at
+                        from lending.remittance_handover_photos candidate
+                        where candidate.remittance_id = remittance.id
+                        order by candidate.version desc
+                        limit 1
+                    ) photo on true
                     where notification.recipient_user_id = %s
                     order by
                         case when notification.status = 'pending' then 0 else 1 end,
@@ -115,12 +132,22 @@ class PostgresNotificationRepository:
                         remittance.total_amount,
                         remittance.client_count,
                         remittance.transaction_count,
-                        remittance.collection_date
+                        remittance.collection_date,
+                        coalesce(photo.version, 0) as handover_photo_version,
+                        coalesce(photo.content_type, '') as handover_photo_content_type,
+                        photo.uploaded_at as handover_photo_uploaded_at
                     from core.user_notifications notification
                     join lending.collection_remittances remittance
                       on remittance.id = notification.remittance_id
                     join core.users collector
                       on collector.id = remittance.collector_user_id
+                    left join lateral (
+                        select version, content_type, uploaded_at
+                        from lending.remittance_handover_photos candidate
+                        where candidate.remittance_id = remittance.id
+                        order by candidate.version desc
+                        limit 1
+                    ) photo on true
                     where notification.id = %s
                     """,
                     (notification_id,),
@@ -183,4 +210,9 @@ class PostgresNotificationRepository:
             client_count=int(row["client_count"]),
             transaction_count=int(row["transaction_count"]),
             collection_date=row["collection_date"],
+            handover_photo_version=int(row["handover_photo_version"] or 0),
+            handover_photo_content_type=str(
+                row["handover_photo_content_type"] or ""
+            ),
+            handover_photo_uploaded_at=row["handover_photo_uploaded_at"],
         )
