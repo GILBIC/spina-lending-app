@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/notifications/remittance_notification.dart';
 import 'package:gilbic_mobile/src/core/notifications/remittance_notification_repository.dart';
+import 'package:gilbic_mobile/src/features/remittance/remittance_photo_viewer_page.dart';
 
 class RemittanceNotificationsPage extends StatefulWidget {
   const RemittanceNotificationsPage({
@@ -109,6 +110,7 @@ class _RemittanceNotificationsPageState
           'Collector: ${notification.collectorName}\n'
           'Amount: ${_money(notification.totalAmount)}\n'
           'Remittance: ${notification.remittanceNumber}\n\n'
+          '${notification.hasHandoverPhoto ? 'A handover photo is attached for review.\n\n' : ''}'
           'Accept only after the cash is physically in your possession. '
           'After acceptance, the system records that this money is now under your custody.',
         ),
@@ -245,6 +247,8 @@ class _RemittanceNotificationsPageState
                       for (final notification in _notifications)
                         _NotificationCard(
                           notification: notification,
+                          session: widget.session,
+                          deviceIdentityProvider: widget.deviceIdentityProvider,
                           accepting:
                               _acceptingId == notification.notificationId,
                           onOpened: () => _markRead(notification),
@@ -261,15 +265,32 @@ class _RemittanceNotificationsPageState
 class _NotificationCard extends StatelessWidget {
   const _NotificationCard({
     required this.notification,
+    required this.session,
+    required this.deviceIdentityProvider,
     required this.accepting,
     required this.onOpened,
     required this.onAccept,
   });
 
   final RemittanceNotification notification;
+  final UserSession session;
+  final DeviceIdentityProvider deviceIdentityProvider;
   final bool accepting;
   final VoidCallback onOpened;
   final VoidCallback onAccept;
+
+  Future<void> _openPhoto(BuildContext context) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => RemittancePhotoViewerPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+          remittanceId: notification.remittanceId,
+          remittanceNumber: notification.remittanceNumber,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -314,6 +335,28 @@ class _NotificationCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          if (notification.hasHandoverPhoto) ...[
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                key: Key(
+                  'view-handover-photo-${notification.notificationId}',
+                ),
+                onPressed: () => _openPhoto(context),
+                icon: const Icon(Icons.photo_outlined),
+                label: Text(
+                  'View Handover Photo (v${notification.handoverPhotoVersion})',
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ] else ...[
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text('No handover photo was attached.'),
+            ),
+            const SizedBox(height: 8),
+          ],
           if (notification.isPending)
             SizedBox(
               width: double.infinity,
