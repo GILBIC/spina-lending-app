@@ -36,6 +36,7 @@ class PaymentSubmissionDraft {
     this.amount,
     this.advanceFrom,
     this.advanceUntil,
+    this.coveredDates = const <DateTime>[],
     this.note = '',
     this.routeRevision,
   });
@@ -52,6 +53,7 @@ class PaymentSubmissionDraft {
   final double? amount;
   final DateTime? advanceFrom;
   final DateTime? advanceUntil;
+  final List<DateTime> coveredDates;
   final String note;
   final String? routeRevision;
 
@@ -68,32 +70,50 @@ class PaymentSubmissionDraft {
       return 'A valid device identity and sequence are required.';
     }
 
+    final normalizedDates = _sortedUniqueDates(coveredDates);
+    if (normalizedDates.length != coveredDates.length) {
+      return 'Covered dates must not contain duplicates.';
+    }
+
     switch (entryType) {
       case CollectionEntryType.payment:
         if (amount == null || amount! <= 0) {
           return 'A payment amount greater than zero is required.';
         }
         if (advanceFrom != null || advanceUntil != null) {
-          return 'A normal payment cannot contain ADV coverage dates.';
+          return 'A normal payment cannot contain coverage bounds.';
+        }
+        if (normalizedDates.isNotEmpty &&
+            (normalizedDates.length != 1 ||
+                !_sameDate(normalizedDates.single, collectionDate))) {
+          return 'A normal payment may cover only the collection date.';
         }
         break;
       case CollectionEntryType.advance:
         if (amount == null || amount! <= 0) {
-          return 'An ADV amount greater than zero is required.';
+          return 'A covered-date payment amount greater than zero is required.';
+        }
+        if (normalizedDates.isEmpty) {
+          return 'Choose at least one covered date.';
         }
         if (advanceFrom == null || advanceUntil == null) {
-          return 'ADV coverage start and end dates are required.';
+          return 'The first and last selected covered dates are required.';
         }
-        if (advanceUntil!.isBefore(advanceFrom!)) {
-          return 'ADV coverage cannot end before it starts.';
+        if (!_sameDate(normalizedDates.first, advanceFrom!)) {
+          return 'The first coverage bound must match the earliest selected date.';
+        }
+        if (!_sameDate(normalizedDates.last, advanceUntil!)) {
+          return 'The last coverage bound must match the latest selected date.';
         }
         break;
       case CollectionEntryType.pass:
         if (amount != null && amount != 0) {
-          return 'A PASS entry cannot contain a payment amount.';
+          return 'An unable-to-pay entry cannot contain a payment amount.';
         }
-        if (advanceFrom != null || advanceUntil != null) {
-          return 'A PASS entry cannot contain ADV coverage dates.';
+        if (advanceFrom != null ||
+            advanceUntil != null ||
+            normalizedDates.isNotEmpty) {
+          return 'An unable-to-pay entry cannot contain covered dates.';
         }
         break;
     }
@@ -101,6 +121,7 @@ class PaymentSubmissionDraft {
   }
 
   Map<String, Object?> toJson() {
+    final normalizedDates = _sortedUniqueDates(coveredDates);
     return <String, Object?>{
       'client_transaction_id': idempotencyKey,
       'route_entry_id': routeEntryId,
@@ -111,6 +132,7 @@ class PaymentSubmissionDraft {
       'amount': amount,
       'advance_from': advanceFrom == null ? null : _date(advanceFrom!),
       'advance_until': advanceUntil == null ? null : _date(advanceUntil!),
+      'covered_dates': normalizedDates.map(_date).toList(growable: false),
       'recorded_at': recordedAt.toUtc().toIso8601String(),
       'device_id': deviceId,
       'device_sequence': deviceSequence,
@@ -280,6 +302,22 @@ String _defaultMessage(PaymentSubmissionDisposition disposition) {
       'The collection was rejected by the server.',
   };
 }
+
+List<DateTime> _sortedUniqueDates(Iterable<DateTime> values) {
+  final byText = <String, DateTime>{};
+  for (final value in values) {
+    final normalized = DateTime(value.year, value.month, value.day);
+    byText[_date(normalized)] = normalized;
+  }
+  final result = byText.values.toList(growable: false)
+    ..sort((left, right) => left.compareTo(right));
+  return result;
+}
+
+bool _sameDate(DateTime left, DateTime right) =>
+    left.year == right.year &&
+    left.month == right.month &&
+    left.day == right.day;
 
 String _date(DateTime value) {
   return '${value.year.toString().padLeft(4, '0')}-'
