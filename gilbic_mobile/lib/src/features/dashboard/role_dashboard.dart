@@ -5,7 +5,9 @@ import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
+import 'package:gilbic_mobile/src/features/remittance/remittance_history_page.dart';
 
 class RoleDashboard extends StatelessWidget {
   const RoleDashboard({
@@ -37,6 +39,32 @@ class RoleDashboard extends StatelessWidget {
             paymentRepository: paymentSubmissionRepository,
             deviceIdentityProvider: deviceIdentityProvider,
             deviceSequence: collectionDeviceSequence,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (session.role == AppRole.collector && module.action == 'remittance') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => CollectorRemittancePage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (module.action == 'remittance-inbox' &&
+        (session.role == AppRole.employee ||
+            session.role == AppRole.management)) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => RemittanceHistoryPage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
           ),
         ),
       );
@@ -167,25 +195,26 @@ List<_DashboardModule> _modulesFor(AppRole role) {
     AppRole.collector => const [
         _DashboardModule(
           'Daily Route',
-          'Online route with encrypted offline fallback',
+          'Compact online collection ledger',
           Icons.route,
           action: 'daily-route',
         ),
         _DashboardModule(
           'Record Payment',
-          'Open the route and record Payment, ADV, or PASS',
+          'Open the route and record collections',
           Icons.payments,
           action: 'record-payment',
         ),
         _DashboardModule(
           'Offline Sync',
-          'Route cache only; collection outbox remains disabled',
+          'Route cache only; collection remains read-only offline',
           Icons.sync,
         ),
         _DashboardModule(
-          'End of Day',
-          'Collection totals and cash accountability',
+          'Remittance',
+          'Review totals, choose recipient, submit, and lock entries',
           Icons.summarize,
+          action: 'remittance',
         ),
       ],
     AppRole.employee => const [
@@ -205,9 +234,10 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           Icons.task_alt,
         ),
         _DashboardModule(
-          'Requests',
-          'Leave and internal service requests',
-          Icons.assignment,
+          'Remittances',
+          'Review assigned cash handovers and confirm receipt',
+          Icons.move_to_inbox,
+          action: 'remittance-inbox',
         ),
       ],
     AppRole.management => const [
@@ -220,6 +250,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Loan Operations',
           'Collections, corrections, and portfolio monitoring',
           Icons.insights,
+        ),
+        _DashboardModule(
+          'Remittances',
+          'Review assigned handovers and confirm cash received',
+          Icons.move_to_inbox,
+          action: 'remittance-inbox',
         ),
         _DashboardModule(
           'Financial Accounting',
