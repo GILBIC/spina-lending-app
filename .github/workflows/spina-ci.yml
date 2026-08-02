@@ -86,7 +86,8 @@ jobs:
           popd
           xcopy /e /i /y "%HOST%\android" "%GITHUB_WORKSPACE%\gilbic_mobile\android" >nul || exit /b 1
           copy /y "%HOST%\.metadata" "%GITHUB_WORKSPACE%\gilbic_mobile\.metadata" >nul || exit /b 1
-          if not exist "gilbic_mobile\android\app\build.gradle" if not exist "gilbic_mobile\android\app\build.gradle.kts" exit /b 1
+          if exist "gilbic_mobile\android\app\build.gradle.kts" echo apply from: "build.gradle.kts">"gilbic_mobile\android\app\build.gradle"
+          if not exist "gilbic_mobile\android\app\build.gradle" exit /b 1
           if not exist "gilbic_mobile\.metadata" exit /b 1
 
       - name: Resolve Flutter packages
