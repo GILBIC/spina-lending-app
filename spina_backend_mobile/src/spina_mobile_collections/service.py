@@ -154,6 +154,13 @@ class CollectionSubmissionService:
         has_advance_dates = (
             command.advance_from is not None or command.advance_until is not None
         )
+        selected_dates = tuple(sorted(command.covered_dates))
+        if len(selected_dates) != len(set(selected_dates)):
+            raise CollectionProtocolError(
+                "Covered dates must not contain duplicates.",
+                code="duplicate_covered_date",
+                status_code=422,
+            )
 
         if command.entry_type is CollectionEntryType.PAYMENT:
             if not positive_amount:
@@ -164,8 +171,14 @@ class CollectionSubmissionService:
                 )
             if has_advance_dates:
                 raise CollectionProtocolError(
-                    "A normal payment cannot contain ADV dates.",
+                    "A normal payment cannot contain coverage bounds.",
                     code="invalid_advance_range",
+                    status_code=422,
+                )
+            if selected_dates and selected_dates != (command.collection_date,):
+                raise CollectionProtocolError(
+                    "A normal payment may cover only the collection date.",
+                    code="invalid_covered_dates",
                     status_code=422,
                 )
             return
@@ -173,27 +186,44 @@ class CollectionSubmissionService:
         if command.entry_type is CollectionEntryType.ADVANCE:
             if not positive_amount:
                 raise CollectionProtocolError(
-                    "An ADV amount greater than zero is required.",
+                    "A covered-date payment amount greater than zero is required.",
                     code="invalid_amount",
                     status_code=422,
                 )
             if command.advance_from is None or command.advance_until is None:
                 raise CollectionProtocolError(
-                    "ADV start and end dates are required.",
+                    "The first and last selected covered dates are required.",
                     code="invalid_advance_range",
                     status_code=422,
                 )
             if command.advance_until < command.advance_from:
                 raise CollectionProtocolError(
-                    "ADV coverage cannot end before it starts.",
+                    "The last covered date cannot be before the first covered date.",
                     code="invalid_advance_range",
                     status_code=422,
                 )
+            if selected_dates:
+                if selected_dates[0] != command.advance_from:
+                    raise CollectionProtocolError(
+                        "The first coverage bound must match the earliest selected date.",
+                        code="covered_date_bounds_mismatch",
+                        status_code=422,
+                    )
+                if selected_dates[-1] != command.advance_until:
+                    raise CollectionProtocolError(
+                        "The last coverage bound must match the latest selected date.",
+                        code="covered_date_bounds_mismatch",
+                        status_code=422,
+                    )
             return
 
-        if command.amount not in {None, Decimal("0")} or has_advance_dates:
+        if (
+            command.amount not in {None, Decimal("0")}
+            or has_advance_dates
+            or selected_dates
+        ):
             raise CollectionProtocolError(
-                "A PASS entry cannot contain an amount or ADV dates.",
+                "An unable-to-pay entry cannot contain an amount or covered dates.",
                 code="invalid_pass",
                 status_code=422,
             )
