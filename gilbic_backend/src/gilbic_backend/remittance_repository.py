@@ -100,7 +100,7 @@ class PostgresRemittanceRepository:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
                     """
-                    select distinct
+                    select
                         u.id,
                         u.full_name,
                         case
@@ -242,7 +242,6 @@ class PostgresRemittanceRepository:
                     )
 
                     for item in summary.items:
-                        snapshot = self._item_payload(item)
                         cursor.execute(
                             """
                             insert into lending.collection_remittance_items (
@@ -266,7 +265,7 @@ class PostgresRemittanceRepository:
                                 item.entry_type,
                                 item.amount,
                                 item.receipt_number,
-                                Jsonb(snapshot),
+                                Jsonb(self._item_payload(item)),
                             ),
                         )
 
@@ -496,41 +495,44 @@ class PostgresRemittanceRepository:
         collection_date: date,
         for_update: bool,
     ) -> tuple[RemittanceItemRecord, ...]:
-        lock_clause = "for update of transaction" if for_update else ""
+        lock_clause = "for update of t" if for_update else ""
         cursor.execute(
             f"""
             select
-                transaction.id as transaction_id,
-                transaction.client_id,
+                t.id as transaction_id,
+                t.client_id,
                 client.full_name as client_name,
-                transaction.loan_id,
+                t.loan_id,
                 loan_type.name as loan_type,
-                transaction.collection_date,
-                transaction.entry_type,
-                transaction.amount,
-                transaction.receipt_number,
-                transaction.accepted_at,
-                transaction.note,
+                t.collection_date,
+                t.entry_type,
+                t.amount,
+                t.receipt_number,
+                t.accepted_at,
+                t.note,
                 coalesce(covered.dates, ARRAY[]::date[]) as covered_dates
-            from lending.collection_transactions as transaction
-            join lending.clients client on client.id = transaction.client_id
-            join lending.loans loan on loan.id = transaction.loan_id
+            from lending.collection_transactions t
+            join lending.clients client on client.id = t.client_id
+            join lending.loans loan on loan.id = t.loan_id
             join lending.loan_types loan_type on loan_type.id = loan.loan_type_id
             left join lateral (
                 select array_agg(cd.covered_date order by cd.covered_date) as dates
                 from lending.collection_covered_dates cd
-                where cd.transaction_id = transaction.id
+                where cd.transaction_id = t.id
             ) covered on true
-            where transaction.collector_user_id = %s
-              and transaction.collection_date = %s
-              and transaction.remittance_id is null
-              and transaction.is_locked = false
-            order by transaction.accepted_at, transaction.id
+            where t.collector_user_id = %s
+              and t.collection_date = %s
+              and t.remittance_id is null
+              and t.is_locked = false
+            order by t.accepted_at, t.id
             {lock_clause}
             """,
             (collector_user_id, collection_date),
         )
-        return tuple(PostgresRemittanceRepository._item_from_row(row) for row in cursor.fetchall())
+        return tuple(self_record for self_record in (
+            PostgresRemittanceRepository._item_from_row(row)
+            for row in cursor.fetchall()
+        ))
 
     @staticmethod
     def _summary(
@@ -613,29 +615,29 @@ class PostgresRemittanceRepository:
                 item.receipt_number,
                 coalesce(
                     (item.transaction_snapshot->>'accepted_at')::timestamptz,
-                    transaction.accepted_at
+                    tx.accepted_at
                 ) as accepted_at,
                 coalesce(item.transaction_snapshot->>'note', '') as note,
-                coalesce(
-                    array(
-                        select jsonb_array_elements_text(
-                            coalesce(item.transaction_snapshot->'covered_dates', '[]'::jsonb)
-                        )::date
-                    ),
-                    ARRAY[]::date[]
+                array(
+                    select jsonb_array_elements_text(
+                        coalesce(item.transaction_snapshot->'covered_dates', '[]'::jsonb)
+                    )::date
                 ) as covered_dates
             from lending.collection_remittance_items item
-            join lending.collection_transactions transaction
-              on transaction.id = item.transaction_id
+            join lending.collection_transactions tx
+              on tx.id = item.transaction_id
             join lending.clients client on client.id = item.client_id
             join lending.loans loan on loan.id = item.loan_id
             join lending.loan_types loan_type on loan_type.id = loan.loan_type_id
             where item.remittance_id = %s
-            order by transaction.accepted_at, item.transaction_id
+            order by tx.accepted_at, item.transaction_id
             """,
             (remittance_id,),
         )
-        return tuple(PostgresRemittanceRepository._item_from_row(row) for row in cursor.fetchall())
+        return tuple(
+            PostgresRemittanceRepository._item_from_row(row)
+            for row in cursor.fetchall()
+        )
 
     @staticmethod
     def _record_from_row(row, items: tuple[RemittanceItemRecord, ...]) -> RemittanceRecord:
