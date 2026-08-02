@@ -47,7 +47,7 @@ void main() {
     expect(find.text('Ana Client'), findsOneWidget);
     expect(find.textContaining('Expected collection'), findsOneWidget);
 
-    final footer = find.textContaining('Read-only route');
+    final footer = find.textContaining('Offline routes are view-only');
     await tester.dragUntilVisible(
       footer,
       find.byType(ListView),
