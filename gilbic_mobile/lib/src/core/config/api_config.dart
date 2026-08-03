@@ -11,6 +11,11 @@ class ApiConfig {
     defaultValue: '/api/mobile/v1/auth/login',
   );
 
+  static const String refreshPath = String.fromEnvironment(
+    'GILBIC_REFRESH_PATH',
+    defaultValue: '/api/mobile/v1/auth/refresh',
+  );
+
   static const String logoutPath = String.fromEnvironment(
     'GILBIC_LOGOUT_PATH',
     defaultValue: '/api/mobile/v1/auth/logout',
@@ -37,6 +42,8 @@ class ApiConfig {
   );
 
   static Uri get loginEndpoint => endpoint(loginPath);
+
+  static Uri get refreshEndpoint => endpoint(refreshPath);
 
   static Uri get logoutEndpoint => endpoint(logoutPath);
 
