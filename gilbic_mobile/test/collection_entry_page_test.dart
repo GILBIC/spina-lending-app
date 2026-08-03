@@ -65,7 +65,7 @@ void main() {
     expect(repository.drafts.last.deviceSequence, 1);
   });
 
-  testWidgets('covered-date calendar stays open for several exact dates', (
+  testWidgets('covered-date calendar keeps every selected date circled', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(800, 1400));
@@ -91,17 +91,47 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Choose covered dates'), findsOneWidget);
-    expect(find.byType(CalendarDatePicker), findsOneWidget);
-    expect(find.text('1 selected day'), findsOneWidget);
+    expect(find.byType(CalendarDatePicker), findsNothing);
+    expect(find.byKey(const Key('covered-date-calendar')), findsOneWidget);
+    expect(
+      find.byKey(const Key('selected-covered-date-2026-08-01')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('selected day'), findsNothing);
+    expect(
+      find.byKey(const Key('calendar-selected-2026-08-01')),
+      findsNothing,
+    );
 
-    await tester.tap(find.text('2').last);
+    await tester.tap(
+      find.byKey(const Key('covered-calendar-day-2026-08-02')),
+    );
     await tester.pumpAndSettle();
-    expect(find.text('2 selected days'), findsOneWidget);
-    expect(find.text('Choose covered dates'), findsOneWidget);
+    expect(
+      find.byKey(const Key('selected-covered-date-2026-08-01')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('selected-covered-date-2026-08-02')),
+      findsOneWidget,
+    );
 
-    await tester.tap(find.text('3').last);
+    await tester.tap(
+      find.byKey(const Key('covered-calendar-day-2026-08-03')),
+    );
     await tester.pumpAndSettle();
-    expect(find.text('3 selected days'), findsOneWidget);
+    expect(
+      find.byKey(const Key('selected-covered-date-2026-08-01')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('selected-covered-date-2026-08-02')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('selected-covered-date-2026-08-03')),
+      findsOneWidget,
+    );
     expect(find.text('Choose covered dates'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('confirm-covered-dates')));
