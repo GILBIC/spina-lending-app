@@ -1,5 +1,6 @@
 name: Run covered calendar patch
 
+# Triggered after the workflow already exists on the feature branch.
 on:
   push:
     branches:
