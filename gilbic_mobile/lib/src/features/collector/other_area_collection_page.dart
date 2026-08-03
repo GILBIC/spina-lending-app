@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/other_area_client.dart';
 import 'package:gilbic_mobile/src/core/collector/other_area_client_repository.dart';
@@ -37,6 +38,8 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
   String? _errorMessage;
   bool _searching = false;
   bool _searched = false;
+
+  bool get _isManagement => widget.session.role == AppRole.management;
 
   @override
   void initState() {
@@ -90,7 +93,9 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
         return;
       }
       setState(() {
-        _errorMessage = 'Other-area clients could not be searched.';
+        _errorMessage = _isManagement
+            ? 'Clients could not be searched for direct payment entry.'
+            : 'Other-area clients could not be searched.';
         _searched = true;
         _results = const <OtherAreaClient>[];
       });
@@ -132,12 +137,22 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Record another collector’s client?'),
+        title: Text(
+          _isManagement
+              ? 'Record direct Management payment?'
+              : 'Record another collector’s client?',
+        ),
         content: Text(
-          '${client.entry.clientName} is assigned to '
-          '${client.assignedCollectorName}.\n\n'
-          'Your name will remain the recorder. The assigned collector and linked '
-          'client will be notified after the payment is posted.',
+          _isManagement
+              ? '${client.entry.clientName} is assigned to '
+                  '${client.assignedCollectorName}.\n\n'
+                  'Management will remain the recorder. The assigned collector and '
+                  'linked client will be notified. Collectors cannot edit this '
+                  'Management-recorded payment.'
+              : '${client.entry.clientName} is assigned to '
+                  '${client.assignedCollectorName}.\n\n'
+                  'Your name will remain the recorder. The assigned collector and '
+                  'linked client will be notified after the payment is posted.',
         ),
         actions: [
           TextButton(
@@ -176,7 +191,9 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Other Area Payment')),
+      appBar: AppBar(
+        title: Text(_isManagement ? 'Direct Payment Entry' : 'Other Area Payment'),
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -186,7 +203,9 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Use this only when a client pays a collector outside the client’s assigned area.',
+                    _isManagement
+                        ? 'Search an active client who paid directly to Management. The assigned collector will see a read-only payment update.'
+                        : 'Use this only when a client pays a collector outside the client’s assigned area.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 12),
@@ -236,22 +255,26 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
       return const Center(child: CircularProgressIndicator());
     }
     if (!_searched) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
-            'Search first. Your own assigned clients remain in Daily Route.',
+            _isManagement
+                ? 'Search for the client who paid directly to Management.'
+                : 'Search first. Your own assigned clients remain in Daily Route.',
             textAlign: TextAlign.center,
           ),
         ),
       );
     }
     if (_results.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
-            'No active other-area client matched the search.',
+            _isManagement
+                ? 'No active client matched the search.'
+                : 'No active other-area client matched the search.',
             textAlign: TextAlign.center,
           ),
         ),
@@ -303,7 +326,10 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                   Text('Phone: ${client.phoneNumber}'),
                 const SizedBox(height: 8),
                 Text(
-                  blocked ?? entry.collectionMessage,
+                  blocked ??
+                      (_isManagement
+                          ? 'Direct Management payment. The assigned collector and linked client will be notified.'
+                          : entry.collectionMessage),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 10),
@@ -313,7 +339,9 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                     key: Key('record-other-area-${entry.loanId}'),
                     onPressed: blocked == null ? () => _openPayment(client) : null,
                     icon: const Icon(Icons.payments_outlined),
-                    label: const Text('Record payment'),
+                    label: Text(
+                      _isManagement ? 'Record direct payment' : 'Record payment',
+                    ),
                   ),
                 ),
               ],
