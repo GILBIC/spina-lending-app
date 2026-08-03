@@ -16,20 +16,27 @@ abstract interface class AuthRepository {
   Future<void> signOut(UserSession session);
 }
 
-class SpinaAuthRepository implements AuthRepository {
+abstract interface class SessionRefreshRepository {
+  Future<UserSession> refresh(UserSession session);
+}
+
+class SpinaAuthRepository implements AuthRepository, SessionRefreshRepository {
   SpinaAuthRepository({
     http.Client? client,
     Uri? loginUri,
+    Uri? refreshUri,
     Uri? logoutUri,
     DeviceIdentityProvider? deviceIdentityProvider,
   })  : _client = client ?? http.Client(),
         _loginUri = loginUri ?? ApiConfig.loginEndpoint,
+        _refreshUri = refreshUri ?? ApiConfig.refreshEndpoint,
         _logoutUri = logoutUri ?? ApiConfig.logoutEndpoint,
         _deviceIdentityProvider =
             deviceIdentityProvider ?? DeviceIdentityProvider();
 
   final http.Client _client;
   final Uri _loginUri;
+  final Uri _refreshUri;
   final Uri _logoutUri;
   final DeviceIdentityProvider _deviceIdentityProvider;
 
@@ -43,15 +50,7 @@ class SpinaAuthRepository implements AuthRepository {
       throw const SpinaApiException('Enter your username and password.');
     }
 
-    late final DeviceIdentity deviceIdentity;
-    try {
-      deviceIdentity = await _deviceIdentityProvider.load();
-    } on Exception {
-      throw const SpinaApiException(
-        'Gilbic could not access this installation identity. Restart the app and try again.',
-      );
-    }
-
+    final deviceIdentity = await _loadDeviceIdentity();
     late final http.Response response;
     try {
       response = await _client.post(
@@ -74,19 +73,84 @@ class SpinaAuthRepository implements AuthRepository {
       );
     }
 
+    return _sessionFromResponse(
+      response,
+      fallbackUsername: normalizedUsername,
+      unreadableMessage: 'The SPINA server returned unreadable login data.',
+      authenticationFailureMessage: 'Invalid username or password.',
+    );
+  }
+
+  @override
+  Future<UserSession> refresh(UserSession session) async {
+    final refreshToken = session.refreshToken?.trim() ?? '';
+    if (refreshToken.isEmpty) {
+      throw const SpinaApiException(
+        'Your login session expired. Sign in again.',
+        statusCode: 401,
+      );
+    }
+
+    final deviceIdentity = await _loadDeviceIdentity();
+    late final http.Response response;
+    try {
+      response = await _client.post(
+        _refreshUri,
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-Device-Id': deviceIdentity.installationId,
+        },
+        body: jsonEncode(<String, Object?>{
+          'refresh_token': refreshToken,
+        }),
+      );
+    } on Exception {
+      throw const SpinaApiException(
+        'Gilbic could not renew the login session. Check the connection and try again.',
+      );
+    }
+
+    return _sessionFromResponse(
+      response,
+      fallbackUsername: session.username,
+      unreadableMessage: 'The SPINA server returned unreadable session data.',
+      authenticationFailureMessage:
+          'Your login session expired. Sign in again.',
+    );
+  }
+
+  Future<DeviceIdentity> _loadDeviceIdentity() async {
+    try {
+      return await _deviceIdentityProvider.load();
+    } on Exception {
+      throw const SpinaApiException(
+        'Gilbic could not access this installation identity. Restart the app and try again.',
+      );
+    }
+  }
+
+  UserSession _sessionFromResponse(
+    http.Response response, {
+    required String fallbackUsername,
+    required String unreadableMessage,
+    required String authenticationFailureMessage,
+  }) {
     Map<String, dynamic> payload;
     try {
       payload = decodeJsonObject(response.body);
     } on FormatException {
       throw SpinaApiException(
-        'The SPINA server returned unreadable login data.',
+        unreadableMessage,
         statusCode: response.statusCode,
       );
     }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw SpinaApiException(
-        apiErrorMessage(payload, statusCode: response.statusCode),
+        response.statusCode == 401 || response.statusCode == 403
+            ? authenticationFailureMessage
+            : apiErrorMessage(payload, statusCode: response.statusCode),
         statusCode: response.statusCode,
       );
     }
@@ -143,7 +207,7 @@ class SpinaAuthRepository implements AuthRepository {
           data['user_id'],
           data['account_id'],
         ]) ??
-        normalizedUsername;
+        fallbackUsername;
     final displayName = firstNonEmptyString(<Object?>[
           source['display_name'],
           source['full_name'],
@@ -153,12 +217,12 @@ class SpinaAuthRepository implements AuthRepository {
           data['full_name'],
           data['username'],
         ]) ??
-        normalizedUsername;
+        fallbackUsername;
     final returnedUsername = firstNonEmptyString(<Object?>[
           source['username'],
           data['username'],
         ]) ??
-        normalizedUsername;
+        fallbackUsername;
     final permissions = stringList(
       source['permissions'] ?? data['permissions'],
     );
