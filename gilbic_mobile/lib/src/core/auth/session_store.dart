@@ -37,7 +37,12 @@ class SecureSessionStore implements SessionStore {
       final session = UserSession.fromJson(
         decoded.map((key, value) => MapEntry(key.toString(), value)),
       );
-      if (session == null || session.isExpired) {
+      if (session == null) {
+        await clear();
+        return null;
+      }
+      final refreshToken = session.refreshToken?.trim() ?? '';
+      if (session.isExpired && refreshToken.isEmpty) {
         await clear();
         return null;
       }
