@@ -378,7 +378,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _areas.contains(_selectedArea)
+                            initialValue: _areas.contains(_selectedArea)
                                 ? _selectedArea
                                 : _allAreas,
                             isExpanded: true,
@@ -405,7 +405,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _loanTypes.contains(_selectedLoanType)
+                            initialValue: _loanTypes.contains(_selectedLoanType)
                                 ? _selectedLoanType
                                 : _allLoans,
                             isExpanded: true,
