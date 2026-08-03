@@ -63,7 +63,9 @@ class PostgresCrossRemittanceRepository:
                     group by
                         transaction.assigned_collector_user_id,
                         recipient.full_name
-                    order by lower(recipient.full_name), recipient.id
+                    order by
+                        lower(recipient.full_name),
+                        transaction.assigned_collector_user_id
                     """,
                     (collector_user_id, collection_date),
                 )
