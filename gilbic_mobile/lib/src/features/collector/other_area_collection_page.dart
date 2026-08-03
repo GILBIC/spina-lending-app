@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
@@ -34,12 +36,81 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
   late final TextEditingController _searchController;
   late final OtherAreaClientRepository _repository;
 
+  Timer? _searchDebounce;
   List<OtherAreaClient> _results = const <OtherAreaClient>[];
   String? _errorMessage;
+  String _selectedArea = _allAreas;
+  String _selectedLoanType = _allLoans;
   bool _searching = false;
   bool _searched = false;
+  int _searchGeneration = 0;
+
+  static const String _allAreas = 'All areas';
+  static const String _allLoans = 'All loans';
 
   bool get _isManagement => widget.session.role == AppRole.management;
+
+  List<String> get _areas {
+    final values = _results
+        .map((client) => client.entry.area.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList(growable: false)
+      ..sort((left, right) => left.toLowerCase().compareTo(right.toLowerCase()));
+    return <String>[_allAreas, ...values];
+  }
+
+  List<String> get _loanTypes {
+    final values = _results
+        .map((client) => client.entry.loanType.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList(growable: false)
+      ..sort((left, right) => left.toLowerCase().compareTo(right.toLowerCase()));
+    return <String>[_allLoans, ...values];
+  }
+
+  List<OtherAreaClient> get _visibleResults {
+    final query = _searchController.text.trim().toLowerCase();
+    final filtered = _results.where((client) {
+      if (_selectedArea != _allAreas && client.entry.area != _selectedArea) {
+        return false;
+      }
+      if (_selectedLoanType != _allLoans &&
+          client.entry.loanType != _selectedLoanType) {
+        return false;
+      }
+      return true;
+    }).toList(growable: false);
+
+    filtered.sort((left, right) {
+      final leftName = left.entry.clientName.toLowerCase();
+      final rightName = right.entry.clientName.toLowerCase();
+      final leftCode = left.clientCode.toLowerCase();
+      final rightCode = right.clientCode.toLowerCase();
+      final leftExact = leftName == query || leftCode == query;
+      final rightExact = rightName == query || rightCode == query;
+      if (leftExact != rightExact) {
+        return leftExact ? -1 : 1;
+      }
+      final leftStarts = leftName.startsWith(query) || leftCode.startsWith(query);
+      final rightStarts = rightName.startsWith(query) || rightCode.startsWith(query);
+      if (leftStarts != rightStarts) {
+        return leftStarts ? -1 : 1;
+      }
+      final nameOrder = leftName.compareTo(rightName);
+      if (nameOrder != 0) {
+        return nameOrder;
+      }
+      return left.entry.loanType
+          .toLowerCase()
+          .compareTo(right.entry.loanType.toLowerCase());
+    });
+    return filtered;
+  }
+
+  int get _clientCount =>
+      _results.map((client) => client.entry.clientId).toSet().length;
 
   @override
   void initState() {
@@ -53,34 +124,73 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _search() async {
-    final query = _searchController.text.trim();
-    if (query.length < 2 || _searching) {
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    final query = value.trim();
+    if (query.length < 2) {
+      _searchGeneration += 1;
       setState(() {
-        _errorMessage = 'Enter at least two letters, a client code, phone, or area.';
+        _results = const <OtherAreaClient>[];
+        _searched = false;
+        _searching = false;
+        _errorMessage = null;
+        _selectedArea = _allAreas;
+        _selectedLoanType = _allLoans;
       });
       return;
     }
+    _searchDebounce = Timer(const Duration(milliseconds: 350), _search);
+  }
 
+  void _clearSearch() {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    _searchGeneration += 1;
+    setState(() {
+      _results = const <OtherAreaClient>[];
+      _searched = false;
+      _searching = false;
+      _errorMessage = null;
+      _selectedArea = _allAreas;
+      _selectedLoanType = _allLoans;
+    });
+  }
+
+  Future<void> _search({bool showValidation = false}) async {
+    final query = _searchController.text.trim();
+    if (query.length < 2) {
+      if (showValidation) {
+        setState(() {
+          _errorMessage =
+              'Enter at least two letters, a client code, phone, or area.';
+        });
+      }
+      return;
+    }
+
+    final generation = ++_searchGeneration;
     setState(() {
       _searching = true;
       _errorMessage = null;
     });
     try {
       final results = await _repository.search(widget.session, query);
-      if (!mounted) {
+      if (!mounted || generation != _searchGeneration) {
         return;
       }
       setState(() {
         _results = results;
         _searched = true;
+        _selectedArea = _allAreas;
+        _selectedLoanType = _allLoans;
       });
     } on SpinaApiException catch (error) {
-      if (!mounted) {
+      if (!mounted || generation != _searchGeneration) {
         return;
       }
       setState(() {
@@ -89,7 +199,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
         _results = const <OtherAreaClient>[];
       });
     } on Object {
-      if (!mounted) {
+      if (!mounted || generation != _searchGeneration) {
         return;
       }
       setState(() {
@@ -100,7 +210,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
         _results = const <OtherAreaClient>[];
       });
     } finally {
-      if (mounted) {
+      if (mounted && generation == _searchGeneration) {
         setState(() => _searching = false);
       }
     }
@@ -184,7 +294,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
       ),
     );
     if (saved == true && mounted) {
-      await _search();
+      await _search(showValidation: true);
     }
   }
 
@@ -212,22 +322,39 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                   TextField(
                     key: const Key('other-area-search'),
                     controller: _searchController,
-                    enabled: !_searching,
                     textInputAction: TextInputAction.search,
-                    onSubmitted: (_) => _search(),
+                    autocorrect: false,
+                    onChanged: _onSearchChanged,
+                    onSubmitted: (_) => _search(showValidation: true),
                     decoration: InputDecoration(
-                      labelText: 'Client name, code, phone, or area',
+                      labelText: 'Find by name, code, phone, or area',
+                      helperText: 'Results appear automatically after 2 characters.',
                       prefixIcon: const Icon(Icons.person_search),
-                      suffixIcon: IconButton(
-                        tooltip: 'Search',
-                        onPressed: _searching ? null : _search,
-                        icon: _searching
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.search),
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_searchController.text.isNotEmpty)
+                            IconButton(
+                              tooltip: 'Clear search',
+                              onPressed: _clearSearch,
+                              icon: const Icon(Icons.clear),
+                            ),
+                          IconButton(
+                            tooltip: 'Search now',
+                            onPressed: _searching
+                                ? null
+                                : () => _search(showValidation: true),
+                            icon: _searching
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.search),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -238,6 +365,73 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                       ),
+                    ),
+                  ],
+                  if (_results.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      '$_clientCount clients • ${_results.length} active loans',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _areas.contains(_selectedArea)
+                                ? _selectedArea
+                                : _allAreas,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Area',
+                              prefixIcon: Icon(Icons.location_on_outlined),
+                            ),
+                            items: _areas
+                                .map(
+                                  (area) => DropdownMenuItem<String>(
+                                    value: area,
+                                    child: Text(
+                                      area,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                )
+                                .toList(growable: false),
+                            onChanged: (value) {
+                              setState(() => _selectedArea = value ?? _allAreas);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _loanTypes.contains(_selectedLoanType)
+                                ? _selectedLoanType
+                                : _allLoans,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Loan',
+                              prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                            ),
+                            items: _loanTypes
+                                .map(
+                                  (loanType) => DropdownMenuItem<String>(
+                                    value: loanType,
+                                    child: Text(
+                                      loanType,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                )
+                                .toList(growable: false),
+                            onChanged: (value) {
+                              setState(
+                                () => _selectedLoanType = value ?? _allLoans,
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ],
@@ -260,8 +454,8 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
           padding: const EdgeInsets.all(24),
           child: Text(
             _isManagement
-                ? 'Search for the client who paid directly to Management.'
-                : 'Search first. Your own assigned clients remain in Daily Route.',
+                ? 'Start typing the client name, code, phone, or area.'
+                : 'Start typing. Your own assigned clients remain in Daily Route.',
             textAlign: TextAlign.center,
           ),
         ),
@@ -281,12 +475,25 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
       );
     }
 
+    final visibleResults = _visibleResults;
+    if (visibleResults.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'No client matches the selected area and loan filters.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
-      itemCount: _results.length,
+      itemCount: visibleResults.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
-        final client = _results[index];
+        final client = visibleResults[index];
         final entry = client.entry;
         final blocked = _blockedReason(client);
         return Card(
