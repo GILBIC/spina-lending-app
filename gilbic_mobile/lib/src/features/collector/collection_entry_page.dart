@@ -142,25 +142,112 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   }
 
   Future<void> _selectCoveredDate() async {
-    final dates = _sortedCoveredDates;
-    final selected = await showDatePicker(
+    final existingDates = _sortedCoveredDates;
+    final firstDate = _collectionDate.subtract(const Duration(days: 365));
+    final lastDate = _collectionDate.add(const Duration(days: 730));
+    final initialDate = existingDates.isEmpty ? _collectionDate : existingDates.last;
+
+    final selectedDates = await showDialog<List<DateTime>>(
       context: context,
-      initialDate: dates.isEmpty ? _collectionDate : dates.last,
-      firstDate: _collectionDate.subtract(const Duration(days: 365)),
-      lastDate: _collectionDate.add(const Duration(days: 730)),
-      helpText: 'Add one covered date',
+      builder: (dialogContext) {
+        final workingDates = existingDates.map(_dateOnly).toSet();
+        var focusedDate = initialDate;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final sortedDates = workingDates.toList(growable: false)
+              ..sort((left, right) => left.compareTo(right));
+
+            void toggleDate(DateTime value) {
+              final normalized = _dateOnly(value);
+              setDialogState(() {
+                focusedDate = normalized;
+                if (workingDates.contains(normalized)) {
+                  workingDates.remove(normalized);
+                } else {
+                  workingDates.add(normalized);
+                }
+              });
+            }
+
+            return AlertDialog(
+              title: const Text('Choose covered dates'),
+              content: SizedBox(
+                width: 380,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tap every date this payment covers. The calendar stays open until you press Done.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      CalendarDatePicker(
+                        initialDate: focusedDate,
+                        firstDate: firstDate,
+                        lastDate: lastDate,
+                        onDateChanged: toggleDate,
+                      ),
+                      const Divider(),
+                      Text(
+                        '${sortedDates.length} selected day${sortedDates.length == 1 ? '' : 's'}',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      if (sortedDates.isEmpty)
+                        const Text('No covered date selected.')
+                      else
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            for (final value in sortedDates)
+                              InputChip(
+                                key: Key('calendar-selected-${_date(value)}'),
+                                label: Text(_date(value)),
+                                avatar: const Icon(
+                                  Icons.event_available,
+                                  size: 16,
+                                ),
+                                onDeleted: () => toggleDate(value),
+                              ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: workingDates.isEmpty
+                      ? null
+                      : () => setDialogState(workingDates.clear),
+                  child: const Text('Clear'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  key: const Key('confirm-covered-dates'),
+                  onPressed: workingDates.isEmpty
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(sortedDates),
+                  child: const Text('Done'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
-    if (selected == null || !mounted) {
+
+    if (selectedDates == null || !mounted) {
       return;
     }
-    final normalized = _dateOnly(selected);
-    if (dates.any((date) => _sameDate(date, normalized))) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('That date is already selected.')),
-      );
-      return;
-    }
-    _setCoveredDates(<DateTime>[...dates, normalized]);
+    _setCoveredDates(selectedDates);
   }
 
   Future<void> _selectUnableDate() async {
@@ -398,7 +485,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Select dates one by one. Dates between them are not automatically covered.',
+                  'Tap several dates in one calendar. Only the selected dates are covered.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 8),
@@ -442,8 +529,8 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                     ),
                     ActionChip(
                       key: const Key('add-covered-date'),
-                      avatar: const Icon(Icons.add, size: 18),
-                      label: const Text('Add date'),
+                      avatar: const Icon(Icons.calendar_month, size: 18),
+                      label: const Text('Open calendar'),
                       onPressed: _submitting ? null : _selectCoveredDate,
                     ),
                   ],
