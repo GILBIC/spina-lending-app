@@ -8,7 +8,18 @@ JOIN core.permissions permission
 WHERE role.code = 'collector'
 ON CONFLICT DO NOTHING;
 
+INSERT INTO core.role_permissions (role_id, permission_code)
+SELECT role.id, permission.code
+FROM core.roles role
+JOIN core.permissions permission
+  ON permission.code = 'collection.create'
+WHERE role.code = 'management'
+ON CONFLICT DO NOTHING;
+
 COMMENT ON TABLE lending.collection_assignment_reviews IS
     'Acceptance by the assigned collector acts as the review/copy step for a cross-collector payment without duplicating the official transaction.';
+
+COMMENT ON COLUMN lending.collection_transactions.collection_origin IS
+    'Management direct entries preserve the Management recorder and remain uneditable by the assigned collector.';
 
 COMMIT;
