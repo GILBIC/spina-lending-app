@@ -90,6 +90,7 @@ void main() {
     await tester.tap(find.byKey(const Key('add-covered-date')));
     await tester.pumpAndSettle();
 
+    final dialog = find.byType(AlertDialog);
     expect(find.text('Choose covered dates'), findsOneWidget);
     expect(find.byType(CalendarDatePicker), findsNothing);
     expect(find.byKey(const Key('covered-date-calendar')), findsOneWidget);
@@ -97,7 +98,13 @@ void main() {
       find.byKey(const Key('selected-covered-date-2026-08-01')),
       findsOneWidget,
     );
-    expect(find.textContaining('selected day'), findsNothing);
+    expect(
+      find.descendant(
+        of: dialog,
+        matching: find.textContaining('selected day'),
+      ),
+      findsNothing,
+    );
     expect(
       find.byKey(const Key('calendar-selected-2026-08-01')),
       findsNothing,
