@@ -1,6 +1,6 @@
 name: Run covered calendar patch
 
-# Triggered after the workflow already exists on the feature branch.
+# Emit the generated patch on a temporary branch for connector-controlled adoption.
 on:
   push:
     branches:
@@ -32,4 +32,4 @@ jobs:
           git add gilbic_mobile/test/collection_entry_page_test.dart
           git diff --check
           git commit -m "Show every selected covered date on calendar"
-          git push origin HEAD:agent/cross-collector-payment-notifications
+          git push --force origin HEAD:agent/calendar-circle-patch-output
