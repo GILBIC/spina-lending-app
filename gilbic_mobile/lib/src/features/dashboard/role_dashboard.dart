@@ -48,8 +48,10 @@ class RoleDashboard extends StatelessWidget {
       return;
     }
 
-    if (session.role == AppRole.collector &&
-        module.action == 'other-area-payment') {
+    if ((session.role == AppRole.collector &&
+            module.action == 'other-area-payment') ||
+        (session.role == AppRole.management &&
+            module.action == 'management-direct-payment')) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => OtherAreaCollectionPage(
@@ -319,6 +321,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Loan Operations',
           'Collections, corrections, and portfolio monitoring',
           Icons.insights,
+        ),
+        _DashboardModule(
+          'Direct Payment Entry',
+          'Record a client payment made directly to Management',
+          Icons.point_of_sale,
+          action: 'management-direct-payment',
         ),
         _DashboardModule(
           'Notifications',
