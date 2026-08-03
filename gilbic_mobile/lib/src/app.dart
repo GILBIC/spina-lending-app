@@ -129,7 +129,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
         statusCode: 401,
       );
     }
-    final refreshed = await refresher.refresh(current);
+    final refreshed =
+        await (refresher as SessionRefreshRepository).refresh(current);
     current.applyRefresh(refreshed);
     await _sessionStore.write(current);
     return refreshed;
@@ -218,7 +219,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
 
     _refreshingSession = true;
     try {
-      final refreshed = await refresher.refresh(current);
+      final refreshed =
+          await (refresher as SessionRefreshRepository).refresh(current);
       current.applyRefresh(refreshed);
       await _sessionStore.write(current);
       if (!mounted) {
