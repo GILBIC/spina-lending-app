@@ -7,6 +7,7 @@ import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart'
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
+import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
@@ -66,6 +67,19 @@ class RoleDashboard extends StatelessWidget {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => CollectorRemittancePage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (session.role == AppRole.collector &&
+        module.action == 'assigned-collector-remittance') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => CrossCollectorRemittancePage(
             session: session,
             deviceIdentityProvider: deviceIdentityProvider,
           ),
@@ -248,10 +262,16 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           action: 'other-area-payment',
         ),
         _DashboardModule(
-          'Remittance',
-          'Submit cash to Management or the assigned collector',
-          Icons.summarize,
+          'Management Remittance',
+          'Submit regular route cash to authorized staff',
+          Icons.account_balance_outlined,
           action: 'remittance',
+        ),
+        _DashboardModule(
+          'Assigned Collector Remittance',
+          'Send only other-area payments to their route owner',
+          Icons.compare_arrows,
+          action: 'assigned-collector-remittance',
         ),
         _DashboardModule(
           'Payment Updates',
