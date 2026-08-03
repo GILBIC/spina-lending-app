@@ -45,6 +45,19 @@ def _notification_payload(
         if notification.has_handover_photo
         else None
     )
+    title = (
+        notification.title
+        if notification.is_pending
+        else "Remittance accepted"
+    )
+    message = (
+        notification.message
+        if notification.is_pending
+        else (
+            f"{notification.remittance_number} was accepted. "
+            "Money is now under your custody."
+        )
+    )
     return {
         "notification_id": str(notification.notification_id),
         "notification_type": "remittance_acceptance",
@@ -52,8 +65,8 @@ def _notification_payload(
         "sender_user_id": str(notification.sender_user_id),
         "remittance_id": str(notification.remittance_id),
         "remittance_number": notification.remittance_number,
-        "title": notification.title,
-        "message": notification.message,
+        "title": title,
+        "message": message,
         "action_code": "accept_remittance",
         "status": notification.status,
         "is_pending": notification.is_pending,
