@@ -8,6 +8,7 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
+import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 
 class RoleDashboard extends StatelessWidget {
@@ -65,6 +66,18 @@ class RoleDashboard extends StatelessWidget {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => CollectorRemittancePage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (module.action == 'payment-updates') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => ActivityNotificationsPage(
             session: session,
             deviceIdentityProvider: deviceIdentityProvider,
           ),
@@ -199,6 +212,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           Icons.receipt_long,
         ),
         _DashboardModule(
+          'Payment Updates',
+          'See who posted, remitted, and accepted your payment',
+          Icons.notifications_active,
+          action: 'payment-updates',
+        ),
+        _DashboardModule(
           'Renewal',
           'Submit and monitor renewal requests',
           Icons.autorenew,
@@ -235,7 +254,13 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           action: 'remittance',
         ),
         _DashboardModule(
-          'Notifications',
+          'Payment Updates',
+          'See other-collector posts and cash-custody updates',
+          Icons.receipt_long,
+          action: 'payment-updates',
+        ),
+        _DashboardModule(
+          'Remittance Requests',
           'Review and accept remittances sent to your assigned route',
           Icons.notifications_active,
           action: 'remittance-notifications',
