@@ -31,7 +31,7 @@ class SpinaOtherAreaClientRepository implements OtherAreaClientRepository {
     UserSession session,
     String query,
   ) async {
-    final normalized = ' '.join(query.trim().split(RegExp(r'\s+')));
+    final normalized = query.trim().split(RegExp(r'\s+')).join(' ');
     if (normalized.length < 2) {
       return const <OtherAreaClient>[];
     }
