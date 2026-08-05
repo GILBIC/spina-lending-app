@@ -9,6 +9,7 @@ import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.d
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
+import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 
@@ -109,6 +110,19 @@ class RoleDashboard extends StatelessWidget {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => RemittanceNotificationsPage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (session.role == AppRole.management &&
+        module.action == 'client-registration-approvals') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => ClientRegistrationApprovalsPage(
             session: session,
             deviceIdentityProvider: deviceIdentityProvider,
           ),
@@ -333,6 +347,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Accept assigned remittances after receiving the cash',
           Icons.notifications_active,
           action: 'remittance-notifications',
+        ),
+        _DashboardModule(
+          'Client Portal Approvals',
+          'Approve registrations and link borrower records',
+          Icons.how_to_reg,
+          action: 'client-registration-approvals',
         ),
         _DashboardModule(
           'Financial Accounting',
