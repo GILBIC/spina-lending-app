@@ -283,6 +283,7 @@ class PostgresRemittanceRepository:
                           and collector_user_id = %s
                           and remittance_id is null
                           and is_locked = false
+                          and is_voided = false
                         """,
                         (
                             remittance_id,
@@ -524,15 +525,16 @@ class PostgresRemittanceRepository:
               and t.collection_date = %s
               and t.remittance_id is null
               and t.is_locked = false
+              and t.is_voided = false
             order by t.accepted_at, t.id
             {lock_clause}
             """,
             (collector_user_id, collection_date),
         )
-        return tuple(self_record for self_record in (
+        return tuple(
             PostgresRemittanceRepository._item_from_row(row)
             for row in cursor.fetchall()
-        ))
+        )
 
     @staticmethod
     def _summary(
@@ -600,7 +602,10 @@ class PostgresRemittanceRepository:
         }
 
     @staticmethod
-    def _remittance_items(cursor, remittance_id: UUID) -> tuple[RemittanceItemRecord, ...]:
+    def _remittance_items(
+        cursor,
+        remittance_id: UUID,
+    ) -> tuple[RemittanceItemRecord, ...]:
         cursor.execute(
             """
             select
@@ -640,7 +645,10 @@ class PostgresRemittanceRepository:
         )
 
     @staticmethod
-    def _record_from_row(row, items: tuple[RemittanceItemRecord, ...]) -> RemittanceRecord:
+    def _record_from_row(
+        row,
+        items: tuple[RemittanceItemRecord, ...],
+    ) -> RemittanceRecord:
         return RemittanceRecord(
             remittance_id=row["id"],
             remittance_number=str(row["remittance_number"]),

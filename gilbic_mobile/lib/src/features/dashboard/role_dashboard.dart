@@ -10,6 +10,7 @@ import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 
@@ -123,6 +124,19 @@ class RoleDashboard extends StatelessWidget {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => ClientRegistrationApprovalsPage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (session.role == AppRole.management &&
+        module.action == 'management-void-payment') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => ManagementCollectionVoidPage(
             session: session,
             deviceIdentityProvider: deviceIdentityProvider,
           ),
@@ -341,6 +355,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Record a client payment made directly to Management',
           Icons.point_of_sale,
           action: 'management-direct-payment',
+        ),
+        _DashboardModule(
+          'Void Incorrect Payment',
+          'Reverse an unlocked wrong payment with a permanent audit trail',
+          Icons.block,
+          action: 'management-void-payment',
         ),
         _DashboardModule(
           'Notifications',

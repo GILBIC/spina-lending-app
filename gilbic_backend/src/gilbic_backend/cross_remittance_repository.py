@@ -60,6 +60,7 @@ class PostgresCrossRemittanceRepository:
                       and transaction.assigned_collector_user_id is not null
                       and transaction.remittance_id is null
                       and transaction.is_locked = false
+                      and transaction.is_voided = false
                     group by
                         transaction.assigned_collector_user_id,
                         recipient.full_name
@@ -257,6 +258,7 @@ class PostgresCrossRemittanceRepository:
                           and collection_origin = 'cross_collector'
                           and remittance_id is null
                           and is_locked = false
+                          and is_voided = false
                         """,
                         (
                             remittance_id,
@@ -397,6 +399,7 @@ class PostgresCrossRemittanceRepository:
               and transaction.collection_date = %s
               and transaction.remittance_id is null
               and transaction.is_locked = false
+              and transaction.is_voided = false
             order by transaction.accepted_at, transaction.id
             {lock_clause}
             """,
