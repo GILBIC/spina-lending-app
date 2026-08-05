@@ -104,6 +104,19 @@ class RemittanceSummary {
   static RemittanceSummary fromPayload(Object? value) {
     final data = stringMap(value);
     final rawItems = data['items'];
+    final items = rawItems is Iterable
+        ? rawItems
+            .map(RemittanceItem.fromPayload)
+            .whereType<RemittanceItem>()
+            .toList(growable: false)
+        : const <RemittanceItem>[];
+    final exactCoveredDateCount = items.fold<int>(
+      0,
+      (total, item) => total + item.coveredDates.length,
+    );
+    final serverCoveredCount =
+        firstNumber(<Object?>[data['covered_payment_count']])?.toInt() ?? 0;
+
     return RemittanceSummary(
       collectionDate: DateTime.tryParse(
         firstNonEmptyString(<Object?>[data['collection_date']]) ?? '',
@@ -116,15 +129,10 @@ class RemittanceSummary {
       unableToPayCount:
           firstNumber(<Object?>[data['unable_to_pay_count']])?.toInt() ?? 0,
       coveredPaymentCount:
-          firstNumber(<Object?>[data['covered_payment_count']])?.toInt() ?? 0,
+          exactCoveredDateCount > 0 ? exactCoveredDateCount : serverCoveredCount,
       clientCount: firstNumber(<Object?>[data['client_count']])?.toInt() ?? 0,
       totalAmount: firstNumber(<Object?>[data['total_amount']])?.toDouble() ?? 0,
-      items: rawItems is Iterable
-          ? rawItems
-              .map(RemittanceItem.fromPayload)
-              .whereType<RemittanceItem>()
-              .toList(growable: false)
-          : const <RemittanceItem>[],
+      items: items,
     );
   }
 }

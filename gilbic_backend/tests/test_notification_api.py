@@ -186,6 +186,8 @@ def test_recipient_receives_actionable_remittance_notification() -> None:
     assert data[0]["notification_id"] == str(NOTIFICATION_ID)
     assert data[0]["action_code"] == "accept_remittance"
     assert data[0]["is_pending"] is True
+    assert data[0]["title"] == "Remittance awaiting acceptance"
+    assert data[0]["message"] == "Collector One sent PHP 100.00."
     assert data[0]["custody_message"] == (
         "Accept only after you physically receive the cash."
     )
@@ -206,7 +208,16 @@ def test_accepting_notification_transfers_money_custody_to_recipient() -> None:
     )
     assert body["data"]["status"] == "received"
     assert body["data"]["custody_user_id"] == str(RECIPIENT_USER_ID)
-    assert body["data"]["notification"]["status"] == "accepted"
-    assert body["data"]["notification"]["is_pending"] is False
+    notification = body["data"]["notification"]
+    assert notification["status"] == "accepted"
+    assert notification["is_pending"] is False
+    assert notification["title"] == "Remittance accepted"
+    assert notification["message"] == (
+        "REM-20260802-00000001 was accepted. "
+        "Money is now under your custody."
+    )
+    assert notification["custody_message"] == (
+        "Money is now under your custody."
+    )
     assert remittances.request == (REMITTANCE_ID, RECIPIENT_USER_ID)
     assert notifications.accepted is True

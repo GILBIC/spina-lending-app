@@ -65,6 +65,91 @@ void main() {
     expect(repository.drafts.last.deviceSequence, 1);
   });
 
+  testWidgets('covered-date calendar keeps every selected date circled', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CollectionEntryPage(
+          session: _session,
+          entry: _regularEntry,
+          repository: _RetryRepository(),
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
+          collectionDate: DateTime(2026, 8, 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('add-covered-date')));
+    await tester.pumpAndSettle();
+
+    final dialog = find.byType(AlertDialog);
+    expect(find.text('Choose covered dates'), findsOneWidget);
+    expect(find.byType(CalendarDatePicker), findsNothing);
+    expect(find.byKey(const Key('covered-date-calendar')), findsOneWidget);
+    expect(
+      find.byKey(const Key('selected-covered-date-2026-08-01')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: dialog,
+        matching: find.textContaining('selected day'),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('calendar-selected-2026-08-01')),
+      findsNothing,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('covered-calendar-day-2026-08-02')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('selected-covered-date-2026-08-01')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('selected-covered-date-2026-08-02')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('covered-calendar-day-2026-08-03')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('selected-covered-date-2026-08-01')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('selected-covered-date-2026-08-02')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('selected-covered-date-2026-08-03')),
+      findsOneWidget,
+    );
+    expect(find.text('Choose covered dates'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('confirm-covered-dates')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2026-08-01'), findsOneWidget);
+    expect(find.text('2026-08-02'), findsOneWidget);
+    expect(find.text('2026-08-03'), findsOneWidget);
+    expect(find.text('600.00'), findsOneWidget);
+  });
+
   testWidgets('7x7 collection stays disabled in the form', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
