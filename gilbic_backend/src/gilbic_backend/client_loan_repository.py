@@ -95,10 +95,10 @@ class PostgresClientLoanRepository:
                         coalesce(
                             (
                                 select count(*)
-                                from lending.collection_transactions transaction
-                                where transaction.loan_id = loan.id
-                                  and transaction.is_voided = false
-                                  and transaction.amount > 0
+                                from lending.collection_transactions item
+                                where item.loan_id = loan.id
+                                  and item.is_voided = false
+                                  and item.amount > 0
                             ),
                             0
                         ) as payment_count
