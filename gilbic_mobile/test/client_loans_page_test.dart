@@ -31,6 +31,14 @@ void main() {
     expect(find.textContaining('Remaining: ₱4,950.00'), findsOneWidget);
     expect(find.text('Official remaining balance'), findsWidgets);
     expect(find.text('₱4,950.00'), findsWidgets);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('client-loan-seven-by-seven-loan')),
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
     expect(find.text('7x7'), findsOneWidget);
     expect(
       find.textContaining('7x7 mobile collection remains disabled'),
