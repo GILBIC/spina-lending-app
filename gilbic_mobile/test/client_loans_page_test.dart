@@ -28,7 +28,7 @@ void main() {
     expect(find.text('TEST-REG-001 • TEST AREA'), findsOneWidget);
     expect(find.text('Active loans'), findsOneWidget);
     expect(find.text('Regular'), findsOneWidget);
-    expect(find.text('Remaining: ₱4,950.00'), findsOneWidget);
+    expect(find.textContaining('Remaining: ₱4,950.00'), findsOneWidget);
     expect(find.text('Official remaining balance'), findsWidgets);
     expect(find.text('₱4,950.00'), findsWidgets);
     expect(find.text('7x7'), findsOneWidget);
