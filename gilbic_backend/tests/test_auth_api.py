@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from gilbic_backend.account_repository import (
     AccountContext,
+    AccountDisabled,
     AccountNotFound,
     DeviceNotRegistered,
     DeviceRevoked,
@@ -97,6 +98,8 @@ class FakeAccounts:
         self.registered_device: tuple[str | None, str | None, str | None] | None = None
         self.checked_device: str | None = None
         self.device_error: Exception | None = None
+        self.login_error: Exception | None = None
+        self.registration_claim: tuple[str, str | None] | None = None
 
     def username_exists(self, username: str) -> bool:
         assert username
@@ -116,11 +119,14 @@ class FakeAccounts:
         username: str,
         email: str,
         full_name: str,
+        claimed_client_code: str,
+        claimed_phone_number: str | None,
     ) -> AccountContext:
         assert auth_user_id == AUTH_USER_ID
         assert username == "client.one"
         assert email == "client@example.com"
         assert full_name == "Client One"
+        self.registration_claim = (claimed_client_code, claimed_phone_number)
         return AccountContext(
             user_id=GILBIC_USER_ID,
             auth_user_id=AUTH_USER_ID,
@@ -141,6 +147,8 @@ class FakeAccounts:
         app_version: str | None,
     ) -> AccountContext:
         assert auth_user_id == AUTH_USER_ID
+        if self.login_error is not None:
+            raise self.login_error
         self.registered_device = (device_identifier, platform, app_version)
         value = self.login_context
         return AccountContext(
@@ -199,8 +207,8 @@ def device_headers() -> dict[str, str]:
     }
 
 
-def test_public_registration_is_client_only() -> None:
-    client, _, _ = client_with_fakes()
+def test_public_registration_is_client_only_and_pending_approval() -> None:
+    client, _, accounts = client_with_fakes()
 
     response = client.post(
         "/api/v1/auth/register",
@@ -208,6 +216,8 @@ def test_public_registration_is_client_only() -> None:
             "username": "client.one",
             "email": "client@example.com",
             "full_name": "Client One",
+            "client_code": "CLIENT-001",
+            "phone_number": "09171234567",
             "password": "strong-pass-123",
         },
     )
@@ -215,9 +225,12 @@ def test_public_registration_is_client_only() -> None:
     assert response.status_code == 201
     data = response.json()["data"]
     assert data["requires_email_confirmation"] is True
+    assert data["approval_status"] == "pending"
+    assert "Management must approve" in data["message"]
     assert data["user"]["role"] == "Client"
     assert data["user"]["roles"] == ["client"]
     assert data["user"]["permissions"] == ["loan.self.view"]
+    assert accounts.registration_claim == ("CLIENT-001", "09171234567")
 
 
 def test_registration_rejects_role_injection() -> None:
@@ -229,6 +242,7 @@ def test_registration_rejects_role_injection() -> None:
             "username": "client.one",
             "email": "client@example.com",
             "full_name": "Client One",
+            "client_code": "CLIENT-001",
             "password": "strong-pass-123",
             "role": "Management",
         },
@@ -253,6 +267,23 @@ def test_existing_mobile_login_contract_returns_server_role() -> None:
     assert data["user"]["permissions"] == ["collection.create", "route.view"]
     assert data["user"]["device_registered"] is False
     assert accounts.registered_device == (None, None, None)
+
+
+def test_pending_client_login_requires_management_approval() -> None:
+    client, _, accounts = client_with_fakes()
+    accounts.login_error = AccountDisabled(
+        "Your client account is awaiting Management approval and borrower linking."
+    )
+
+    response = client.post(
+        "/api/mobile/v1/auth/login",
+        json={"username": "collector.one", "password": "correct-password"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == (
+        "Your client account is awaiting Management approval and borrower linking."
+    )
 
 
 def test_login_registers_device_when_mobile_sends_identity() -> None:
