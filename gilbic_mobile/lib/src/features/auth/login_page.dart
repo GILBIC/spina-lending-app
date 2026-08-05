@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:gilbic_mobile/src/core/auth/auth_repository.dart';
 import 'package:gilbic_mobile/src/core/config/api_config.dart';
+import 'package:gilbic_mobile/src/features/auth/client_registration_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({
     required this.onSignIn,
+    this.clientRegistrationRepository,
     super.key,
   });
 
   final Future<String?> Function(String username, String password) onSignIn;
+  final ClientRegistrationRepository? clientRegistrationRepository;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -50,6 +54,18 @@ class _LoginPageState extends State<LoginPage> {
       _submitting = false;
       _errorMessage = error;
     });
+  }
+
+  Future<void> _openRegistration() async {
+    final repository = widget.clientRegistrationRepository;
+    if (repository == null || _submitting) {
+      return;
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ClientRegistrationPage(repository: repository),
+      ),
+    );
   }
 
   @override
@@ -152,6 +168,15 @@ class _LoginPageState extends State<LoginPage> {
                             _submitting ? 'Signing in...' : 'Sign in',
                           ),
                         ),
+                        if (widget.clientRegistrationRepository != null) ...[
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            key: const Key('create-client-account-button'),
+                            onPressed: _submitting ? null : _openRegistration,
+                            icon: const Icon(Icons.person_add_alt_1),
+                            label: const Text('Create client account'),
+                          ),
+                        ],
                         const SizedBox(height: 20),
                         Text(
                           'API: ${ApiConfig.baseUrl}\n'
