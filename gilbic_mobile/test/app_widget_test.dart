@@ -12,7 +12,8 @@ import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 
 void main() {
-  testWidgets('signs in and opens the online collector route', (tester) async {
+  testWidgets('opens compact ledger and expands collector audit details',
+      (tester) async {
     await tester.pumpWidget(
       GilbicApp(
         sessionStore: MemorySessionStore(),
@@ -35,19 +36,24 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Collector Dashboard'), findsOneWidget);
-    expect(find.text('Daily Route'), findsOneWidget);
-    expect(find.text('Offline Sync'), findsOneWidget);
-
     await tester.tap(find.byKey(const Key('daily-route')));
     await tester.pumpAndSettle();
 
     expect(find.text('Daily Route'), findsOneWidget);
     expect(find.text('Online route'), findsOneWidget);
-    expect(find.textContaining('Last synchronized'), findsOneWidget);
+    expect(find.text('AREA: CARDONA'), findsOneWidget);
     expect(find.text('Ana Client'), findsOneWidget);
-    expect(find.textContaining('Expected collection'), findsOneWidget);
+    expect(find.text('Regular'), findsOneWidget);
+    expect(find.text('7x7'), findsOneWidget);
+    expect(find.text('Recorded by: Collector Two'), findsNothing);
 
-    final footer = find.textContaining('Offline routes are view-only');
+    await tester.tap(find.byKey(const Key('route-client-client-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Recorded by: Collector Two'), findsOneWidget);
+    expect(find.text('Entry note: Paid at the route'), findsOneWidget);
+
+    final footer = find.textContaining('Tap a client to show notes');
     await tester.dragUntilVisible(
       footer,
       find.byType(ListView),
@@ -68,7 +74,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Offline copy'), findsOneWidget);
-    expect(find.textContaining('Last synchronized'), findsOneWidget);
     expect(find.text('Ana Client'), findsOneWidget);
     expect(find.textContaining('Offline copy shown'), findsOneWidget);
   });
@@ -81,7 +86,7 @@ const UserSession _session = UserSession(
   role: AppRole.collector,
   rawRole: 'Collector',
   accessToken: 'test-token',
-  permissions: <String>['route.view'],
+  permissions: <String>['route.view', 'collection.create'],
 );
 
 class _FakeAuthRepository implements AuthRepository {
@@ -121,7 +126,7 @@ CollectorRoute _route() {
     routeDate: DateTime.utc(2026, 7, 31),
     collectorName: 'Test Collector',
     areas: const <String>['Cardona'],
-    expectedTotal: 200,
+    expectedTotal: 275,
     entries: const <CollectorRouteEntry>[
       CollectorRouteEntry(
         id: 'entry-1',
@@ -132,8 +137,30 @@ CollectorRoute _route() {
         loanType: 'Regular',
         dailyAmount: 200,
         balance: 4800,
-        status: 'Pending',
+        status: 'Recorded today',
         passCount: 0,
+        note: 'Paid at the route',
+        processedToday: true,
+        todayEntryType: 'payment',
+        todayCollectorName: 'Collector Two',
+        todayAmount: 200,
+        todayNote: 'Paid at the route',
+        todayCoveredDates: <DateTime>[],
+      ),
+      CollectorRouteEntry(
+        id: 'entry-2',
+        clientId: 'client-1',
+        loanId: 'loan-2',
+        clientName: 'Ana Client',
+        area: 'Cardona',
+        loanType: '7x7',
+        dailyAmount: 75,
+        balance: 3000,
+        status: 'Desktop only',
+        passCount: 0,
+        canCollectMobile: false,
+        canEnterPayment: false,
+        collectionMessage: 'Use SPINA desktop for this loan.',
       ),
     ],
   );

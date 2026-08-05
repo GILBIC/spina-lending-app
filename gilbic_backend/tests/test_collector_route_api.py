@@ -28,6 +28,7 @@ AUTH_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 COLLECTOR_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
 CLIENT_ID = UUID("33333333-3333-4333-8333-333333333333")
 LOAN_ID = UUID("44444444-4444-4444-8444-444444444444")
+TRANSACTION_ID = UUID("55555555-5555-4555-8555-555555555555")
 
 
 def collector_context(*, permissions: tuple[str, ...] = ("route.view",)) -> AccountContext:
@@ -104,15 +105,28 @@ class FakeRoutes:
                     remaining_balance=Decimal("4800.00"),
                     pass_count=1,
                     last_payment_date=date(2026, 7, 31),
-                    advance_until=None,
-                    status="Pass",
+                    advance_until=date(2026, 8, 3),
+                    status="Recorded today",
                     note="Call before visiting",
                     state_version=7,
                     is_reconciled=True,
                     mobile_collections_enabled=True,
                     mobile_balance_mode="direct_remaining_balance",
-                    processed_today=False,
-                    today_entry_type="",
+                    processed_today=True,
+                    today_entry_type="advance",
+                    today_collector_name="Collector One",
+                    today_transaction_id=TRANSACTION_ID,
+                    today_collector_user_id=COLLECTOR_USER_ID,
+                    today_is_locked=False,
+                    can_edit_today=True,
+                    today_amount=Decimal("600.00"),
+                    today_note="Paid three selected dates",
+                    today_covered_dates=(
+                        date(2026, 7, 31),
+                        date(2026, 8, 2),
+                        date(2026, 8, 3),
+                    ),
+                    covered_dates=(date(2026, 8, 2), date(2026, 8, 3)),
                 ),
             ),
         )
@@ -161,15 +175,27 @@ def test_collector_receives_only_server_assigned_route() -> None:
             "remaining_balance": "4800.00",
             "pass_count": 1,
             "last_payment_date": "2026-07-31",
-            "advance_until": None,
-            "status": "Pass",
+            "advance_until": "2026-08-03",
+            "covered_dates": ["2026-08-02", "2026-08-03"],
+            "status": "Recorded today",
             "note": "Call before visiting",
             "route_revision": f"loan:{LOAN_ID}:v7",
             "can_collect_mobile": True,
             "can_enter_payment": True,
-            "collection_message": "Ready for mobile collection.",
-            "processed_today": False,
-            "today_entry_type": "",
+            "collection_message": "Today's collection has already been recorded.",
+            "processed_today": True,
+            "today_entry_type": "advance",
+            "today_collector_name": "Collector One",
+            "today_transaction_id": str(TRANSACTION_ID),
+            "today_is_locked": False,
+            "can_edit_today": True,
+            "today_amount": "600.00",
+            "today_note": "Paid three selected dates",
+            "today_covered_dates": [
+                "2026-07-31",
+                "2026-08-02",
+                "2026-08-03",
+            ],
         }
     ]
     assert accounts.seen_device == "gilbic-installation-one"

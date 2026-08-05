@@ -31,6 +31,15 @@ class CollectorRouteEntryRecord:
     mobile_balance_mode: str = ""
     processed_today: bool = False
     today_entry_type: str = ""
+    today_collector_name: str = ""
+    today_transaction_id: UUID | None = None
+    today_collector_user_id: UUID | None = None
+    today_is_locked: bool = False
+    can_edit_today: bool = False
+    today_amount: Decimal = Decimal("0.00")
+    today_note: str = ""
+    today_covered_dates: tuple[date, ...] = ()
+    covered_dates: tuple[date, ...] = ()
 
     @property
     def route_revision(self) -> str:
@@ -47,6 +56,8 @@ class CollectorRouteEntryRecord:
     @property
     def collection_message(self) -> str:
         if self.processed_today:
+            if self.today_is_locked:
+                return "Today's collection is already included in a remittance and is locked."
             return "Today's collection has already been recorded."
         if not self.is_reconciled:
             return "Checking this loan against SPINA records."
@@ -70,14 +81,7 @@ class CollectorRouteRecord:
 
 
 class PostgresCollectorRouteRepository:
-    """Read the live route for one authenticated collector.
-
-    Area ownership is server-side in ``lending.collector_area_assignments``.
-    Balance, missed-payment count, covered dates, and notes are read from the
-    authoritative ``lending.loan_collection_state`` row. Before imported loans
-    are exposed to mobile collection, that state must be reconciled with the
-    desktop source of truth.
-    """
+    """Read the live route for one authenticated collector."""
 
     def get_today_route(
         self,
@@ -125,7 +129,7 @@ class PostgresCollectorRouteRepository:
                             when lower(coalesce(lt.settings->>'mobile_collections_enabled', ''))
                                  not in ('true', '1', 'yes', 'on')
                                 then 'Desktop only'
-                            when s.advance_until is not null and s.advance_until >= %s
+                            when coalesce(coverage.covered_today, false)
                                 then 'Covered'
                             when coalesce(s.pass_count, 0) > 0
                                 then 'Missed payment'
@@ -138,7 +142,15 @@ class PostgresCollectorRouteRepository:
                             in ('true', '1', 'yes', 'on') as mobile_collections_enabled,
                         coalesce(lt.settings->>'mobile_balance_mode', '') as mobile_balance_mode,
                         today.entry_type is not null as processed_today,
-                        coalesce(today.entry_type, '') as today_entry_type
+                        coalesce(today.entry_type, '') as today_entry_type,
+                        coalesce(today.collector_name, '') as today_collector_name,
+                        today.transaction_id as today_transaction_id,
+                        today.collector_user_id as today_collector_user_id,
+                        coalesce(today.is_locked, false) as today_is_locked,
+                        coalesce(today.amount, 0) as today_amount,
+                        coalesce(today.note, '') as today_note,
+                        coalesce(today.covered_dates, ARRAY[]::date[]) as today_covered_dates,
+                        coalesce(coverage.covered_dates, ARRAY[]::date[]) as covered_dates
                     from lending.collector_area_assignments a
                     join lending.clients c
                       on lower(btrim(c.area)) = lower(btrim(a.area))
@@ -152,8 +164,41 @@ class PostgresCollectorRouteRepository:
                     left join lending.loan_collection_state s
                       on s.loan_id = l.id
                     left join lateral (
-                        select t.entry_type
+                        select
+                            coalesce(bool_or(cd.covered_date = %s), false) as covered_today,
+                            coalesce(
+                                array_agg(cd.covered_date order by cd.covered_date)
+                                    filter (where cd.covered_date >= %s),
+                                ARRAY[]::date[]
+                            ) as covered_dates
+                        from lending.collection_covered_dates cd
+                        where cd.loan_id = l.id
+                    ) coverage on true
+                    left join lateral (
+                        select
+                            t.id as transaction_id,
+                            t.entry_type,
+                            t.amount,
+                            t.note,
+                            t.collector_user_id,
+                            t.is_locked,
+                            coalesce(
+                                array(
+                                    select cd.covered_date
+                                    from lending.collection_covered_dates cd
+                                    where cd.transaction_id = t.id
+                                    order by cd.covered_date
+                                ),
+                                ARRAY[]::date[]
+                            ) as covered_dates,
+                            coalesce(
+                                nullif(btrim(u.full_name), ''),
+                                nullif(btrim(u.username), ''),
+                                'Collector'
+                            ) as collector_name
                         from lending.collection_transactions t
+                        left join core.users u
+                          on u.id = t.collector_user_id
                         where t.loan_id = l.id
                           and t.collection_date = %s
                         order by t.accepted_at desc, t.id desc
@@ -168,7 +213,7 @@ class PostgresCollectorRouteRepository:
                         l.date_released,
                         l.id
                     """,
-                    (route_date, route_date, collector_user_id),
+                    (route_date, route_date, route_date, collector_user_id),
                 )
                 rows = cursor.fetchall()
 
@@ -193,6 +238,19 @@ class PostgresCollectorRouteRepository:
                 mobile_balance_mode=str(row["mobile_balance_mode"] or ""),
                 processed_today=bool(row["processed_today"]),
                 today_entry_type=str(row["today_entry_type"] or ""),
+                today_collector_name=str(row["today_collector_name"] or ""),
+                today_transaction_id=row["today_transaction_id"],
+                today_collector_user_id=row["today_collector_user_id"],
+                today_is_locked=bool(row["today_is_locked"]),
+                can_edit_today=(
+                    row["today_transaction_id"] is not None
+                    and row["today_collector_user_id"] == collector_user_id
+                    and not bool(row["today_is_locked"])
+                ),
+                today_amount=Decimal(row["today_amount"]),
+                today_note=str(row["today_note"] or ""),
+                today_covered_dates=tuple(row["today_covered_dates"] or ()),
+                covered_dates=tuple(row["covered_dates"] or ()),
             )
             for row in rows
         )

@@ -37,6 +37,7 @@ def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
             entry.last_payment_date.isoformat() if entry.last_payment_date else None
         ),
         "advance_until": entry.advance_until.isoformat() if entry.advance_until else None,
+        "covered_dates": [value.isoformat() for value in entry.covered_dates],
         "status": entry.status,
         "note": entry.note,
         "route_revision": entry.route_revision,
@@ -45,6 +46,17 @@ def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
         "collection_message": entry.collection_message,
         "processed_today": entry.processed_today,
         "today_entry_type": entry.today_entry_type,
+        "today_collector_name": entry.today_collector_name,
+        "today_transaction_id": (
+            str(entry.today_transaction_id) if entry.today_transaction_id else None
+        ),
+        "today_is_locked": entry.today_is_locked,
+        "can_edit_today": entry.can_edit_today,
+        "today_amount": str(entry.today_amount),
+        "today_note": entry.today_note,
+        "today_covered_dates": [
+            value.isoformat() for value in entry.today_covered_dates
+        ],
     }
 
 

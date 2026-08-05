@@ -33,9 +33,8 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   late final TextEditingController _amountController;
   late final TextEditingController _noteController;
   late final DateTime _collectionDate;
-  late DateTime _coveredFrom;
-  late DateTime _coveredUntil;
   late DateTime _unableDate;
+  final List<DateTime> _coveredDates = <DateTime>[];
 
   CollectionEntryType _entryType = CollectionEntryType.payment;
   PaymentSubmissionDraft? _pendingDraft;
@@ -47,13 +46,20 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   bool get _isSevenBySeven => _isSevenBySevenLoan(widget.entry.loanType);
   bool get _isUnableToPay => _entryType == CollectionEntryType.pass;
 
-  int get _coveredDays => _coveredUntil.difference(_coveredFrom).inDays + 1;
+  List<DateTime> get _sortedCoveredDates {
+    final result = _coveredDates.map(_dateOnly).toSet().toList(growable: false)
+      ..sort((left, right) => left.compareTo(right));
+    return result;
+  }
+
+  int get _coveredDays => _sortedCoveredDates.length;
 
   double get _suggestedAmount => widget.entry.dailyAmount * _coveredDays;
 
-  bool get _isSingleToday =>
-      _sameDate(_coveredFrom, _collectionDate) &&
-      _sameDate(_coveredUntil, _collectionDate);
+  bool get _isSingleToday {
+    final dates = _sortedCoveredDates;
+    return dates.length == 1 && _sameDate(dates.single, _collectionDate);
+  }
 
   CollectionEntryType get _submissionEntryType {
     if (_isUnableToPay) {
@@ -68,9 +74,8 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   void initState() {
     super.initState();
     _collectionDate = _dateOnly(widget.collectionDate ?? DateTime.now());
-    _coveredFrom = _collectionDate;
-    _coveredUntil = _collectionDate;
     _unableDate = _collectionDate;
+    _coveredDates.add(_collectionDate);
     _amountController = TextEditingController(
       text: widget.entry.dailyAmount > 0
           ? widget.entry.dailyAmount.toStringAsFixed(2)
@@ -106,36 +111,144 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     });
   }
 
-  void _setCoverage(DateTime from, DateTime until) {
-    final normalizedFrom = _dateOnly(from);
-    final normalizedUntil = _dateOnly(until);
+  void _setCoveredDates(Iterable<DateTime> values) {
+    final normalized = values.map(_dateOnly).toSet().toList(growable: false)
+      ..sort((left, right) => left.compareTo(right));
     setState(() {
-      _coveredFrom = normalizedFrom;
-      _coveredUntil = normalizedUntil.isBefore(normalizedFrom)
-          ? normalizedFrom
-          : normalizedUntil;
+      _coveredDates
+        ..clear()
+        ..addAll(normalized);
       _amountController.text = _suggestedAmount.toStringAsFixed(2);
       _clearSubmissionState();
     });
   }
 
-  Future<void> _selectCoveredDate({required bool isStart}) async {
-    final current = isStart ? _coveredFrom : _coveredUntil;
-    final selected = await showDatePicker(
-      context: context,
-      initialDate: current,
-      firstDate: _collectionDate.subtract(const Duration(days: 365)),
-      lastDate: _collectionDate.add(const Duration(days: 730)),
-      helpText: isStart ? 'First covered date' : 'Last covered date',
+  void _toggleCoveredDate(DateTime value) {
+    final normalized = _dateOnly(value);
+    final updated = _sortedCoveredDates;
+    final index = updated.indexWhere((date) => _sameDate(date, normalized));
+    if (index >= 0) {
+      updated.removeAt(index);
+    } else {
+      updated.add(normalized);
+    }
+    _setCoveredDates(updated);
+  }
+
+  void _removeCoveredDate(DateTime value) {
+    _setCoveredDates(
+      _sortedCoveredDates.where((date) => !_sameDate(date, value)),
     );
-    if (selected == null || !mounted) {
+  }
+
+  Future<void> _selectCoveredDate() async {
+    final existingDates = _sortedCoveredDates;
+    final firstDate = _dateOnly(
+      _collectionDate.subtract(const Duration(days: 365)),
+    );
+    final lastDate = _dateOnly(
+      _collectionDate.add(const Duration(days: 730)),
+    );
+    final initialDate = existingDates.isEmpty
+        ? _collectionDate
+        : existingDates.last;
+    final firstMonth = DateTime(firstDate.year, firstDate.month);
+    final lastMonth = DateTime(lastDate.year, lastDate.month);
+
+    final selectedDates = await showDialog<List<DateTime>>(
+      context: context,
+      builder: (dialogContext) {
+        final workingDates = existingDates.map(_dateOnly).toSet();
+        var visibleMonth = DateTime(initialDate.year, initialDate.month);
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final sortedDates = workingDates.toList(growable: false)
+              ..sort((left, right) => left.compareTo(right));
+            final canMoveBack = visibleMonth.isAfter(firstMonth);
+            final canMoveForward = visibleMonth.isBefore(lastMonth);
+
+            void toggleDate(DateTime value) {
+              final normalized = _dateOnly(value);
+              setDialogState(() {
+                if (workingDates.contains(normalized)) {
+                  workingDates.remove(normalized);
+                } else {
+                  workingDates.add(normalized);
+                }
+              });
+            }
+
+            void moveMonth(int offset) {
+              final candidate = DateTime(
+                visibleMonth.year,
+                visibleMonth.month + offset,
+              );
+              if (candidate.isBefore(firstMonth) ||
+                  candidate.isAfter(lastMonth)) {
+                return;
+              }
+              setDialogState(() => visibleMonth = candidate);
+            }
+
+            return AlertDialog(
+              title: const Text('Choose covered dates'),
+              content: SizedBox(
+                width: 380,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tap every date this payment covers. Selected dates stay circled until you press Done.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      _MultiSelectMonthCalendar(
+                        visibleMonth: visibleMonth,
+                        firstDate: firstDate,
+                        lastDate: lastDate,
+                        selectedDates: workingDates,
+                        onDateTapped: toggleDate,
+                        onPreviousMonth:
+                            canMoveBack ? () => moveMonth(-1) : null,
+                        onNextMonth:
+                            canMoveForward ? () => moveMonth(1) : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: workingDates.isEmpty
+                      ? null
+                      : () => setDialogState(workingDates.clear),
+                  child: const Text('Clear'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  key: const Key('confirm-covered-dates'),
+                  onPressed: workingDates.isEmpty
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(sortedDates),
+                  child: const Text('Done'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (selectedDates == null || !mounted) {
       return;
     }
-    if (isStart) {
-      _setCoverage(selected, _coveredUntil);
-    } else {
-      _setCoverage(_coveredFrom, selected);
-    }
+    _setCoveredDates(selectedDates);
   }
 
   Future<void> _selectUnableDate() async {
@@ -237,8 +350,8 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     if (!_isUnableToPay && (amount == null || amount <= 0)) {
       return 'Enter an amount greater than zero.';
     }
-    if (!_isUnableToPay && _coveredUntil.isBefore(_coveredFrom)) {
-      return 'The last covered date cannot be before the first covered date.';
+    if (!_isUnableToPay && _coveredDates.isEmpty) {
+      return 'Choose at least one covered date.';
     }
     if (_isUnableToPay && _noteController.text.trim().isEmpty) {
       return 'Enter the reason the client could not pay.';
@@ -250,6 +363,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     final identity = await widget.deviceIdentityProvider.load();
     final sequence = await widget.deviceSequence.next();
     final submissionType = _submissionEntryType;
+    final selectedDates = _sortedCoveredDates;
     return PaymentSubmissionDraft(
       idempotencyKey: SecureIdempotencyKeyGenerator().generate(),
       routeEntryId: widget.entry.id,
@@ -258,10 +372,15 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
       collectionDate: _isUnableToPay ? _unableDate : _collectionDate,
       entryType: submissionType,
       amount: amount,
-      advanceFrom:
-          submissionType == CollectionEntryType.advance ? _coveredFrom : null,
-      advanceUntil:
-          submissionType == CollectionEntryType.advance ? _coveredUntil : null,
+      advanceFrom: submissionType == CollectionEntryType.advance
+          ? selectedDates.first
+          : null,
+      advanceUntil: submissionType == CollectionEntryType.advance
+          ? selectedDates.last
+          : null,
+      coveredDates: _isUnableToPay
+          ? const <DateTime>[]
+          : List<DateTime>.from(selectedDates),
       recordedAt: DateTime.now().toUtc(),
       deviceId: identity.installationId,
       deviceSequence: sequence,
@@ -276,7 +395,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
         ? 'Record that ${widget.entry.clientName} could not pay on '
             '${_date(_unableDate)}?\n\nReason: ${_noteController.text.trim()}'
         : 'Save ${amountText ?? 'this payment'} for '
-            '${widget.entry.clientName} covering ${_coverageLabel()}?';
+            '${widget.entry.clientName}?\n\nCovered dates:\n${_coverageLabel()}';
 
     return showDialog<bool>(
       context: context,
@@ -298,19 +417,15 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     );
   }
 
-  String _coverageLabel() {
-    if (_sameDate(_coveredFrom, _coveredUntil)) {
-      return _date(_coveredFrom);
-    }
-    return '${_date(_coveredFrom)} to ${_date(_coveredUntil)}';
-  }
+  String _coverageLabel() =>
+      _sortedCoveredDates.map(_date).map((value) => '• $value').join('\n');
 
   String _successMessage() {
     if (_isUnableToPay) {
       return 'Unable-to-pay reason saved.';
     }
     if (_submissionEntryType == CollectionEntryType.advance) {
-      return 'Covered payment saved.';
+      return 'Covered-date payment saved.';
     }
     return 'Payment saved.';
   }
@@ -370,86 +485,90 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                   'Covered dates',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  'Tap several dates in one calendar. Only the selected dates are covered.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    ActionChip(
+                    ChoiceChip(
+                      label: const Text('Yesterday'),
+                      selected: _containsCoveredDate(
+                        _coveredDates,
+                        _collectionDate.subtract(const Duration(days: 1)),
+                      ),
+                      onSelected: _submitting
+                          ? null
+                          : (_) => _toggleCoveredDate(
+                                _collectionDate.subtract(
+                                  const Duration(days: 1),
+                                ),
+                              ),
+                    ),
+                    ChoiceChip(
                       label: const Text('Today'),
-                      onPressed: _submitting
+                      selected: _containsCoveredDate(
+                        _coveredDates,
+                        _collectionDate,
+                      ),
+                      onSelected: _submitting
                           ? null
-                          : () => _setCoverage(
-                                _collectionDate,
-                                _collectionDate,
-                              ),
+                          : (_) => _toggleCoveredDate(_collectionDate),
                     ),
-                    ActionChip(
-                      label: const Text('Previous + today'),
-                      onPressed: _submitting
+                    ChoiceChip(
+                      label: const Text('Tomorrow'),
+                      selected: _containsCoveredDate(
+                        _coveredDates,
+                        _collectionDate.add(const Duration(days: 1)),
+                      ),
+                      onSelected: _submitting
                           ? null
-                          : () => _setCoverage(
-                                _collectionDate.subtract(
-                                  const Duration(days: 1),
-                                ),
-                                _collectionDate,
-                              ),
-                    ),
-                    ActionChip(
-                      label: const Text('Today + tomorrow'),
-                      onPressed: _submitting
-                          ? null
-                          : () => _setCoverage(
-                                _collectionDate,
+                          : (_) => _toggleCoveredDate(
                                 _collectionDate.add(
                                   const Duration(days: 1),
                                 ),
                               ),
                     ),
                     ActionChip(
-                      label: const Text('Triple'),
-                      onPressed: _submitting
-                          ? null
-                          : () => _setCoverage(
-                                _collectionDate.subtract(
-                                  const Duration(days: 1),
-                                ),
-                                _collectionDate.add(
-                                  const Duration(days: 1),
-                                ),
-                              ),
+                      key: const Key('add-covered-date'),
+                      avatar: const Icon(Icons.calendar_month, size: 18),
+                      label: const Text('Open calendar'),
+                      onPressed: _submitting ? null : _selectCoveredDate,
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        key: const Key('covered-from'),
-                        onPressed: _submitting
-                            ? null
-                            : () => _selectCoveredDate(isStart: true),
-                        icon: const Icon(Icons.calendar_today),
-                        label: Text('From ${_date(_coveredFrom)}'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        key: const Key('covered-until'),
-                        onPressed: _submitting
-                            ? null
-                            : () => _selectCoveredDate(isStart: false),
-                        icon: const Icon(Icons.event_available),
-                        label: Text('Until ${_date(_coveredUntil)}'),
-                      ),
-                    ),
-                  ],
-                ),
+                if (_sortedCoveredDates.isEmpty)
+                  const _SafetyNotice(
+                    icon: Icons.calendar_month_outlined,
+                    message: 'No covered date selected.',
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final coveredDate in _sortedCoveredDates)
+                        InputChip(
+                          key: Key('covered-date-${_date(coveredDate)}'),
+                          label: Text(_date(coveredDate)),
+                          avatar: const Icon(
+                            Icons.event_available,
+                            size: 18,
+                          ),
+                          onDeleted: _submitting
+                              ? null
+                              : () => _removeCoveredDate(coveredDate),
+                        ),
+                    ],
+                  ),
                 const SizedBox(height: 8),
                 Text(
-                  '$_coveredDays covered day${_coveredDays == 1 ? '' : 's'} • '
+                  '$_coveredDays selected day${_coveredDays == 1 ? '' : 's'} • '
                   'Suggested amount ${_money(_suggestedAmount)}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
@@ -494,8 +613,9 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                       ChoiceChip(
                         label: Text(reason),
                         selected: _selectedReason == reason,
-                        onSelected:
-                            _submitting ? null : (_) => _selectReason(reason),
+                        onSelected: _submitting
+                            ? null
+                            : (_) => _selectReason(reason),
                       ),
                   ],
                 ),
@@ -532,8 +652,9 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
               ],
               FilledButton.icon(
                 key: const Key('submit-collection-entry'),
-                onPressed:
-                    _submitting || _result?.isFinalSuccess == true ? null : _submit,
+                onPressed: _submitting || _result?.isFinalSuccess == true
+                    ? null
+                    : _submit,
                 icon: _submitting
                     ? const SizedBox(
                         width: 18,
@@ -562,7 +683,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
               ],
               const SizedBox(height: 10),
               Text(
-                'Official balance, receipt, covered dates, and acceptance time come from the SPINA server. Offline collection remains read-only.',
+                'Official balance, receipt, exact covered dates, and acceptance time come from the SPINA server. Offline collection remains read-only.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
@@ -570,6 +691,182 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MultiSelectMonthCalendar extends StatelessWidget {
+  const _MultiSelectMonthCalendar({
+    required this.visibleMonth,
+    required this.firstDate,
+    required this.lastDate,
+    required this.selectedDates,
+    required this.onDateTapped,
+    required this.onPreviousMonth,
+    required this.onNextMonth,
+  });
+
+  final DateTime visibleMonth;
+  final DateTime firstDate;
+  final DateTime lastDate;
+  final Set<DateTime> selectedDates;
+  final ValueChanged<DateTime> onDateTapped;
+  final VoidCallback? onPreviousMonth;
+  final VoidCallback? onNextMonth;
+
+  static const _monthNames = <String>[
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+
+  static const _weekdayLabels = <String>[
+    'S',
+    'M',
+    'T',
+    'W',
+    'T',
+    'F',
+    'S',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final monthStart = DateTime(visibleMonth.year, visibleMonth.month);
+    final leadingEmptyCells = monthStart.weekday % 7;
+    final daysInMonth =
+        DateTime(visibleMonth.year, visibleMonth.month + 1, 0).day;
+    final cellCount = ((leadingEmptyCells + daysInMonth + 6) ~/ 7) * 7;
+    final today = _dateOnly(DateTime.now());
+    final normalizedFirstDate = _dateOnly(firstDate);
+    final normalizedLastDate = _dateOnly(lastDate);
+
+    return Column(
+      key: const Key('covered-date-calendar'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${_monthNames[visibleMonth.month - 1]} ${visibleMonth.year}',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+            IconButton(
+              key: const Key('previous-covered-month'),
+              tooltip: 'Previous month',
+              onPressed: onPreviousMonth,
+              icon: const Icon(Icons.chevron_left),
+            ),
+            IconButton(
+              key: const Key('next-covered-month'),
+              tooltip: 'Next month',
+              onPressed: onNextMonth,
+              icon: const Icon(Icons.chevron_right),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            for (final label in _weekdayLabels)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        GridView.builder(
+          key: Key(
+            'covered-calendar-${visibleMonth.year}-${visibleMonth.month}',
+          ),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: cellCount,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            mainAxisExtent: 44,
+          ),
+          itemBuilder: (context, index) {
+            final dayNumber = index - leadingEmptyCells + 1;
+            if (dayNumber < 1 || dayNumber > daysInMonth) {
+              return const SizedBox.shrink();
+            }
+
+            final date = DateTime(
+              visibleMonth.year,
+              visibleMonth.month,
+              dayNumber,
+            );
+            final enabled = !date.isBefore(normalizedFirstDate) &&
+                !date.isAfter(normalizedLastDate);
+            final selected = selectedDates.contains(date);
+            final isToday = _sameDate(date, today);
+            final foreground = selected
+                ? scheme.onPrimary
+                : enabled
+                    ? scheme.onSurface
+                    : scheme.onSurface.withValues(alpha: 0.38);
+
+            return Semantics(
+              button: true,
+              enabled: enabled,
+              selected: selected,
+              label: '${_date(date)}${selected ? ', selected' : ''}',
+              child: InkResponse(
+                key: Key('covered-calendar-day-${_date(date)}'),
+                onTap: enabled ? () => onDateTapped(date) : null,
+                radius: 22,
+                child: Center(
+                  child: AnimatedContainer(
+                    key: selected
+                        ? Key('selected-covered-date-${_date(date)}')
+                        : null,
+                    duration: const Duration(milliseconds: 120),
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected ? scheme.primary : null,
+                      border: !selected && isToday
+                          ? Border.all(color: scheme.primary)
+                          : null,
+                    ),
+                    child: Text(
+                      '$dayNumber',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: foreground,
+                            fontWeight: selected
+                                ? FontWeight.w700
+                                : FontWeight.normal,
+                          ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -652,7 +949,11 @@ class _ResultCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(success ? Icons.check_circle_outline : Icons.warning_amber),
+                Icon(
+                  success
+                      ? Icons.check_circle_outline
+                      : Icons.warning_amber,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -668,7 +969,9 @@ class _ResultCard extends StatelessWidget {
             ],
             if (result.officialBalance != null) ...[
               const SizedBox(height: 2),
-              Text('Official balance: ${_money(result.officialBalance!)}'),
+              Text(
+                'Official balance: ${_money(result.officialBalance!)}',
+              ),
             ],
             if (result.code != null && !success) ...[
               const SizedBox(height: 2),
@@ -694,7 +997,7 @@ String _submitLabel({
     return 'Save unable-to-pay reason';
   }
   if (coveredMultipleDates) {
-    return 'Save covered payment';
+    return 'Save covered-date payment';
   }
   return 'Save payment';
 }
@@ -706,6 +1009,9 @@ bool _sameDate(DateTime first, DateTime second) =>
     first.year == second.year &&
     first.month == second.month &&
     first.day == second.day;
+
+bool _containsCoveredDate(Iterable<DateTime> values, DateTime target) =>
+    values.any((value) => _sameDate(value, target));
 
 String _date(DateTime value) {
   return '${value.year.toString().padLeft(4, '0')}-'

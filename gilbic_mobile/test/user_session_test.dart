@@ -29,6 +29,39 @@ void main() {
     expect(restored.expiresAt, expiry);
   });
 
+  test('open screens see refreshed tokens through the same session object', () {
+    final expiry = DateTime.utc(2030, 1, 2, 3, 4, 5);
+    const current = UserSession(
+      userId: 'collector-refresh-test',
+      username: 'collector.one',
+      displayName: 'Collector One',
+      role: AppRole.collector,
+      rawRole: 'Collector',
+      accessToken: 'access-old',
+      refreshToken: 'refresh-old',
+    );
+    final refreshed = UserSession(
+      userId: 'collector-refresh-test',
+      username: 'collector.one',
+      displayName: 'Collector One',
+      role: AppRole.collector,
+      rawRole: 'Collector',
+      accessToken: 'access-new',
+      refreshToken: 'refresh-new',
+      expiresAt: expiry,
+    );
+
+    current.applyRefresh(refreshed);
+
+    expect(current.accessToken, 'access-new');
+    expect(current.refreshToken, 'refresh-new');
+    expect(current.expiresAt, expiry);
+    expect(current.toJson()['access_token'], 'access-new');
+
+    current.clearRefreshOverride();
+    expect(current.accessToken, 'access-old');
+  });
+
   test('rejects incomplete secure-session data', () {
     expect(
       UserSession.fromJson(<String, Object?>{

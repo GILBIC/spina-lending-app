@@ -34,6 +34,7 @@ class CollectionSubmissionBody(BaseModel):
     amount: Decimal | None = Field(default=None, max_digits=18, decimal_places=2)
     advance_from: date | None = None
     advance_until: date | None = None
+    covered_dates: list[date] = Field(default_factory=list, max_length=366)
     recorded_at: datetime
     device_id: str = Field(min_length=1, max_length=256)
     device_sequence: int = Field(ge=1)
@@ -51,6 +52,7 @@ class CollectionSubmissionBody(BaseModel):
             amount=self.amount,
             advance_from=self.advance_from,
             advance_until=self.advance_until,
+            covered_dates=tuple(self.covered_dates),
             recorded_at=self.recorded_at,
             device_id=self.device_id,
             device_sequence=self.device_sequence,
@@ -68,7 +70,7 @@ def create_collection_router(
     get_actor: ActorDependency,
     get_service: ServiceDependency,
 ) -> APIRouter:
-    """Create the official payment, ADV, and PASS endpoints.
+    """Create the official payment, covered-date, and unable-to-pay endpoints.
 
     ``get_actor`` authenticates the bearer session and resolves the active
     registered device. ``get_service`` supplies the PostgreSQL idempotency
