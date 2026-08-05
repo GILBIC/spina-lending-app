@@ -157,6 +157,11 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     }
   }
 
+  ClientRegistrationRepository? get _clientRegistrationRepository {
+    final repository = _authRepository;
+    return repository is ClientRegistrationRepository ? repository : null;
+  }
+
   Future<void> _signOut() async {
     _sessionRefreshTimer?.cancel();
     final session = _session;
@@ -260,7 +265,10 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       home: _loading
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : _session == null
-              ? LoginPage(onSignIn: _signIn)
+              ? LoginPage(
+                  onSignIn: _signIn,
+                  clientRegistrationRepository: _clientRegistrationRepository,
+                )
               : RoleDashboard(
                   session: _session!,
                   onSignOut: _signOut,
