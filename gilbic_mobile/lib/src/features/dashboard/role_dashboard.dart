@@ -5,6 +5,7 @@ import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
+import 'package:gilbic_mobile/src/features/client/client_loans_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
@@ -84,6 +85,18 @@ class RoleDashboard extends StatelessWidget {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => CrossCollectorRemittancePage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (session.role == AppRole.client && module.action == 'my-loans') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => ClientLoansPage(
             session: session,
             deviceIdentityProvider: deviceIdentityProvider,
           ),
@@ -249,6 +262,7 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'My Loans',
           'Balances, schedules, and loan history',
           Icons.account_balance_wallet,
+          action: 'my-loans',
         ),
         _DashboardModule(
           'Payments',
