@@ -5,6 +5,7 @@ from . import __version__
 from .activity_notification_api import create_activity_notification_router
 from .auth_api import create_auth_router
 from .client_loan_api import create_client_loan_router
+from .client_payment_api import create_client_payment_router
 from .collection_api import create_collection_api_router
 from .collection_correction_api import create_collection_correction_router
 from .collection_void_api import create_collection_void_router
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     app.include_router(create_auth_router())
     app.include_router(create_management_router())
     app.include_router(create_client_loan_router())
+    app.include_router(create_client_payment_router())
     app.include_router(create_collector_route_router())
     app.include_router(create_other_area_router())
     app.include_router(create_collection_api_router())
