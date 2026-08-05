@@ -29,6 +29,8 @@ class RegisterRequest(StrictRequest):
     username: str = Field(min_length=3, max_length=80)
     email: str = Field(min_length=5, max_length=320)
     full_name: str = Field(min_length=2, max_length=200)
+    client_code: str = Field(min_length=2, max_length=100)
+    phone_number: str | None = Field(default=None, max_length=30)
     password: str = Field(min_length=8, max_length=200)
 
     @field_validator("username")
@@ -51,6 +53,20 @@ class RegisterRequest(StrictRequest):
     @classmethod
     def normalize_full_name(cls, value: str) -> str:
         return " ".join(value.split())
+
+    @field_validator("client_code")
+    @classmethod
+    def normalize_client_code(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("Client code is required.")
+        return normalized
+
+    @field_validator("phone_number")
+    @classmethod
+    def normalize_phone_number(cls, value: str | None) -> str | None:
+        normalized = (value or "").strip()
+        return normalized or None
 
 
 class LoginRequest(StrictRequest):
@@ -139,6 +155,8 @@ def create_auth_router() -> APIRouter:
                 username=request.username,
                 email=request.email,
                 full_name=request.full_name,
+                claimed_client_code=request.client_code,
+                claimed_phone_number=request.phone_number,
             )
         except SupabaseAuthError as exc:
             raise _auth_exception(exc) from exc
@@ -149,6 +167,11 @@ def create_auth_router() -> APIRouter:
             "success": True,
             "data": {
                 "requires_email_confirmation": session.access_token is None,
+                "approval_status": "pending",
+                "message": (
+                    "Registration received. Management must approve and link "
+                    "your account to your borrower record before you can sign in."
+                ),
                 "user": _user_payload(context),
             },
         }
