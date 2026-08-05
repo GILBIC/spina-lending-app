@@ -54,7 +54,9 @@ class SpinaClientLoanRepository implements ClientLoanRepository {
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return ClientLoanPortfolio.fromPayload(
-        unwrapSpinaData(payload, statusCode: response.statusCode),
+        stringMap(
+          unwrapSpinaData(payload, statusCode: response.statusCode),
+        ),
       );
     }
 
