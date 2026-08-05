@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
+import 'package:gilbic_mobile/src/core/auth/client_registration.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/config/api_config.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -16,18 +17,30 @@ abstract interface class AuthRepository {
   Future<void> signOut(UserSession session);
 }
 
+abstract interface class ClientRegistrationRepository {
+  Future<ClientRegistrationResult> registerClient(
+    ClientRegistrationDraft draft,
+  );
+}
+
 abstract interface class SessionRefreshRepository {
   Future<UserSession> refresh(UserSession session);
 }
 
-class SpinaAuthRepository implements AuthRepository, SessionRefreshRepository {
+class SpinaAuthRepository
+    implements
+        AuthRepository,
+        ClientRegistrationRepository,
+        SessionRefreshRepository {
   SpinaAuthRepository({
     http.Client? client,
+    Uri? registerUri,
     Uri? loginUri,
     Uri? refreshUri,
     Uri? logoutUri,
     DeviceIdentityProvider? deviceIdentityProvider,
   })  : _client = client ?? http.Client(),
+        _registerUri = registerUri ?? ApiConfig.registerEndpoint,
         _loginUri = loginUri ?? ApiConfig.loginEndpoint,
         _refreshUri = refreshUri ?? ApiConfig.refreshEndpoint,
         _logoutUri = logoutUri ?? ApiConfig.logoutEndpoint,
@@ -35,10 +48,83 @@ class SpinaAuthRepository implements AuthRepository, SessionRefreshRepository {
             deviceIdentityProvider ?? DeviceIdentityProvider();
 
   final http.Client _client;
+  final Uri _registerUri;
   final Uri _loginUri;
   final Uri _refreshUri;
   final Uri _logoutUri;
   final DeviceIdentityProvider _deviceIdentityProvider;
+
+  @override
+  Future<ClientRegistrationResult> registerClient(
+    ClientRegistrationDraft draft,
+  ) async {
+    final fullName = draft.fullName.trim();
+    final clientCode = draft.clientCode.trim();
+    final email = draft.email.trim().toLowerCase();
+    final username = draft.username.trim();
+    final phoneNumber = draft.phoneNumber.trim();
+
+    if (fullName.isEmpty ||
+        clientCode.isEmpty ||
+        email.isEmpty ||
+        username.isEmpty ||
+        draft.password.isEmpty) {
+      throw const SpinaApiException(
+        'Complete the required client registration fields.',
+      );
+    }
+
+    late final http.Response response;
+    try {
+      response = await _client.post(
+        _registerUri,
+        headers: const <String, String>{
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(<String, Object?>{
+          'full_name': fullName,
+          'client_code': clientCode,
+          'phone_number': phoneNumber.isEmpty ? null : phoneNumber,
+          'email': email,
+          'username': username,
+          'password': draft.password,
+        }),
+      );
+    } on Exception {
+      throw const SpinaApiException(
+        'Gilbic could not reach the SPINA server. Check the connection and try again.',
+      );
+    }
+
+    Map<String, dynamic> payload;
+    try {
+      payload = decodeJsonObject(response.body);
+    } on Object {
+      throw SpinaApiException(
+        'The SPINA server returned unreadable registration data.',
+        statusCode: response.statusCode,
+      );
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw SpinaApiException(
+        apiErrorMessage(payload, statusCode: response.statusCode),
+        statusCode: response.statusCode,
+      );
+    }
+
+    final data = stringMap(
+      unwrapSpinaData(payload, statusCode: response.statusCode),
+    );
+    return ClientRegistrationResult(
+      approvalStatus:
+          firstNonEmptyString(<Object?>[data['approval_status']]) ?? 'pending',
+      message: firstNonEmptyString(<Object?>[data['message']]) ??
+          'Registration received. Wait for Management approval before signing in.',
+      requiresEmailConfirmation: data['requires_email_confirmation'] == true,
+    );
+  }
 
   @override
   Future<UserSession> signIn({
@@ -148,7 +234,7 @@ class SpinaAuthRepository implements AuthRepository, SessionRefreshRepository {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw SpinaApiException(
-        response.statusCode == 401 || response.statusCode == 403
+        response.statusCode == 401
             ? authenticationFailureMessage
             : apiErrorMessage(payload, statusCode: response.statusCode),
         statusCode: response.statusCode,

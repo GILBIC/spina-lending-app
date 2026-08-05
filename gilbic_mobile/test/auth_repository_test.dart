@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/auth_repository.dart';
+import 'package:gilbic_mobile/src/core/auth/client_registration.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
@@ -19,6 +20,57 @@ DeviceIdentityProvider testDeviceIdentityProvider() {
 }
 
 void main() {
+  test('submits a pending client registration claim', () async {
+    final client = MockClient((request) async {
+      expect(request.method, 'POST');
+      expect(request.url.path, '/register');
+      expect(
+        jsonDecode(request.body),
+        <String, Object?>{
+          'full_name': 'Client One',
+          'client_code': 'CLIENT-001',
+          'phone_number': '09171234567',
+          'email': 'client@example.com',
+          'username': 'client.one',
+          'password': 'strong-pass-123',
+        },
+      );
+      return http.Response(
+        jsonEncode(<String, Object?>{
+          'success': true,
+          'data': <String, Object?>{
+            'requires_email_confirmation': true,
+            'approval_status': 'pending',
+            'message': 'Wait for Management approval.',
+          },
+        }),
+        201,
+      );
+    });
+    final repository = SpinaAuthRepository(
+      client: client,
+      registerUri: Uri.parse('https://spina.test/register'),
+      loginUri: Uri.parse('https://spina.test/login'),
+      logoutUri: Uri.parse('https://spina.test/logout'),
+      deviceIdentityProvider: testDeviceIdentityProvider(),
+    );
+
+    final result = await repository.registerClient(
+      const ClientRegistrationDraft(
+        fullName: ' Client One ',
+        clientCode: ' CLIENT-001 ',
+        phoneNumber: ' 09171234567 ',
+        email: ' CLIENT@EXAMPLE.COM ',
+        username: ' client.one ',
+        password: 'strong-pass-123',
+      ),
+    );
+
+    expect(result.approvalStatus, 'pending');
+    expect(result.requiresEmailConfirmation, isTrue);
+    expect(result.message, 'Wait for Management approval.');
+  });
+
   test('parses standard SPINA login response and sends device identity', () async {
     final client = MockClient((request) async {
       expect(request.method, 'POST');
@@ -182,6 +234,34 @@ void main() {
           (error) => error.message,
           'message',
           'Invalid username or password.',
+        ),
+      ),
+    );
+  });
+
+  test('shows the server pending-approval message on forbidden login', () async {
+    final repository = SpinaAuthRepository(
+      client: MockClient((request) async {
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'detail':
+                'Your client account is awaiting Management approval and borrower linking.',
+          }),
+          403,
+        );
+      }),
+      loginUri: Uri.parse('https://spina.test/login'),
+      logoutUri: Uri.parse('https://spina.test/logout'),
+      deviceIdentityProvider: testDeviceIdentityProvider(),
+    );
+
+    await expectLater(
+      repository.signIn(username: 'client.one', password: 'secret'),
+      throwsA(
+        isA<SpinaApiException>().having(
+          (error) => error.message,
+          'message',
+          'Your client account is awaiting Management approval and borrower linking.',
         ),
       ),
     );

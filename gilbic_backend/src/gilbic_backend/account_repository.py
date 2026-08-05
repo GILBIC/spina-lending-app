@@ -104,6 +104,8 @@ class PostgresAccountRepository:
         username: str,
         email: str,
         full_name: str,
+        claimed_client_code: str,
+        claimed_phone_number: str | None,
     ) -> AccountContext:
         try:
             with open_connection() as connection:
@@ -118,6 +120,7 @@ class PostgresAccountRepository:
                             set username = excluded.username,
                                 email = excluded.email,
                                 full_name = excluded.full_name,
+                                status = 'pending',
                                 updated_at = now()
                             returning id
                             """,
@@ -137,6 +140,37 @@ class PostgresAccountRepository:
                             """,
                             (user_id,),
                         )
+                        cursor.execute(
+                            """
+                            insert into core.client_registration_requests (
+                                user_id,
+                                claimed_client_code,
+                                claimed_phone_number,
+                                status,
+                                linked_client_id,
+                                reviewed_by_user_id,
+                                review_note,
+                                submitted_at,
+                                reviewed_at,
+                                updated_at
+                            ) values (%s, %s, %s, 'pending', null, null, '', now(), null, now())
+                            on conflict (user_id) do update
+                            set claimed_client_code = excluded.claimed_client_code,
+                                claimed_phone_number = excluded.claimed_phone_number,
+                                status = 'pending',
+                                linked_client_id = null,
+                                reviewed_by_user_id = null,
+                                review_note = '',
+                                submitted_at = now(),
+                                reviewed_at = null,
+                                updated_at = now()
+                            """,
+                            (
+                                user_id,
+                                claimed_client_code.strip(),
+                                (claimed_phone_number or "").strip() or None,
+                            ),
+                        )
                     return self._load_context(connection, auth_user_id)
         except errors.UniqueViolation as exc:
             raise AccountConflict("Username or email is already in use.") from exc
@@ -153,16 +187,42 @@ class PostgresAccountRepository:
             with connection.transaction():
                 with connection.cursor() as cursor:
                     cursor.execute(
-                        "select id, status from core.users where external_auth_id = %s for update",
+                        """
+                        select
+                            u.id,
+                            u.status,
+                            exists (
+                                select 1
+                                from core.user_roles ur
+                                join core.roles r on r.id = ur.role_id
+                                where ur.user_id = u.id and r.code = 'client'
+                            ) as is_client,
+                            coalesce((
+                                select crr.status
+                                from core.client_registration_requests crr
+                                where crr.user_id = u.id
+                            ), '') as registration_status
+                        from core.users u
+                        where u.external_auth_id = %s
+                        for update
+                        """,
                         (auth_user_id,),
                     )
                     row = cursor.fetchone()
                     if not row:
                         raise AccountNotFound("Gilbic profile is not linked to this login.")
-                    user_id, status = row
-                    if status in {"inactive", "locked"}:
+                    user_id, account_status, is_client, registration_status = row
+                    if account_status in {"inactive", "locked"}:
                         raise AccountDisabled("This Gilbic account is not active.")
-                    if status == "pending":
+                    if (
+                        account_status == "pending"
+                        and is_client
+                        and registration_status == "pending"
+                    ):
+                        raise AccountDisabled(
+                            "Your client account is awaiting Management approval and borrower linking."
+                        )
+                    if account_status == "pending":
                         cursor.execute(
                             "update core.users set status = 'active', updated_at = now() where id = %s",
                             (user_id,),
