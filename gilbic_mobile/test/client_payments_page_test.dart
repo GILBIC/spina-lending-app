@@ -29,15 +29,21 @@ void main() {
     expect(find.text('Valid payments'), findsOneWidget);
     expect(find.text('₱50.00'), findsWidgets);
     expect(find.text('Payment timeline'), findsOneWidget);
-    expect(find.text('GBC-20260806-00000010'), findsOneWidget);
+    expect(
+      find.text('Receipt: GBC-20260806-00000010'),
+      findsOneWidget,
+    );
     expect(find.text('Payment posted'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('GBC-20260805-00000008'),
+      find.text('Receipt: GBC-20260805-00000008'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('GBC-20260805-00000008'), findsOneWidget);
+    expect(
+      find.text('Receipt: GBC-20260805-00000008'),
+      findsOneWidget,
+    );
     expect(find.text('Voided'), findsOneWidget);
     expect(
       find.text('This receipt was voided and does not reduce your balance.'),
