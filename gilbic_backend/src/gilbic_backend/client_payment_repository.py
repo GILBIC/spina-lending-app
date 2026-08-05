@@ -87,9 +87,9 @@ class PostgresClientPaymentRepository:
                 cursor.execute(
                     """
                     select
-                        transaction.id as transaction_id,
-                        transaction.receipt_number,
-                        transaction.loan_id,
+                        payment.id as transaction_id,
+                        payment.receipt_number,
+                        payment.loan_id,
                         loan.loan_number,
                         coalesce(nullif(btrim(loan_type.name), ''), 'Loan')
                             as loan_type_name,
@@ -98,12 +98,12 @@ class PostgresClientPaymentRepository:
                             nullif(btrim(collector.username), ''),
                             'SPINA'
                         ) as collector_name,
-                        transaction.collection_date,
-                        transaction.recorded_at,
-                        transaction.entry_type,
-                        transaction.amount,
+                        payment.collection_date,
+                        payment.recorded_at,
+                        payment.entry_type,
+                        payment.amount,
                         case
-                            when transaction.is_voided then coalesce(
+                            when payment.is_voided then coalesce(
                                 void_history.previous_covered_dates,
                                 array[]::date[]
                             )
@@ -112,48 +112,48 @@ class PostgresClientPaymentRepository:
                                 array[]::date[]
                             )
                         end as covered_dates,
-                        transaction.previous_balance,
-                        transaction.official_balance,
-                        transaction.note,
-                        transaction.collection_origin,
-                        transaction.is_voided,
-                        transaction.voided_at,
-                        transaction.void_reason,
-                        transaction.edit_version,
+                        payment.previous_balance,
+                        payment.official_balance,
+                        payment.note,
+                        payment.collection_origin,
+                        payment.is_voided,
+                        payment.voided_at,
+                        payment.void_reason,
+                        payment.edit_version,
                         remittance.remittance_number,
                         remittance.status as remittance_status,
                         remittance.submitted_at as remittance_submitted_at,
                         remittance.received_at as remittance_received_at
-                    from lending.collection_transactions transaction
+                    from lending.collection_transactions payment
                     join lending.loans loan
-                      on loan.id = transaction.loan_id
+                      on loan.id = payment.loan_id
                     left join lending.loan_types loan_type
                       on loan_type.id = loan.loan_type_id
-                    join core.users collector
-                      on collector.id = transaction.collector_user_id
+                    left join core.users collector
+                      on collector.id = payment.collector_user_id
                     left join lending.collection_remittances remittance
-                      on remittance.id = transaction.remittance_id
+                      on remittance.id = payment.remittance_id
                     left join lateral (
                         select array_agg(
                             covered.covered_date
                             order by covered.covered_date
                         ) as covered_dates
                         from lending.collection_covered_dates covered
-                        where covered.transaction_id = transaction.id
+                        where covered.transaction_id = payment.id
                     ) covered_dates on true
                     left join lateral (
                         select history.previous_covered_dates
                         from lending.collection_transaction_voids history
-                        where history.transaction_id = transaction.id
+                        where history.transaction_id = payment.id
                         order by history.voided_at desc, history.id desc
                         limit 1
                     ) void_history on true
-                    where transaction.client_id = %s
-                      and transaction.amount > 0
+                    where payment.client_id = %s
+                      and payment.amount > 0
                     order by
-                        transaction.collection_date desc,
-                        transaction.recorded_at desc,
-                        transaction.id desc
+                        payment.collection_date desc,
+                        payment.recorded_at desc,
+                        payment.id desc
                     """,
                     (client["id"],),
                 )
