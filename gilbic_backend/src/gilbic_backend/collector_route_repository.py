@@ -201,6 +201,7 @@ class PostgresCollectorRouteRepository:
                           on u.id = t.collector_user_id
                         where t.loan_id = l.id
                           and t.collection_date = %s
+                          and t.is_voided = false
                         order by t.accepted_at desc, t.id desc
                         limit 1
                     ) today on true
