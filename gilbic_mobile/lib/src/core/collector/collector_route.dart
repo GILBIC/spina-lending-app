@@ -98,6 +98,7 @@ class CollectorRouteEntry {
     required this.passCount,
     this.lastPaymentDate,
     this.advanceUntil,
+    this.coveredDates = const <DateTime>[],
     this.note = '',
     this.routeRevision,
     this.canCollectMobile = true,
@@ -106,6 +107,12 @@ class CollectorRouteEntry {
     this.processedToday = false,
     this.todayEntryType = '',
     this.todayCollectorName = '',
+    this.todayTransactionId,
+    this.todayIsLocked = false,
+    this.canEditToday = false,
+    this.todayAmount = 0,
+    this.todayNote = '',
+    this.todayCoveredDates = const <DateTime>[],
   });
 
   final String id;
@@ -120,6 +127,7 @@ class CollectorRouteEntry {
   final int passCount;
   final DateTime? lastPaymentDate;
   final DateTime? advanceUntil;
+  final List<DateTime> coveredDates;
   final String note;
   final String? routeRevision;
   final bool canCollectMobile;
@@ -128,6 +136,12 @@ class CollectorRouteEntry {
   final bool processedToday;
   final String todayEntryType;
   final String todayCollectorName;
+  final String? todayTransactionId;
+  final bool todayIsLocked;
+  final bool canEditToday;
+  final double todayAmount;
+  final String todayNote;
+  final List<DateTime> todayCoveredDates;
 
   Map<String, Object?> toJson() {
     return <String, Object?>{
@@ -143,6 +157,9 @@ class CollectorRouteEntry {
       'pass_count': passCount,
       'last_payment_date': lastPaymentDate?.toIso8601String(),
       'advance_until': advanceUntil?.toIso8601String(),
+      'covered_dates': coveredDates
+          .map((value) => value.toIso8601String())
+          .toList(growable: false),
       'note': note,
       'route_revision': routeRevision,
       'can_collect_mobile': canCollectMobile,
@@ -151,6 +168,14 @@ class CollectorRouteEntry {
       'processed_today': processedToday,
       'today_entry_type': todayEntryType,
       'today_collector_name': todayCollectorName,
+      'today_transaction_id': todayTransactionId,
+      'today_is_locked': todayIsLocked,
+      'can_edit_today': canEditToday,
+      'today_amount': todayAmount,
+      'today_note': todayNote,
+      'today_covered_dates': todayCoveredDates
+          .map((value) => value.toIso8601String())
+          .toList(growable: false),
     };
   }
 
@@ -251,6 +276,7 @@ class CollectorRouteEntry {
             ]) ??
             '',
       ),
+      coveredDates: _dateList(data['covered_dates']),
       note: firstNonEmptyString(<Object?>[
             data['note'],
             data['route_note'],
@@ -289,8 +315,44 @@ class CollectorRouteEntry {
             data['collector_name_today'],
           ]) ??
           '',
+      todayTransactionId: firstNonEmptyString(<Object?>[
+        data['today_transaction_id'],
+        data['transaction_id_today'],
+      ]),
+      todayIsLocked: _boolValue(
+        data['today_is_locked'],
+        fallback: false,
+      ),
+      canEditToday: _boolValue(
+        data['can_edit_today'],
+        fallback: false,
+      ),
+      todayAmount: firstNumber(<Object?>[
+            data['today_amount'],
+            data['recorded_amount_today'],
+          ])?.toDouble() ??
+          0,
+      todayNote: firstNonEmptyString(<Object?>[
+            data['today_note'],
+            data['recorded_note_today'],
+          ]) ??
+          '',
+      todayCoveredDates: _dateList(data['today_covered_dates']),
     );
   }
+}
+
+List<DateTime> _dateList(Object? value) {
+  if (value is! Iterable) {
+    return const <DateTime>[];
+  }
+  final dates = value
+      .map((item) => DateTime.tryParse(item.toString()))
+      .whereType<DateTime>()
+      .toSet()
+      .toList(growable: false)
+    ..sort((left, right) => left.compareTo(right));
+  return dates;
 }
 
 bool _boolValue(Object? value, {required bool fallback}) {

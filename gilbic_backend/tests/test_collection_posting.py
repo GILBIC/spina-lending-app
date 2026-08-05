@@ -30,6 +30,7 @@ class FakeCursor:
         self.device_exists = True
         self.sequence_used = False
         self.assignment_exists = True
+        self.covered_date: date | None = None
         self.pass_exists = False
         self.next_receipt = 42
         self.executions: list[tuple[str, tuple[Any, ...] | None]] = []
@@ -56,6 +57,20 @@ class FakeCursor:
             self._next = self.loan
         elif "from lending.collector_area_assignments" in normalized:
             self._next = {"exists": 1} if self.assignment_exists else None
+        elif "from lending.collection_covered_dates" in normalized:
+            requested = parameters[1] if parameters is not None else None
+            if isinstance(requested, list):
+                covered = self.covered_date is not None and self.covered_date in requested
+            else:
+                covered = self.covered_date is not None and self.covered_date == requested
+            self._next = (
+                {
+                    "covered_date": self.covered_date,
+                    "transaction_id": UUID(int=11),
+                }
+                if covered
+                else None
+            )
         elif (
             "from lending.collection_transactions" in normalized
             and "entry_type = 'pass'" in normalized
@@ -196,8 +211,9 @@ def test_stale_route_revision_requires_refresh() -> None:
     assert "Refresh the route" in caught.value.message
 
 
-def test_pass_is_rejected_when_advance_already_covers_the_date() -> None:
+def test_pass_is_rejected_when_exact_date_is_already_covered() -> None:
     cursor = FakeCursor(loan_row(advance_until=date(2026, 8, 5)))
+    cursor.covered_date = date(2026, 8, 1)
 
     with pytest.raises(CollectionRejected) as caught:
         PostgresCollectionPostingBridge().post_collection(
@@ -206,8 +222,29 @@ def test_pass_is_rejected_when_advance_already_covers_the_date() -> None:
             command(entry_type=CollectionEntryType.PASS, amount=None),
         )
 
-    assert caught.value.code == "advance_already_covers_date"
-    assert "already covered by ADV" in caught.value.message
+    assert caught.value.code == "covered_date_already_used"
+    assert "already covered by a payment" in caught.value.message
+
+
+def test_pass_is_allowed_when_advance_bound_skips_collection_date() -> None:
+    cursor = FakeCursor(loan_row(advance_until=date(2026, 8, 5)))
+
+    result = PostgresCollectionPostingBridge().post_collection(
+        FakeConnection(cursor),
+        actor(),
+        command(entry_type=CollectionEntryType.PASS, amount=None),
+    )
+
+    assert result.official_balance == Decimal("1000.00")
+    assert result.message == "Unable-to-pay reason saved."
+    state_update = next(
+        parameters
+        for statement, parameters in cursor.executions
+        if "update lending.loan_collection_state" in statement
+    )
+    assert state_update is not None
+    assert state_update[1] == 3
+    assert state_update[3] == date(2026, 8, 5)
 
 
 def test_unreconciled_state_is_never_modified() -> None:

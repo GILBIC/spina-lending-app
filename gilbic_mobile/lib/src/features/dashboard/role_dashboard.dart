@@ -5,7 +5,12 @@ import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
+import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
+import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
+import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
+import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 
 class RoleDashboard extends StatelessWidget {
   const RoleDashboard({
@@ -37,6 +42,75 @@ class RoleDashboard extends StatelessWidget {
             paymentRepository: paymentSubmissionRepository,
             deviceIdentityProvider: deviceIdentityProvider,
             deviceSequence: collectionDeviceSequence,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if ((session.role == AppRole.collector &&
+            module.action == 'other-area-payment') ||
+        (session.role == AppRole.management &&
+            module.action == 'management-direct-payment')) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => OtherAreaCollectionPage(
+            session: session,
+            paymentRepository: paymentSubmissionRepository,
+            deviceIdentityProvider: deviceIdentityProvider,
+            deviceSequence: collectionDeviceSequence,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (session.role == AppRole.collector && module.action == 'remittance') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => CollectorRemittancePage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (session.role == AppRole.collector &&
+        module.action == 'assigned-collector-remittance') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => CrossCollectorRemittancePage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (module.action == 'payment-updates') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => ActivityNotificationsPage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (module.action == 'remittance-notifications' &&
+        (session.role == AppRole.collector ||
+            session.role == AppRole.employee ||
+            session.role == AppRole.management)) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => RemittanceNotificationsPage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
           ),
         ),
       );
@@ -154,6 +228,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           Icons.receipt_long,
         ),
         _DashboardModule(
+          'Payment Updates',
+          'See who posted, remitted, and accepted your payment',
+          Icons.notifications_active,
+          action: 'payment-updates',
+        ),
+        _DashboardModule(
           'Renewal',
           'Submit and monitor renewal requests',
           Icons.autorenew,
@@ -167,25 +247,45 @@ List<_DashboardModule> _modulesFor(AppRole role) {
     AppRole.collector => const [
         _DashboardModule(
           'Daily Route',
-          'Online route with encrypted offline fallback',
+          'Compact online collection ledger',
           Icons.route,
           action: 'daily-route',
         ),
         _DashboardModule(
           'Record Payment',
-          'Open the route and record Payment, ADV, or PASS',
+          'Open the route and record assigned collections',
           Icons.payments,
           action: 'record-payment',
         ),
         _DashboardModule(
-          'Offline Sync',
-          'Route cache only; collection outbox remains disabled',
-          Icons.sync,
+          'Other Area Payment',
+          'Search a client who paid a different collector',
+          Icons.person_search,
+          action: 'other-area-payment',
         ),
         _DashboardModule(
-          'End of Day',
-          'Collection totals and cash accountability',
-          Icons.summarize,
+          'Management Remittance',
+          'Submit regular route cash to authorized staff',
+          Icons.account_balance_outlined,
+          action: 'remittance',
+        ),
+        _DashboardModule(
+          'Assigned Collector Remittance',
+          'Send only other-area payments to their route owner',
+          Icons.compare_arrows,
+          action: 'assigned-collector-remittance',
+        ),
+        _DashboardModule(
+          'Payment Updates',
+          'See other-collector posts and cash-custody updates',
+          Icons.receipt_long,
+          action: 'payment-updates',
+        ),
+        _DashboardModule(
+          'Remittance Requests',
+          'Review and accept remittances sent to your assigned route',
+          Icons.notifications_active,
+          action: 'remittance-notifications',
         ),
       ],
     AppRole.employee => const [
@@ -205,9 +305,10 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           Icons.task_alt,
         ),
         _DashboardModule(
-          'Requests',
-          'Leave and internal service requests',
-          Icons.assignment,
+          'Notifications',
+          'Accept assigned remittances after receiving the cash',
+          Icons.notifications_active,
+          action: 'remittance-notifications',
         ),
       ],
     AppRole.management => const [
@@ -220,6 +321,18 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Loan Operations',
           'Collections, corrections, and portfolio monitoring',
           Icons.insights,
+        ),
+        _DashboardModule(
+          'Direct Payment Entry',
+          'Record a client payment made directly to Management',
+          Icons.point_of_sale,
+          action: 'management-direct-payment',
+        ),
+        _DashboardModule(
+          'Notifications',
+          'Accept assigned remittances after receiving the cash',
+          Icons.notifications_active,
+          action: 'remittance-notifications',
         ),
         _DashboardModule(
           'Financial Accounting',
