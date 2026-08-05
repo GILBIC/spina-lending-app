@@ -6,6 +6,11 @@ class ApiConfig {
     defaultValue: 'http://10.0.2.2:8000',
   );
 
+  static const String registerPath = String.fromEnvironment(
+    'GILBIC_REGISTER_PATH',
+    defaultValue: '/api/mobile/v1/auth/register',
+  );
+
   static const String loginPath = String.fromEnvironment(
     'GILBIC_LOGIN_PATH',
     defaultValue: '/api/mobile/v1/auth/login',
@@ -41,6 +46,8 @@ class ApiConfig {
     defaultValue: '/api/mobile/v1/activity-notifications',
   );
 
+  static Uri get registerEndpoint => endpoint(registerPath);
+
   static Uri get loginEndpoint => endpoint(loginPath);
 
   static Uri get refreshEndpoint => endpoint(refreshPath);
@@ -55,6 +62,19 @@ class ApiConfig {
 
   static Uri get activityNotificationsEndpoint =>
       endpoint(activityNotificationsPath);
+
+  static Uri get managementClientRegistrationsEndpoint =>
+      endpoint('/api/v1/management/client-registrations');
+
+  static Uri managementClientCandidatesEndpoint(String query) => endpoint(
+        '/api/v1/management/client-link-candidates?q=${Uri.encodeQueryComponent(query)}',
+      );
+
+  static Uri managementApproveClientRegistrationEndpoint(String userId) =>
+      endpoint('/api/v1/management/client-registrations/$userId/approve');
+
+  static Uri managementRejectClientRegistrationEndpoint(String userId) =>
+      endpoint('/api/v1/management/client-registrations/$userId/reject');
 
   static Uri endpoint(String path) {
     final cleanBase = baseUrl.endsWith('/')
