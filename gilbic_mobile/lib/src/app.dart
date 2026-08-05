@@ -159,7 +159,9 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
 
   ClientRegistrationRepository? get _clientRegistrationRepository {
     final repository = _authRepository;
-    return repository is ClientRegistrationRepository ? repository : null;
+    return repository is ClientRegistrationRepository
+        ? repository as ClientRegistrationRepository
+        : null;
   }
 
   Future<void> _signOut() async {
