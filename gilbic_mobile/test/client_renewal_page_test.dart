@@ -28,10 +28,15 @@ void main() {
     expect(find.text('TEST-REG-001'), findsOneWidget);
     expect(find.text('Regular'), findsWidgets);
     expect(find.text('₱4,900.00'), findsWidgets);
-    expect(find.text('Request history'), findsOneWidget);
-    expect(find.text('Pending review'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('request-renewal-regular-loan')));
+    final requestButton =
+        find.byKey(const Key('request-renewal-regular-loan'));
+    await tester.scrollUntilVisible(
+      requestButton,
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(requestButton);
     await tester.pumpAndSettle();
     expect(find.text('Request loan renewal'), findsOneWidget);
 
@@ -53,6 +58,14 @@ void main() {
       'Requesting a higher renewal amount',
     );
     expect(repository.deviceId, 'client-device');
+
+    await tester.scrollUntilVisible(
+      find.text('Request history'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Request history'), findsOneWidget);
+    expect(find.text('Pending review'), findsOneWidget);
   });
 }
 
