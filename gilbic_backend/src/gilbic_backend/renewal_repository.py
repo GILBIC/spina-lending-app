@@ -352,7 +352,7 @@ class PostgresRenewalRepository:
                         %s,
                         'client_renewal_request',
                         %s,
-                        jsonb_build_object('review_note', %s)
+                        jsonb_build_object('review_note', %s::text)
                     )
                     """,
                     (
