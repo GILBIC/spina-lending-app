@@ -8,6 +8,7 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/client/client_loans_page.dart';
 import 'package:gilbic_mobile/src/features/client/client_payments_page.dart';
 import 'package:gilbic_mobile/src/features/client/client_renewal_page.dart';
+import 'package:gilbic_mobile/src/features/client/client_support_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
@@ -15,6 +16,7 @@ import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.
 import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 
@@ -132,6 +134,18 @@ class RoleDashboard extends StatelessWidget {
       return;
     }
 
+    if (session.role == AppRole.client && module.action == 'support') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => ClientSupportPage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+          ),
+        ),
+      );
+      return;
+    }
+
     if (module.action == 'payment-updates') {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
@@ -190,6 +204,19 @@ class RoleDashboard extends StatelessWidget {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => ManagementRenewalRequestsPage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (session.role == AppRole.management &&
+        module.action == 'management-support') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => ManagementSupportRequestsPage(
             session: session,
             deviceIdentityProvider: deviceIdentityProvider,
           ),
@@ -326,6 +353,7 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Support',
           'Notices, corrections, and assistance',
           Icons.support_agent,
+          action: 'support',
         ),
       ],
     AppRole.collector => const [
@@ -406,6 +434,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Review client renewal requests for office processing',
           Icons.autorenew,
           action: 'management-renewals',
+        ),
+        _DashboardModule(
+          'Client Support',
+          'Answer and resolve client assistance requests',
+          Icons.support_agent,
+          action: 'management-support',
         ),
         _DashboardModule(
           'Loan Operations',

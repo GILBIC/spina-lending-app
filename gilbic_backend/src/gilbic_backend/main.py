@@ -19,6 +19,7 @@ from .other_area_api import create_other_area_router
 from .remittance_api import create_remittance_router
 from .remittance_photo_api import create_remittance_photo_router
 from .renewal_api import create_renewal_router
+from .support_api import create_support_router
 
 
 def create_app() -> FastAPI:
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
     app.include_router(create_client_loan_router())
     app.include_router(create_client_payment_router())
     app.include_router(create_renewal_router())
+    app.include_router(create_support_router())
     app.include_router(create_collector_route_router())
     app.include_router(create_other_area_router())
     app.include_router(create_collection_api_router())
