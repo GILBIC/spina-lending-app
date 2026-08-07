@@ -8,7 +8,7 @@ import 'package:gilbic_mobile/src/core/management/financial_accounting_repositor
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
 
 void main() {
-  testWidgets('Management sees read-only accounting controls and loan policies', (
+  testWidgets('Management sees accounting foundation and loan policies', (
     tester,
   ) async {
     final repository = _FakeAccountingRepository();
@@ -38,8 +38,24 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Posting readiness'), findsOneWidget);
-    expect(find.text('Not started'), findsOneWidget);
+    expect(find.text('Ready'), findsOneWidget);
+    expect(find.textContaining('23 / 23 posting'), findsOneWidget);
+    expect(find.textContaining('Not configured'), findsOneWidget);
+    expect(find.textContaining('Foundation ready'), findsOneWidget);
     expect(find.text('Unavailable'), findsOneWidget);
+
+    final chart = find.byKey(const Key('financial-accounting-chart-of-accounts'));
+    await tester.scrollUntilVisible(
+      chart,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Chart of Accounts'), findsOneWidget);
+    await tester.tap(chart);
+    await tester.pumpAndSettle();
+    expect(find.text('Cash - Office'), findsOneWidget);
+    expect(find.text('Interest Income - Regular'), findsOneWidget);
 
     final sevenBySeven = find.byKey(
       const Key('financial-accounting-policy-seven_by_seven_mobile_test'),
@@ -89,8 +105,11 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
   }) async {
     this.deviceId = deviceId;
     return const FinancialAccountingOverview(
-      notice: 'Financial Accounting is currently a read-only control center.',
-      journalStatus: 'not_started',
+      notice:
+          'Financial Accounting now has a protected database foundation and chart of accounts.',
+      foundationStatus: 'ready',
+      fiscalPeriodStatus: 'not_configured',
+      journalStatus: 'foundation_ready',
       trialBalanceStatus: 'unavailable',
       summary: FinancialAccountingSummary(
         activeLoanCount: 7,
@@ -104,6 +123,36 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
         correctionCount: 1,
         voidCount: 1,
       ),
+      foundation: AccountingFoundationSummary(
+        accountCount: 23,
+        postingAccountCount: 23,
+        fiscalPeriodCount: 0,
+        openPeriodCount: 0,
+        journalEntryCount: 0,
+        draftJournalCount: 0,
+        postedJournalCount: 0,
+        reversalDraftCount: 0,
+      ),
+      accounts: <AccountingAccount>[
+        AccountingAccount(
+          code: '1010',
+          systemKey: 'cash_office',
+          name: 'Cash - Office',
+          accountType: 'asset',
+          normalBalance: 'debit',
+          isPosting: true,
+          isActive: true,
+        ),
+        AccountingAccount(
+          code: '4000',
+          systemKey: 'interest_income_regular',
+          name: 'Interest Income - Regular',
+          accountType: 'income',
+          normalBalance: 'credit',
+          isPosting: true,
+          isActive: true,
+        ),
+      ],
       policies: <LoanAccountingPolicy>[
         LoanAccountingPolicy(
           code: 'regular_mobile_test',
