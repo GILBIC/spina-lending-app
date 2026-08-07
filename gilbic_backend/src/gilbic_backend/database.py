@@ -28,16 +28,19 @@ def connect_database(settings: Settings | None = None) -> Connection[Any]:
 
 @contextmanager
 def open_connection(settings: Settings | None = None) -> Iterator[Connection[Any]]:
-    """Open a short-lived PostgreSQL connection for backend operations.
+    """Open one short-lived transactional PostgreSQL connection.
 
-    Production credentials come only from ``GILBIC_DATABASE_URL``. Callers
-    should keep transactions small and use an explicit connection-pool layer
-    when request volume grows.
+    Successful operations are committed when the context exits. Exceptions are
+    rolled back by psycopg before the connection is closed. Production
+    credentials come only from ``GILBIC_DATABASE_URL``. Callers should keep
+    transactions small and use an explicit connection-pool layer when request
+    volume grows.
     """
 
     connection = connect_database(settings)
     try:
-        yield connection
+        with connection:
+            yield connection
     finally:
         connection.close()
 
