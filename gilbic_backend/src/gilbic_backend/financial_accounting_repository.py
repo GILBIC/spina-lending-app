@@ -23,6 +23,29 @@ class FinancialAccountingSummary:
 
 
 @dataclass(frozen=True, slots=True)
+class AccountingFoundationSummary:
+    account_count: int
+    posting_account_count: int
+    fiscal_period_count: int
+    open_period_count: int
+    journal_entry_count: int
+    draft_journal_count: int
+    posted_journal_count: int
+    reversal_draft_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class AccountingAccount:
+    code: str
+    system_key: str
+    name: str
+    account_type: str
+    normal_balance: str
+    is_posting: bool
+    is_active: bool
+
+
+@dataclass(frozen=True, slots=True)
 class LoanAccountingPolicy:
     code: str
     name: str
@@ -38,11 +61,13 @@ class LoanAccountingPolicy:
 @dataclass(frozen=True, slots=True)
 class FinancialAccountingOverview:
     summary: FinancialAccountingSummary
+    foundation: AccountingFoundationSummary
+    accounts: tuple[AccountingAccount, ...]
     policies: tuple[LoanAccountingPolicy, ...]
 
 
 class PostgresFinancialAccountingRepository:
-    """Read existing lending sources without creating accounting journals."""
+    """Read lending sources and the non-posting accounting foundation."""
 
     def load_overview(self) -> FinancialAccountingOverview:
         with open_connection() as connection:
@@ -86,9 +111,8 @@ class PostgresFinancialAccountingRepository:
                               and t.remittance_id is null
                               and t.entry_type <> 'pass'
                         ), 0) as unremitted_cash,
-                        count(*) filter (
-                            where t.is_voided = false
-                        ) as valid_collection_count,
+                        count(*) filter (where t.is_voided = false)
+                            as valid_collection_count,
                         (select count(*)
                            from lending.collection_transaction_edits)
                             as correction_count,
@@ -131,6 +155,62 @@ class PostgresFinancialAccountingRepository:
                     self._policy_from_row(row) for row in cursor.fetchall()
                 )
 
+                cursor.execute(
+                    """
+                    select
+                        (select count(*) from accounting.accounts)
+                            as account_count,
+                        (select count(*) from accounting.accounts
+                          where is_active = true and is_posting = true)
+                            as posting_account_count,
+                        (select count(*) from accounting.fiscal_periods)
+                            as fiscal_period_count,
+                        (select count(*) from accounting.fiscal_periods
+                          where status = 'open')
+                            as open_period_count,
+                        (select count(*) from accounting.journal_entries)
+                            as journal_entry_count,
+                        (select count(*) from accounting.journal_entries
+                          where status = 'draft')
+                            as draft_journal_count,
+                        (select count(*) from accounting.journal_entries
+                          where status = 'posted')
+                            as posted_journal_count,
+                        (select count(*) from accounting.journal_entries
+                          where status = 'draft'
+                            and reversal_of_entry_id is not null)
+                            as reversal_draft_count
+                    """
+                )
+                foundation_row = cursor.fetchone()
+
+                cursor.execute(
+                    """
+                    select
+                        code,
+                        system_key,
+                        name,
+                        account_type,
+                        normal_balance,
+                        is_posting,
+                        is_active
+                    from accounting.accounts
+                    order by code
+                    """
+                )
+                chart_of_accounts = tuple(
+                    AccountingAccount(
+                        code=str(row["code"]),
+                        system_key=str(row["system_key"]),
+                        name=str(row["name"]),
+                        account_type=str(row["account_type"]),
+                        normal_balance=str(row["normal_balance"]),
+                        is_posting=bool(row["is_posting"]),
+                        is_active=bool(row["is_active"]),
+                    )
+                    for row in cursor.fetchall()
+                )
+
         return FinancialAccountingOverview(
             summary=FinancialAccountingSummary(
                 active_loan_count=int(loan_summary["active_loan_count"] or 0),
@@ -156,6 +236,19 @@ class PostgresFinancialAccountingRepository:
                 correction_count=int(collection_summary["correction_count"] or 0),
                 void_count=int(collection_summary["void_count"] or 0),
             ),
+            foundation=AccountingFoundationSummary(
+                account_count=int(foundation_row["account_count"] or 0),
+                posting_account_count=int(
+                    foundation_row["posting_account_count"] or 0
+                ),
+                fiscal_period_count=int(foundation_row["fiscal_period_count"] or 0),
+                open_period_count=int(foundation_row["open_period_count"] or 0),
+                journal_entry_count=int(foundation_row["journal_entry_count"] or 0),
+                draft_journal_count=int(foundation_row["draft_journal_count"] or 0),
+                posted_journal_count=int(foundation_row["posted_journal_count"] or 0),
+                reversal_draft_count=int(foundation_row["reversal_draft_count"] or 0),
+            ),
+            accounts=chart_of_accounts,
             policies=policies,
         )
 
