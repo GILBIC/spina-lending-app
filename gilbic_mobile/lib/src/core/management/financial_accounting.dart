@@ -3,21 +3,30 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 class FinancialAccountingOverview {
   const FinancialAccountingOverview({
     required this.summary,
+    required this.foundation,
+    required this.accounts,
     required this.policies,
+    required this.foundationStatus,
+    required this.fiscalPeriodStatus,
     required this.journalStatus,
     required this.trialBalanceStatus,
     required this.notice,
   });
 
   final FinancialAccountingSummary summary;
+  final AccountingFoundationSummary foundation;
+  final List<AccountingAccount> accounts;
   final List<LoanAccountingPolicy> policies;
+  final String foundationStatus;
+  final String fiscalPeriodStatus;
   final String journalStatus;
   final String trialBalanceStatus;
   final String notice;
 
   factory FinancialAccountingOverview.fromPayload(Map<String, dynamic> payload) {
     final rawPolicies = payload['policies'];
-    if (rawPolicies is! List) {
+    final rawAccounts = payload['accounts'];
+    if (rawPolicies is! List || rawAccounts is! List) {
       throw const SpinaApiException(
         'The SPINA server returned incomplete Financial Accounting data.',
         code: 'invalid_financial_accounting_payload',
@@ -27,9 +36,17 @@ class FinancialAccountingOverview {
       summary: FinancialAccountingSummary.fromPayload(
         stringMap(payload['summary']),
       ),
+      foundation: AccountingFoundationSummary.fromPayload(
+        stringMap(payload['foundation']),
+      ),
+      accounts: rawAccounts
+          .map((item) => AccountingAccount.fromPayload(stringMap(item)))
+          .toList(growable: false),
       policies: rawPolicies
           .map((item) => LoanAccountingPolicy.fromPayload(stringMap(item)))
           .toList(growable: false),
+      foundationStatus: _requiredString(payload, 'foundation_status'),
+      fiscalPeriodStatus: _requiredString(payload, 'fiscal_period_status'),
       journalStatus: _requiredString(payload, 'journal_status'),
       trialBalanceStatus: _requiredString(payload, 'trial_balance_status'),
       notice: _requiredString(payload, 'notice'),
@@ -77,6 +94,73 @@ class FinancialAccountingSummary {
       validCollectionCount: _requiredInt(payload, 'valid_collection_count'),
       correctionCount: _requiredInt(payload, 'correction_count'),
       voidCount: _requiredInt(payload, 'void_count'),
+    );
+  }
+}
+
+class AccountingFoundationSummary {
+  const AccountingFoundationSummary({
+    required this.accountCount,
+    required this.postingAccountCount,
+    required this.fiscalPeriodCount,
+    required this.openPeriodCount,
+    required this.journalEntryCount,
+    required this.draftJournalCount,
+    required this.postedJournalCount,
+    required this.reversalDraftCount,
+  });
+
+  final int accountCount;
+  final int postingAccountCount;
+  final int fiscalPeriodCount;
+  final int openPeriodCount;
+  final int journalEntryCount;
+  final int draftJournalCount;
+  final int postedJournalCount;
+  final int reversalDraftCount;
+
+  factory AccountingFoundationSummary.fromPayload(Map<String, dynamic> payload) {
+    return AccountingFoundationSummary(
+      accountCount: _requiredInt(payload, 'account_count'),
+      postingAccountCount: _requiredInt(payload, 'posting_account_count'),
+      fiscalPeriodCount: _requiredInt(payload, 'fiscal_period_count'),
+      openPeriodCount: _requiredInt(payload, 'open_period_count'),
+      journalEntryCount: _requiredInt(payload, 'journal_entry_count'),
+      draftJournalCount: _requiredInt(payload, 'draft_journal_count'),
+      postedJournalCount: _requiredInt(payload, 'posted_journal_count'),
+      reversalDraftCount: _requiredInt(payload, 'reversal_draft_count'),
+    );
+  }
+}
+
+class AccountingAccount {
+  const AccountingAccount({
+    required this.code,
+    required this.systemKey,
+    required this.name,
+    required this.accountType,
+    required this.normalBalance,
+    required this.isPosting,
+    required this.isActive,
+  });
+
+  final String code;
+  final String systemKey;
+  final String name;
+  final String accountType;
+  final String normalBalance;
+  final bool isPosting;
+  final bool isActive;
+
+  factory AccountingAccount.fromPayload(Map<String, dynamic> payload) {
+    return AccountingAccount(
+      code: _requiredString(payload, 'code'),
+      systemKey: _requiredString(payload, 'system_key'),
+      name: _requiredString(payload, 'name'),
+      accountType: _requiredString(payload, 'account_type'),
+      normalBalance: _requiredString(payload, 'normal_balance'),
+      isPosting: payload['is_posting'] == true,
+      isActive: payload['is_active'] == true,
     );
   }
 }
