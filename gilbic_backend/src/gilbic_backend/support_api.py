@@ -33,9 +33,17 @@ class SubmitSupportRequest(StrictSupportRequest):
     message: str = Field(min_length=3, max_length=2000)
     reference_text: str = Field(default="", max_length=120)
 
-    @field_validator("subject", "message", "reference_text")
+    @field_validator("subject", "message")
     @classmethod
-    def normalize_text(cls, value: str) -> str:
+    def normalize_required_text(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if len(normalized) < 3:
+            raise ValueError("Enter at least 3 characters.")
+        return normalized
+
+    @field_validator("reference_text")
+    @classmethod
+    def normalize_reference(cls, value: str) -> str:
         return " ".join(value.split())
 
 
@@ -46,7 +54,10 @@ class ReviewSupportRequest(StrictSupportRequest):
     @field_validator("response")
     @classmethod
     def normalize_response(cls, value: str) -> str:
-        return " ".join(value.split())
+        normalized = " ".join(value.split())
+        if len(normalized) < 3:
+            raise ValueError("Enter at least 3 characters.")
+        return normalized
 
 
 def support_repository_dependency() -> PostgresSupportRepository:
