@@ -7,12 +7,14 @@ import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart'
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/client/client_loans_page.dart';
 import 'package:gilbic_mobile/src/features/client/client_payments_page.dart';
+import 'package:gilbic_mobile/src/features/client/client_renewal_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 
@@ -118,6 +120,18 @@ class RoleDashboard extends StatelessWidget {
       return;
     }
 
+    if (session.role == AppRole.client && module.action == 'renewal') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => ClientRenewalPage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+          ),
+        ),
+      );
+      return;
+    }
+
     if (module.action == 'payment-updates') {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
@@ -163,6 +177,19 @@ class RoleDashboard extends StatelessWidget {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (context) => ManagementCollectionVoidPage(
+            session: session,
+            deviceIdentityProvider: deviceIdentityProvider,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (session.role == AppRole.management &&
+        module.action == 'management-renewals') {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (context) => ManagementRenewalRequestsPage(
             session: session,
             deviceIdentityProvider: deviceIdentityProvider,
           ),
@@ -293,6 +320,7 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Renewal',
           'Submit and monitor renewal requests',
           Icons.autorenew,
+          action: 'renewal',
         ),
         _DashboardModule(
           'Support',
@@ -372,6 +400,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Loan Management',
           'Products, approvals, releases, and renewals',
           Icons.account_balance,
+        ),
+        _DashboardModule(
+          'Renewal Requests',
+          'Review client renewal requests for office processing',
+          Icons.autorenew,
+          action: 'management-renewals',
         ),
         _DashboardModule(
           'Loan Operations',
