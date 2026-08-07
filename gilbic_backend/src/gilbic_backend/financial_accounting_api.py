@@ -157,13 +157,13 @@ def _overview_payload(
         ),
         "fiscal_period_status": fiscal_period_status,
         "period_management_enabled": can_manage_periods,
-        "journal_status": "foundation_ready",
-        "trial_balance_status": "unavailable",
+        "journal_status": "manual_ready",
+        "trial_balance_status": "available",
         "notice": (
-            "Financial Accounting now has protected fiscal-period controls. Periods "
-            "may be created, moved to review, reopened, and closed by authorized "
-            "Management users, but automatic loan posting, opening-balance "
-            "conversion, and General Journal posting remain disabled."
+            "Financial Accounting now supports protected manual General Journal "
+            "drafts, immutable posting, reversals, and a posted-only Trial Balance. "
+            "Automatic loan posting, opening-balance conversion, EIR schedules, "
+            "and ECL posting remain disabled until later controlled stages."
         ),
     }
 
