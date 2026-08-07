@@ -88,6 +88,7 @@ def _loan_payload(record) -> dict[str, object]:
         "pending_request_id": (
             str(record.pending_request_id) if record.pending_request_id else None
         ),
+        "blocking_request_status": record.blocking_request_status,
     }
 
 

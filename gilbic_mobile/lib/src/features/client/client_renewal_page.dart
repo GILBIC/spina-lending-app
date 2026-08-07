@@ -368,13 +368,7 @@ class _RenewalLoanCard extends StatelessWidget {
                 key: Key('request-renewal-${loan.loanId}'),
                 onPressed: loan.canRequest && !busy ? onRequest : null,
                 icon: const Icon(Icons.autorenew),
-                label: Text(
-                  loan.pendingRequestId != null
-                      ? 'Request pending'
-                      : loan.eligible
-                          ? 'Request renewal'
-                          : 'Contact SPINA office',
-                ),
+                label: Text(loan.requestButtonLabel),
               ),
             ),
           ],
