@@ -27,10 +27,15 @@ void main() {
     expect(find.text('Outstanding'), findsOneWidget);
     expect(find.text('Approved renewals'), findsOneWidget);
 
-    await tester.enterText(
-      find.byKey(const Key('management-loan-search')),
-      'TEST-REG-001',
+    final searchField = find.byKey(const Key('management-loan-search'));
+    await tester.scrollUntilVisible(
+      searchField,
+      300,
+      scrollable: find.byType(Scrollable).first,
     );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(searchField, 'TEST-REG-001');
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pumpAndSettle();
 
