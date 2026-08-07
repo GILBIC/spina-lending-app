@@ -1,21 +1,53 @@
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
+from typing import Literal
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, status
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .financial_accounting_repository import (
     AccountingAccount,
+    AccountingFiscalPeriod,
     AccountingFoundationSummary,
+    AccountingPeriodConflict,
+    AccountingPeriodError,
+    AccountingPeriodInvalidTransition,
+    AccountingPeriodNotFound,
     FinancialAccountingOverview,
     FinancialAccountingSummary,
     LoanAccountingPolicy,
     PostgresFinancialAccountingRepository,
 )
 from .request_auth import authenticated_device_context
+
+
+class StrictAccountingRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class CreateFiscalPeriodRequest(StrictAccountingRequest):
+    label: str = Field(min_length=3, max_length=80)
+    start_date: date
+    end_date: date
+
+    @field_validator("label")
+    @classmethod
+    def normalize_label(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if len(normalized) < 3:
+            raise ValueError("Accounting period label is too short.")
+        return normalized
+
+
+class ChangeFiscalPeriodStatusRequest(StrictAccountingRequest):
+    status: Literal["open", "review", "closed"]
+    confirm_close: bool = False
 
 
 def financial_accounting_repository_dependency() -> (
@@ -70,6 +102,21 @@ def _account_payload(account: AccountingAccount) -> dict[str, object]:
     }
 
 
+def _fiscal_period_payload(period: AccountingFiscalPeriod) -> dict[str, object]:
+    return {
+        "period_id": str(period.period_id),
+        "label": period.label,
+        "start_date": period.start_date.isoformat(),
+        "end_date": period.end_date.isoformat(),
+        "status": period.status,
+        "journal_count": period.journal_count,
+        "draft_journal_count": period.draft_journal_count,
+        "posted_journal_count": period.posted_journal_count,
+        "closed_by_name": period.closed_by_name,
+        "closed_at": period.closed_at.isoformat() if period.closed_at else None,
+    }
+
+
 def _policy_payload(policy: LoanAccountingPolicy) -> dict[str, object]:
     return {
         "code": policy.code,
@@ -84,7 +131,11 @@ def _policy_payload(policy: LoanAccountingPolicy) -> dict[str, object]:
     }
 
 
-def _overview_payload(overview: FinancialAccountingOverview) -> dict[str, object]:
+def _overview_payload(
+    overview: FinancialAccountingOverview,
+    *,
+    can_manage_periods: bool,
+) -> dict[str, object]:
     foundation = overview.foundation
     fiscal_period_status = (
         "open"
@@ -97,20 +148,37 @@ def _overview_payload(overview: FinancialAccountingOverview) -> dict[str, object
         "summary": _summary_payload(overview.summary),
         "foundation": _foundation_payload(foundation),
         "accounts": [_account_payload(item) for item in overview.accounts],
+        "fiscal_periods": [
+            _fiscal_period_payload(item) for item in overview.fiscal_periods
+        ],
         "policies": [_policy_payload(item) for item in overview.policies],
         "foundation_status": (
             "ready" if foundation.account_count > 0 else "not_started"
         ),
         "fiscal_period_status": fiscal_period_status,
+        "period_management_enabled": can_manage_periods,
         "journal_status": "foundation_ready",
         "trial_balance_status": "unavailable",
         "notice": (
-            "Financial Accounting now has a protected database foundation and chart "
-            "of accounts. This mobile view remains read-only: no automatic loan "
-            "posting, opening-balance conversion, period closing, or financial "
-            "statement posting is enabled yet."
+            "Financial Accounting now has protected fiscal-period controls. Periods "
+            "may be created, moved to review, reopened, and closed by authorized "
+            "Management users, but automatic loan posting, opening-balance "
+            "conversion, and General Journal posting remain disabled."
         ),
     }
+
+
+def _period_exception(error: AccountingPeriodError) -> HTTPException:
+    if isinstance(error, AccountingPeriodNotFound):
+        status_code = 404
+    elif isinstance(error, (AccountingPeriodConflict, AccountingPeriodInvalidTransition)):
+        status_code = 409
+    else:
+        status_code = 500
+    return HTTPException(
+        status_code=status_code,
+        detail={"code": error.code, "message": str(error)},
+    )
 
 
 def create_financial_accounting_router() -> APIRouter:
@@ -146,7 +214,100 @@ def create_financial_accounting_router() -> APIRouter:
             )
         return {
             "success": True,
-            "data": _overview_payload(accounting.load_overview()),
+            "data": _overview_payload(
+                accounting.load_overview(),
+                can_manage_periods="accounting.period.manage" in actor.permissions,
+            ),
         }
+
+    @router.post(
+        "/api/v1/management/financial-accounting/fiscal-periods",
+        status_code=status.HTTP_201_CREATED,
+    )
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/fiscal-periods",
+        status_code=status.HTTP_201_CREATED,
+        include_in_schema=False,
+    )
+    def create_fiscal_period(
+        body: CreateFiscalPeriodRequest,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        accounting: PostgresFinancialAccountingRepository = Depends(
+            financial_accounting_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+            permission="accounting.period.manage",
+            permission_error="Accounting period management permission is required.",
+        )
+        if body.end_date < body.start_date:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "invalid_accounting_period_dates",
+                    "message": "Accounting period end date cannot be before the start date.",
+                },
+            )
+        try:
+            period = accounting.create_fiscal_period(
+                actor_user_id=actor.user_id,
+                label=body.label,
+                start_date=body.start_date,
+                end_date=body.end_date,
+            )
+        except AccountingPeriodError as error:
+            raise _period_exception(error) from error
+        return {"success": True, "data": {"period": _fiscal_period_payload(period)}}
+
+    @router.post(
+        "/api/v1/management/financial-accounting/fiscal-periods/{period_id}/status"
+    )
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/fiscal-periods/{period_id}/status",
+        include_in_schema=False,
+    )
+    def change_fiscal_period_status(
+        period_id: UUID,
+        body: ChangeFiscalPeriodStatusRequest,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        accounting: PostgresFinancialAccountingRepository = Depends(
+            financial_accounting_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+            permission="accounting.period.manage",
+            permission_error="Accounting period management permission is required.",
+        )
+        if body.status == "closed" and not body.confirm_close:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "accounting_period_close_confirmation_required",
+                    "message": "Confirm the accounting period close before continuing.",
+                },
+            )
+        try:
+            period = accounting.set_fiscal_period_status(
+                actor_user_id=actor.user_id,
+                period_id=period_id,
+                status=body.status,
+            )
+        except AccountingPeriodError as error:
+            raise _period_exception(error) from error
+        return {"success": True, "data": {"period": _fiscal_period_payload(period)}}
 
     return router
