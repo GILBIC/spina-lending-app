@@ -15,6 +15,7 @@ import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_loan_operations_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_portfolio_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
@@ -185,6 +186,17 @@ class RoleDashboard extends StatelessWidget {
       _push(
         context,
         ManagementLoanPortfolioPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      );
+      return;
+    }
+    if (session.role == AppRole.management &&
+        action == 'management-loan-operations') {
+      _push(
+        context,
+        ManagementLoanOperationsPage(
           session: session,
           deviceIdentityProvider: deviceIdentityProvider,
         ),
@@ -405,8 +417,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           Icons.support_agent,
           action: 'management-support',
         ),
-        _DashboardModule('Loan Operations',
-            'Collections, corrections, and portfolio monitoring', Icons.insights),
+        _DashboardModule(
+          'Loan Operations',
+          'Monitor collections, remittances, corrections, and voids',
+          Icons.insights,
+          action: 'management-loan-operations',
+        ),
         _DashboardModule(
           'Direct Payment Entry',
           'Record a client payment made directly to Management',
