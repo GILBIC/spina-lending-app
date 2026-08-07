@@ -26,13 +26,6 @@ void main() {
     expect(find.text('Active loans'), findsOneWidget);
     expect(find.text('Outstanding'), findsOneWidget);
     expect(find.text('Approved renewals'), findsOneWidget);
-    expect(find.text('TEST CLIENT REGULAR'), findsOneWidget);
-    expect(
-      find.text('Renewal approved and awaiting SPINA office processing.'),
-      findsOneWidget,
-    );
-    expect(find.text('Official remaining balance'), findsOneWidget);
-    expect(find.text('₱4,900.00'), findsWidgets);
 
     await tester.enterText(
       find.byKey(const Key('management-loan-search')),
@@ -44,6 +37,21 @@ void main() {
     expect(repository.query, 'TEST-REG-001');
     expect(repository.status, 'active');
     expect(repository.deviceId, 'management-device');
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('management-loan-loan-1')),
+      500,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('TEST CLIENT REGULAR'), findsOneWidget);
+    expect(
+      find.text('Renewal approved and awaiting SPINA office processing.'),
+      findsOneWidget,
+    );
+    expect(find.text('Official remaining balance'), findsOneWidget);
+    expect(find.text('₱4,900.00'), findsWidgets);
   });
 }
 
