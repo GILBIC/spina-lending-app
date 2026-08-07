@@ -3,7 +3,7 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS accounting.pre_cutover_period_reset_audit (
     id BIGSERIAL PRIMARY KEY,
     original_period_id UUID NOT NULL,
-    replacement_period_id UUID,
+    replacement_period_id UUID NOT NULL,
     label TEXT NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
@@ -36,7 +36,6 @@ DECLARE
     period_row accounting.fiscal_periods%ROWTYPE;
     replacement_id UUID;
     event_snapshot JSONB;
-    audit_id BIGINT;
     journal_count_value INTEGER;
 BEGIN
     SELECT * INTO period_row
@@ -75,32 +74,6 @@ BEGIN
     FROM accounting.fiscal_period_events
     WHERE fiscal_period_id = period_row.id;
 
-    INSERT INTO accounting.pre_cutover_period_reset_audit (
-        original_period_id,
-        label,
-        start_date,
-        end_date,
-        previous_status,
-        closed_by_user_id,
-        closed_at,
-        journal_count,
-        period_events,
-        reset_reason
-    )
-    VALUES (
-        period_row.id,
-        period_row.label,
-        period_row.start_date,
-        period_row.end_date,
-        period_row.status,
-        period_row.closed_by_user_id,
-        period_row.closed_at,
-        journal_count_value,
-        event_snapshot,
-        'Stage 3 pre-cutover close-flow test reset before General Journal enablement.'
-    )
-    RETURNING id INTO audit_id;
-
     DELETE FROM accounting.fiscal_period_events
     WHERE fiscal_period_id = period_row.id;
 
@@ -114,13 +87,32 @@ BEGIN
         period_row.closed_by_user_id
     );
 
-    -- The archive row is deliberately updated once inside this migration before
-    -- the immutable guard is relied upon by normal application operations.
-    ALTER TABLE accounting.pre_cutover_period_reset_audit DISABLE TRIGGER accounting_pre_cutover_reset_audit_guard;
-    UPDATE accounting.pre_cutover_period_reset_audit
-    SET replacement_period_id = replacement_id
-    WHERE id = audit_id;
-    ALTER TABLE accounting.pre_cutover_period_reset_audit ENABLE TRIGGER accounting_pre_cutover_reset_audit_guard;
+    INSERT INTO accounting.pre_cutover_period_reset_audit (
+        original_period_id,
+        replacement_period_id,
+        label,
+        start_date,
+        end_date,
+        previous_status,
+        closed_by_user_id,
+        closed_at,
+        journal_count,
+        period_events,
+        reset_reason
+    )
+    VALUES (
+        period_row.id,
+        replacement_id,
+        period_row.label,
+        period_row.start_date,
+        period_row.end_date,
+        period_row.status,
+        period_row.closed_by_user_id,
+        period_row.closed_at,
+        journal_count_value,
+        event_snapshot,
+        'Stage 3 pre-cutover close-flow test reset before General Journal enablement.'
+    );
 END;
 $$;
 
