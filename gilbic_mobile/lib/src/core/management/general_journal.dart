@@ -218,5 +218,33 @@ String? nullableString(Object? value) {
     return null;
   }
   final text = value.toString().trim();
-  return text.isEmpty ? null : text;
+  return text.isEmpty || text.toLowerCase() == 'null' ? null : text;
+}
+
+String stringValue(Object? value) => value?.toString() ?? '';
+
+int intValue(Object? value) {
+  if (value is int) {
+    return value;
+  }
+  return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+double doubleValue(Object? value) {
+  if (value is num) {
+    return value.toDouble();
+  }
+  return double.tryParse(value?.toString().replaceAll(',', '') ?? '') ?? 0;
+}
+
+bool boolValue(Object? value) {
+  if (value is bool) {
+    return value;
+  }
+  final normalized = value?.toString().trim().toLowerCase();
+  return normalized == 'true' || normalized == '1';
+}
+
+List<dynamic> listValue(Object? value) {
+  return value is List ? value : const <dynamic>[];
 }
