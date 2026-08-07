@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/config/api_config.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
@@ -8,6 +10,22 @@ abstract interface class FinancialAccountingRepository {
   Future<FinancialAccountingOverview> loadOverview(
     UserSession session, {
     required String deviceId,
+  });
+
+  Future<AccountingFiscalPeriod> createFiscalPeriod(
+    UserSession session, {
+    required String deviceId,
+    required String label,
+    required DateTime startDate,
+    required DateTime endDate,
+  });
+
+  Future<AccountingFiscalPeriod> changeFiscalPeriodStatus(
+    UserSession session, {
+    required String deviceId,
+    required String periodId,
+    required String status,
+    bool confirmClose = false,
   });
 }
 
@@ -26,18 +44,89 @@ class SpinaFinancialAccountingRepository
     final endpoint = ApiConfig.endpoint(
       '/api/mobile/v1/management/financial-accounting',
     );
+    final payload = await _request(
+      () => _client.get(endpoint, headers: _headers(session, deviceId)),
+    );
+    return FinancialAccountingOverview.fromPayload(
+      stringMap(unwrapSpinaData(payload.data, statusCode: payload.statusCode)),
+    );
+  }
 
+  @override
+  Future<AccountingFiscalPeriod> createFiscalPeriod(
+    UserSession session, {
+    required String deviceId,
+    required String label,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final endpoint = ApiConfig.endpoint(
+      '/api/mobile/v1/management/financial-accounting/fiscal-periods',
+    );
+    final payload = await _request(
+      () => _client.post(
+        endpoint,
+        headers: _headers(session, deviceId, jsonBody: true),
+        body: jsonEncode(<String, Object>{
+          'label': label,
+          'start_date': _dateText(startDate),
+          'end_date': _dateText(endDate),
+        }),
+      ),
+    );
+    final data = stringMap(
+      unwrapSpinaData(payload.data, statusCode: payload.statusCode),
+    );
+    return AccountingFiscalPeriod.fromPayload(stringMap(data['period']));
+  }
+
+  @override
+  Future<AccountingFiscalPeriod> changeFiscalPeriodStatus(
+    UserSession session, {
+    required String deviceId,
+    required String periodId,
+    required String status,
+    bool confirmClose = false,
+  }) async {
+    final endpoint = ApiConfig.endpoint(
+      '/api/mobile/v1/management/financial-accounting/fiscal-periods/$periodId/status',
+    );
+    final payload = await _request(
+      () => _client.post(
+        endpoint,
+        headers: _headers(session, deviceId, jsonBody: true),
+        body: jsonEncode(<String, Object>{
+          'status': status,
+          'confirm_close': confirmClose,
+        }),
+      ),
+    );
+    final data = stringMap(
+      unwrapSpinaData(payload.data, statusCode: payload.statusCode),
+    );
+    return AccountingFiscalPeriod.fromPayload(stringMap(data['period']));
+  }
+
+  Map<String, String> _headers(
+    UserSession session,
+    String deviceId, {
+    bool jsonBody = false,
+  }) {
+    return <String, String>{
+      'Accept': 'application/json',
+      if (jsonBody) 'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${session.accessToken}',
+      'X-Session-Id': session.accessToken,
+      'X-Device-Id': deviceId,
+    };
+  }
+
+  Future<_AccountingResponse> _request(
+    Future<http.Response> Function() request,
+  ) async {
     late final http.Response response;
     try {
-      response = await _client.get(
-        endpoint,
-        headers: <String, String>{
-          'Accept': 'application/json',
-          'Authorization': 'Bearer ${session.accessToken}',
-          'X-Session-Id': session.accessToken,
-          'X-Device-Id': deviceId,
-        },
-      );
+      response = await request();
     } on Exception {
       throw const SpinaApiException(
         'Financial Accounting could not reach the SPINA server.',
@@ -57,9 +146,7 @@ class SpinaFinancialAccountingRepository
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return FinancialAccountingOverview.fromPayload(
-        stringMap(unwrapSpinaData(payload, statusCode: response.statusCode)),
-      );
+      return _AccountingResponse(response.statusCode, payload);
     }
 
     final detail = payload['detail'];
@@ -79,4 +166,17 @@ class SpinaFinancialAccountingRepository
       ]),
     );
   }
+}
+
+class _AccountingResponse {
+  const _AccountingResponse(this.statusCode, this.data);
+
+  final int statusCode;
+  final Map<String, dynamic> data;
+}
+
+String _dateText(DateTime value) {
+  final month = value.month.toString().padLeft(2, '0');
+  final day = value.day.toString().padLeft(2, '0');
+  return '${value.year}-$month-$day';
 }

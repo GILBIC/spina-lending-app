@@ -8,7 +8,7 @@ import 'package:gilbic_mobile/src/core/management/financial_accounting_repositor
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
 
 void main() {
-  testWidgets('Management sees accounting foundation and loan policies', (
+  testWidgets('Management sees accounting foundation, periods, and loan policies', (
     tester,
   ) async {
     final repository = _FakeAccountingRepository();
@@ -40,9 +40,22 @@ void main() {
     expect(find.text('Posting readiness'), findsOneWidget);
     expect(find.text('Ready'), findsOneWidget);
     expect(find.textContaining('23 / 23 posting'), findsOneWidget);
-    expect(find.textContaining('Not configured'), findsOneWidget);
+    expect(find.textContaining('Open'), findsWidgets);
     expect(find.textContaining('Foundation ready'), findsOneWidget);
     expect(find.text('Unavailable'), findsOneWidget);
+
+    final periods = find.byKey(const Key('financial-accounting-fiscal-periods'));
+    await tester.scrollUntilVisible(
+      periods,
+      350,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Fiscal Periods'), findsOneWidget);
+    expect(find.text('August 2026'), findsOneWidget);
+    expect(find.text('2026-08-01 – 2026-08-31'), findsOneWidget);
+    expect(find.text('Send to review'), findsOneWidget);
+    expect(find.byKey(const Key('create-accounting-period')), findsOneWidget);
 
     final chart = find.byKey(const Key('financial-accounting-chart-of-accounts'));
     await tester.scrollUntilVisible(
@@ -74,6 +87,74 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('Management can move an open period to review', (tester) async {
+    final repository = _FakeAccountingRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final reviewButton = find.byKey(const Key('period-review-period-aug-2026'));
+    await tester.scrollUntilVisible(
+      reviewButton,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(reviewButton);
+    await tester.pumpAndSettle();
+
+    expect(repository.lastStatus, 'review');
+    expect(find.text('Review'), findsWidgets);
+    expect(find.text('Close period'), findsOneWidget);
+    expect(find.text('Reopen'), findsOneWidget);
+  });
+
+  testWidgets('Closing a review period requires visible confirmation', (
+    tester,
+  ) async {
+    final repository = _FakeAccountingRepository(initialStatus: 'review');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final closeButton = find.byKey(const Key('period-close-period-aug-2026'));
+    await tester.scrollUntilVisible(
+      closeButton,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(closeButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Close accounting period?'), findsOneWidget);
+    expect(find.byKey(const Key('confirm-close-accounting-period')), findsOneWidget);
+    expect(repository.lastStatus, isNull);
+
+    await tester.tap(find.byKey(const Key('confirm-close-accounting-period')));
+    await tester.pumpAndSettle();
+
+    expect(repository.lastStatus, 'closed');
+    expect(repository.lastConfirmClose, isTrue);
+    expect(find.text('Closed'), findsWidgets);
+  });
 }
 
 const UserSession _session = UserSession(
@@ -96,7 +177,13 @@ DeviceIdentityProvider _deviceIdentityProvider() {
 }
 
 class _FakeAccountingRepository implements FinancialAccountingRepository {
+  _FakeAccountingRepository({String initialStatus = 'open'})
+      : _status = initialStatus;
+
   String? deviceId;
+  String? lastStatus;
+  bool? lastConfirmClose;
+  String _status;
 
   @override
   Future<FinancialAccountingOverview> loadOverview(
@@ -104,14 +191,15 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
     required String deviceId,
   }) async {
     this.deviceId = deviceId;
-    return const FinancialAccountingOverview(
+    return FinancialAccountingOverview(
       notice:
-          'Financial Accounting now has a protected database foundation and chart of accounts.',
+          'Financial Accounting now has protected fiscal-period controls.',
       foundationStatus: 'ready',
-      fiscalPeriodStatus: 'not_configured',
+      fiscalPeriodStatus: _status == 'open' ? 'open' : 'configured',
+      periodManagementEnabled: true,
       journalStatus: 'foundation_ready',
       trialBalanceStatus: 'unavailable',
-      summary: FinancialAccountingSummary(
+      summary: const FinancialAccountingSummary(
         activeLoanCount: 7,
         activePrincipal: 29000,
         operationalOutstanding: 28550,
@@ -126,14 +214,14 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
       foundation: AccountingFoundationSummary(
         accountCount: 23,
         postingAccountCount: 23,
-        fiscalPeriodCount: 0,
-        openPeriodCount: 0,
+        fiscalPeriodCount: 1,
+        openPeriodCount: _status == 'open' ? 1 : 0,
         journalEntryCount: 0,
         draftJournalCount: 0,
         postedJournalCount: 0,
         reversalDraftCount: 0,
       ),
-      accounts: <AccountingAccount>[
+      accounts: const <AccountingAccount>[
         AccountingAccount(
           code: '1010',
           systemKey: 'cash_office',
@@ -153,7 +241,20 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
           isActive: true,
         ),
       ],
-      policies: <LoanAccountingPolicy>[
+      fiscalPeriods: <AccountingFiscalPeriod>[
+        AccountingFiscalPeriod(
+          periodId: 'period-aug-2026',
+          label: 'August 2026',
+          startDate: DateTime(2026, 8, 1),
+          endDate: DateTime(2026, 8, 31),
+          status: _status,
+          journalCount: 0,
+          draftJournalCount: 0,
+          postedJournalCount: 0,
+          closedByName: _status == 'closed' ? 'Management' : null,
+        ),
+      ],
+      policies: const <LoanAccountingPolicy>[
         LoanAccountingPolicy(
           code: 'regular_mobile_test',
           name: 'Regular',
@@ -180,6 +281,52 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
               'Cash release = new principal minus old principal outstanding minus accrued unpaid interest.',
         ),
       ],
+    );
+  }
+
+  @override
+  Future<AccountingFiscalPeriod> createFiscalPeriod(
+    UserSession session, {
+    required String deviceId,
+    required String label,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    this.deviceId = deviceId;
+    return AccountingFiscalPeriod(
+      periodId: 'created-period',
+      label: label,
+      startDate: startDate,
+      endDate: endDate,
+      status: 'open',
+      journalCount: 0,
+      draftJournalCount: 0,
+      postedJournalCount: 0,
+    );
+  }
+
+  @override
+  Future<AccountingFiscalPeriod> changeFiscalPeriodStatus(
+    UserSession session, {
+    required String deviceId,
+    required String periodId,
+    required String status,
+    bool confirmClose = false,
+  }) async {
+    this.deviceId = deviceId;
+    lastStatus = status;
+    lastConfirmClose = confirmClose;
+    _status = status;
+    return AccountingFiscalPeriod(
+      periodId: periodId,
+      label: 'August 2026',
+      startDate: DateTime(2026, 8, 1),
+      endDate: DateTime(2026, 8, 31),
+      status: status,
+      journalCount: 0,
+      draftJournalCount: 0,
+      postedJournalCount: 0,
+      closedByName: status == 'closed' ? 'Management' : null,
     );
   }
 }

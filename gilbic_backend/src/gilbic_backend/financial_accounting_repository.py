@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime
 from decimal import Decimal
+from uuid import UUID
 
+import psycopg
 from psycopg.rows import dict_row
 
 from .database import open_connection
@@ -46,6 +49,20 @@ class AccountingAccount:
 
 
 @dataclass(frozen=True, slots=True)
+class AccountingFiscalPeriod:
+    period_id: UUID
+    label: str
+    start_date: date
+    end_date: date
+    status: str
+    journal_count: int
+    draft_journal_count: int
+    posted_journal_count: int
+    closed_by_name: str | None
+    closed_at: datetime | None
+
+
+@dataclass(frozen=True, slots=True)
 class LoanAccountingPolicy:
     code: str
     name: str
@@ -63,11 +80,28 @@ class FinancialAccountingOverview:
     summary: FinancialAccountingSummary
     foundation: AccountingFoundationSummary
     accounts: tuple[AccountingAccount, ...]
+    fiscal_periods: tuple[AccountingFiscalPeriod, ...]
     policies: tuple[LoanAccountingPolicy, ...]
 
 
+class AccountingPeriodError(RuntimeError):
+    code = "accounting_period_error"
+
+
+class AccountingPeriodConflict(AccountingPeriodError):
+    code = "accounting_period_conflict"
+
+
+class AccountingPeriodNotFound(AccountingPeriodError):
+    code = "accounting_period_not_found"
+
+
+class AccountingPeriodInvalidTransition(AccountingPeriodError):
+    code = "accounting_period_invalid_transition"
+
+
 class PostgresFinancialAccountingRepository:
-    """Read lending sources and the non-posting accounting foundation."""
+    """Read lending sources and manage protected accounting fiscal periods."""
 
     def load_overview(self) -> FinancialAccountingOverview:
         with open_connection() as connection:
@@ -211,6 +245,8 @@ class PostgresFinancialAccountingRepository:
                     for row in cursor.fetchall()
                 )
 
+                fiscal_periods = self._load_periods(cursor)
+
         return FinancialAccountingOverview(
             summary=FinancialAccountingSummary(
                 active_loan_count=int(loan_summary["active_loan_count"] or 0),
@@ -249,8 +285,154 @@ class PostgresFinancialAccountingRepository:
                 reversal_draft_count=int(foundation_row["reversal_draft_count"] or 0),
             ),
             accounts=chart_of_accounts,
+            fiscal_periods=fiscal_periods,
             policies=policies,
         )
+
+    def create_fiscal_period(
+        self,
+        *,
+        actor_user_id: UUID,
+        label: str,
+        start_date: date,
+        end_date: date,
+    ) -> AccountingFiscalPeriod:
+        try:
+            with open_connection() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        select accounting.create_fiscal_period(
+                            %s, %s, %s, %s
+                        ) as period_id
+                        """,
+                        (label, start_date, end_date, actor_user_id),
+                    )
+                    created = cursor.fetchone()
+                    return self._load_period(cursor, UUID(str(created["period_id"])))
+        except psycopg.Error as error:
+            raise self._period_error(error) from error
+
+    def set_fiscal_period_status(
+        self,
+        *,
+        actor_user_id: UUID,
+        period_id: UUID,
+        status: str,
+    ) -> AccountingFiscalPeriod:
+        try:
+            with open_connection() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        select accounting.set_fiscal_period_status(
+                            %s, %s, %s
+                        ) as status
+                        """,
+                        (period_id, status, actor_user_id),
+                    )
+                    cursor.fetchone()
+                    return self._load_period(cursor, period_id)
+        except psycopg.Error as error:
+            raise self._period_error(error) from error
+
+    @classmethod
+    def _load_periods(cls, cursor) -> tuple[AccountingFiscalPeriod, ...]:
+        cursor.execute(
+            """
+            select
+                period.id,
+                period.label,
+                period.start_date,
+                period.end_date,
+                period.status,
+                count(journal.id) as journal_count,
+                count(journal.id) filter (where journal.status = 'draft')
+                    as draft_journal_count,
+                count(journal.id) filter (where journal.status = 'posted')
+                    as posted_journal_count,
+                closed_by.full_name as closed_by_name,
+                period.closed_at
+            from accounting.fiscal_periods period
+            left join accounting.journal_entries journal
+              on journal.fiscal_period_id = period.id
+            left join core.users closed_by
+              on closed_by.id = period.closed_by_user_id
+            group by period.id, closed_by.full_name
+            order by period.start_date desc, period.end_date desc
+            """
+        )
+        return tuple(cls._period_from_row(row) for row in cursor.fetchall())
+
+    @classmethod
+    def _load_period(cls, cursor, period_id: UUID) -> AccountingFiscalPeriod:
+        cursor.execute(
+            """
+            select
+                period.id,
+                period.label,
+                period.start_date,
+                period.end_date,
+                period.status,
+                count(journal.id) as journal_count,
+                count(journal.id) filter (where journal.status = 'draft')
+                    as draft_journal_count,
+                count(journal.id) filter (where journal.status = 'posted')
+                    as posted_journal_count,
+                closed_by.full_name as closed_by_name,
+                period.closed_at
+            from accounting.fiscal_periods period
+            left join accounting.journal_entries journal
+              on journal.fiscal_period_id = period.id
+            left join core.users closed_by
+              on closed_by.id = period.closed_by_user_id
+            where period.id = %s
+            group by period.id, closed_by.full_name
+            """,
+            (period_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            raise AccountingPeriodNotFound("Accounting period was not found.")
+        return cls._period_from_row(row)
+
+    @staticmethod
+    def _period_from_row(row) -> AccountingFiscalPeriod:
+        return AccountingFiscalPeriod(
+            period_id=UUID(str(row["id"])),
+            label=str(row["label"]),
+            start_date=row["start_date"],
+            end_date=row["end_date"],
+            status=str(row["status"]),
+            journal_count=int(row["journal_count"] or 0),
+            draft_journal_count=int(row["draft_journal_count"] or 0),
+            posted_journal_count=int(row["posted_journal_count"] or 0),
+            closed_by_name=(
+                str(row["closed_by_name"]) if row["closed_by_name"] else None
+            ),
+            closed_at=row["closed_at"],
+        )
+
+    @staticmethod
+    def _period_error(error: psycopg.Error) -> AccountingPeriodError:
+        message = str(error).split("CONTEXT:", 1)[0].strip()
+        lowered = message.lower()
+        if "was not found" in lowered:
+            return AccountingPeriodNotFound(message)
+        if (
+            "cannot overlap" in lowered
+            or "already exists for this date range" in lowered
+            or "draft journal entries remain" in lowered
+        ):
+            return AccountingPeriodConflict(message)
+        if (
+            "must move to review" in lowered
+            or "can only be reopened or closed" in lowered
+            or "unsupported accounting period status" in lowered
+            or "closed accounting periods are immutable" in lowered
+        ):
+            return AccountingPeriodInvalidTransition(message)
+        return AccountingPeriodError(message or "Accounting period operation failed.")
 
     @staticmethod
     def _policy_from_row(row) -> LoanAccountingPolicy:
