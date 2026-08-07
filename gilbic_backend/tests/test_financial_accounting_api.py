@@ -237,8 +237,8 @@ def test_management_can_view_financial_accounting_foundation_and_periods() -> No
     assert data["period_management_enabled"] is True
     assert data["fiscal_periods"][0]["label"] == "August 2026"
     assert data["fiscal_periods"][0]["status"] == "open"
-    assert data["journal_status"] == "foundation_ready"
-    assert data["trial_balance_status"] == "unavailable"
+    assert data["journal_status"] == "manual_ready"
+    assert data["trial_balance_status"] == "available"
     assert data["accounts"][0]["code"] == "1010"
     assert data["accounts"][1]["normal_balance"] == "credit"
     assert data["policies"][0]["name"] == "Regular"
