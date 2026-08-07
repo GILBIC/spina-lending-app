@@ -5,9 +5,11 @@ class FinancialAccountingOverview {
     required this.summary,
     required this.foundation,
     required this.accounts,
+    required this.fiscalPeriods,
     required this.policies,
     required this.foundationStatus,
     required this.fiscalPeriodStatus,
+    required this.periodManagementEnabled,
     required this.journalStatus,
     required this.trialBalanceStatus,
     required this.notice,
@@ -16,9 +18,11 @@ class FinancialAccountingOverview {
   final FinancialAccountingSummary summary;
   final AccountingFoundationSummary foundation;
   final List<AccountingAccount> accounts;
+  final List<AccountingFiscalPeriod> fiscalPeriods;
   final List<LoanAccountingPolicy> policies;
   final String foundationStatus;
   final String fiscalPeriodStatus;
+  final bool periodManagementEnabled;
   final String journalStatus;
   final String trialBalanceStatus;
   final String notice;
@@ -26,7 +30,10 @@ class FinancialAccountingOverview {
   factory FinancialAccountingOverview.fromPayload(Map<String, dynamic> payload) {
     final rawPolicies = payload['policies'];
     final rawAccounts = payload['accounts'];
-    if (rawPolicies is! List || rawAccounts is! List) {
+    final rawFiscalPeriods = payload['fiscal_periods'];
+    if (rawPolicies is! List ||
+        rawAccounts is! List ||
+        rawFiscalPeriods is! List) {
       throw const SpinaApiException(
         'The SPINA server returned incomplete Financial Accounting data.',
         code: 'invalid_financial_accounting_payload',
@@ -42,11 +49,15 @@ class FinancialAccountingOverview {
       accounts: rawAccounts
           .map((item) => AccountingAccount.fromPayload(stringMap(item)))
           .toList(growable: false),
+      fiscalPeriods: rawFiscalPeriods
+          .map((item) => AccountingFiscalPeriod.fromPayload(stringMap(item)))
+          .toList(growable: false),
       policies: rawPolicies
           .map((item) => LoanAccountingPolicy.fromPayload(stringMap(item)))
           .toList(growable: false),
       foundationStatus: _requiredString(payload, 'foundation_status'),
       fiscalPeriodStatus: _requiredString(payload, 'fiscal_period_status'),
+      periodManagementEnabled: payload['period_management_enabled'] == true,
       journalStatus: _requiredString(payload, 'journal_status'),
       trialBalanceStatus: _requiredString(payload, 'trial_balance_status'),
       notice: _requiredString(payload, 'notice'),
@@ -165,6 +176,47 @@ class AccountingAccount {
   }
 }
 
+class AccountingFiscalPeriod {
+  const AccountingFiscalPeriod({
+    required this.periodId,
+    required this.label,
+    required this.startDate,
+    required this.endDate,
+    required this.status,
+    required this.journalCount,
+    required this.draftJournalCount,
+    required this.postedJournalCount,
+    this.closedByName,
+    this.closedAt,
+  });
+
+  final String periodId;
+  final String label;
+  final DateTime startDate;
+  final DateTime endDate;
+  final String status;
+  final int journalCount;
+  final int draftJournalCount;
+  final int postedJournalCount;
+  final String? closedByName;
+  final DateTime? closedAt;
+
+  factory AccountingFiscalPeriod.fromPayload(Map<String, dynamic> payload) {
+    return AccountingFiscalPeriod(
+      periodId: _requiredString(payload, 'period_id'),
+      label: _requiredString(payload, 'label'),
+      startDate: _requiredDate(payload, 'start_date'),
+      endDate: _requiredDate(payload, 'end_date'),
+      status: _requiredString(payload, 'status'),
+      journalCount: _requiredInt(payload, 'journal_count'),
+      draftJournalCount: _requiredInt(payload, 'draft_journal_count'),
+      postedJournalCount: _requiredInt(payload, 'posted_journal_count'),
+      closedByName: _optionalString(payload['closed_by_name']),
+      closedAt: _optionalDateTime(payload['closed_at']),
+    );
+  }
+}
+
 class LoanAccountingPolicy {
   const LoanAccountingPolicy({
     required this.code,
@@ -244,4 +296,28 @@ int _requiredInt(Map<String, dynamic> payload, String key) {
     );
   }
   return parsed;
+}
+
+DateTime _requiredDate(Map<String, dynamic> payload, String key) {
+  final parsed = DateTime.tryParse(payload[key]?.toString() ?? '');
+  if (parsed == null) {
+    throw SpinaApiException(
+      'The SPINA server omitted $key.',
+      code: 'invalid_financial_accounting_payload',
+    );
+  }
+  return DateTime(parsed.year, parsed.month, parsed.day);
+}
+
+String? _optionalString(Object? value) {
+  final normalized = value?.toString().trim() ?? '';
+  return normalized.isEmpty ? null : normalized;
+}
+
+DateTime? _optionalDateTime(Object? value) {
+  final normalized = value?.toString().trim() ?? '';
+  if (normalized.isEmpty) {
+    return null;
+  }
+  return DateTime.tryParse(normalized);
 }
