@@ -8,6 +8,8 @@ from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .financial_accounting_repository import (
+    AccountingAccount,
+    AccountingFoundationSummary,
     FinancialAccountingOverview,
     FinancialAccountingSummary,
     LoanAccountingPolicy,
@@ -41,6 +43,33 @@ def _summary_payload(summary: FinancialAccountingSummary) -> dict[str, object]:
     }
 
 
+def _foundation_payload(
+    foundation: AccountingFoundationSummary,
+) -> dict[str, object]:
+    return {
+        "account_count": foundation.account_count,
+        "posting_account_count": foundation.posting_account_count,
+        "fiscal_period_count": foundation.fiscal_period_count,
+        "open_period_count": foundation.open_period_count,
+        "journal_entry_count": foundation.journal_entry_count,
+        "draft_journal_count": foundation.draft_journal_count,
+        "posted_journal_count": foundation.posted_journal_count,
+        "reversal_draft_count": foundation.reversal_draft_count,
+    }
+
+
+def _account_payload(account: AccountingAccount) -> dict[str, object]:
+    return {
+        "code": account.code,
+        "system_key": account.system_key,
+        "name": account.name,
+        "account_type": account.account_type,
+        "normal_balance": account.normal_balance,
+        "is_posting": account.is_posting,
+        "is_active": account.is_active,
+    }
+
+
 def _policy_payload(policy: LoanAccountingPolicy) -> dict[str, object]:
     return {
         "code": policy.code,
@@ -56,15 +85,30 @@ def _policy_payload(policy: LoanAccountingPolicy) -> dict[str, object]:
 
 
 def _overview_payload(overview: FinancialAccountingOverview) -> dict[str, object]:
+    foundation = overview.foundation
+    fiscal_period_status = (
+        "open"
+        if foundation.open_period_count > 0
+        else "configured"
+        if foundation.fiscal_period_count > 0
+        else "not_configured"
+    )
     return {
         "summary": _summary_payload(overview.summary),
+        "foundation": _foundation_payload(foundation),
+        "accounts": [_account_payload(item) for item in overview.accounts],
         "policies": [_policy_payload(item) for item in overview.policies],
-        "journal_status": "not_started",
+        "foundation_status": (
+            "ready" if foundation.account_count > 0 else "not_started"
+        ),
+        "fiscal_period_status": fiscal_period_status,
+        "journal_status": "foundation_ready",
         "trial_balance_status": "unavailable",
         "notice": (
-            "Financial Accounting is currently a read-only control center. It reads "
-            "existing lending and cash-custody sources but does not create, post, "
-            "edit, reverse, or close accounting journal entries."
+            "Financial Accounting now has a protected database foundation and chart "
+            "of accounts. This mobile view remains read-only: no automatic loan "
+            "posting, opening-balance conversion, period closing, or financial "
+            "statement posting is enabled yet."
         ),
     }
 

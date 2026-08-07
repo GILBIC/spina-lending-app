@@ -136,6 +136,11 @@ class _ManagementFinancialAccountingPageState
           _SummaryGrid(summary: overview.summary),
           const SizedBox(height: 16),
           _ReadinessCard(overview: overview),
+          const SizedBox(height: 16),
+          _ChartOfAccountsCard(
+            foundation: overview.foundation,
+            accounts: overview.accounts,
+          ),
           const SizedBox(height: 18),
           Row(
             children: [
@@ -237,6 +242,7 @@ class _ReadinessCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final foundation = overview.foundation;
     return Card(
       key: const Key('financial-accounting-readiness'),
       child: Padding(
@@ -256,8 +262,28 @@ class _ReadinessCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _DetailRow(
+              label: 'Foundation',
+              value: _statusLabel(overview.foundationStatus),
+            ),
+            _DetailRow(
+              label: 'Chart of accounts',
+              value:
+                  '${foundation.postingAccountCount} / ${foundation.accountCount} posting',
+            ),
+            _DetailRow(
+              label: 'Fiscal periods',
+              value:
+                  '${_statusLabel(overview.fiscalPeriodStatus)} • ${foundation.fiscalPeriodCount}',
+            ),
+            _DetailRow(
               label: 'General journal',
-              value: _statusLabel(overview.journalStatus),
+              value:
+                  '${_statusLabel(overview.journalStatus)} • ${foundation.journalEntryCount}',
+            ),
+            _DetailRow(
+              label: 'Posted / drafts',
+              value:
+                  '${foundation.postedJournalCount} / ${foundation.draftJournalCount}',
             ),
             _DetailRow(
               label: 'Trial balance',
@@ -265,11 +291,90 @@ class _ReadinessCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'No accounting journal is being posted yet. These figures are source-control totals only, so they must not be presented as finalized financial statements.',
+              'The database now enforces balanced posting, immutable posted entries, source-event uniqueness, reversal drafts, and closed-period protection. No fiscal period or journal is created automatically in this stage.',
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ChartOfAccountsCard extends StatelessWidget {
+  const _ChartOfAccountsCard({
+    required this.foundation,
+    required this.accounts,
+  });
+
+  final AccountingFoundationSummary foundation;
+  final List<AccountingAccount> accounts;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      key: const Key('financial-accounting-chart-of-accounts'),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        leading: const Icon(Icons.account_tree_outlined),
+        title: const Text('Chart of Accounts'),
+        subtitle: Text(
+          '${foundation.accountCount} accounts • ${foundation.postingAccountCount} posting',
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Seeded foundation accounts only. Balances remain zero until an approved cutover/opening-balance process is completed.',
+            ),
+          ),
+          const SizedBox(height: 10),
+          for (final account in accounts) ...[
+            _AccountRow(account: account),
+            const Divider(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountRow extends StatelessWidget {
+  const _AccountRow({required this.account});
+
+  final AccountingAccount account;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 46,
+          child: Text(
+            account.code,
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(account.name),
+              Text(
+                '${_titleCase(account.accountType)} • ${_titleCase(account.normalBalance)} normal',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Icon(
+          account.isActive ? Icons.check_circle_outline : Icons.pause_circle_outline,
+          size: 18,
+        ),
+      ],
     );
   }
 }
@@ -455,8 +560,20 @@ String _mode(String value) {
 
 String _statusLabel(String value) {
   return switch (value) {
+    'ready' => 'Ready',
+    'foundation_ready' => 'Foundation ready',
+    'not_configured' => 'Not configured',
+    'configured' => 'Configured',
+    'open' => 'Open',
     'not_started' => 'Not started',
     'unavailable' => 'Unavailable',
-    _ => value.replaceAll('_', ' '),
+    _ => _titleCase(value.replaceAll('_', ' ')),
   };
+}
+
+String _titleCase(String value) {
+  if (value.isEmpty) {
+    return value;
+  }
+  return value[0].toUpperCase() + value.substring(1);
 }

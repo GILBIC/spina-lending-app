@@ -12,6 +12,8 @@ from gilbic_backend.financial_accounting_api import (
     financial_accounting_repository_dependency,
 )
 from gilbic_backend.financial_accounting_repository import (
+    AccountingAccount,
+    AccountingFoundationSummary,
     FinancialAccountingOverview,
     FinancialAccountingSummary,
     LoanAccountingPolicy,
@@ -57,7 +59,7 @@ class FakeAccounts:
             full_name="Management" if is_management else "Client",
             status="active",
             roles=(self.role,),
-            permissions=(),
+            permissions=("accounting.view",) if is_management else (),
             device_registered=True,
         )
 
@@ -76,6 +78,36 @@ class FakeAccounting:
                 valid_collection_count=9,
                 correction_count=1,
                 void_count=1,
+            ),
+            foundation=AccountingFoundationSummary(
+                account_count=23,
+                posting_account_count=23,
+                fiscal_period_count=0,
+                open_period_count=0,
+                journal_entry_count=0,
+                draft_journal_count=0,
+                posted_journal_count=0,
+                reversal_draft_count=0,
+            ),
+            accounts=(
+                AccountingAccount(
+                    code="1010",
+                    system_key="cash_office",
+                    name="Cash - Office",
+                    account_type="asset",
+                    normal_balance="debit",
+                    is_posting=True,
+                    is_active=True,
+                ),
+                AccountingAccount(
+                    code="4000",
+                    system_key="interest_income_regular",
+                    name="Interest Income - Regular",
+                    account_type="income",
+                    normal_balance="credit",
+                    is_posting=True,
+                    is_active=True,
+                ),
             ),
             policies=(
                 LoanAccountingPolicy(
@@ -123,7 +155,7 @@ def client_with_fakes(*, role: str = "management") -> TestClient:
     return TestClient(app)
 
 
-def test_management_can_view_financial_accounting_control_center() -> None:
+def test_management_can_view_financial_accounting_foundation() -> None:
     client = client_with_fakes()
 
     response = client.get(
@@ -136,8 +168,14 @@ def test_management_can_view_financial_accounting_control_center() -> None:
     assert data["summary"]["active_loan_count"] == 7
     assert data["summary"]["operational_outstanding"] == "28550.00"
     assert data["summary"]["unremitted_cash"] == "200.00"
-    assert data["journal_status"] == "not_started"
+    assert data["foundation_status"] == "ready"
+    assert data["foundation"]["account_count"] == 23
+    assert data["foundation"]["posted_journal_count"] == 0
+    assert data["fiscal_period_status"] == "not_configured"
+    assert data["journal_status"] == "foundation_ready"
     assert data["trial_balance_status"] == "unavailable"
+    assert data["accounts"][0]["code"] == "1010"
+    assert data["accounts"][1]["normal_balance"] == "credit"
     assert data["policies"][0]["name"] == "Regular"
     assert data["policies"][1]["daily_interest_per_1000"] == "7.00"
     assert data["policies"][1]["mobile_collections_enabled"] is False
@@ -155,7 +193,7 @@ def test_non_management_role_is_denied() -> None:
     assert response.json()["detail"]["code"] == "management_role_required"
 
 
-def test_financial_accounting_control_center_has_no_write_endpoint() -> None:
+def test_financial_accounting_has_no_mobile_write_endpoint() -> None:
     client = client_with_fakes()
 
     response = client.post(
