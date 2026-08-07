@@ -15,6 +15,7 @@ import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_loan_portfolio_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
@@ -38,188 +39,174 @@ class RoleDashboard extends StatelessWidget {
   final DeviceIdentityProvider deviceIdentityProvider;
   final CollectionDeviceSequence collectionDeviceSequence;
 
+  void _push(BuildContext context, Widget page) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (context) => page),
+    );
+  }
+
   void _openModule(BuildContext context, _DashboardModule module) {
-    final collectorRouteAction =
-        module.action == 'daily-route' || module.action == 'record-payment';
-    if (session.role == AppRole.collector && collectorRouteAction) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => CollectorRoutePage(
-            session: session,
-            loader: collectorRouteLoader,
-            paymentRepository: paymentSubmissionRepository,
-            deviceIdentityProvider: deviceIdentityProvider,
-            deviceSequence: collectionDeviceSequence,
-          ),
-        ),
-      );
-      return;
-    }
-
-    if ((session.role == AppRole.collector &&
-            module.action == 'other-area-payment') ||
-        (session.role == AppRole.management &&
-            module.action == 'management-direct-payment')) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => OtherAreaCollectionPage(
-            session: session,
-            paymentRepository: paymentSubmissionRepository,
-            deviceIdentityProvider: deviceIdentityProvider,
-            deviceSequence: collectionDeviceSequence,
-          ),
-        ),
-      );
-      return;
-    }
-
-    if (session.role == AppRole.collector && module.action == 'remittance') {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => CollectorRemittancePage(
-            session: session,
-            deviceIdentityProvider: deviceIdentityProvider,
-          ),
-        ),
-      );
-      return;
-    }
-
+    final action = module.action;
     if (session.role == AppRole.collector &&
-        module.action == 'assigned-collector-remittance') {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => CrossCollectorRemittancePage(
-            session: session,
-            deviceIdentityProvider: deviceIdentityProvider,
-          ),
+        (action == 'daily-route' || action == 'record-payment')) {
+      _push(
+        context,
+        CollectorRoutePage(
+          session: session,
+          loader: collectorRouteLoader,
+          paymentRepository: paymentSubmissionRepository,
+          deviceIdentityProvider: deviceIdentityProvider,
+          deviceSequence: collectionDeviceSequence,
         ),
       );
       return;
     }
-
-    if (session.role == AppRole.client && module.action == 'my-loans') {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => ClientLoansPage(
-            session: session,
-            deviceIdentityProvider: deviceIdentityProvider,
-          ),
+    if ((session.role == AppRole.collector && action == 'other-area-payment') ||
+        (session.role == AppRole.management &&
+            action == 'management-direct-payment')) {
+      _push(
+        context,
+        OtherAreaCollectionPage(
+          session: session,
+          paymentRepository: paymentSubmissionRepository,
+          deviceIdentityProvider: deviceIdentityProvider,
+          deviceSequence: collectionDeviceSequence,
         ),
       );
       return;
     }
-
-    if (session.role == AppRole.client && module.action == 'payments') {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => ClientPaymentsPage(
-            session: session,
-            deviceIdentityProvider: deviceIdentityProvider,
-          ),
+    if (session.role == AppRole.collector && action == 'remittance') {
+      _push(
+        context,
+        CollectorRemittancePage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
         ),
       );
       return;
     }
-
-    if (session.role == AppRole.client && module.action == 'renewal') {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => ClientRenewalPage(
-            session: session,
-            deviceIdentityProvider: deviceIdentityProvider,
-          ),
+    if (session.role == AppRole.collector &&
+        action == 'assigned-collector-remittance') {
+      _push(
+        context,
+        CrossCollectorRemittancePage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
         ),
       );
       return;
     }
-
-    if (session.role == AppRole.client && module.action == 'support') {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => ClientSupportPage(
-            session: session,
-            deviceIdentityProvider: deviceIdentityProvider,
-          ),
+    if (session.role == AppRole.client && action == 'my-loans') {
+      _push(
+        context,
+        ClientLoansPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
         ),
       );
       return;
     }
-
-    if (module.action == 'payment-updates') {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => ActivityNotificationsPage(
-            session: session,
-            deviceIdentityProvider: deviceIdentityProvider,
-          ),
+    if (session.role == AppRole.client && action == 'payments') {
+      _push(
+        context,
+        ClientPaymentsPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
         ),
       );
       return;
     }
-
-    if (module.action == 'remittance-notifications' &&
+    if (session.role == AppRole.client && action == 'renewal') {
+      _push(
+        context,
+        ClientRenewalPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      );
+      return;
+    }
+    if (session.role == AppRole.client && action == 'support') {
+      _push(
+        context,
+        ClientSupportPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      );
+      return;
+    }
+    if (action == 'payment-updates') {
+      _push(
+        context,
+        ActivityNotificationsPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      );
+      return;
+    }
+    if (action == 'remittance-notifications' &&
         (session.role == AppRole.collector ||
             session.role == AppRole.employee ||
             session.role == AppRole.management)) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => RemittanceNotificationsPage(
-            session: session,
-            deviceIdentityProvider: deviceIdentityProvider,
-          ),
+      _push(
+        context,
+        RemittanceNotificationsPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
         ),
       );
       return;
     }
-
     if (session.role == AppRole.management &&
-        module.action == 'client-registration-approvals') {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => ClientRegistrationApprovalsPage(
-            session: session,
-            deviceIdentityProvider: deviceIdentityProvider,
-          ),
+        action == 'client-registration-approvals') {
+      _push(
+        context,
+        ClientRegistrationApprovalsPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
         ),
       );
       return;
     }
-
     if (session.role == AppRole.management &&
-        module.action == 'management-void-payment') {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => ManagementCollectionVoidPage(
-            session: session,
-            deviceIdentityProvider: deviceIdentityProvider,
-          ),
+        action == 'management-void-payment') {
+      _push(
+        context,
+        ManagementCollectionVoidPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
         ),
       );
       return;
     }
-
-    if (session.role == AppRole.management &&
-        module.action == 'management-renewals') {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => ManagementRenewalRequestsPage(
-            session: session,
-            deviceIdentityProvider: deviceIdentityProvider,
-          ),
+    if (session.role == AppRole.management && action == 'management-loans') {
+      _push(
+        context,
+        ManagementLoanPortfolioPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
         ),
       );
       return;
     }
-
-    if (session.role == AppRole.management &&
-        module.action == 'management-support') {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => ManagementSupportRequestsPage(
-            session: session,
-            deviceIdentityProvider: deviceIdentityProvider,
-          ),
+    if (session.role == AppRole.management && action == 'management-renewals') {
+      _push(
+        context,
+        ManagementRenewalRequestsPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      );
+      return;
+    }
+    if (session.role == AppRole.management && action == 'management-support') {
+      _push(
+        context,
+        ManagementSupportRequestsPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
         ),
       );
       return;
@@ -325,44 +312,29 @@ class _DashboardModule {
 List<_DashboardModule> _modulesFor(AppRole role) {
   return switch (role) {
     AppRole.client => const [
-        _DashboardModule(
-          'My Loans',
-          'Balances, schedules, and loan history',
-          Icons.account_balance_wallet,
-          action: 'my-loans',
-        ),
-        _DashboardModule(
-          'Payments',
-          'Timeline, receipts, and payment proofs',
-          Icons.receipt_long,
-          action: 'payments',
-        ),
+        _DashboardModule('My Loans', 'Balances, schedules, and loan history',
+            Icons.account_balance_wallet,
+            action: 'my-loans'),
+        _DashboardModule('Payments', 'Timeline, receipts, and payment proofs',
+            Icons.receipt_long,
+            action: 'payments'),
         _DashboardModule(
           'Payment Updates',
           'See who posted, remitted, and accepted your payment',
           Icons.notifications_active,
           action: 'payment-updates',
         ),
-        _DashboardModule(
-          'Renewal',
-          'Submit and monitor renewal requests',
-          Icons.autorenew,
-          action: 'renewal',
-        ),
-        _DashboardModule(
-          'Support',
-          'Notices, corrections, and assistance',
-          Icons.support_agent,
-          action: 'support',
-        ),
+        _DashboardModule('Renewal', 'Submit and monitor renewal requests',
+            Icons.autorenew,
+            action: 'renewal'),
+        _DashboardModule('Support', 'Notices, corrections, and assistance',
+            Icons.support_agent,
+            action: 'support'),
       ],
     AppRole.collector => const [
-        _DashboardModule(
-          'Daily Route',
-          'Compact online collection ledger',
-          Icons.route,
-          action: 'daily-route',
-        ),
+        _DashboardModule('Daily Route', 'Compact online collection ledger',
+            Icons.route,
+            action: 'daily-route'),
         _DashboardModule(
           'Record Payment',
           'Open the route and record assigned collections',
@@ -401,21 +373,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
         ),
       ],
     AppRole.employee => const [
-        _DashboardModule(
-          'Attendance',
-          'Time records and attendance history',
-          Icons.schedule,
-        ),
-        _DashboardModule(
-          'Payroll',
-          'Payslips and payroll summaries',
-          Icons.price_check,
-        ),
-        _DashboardModule(
-          'Tasks',
-          'Assigned work and announcements',
-          Icons.task_alt,
-        ),
+        _DashboardModule('Attendance', 'Time records and attendance history',
+            Icons.schedule),
+        _DashboardModule('Payroll', 'Payslips and payroll summaries',
+            Icons.price_check),
+        _DashboardModule('Tasks', 'Assigned work and announcements',
+            Icons.task_alt),
         _DashboardModule(
           'Notifications',
           'Accept assigned remittances after receiving the cash',
@@ -426,8 +389,9 @@ List<_DashboardModule> _modulesFor(AppRole role) {
     AppRole.management => const [
         _DashboardModule(
           'Loan Management',
-          'Products, approvals, releases, and renewals',
+          'Portfolio, balances, due dates, and renewal processing status',
           Icons.account_balance,
+          action: 'management-loans',
         ),
         _DashboardModule(
           'Renewal Requests',
@@ -441,11 +405,8 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           Icons.support_agent,
           action: 'management-support',
         ),
-        _DashboardModule(
-          'Loan Operations',
-          'Collections, corrections, and portfolio monitoring',
-          Icons.insights,
-        ),
+        _DashboardModule('Loan Operations',
+            'Collections, corrections, and portfolio monitoring', Icons.insights),
         _DashboardModule(
           'Direct Payment Entry',
           'Record a client payment made directly to Management',
@@ -470,26 +431,14 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           Icons.how_to_reg,
           action: 'client-registration-approvals',
         ),
-        _DashboardModule(
-          'Financial Accounting',
-          'Ledgers, journals, and financial reports',
-          Icons.calculate,
-        ),
-        _DashboardModule(
-          'Billing & Taxation',
-          'Billing records and tax schedules',
-          Icons.request_quote,
-        ),
-        _DashboardModule(
-          'Risk & Compliance',
-          'KYC, alerts, incidents, and audit reviews',
-          Icons.verified_user,
-        ),
-        _DashboardModule(
-          'Administration',
-          'Users, roles, devices, and settings',
-          Icons.admin_panel_settings,
-        ),
+        _DashboardModule('Financial Accounting',
+            'Ledgers, journals, and financial reports', Icons.calculate),
+        _DashboardModule('Billing & Taxation',
+            'Billing records and tax schedules', Icons.request_quote),
+        _DashboardModule('Risk & Compliance',
+            'KYC, alerts, incidents, and audit reviews', Icons.verified_user),
+        _DashboardModule('Administration',
+            'Users, roles, devices, and settings', Icons.admin_panel_settings),
       ],
   };
 }
