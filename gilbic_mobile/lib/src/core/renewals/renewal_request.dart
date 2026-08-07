@@ -60,6 +60,7 @@ class RenewalLoanOption {
     required this.eligible,
     required this.eligibilityMessage,
     this.pendingRequestId,
+    this.blockingRequestStatus,
   });
 
   final String loanId;
@@ -77,8 +78,22 @@ class RenewalLoanOption {
   final bool eligible;
   final String eligibilityMessage;
   final String? pendingRequestId;
+  final String? blockingRequestStatus;
 
   bool get canRequest => eligible && pendingRequestId == null;
+
+  bool get isAwaitingOfficeProcessing =>
+      blockingRequestStatus?.toLowerCase() == 'approved';
+
+  String get requestButtonLabel {
+    if (isAwaitingOfficeProcessing) {
+      return 'Office processing';
+    }
+    if (pendingRequestId != null) {
+      return 'Request pending';
+    }
+    return eligible ? 'Request renewal' : 'Contact SPINA office';
+  }
 
   factory RenewalLoanOption.fromPayload(Map<String, dynamic> payload) {
     return RenewalLoanOption(
@@ -97,6 +112,8 @@ class RenewalLoanOption {
       eligible: payload['eligible'] == true,
       eligibilityMessage: _requiredString(payload, 'eligibility_message'),
       pendingRequestId: _optionalString(payload['pending_request_id']),
+      blockingRequestStatus:
+          _optionalString(payload['blocking_request_status']),
     );
   }
 }
