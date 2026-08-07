@@ -170,10 +170,12 @@ class PostgresFinancialAccountingRepository:
                 "the original principal until principal reaches zero."
             )
             accounting_rule = (
-                "Track principal receivable and accrued interest separately. "
-                "Recognize earned contractual interest over time, collect accrued "
-                "interest without recognizing it twice, and assess impairment/ECL "
-                "separately when collectibility deteriorates."
+                "Track principal and contractual accrued interest separately in the "
+                "operational subledger. Before official journal posting is enabled, "
+                "derive and validate the PFRS effective-interest schedule from the "
+                "actual contractual cash flows. Collection of previously recognized "
+                "interest must never recognize the same income twice; impairment/ECL "
+                "is assessed separately when collectibility deteriorates."
             )
             renewal_rule = (
                 "Cash release = new principal minus old principal outstanding minus "
