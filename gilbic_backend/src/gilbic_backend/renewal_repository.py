@@ -51,6 +51,7 @@ class RenewalLoanOption:
     eligible: bool
     eligibility_message: str
     pending_request_id: UUID | None
+    blocking_request_status: str | None = None
 
     @property
     def paid_amount(self) -> Decimal:
@@ -115,21 +116,24 @@ class PostgresRenewalRepository:
                         loan.date_released,
                         loan.due_date,
                         loan.status,
-                        pending.id as pending_request_id
+                        blocking.id as pending_request_id,
+                        blocking.status as blocking_request_status
                     from lending.loans loan
                     join lending.loan_types loan_type
                       on loan_type.id = loan.loan_type_id
                     left join lending.loan_collection_state state
                       on state.loan_id = loan.id
                     left join lateral (
-                        select request.id
+                        select request.id, request.status
                         from lending.client_renewal_requests request
                         where request.client_id = loan.client_id
                           and request.loan_id = loan.id
-                          and request.status = 'pending'
-                        order by request.submitted_at desc
+                          and request.status in ('pending', 'approved')
+                        order by
+                            case when request.status = 'approved' then 0 else 1 end,
+                            request.submitted_at desc
                         limit 1
-                    ) pending on true
+                    ) blocking on true
                     where loan.client_id = %s
                       and loan.status in ('active', 'paid')
                     order by
@@ -190,6 +194,30 @@ class PostgresRenewalRepository:
                         "7x7 renewal requests are handled by the SPINA office."
                     )
 
+                cursor.execute(
+                    """
+                    select status
+                    from lending.client_renewal_requests
+                    where client_id = %s
+                      and loan_id = %s
+                      and status in ('pending', 'approved')
+                    order by
+                        case when status = 'approved' then 0 else 1 end,
+                        submitted_at desc
+                    limit 1
+                    """,
+                    (client["id"], loan_id),
+                )
+                blocking_request = cursor.fetchone()
+                if blocking_request:
+                    if str(blocking_request["status"]).lower() == "approved":
+                        raise RenewalConflict(
+                            "The approved renewal is still awaiting SPINA office processing."
+                        )
+                    raise RenewalConflict(
+                        "A renewal request for this loan is already pending."
+                    )
+
                 try:
                     cursor.execute(
                         """
@@ -213,7 +241,7 @@ class PostgresRenewalRepository:
                     )
                 except UniqueViolation as exc:
                     raise RenewalConflict(
-                        "A renewal request for this loan is already pending."
+                        "A renewal request is already awaiting review or office processing."
                     ) from exc
                 request_id = cursor.fetchone()["id"]
                 cursor.execute(
@@ -386,6 +414,11 @@ class PostgresRenewalRepository:
     def _loan_from_row(row) -> RenewalLoanOption:
         calculation_mode = str(row["calculation_mode"])
         status = str(row["status"])
+        blocking_status = (
+            str(row["blocking_request_status"]).lower()
+            if row["blocking_request_status"]
+            else None
+        )
         eligible = (
             calculation_mode.lower() != "seven_by_seven"
             and status.lower() in {"active", "paid"}
@@ -394,6 +427,8 @@ class PostgresRenewalRepository:
             message = "7x7 renewals are handled by the SPINA office."
         elif not eligible:
             message = "This loan is not currently eligible for renewal."
+        elif blocking_status == "approved":
+            message = "Your approved renewal is awaiting SPINA office processing."
         elif row["pending_request_id"]:
             message = "A renewal request is already pending."
         else:
@@ -412,6 +447,7 @@ class PostgresRenewalRepository:
             eligible=eligible,
             eligibility_message=message,
             pending_request_id=row["pending_request_id"],
+            blocking_request_status=blocking_status,
         )
 
     def _list_requests(
