@@ -28,6 +28,7 @@ class _ManagementFinancialAccountingPageState
   FinancialAccountingOverview? _overview;
   String? _errorMessage;
   bool _loading = true;
+  bool _periodActionInProgress = false;
 
   @override
   void initState() {
@@ -63,6 +64,112 @@ class _ManagementFinancialAccountingPageState
     } finally {
       if (mounted) {
         setState(() => _loading = false);
+      }
+    }
+  }
+
+  Future<void> _createFiscalPeriod() async {
+    final draft = await showDialog<_FiscalPeriodDraft>(
+      context: context,
+      builder: (context) => const _CreateFiscalPeriodDialog(),
+    );
+    if (draft == null || !mounted) {
+      return;
+    }
+    await _runPeriodAction(() async {
+      final identity = await widget.deviceIdentityProvider.load();
+      await _repository.createFiscalPeriod(
+        widget.session,
+        deviceId: identity.installationId,
+        label: draft.label,
+        startDate: draft.startDate,
+        endDate: draft.endDate,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${draft.label} accounting period created.')),
+        );
+      }
+    });
+  }
+
+  Future<void> _changeFiscalPeriodStatus(
+    AccountingFiscalPeriod period,
+    String targetStatus,
+  ) async {
+    var confirmClose = false;
+    if (targetStatus == 'closed') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Close accounting period?'),
+          content: Text(
+            '${period.label} will become permanently protected from ordinary changes. '
+            'A closed period cannot be reopened. General Journal posting is still disabled in this stage.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              key: const Key('confirm-close-accounting-period'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Close period'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) {
+        return;
+      }
+      confirmClose = true;
+    }
+
+    await _runPeriodAction(() async {
+      final identity = await widget.deviceIdentityProvider.load();
+      await _repository.changeFiscalPeriodStatus(
+        widget.session,
+        deviceId: identity.installationId,
+        periodId: period.periodId,
+        status: targetStatus,
+        confirmClose: confirmClose,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${period.label} moved to ${_statusLabel(targetStatus).toLowerCase()}.',
+            ),
+          ),
+        );
+      }
+    });
+  }
+
+  Future<void> _runPeriodAction(Future<void> Function() action) async {
+    if (_periodActionInProgress) {
+      return;
+    }
+    setState(() => _periodActionInProgress = true);
+    try {
+      await action();
+      await _load();
+    } on SpinaApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Accounting period action failed.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _periodActionInProgress = false);
       }
     }
   }
@@ -136,6 +243,14 @@ class _ManagementFinancialAccountingPageState
           _SummaryGrid(summary: overview.summary),
           const SizedBox(height: 16),
           _ReadinessCard(overview: overview),
+          const SizedBox(height: 16),
+          _FiscalPeriodsCard(
+            periods: overview.fiscalPeriods,
+            canManage: overview.periodManagementEnabled,
+            busy: _periodActionInProgress,
+            onCreate: _createFiscalPeriod,
+            onStatusChange: _changeFiscalPeriodStatus,
+          ),
           const SizedBox(height: 16),
           _ChartOfAccountsCard(
             foundation: overview.foundation,
@@ -291,13 +406,306 @@ class _ReadinessCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'The database now enforces balanced posting, immutable posted entries, source-event uniqueness, reversal drafts, and closed-period protection. No fiscal period or journal is created automatically in this stage.',
+              'Fiscal periods are now protected by controlled status transitions and non-overlap rules. General Journal posting, opening balances, and automatic lending entries remain disabled.',
             ),
           ],
         ),
       ),
     );
   }
+}
+
+class _FiscalPeriodsCard extends StatelessWidget {
+  const _FiscalPeriodsCard({
+    required this.periods,
+    required this.canManage,
+    required this.busy,
+    required this.onCreate,
+    required this.onStatusChange,
+  });
+
+  final List<AccountingFiscalPeriod> periods;
+  final bool canManage;
+  final bool busy;
+  final VoidCallback onCreate;
+  final Future<void> Function(AccountingFiscalPeriod period, String targetStatus)
+      onStatusChange;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      key: const Key('financial-accounting-fiscal-periods'),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        leading: const Icon(Icons.date_range_outlined),
+        title: const Text('Fiscal Periods'),
+        subtitle: Text(
+          periods.isEmpty ? 'No periods configured' : '${periods.length} configured',
+        ),
+        trailing: canManage
+            ? IconButton(
+                key: const Key('create-accounting-period'),
+                tooltip: 'Create accounting period',
+                onPressed: busy ? null : onCreate,
+                icon: const Icon(Icons.add_circle_outline),
+              )
+            : null,
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Periods must not overlap. Open periods move to Review before closing. Closed periods are permanently protected from ordinary changes.',
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (periods.isEmpty)
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'No fiscal period has been created. No journal posting is enabled yet.',
+              ),
+            )
+          else
+            for (final period in periods) ...[
+              _FiscalPeriodRow(
+                period: period,
+                canManage: canManage,
+                busy: busy,
+                onStatusChange: onStatusChange,
+              ),
+              const Divider(height: 18),
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FiscalPeriodRow extends StatelessWidget {
+  const _FiscalPeriodRow({
+    required this.period,
+    required this.canManage,
+    required this.busy,
+    required this.onStatusChange,
+  });
+
+  final AccountingFiscalPeriod period;
+  final bool canManage;
+  final bool busy;
+  final Future<void> Function(AccountingFiscalPeriod period, String targetStatus)
+      onStatusChange;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: Key('accounting-period-${period.periodId}'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    period.label,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  Text('${_date(period.startDate)} – ${_date(period.endDate)}'),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Chip(label: Text(_statusLabel(period.status))),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${period.journalCount} journals • ${period.postedJournalCount} posted • ${period.draftJournalCount} drafts',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        if (period.status == 'closed') ...[
+          const SizedBox(height: 4),
+          Text(
+            'Closed${period.closedByName == null ? '' : ' by ${period.closedByName}'}${period.closedAt == null ? '' : ' • ${_dateTime(period.closedAt!)}'}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+        if (canManage && period.status != 'closed') ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              if (period.status == 'open')
+                OutlinedButton.icon(
+                  key: Key('period-review-${period.periodId}'),
+                  onPressed: busy
+                      ? null
+                      : () => onStatusChange(period, 'review'),
+                  icon: const Icon(Icons.rate_review_outlined),
+                  label: const Text('Send to review'),
+                ),
+              if (period.status == 'review') ...[
+                OutlinedButton.icon(
+                  key: Key('period-reopen-${period.periodId}'),
+                  onPressed: busy
+                      ? null
+                      : () => onStatusChange(period, 'open'),
+                  icon: const Icon(Icons.lock_open_outlined),
+                  label: const Text('Reopen'),
+                ),
+                FilledButton.icon(
+                  key: Key('period-close-${period.periodId}'),
+                  onPressed: busy
+                      ? null
+                      : () => onStatusChange(period, 'closed'),
+                  icon: const Icon(Icons.lock_outline),
+                  label: const Text('Close period'),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _CreateFiscalPeriodDialog extends StatefulWidget {
+  const _CreateFiscalPeriodDialog();
+
+  @override
+  State<_CreateFiscalPeriodDialog> createState() =>
+      _CreateFiscalPeriodDialogState();
+}
+
+class _CreateFiscalPeriodDialogState extends State<_CreateFiscalPeriodDialog> {
+  late final TextEditingController _labelController;
+  late DateTime _startDate;
+  late DateTime _endDate;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _startDate = DateTime(now.year, now.month, 1);
+    _endDate = DateTime(now.year, now.month + 1, 0);
+    _labelController = TextEditingController(text: _monthLabel(_startDate));
+  }
+
+  @override
+  void dispose() {
+    _labelController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickStartDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _startDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (selected != null && mounted) {
+      setState(() {
+        _startDate = selected;
+        if (_endDate.isBefore(_startDate)) {
+          _endDate = _startDate;
+        }
+      });
+    }
+  }
+
+  Future<void> _pickEndDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _endDate.isBefore(_startDate) ? _startDate : _endDate,
+      firstDate: _startDate,
+      lastDate: DateTime(2100),
+    );
+    if (selected != null && mounted) {
+      setState(() => _endDate = selected);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Create accounting period'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              key: const Key('accounting-period-label'),
+              controller: _labelController,
+              maxLength: 80,
+              decoration: const InputDecoration(labelText: 'Period label'),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Start date'),
+              subtitle: Text(_date(_startDate)),
+              trailing: const Icon(Icons.calendar_today_outlined),
+              onTap: _pickStartDate,
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('End date'),
+              subtitle: Text(_date(_endDate)),
+              trailing: const Icon(Icons.event_outlined),
+              onTap: _pickEndDate,
+            ),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'The new period starts Open. It cannot overlap another accounting period.',
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: const Key('save-accounting-period'),
+          onPressed: () {
+            final label = _labelController.text.trim();
+            if (label.length < 3) {
+              return;
+            }
+            Navigator.of(context).pop(
+              _FiscalPeriodDraft(
+                label: label,
+                startDate: _startDate,
+                endDate: _endDate,
+              ),
+            );
+          },
+          child: const Text('Create period'),
+        ),
+      ],
+    );
+  }
+}
+
+class _FiscalPeriodDraft {
+  const _FiscalPeriodDraft({
+    required this.label,
+    required this.startDate,
+    required this.endDate,
+  });
+
+  final String label;
+  final DateTime startDate;
+  final DateTime endDate;
 }
 
 class _ChartOfAccountsCard extends StatelessWidget {
@@ -565,6 +973,8 @@ String _statusLabel(String value) {
     'not_configured' => 'Not configured',
     'configured' => 'Configured',
     'open' => 'Open',
+    'review' => 'Review',
+    'closed' => 'Closed',
     'not_started' => 'Not started',
     'unavailable' => 'Unavailable',
     _ => _titleCase(value.replaceAll('_', ' ')),
@@ -576,4 +986,35 @@ String _titleCase(String value) {
     return value;
   }
   return value[0].toUpperCase() + value.substring(1);
+}
+
+String _date(DateTime value) {
+  final month = value.month.toString().padLeft(2, '0');
+  final day = value.day.toString().padLeft(2, '0');
+  return '${value.year}-$month-$day';
+}
+
+String _dateTime(DateTime value) {
+  final local = value.toLocal();
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '${_date(local)} $hour:$minute';
+}
+
+String _monthLabel(DateTime value) {
+  const months = <String>[
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  return '${months[value.month - 1]} ${value.year}';
 }
