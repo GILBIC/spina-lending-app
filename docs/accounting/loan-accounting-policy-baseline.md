@@ -48,28 +48,28 @@ Business baseline:
 - The daily interest amount stays based on original principal even when principal has partially declined.
 - Daily interest stops when principal reaches zero, subject to the written contract and applicable rules.
 - Interest and principal are separate components.
-- A payment first settles accrued unpaid interest. Any excess reduces principal.
+- A payment first settles accrued unpaid contractual interest. Any excess reduces principal.
 
 Example for a PHP 3,000 7x7 loan:
 
-- Daily interest = PHP 21.
+- Daily contractual interest = PHP 21.
 - If the client pays PHP 21, principal remains PHP 3,000.
-- If the client pays PHP 50, PHP 21 settles interest and PHP 29 reduces principal.
+- If the client pays PHP 50, PHP 21 settles contractual interest and PHP 29 reduces principal.
 - After that PHP 50 payment, principal is PHP 2,971 but the next contractual daily interest remains PHP 21 under the agreed business rule.
 
 Accounting baseline:
 
-- On release: record principal as a loan receivable and cash outflow.
-- As contractual daily interest is earned: recognize interest income and an interest receivable.
-- When cash is received: settle accrued interest first; any excess reduces principal.
-- Previously accrued interest is not recognized again when collected.
-- If collectibility deteriorates, principal and accrued interest remain gross receivables while impairment / expected credit loss is assessed separately.
+- On release: principal is the operational loan receivable source and cash is released.
+- The operational subledger tracks contractual daily interest earned/accrued, interest collected, principal collected, and principal outstanding separately.
+- Collection of contractual interest already recognized in the accounting journal must not recognize the same income twice.
+- Before official PFRS journal posting is enabled, SPINA must derive and validate the effective-interest schedule from the actual 7x7 contractual cash flows. The operational PHP 21-per-day example must not automatically be assumed to equal official PFRS interest income if the EIR calculation produces a different allocation.
+- If collectibility deteriorates, impairment / expected credit loss is assessed separately from the contractual borrower balance.
 
 ### 7x7 renewal
 
 The agreed operational formula is:
 
-**Cash release = new principal - old principal outstanding - accrued unpaid interest**
+**Cash release = new principal - old principal outstanding - accrued unpaid contractual interest**
 
 Already-paid principal and already-paid interest are not deducted again.
 
@@ -77,15 +77,15 @@ Example:
 
 - New principal: PHP 3,000.
 - Old principal outstanding: PHP 1,260.
-- Accrued unpaid interest: PHP 0.
+- Accrued unpaid contractual interest: PHP 0.
 - Cash released: PHP 1,740.
 
-If accrued unpaid interest is PHP 84, cash released becomes PHP 1,656.
+If accrued unpaid contractual interest is PHP 84, cash released becomes PHP 1,656.
 
-The old 7x7 loan is closed as settled by renewal and preserved for audit. The new loan starts separately with a new daily-interest schedule based on its own original principal.
+The old 7x7 loan is closed as settled by renewal and preserved for audit. The new loan starts separately with a new contractual daily-interest schedule based on its own original principal. The official accounting treatment of the new loan remains subject to its validated effective-interest schedule.
 
 ## Default, impairment, and write-off
 
-Default does not erase prior accounting history. Principal and earned unpaid interest remain receivables until collection, settlement, or write-off. The future accounting layer must separately track expected credit loss / impairment and must not treat a mere operational default flag as an automatic tax bad-debt deduction.
+Default does not erase prior accounting history. Principal and earned unpaid amounts remain receivables until collection, settlement, or write-off. The future accounting layer must separately track expected credit loss / impairment and must not treat a mere operational default flag as an automatic tax bad-debt deduction.
 
-No automatic journal, ECL model, tax deduction, write-off, or period-close logic is activated by the first Financial Accounting control-center release.
+No automatic journal, EIR posting engine, ECL model, tax deduction, write-off, or period-close logic is activated by the first Financial Accounting control-center release.
