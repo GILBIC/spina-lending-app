@@ -31,9 +31,17 @@ void main() {
     expect(find.text('Trial Balance'), findsOneWidget);
     expect(find.textContaining('Balanced'), findsOneWidget);
     expect(find.textContaining('₱100.00 / ₱100.00'), findsOneWidget);
-    expect(find.text('Draft journal'), findsOneWidget);
     expect(find.byKey(const Key('create-manual-journal')), findsOneWidget);
     expect(repository.deviceId, 'management-device');
+
+    final journalCard = find.byKey(const Key('journal-entry-1'));
+    await tester.scrollUntilVisible(
+      journalCard,
+      350,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Draft journal'), findsOneWidget);
   });
 }
 
