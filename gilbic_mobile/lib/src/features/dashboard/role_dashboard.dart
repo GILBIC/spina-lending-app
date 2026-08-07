@@ -15,6 +15,7 @@ import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_operations_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_portfolio_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
@@ -197,6 +198,17 @@ class RoleDashboard extends StatelessWidget {
       _push(
         context,
         ManagementLoanOperationsPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      );
+      return;
+    }
+    if (session.role == AppRole.management &&
+        action == 'management-financial-accounting') {
+      _push(
+        context,
+        ManagementFinancialAccountingPage(
           session: session,
           deviceIdentityProvider: deviceIdentityProvider,
         ),
@@ -447,8 +459,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           Icons.how_to_reg,
           action: 'client-registration-approvals',
         ),
-        _DashboardModule('Financial Accounting',
-            'Ledgers, journals, and financial reports', Icons.calculate),
+        _DashboardModule(
+          'Financial Accounting',
+          'Source controls and approved loan-accounting policy baseline',
+          Icons.calculate,
+          action: 'management-financial-accounting',
+        ),
         _DashboardModule('Billing & Taxation',
             'Billing records and tax schedules', Icons.request_quote),
         _DashboardModule('Risk & Compliance',
