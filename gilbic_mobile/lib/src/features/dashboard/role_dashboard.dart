@@ -16,6 +16,7 @@ import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.
 import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_general_journal_launcher_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_operations_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_portfolio_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
@@ -209,6 +210,17 @@ class RoleDashboard extends StatelessWidget {
       _push(
         context,
         ManagementFinancialAccountingPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      );
+      return;
+    }
+    if (session.role == AppRole.management &&
+        action == 'management-general-journal') {
+      _push(
+        context,
+        ManagementGeneralJournalLauncherPage(
           session: session,
           deviceIdentityProvider: deviceIdentityProvider,
         ),
@@ -461,9 +473,15 @@ List<_DashboardModule> _modulesFor(AppRole role) {
         ),
         _DashboardModule(
           'Financial Accounting',
-          'Source controls and approved loan-accounting policy baseline',
+          'Accounting periods, chart of accounts, and loan policy controls',
           Icons.calculate,
           action: 'management-financial-accounting',
+        ),
+        _DashboardModule(
+          'General Journal',
+          'Manual journals, immutable posting, reversals, and Trial Balance',
+          Icons.menu_book_outlined,
+          action: 'management-general-journal',
         ),
         _DashboardModule('Billing & Taxation',
             'Billing records and tax schedules', Icons.request_quote),
