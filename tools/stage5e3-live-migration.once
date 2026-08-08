@@ -1,0 +1,4 @@
+Stage 5E.3 live migration gate.
+Expected historical episodes: 992
+Expected structurally usable episodes: 919
+The workflow runner must verify both counts before applying migration 0033.
