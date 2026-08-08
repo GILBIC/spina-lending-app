@@ -137,4 +137,4 @@ jobs:
           GILBIC_TEST_DATABASE_URL: ${{ secrets.GILBIC_TEST_DATABASE_URL }}
         run: |
           set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
-          "%VENV%\Scripts\python.exe" tools\import_ecl_history.py --find-source-name "loans(20260808-080255).db" --search-root "C:\Users\pc\Downloads" --search-root "C:\Users\pc\Desktop" --search-root "C:\Users\pc\OneDrive\Desktop" --search-root "C:\Users\pc\OneDrive\Documents" --search-root "C:\GitHub\spina-lending-app-clean" --search-root "C:\SPINA_ONLINE" --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL --expected-sha256 3ef840b6221c9d94327c3e5beb10318899f7a5ee96643df87a49b02312d77260 --expected-episodes 992 || exit /b 1
+          "%VENV%\Scripts\python.exe" tools\import_ecl_history.py --find-source-name "loans(20260808-080255).db" --search-root "C:\Users\pc" --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL --expected-sha256 3ef840b6221c9d94327c3e5beb10318899f7a5ee96643df87a49b02312d77260 --expected-episodes 992 || exit /b 1
