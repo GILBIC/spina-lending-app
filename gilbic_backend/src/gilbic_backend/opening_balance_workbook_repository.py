@@ -48,12 +48,60 @@ class OpeningBalanceWorkbookLine:
     proposed_credit: Decimal | None
     verification_status: str
     evidence_note: str | None
+    measurement_reference_amount: Decimal | None
+    measurement_status: str | None
+    measurement_note: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class LoanMeasurementSummary:
+    active_loan_count: int
+    measured_loan_count: int
+    review_required_count: int
+    actual_cash_received: Decimal
+    effective_interest_income: Decimal
+    regular_loan_component: Decimal
+    seven_by_seven_loan_component: Decimal
+    accrued_interest_component: Decimal
+    gross_carrying_amount: Decimal
+    measurement_status: str
+    measurement_policy_version: str
+    ecl_included: bool
+    ready_to_post: bool
+
+
+@dataclass(frozen=True, slots=True)
+class LoanMeasurement:
+    loan_id: UUID
+    loan_number: str
+    client_name: str
+    calculation_mode: str
+    policy_version: str
+    date_released: date
+    due_date: date
+    cutover_date: date | None
+    days_elapsed: int | None
+    principal: Decimal
+    operational_balance: Decimal
+    daily_eir: Decimal | None
+    daily_eir_percent: Decimal | None
+    contractual_cash_due: Decimal | None
+    actual_cash_received: Decimal | None
+    effective_interest_income: Decimal | None
+    loan_component: Decimal | None
+    accrued_interest_component: Decimal | None
+    gross_carrying_amount: Decimal | None
+    contractual_unpaid_interest: Decimal | None
+    measurement_status: str
+    measurement_note: str
 
 
 @dataclass(frozen=True, slots=True)
 class OpeningBalanceWorkbook:
     summary: OpeningBalanceWorkbookSummary
     lines: tuple[OpeningBalanceWorkbookLine, ...]
+    measurement_summary: LoanMeasurementSummary
+    loan_measurements: tuple[LoanMeasurement, ...]
 
 
 class OpeningBalanceWorkbookError(RuntimeError):
@@ -230,12 +278,72 @@ class PostgresOpeningBalanceWorkbookRepository:
                 proposed_debit,
                 proposed_credit,
                 verification_status,
-                evidence_note
+                evidence_note,
+                measurement_reference_amount,
+                measurement_status,
+                measurement_note
             from accounting.opening_balance_cutover_worksheet
             order by account_code
             """
         )
         lines = tuple(cls._line_from_row(row) for row in cursor.fetchall())
+
+        cursor.execute(
+            """
+            select
+                active_loan_count,
+                measured_loan_count,
+                review_required_count,
+                actual_cash_received,
+                effective_interest_income,
+                regular_loan_component,
+                seven_by_seven_loan_component,
+                accrued_interest_component,
+                gross_carrying_amount,
+                measurement_status,
+                measurement_policy_version,
+                ecl_included,
+                ready_to_post
+            from accounting.loan_measurement_summary
+            """
+        )
+        measurement_summary_row = cursor.fetchone()
+        if measurement_summary_row is None:
+            raise OpeningBalanceWorkbookError(
+                "Accounting loan measurement summary is unavailable."
+            )
+
+        cursor.execute(
+            """
+            select
+                loan_id,
+                loan_number,
+                client_name,
+                calculation_mode,
+                policy_version,
+                date_released,
+                due_date,
+                cutover_date,
+                days_elapsed,
+                principal,
+                operational_balance,
+                daily_eir,
+                daily_eir_percent,
+                contractual_cash_due,
+                actual_cash_received,
+                effective_interest_income,
+                loan_component,
+                accrued_interest_component,
+                gross_carrying_amount,
+                contractual_unpaid_interest,
+                measurement_status,
+                measurement_note
+            from accounting.loan_measurement_at_cutover
+            order by calculation_mode, loan_number
+            """
+        )
+        measurements = tuple(cls._measurement_from_row(row) for row in cursor.fetchall())
+
         return OpeningBalanceWorkbook(
             summary=OpeningBalanceWorkbookSummary(
                 workbook_id=(
@@ -246,9 +354,7 @@ class PostgresOpeningBalanceWorkbookRepository:
                 cutover_date=summary_row["cutover_date"],
                 status=str(summary_row["worksheet_status"]),
                 line_count=int(summary_row["worksheet_line_count"] or 0),
-                source_reference_count=int(
-                    summary_row["source_reference_count"] or 0
-                ),
+                source_reference_count=int(summary_row["source_reference_count"] or 0),
                 verified_line_count=int(summary_row["verified_line_count"] or 0),
                 pending_line_count=int(summary_row["pending_line_count"] or 0),
                 profit_loss_policy_confirmed=bool(
@@ -273,6 +379,40 @@ class PostgresOpeningBalanceWorkbookRepository:
                 ),
             ),
             lines=lines,
+            measurement_summary=LoanMeasurementSummary(
+                active_loan_count=int(measurement_summary_row["active_loan_count"] or 0),
+                measured_loan_count=int(measurement_summary_row["measured_loan_count"] or 0),
+                review_required_count=int(
+                    measurement_summary_row["review_required_count"] or 0
+                ),
+                actual_cash_received=Decimal(
+                    measurement_summary_row["actual_cash_received"] or 0
+                ),
+                effective_interest_income=Decimal(
+                    measurement_summary_row["effective_interest_income"] or 0
+                ),
+                regular_loan_component=Decimal(
+                    measurement_summary_row["regular_loan_component"] or 0
+                ),
+                seven_by_seven_loan_component=Decimal(
+                    measurement_summary_row["seven_by_seven_loan_component"] or 0
+                ),
+                accrued_interest_component=Decimal(
+                    measurement_summary_row["accrued_interest_component"] or 0
+                ),
+                gross_carrying_amount=Decimal(
+                    measurement_summary_row["gross_carrying_amount"] or 0
+                ),
+                measurement_status=str(
+                    measurement_summary_row["measurement_status"]
+                ),
+                measurement_policy_version=str(
+                    measurement_summary_row["measurement_policy_version"]
+                ),
+                ecl_included=bool(measurement_summary_row["ecl_included"]),
+                ready_to_post=bool(measurement_summary_row["ready_to_post"]),
+            ),
+            loan_measurements=measurements,
         )
 
     @staticmethod
@@ -283,9 +423,7 @@ class PostgresOpeningBalanceWorkbookRepository:
 
         return OpeningBalanceWorkbookLine(
             workbook_id=(
-                UUID(str(row["workbook_id"]))
-                if row["workbook_id"] is not None
-                else None
+                UUID(str(row["workbook_id"])) if row["workbook_id"] is not None else None
             ),
             account_code=str(row["account_code"]),
             system_key=str(row["system_key"]),
@@ -299,9 +437,47 @@ class PostgresOpeningBalanceWorkbookRepository:
             proposed_debit=optional_decimal("proposed_debit"),
             proposed_credit=optional_decimal("proposed_credit"),
             verification_status=str(row["verification_status"]),
-            evidence_note=(
-                str(row["evidence_note"]) if row["evidence_note"] else None
+            evidence_note=(str(row["evidence_note"]) if row["evidence_note"] else None),
+            measurement_reference_amount=optional_decimal(
+                "measurement_reference_amount"
             ),
+            measurement_status=(
+                str(row["measurement_status"]) if row["measurement_status"] else None
+            ),
+            measurement_note=(
+                str(row["measurement_note"]) if row["measurement_note"] else None
+            ),
+        )
+
+    @staticmethod
+    def _measurement_from_row(row) -> LoanMeasurement:
+        def optional_decimal(key: str) -> Decimal | None:
+            value = row[key]
+            return Decimal(value) if value is not None else None
+
+        return LoanMeasurement(
+            loan_id=UUID(str(row["loan_id"])),
+            loan_number=str(row["loan_number"]),
+            client_name=str(row["client_name"]),
+            calculation_mode=str(row["calculation_mode"]),
+            policy_version=str(row["policy_version"]),
+            date_released=row["date_released"],
+            due_date=row["due_date"],
+            cutover_date=row["cutover_date"],
+            days_elapsed=(int(row["days_elapsed"]) if row["days_elapsed"] is not None else None),
+            principal=Decimal(row["principal"] or 0),
+            operational_balance=Decimal(row["operational_balance"] or 0),
+            daily_eir=optional_decimal("daily_eir"),
+            daily_eir_percent=optional_decimal("daily_eir_percent"),
+            contractual_cash_due=optional_decimal("contractual_cash_due"),
+            actual_cash_received=optional_decimal("actual_cash_received"),
+            effective_interest_income=optional_decimal("effective_interest_income"),
+            loan_component=optional_decimal("loan_component"),
+            accrued_interest_component=optional_decimal("accrued_interest_component"),
+            gross_carrying_amount=optional_decimal("gross_carrying_amount"),
+            contractual_unpaid_interest=optional_decimal("contractual_unpaid_interest"),
+            measurement_status=str(row["measurement_status"]),
+            measurement_note=str(row["measurement_note"] or ""),
         )
 
     @staticmethod
