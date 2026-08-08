@@ -76,25 +76,87 @@ ON CONFLICT (import_batch_id, episode_key) DO UPDATE SET
 """
 
 
+def _load_env_file(path: Path) -> None:
+    if not path.is_file():
+        return
+    for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            continue
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        os.environ.setdefault(key, value)
+
+
+def _resolve_source(
+    direct: Path | None,
+    *,
+    filename: str | None,
+    roots: list[Path],
+) -> Path:
+    if direct is not None:
+        if direct.is_file():
+            return direct
+        raise SystemExit(f"SQLite source file was not found: {direct}")
+    if not filename:
+        raise SystemExit("Provide sqlite_file or --find-source-name")
+
+    for root in roots:
+        if not root.exists():
+            continue
+        direct_candidate = root / filename
+        if direct_candidate.is_file():
+            return direct_candidate
+        try:
+            for candidate in root.rglob(filename):
+                if candidate.is_file():
+                    return candidate
+        except (OSError, PermissionError):
+            continue
+    raise SystemExit(
+        f"Stage 5E.2 source file {filename!r} was not found under the configured search roots."
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Import reconstructed legacy SPINA loan episodes into the accounting-only Stage 5E.2 history tables."
     )
-    parser.add_argument("sqlite_file", type=Path)
+    parser.add_argument("sqlite_file", type=Path, nargs="?")
+    parser.add_argument("--find-source-name")
+    parser.add_argument("--search-root", action="append", type=Path, default=[])
+    parser.add_argument("--env-file", action="append", type=Path, default=[])
     parser.add_argument(
         "--database-url-env",
-        default="GILBIC_TEST_DATABASE_URL",
+        default="GILBIC_DATABASE_URL",
         help="Environment variable containing the PostgreSQL connection URL.",
     )
     parser.add_argument("--expected-sha256")
     parser.add_argument("--expected-episodes", type=int)
     args = parser.parse_args()
 
-    database_url = os.getenv(args.database_url_env)
-    if not database_url:
-        raise SystemExit(f"{args.database_url_env} is not configured")
+    for env_path in args.env_file:
+        _load_env_file(env_path)
 
-    result = reconstruct_sqlite_history(args.sqlite_file)
+    database_url = os.getenv(args.database_url_env)
+    if not database_url and args.database_url_env != "GILBIC_TEST_DATABASE_URL":
+        database_url = os.getenv("GILBIC_TEST_DATABASE_URL")
+    if not database_url:
+        raise SystemExit(
+            f"Neither {args.database_url_env} nor GILBIC_TEST_DATABASE_URL is configured"
+        )
+
+    source = _resolve_source(
+        args.sqlite_file,
+        filename=args.find_source_name,
+        roots=args.search_root,
+    )
+    result = reconstruct_sqlite_history(source)
     if args.expected_sha256 and result.source_sha256 != args.expected_sha256:
         raise SystemExit(
             f"Source SHA-256 mismatch: expected {args.expected_sha256}, got {result.source_sha256}"

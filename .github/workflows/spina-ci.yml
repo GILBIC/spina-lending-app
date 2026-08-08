@@ -132,31 +132,9 @@ jobs:
 
       - name: One-time Stage 5E.2 live historical import
         if: github.event_name == 'push' && hashFiles('tools/stage5e2-import.once') != ''
-        shell: powershell
+        shell: cmd
         env:
           GILBIC_TEST_DATABASE_URL: ${{ secrets.GILBIC_TEST_DATABASE_URL }}
         run: |
-          $ErrorActionPreference = 'Stop'
-          $name = 'loans(20260808-080255).db'
-          $candidates = @(
-            "C:\Users\pc\Downloads\$name",
-            "C:\Users\pc\Desktop\$name",
-            "C:\Users\pc\OneDrive\Desktop\$name",
-            "C:\Users\pc\OneDrive\Documents\$name",
-            "C:\GitHub\spina-lending-app-clean\$name",
-            "C:\SPINA_ONLINE\$name"
-          )
-          $source = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $source -and (Test-Path 'C:\Users\pc')) {
-            $source = Get-ChildItem -Path 'C:\Users\pc' -Filter $name -File -Recurse -ErrorAction SilentlyContinue |
-              Select-Object -First 1 -ExpandProperty FullName
-          }
-          if (-not $source) {
-            throw "Stage 5E.2 source file $name was not found on the self-hosted runner."
-          }
-          Write-Host "Using Stage 5E.2 historical source: $source"
-          $python = Join-Path $env:RUNNER_TEMP 'spina-unified-ci-venv\Scripts\python.exe'
-          & $python tools/import_ecl_history.py $source `
-            --expected-sha256 3ef840b6221c9d94327c3e5beb10318899f7a5ee96643df87a49b02312d77260 `
-            --expected-episodes 992
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          "%VENV%\Scripts\python.exe" tools\import_ecl_history.py --find-source-name "loans(20260808-080255).db" --search-root "C:\Users\pc\Downloads" --search-root "C:\Users\pc\Desktop" --search-root "C:\Users\pc\OneDrive\Desktop" --search-root "C:\Users\pc\OneDrive\Documents" --search-root "C:\GitHub\spina-lending-app-clean" --search-root "C:\SPINA_ONLINE" --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL --expected-sha256 3ef840b6221c9d94327c3e5beb10318899f7a5ee96643df87a49b02312d77260 --expected-episodes 992 || exit /b 1
