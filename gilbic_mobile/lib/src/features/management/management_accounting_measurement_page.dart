@@ -99,6 +99,7 @@ class _ManagementAccountingMeasurementPageState
     if (data == null) return const SizedBox.shrink();
 
     final measurement = data.measurement;
+    final eclLine = _lineByCode(data.lines, '1190');
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -123,6 +124,10 @@ class _ManagementAccountingMeasurementPageState
             summary: measurement.summary,
             cutoverDate: data.summary.cutoverDate,
           ),
+          if (eclLine != null) ...[
+            const SizedBox(height: 12),
+            _EclReadinessCard(line: eclLine),
+          ],
           const SizedBox(height: 12),
           _WorkbookMeasurementReferenceCard(lines: data.lines),
           const SizedBox(height: 12),
@@ -137,7 +142,7 @@ class _ManagementAccountingMeasurementPageState
             child: Padding(
               padding: EdgeInsets.all(14),
               child: Text(
-                'Stage 5D is measurement only. These amounts are not automatically copied into a verified workbook line, ECL is not included, and no General Ledger journal is created.',
+                'Stage 5D provides reconciled EIR measurement. Stage 5E adds read-only ECL assessment readiness only: no PD, LGD, forward-looking scenario weight, ECL amount, verified workbook value, or General Ledger journal is created automatically.',
               ),
             ),
           ),
@@ -198,6 +203,57 @@ class _MeasurementSummaryCard extends StatelessWidget {
   }
 }
 
+class _EclReadinessCard extends StatelessWidget {
+  const _EclReadinessCard({required this.line});
+
+  final OpeningBalanceWorkbookLine line;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      key: const Key('accounting-ecl-readiness'),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.shield_outlined),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Stage 5E Expected Credit Loss Readiness',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                Chip(
+                  label: Text(_status(line.measurementStatus ?? 'assessment_required')),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _Row(label: 'Allowance account', value: '${line.accountCode} ${line.accountName}'),
+            _Row(
+              label: 'ECL amount',
+              value: line.measurementReferenceAmount == null
+                  ? 'Not calculated'
+                  : _money(line.measurementReferenceAmount!),
+            ),
+            _Row(label: 'ECL included', value: 'No'),
+            _Row(label: 'Ready to post', value: 'No'),
+            const SizedBox(height: 8),
+            Text(
+              line.measurementNote ?? line.guidance,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _WorkbookMeasurementReferenceCard extends StatelessWidget {
   const _WorkbookMeasurementReferenceCard({required this.lines});
 
@@ -206,7 +262,7 @@ class _WorkbookMeasurementReferenceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final refs = lines
-        .where((line) => const {'1100', '1110', '1120'}.contains(line.accountCode))
+        .where((line) => const {'1100', '1110', '1120', '1190'}.contains(line.accountCode))
         .toList(growable: false);
     return Card(
       key: const Key('accounting-measurement-workbook-references'),
@@ -219,13 +275,19 @@ class _WorkbookMeasurementReferenceCard extends StatelessWidget {
             const SizedBox(height: 6),
             const Text('Reference only — these values are not automatically verified or posted.'),
             const SizedBox(height: 8),
-            for (final line in refs)
+            for (final line in refs) ...[
               _Row(
                 label: '${line.accountCode} ${line.accountName}',
                 value: line.measurementReferenceAmount == null
                     ? _status(line.measurementStatus ?? 'review_required')
                     : _money(line.measurementReferenceAmount!),
               ),
+              if (line.accountCode == '1190' && line.measurementNote != null) ...[
+                const SizedBox(height: 4),
+                Text(line.measurementNote!, style: Theme.of(context).textTheme.bodySmall),
+                const SizedBox(height: 6),
+              ],
+            ],
           ],
         ),
       ),
@@ -322,6 +384,16 @@ class _Row extends StatelessWidget {
       ),
     );
   }
+}
+
+OpeningBalanceWorkbookLine? _lineByCode(
+  List<OpeningBalanceWorkbookLine> lines,
+  String code,
+) {
+  for (final line in lines) {
+    if (line.accountCode == code) return line;
+  }
+  return null;
 }
 
 String _typeLabel(String mode) => switch (mode) {
