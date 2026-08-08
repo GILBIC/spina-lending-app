@@ -328,7 +328,7 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
         overallStatus: 'opening_balances_required',
       ),
       cutoverLoans: <AccountingCutoverLoan>[
-        const AccountingCutoverLoan(
+        AccountingCutoverLoan(
           loanNumber: 'TEST-REG-20260802',
           clientCode: 'TEST-REG-001',
           clientName: 'TEST CLIENT REGULAR',
@@ -338,8 +338,8 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
           principal: 5000,
           dailyAmount: 50,
           interestRate: 20,
-          dateReleased: _augustFirst,
-          dueDate: _novemberTwentyNinth,
+          dateReleased: DateTime(2026, 8, 1),
+          dueDate: DateTime(2026, 11, 29),
           operationalBalance: 4900,
           regularContractTotal: 6000,
           regularScheduledTotal: 6000,
@@ -348,7 +348,7 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
           sevenBySevenContractTotalIfPrincipalAtMaturity: null,
           sevenBySevenBaseDailyRatePercent: null,
           readinessStatus: 'source_ready',
-          blockers: <String>[],
+          blockers: const <String>[],
         ),
         ...List<AccountingCutoverLoan>.generate(
           3,
@@ -464,6 +464,3 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
     );
   }
 }
-
-const DateTime _augustFirst = DateTime(2026, 8, 1);
-const DateTime _novemberTwentyNinth = DateTime(2026, 11, 29);
