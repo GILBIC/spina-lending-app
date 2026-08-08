@@ -12,6 +12,8 @@ from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .opening_balance_workbook_repository import (
+    LoanMeasurement,
+    LoanMeasurementSummary,
     OpeningBalanceWorkbook,
     OpeningBalanceWorkbookConflict,
     OpeningBalanceWorkbookError,
@@ -117,6 +119,66 @@ def _line_payload(line: OpeningBalanceWorkbookLine) -> dict[str, object]:
         "proposed_credit": _optional_decimal(line.proposed_credit),
         "verification_status": line.verification_status,
         "evidence_note": line.evidence_note,
+        "measurement_reference_amount": _optional_decimal(
+            line.measurement_reference_amount
+        ),
+        "measurement_status": line.measurement_status,
+        "measurement_note": line.measurement_note,
+    }
+
+
+def _measurement_summary_payload(
+    summary: LoanMeasurementSummary,
+) -> dict[str, object]:
+    return {
+        "active_loan_count": summary.active_loan_count,
+        "measured_loan_count": summary.measured_loan_count,
+        "review_required_count": summary.review_required_count,
+        "actual_cash_received": _decimal(summary.actual_cash_received),
+        "effective_interest_income": _decimal(summary.effective_interest_income),
+        "regular_loan_component": _decimal(summary.regular_loan_component),
+        "seven_by_seven_loan_component": _decimal(
+            summary.seven_by_seven_loan_component
+        ),
+        "accrued_interest_component": _decimal(summary.accrued_interest_component),
+        "gross_carrying_amount": _decimal(summary.gross_carrying_amount),
+        "measurement_status": summary.measurement_status,
+        "measurement_policy_version": summary.measurement_policy_version,
+        "ecl_included": summary.ecl_included,
+        "ready_to_post": summary.ready_to_post,
+    }
+
+
+def _measurement_payload(item: LoanMeasurement) -> dict[str, object]:
+    return {
+        "loan_id": str(item.loan_id),
+        "loan_number": item.loan_number,
+        "client_name": item.client_name,
+        "calculation_mode": item.calculation_mode,
+        "policy_version": item.policy_version,
+        "date_released": item.date_released.isoformat(),
+        "due_date": item.due_date.isoformat(),
+        "cutover_date": item.cutover_date.isoformat() if item.cutover_date else None,
+        "days_elapsed": item.days_elapsed,
+        "principal": _decimal(item.principal),
+        "operational_balance": _decimal(item.operational_balance),
+        "daily_eir": _optional_decimal(item.daily_eir),
+        "daily_eir_percent": _optional_decimal(item.daily_eir_percent),
+        "contractual_cash_due": _optional_decimal(item.contractual_cash_due),
+        "actual_cash_received": _optional_decimal(item.actual_cash_received),
+        "effective_interest_income": _optional_decimal(
+            item.effective_interest_income
+        ),
+        "loan_component": _optional_decimal(item.loan_component),
+        "accrued_interest_component": _optional_decimal(
+            item.accrued_interest_component
+        ),
+        "gross_carrying_amount": _optional_decimal(item.gross_carrying_amount),
+        "contractual_unpaid_interest": _optional_decimal(
+            item.contractual_unpaid_interest
+        ),
+        "measurement_status": item.measurement_status,
+        "measurement_note": item.measurement_note,
     }
 
 
@@ -128,12 +190,24 @@ def _workbook_payload(
     return {
         "summary": _summary_payload(workbook.summary),
         "lines": [_line_payload(line) for line in workbook.lines],
+        "measurement": {
+            "summary": _measurement_summary_payload(workbook.measurement_summary),
+            "loans": [
+                _measurement_payload(item) for item in workbook.loan_measurements
+            ],
+            "notice": (
+                "Stage 5D measurements are accounting references only. Daily EIR is "
+                "derived from contractual cash flows and actual non-voided cash timing. "
+                "ECL is excluded. Measurements do not verify workbook lines and do not "
+                "post a journal."
+            ),
+        },
         "management_enabled": can_manage,
         "notice": (
-            "Stage 5C workbook values remain outside the General Ledger. "
-            "Saving, verifying, and moving the workbook to review ready do not post "
-            "an opening journal. Opening-balance posting and automatic source posting "
-            "remain disabled."
+            "Stage 5D keeps workbook values outside the General Ledger. Saving, "
+            "verifying, measurement review, and moving the workbook to review ready "
+            "do not post an opening journal. Opening-balance posting and automatic "
+            "source posting remain disabled."
         ),
     }
 
@@ -186,9 +260,7 @@ def create_opening_balance_workbook_router() -> APIRouter:
             )
         return actor
 
-    @router.get(
-        "/api/v1/management/financial-accounting/opening-balance-workbook"
-    )
+    @router.get("/api/v1/management/financial-accounting/opening-balance-workbook")
     @router.get(
         "/api/mobile/v1/management/financial-accounting/opening-balance-workbook",
         include_in_schema=False,
@@ -250,10 +322,7 @@ def create_opening_balance_workbook_router() -> APIRouter:
             )
         except OpeningBalanceWorkbookError as error:
             raise _exception(error) from error
-        return {
-            "success": True,
-            "data": _workbook_payload(workbook, can_manage=True),
-        }
+        return {"success": True, "data": _workbook_payload(workbook, can_manage=True)}
 
     @router.put(
         "/api/v1/management/financial-accounting/opening-balance-workbook/{workbook_id}/lines/{account_code}"
@@ -293,10 +362,7 @@ def create_opening_balance_workbook_router() -> APIRouter:
             )
         except OpeningBalanceWorkbookError as error:
             raise _exception(error) from error
-        return {
-            "success": True,
-            "data": _workbook_payload(workbook, can_manage=True),
-        }
+        return {"success": True, "data": _workbook_payload(workbook, can_manage=True)}
 
     @router.put(
         "/api/v1/management/financial-accounting/opening-balance-workbook/{workbook_id}/policy"
@@ -332,10 +398,7 @@ def create_opening_balance_workbook_router() -> APIRouter:
             )
         except OpeningBalanceWorkbookError as error:
             raise _exception(error) from error
-        return {
-            "success": True,
-            "data": _workbook_payload(workbook, can_manage=True),
-        }
+        return {"success": True, "data": _workbook_payload(workbook, can_manage=True)}
 
     @router.post(
         "/api/v1/management/financial-accounting/opening-balance-workbook/{workbook_id}/status"
@@ -370,9 +433,6 @@ def create_opening_balance_workbook_router() -> APIRouter:
             )
         except OpeningBalanceWorkbookError as error:
             raise _exception(error) from error
-        return {
-            "success": True,
-            "data": _workbook_payload(workbook, can_manage=True),
-        }
+        return {"success": True, "data": _workbook_payload(workbook, can_manage=True)}
 
     return router
