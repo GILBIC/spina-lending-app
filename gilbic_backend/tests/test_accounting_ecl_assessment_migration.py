@@ -9,8 +9,8 @@ SQL = (
 
 
 def test_stage5e_defines_read_only_ecl_assessment_views() -> None:
-    assert "CREATE VIEW accounting.ecl_assessment_at_cutover" in SQL
-    assert "CREATE VIEW accounting.ecl_assessment_summary" in SQL
+    assert "CREATE OR REPLACE VIEW accounting.ecl_assessment_at_cutover" in SQL
+    assert "CREATE OR REPLACE VIEW accounting.ecl_assessment_summary" in SQL
     assert "days_past_due_backstop" in SQL
     assert "sicr_30dpd_backstop" in SQL
     assert "default_90dpd_backstop" in SQL
