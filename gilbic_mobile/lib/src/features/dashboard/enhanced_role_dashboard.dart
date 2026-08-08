@@ -7,6 +7,7 @@ import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart'
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/dashboard/role_dashboard.dart';
 import 'package:gilbic_mobile/src/features/management/management_accounting_measurement_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_ecl_outcome_review_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_opening_balance_workbook_page.dart';
 
 class EnhancedRoleDashboard extends StatelessWidget {
@@ -51,6 +52,23 @@ class EnhancedRoleDashboard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
+                FloatingActionButton.extended(
+                  key: const Key('management-ecl-outcome-review'),
+                  heroTag: 'management-ecl-outcome-review',
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (context) => ManagementEclOutcomeReviewPage(
+                          session: session,
+                          deviceIdentityProvider: deviceIdentityProvider,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.fact_check_outlined),
+                  label: const Text('Outcome Review'),
+                ),
+                const SizedBox(height: 10),
                 FloatingActionButton.extended(
                   key: const Key('management-accounting-measurement'),
                   heroTag: 'management-accounting-measurement',
