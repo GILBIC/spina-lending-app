@@ -32,7 +32,9 @@ void main() {
     expect(find.text('Not calculated'), findsOneWidget);
     expect(repository.deviceId, 'management-device');
 
-    await tester.tap(find.textContaining('Regular • Episode 1'));
+    final pendingCard = find.byKey(const Key('ecl-outcome-review-101'));
+    await tester.scrollUntilVisible(pendingCard, 250);
+    await tester.tap(pendingCard);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('review-outcome-101')));
     await tester.pumpAndSettle();
@@ -83,7 +85,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.lastStatus, 'source_review');
 
-    await tester.tap(find.textContaining('7x7 • Episode 2'));
+    final blockedCard = find.byKey(const Key('ecl-outcome-review-202'));
+    await tester.scrollUntilVisible(blockedCard, 250);
+    await tester.tap(blockedCard);
     await tester.pumpAndSettle();
 
     expect(find.textContaining('requires source review'), findsOneWidget);
