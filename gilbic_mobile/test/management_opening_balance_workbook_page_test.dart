@@ -54,10 +54,7 @@ void main() {
     expect(find.text('No'), findsWidgets);
     expect(find.byKey(const Key('opening-workbook-policy')), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('Cash - Collector Custody'),
-      250,
-    );
+    await tester.scrollUntilVisible(find.text('Cash - Collector Custody'), 250);
     expect(find.byKey(const Key('opening-workbook-line-1020')), findsOneWidget);
     expect(find.byKey(const Key('edit-opening-workbook-line-1020')), findsOneWidget);
 
@@ -69,10 +66,7 @@ void main() {
       ).onPressed,
       isNull,
     );
-    expect(
-      find.textContaining('Opening journal posting: Disabled'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Opening journal posting: Disabled'), findsOneWidget);
   });
 }
 
@@ -105,7 +99,7 @@ class _FakeWorkbookRepository implements OpeningBalanceWorkbookRepository {
     return OpeningBalanceWorkbookData(
       managementEnabled: true,
       notice:
-          'Stage 5C workbook values remain outside the General Ledger. Saving and verifying do not post an opening journal.',
+          'Stage 5D workbook values remain outside the General Ledger. Saving and verifying do not post an opening journal.',
       summary: OpeningBalanceWorkbookSummary(
         workbookId: initialized ? 'workbook-1' : null,
         cutoverDate: initialized ? DateTime(2026, 8, 8) : null,
@@ -125,9 +119,9 @@ class _FakeWorkbookRepository implements OpeningBalanceWorkbookRepository {
         openingBalancePostingEnabled: false,
         automaticSourcePostingEnabled: false,
       ),
-      lines: const <OpeningBalanceWorkbookLine>[
+      lines: <OpeningBalanceWorkbookLine>[
         OpeningBalanceWorkbookLine(
-          workbookId: null,
+          workbookId: initialized ? 'workbook-1' : null,
           accountCode: '1020',
           systemKey: 'cash_collector_custody',
           accountName: 'Cash - Collector Custody',
@@ -141,8 +135,31 @@ class _FakeWorkbookRepository implements OpeningBalanceWorkbookRepository {
           proposedCredit: null,
           verificationStatus: 'pending',
           evidenceNote: null,
+          measurementReferenceAmount: null,
+          measurementStatus: null,
+          measurementNote: null,
         ),
       ],
+      measurement: AccountingMeasurementData(
+        notice: 'Measurement is reference only and does not post.',
+        summary: AccountingMeasurementSummary(
+          activeLoanCount: initialized ? 7 : 0,
+          measuredLoanCount: initialized ? 7 : 0,
+          reviewRequiredCount: 0,
+          actualCashReceived: initialized ? 450 : 0,
+          effectiveInterestIncome: initialized ? 793.11 : 0,
+          regularLoanComponent: initialized ? 19723.77 : 0,
+          sevenBySevenLoanComponent: initialized ? 9000 : 0,
+          accruedInterestComponent: initialized ? 619.36 : 0,
+          grossCarryingAmount: initialized ? 29343.11 : 0,
+          measurementStatus:
+              initialized ? 'measured' : 'cutover_workbook_required',
+          measurementPolicyVersion: 'eir_cutover_v1',
+          eclIncluded: false,
+          readyToPost: false,
+        ),
+        loans: const <LoanAccountingMeasurement>[],
+      ),
     );
   }
 
