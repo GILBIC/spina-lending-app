@@ -155,9 +155,11 @@ def allocate_collection_transaction(
 ) -> tuple[AllocationInstruction, ...]:
     """Apply one accepted cash transaction to its contractual installments.
 
-    The collection transaction is locked before planning. Re-running a fully
-    allocated transaction is idempotent. Partial pre-existing allocations are
-    treated as a conflict rather than guessed or silently repaired.
+    The collection transaction and its loan are locked before planning, so two
+    concurrent payments for the same loan cannot both consume the same unpaid
+    installment. Re-running a fully allocated transaction is idempotent.
+    Partial pre-existing allocations are treated as a conflict rather than
+    guessed or silently repaired.
     """
 
     cursor.execute(
@@ -182,6 +184,16 @@ def allocate_collection_transaction(
         raise ContractPaymentAllocationConflict(
             "Only payment and advance transactions can be allocated to installments."
         )
+
+    # Serialize all automatic allocation planning for this loan. This prevents
+    # two different collection transactions from reading the same outstanding
+    # installment state at the same time.
+    cursor.execute(
+        "select id from lending.loans where id = %s for update",
+        (loan_id,),
+    )
+    if cursor.fetchone() is None:
+        raise ContractScheduleNotReady("The loan for this collection no longer exists.")
 
     cursor.execute(
         """
