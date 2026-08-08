@@ -7,6 +7,10 @@ class FinancialAccountingOverview {
     required this.accounts,
     required this.fiscalPeriods,
     required this.policies,
+    required this.cutoverSummary,
+    required this.cutoverLoans,
+    required this.openingBalanceSummary,
+    required this.openingBalanceLines,
     required this.foundationStatus,
     required this.fiscalPeriodStatus,
     required this.periodManagementEnabled,
@@ -20,6 +24,10 @@ class FinancialAccountingOverview {
   final List<AccountingAccount> accounts;
   final List<AccountingFiscalPeriod> fiscalPeriods;
   final List<LoanAccountingPolicy> policies;
+  final AccountingCutoverReadinessSummary cutoverSummary;
+  final List<AccountingCutoverLoan> cutoverLoans;
+  final OpeningBalanceCutoverSummary openingBalanceSummary;
+  final List<OpeningBalanceCutoverLine> openingBalanceLines;
   final String foundationStatus;
   final String fiscalPeriodStatus;
   final bool periodManagementEnabled;
@@ -31,9 +39,15 @@ class FinancialAccountingOverview {
     final rawPolicies = payload['policies'];
     final rawAccounts = payload['accounts'];
     final rawFiscalPeriods = payload['fiscal_periods'];
+    final cutover = stringMap(payload['cutover']);
+    final openingWorksheet = stringMap(payload['opening_balance_worksheet']);
+    final rawCutoverLoans = cutover['loans'];
+    final rawOpeningLines = openingWorksheet['lines'];
     if (rawPolicies is! List ||
         rawAccounts is! List ||
-        rawFiscalPeriods is! List) {
+        rawFiscalPeriods is! List ||
+        rawCutoverLoans is! List ||
+        rawOpeningLines is! List) {
       throw const SpinaApiException(
         'The SPINA server returned incomplete Financial Accounting data.',
         code: 'invalid_financial_accounting_payload',
@@ -54,6 +68,18 @@ class FinancialAccountingOverview {
           .toList(growable: false),
       policies: rawPolicies
           .map((item) => LoanAccountingPolicy.fromPayload(stringMap(item)))
+          .toList(growable: false),
+      cutoverSummary: AccountingCutoverReadinessSummary.fromPayload(
+        stringMap(cutover['summary']),
+      ),
+      cutoverLoans: rawCutoverLoans
+          .map((item) => AccountingCutoverLoan.fromPayload(stringMap(item)))
+          .toList(growable: false),
+      openingBalanceSummary: OpeningBalanceCutoverSummary.fromPayload(
+        stringMap(openingWorksheet['summary']),
+      ),
+      openingBalanceLines: rawOpeningLines
+          .map((item) => OpeningBalanceCutoverLine.fromPayload(stringMap(item)))
           .toList(growable: false),
       foundationStatus: _requiredString(payload, 'foundation_status'),
       fiscalPeriodStatus: _requiredString(payload, 'fiscal_period_status'),
@@ -257,6 +283,219 @@ class LoanAccountingPolicy {
   }
 }
 
+class AccountingCutoverReadinessSummary {
+  const AccountingCutoverReadinessSummary({
+    required this.activeLoanCount,
+    required this.sourceReadyCount,
+    required this.contractValidationCount,
+    required this.blockedCount,
+    required this.openingBalancesConfigured,
+    required this.automaticSourcePostingEnabled,
+    required this.overallStatus,
+  });
+
+  final int activeLoanCount;
+  final int sourceReadyCount;
+  final int contractValidationCount;
+  final int blockedCount;
+  final bool openingBalancesConfigured;
+  final bool automaticSourcePostingEnabled;
+  final String overallStatus;
+
+  factory AccountingCutoverReadinessSummary.fromPayload(
+    Map<String, dynamic> payload,
+  ) {
+    return AccountingCutoverReadinessSummary(
+      activeLoanCount: _requiredInt(payload, 'active_loan_count'),
+      sourceReadyCount: _requiredInt(payload, 'source_ready_count'),
+      contractValidationCount:
+          _requiredInt(payload, 'contract_validation_count'),
+      blockedCount: _requiredInt(payload, 'blocked_count'),
+      openingBalancesConfigured: payload['opening_balances_configured'] == true,
+      automaticSourcePostingEnabled:
+          payload['automatic_source_posting_enabled'] == true,
+      overallStatus: _requiredString(payload, 'overall_status'),
+    );
+  }
+}
+
+class AccountingCutoverLoan {
+  const AccountingCutoverLoan({
+    required this.loanNumber,
+    required this.clientCode,
+    required this.clientName,
+    required this.loanTypeName,
+    required this.calculationMode,
+    required this.termDays,
+    required this.principal,
+    required this.dailyAmount,
+    required this.interestRate,
+    required this.dateReleased,
+    required this.dueDate,
+    required this.operationalBalance,
+    required this.regularContractTotal,
+    required this.regularScheduledTotal,
+    required this.sevenBySevenExpectedDailyInterest,
+    required this.sevenBySevenContractInterestTotal,
+    required this.sevenBySevenContractTotalIfPrincipalAtMaturity,
+    required this.sevenBySevenBaseDailyRatePercent,
+    required this.readinessStatus,
+    required this.blockers,
+  });
+
+  final String loanNumber;
+  final String clientCode;
+  final String clientName;
+  final String loanTypeName;
+  final String calculationMode;
+  final int termDays;
+  final double principal;
+  final double dailyAmount;
+  final double? interestRate;
+  final DateTime dateReleased;
+  final DateTime dueDate;
+  final double operationalBalance;
+  final double? regularContractTotal;
+  final double? regularScheduledTotal;
+  final double? sevenBySevenExpectedDailyInterest;
+  final double? sevenBySevenContractInterestTotal;
+  final double? sevenBySevenContractTotalIfPrincipalAtMaturity;
+  final double? sevenBySevenBaseDailyRatePercent;
+  final String readinessStatus;
+  final List<String> blockers;
+
+  bool get isSevenBySeven => calculationMode == 'seven_by_seven';
+
+  factory AccountingCutoverLoan.fromPayload(Map<String, dynamic> payload) {
+    final rawBlockers = payload['blockers'];
+    return AccountingCutoverLoan(
+      loanNumber: _requiredString(payload, 'loan_number'),
+      clientCode: _requiredString(payload, 'client_code'),
+      clientName: _requiredString(payload, 'client_name'),
+      loanTypeName: _requiredString(payload, 'loan_type_name'),
+      calculationMode: _requiredString(payload, 'calculation_mode'),
+      termDays: _requiredInt(payload, 'term_days'),
+      principal: _requiredDouble(payload, 'principal'),
+      dailyAmount: _requiredDouble(payload, 'daily_amount'),
+      interestRate: _optionalDouble(payload['interest_rate']),
+      dateReleased: _requiredDate(payload, 'date_released'),
+      dueDate: _requiredDate(payload, 'due_date'),
+      operationalBalance: _requiredDouble(payload, 'operational_balance'),
+      regularContractTotal: _optionalDouble(payload['regular_contract_total']),
+      regularScheduledTotal: _optionalDouble(payload['regular_scheduled_total']),
+      sevenBySevenExpectedDailyInterest:
+          _optionalDouble(payload['seven_by_seven_expected_daily_interest']),
+      sevenBySevenContractInterestTotal:
+          _optionalDouble(payload['seven_by_seven_contract_interest_total']),
+      sevenBySevenContractTotalIfPrincipalAtMaturity: _optionalDouble(
+        payload['seven_by_seven_contract_total_if_principal_at_maturity'],
+      ),
+      sevenBySevenBaseDailyRatePercent:
+          _optionalDouble(payload['seven_by_seven_base_daily_rate_percent']),
+      readinessStatus: _requiredString(payload, 'readiness_status'),
+      blockers: rawBlockers is List
+          ? rawBlockers.map((item) => item.toString()).toList(growable: false)
+          : const <String>[],
+    );
+  }
+}
+
+class OpeningBalanceCutoverSummary {
+  const OpeningBalanceCutoverSummary({
+    required this.cutoverDate,
+    required this.worksheetStatus,
+    required this.worksheetLineCount,
+    required this.sourceReferenceCount,
+    required this.manualRequiredCount,
+    required this.reconciliationRequiredCount,
+    required this.calculationRequiredCount,
+    required this.assessmentRequiredCount,
+    required this.profitLossMigrationPolicyRequired,
+    required this.worksheetBalanced,
+    required this.readyToPost,
+    required this.openingBalancePostingEnabled,
+    required this.automaticSourcePostingEnabled,
+  });
+
+  final DateTime? cutoverDate;
+  final String worksheetStatus;
+  final int worksheetLineCount;
+  final int sourceReferenceCount;
+  final int manualRequiredCount;
+  final int reconciliationRequiredCount;
+  final int calculationRequiredCount;
+  final int assessmentRequiredCount;
+  final bool profitLossMigrationPolicyRequired;
+  final bool worksheetBalanced;
+  final bool readyToPost;
+  final bool openingBalancePostingEnabled;
+  final bool automaticSourcePostingEnabled;
+
+  factory OpeningBalanceCutoverSummary.fromPayload(
+    Map<String, dynamic> payload,
+  ) {
+    return OpeningBalanceCutoverSummary(
+      cutoverDate: _optionalDate(payload['cutover_date']),
+      worksheetStatus: _requiredString(payload, 'worksheet_status'),
+      worksheetLineCount: _requiredInt(payload, 'worksheet_line_count'),
+      sourceReferenceCount: _requiredInt(payload, 'source_reference_count'),
+      manualRequiredCount: _requiredInt(payload, 'manual_required_count'),
+      reconciliationRequiredCount:
+          _requiredInt(payload, 'reconciliation_required_count'),
+      calculationRequiredCount:
+          _requiredInt(payload, 'calculation_required_count'),
+      assessmentRequiredCount:
+          _requiredInt(payload, 'assessment_required_count'),
+      profitLossMigrationPolicyRequired:
+          payload['profit_loss_migration_policy_required'] == true,
+      worksheetBalanced: payload['worksheet_balanced'] == true,
+      readyToPost: payload['ready_to_post'] == true,
+      openingBalancePostingEnabled:
+          payload['opening_balance_posting_enabled'] == true,
+      automaticSourcePostingEnabled:
+          payload['automatic_source_posting_enabled'] == true,
+    );
+  }
+}
+
+class OpeningBalanceCutoverLine {
+  const OpeningBalanceCutoverLine({
+    required this.accountCode,
+    required this.systemKey,
+    required this.accountName,
+    required this.accountType,
+    required this.normalBalance,
+    required this.sourceReferenceAmount,
+    required this.sourceBasis,
+    required this.readinessStatus,
+    required this.guidance,
+  });
+
+  final String accountCode;
+  final String systemKey;
+  final String accountName;
+  final String accountType;
+  final String normalBalance;
+  final double? sourceReferenceAmount;
+  final String sourceBasis;
+  final String readinessStatus;
+  final String guidance;
+
+  factory OpeningBalanceCutoverLine.fromPayload(Map<String, dynamic> payload) {
+    return OpeningBalanceCutoverLine(
+      accountCode: _requiredString(payload, 'account_code'),
+      systemKey: _requiredString(payload, 'system_key'),
+      accountName: _requiredString(payload, 'account_name'),
+      accountType: _requiredString(payload, 'account_type'),
+      normalBalance: _requiredString(payload, 'normal_balance'),
+      sourceReferenceAmount: _optionalDouble(payload['source_reference_amount']),
+      sourceBasis: _requiredString(payload, 'source_basis'),
+      readinessStatus: _requiredString(payload, 'readiness_status'),
+      guidance: _requiredString(payload, 'guidance'),
+    );
+  }
+}
+
 String _requiredString(Map<String, dynamic> payload, String key) {
   final value = payload[key]?.toString().trim() ?? '';
   if (value.isEmpty) {
@@ -283,6 +522,20 @@ double _requiredDouble(Map<String, dynamic> payload, String key) {
   return parsed;
 }
 
+double? _optionalDouble(Object? value) {
+  if (value == null) {
+    return null;
+  }
+  if (value is num) {
+    return value.toDouble();
+  }
+  final normalized = value.toString().trim();
+  if (normalized.isEmpty || normalized.toLowerCase() == 'null') {
+    return null;
+  }
+  return double.tryParse(normalized);
+}
+
 int _requiredInt(Map<String, dynamic> payload, String key) {
   final value = payload[key];
   if (value is int) {
@@ -307,6 +560,15 @@ DateTime _requiredDate(Map<String, dynamic> payload, String key) {
     );
   }
   return DateTime(parsed.year, parsed.month, parsed.day);
+}
+
+DateTime? _optionalDate(Object? value) {
+  final normalized = value?.toString().trim() ?? '';
+  if (normalized.isEmpty || normalized.toLowerCase() == 'null') {
+    return null;
+  }
+  final parsed = DateTime.tryParse(normalized);
+  return parsed == null ? null : DateTime(parsed.year, parsed.month, parsed.day);
 }
 
 String? _optionalString(Object? value) {

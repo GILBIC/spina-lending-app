@@ -13,6 +13,8 @@ from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .financial_accounting_repository import (
     AccountingAccount,
+    AccountingCutoverLoan,
+    AccountingCutoverReadinessSummary,
     AccountingFiscalPeriod,
     AccountingFoundationSummary,
     AccountingPeriodConflict,
@@ -22,6 +24,8 @@ from .financial_accounting_repository import (
     FinancialAccountingOverview,
     FinancialAccountingSummary,
     LoanAccountingPolicy,
+    OpeningBalanceCutoverLine,
+    OpeningBalanceCutoverSummary,
     PostgresFinancialAccountingRepository,
 )
 from .request_auth import authenticated_device_context
@@ -58,6 +62,10 @@ def financial_accounting_repository_dependency() -> (
 
 def _decimal(value: Decimal) -> str:
     return format(value, "f")
+
+
+def _optional_decimal(value: Decimal | None) -> str | None:
+    return _decimal(value) if value is not None else None
 
 
 def _summary_payload(summary: FinancialAccountingSummary) -> dict[str, object]:
@@ -131,6 +139,91 @@ def _policy_payload(policy: LoanAccountingPolicy) -> dict[str, object]:
     }
 
 
+def _cutover_summary_payload(
+    summary: AccountingCutoverReadinessSummary,
+) -> dict[str, object]:
+    return {
+        "active_loan_count": summary.active_loan_count,
+        "source_ready_count": summary.source_ready_count,
+        "contract_validation_count": summary.contract_validation_count,
+        "blocked_count": summary.blocked_count,
+        "opening_balances_configured": summary.opening_balances_configured,
+        "automatic_source_posting_enabled": summary.automatic_source_posting_enabled,
+        "overall_status": summary.overall_status,
+    }
+
+
+def _cutover_loan_payload(loan: AccountingCutoverLoan) -> dict[str, object]:
+    return {
+        "loan_number": loan.loan_number,
+        "client_code": loan.client_code,
+        "client_name": loan.client_name,
+        "loan_type_name": loan.loan_type_name,
+        "calculation_mode": loan.calculation_mode,
+        "term_days": loan.term_days,
+        "principal": _decimal(loan.principal),
+        "daily_amount": _decimal(loan.daily_amount),
+        "interest_rate": _optional_decimal(loan.interest_rate),
+        "date_released": loan.date_released.isoformat(),
+        "due_date": loan.due_date.isoformat(),
+        "operational_balance": _decimal(loan.operational_balance),
+        "regular_contract_total": _optional_decimal(loan.regular_contract_total),
+        "regular_scheduled_total": _optional_decimal(loan.regular_scheduled_total),
+        "seven_by_seven_expected_daily_interest": _optional_decimal(
+            loan.seven_by_seven_expected_daily_interest
+        ),
+        "seven_by_seven_contract_interest_total": _optional_decimal(
+            loan.seven_by_seven_contract_interest_total
+        ),
+        "seven_by_seven_contract_total_if_principal_at_maturity": _optional_decimal(
+            loan.seven_by_seven_contract_total_if_principal_at_maturity
+        ),
+        "seven_by_seven_base_daily_rate_percent": _optional_decimal(
+            loan.seven_by_seven_base_daily_rate_percent
+        ),
+        "readiness_status": loan.readiness_status,
+        "blockers": list(loan.blockers),
+    }
+
+
+def _opening_balance_summary_payload(
+    summary: OpeningBalanceCutoverSummary,
+) -> dict[str, object]:
+    return {
+        "cutover_date": summary.cutover_date.isoformat() if summary.cutover_date else None,
+        "worksheet_status": summary.worksheet_status,
+        "worksheet_line_count": summary.worksheet_line_count,
+        "source_reference_count": summary.source_reference_count,
+        "manual_required_count": summary.manual_required_count,
+        "reconciliation_required_count": summary.reconciliation_required_count,
+        "calculation_required_count": summary.calculation_required_count,
+        "assessment_required_count": summary.assessment_required_count,
+        "profit_loss_migration_policy_required": (
+            summary.profit_loss_migration_policy_required
+        ),
+        "worksheet_balanced": summary.worksheet_balanced,
+        "ready_to_post": summary.ready_to_post,
+        "opening_balance_posting_enabled": summary.opening_balance_posting_enabled,
+        "automatic_source_posting_enabled": summary.automatic_source_posting_enabled,
+    }
+
+
+def _opening_balance_line_payload(
+    line: OpeningBalanceCutoverLine,
+) -> dict[str, object]:
+    return {
+        "account_code": line.account_code,
+        "system_key": line.system_key,
+        "account_name": line.account_name,
+        "account_type": line.account_type,
+        "normal_balance": line.normal_balance,
+        "source_reference_amount": _optional_decimal(line.source_reference_amount),
+        "source_basis": line.source_basis,
+        "readiness_status": line.readiness_status,
+        "guidance": line.guidance,
+    }
+
+
 def _overview_payload(
     overview: FinancialAccountingOverview,
     *,
@@ -152,6 +245,19 @@ def _overview_payload(
             _fiscal_period_payload(item) for item in overview.fiscal_periods
         ],
         "policies": [_policy_payload(item) for item in overview.policies],
+        "cutover": {
+            "summary": _cutover_summary_payload(overview.cutover_summary),
+            "loans": [_cutover_loan_payload(item) for item in overview.cutover_loans],
+        },
+        "opening_balance_worksheet": {
+            "summary": _opening_balance_summary_payload(
+                overview.opening_balance_summary
+            ),
+            "lines": [
+                _opening_balance_line_payload(item)
+                for item in overview.opening_balance_lines
+            ],
+        },
         "foundation_status": (
             "ready" if foundation.account_count > 0 else "not_started"
         ),
@@ -160,10 +266,12 @@ def _overview_payload(
         "journal_status": "manual_ready",
         "trial_balance_status": "available",
         "notice": (
-            "Financial Accounting now supports protected manual General Journal "
-            "drafts, immutable posting, reversals, and a posted-only Trial Balance. "
-            "Automatic loan posting, opening-balance conversion, EIR schedules, "
-            "and ECL posting remain disabled until later controlled stages."
+            "Financial Accounting now includes Stage 5B cutover-readiness controls: "
+            "the 7x7 base contractual cash-flow schedule is validated and an opening-"
+            "balance source worksheet is available for review. The worksheet is not "
+            "a journal and cannot post. Automatic loan posting, opening-balance "
+            "conversion, final EIR carrying amounts, ECL posting, and tax posting "
+            "remain disabled until later controlled stages."
         ),
     }
 

@@ -105,7 +105,7 @@ class _ManagementFinancialAccountingPageState
           title: const Text('Close accounting period?'),
           content: Text(
             '${period.label} will become permanently protected from ordinary changes. '
-            'A closed period cannot be reopened. General Journal posting is still disabled in this stage.',
+            'A closed period cannot be reopened.',
           ),
           actions: [
             TextButton(
@@ -243,6 +243,10 @@ class _ManagementFinancialAccountingPageState
           _SummaryGrid(summary: overview.summary),
           const SizedBox(height: 16),
           _ReadinessCard(overview: overview),
+          const SizedBox(height: 16),
+          _CutoverReadinessCard(overview: overview),
+          const SizedBox(height: 16),
+          _OpeningBalanceWorksheetCard(overview: overview),
           const SizedBox(height: 16),
           _FiscalPeriodsCard(
             periods: overview.fiscalPeriods,
@@ -406,10 +410,260 @@ class _ReadinessCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Fiscal periods are now protected by controlled status transitions and non-overlap rules. General Journal posting, opening balances, and automatic lending entries remain disabled.',
+              'Manual General Journal posting is protected and available. Opening-balance conversion and automatic lending entries remain disabled until the cutover worksheet is completed and approved.',
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CutoverReadinessCard extends StatelessWidget {
+  const _CutoverReadinessCard({required this.overview});
+
+  final FinancialAccountingOverview overview;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = overview.cutoverSummary;
+    final sevenBySeven = overview.cutoverLoans
+        .where((loan) => loan.isSevenBySeven)
+        .toList(growable: false);
+    final regularReady = overview.cutoverLoans
+        .where(
+          (loan) =>
+              !loan.isSevenBySeven && loan.readinessStatus == 'source_ready',
+        )
+        .length;
+
+    return Card(
+      key: const Key('financial-accounting-cutover-readiness'),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        leading: const Icon(Icons.fact_check_outlined),
+        title: const Text('Accounting Cutover Readiness'),
+        subtitle: Text(
+          '${summary.sourceReadyCount} / ${summary.activeLoanCount} loan sources ready',
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          _DetailRow(
+            label: 'Overall status',
+            value: _statusLabel(summary.overallStatus),
+          ),
+          _DetailRow(
+            label: 'Source ready',
+            value: '${summary.sourceReadyCount}',
+          ),
+          _DetailRow(
+            label: 'Blocked',
+            value: '${summary.blockedCount}',
+          ),
+          _DetailRow(
+            label: 'Regular ready',
+            value: '$regularReady',
+          ),
+          _DetailRow(
+            label: '7x7 schedules',
+            value: '${sevenBySeven.length} validated',
+          ),
+          _DetailRow(
+            label: 'Opening balances',
+            value: summary.openingBalancesConfigured ? 'Configured' : 'Not configured',
+          ),
+          _DetailRow(
+            label: 'Automatic posting',
+            value: summary.automaticSourcePostingEnabled ? 'Enabled' : 'Disabled',
+          ),
+          const SizedBox(height: 10),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '7x7 validated base contract schedule',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Daily contractual interest is based on original principal. Principal is due on or before maturity; optional principal prepayments do not reduce the fixed daily contractual interest. This validates source cash flows only and does not post EIR income yet.',
+            ),
+          ),
+          const SizedBox(height: 10),
+          for (final loan in sevenBySeven) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Theme.of(context).dividerColor),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    loan.clientName,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  Text(
+                    '${loan.loanNumber} • ${_statusLabel(loan.readinessStatus)}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 6),
+                  _DetailRow(label: 'Principal', value: _money(loan.principal)),
+                  _DetailRow(
+                    label: 'Daily interest',
+                    value: _money(loan.sevenBySevenExpectedDailyInterest ?? 0),
+                  ),
+                  _DetailRow(
+                    label: '${loan.termDays}-day interest',
+                    value: _money(loan.sevenBySevenContractInterestTotal ?? 0),
+                  ),
+                  _DetailRow(
+                    label: 'Base contract total',
+                    value: _money(
+                      loan.sevenBySevenContractTotalIfPrincipalAtMaturity ?? 0,
+                    ),
+                  ),
+                  _DetailRow(
+                    label: 'Base daily rate',
+                    value:
+                        '${(loan.sevenBySevenBaseDailyRatePercent ?? 0).toStringAsFixed(4)}%',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _OpeningBalanceWorksheetCard extends StatelessWidget {
+  const _OpeningBalanceWorksheetCard({required this.overview});
+
+  final FinancialAccountingOverview overview;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = overview.openingBalanceSummary;
+    return Card(
+      key: const Key('financial-accounting-opening-balance-worksheet'),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        leading: const Icon(Icons.table_view_outlined),
+        title: const Text('Opening Balance / Cutover Worksheet'),
+        subtitle: Text(
+          '${summary.worksheetLineCount} balance-sheet accounts • ${_statusLabel(summary.worksheetStatus)}',
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          _DetailRow(
+            label: 'Cutover date',
+            value: summary.cutoverDate == null
+                ? 'Not selected'
+                : _date(summary.cutoverDate!),
+          ),
+          _DetailRow(
+            label: 'Source references',
+            value: '${summary.sourceReferenceCount}',
+          ),
+          _DetailRow(
+            label: 'Manual balances',
+            value: '${summary.manualRequiredCount} required',
+          ),
+          _DetailRow(
+            label: 'Reconciliations',
+            value: '${summary.reconciliationRequiredCount} required',
+          ),
+          _DetailRow(
+            label: 'Calculations',
+            value: '${summary.calculationRequiredCount} required',
+          ),
+          _DetailRow(
+            label: 'ECL assessment',
+            value: '${summary.assessmentRequiredCount} required',
+          ),
+          _DetailRow(
+            label: 'P&L migration policy',
+            value: summary.profitLossMigrationPolicyRequired ? 'Required' : 'Set',
+          ),
+          _DetailRow(
+            label: 'Worksheet balanced',
+            value: summary.worksheetBalanced ? 'Yes' : 'No',
+          ),
+          _DetailRow(
+            label: 'Ready to post',
+            value: summary.readyToPost ? 'Yes' : 'No',
+          ),
+          _DetailRow(
+            label: 'Opening posting',
+            value: summary.openingBalancePostingEnabled ? 'Enabled' : 'Disabled',
+          ),
+          const SizedBox(height: 10),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Source amounts below are references only. They are not opening journal balances and cannot post from this stage.',
+            ),
+          ),
+          const SizedBox(height: 10),
+          for (final line in overview.openingBalanceLines) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Theme.of(context).dividerColor),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 48,
+                        child: Text(
+                          line.accountCode,
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          line.accountName,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  _DetailRow(
+                    label: 'Source reference',
+                    value: line.sourceReferenceAmount == null
+                        ? 'Not set'
+                        : _money(line.sourceReferenceAmount!),
+                  ),
+                  _DetailRow(
+                    label: 'Status',
+                    value: _statusLabel(line.readinessStatus),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    line.guidance,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
       ),
     );
   }
@@ -464,7 +718,7 @@ class _FiscalPeriodsCard extends StatelessWidget {
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'No fiscal period has been created. No journal posting is enabled yet.',
+                'No fiscal period has been created.',
               ),
             )
           else
@@ -733,7 +987,7 @@ class _ChartOfAccountsCard extends StatelessWidget {
           const Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Seeded foundation accounts only. Balances remain zero until an approved cutover/opening-balance process is completed.',
+              'Seeded foundation accounts only. Balances remain subject to the approved cutover/opening-balance process.',
             ),
           ),
           const SizedBox(height: 10),
@@ -970,6 +1224,7 @@ String _statusLabel(String value) {
   return switch (value) {
     'ready' => 'Ready',
     'foundation_ready' => 'Foundation ready',
+    'manual_ready' => 'Manual ready',
     'not_configured' => 'Not configured',
     'configured' => 'Configured',
     'open' => 'Open',
@@ -977,6 +1232,13 @@ String _statusLabel(String value) {
     'closed' => 'Closed',
     'not_started' => 'Not started',
     'unavailable' => 'Unavailable',
+    'source_ready' => 'Source ready',
+    'opening_balances_required' => 'Opening balances required',
+    'source_review_required' => 'Source review required',
+    'manual_required' => 'Manual balance required',
+    'reconciliation_required' => 'Reconciliation required',
+    'calculation_required' => 'Accounting calculation required',
+    'assessment_required' => 'Assessment required',
     _ => _titleCase(value.replaceAll('_', ' ')),
   };
 }

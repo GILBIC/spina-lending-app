@@ -8,7 +8,7 @@ import 'package:gilbic_mobile/src/core/management/financial_accounting_repositor
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
 
 void main() {
-  testWidgets('Management sees accounting foundation, periods, and loan policies', (
+  testWidgets('Management sees accounting cutover readiness and worksheet', (
     tester,
   ) async {
     final repository = _FakeAccountingRepository();
@@ -40,14 +40,51 @@ void main() {
     expect(find.text('Posting readiness'), findsOneWidget);
     expect(find.text('Ready'), findsOneWidget);
     expect(find.textContaining('23 / 23 posting'), findsOneWidget);
-    expect(find.textContaining('Open'), findsWidgets);
-    expect(find.textContaining('Foundation ready'), findsOneWidget);
-    expect(find.text('Unavailable'), findsOneWidget);
+    expect(find.textContaining('Manual ready'), findsOneWidget);
+    expect(find.textContaining('Available'), findsOneWidget);
+
+    final cutover = find.byKey(
+      const Key('financial-accounting-cutover-readiness'),
+    );
+    await tester.scrollUntilVisible(
+      cutover,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Accounting Cutover Readiness'), findsOneWidget);
+    expect(find.text('7 / 7 loan sources ready'), findsOneWidget);
+    expect(find.text('Opening balances required'), findsOneWidget);
+    expect(find.text('3 validated'), findsOneWidget);
+    expect(find.text('7x7 validated base contract schedule'), findsOneWidget);
+    expect(find.text('₱2,520.00'), findsWidgets);
+    expect(find.text('₱5,520.00'), findsWidgets);
+    expect(find.text('0.7000%'), findsWidgets);
+
+    final worksheet = find.byKey(
+      const Key('financial-accounting-opening-balance-worksheet'),
+    );
+    await tester.scrollUntilVisible(
+      worksheet,
+      450,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Opening Balance / Cutover Worksheet'), findsOneWidget);
+    await tester.tap(worksheet);
+    await tester.pumpAndSettle();
+    expect(find.text('Not selected'), findsOneWidget);
+    expect(find.textContaining('Source review required'), findsOneWidget);
+    expect(find.text('Cash - Collector Custody'), findsOneWidget);
+    expect(find.text('Loans Receivable - Regular'), findsOneWidget);
+    expect(find.text('₱200.00'), findsWidgets);
+    expect(find.text('₱19,550.00'), findsWidgets);
+    expect(find.text('Disabled'), findsWidgets);
 
     final periods = find.byKey(const Key('financial-accounting-fiscal-periods'));
     await tester.scrollUntilVisible(
       periods,
-      350,
+      500,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
@@ -60,7 +97,7 @@ void main() {
     final chart = find.byKey(const Key('financial-accounting-chart-of-accounts'));
     await tester.scrollUntilVisible(
       chart,
-      400,
+      500,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
@@ -75,13 +112,13 @@ void main() {
     );
     await tester.scrollUntilVisible(
       sevenBySeven,
-      500,
+      600,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
     expect(find.text('7x7'), findsOneWidget);
     expect(find.text('₱7.00 / ₱1,000'), findsOneWidget);
-    expect(find.text('Disabled'), findsOneWidget);
+    expect(find.text('Disabled'), findsWidgets);
     expect(
       find.textContaining('Cash release = new principal'),
       findsOneWidget,
@@ -105,7 +142,7 @@ void main() {
     final reviewButton = find.byKey(const Key('period-review-period-aug-2026'));
     await tester.scrollUntilVisible(
       reviewButton,
-      400,
+      600,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
@@ -137,7 +174,7 @@ void main() {
     final closeButton = find.byKey(const Key('period-close-period-aug-2026'));
     await tester.scrollUntilVisible(
       closeButton,
-      400,
+      600,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
@@ -193,12 +230,12 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
     this.deviceId = deviceId;
     return FinancialAccountingOverview(
       notice:
-          'Financial Accounting now has protected fiscal-period controls.',
+          'Stage 5B cutover readiness and opening-balance source worksheet.',
       foundationStatus: 'ready',
       fiscalPeriodStatus: _status == 'open' ? 'open' : 'configured',
       periodManagementEnabled: true,
-      journalStatus: 'foundation_ready',
-      trialBalanceStatus: 'unavailable',
+      journalStatus: 'manual_ready',
+      trialBalanceStatus: 'available',
       summary: const FinancialAccountingSummary(
         activeLoanCount: 7,
         activePrincipal: 29000,
@@ -216,9 +253,9 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
         postingAccountCount: 23,
         fiscalPeriodCount: 1,
         openPeriodCount: _status == 'open' ? 1 : 0,
-        journalEntryCount: 0,
+        journalEntryCount: 2,
         draftJournalCount: 0,
-        postedJournalCount: 0,
+        postedJournalCount: 2,
         reversalDraftCount: 0,
       ),
       accounts: const <AccountingAccount>[
@@ -248,9 +285,9 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
           startDate: DateTime(2026, 8, 1),
           endDate: DateTime(2026, 8, 31),
           status: _status,
-          journalCount: 0,
+          journalCount: 2,
           draftJournalCount: 0,
-          postedJournalCount: 0,
+          postedJournalCount: 2,
           closedByName: _status == 'closed' ? 'Management' : null,
         ),
       ],
@@ -276,9 +313,106 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
           operationalRule:
               'Daily interest stays based on the original principal until principal reaches zero.',
           accountingRule:
-              'Track principal receivable and accrued interest separately.',
+              'Validated daily-interest plus maturity-principal cash-flow schedule.',
           renewalRule:
               'Cash release = new principal minus old principal outstanding minus accrued unpaid interest.',
+        ),
+      ],
+      cutoverSummary: const AccountingCutoverReadinessSummary(
+        activeLoanCount: 7,
+        sourceReadyCount: 7,
+        contractValidationCount: 0,
+        blockedCount: 0,
+        openingBalancesConfigured: false,
+        automaticSourcePostingEnabled: false,
+        overallStatus: 'opening_balances_required',
+      ),
+      cutoverLoans: <AccountingCutoverLoan>[
+        AccountingCutoverLoan(
+          loanNumber: 'TEST-REG-20260802',
+          clientCode: 'TEST-REG-001',
+          clientName: 'TEST CLIENT REGULAR',
+          loanTypeName: 'Regular',
+          calculationMode: 'fixed_daily',
+          termDays: 120,
+          principal: 5000,
+          dailyAmount: 50,
+          interestRate: 20,
+          dateReleased: DateTime(2026, 8, 1),
+          dueDate: DateTime(2026, 11, 29),
+          operationalBalance: 4900,
+          regularContractTotal: 6000,
+          regularScheduledTotal: 6000,
+          sevenBySevenExpectedDailyInterest: null,
+          sevenBySevenContractInterestTotal: null,
+          sevenBySevenContractTotalIfPrincipalAtMaturity: null,
+          sevenBySevenBaseDailyRatePercent: null,
+          readinessStatus: 'source_ready',
+          blockers: const <String>[],
+        ),
+        ...List<AccountingCutoverLoan>.generate(
+          3,
+          (index) => AccountingCutoverLoan(
+            loanNumber: 'TEST-7X7-${index + 1}',
+            clientCode: 'TEST-7X7-${index + 1}',
+            clientName: 'TEST CLIENT 7X7 ${index + 1}',
+            loanTypeName: '7x7',
+            calculationMode: 'seven_by_seven',
+            termDays: 120,
+            principal: 3000,
+            dailyAmount: 21,
+            interestRate: null,
+            dateReleased: DateTime(2026, 8, 2),
+            dueDate: DateTime(2026, 11, 30),
+            operationalBalance: 3000,
+            regularContractTotal: null,
+            regularScheduledTotal: null,
+            sevenBySevenExpectedDailyInterest: 21,
+            sevenBySevenContractInterestTotal: 2520,
+            sevenBySevenContractTotalIfPrincipalAtMaturity: 5520,
+            sevenBySevenBaseDailyRatePercent: 0.7,
+            readinessStatus: 'source_ready',
+            blockers: const <String>[],
+          ),
+        ),
+      ],
+      openingBalanceSummary: const OpeningBalanceCutoverSummary(
+        cutoverDate: null,
+        worksheetStatus: 'source_review_required',
+        worksheetLineCount: 11,
+        sourceReferenceCount: 4,
+        manualRequiredCount: 5,
+        reconciliationRequiredCount: 2,
+        calculationRequiredCount: 3,
+        assessmentRequiredCount: 1,
+        profitLossMigrationPolicyRequired: true,
+        worksheetBalanced: false,
+        readyToPost: false,
+        openingBalancePostingEnabled: false,
+        automaticSourcePostingEnabled: false,
+      ),
+      openingBalanceLines: const <OpeningBalanceCutoverLine>[
+        OpeningBalanceCutoverLine(
+          accountCode: '1020',
+          systemKey: 'cash_collector_custody',
+          accountName: 'Cash - Collector Custody',
+          accountType: 'asset',
+          normalBalance: 'debit',
+          sourceReferenceAmount: 200,
+          sourceBasis: 'collection_custody_reference',
+          readinessStatus: 'reconciliation_required',
+          guidance: 'Reconcile to physical collector cash.',
+        ),
+        OpeningBalanceCutoverLine(
+          accountCode: '1100',
+          systemKey: 'loans_receivable_regular',
+          accountName: 'Loans Receivable - Regular',
+          accountType: 'asset',
+          normalBalance: 'debit',
+          sourceReferenceAmount: 19550,
+          sourceBasis: 'regular_operational_reference',
+          readinessStatus: 'calculation_required',
+          guidance: 'Derive the PFRS carrying amount before posting.',
         ),
       ],
     );
@@ -323,9 +457,9 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
       startDate: DateTime(2026, 8, 1),
       endDate: DateTime(2026, 8, 31),
       status: status,
-      journalCount: 0,
+      journalCount: 2,
       draftJournalCount: 0,
-      postedJournalCount: 0,
+      postedJournalCount: 2,
       closedByName: status == 'closed' ? 'Management' : null,
     );
   }

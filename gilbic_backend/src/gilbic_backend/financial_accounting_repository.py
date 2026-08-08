@@ -76,12 +76,81 @@ class LoanAccountingPolicy:
 
 
 @dataclass(frozen=True, slots=True)
+class AccountingCutoverReadinessSummary:
+    active_loan_count: int
+    source_ready_count: int
+    contract_validation_count: int
+    blocked_count: int
+    opening_balances_configured: bool
+    automatic_source_posting_enabled: bool
+    overall_status: str
+
+
+@dataclass(frozen=True, slots=True)
+class AccountingCutoverLoan:
+    loan_number: str
+    client_code: str
+    client_name: str
+    loan_type_name: str
+    calculation_mode: str
+    term_days: int
+    principal: Decimal
+    daily_amount: Decimal
+    interest_rate: Decimal | None
+    date_released: date
+    due_date: date
+    operational_balance: Decimal
+    regular_contract_total: Decimal | None
+    regular_scheduled_total: Decimal | None
+    seven_by_seven_expected_daily_interest: Decimal | None
+    seven_by_seven_contract_interest_total: Decimal | None
+    seven_by_seven_contract_total_if_principal_at_maturity: Decimal | None
+    seven_by_seven_base_daily_rate_percent: Decimal | None
+    readiness_status: str
+    blockers: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class OpeningBalanceCutoverSummary:
+    cutover_date: date | None
+    worksheet_status: str
+    worksheet_line_count: int
+    source_reference_count: int
+    manual_required_count: int
+    reconciliation_required_count: int
+    calculation_required_count: int
+    assessment_required_count: int
+    profit_loss_migration_policy_required: bool
+    worksheet_balanced: bool
+    ready_to_post: bool
+    opening_balance_posting_enabled: bool
+    automatic_source_posting_enabled: bool
+
+
+@dataclass(frozen=True, slots=True)
+class OpeningBalanceCutoverLine:
+    account_code: str
+    system_key: str
+    account_name: str
+    account_type: str
+    normal_balance: str
+    source_reference_amount: Decimal | None
+    source_basis: str
+    readiness_status: str
+    guidance: str
+
+
+@dataclass(frozen=True, slots=True)
 class FinancialAccountingOverview:
     summary: FinancialAccountingSummary
     foundation: AccountingFoundationSummary
     accounts: tuple[AccountingAccount, ...]
     fiscal_periods: tuple[AccountingFiscalPeriod, ...]
     policies: tuple[LoanAccountingPolicy, ...]
+    cutover_summary: AccountingCutoverReadinessSummary
+    cutover_loans: tuple[AccountingCutoverLoan, ...]
+    opening_balance_summary: OpeningBalanceCutoverSummary
+    opening_balance_lines: tuple[OpeningBalanceCutoverLine, ...]
 
 
 class AccountingPeriodError(RuntimeError):
@@ -247,6 +316,109 @@ class PostgresFinancialAccountingRepository:
 
                 fiscal_periods = self._load_periods(cursor)
 
+                cursor.execute(
+                    """
+                    select
+                        active_loan_count,
+                        source_ready_count,
+                        contract_validation_count,
+                        blocked_count,
+                        opening_balances_configured,
+                        automatic_source_posting_enabled,
+                        overall_status
+                    from accounting.cutover_readiness_summary
+                    """
+                )
+                cutover_summary_row = cursor.fetchone()
+
+                cursor.execute(
+                    """
+                    select
+                        loan_number,
+                        client_code,
+                        client_name,
+                        loan_type_name,
+                        calculation_mode,
+                        term_days,
+                        principal,
+                        daily_amount,
+                        interest_rate,
+                        date_released,
+                        due_date,
+                        operational_balance,
+                        regular_contract_total,
+                        regular_scheduled_total,
+                        seven_by_seven_expected_daily_interest,
+                        seven_by_seven_contract_interest_total,
+                        seven_by_seven_contract_total_if_principal_at_maturity,
+                        seven_by_seven_base_daily_rate_percent,
+                        readiness_status,
+                        blockers
+                    from accounting.loan_cutover_readiness
+                    where status = 'active'
+                    order by calculation_mode, client_name, loan_number
+                    """
+                )
+                cutover_loans = tuple(
+                    self._cutover_loan_from_row(row) for row in cursor.fetchall()
+                )
+
+                cursor.execute(
+                    """
+                    select
+                        cutover_date,
+                        worksheet_status,
+                        worksheet_line_count,
+                        source_reference_count,
+                        manual_required_count,
+                        reconciliation_required_count,
+                        calculation_required_count,
+                        assessment_required_count,
+                        profit_loss_migration_policy_required,
+                        worksheet_balanced,
+                        ready_to_post,
+                        opening_balance_posting_enabled,
+                        automatic_source_posting_enabled
+                    from accounting.opening_balance_cutover_summary
+                    """
+                )
+                opening_summary_row = cursor.fetchone()
+
+                cursor.execute(
+                    """
+                    select
+                        account_code,
+                        system_key,
+                        account_name,
+                        account_type,
+                        normal_balance,
+                        source_reference_amount,
+                        source_basis,
+                        readiness_status,
+                        guidance
+                    from accounting.opening_balance_cutover_worksheet
+                    order by account_code
+                    """
+                )
+                opening_lines = tuple(
+                    OpeningBalanceCutoverLine(
+                        account_code=str(row["account_code"]),
+                        system_key=str(row["system_key"]),
+                        account_name=str(row["account_name"]),
+                        account_type=str(row["account_type"]),
+                        normal_balance=str(row["normal_balance"]),
+                        source_reference_amount=(
+                            Decimal(row["source_reference_amount"])
+                            if row["source_reference_amount"] is not None
+                            else None
+                        ),
+                        source_basis=str(row["source_basis"]),
+                        readiness_status=str(row["readiness_status"]),
+                        guidance=str(row["guidance"]),
+                    )
+                    for row in cursor.fetchall()
+                )
+
         return FinancialAccountingOverview(
             summary=FinancialAccountingSummary(
                 active_loan_count=int(loan_summary["active_loan_count"] or 0),
@@ -287,6 +459,56 @@ class PostgresFinancialAccountingRepository:
             accounts=chart_of_accounts,
             fiscal_periods=fiscal_periods,
             policies=policies,
+            cutover_summary=AccountingCutoverReadinessSummary(
+                active_loan_count=int(cutover_summary_row["active_loan_count"] or 0),
+                source_ready_count=int(cutover_summary_row["source_ready_count"] or 0),
+                contract_validation_count=int(
+                    cutover_summary_row["contract_validation_count"] or 0
+                ),
+                blocked_count=int(cutover_summary_row["blocked_count"] or 0),
+                opening_balances_configured=bool(
+                    cutover_summary_row["opening_balances_configured"]
+                ),
+                automatic_source_posting_enabled=bool(
+                    cutover_summary_row["automatic_source_posting_enabled"]
+                ),
+                overall_status=str(cutover_summary_row["overall_status"]),
+            ),
+            cutover_loans=cutover_loans,
+            opening_balance_summary=OpeningBalanceCutoverSummary(
+                cutover_date=opening_summary_row["cutover_date"],
+                worksheet_status=str(opening_summary_row["worksheet_status"]),
+                worksheet_line_count=int(
+                    opening_summary_row["worksheet_line_count"] or 0
+                ),
+                source_reference_count=int(
+                    opening_summary_row["source_reference_count"] or 0
+                ),
+                manual_required_count=int(
+                    opening_summary_row["manual_required_count"] or 0
+                ),
+                reconciliation_required_count=int(
+                    opening_summary_row["reconciliation_required_count"] or 0
+                ),
+                calculation_required_count=int(
+                    opening_summary_row["calculation_required_count"] or 0
+                ),
+                assessment_required_count=int(
+                    opening_summary_row["assessment_required_count"] or 0
+                ),
+                profit_loss_migration_policy_required=bool(
+                    opening_summary_row["profit_loss_migration_policy_required"]
+                ),
+                worksheet_balanced=bool(opening_summary_row["worksheet_balanced"]),
+                ready_to_post=bool(opening_summary_row["ready_to_post"]),
+                opening_balance_posting_enabled=bool(
+                    opening_summary_row["opening_balance_posting_enabled"]
+                ),
+                automatic_source_posting_enabled=bool(
+                    opening_summary_row["automatic_source_posting_enabled"]
+                ),
+            ),
+            opening_balance_lines=opening_lines,
         )
 
     def create_fiscal_period(
@@ -435,6 +657,44 @@ class PostgresFinancialAccountingRepository:
         return AccountingPeriodError(message or "Accounting period operation failed.")
 
     @staticmethod
+    def _cutover_loan_from_row(row) -> AccountingCutoverLoan:
+        def optional_decimal(key: str) -> Decimal | None:
+            value = row[key]
+            return Decimal(value) if value is not None else None
+
+        blockers = row["blockers"] or []
+        return AccountingCutoverLoan(
+            loan_number=str(row["loan_number"]),
+            client_code=str(row["client_code"]),
+            client_name=str(row["client_name"]),
+            loan_type_name=str(row["loan_type_name"]),
+            calculation_mode=str(row["calculation_mode"]),
+            term_days=int(row["term_days"] or 0),
+            principal=Decimal(row["principal"] or 0),
+            daily_amount=Decimal(row["daily_amount"] or 0),
+            interest_rate=optional_decimal("interest_rate"),
+            date_released=row["date_released"],
+            due_date=row["due_date"],
+            operational_balance=Decimal(row["operational_balance"] or 0),
+            regular_contract_total=optional_decimal("regular_contract_total"),
+            regular_scheduled_total=optional_decimal("regular_scheduled_total"),
+            seven_by_seven_expected_daily_interest=optional_decimal(
+                "seven_by_seven_expected_daily_interest"
+            ),
+            seven_by_seven_contract_interest_total=optional_decimal(
+                "seven_by_seven_contract_interest_total"
+            ),
+            seven_by_seven_contract_total_if_principal_at_maturity=optional_decimal(
+                "seven_by_seven_contract_total_if_principal_at_maturity"
+            ),
+            seven_by_seven_base_daily_rate_percent=optional_decimal(
+                "seven_by_seven_base_daily_rate_percent"
+            ),
+            readiness_status=str(row["readiness_status"]),
+            blockers=tuple(str(item) for item in blockers),
+        )
+
+    @staticmethod
     def _policy_from_row(row) -> LoanAccountingPolicy:
         mode = str(row["calculation_mode"])
         if mode == "seven_by_seven":
@@ -445,12 +705,13 @@ class PostgresFinancialAccountingRepository:
                 "the original principal until principal reaches zero."
             )
             accounting_rule = (
-                "Track principal and contractual accrued interest separately in the "
-                "operational subledger. Before official journal posting is enabled, "
-                "derive and validate the PFRS effective-interest schedule from the "
-                "actual contractual cash flows. Collection of previously recognized "
-                "interest must never recognize the same income twice; impairment/ECL "
-                "is assessed separately when collectibility deteriorates."
+                "The validated base contract schedule uses daily contractual interest "
+                "with principal due on or before maturity. Principal prepayments are "
+                "allowed but do not reduce the fixed daily contractual interest. "
+                "Use this cash-flow schedule to derive the PFRS effective-interest "
+                "measurement before automatic journal posting is enabled. Previously "
+                "recognized interest must never be recognized twice, and ECL remains "
+                "a separate impairment assessment."
             )
             renewal_rule = (
                 "Cash release = new principal minus old principal outstanding minus "
