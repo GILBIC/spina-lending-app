@@ -12,7 +12,7 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/auth/login_page.dart';
-import 'package:gilbic_mobile/src/features/dashboard/role_dashboard.dart';
+import 'package:gilbic_mobile/src/features/dashboard/enhanced_role_dashboard.dart';
 
 class GilbicApp extends StatefulWidget {
   const GilbicApp({
@@ -271,7 +271,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
                   onSignIn: _signIn,
                   clientRegistrationRepository: _clientRegistrationRepository,
                 )
-              : RoleDashboard(
+              : EnhancedRoleDashboard(
                   session: _session!,
                   onSignOut: _signOut,
                   collectorRouteLoader: _collectorRouteLoader,
