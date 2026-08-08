@@ -67,9 +67,7 @@ class _ManagementEclOutcomeReviewPageState
       if (mounted) setState(() => _error = error.message);
     } on Object {
       if (mounted) {
-        setState(() {
-          _error = 'Historical outcome review could not be loaded.';
-        });
+        setState(() => _error = 'Historical outcome review could not be loaded.');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -152,6 +150,7 @@ class _ManagementEclOutcomeReviewPageState
     }
     if (data == null) return const SizedBox.shrink();
 
+    final previousOffset = _offset <= _pageSize ? 0 : _offset - _pageSize;
     return RefreshIndicator(
       onRefresh: () => _load(),
       child: ListView(
@@ -162,7 +161,7 @@ class _ManagementEclOutcomeReviewPageState
           const SizedBox(height: 12),
           _SummaryCard(summary: data.summary),
           const SizedBox(height: 12),
-          if (!data.reviewPermission)
+          if (!data.reviewPermission) ...[
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(14),
@@ -180,7 +179,8 @@ class _ManagementEclOutcomeReviewPageState
                 ),
               ),
             ),
-          if (!data.reviewPermission) const SizedBox(height: 12),
+            const SizedBox(height: 12),
+          ],
           _FilterBar(
             value: _filter,
             disabled: _loading || _submitting,
@@ -204,10 +204,11 @@ class _ManagementEclOutcomeReviewPageState
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              if (_loading) const SizedBox.square(
-                dimension: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
+              if (_loading)
+                const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
             ],
           ),
           const SizedBox(height: 8),
@@ -233,7 +234,7 @@ class _ManagementEclOutcomeReviewPageState
             pageSize: _pageSize,
             hasNext: data.episodes.length == _pageSize,
             disabled: _loading || _submitting,
-            onPrevious: () => _load(offset: (_offset - _pageSize).clamp(0, 1 << 31)),
+            onPrevious: () => _load(offset: previousOffset),
             onNext: () => _load(offset: _offset + _pageSize),
           ),
           const SizedBox(height: 12),
@@ -304,18 +305,38 @@ class _SummaryCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _Row(label: 'Historical episodes', value: '${summary.episodeCount}'),
-            _Row(label: 'Usable for outcome review', value: '${summary.structurallyUsableCount}'),
-            _Row(label: 'Source review required', value: '${summary.sourceReviewRequiredCount}'),
-            _Row(label: 'Pending outcome review', value: '${summary.pendingOutcomeReviewCount}'),
+            _Row(
+              label: 'Usable for outcome review',
+              value: '${summary.structurallyUsableCount}',
+            ),
+            _Row(
+              label: 'Source review required',
+              value: '${summary.sourceReviewRequiredCount}',
+            ),
+            _Row(
+              label: 'Pending outcome review',
+              value: '${summary.pendingOutcomeReviewCount}',
+            ),
             _Row(label: 'Reviewed', value: '${summary.reviewedOutcomeCount}'),
-            _Row(label: 'Reviewed default', value: '${summary.reviewedDefaultCount}'),
-            _Row(label: 'Reviewed non-default', value: '${summary.reviewedNonDefaultCount}'),
+            _Row(
+              label: 'Reviewed default',
+              value: '${summary.reviewedDefaultCount}',
+            ),
+            _Row(
+              label: 'Reviewed non-default',
+              value: '${summary.reviewedNonDefaultCount}',
+            ),
             _Row(label: 'ECL included', value: summary.eclIncluded ? 'Yes' : 'No'),
             _Row(
               label: 'ECL amount',
-              value: summary.eclAmount == null ? 'Not calculated' : _money(summary.eclAmount!),
+              value: summary.eclAmount == null
+                  ? 'Not calculated'
+                  : _money(summary.eclAmount!),
             ),
-            _Row(label: 'Ready to post', value: summary.readyToPost ? 'Yes' : 'No'),
+            _Row(
+              label: 'Ready to post',
+              value: summary.readyToPost ? 'Yes' : 'No',
+            ),
           ],
         ),
       ),
@@ -374,7 +395,9 @@ class _EpisodeCard extends StatelessWidget {
     return Card(
       key: Key('ecl-outcome-review-${episode.historicalEpisodeId}'),
       child: ExpansionTile(
-        title: Text('${_loanType(episode.loanType)} • Episode ${episode.episodeSequence}'),
+        title: Text(
+          '${_loanType(episode.loanType)} • Episode ${episode.episodeSequence}',
+        ),
         subtitle: Text(
           '${_dateOrDash(episode.releaseDate)} • ${_money(episode.principal)} • ${_shortKey(episode.borrowerKey)}',
         ),
@@ -398,16 +421,36 @@ class _EpisodeCard extends StatelessWidget {
           _Row(label: 'Principal', value: _money(episode.principal)),
           _Row(
             label: 'Contractual total',
-            value: episode.contractualTotal == null ? '—' : _money(episode.contractualTotal!),
+            value: episode.contractualTotal == null
+                ? '—'
+                : _money(episode.contractualTotal!),
           ),
           _Row(label: 'Observed cash', value: _money(episode.cashCollected)),
-          _Row(label: 'Positive payments', value: '${episode.positivePaymentCount}'),
-          _Row(label: 'Zero-payment observations', value: '${episode.zeroPaymentObservationCount}'),
-          _Row(label: 'Observed collection days', value: '${episode.observedCollectionDays}'),
-          _Row(label: 'Lifecycle evidence', value: _status(episode.outcomeEvidence ?? 'none')),
-          _Row(label: 'Outcome evidence date', value: _dateOrDash(episode.outcomeDate)),
+          _Row(
+            label: 'Positive payments',
+            value: '${episode.positivePaymentCount}',
+          ),
+          _Row(
+            label: 'Zero-payment observations',
+            value: '${episode.zeroPaymentObservationCount}',
+          ),
+          _Row(
+            label: 'Observed collection days',
+            value: '${episode.observedCollectionDays}',
+          ),
+          _Row(
+            label: 'Lifecycle evidence',
+            value: _status(episode.outcomeEvidence ?? 'none'),
+          ),
+          _Row(
+            label: 'Outcome evidence date',
+            value: _dateOrDash(episode.outcomeDate),
+          ),
           if (episode.renewalRolloverAmount != null)
-            _Row(label: 'Renewal rollover', value: _money(episode.renewalRolloverAmount!)),
+            _Row(
+              label: 'Renewal rollover',
+              value: _money(episode.renewalRolloverAmount!),
+            ),
           const SizedBox(height: 8),
           if (episode.sourceBlocked)
             _WarningBox(
@@ -424,8 +467,12 @@ class _EpisodeCard extends StatelessWidget {
               child: FilledButton.icon(
                 key: Key('review-outcome-${episode.historicalEpisodeId}'),
                 onPressed: canReview ? onReview : null,
-                icon: Icon(episode.reviewed ? Icons.edit_note : Icons.fact_check_outlined),
-                label: Text(episode.reviewed ? 'Revise review' : 'Review outcome'),
+                icon: Icon(
+                  episode.reviewed ? Icons.edit_note : Icons.fact_check_outlined,
+                ),
+                label: Text(
+                  episode.reviewed ? 'Revise review' : 'Review outcome',
+                ),
               ),
             ),
         ],
@@ -445,7 +492,9 @@ class _ReviewHistory extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -456,11 +505,23 @@ class _ReviewHistory extends StatelessWidget {
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 6),
-          _Row(label: 'Review version', value: '${episode.reviewVersion ?? 1}'),
-          _Row(label: 'Evidence basis', value: _status(episode.evidenceBasis ?? 'not_recorded')),
-          _Row(label: 'Evidence reference', value: episode.evidenceReference ?? '—'),
+          _Row(
+            label: 'Review version',
+            value: '${episode.reviewVersion ?? 1}',
+          ),
+          _Row(
+            label: 'Evidence basis',
+            value: _status(episode.evidenceBasis ?? 'not_recorded'),
+          ),
+          _Row(
+            label: 'Evidence reference',
+            value: episode.evidenceReference ?? '—',
+          ),
           _Row(label: 'Reviewer', value: episode.reviewerName ?? '—'),
-          _Row(label: 'Reviewed at', value: _dateTimeOrDash(episode.reviewedAt)),
+          _Row(
+            label: 'Reviewed at',
+            value: _dateTimeOrDash(episode.reviewedAt),
+          ),
           const SizedBox(height: 6),
           Text(episode.reviewNote ?? 'No review note recorded.'),
         ],
@@ -476,24 +537,22 @@ class _WarningBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer,
+        color: colors.errorContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.warning_amber_outlined, color: Theme.of(context).colorScheme.onErrorContainer),
+          Icon(Icons.warning_amber_outlined, color: colors.onErrorContainer),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              text,
-              style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
-            ),
+            child: Text(text, style: TextStyle(color: colors.onErrorContainer)),
           ),
         ],
       ),
@@ -533,7 +592,6 @@ class _Pagination extends StatelessWidget {
           onPressed: disabled || !hasNext ? null : onNext,
           icon: const Icon(Icons.chevron_right),
           label: const Text('Next'),
-          iconAlignment: IconAlignment.end,
         ),
       ],
     );
@@ -608,9 +666,13 @@ class _ReviewDialogState extends State<_ReviewDialog> {
                   ),
                 ],
                 emptySelectionAllowed: true,
-                selected: _defaultLabel == null ? <bool>{} : <bool>{_defaultLabel!},
+                selected: _defaultLabel == null
+                    ? <bool>{}
+                    : <bool>{_defaultLabel!},
                 onSelectionChanged: (selection) {
-                  setState(() => _defaultLabel = selection.isEmpty ? null : selection.first);
+                  setState(() {
+                    _defaultLabel = selection.isEmpty ? null : selection.first;
+                  });
                 },
               ),
               const SizedBox(height: 14),
@@ -619,10 +681,22 @@ class _ReviewDialogState extends State<_ReviewDialog> {
                 initialValue: _basis,
                 decoration: const InputDecoration(labelText: 'Evidence basis'),
                 items: const [
-                  DropdownMenuItem(value: 'source_document', child: Text('Source document')),
-                  DropdownMenuItem(value: 'collection_history', child: Text('Collection history')),
-                  DropdownMenuItem(value: 'renewal_settlement', child: Text('Renewal settlement')),
-                  DropdownMenuItem(value: 'management_review', child: Text('Management review')),
+                  DropdownMenuItem(
+                    value: 'source_document',
+                    child: Text('Source document'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'collection_history',
+                    child: Text('Collection history'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'renewal_settlement',
+                    child: Text('Renewal settlement'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'management_review',
+                    child: Text('Management review'),
+                  ),
                 ],
                 onChanged: (value) {
                   if (value != null) setState(() => _basis = value);
@@ -635,7 +709,8 @@ class _ReviewDialogState extends State<_ReviewDialog> {
                 maxLength: 300,
                 decoration: const InputDecoration(
                   labelText: 'Evidence reference',
-                  hintText: 'Document, ledger period, settlement reference, or review file',
+                  hintText:
+                      'Document, ledger period, settlement reference, or review file',
                 ),
                 onChanged: (_) => setState(() {}),
               ),
@@ -648,7 +723,8 @@ class _ReviewDialogState extends State<_ReviewDialog> {
                 maxLines: 6,
                 decoration: const InputDecoration(
                   labelText: 'Review note',
-                  hintText: 'Explain the evidence supporting this reviewed outcome',
+                  hintText:
+                      'Explain the evidence supporting this reviewed outcome',
                 ),
                 onChanged: (_) => setState(() {}),
               ),
