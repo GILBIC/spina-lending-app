@@ -115,7 +115,8 @@ CROSS JOIN LATERAL accounting.measure_loan_at_cutover(
 ORDER BY measurement.calculation_mode, measurement.loan_number;
 
 -- Read-only audit surface for Stage 5D.1 validation. It does not change workbook
--- lines and does not create or post journals.
+-- lines and does not create or post journals. The LEFT JOIN keeps one audit row
+-- available even when no loans are currently measured.
 CREATE OR REPLACE VIEW accounting.loan_measurement_reconciliation AS
 WITH measured AS (
     SELECT *
@@ -126,13 +127,13 @@ WITH measured AS (
     FROM accounting.loan_measurement_summary
 )
 SELECT
-    count(*)::bigint AS measured_loan_count,
+    count(measured.loan_id)::bigint AS measured_loan_count,
     coalesce(
         sum(
             round(
-                loan_component
-                    + accrued_interest_component
-                    - gross_carrying_amount,
+                measured.loan_component
+                    + measured.accrued_interest_component
+                    - measured.gross_carrying_amount,
                 2
             )
         ),
@@ -141,11 +142,11 @@ SELECT
     coalesce(
         bool_and(
             abs(
-                loan_component
-                    + accrued_interest_component
-                    - gross_carrying_amount
+                measured.loan_component
+                    + measured.accrued_interest_component
+                    - measured.gross_carrying_amount
             ) < 0.005
-        ),
+        ) FILTER (WHERE measured.loan_id IS NOT NULL),
         true
     ) AS all_measured_loans_reconciled,
     round(
@@ -163,8 +164,8 @@ SELECT
     ) < 0.005 AS summary_reconciled,
     false AS ready_to_post,
     false AS ecl_included
-FROM measured
-CROSS JOIN summary
+FROM summary
+LEFT JOIN measured ON true
 GROUP BY
     summary.regular_loan_component,
     summary.seven_by_seven_loan_component,
