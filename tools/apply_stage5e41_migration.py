@@ -70,7 +70,11 @@ def _journal_count(connection: psycopg.Connection) -> int | None:
     return _count(connection, "accounting.journal_entries")
 
 
-def _verify_installed(connection: psycopg.Connection) -> None:
+def _verify_installed(
+    connection: psycopg.Connection,
+    *,
+    require_pristine_install: bool,
+) -> None:
     objects = connection.execute(
         """
         SELECT
@@ -91,7 +95,9 @@ def _verify_installed(connection: psycopg.Connection) -> None:
     allocation_count = _count(
         connection, "lending.loan_installment_payment_allocations"
     )
-    if schedule_count or installment_count or allocation_count:
+    if require_pristine_install and (
+        schedule_count or installment_count or allocation_count
+    ):
         raise SystemExit(
             "Stage 5E.4.1 verification failed: live install must not auto-create "
             "contract schedules, installments, or payment allocations"
@@ -120,18 +126,21 @@ def _verify_installed(connection: psycopg.Connection) -> None:
         raise SystemExit(
             "Stage 5E.4.1 verification failed: DPD summary does not cover every live loan"
         )
-    if int(summary[1]) != 0:
-        raise SystemExit(
-            "Stage 5E.4.1 verification failed: existing loans became DPD-ready without verified schedules"
-        )
-    if int(summary[2]) != live_loan_count:
-        raise SystemExit(
-            "Stage 5E.4.1 verification failed: existing loans must remain contract_schedule_required"
-        )
-    if any(int(summary[index]) != 0 for index in range(3, 8)):
-        raise SystemExit(
-            "Stage 5E.4.1 verification failed: live install unexpectedly produced DPD/backstop activity"
-        )
+
+    if require_pristine_install:
+        if int(summary[1]) != 0:
+            raise SystemExit(
+                "Stage 5E.4.1 verification failed: existing loans became DPD-ready without verified schedules"
+            )
+        if int(summary[2]) != live_loan_count:
+            raise SystemExit(
+                "Stage 5E.4.1 verification failed: existing loans must remain contract_schedule_required"
+            )
+        if any(int(summary[index]) != 0 for index in range(3, 8)):
+            raise SystemExit(
+                "Stage 5E.4.1 verification failed: live install unexpectedly produced DPD/backstop activity"
+            )
+
     if bool(summary[8]) or bool(summary[9]) or summary[10] is not None or bool(summary[11]):
         raise SystemExit(
             "Stage 5E.4.1 verification failed: default, ECL, or posting was unexpectedly enabled"
@@ -143,8 +152,10 @@ def _verify_installed(connection: psycopg.Connection) -> None:
         f"schedule_required={summary[2]}, installments_required={summary[3]}, "
         f"allocation_required={summary[4]}, past_due={summary[5]}, "
         f"backstop30={summary[6]}, backstop90={summary[7]}, "
-        f"automatic_default={summary[8]}, ecl_included={summary[9]}, "
-        f"ecl_amount={summary[10]}, ready_to_post={summary[11]}."
+        f"schedules={schedule_count}, installments={installment_count}, "
+        f"allocations={allocation_count}, automatic_default={summary[8]}, "
+        f"ecl_included={summary[9]}, ecl_amount={summary[10]}, "
+        f"ready_to_post={summary[11]}."
     )
 
 
@@ -181,7 +192,7 @@ def main() -> int:
         ).fetchone()[0]
         if already_installed is not None:
             print("Stage 5E.4.1 is already installed; skipping migration application.")
-            _verify_installed(connection)
+            _verify_installed(connection, require_pristine_install=False)
             return 0
 
         before_loans = _count(connection, "lending.loans")
@@ -219,7 +230,7 @@ def main() -> int:
                 "Stage 5E.4.1 safety gate failed: historical ECL outcome labels changed"
             )
 
-        _verify_installed(connection)
+        _verify_installed(connection, require_pristine_install=True)
 
     print(
         "Stage 5E.4.1 live migration complete. Contractual DPD schema is installed; "
