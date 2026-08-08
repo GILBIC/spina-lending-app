@@ -13,6 +13,7 @@ from .collector_route_api import create_collector_route_router
 from .config import get_settings
 from .cross_remittance_api import create_cross_remittance_router
 from .database import database_ready
+from .ecl_outcome_review_api import create_ecl_outcome_review_router
 from .financial_accounting_api import create_financial_accounting_router
 from .general_journal_api import create_general_journal_router
 from .management_api import create_management_router
@@ -56,6 +57,7 @@ def create_app() -> FastAPI:
     app.include_router(create_management_loan_router())
     app.include_router(create_management_operations_router())
     app.include_router(create_financial_accounting_router())
+    app.include_router(create_ecl_outcome_review_router())
     app.include_router(create_opening_balance_workbook_router())
     app.include_router(create_general_journal_router())
     app.include_router(create_client_loan_router())
