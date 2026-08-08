@@ -4,12 +4,14 @@ class OpeningBalanceWorkbookData {
   const OpeningBalanceWorkbookData({
     required this.summary,
     required this.lines,
+    required this.measurement,
     required this.managementEnabled,
     required this.notice,
   });
 
   final OpeningBalanceWorkbookSummary summary;
   final List<OpeningBalanceWorkbookLine> lines;
+  final AccountingMeasurementData measurement;
   final bool managementEnabled;
   final String notice;
 
@@ -28,6 +30,9 @@ class OpeningBalanceWorkbookData {
       lines: rawLines
           .map((item) => OpeningBalanceWorkbookLine.fromPayload(stringMap(item)))
           .toList(growable: false),
+      measurement: AccountingMeasurementData.fromPayload(
+        stringMap(payload['measurement']),
+      ),
       managementEnabled: payload['management_enabled'] == true,
       notice: _requiredString(payload, 'notice'),
     );
@@ -121,6 +126,9 @@ class OpeningBalanceWorkbookLine {
     required this.proposedCredit,
     required this.verificationStatus,
     required this.evidenceNote,
+    required this.measurementReferenceAmount,
+    required this.measurementStatus,
+    required this.measurementNote,
   });
 
   final String? workbookId;
@@ -137,6 +145,9 @@ class OpeningBalanceWorkbookLine {
   final double? proposedCredit;
   final String verificationStatus;
   final String? evidenceNote;
+  final double? measurementReferenceAmount;
+  final String? measurementStatus;
+  final String? measurementNote;
 
   bool get isVerified => verificationStatus == 'verified';
 
@@ -156,6 +167,184 @@ class OpeningBalanceWorkbookLine {
       proposedCredit: _optionalDouble(payload['proposed_credit']),
       verificationStatus: _requiredString(payload, 'verification_status'),
       evidenceNote: _optionalString(payload['evidence_note']),
+      measurementReferenceAmount:
+          _optionalDouble(payload['measurement_reference_amount']),
+      measurementStatus: _optionalString(payload['measurement_status']),
+      measurementNote: _optionalString(payload['measurement_note']),
+    );
+  }
+}
+
+class AccountingMeasurementData {
+  const AccountingMeasurementData({
+    required this.summary,
+    required this.loans,
+    required this.notice,
+  });
+
+  final AccountingMeasurementSummary summary;
+  final List<LoanAccountingMeasurement> loans;
+  final String notice;
+
+  factory AccountingMeasurementData.fromPayload(Map<String, dynamic> payload) {
+    final rawLoans = payload['loans'];
+    if (rawLoans is! List) {
+      throw const SpinaApiException(
+        'The SPINA server returned incomplete accounting measurement data.',
+        code: 'invalid_accounting_measurement_payload',
+      );
+    }
+    return AccountingMeasurementData(
+      summary: AccountingMeasurementSummary.fromPayload(
+        stringMap(payload['summary']),
+      ),
+      loans: rawLoans
+          .map((item) => LoanAccountingMeasurement.fromPayload(stringMap(item)))
+          .toList(growable: false),
+      notice: _requiredString(payload, 'notice'),
+    );
+  }
+}
+
+class AccountingMeasurementSummary {
+  const AccountingMeasurementSummary({
+    required this.activeLoanCount,
+    required this.measuredLoanCount,
+    required this.reviewRequiredCount,
+    required this.actualCashReceived,
+    required this.effectiveInterestIncome,
+    required this.regularLoanComponent,
+    required this.sevenBySevenLoanComponent,
+    required this.accruedInterestComponent,
+    required this.grossCarryingAmount,
+    required this.measurementStatus,
+    required this.measurementPolicyVersion,
+    required this.eclIncluded,
+    required this.readyToPost,
+  });
+
+  final int activeLoanCount;
+  final int measuredLoanCount;
+  final int reviewRequiredCount;
+  final double actualCashReceived;
+  final double effectiveInterestIncome;
+  final double regularLoanComponent;
+  final double sevenBySevenLoanComponent;
+  final double accruedInterestComponent;
+  final double grossCarryingAmount;
+  final String measurementStatus;
+  final String measurementPolicyVersion;
+  final bool eclIncluded;
+  final bool readyToPost;
+
+  bool get measured => measurementStatus == 'measured';
+
+  factory AccountingMeasurementSummary.fromPayload(
+    Map<String, dynamic> payload,
+  ) {
+    return AccountingMeasurementSummary(
+      activeLoanCount: _requiredInt(payload, 'active_loan_count'),
+      measuredLoanCount: _requiredInt(payload, 'measured_loan_count'),
+      reviewRequiredCount: _requiredInt(payload, 'review_required_count'),
+      actualCashReceived: _requiredDouble(payload, 'actual_cash_received'),
+      effectiveInterestIncome:
+          _requiredDouble(payload, 'effective_interest_income'),
+      regularLoanComponent: _requiredDouble(payload, 'regular_loan_component'),
+      sevenBySevenLoanComponent:
+          _requiredDouble(payload, 'seven_by_seven_loan_component'),
+      accruedInterestComponent:
+          _requiredDouble(payload, 'accrued_interest_component'),
+      grossCarryingAmount: _requiredDouble(payload, 'gross_carrying_amount'),
+      measurementStatus: _requiredString(payload, 'measurement_status'),
+      measurementPolicyVersion:
+          _requiredString(payload, 'measurement_policy_version'),
+      eclIncluded: payload['ecl_included'] == true,
+      readyToPost: payload['ready_to_post'] == true,
+    );
+  }
+}
+
+class LoanAccountingMeasurement {
+  const LoanAccountingMeasurement({
+    required this.loanId,
+    required this.loanNumber,
+    required this.clientName,
+    required this.calculationMode,
+    required this.policyVersion,
+    required this.dateReleased,
+    required this.dueDate,
+    required this.cutoverDate,
+    required this.daysElapsed,
+    required this.principal,
+    required this.operationalBalance,
+    required this.dailyEir,
+    required this.dailyEirPercent,
+    required this.contractualCashDue,
+    required this.actualCashReceived,
+    required this.effectiveInterestIncome,
+    required this.loanComponent,
+    required this.accruedInterestComponent,
+    required this.grossCarryingAmount,
+    required this.contractualUnpaidInterest,
+    required this.measurementStatus,
+    required this.measurementNote,
+  });
+
+  final String loanId;
+  final String loanNumber;
+  final String clientName;
+  final String calculationMode;
+  final String policyVersion;
+  final DateTime dateReleased;
+  final DateTime dueDate;
+  final DateTime? cutoverDate;
+  final int? daysElapsed;
+  final double principal;
+  final double operationalBalance;
+  final double? dailyEir;
+  final double? dailyEirPercent;
+  final double? contractualCashDue;
+  final double? actualCashReceived;
+  final double? effectiveInterestIncome;
+  final double? loanComponent;
+  final double? accruedInterestComponent;
+  final double? grossCarryingAmount;
+  final double? contractualUnpaidInterest;
+  final String measurementStatus;
+  final String measurementNote;
+
+  bool get measured => measurementStatus == 'measured';
+  bool get isSevenBySeven => calculationMode == 'seven_by_seven';
+
+  factory LoanAccountingMeasurement.fromPayload(
+    Map<String, dynamic> payload,
+  ) {
+    return LoanAccountingMeasurement(
+      loanId: _requiredString(payload, 'loan_id'),
+      loanNumber: _requiredString(payload, 'loan_number'),
+      clientName: _requiredString(payload, 'client_name'),
+      calculationMode: _requiredString(payload, 'calculation_mode'),
+      policyVersion: _requiredString(payload, 'policy_version'),
+      dateReleased: _requiredDate(payload, 'date_released'),
+      dueDate: _requiredDate(payload, 'due_date'),
+      cutoverDate: _optionalDate(payload['cutover_date']),
+      daysElapsed: _optionalInt(payload['days_elapsed']),
+      principal: _requiredDouble(payload, 'principal'),
+      operationalBalance: _requiredDouble(payload, 'operational_balance'),
+      dailyEir: _optionalDouble(payload['daily_eir']),
+      dailyEirPercent: _optionalDouble(payload['daily_eir_percent']),
+      contractualCashDue: _optionalDouble(payload['contractual_cash_due']),
+      actualCashReceived: _optionalDouble(payload['actual_cash_received']),
+      effectiveInterestIncome:
+          _optionalDouble(payload['effective_interest_income']),
+      loanComponent: _optionalDouble(payload['loan_component']),
+      accruedInterestComponent:
+          _optionalDouble(payload['accrued_interest_component']),
+      grossCarryingAmount: _optionalDouble(payload['gross_carrying_amount']),
+      contractualUnpaidInterest:
+          _optionalDouble(payload['contractual_unpaid_interest']),
+      measurementStatus: _requiredString(payload, 'measurement_status'),
+      measurementNote: _requiredString(payload, 'measurement_note'),
     );
   }
 }
@@ -180,9 +369,7 @@ String? _optionalString(Object? value) {
 
 int _requiredInt(Map<String, dynamic> payload, String key) {
   final value = payload[key];
-  if (value is int) {
-    return value;
-  }
+  if (value is int) return value;
   final parsed = int.tryParse(value?.toString() ?? '');
   if (parsed == null) {
     throw SpinaApiException(
@@ -193,11 +380,15 @@ int _requiredInt(Map<String, dynamic> payload, String key) {
   return parsed;
 }
 
+int? _optionalInt(Object? value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  return int.tryParse(value.toString());
+}
+
 double _requiredDouble(Map<String, dynamic> payload, String key) {
   final value = payload[key];
-  if (value is num) {
-    return value.toDouble();
-  }
+  if (value is num) return value.toDouble();
   final parsed = double.tryParse(value?.toString() ?? '');
   if (parsed == null) {
     throw SpinaApiException(
@@ -209,24 +400,27 @@ double _requiredDouble(Map<String, dynamic> payload, String key) {
 }
 
 double? _optionalDouble(Object? value) {
-  if (value == null) {
-    return null;
-  }
-  if (value is num) {
-    return value.toDouble();
-  }
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
   final normalized = value.toString().trim();
-  if (normalized.isEmpty || normalized.toLowerCase() == 'null') {
-    return null;
-  }
+  if (normalized.isEmpty || normalized.toLowerCase() == 'null') return null;
   return double.tryParse(normalized);
+}
+
+DateTime _requiredDate(Map<String, dynamic> payload, String key) {
+  final parsed = _optionalDate(payload[key]);
+  if (parsed == null) {
+    throw SpinaApiException(
+      'The SPINA server omitted $key.',
+      code: 'invalid_opening_balance_workbook_payload',
+    );
+  }
+  return parsed;
 }
 
 DateTime? _optionalDate(Object? value) {
   final normalized = value?.toString().trim() ?? '';
-  if (normalized.isEmpty || normalized.toLowerCase() == 'null') {
-    return null;
-  }
+  if (normalized.isEmpty || normalized.toLowerCase() == 'null') return null;
   final parsed = DateTime.tryParse(normalized);
   return parsed == null ? null : DateTime(parsed.year, parsed.month, parsed.day);
 }
