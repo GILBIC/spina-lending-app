@@ -34,8 +34,7 @@ def test_stage5d1_migration_executes_and_reconciles_in_postgres() -> None:
 
     with psycopg.connect(DATABASE_URL) as connection:
         original_function = connection.execute(
-            "SELECT to_regprocedure(" 
-            "'accounting.measure_loan_at_cutover(uuid,date)')"
+            "SELECT to_regprocedure('accounting.measure_loan_at_cutover(uuid,date)')"
         ).fetchone()[0]
         if original_function is None:
             pytest.skip("Stage 5D migration 0028 is not installed in the test database")
