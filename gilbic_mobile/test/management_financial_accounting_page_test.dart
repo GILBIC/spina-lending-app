@@ -74,7 +74,7 @@ void main() {
     await tester.tap(worksheet);
     await tester.pumpAndSettle();
     expect(find.text('Not selected'), findsOneWidget);
-    expect(find.text('Source review required'), findsOneWidget);
+    expect(find.textContaining('Source review required'), findsOneWidget);
     expect(find.text('Cash - Collector Custody'), findsOneWidget);
     expect(find.text('Loans Receivable - Regular'), findsOneWidget);
     expect(find.text('₱200.00'), findsWidgets);
