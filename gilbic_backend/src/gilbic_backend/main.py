@@ -19,6 +19,7 @@ from .management_api import create_management_router
 from .management_loan_api import create_management_loan_router
 from .management_operations_api import create_management_operations_router
 from .notification_api import create_notification_router
+from .opening_balance_workbook_api import create_opening_balance_workbook_router
 from .other_area_api import create_other_area_router
 from .remittance_api import create_remittance_router
 from .remittance_photo_api import create_remittance_photo_router
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
     app.include_router(create_management_loan_router())
     app.include_router(create_management_operations_router())
     app.include_router(create_financial_accounting_router())
+    app.include_router(create_opening_balance_workbook_router())
     app.include_router(create_general_journal_router())
     app.include_router(create_client_loan_router())
     app.include_router(create_client_payment_router())
