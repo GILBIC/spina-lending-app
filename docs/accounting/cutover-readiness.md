@@ -4,6 +4,8 @@ Status: **Stage 5A pre-cutover readiness only**.
 
 This stage does not post opening balances and does not enable automatic lending journals. It normalizes contract metadata that is already fixed by the approved product rules, exposes a database readiness view, and hardens reversal controls before any accounting cutover is attempted.
 
+Stage 5A is database/backend accounting preparation only and does not require an APK change. The existing mobile accounting screens remain valid while the source data is prepared for the later cutover worksheet and automated-posting stages.
+
 ## Regular
 
 - Product rule: fixed 20% contractual interest over the configured 120-day term.
