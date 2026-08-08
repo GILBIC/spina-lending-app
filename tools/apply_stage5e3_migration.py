@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 
 import psycopg
-from psycopg.pq import ExecStatus
 
 
 MIGRATION = (
@@ -50,7 +49,12 @@ def _dataset_counts(connection: psycopg.Connection) -> tuple[int, int, int]:
     return int(row[0]), int(row[1]), int(row[2])
 
 
-def _verify_stage5e3(connection: psycopg.Connection, *, expected_episodes: int, expected_usable: int) -> None:
+def _verify_stage5e3(
+    connection: psycopg.Connection,
+    *,
+    expected_episodes: int,
+    expected_usable: int,
+) -> None:
     objects = connection.execute(
         """
         SELECT
@@ -60,7 +64,9 @@ def _verify_stage5e3(connection: psycopg.Connection, *, expected_episodes: int, 
         """
     ).fetchone()
     if any(item is None for item in objects):
-        raise SystemExit("Stage 5E.3 verification failed: required review objects are missing")
+        raise SystemExit(
+            "Stage 5E.3 verification failed: required review objects are missing"
+        )
 
     summary = connection.execute(
         """
@@ -89,7 +95,9 @@ def _verify_stage5e3(connection: psycopg.Connection, *, expected_episodes: int, 
             f"Stage 5E.3 verification failed: expected {expected_usable} usable episodes, found {summary[1]}"
         )
     if bool(summary[8]) or summary[9] is not None or bool(summary[10]):
-        raise SystemExit("Stage 5E.3 verification failed: ECL or posting was unexpectedly enabled")
+        raise SystemExit(
+            "Stage 5E.3 verification failed: ECL or posting was unexpectedly enabled"
+        )
 
     print(
         "Stage 5E.3 review summary: "
@@ -102,7 +110,10 @@ def _verify_stage5e3(connection: psycopg.Connection, *, expected_episodes: int, 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Apply the guarded Stage 5E.3 historical ECL outcome-review migration to the live SPINA database."
+        description=(
+            "Apply the guarded Stage 5E.3 historical ECL outcome-review "
+            "migration to the live SPINA database."
+        )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
     parser.add_argument("--database-url-env", default="GILBIC_DATABASE_URL")
@@ -154,14 +165,17 @@ def main() -> int:
 
         if reviewed_count != 0:
             raise SystemExit(
-                "Live dataset gate failed: explicit historical labels already exist before Stage 5E.3 review controls are installed"
+                "Live dataset gate failed: explicit historical labels already exist "
+                "before Stage 5E.3 review controls are installed"
             )
 
         migration_sql = MIGRATION.read_text(encoding="utf-8")
-        result = connection.pgconn.exec_(migration_sql.encode("utf-8"))
-        if result.status not in {ExecStatus.COMMAND_OK, ExecStatus.TUPLES_OK}:
-            message = result.error_message.decode("utf-8", errors="replace") if result.error_message else "unknown PostgreSQL error"
-            raise SystemExit(f"Stage 5E.3 migration failed: {message}")
+        try:
+            # No query parameters are passed. Psycopg therefore supports the
+            # migration's multi-statement BEGIN ... COMMIT script directly.
+            connection.execute(migration_sql)
+        except psycopg.Error as error:
+            raise SystemExit(f"Stage 5E.3 migration failed: {error}") from error
 
         _verify_stage5e3(
             connection,
@@ -169,7 +183,10 @@ def main() -> int:
             expected_usable=args.expected_usable,
         )
 
-    print("Stage 5E.3 live migration complete. Historical outcome review is ready; ECL and posting remain disabled.")
+    print(
+        "Stage 5E.3 live migration complete. Historical outcome review is ready; "
+        "ECL and posting remain disabled."
+    )
     return 0
 
 
