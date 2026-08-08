@@ -32,7 +32,15 @@ void main() {
     expect(find.text('₱619.36'), findsWidgets);
     expect(find.text('₱29,343.11'), findsOneWidget);
     expect(find.text('No'), findsWidgets);
-    expect(find.byKey(const Key('accounting-measurement-workbook-references')), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Workbook measurement references'),
+      250,
+    );
+    expect(
+      find.byKey(const Key('accounting-measurement-workbook-references')),
+      findsOneWidget,
+    );
 
     await tester.scrollUntilVisible(
       find.byKey(const Key('loan-measurement-TEST-REG-20260802')),
