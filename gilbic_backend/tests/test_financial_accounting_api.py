@@ -14,11 +14,15 @@ from gilbic_backend.financial_accounting_api import (
 )
 from gilbic_backend.financial_accounting_repository import (
     AccountingAccount,
+    AccountingCutoverLoan,
+    AccountingCutoverReadinessSummary,
     AccountingFiscalPeriod,
     AccountingFoundationSummary,
     FinancialAccountingOverview,
     FinancialAccountingSummary,
     LoanAccountingPolicy,
+    OpeningBalanceCutoverLine,
+    OpeningBalanceCutoverSummary,
 )
 from gilbic_backend.main import create_app
 
@@ -97,9 +101,9 @@ class FakeAccounting:
                 posting_account_count=23,
                 fiscal_period_count=1,
                 open_period_count=1,
-                journal_entry_count=0,
+                journal_entry_count=2,
                 draft_journal_count=0,
-                posted_journal_count=0,
+                posted_journal_count=2,
                 reversal_draft_count=0,
             ),
             accounts=(
@@ -143,8 +147,102 @@ class FakeAccounting:
                     daily_interest_per_1000=Decimal("7.00"),
                     mobile_collections_enabled=False,
                     operational_rule="PHP 7 per PHP 1,000 of original principal per day.",
-                    accounting_rule="Track principal and accrued interest separately.",
+                    accounting_rule="Use the validated daily-interest plus maturity-principal cash-flow schedule for EIR derivation.",
                     renewal_rule="Deduct old principal and accrued unpaid interest.",
+                ),
+            ),
+            cutover_summary=AccountingCutoverReadinessSummary(
+                active_loan_count=7,
+                source_ready_count=7,
+                contract_validation_count=0,
+                blocked_count=0,
+                opening_balances_configured=False,
+                automatic_source_posting_enabled=False,
+                overall_status="opening_balances_required",
+            ),
+            cutover_loans=(
+                AccountingCutoverLoan(
+                    loan_number="TEST-REG-20260802",
+                    client_code="TEST-REG-001",
+                    client_name="TEST CLIENT REGULAR",
+                    loan_type_name="Regular",
+                    calculation_mode="fixed_daily",
+                    term_days=120,
+                    principal=Decimal("5000.00"),
+                    daily_amount=Decimal("50.00"),
+                    interest_rate=Decimal("20.0000"),
+                    date_released=date(2026, 8, 1),
+                    due_date=date(2026, 11, 29),
+                    operational_balance=Decimal("4900.00"),
+                    regular_contract_total=Decimal("6000.00"),
+                    regular_scheduled_total=Decimal("6000.00"),
+                    seven_by_seven_expected_daily_interest=None,
+                    seven_by_seven_contract_interest_total=None,
+                    seven_by_seven_contract_total_if_principal_at_maturity=None,
+                    seven_by_seven_base_daily_rate_percent=None,
+                    readiness_status="source_ready",
+                    blockers=(),
+                ),
+                AccountingCutoverLoan(
+                    loan_number="TEST-REG-7X7-20260802",
+                    client_code="TEST-REG-001",
+                    client_name="TEST CLIENT REGULAR",
+                    loan_type_name="7x7",
+                    calculation_mode="seven_by_seven",
+                    term_days=120,
+                    principal=Decimal("3000.00"),
+                    daily_amount=Decimal("21.00"),
+                    interest_rate=None,
+                    date_released=date(2026, 8, 2),
+                    due_date=date(2026, 11, 30),
+                    operational_balance=Decimal("3000.00"),
+                    regular_contract_total=None,
+                    regular_scheduled_total=None,
+                    seven_by_seven_expected_daily_interest=Decimal("21.00"),
+                    seven_by_seven_contract_interest_total=Decimal("2520.00"),
+                    seven_by_seven_contract_total_if_principal_at_maturity=Decimal("5520.00"),
+                    seven_by_seven_base_daily_rate_percent=Decimal("0.700000"),
+                    readiness_status="source_ready",
+                    blockers=(),
+                ),
+            ),
+            opening_balance_summary=OpeningBalanceCutoverSummary(
+                cutover_date=None,
+                worksheet_status="source_review_required",
+                worksheet_line_count=11,
+                source_reference_count=4,
+                manual_required_count=5,
+                reconciliation_required_count=2,
+                calculation_required_count=3,
+                assessment_required_count=1,
+                profit_loss_migration_policy_required=True,
+                worksheet_balanced=False,
+                ready_to_post=False,
+                opening_balance_posting_enabled=False,
+                automatic_source_posting_enabled=False,
+            ),
+            opening_balance_lines=(
+                OpeningBalanceCutoverLine(
+                    account_code="1020",
+                    system_key="cash_collector_custody",
+                    account_name="Cash - Collector Custody",
+                    account_type="asset",
+                    normal_balance="debit",
+                    source_reference_amount=Decimal("200.00"),
+                    source_basis="collection_custody_reference",
+                    readiness_status="reconciliation_required",
+                    guidance="Reconcile to physical collector cash.",
+                ),
+                OpeningBalanceCutoverLine(
+                    account_code="1100",
+                    system_key="loans_receivable_regular",
+                    account_name="Loans Receivable - Regular",
+                    account_type="asset",
+                    normal_balance="debit",
+                    source_reference_amount=Decimal("19550.00"),
+                    source_basis="regular_operational_reference",
+                    readiness_status="calculation_required",
+                    guidance="Derive the PFRS carrying amount before posting.",
                 ),
             ),
         )
@@ -184,9 +282,9 @@ class FakeAccounting:
             start_date=start_date,
             end_date=end_date,
             status=status,
-            journal_count=0,
+            journal_count=2,
             draft_journal_count=0,
-            posted_journal_count=0,
+            posted_journal_count=2,
             closed_by_name="Management" if status == "closed" else None,
             closed_at=None,
         )
@@ -232,7 +330,7 @@ def test_management_can_view_financial_accounting_foundation_and_periods() -> No
     assert data["summary"]["unremitted_cash"] == "200.00"
     assert data["foundation_status"] == "ready"
     assert data["foundation"]["account_count"] == 23
-    assert data["foundation"]["posted_journal_count"] == 0
+    assert data["foundation"]["posted_journal_count"] == 2
     assert data["fiscal_period_status"] == "open"
     assert data["period_management_enabled"] is True
     assert data["fiscal_periods"][0]["label"] == "August 2026"
@@ -244,6 +342,23 @@ def test_management_can_view_financial_accounting_foundation_and_periods() -> No
     assert data["policies"][0]["name"] == "Regular"
     assert data["policies"][1]["daily_interest_per_1000"] == "7.00"
     assert data["policies"][1]["mobile_collections_enabled"] is False
+    assert data["cutover"]["summary"]["source_ready_count"] == 7
+    assert data["cutover"]["summary"]["overall_status"] == (
+        "opening_balances_required"
+    )
+    assert data["cutover"]["loans"][1][
+        "seven_by_seven_contract_interest_total"
+    ] == "2520.00"
+    assert data["cutover"]["loans"][1][
+        "seven_by_seven_contract_total_if_principal_at_maturity"
+    ] == "5520.00"
+    assert data["opening_balance_worksheet"]["summary"]["ready_to_post"] is False
+    assert data["opening_balance_worksheet"]["summary"][
+        "opening_balance_posting_enabled"
+    ] is False
+    assert data["opening_balance_worksheet"]["lines"][0][
+        "source_reference_amount"
+    ] == "200.00"
 
 
 def test_management_can_create_fiscal_period() -> None:
