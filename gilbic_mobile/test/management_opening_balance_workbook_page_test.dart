@@ -53,8 +53,15 @@ void main() {
     expect(find.text('Ready to post'), findsOneWidget);
     expect(find.text('No'), findsWidgets);
     expect(find.byKey(const Key('opening-workbook-policy')), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Cash - Collector Custody'),
+      250,
+    );
     expect(find.byKey(const Key('opening-workbook-line-1020')), findsOneWidget);
     expect(find.byKey(const Key('edit-opening-workbook-line-1020')), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('Review gate'), 250);
     expect(find.byKey(const Key('opening-workbook-mark-review-ready')), findsOneWidget);
     expect(
       tester.widget<FilledButton>(
