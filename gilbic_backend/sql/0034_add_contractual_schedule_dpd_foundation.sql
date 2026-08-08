@@ -105,10 +105,13 @@ BEGIN
       ON schedule.id = installment.schedule_id
     WHERE installment.id = NEW.installment_id;
 
+    -- Lock the payment row so concurrent allocation requests serialize before
+    -- the total-allocation check below.
     SELECT transaction.loan_id, transaction.amount, transaction.is_voided
     INTO transaction_loan_id, transaction_amount, transaction_voided
     FROM lending.collection_transactions transaction
-    WHERE transaction.id = NEW.transaction_id;
+    WHERE transaction.id = NEW.transaction_id
+    FOR UPDATE;
 
     IF installment_loan_id IS NULL OR transaction_loan_id IS NULL THEN
         RAISE EXCEPTION 'Installment and collection transaction must exist before payment allocation.';
