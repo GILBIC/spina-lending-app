@@ -8,7 +8,7 @@ import 'package:gilbic_mobile/src/core/management/opening_balance_workbook_repos
 import 'package:gilbic_mobile/src/features/management/management_accounting_measurement_page.dart';
 
 void main() {
-  testWidgets('Management sees measured EIR cutover references without posting', (
+  testWidgets('Management sees reconciled EIR and ECL readiness without posting', (
     tester,
   ) async {
     final repository = _FakeMeasurementRepository();
@@ -27,11 +27,19 @@ void main() {
     expect(find.text('Loan Measurement'), findsOneWidget);
     expect(find.byKey(const Key('accounting-measurement-summary')), findsOneWidget);
     expect(find.text('7 / 7'), findsOneWidget);
-    expect(find.text('₱19,723.77'), findsWidgets);
+    expect(find.text('₱19,723.75'), findsWidgets);
     expect(find.text('₱9,000.00'), findsWidgets);
     expect(find.text('₱619.36'), findsWidgets);
     expect(find.text('₱29,343.11'), findsOneWidget);
     expect(find.text('No'), findsWidgets);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('accounting-ecl-readiness')),
+      250,
+    );
+    expect(find.text('Stage 5E Expected Credit Loss Readiness'), findsOneWidget);
+    expect(find.text('Calibration Required'), findsWidgets);
+    expect(find.text('Not calculated'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text('Workbook measurement references'),
@@ -41,6 +49,7 @@ void main() {
       find.byKey(const Key('accounting-measurement-workbook-references')),
       findsOneWidget,
     );
+    expect(find.textContaining('1190 Allowance for Expected Credit Loss'), findsWidgets);
 
     await tester.scrollUntilVisible(
       find.byKey(const Key('loan-measurement-TEST-REG-20260802')),
@@ -111,7 +120,7 @@ class _FakeMeasurementRepository implements OpeningBalanceWorkbookRepository {
             proposedCredit: null,
             verificationStatus: 'pending',
             evidenceNote: null,
-            measurementReferenceAmount: 19723.77,
+            measurementReferenceAmount: 19723.75,
             measurementStatus: 'measured',
             measurementNote: 'Regular loan component.',
           ),
@@ -153,6 +162,26 @@ class _FakeMeasurementRepository implements OpeningBalanceWorkbookRepository {
             measurementStatus: 'measured',
             measurementNote: 'Accrued EIR component.',
           ),
+          OpeningBalanceWorkbookLine(
+            workbookId: 'workbook-1',
+            accountCode: '1190',
+            systemKey: 'allowance_expected_credit_loss',
+            accountName: 'Allowance for Expected Credit Loss',
+            accountType: 'asset',
+            normalBalance: 'credit',
+            sourceReferenceAmount: null,
+            sourceBasis: 'ecl_assessment_required',
+            requirementType: 'assessment_required',
+            guidance: 'Complete the expected-credit-loss assessment.',
+            proposedDebit: null,
+            proposedCredit: null,
+            verificationStatus: 'pending',
+            evidenceNote: null,
+            measurementReferenceAmount: null,
+            measurementStatus: 'calibration_required',
+            measurementNote:
+                'Stage 5E ECL readiness: 7/7 loans have mechanical arrears backstops; 0 are 30+ DPD and 0 are 90+ DPD. Gross measured exposure is PHP 29343.11. ECL is intentionally not quantified until calibration is approved.',
+          ),
         ],
         measurement: AccountingMeasurementData(
           notice: 'Stage 5D measurements are references only and do not post.',
@@ -162,7 +191,7 @@ class _FakeMeasurementRepository implements OpeningBalanceWorkbookRepository {
             reviewRequiredCount: 0,
             actualCashReceived: 450,
             effectiveInterestIncome: 793.11,
-            regularLoanComponent: 19723.77,
+            regularLoanComponent: 19723.75,
             sevenBySevenLoanComponent: 9000,
             accruedInterestComponent: 619.36,
             grossCarryingAmount: 29343.11,
