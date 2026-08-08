@@ -1,0 +1,5 @@
+Stage 5E.4.1 live contractual DPD schema migration gate.
+The workflow runner must install migration 0034 only on a main push.
+The migration must not create any live contract schedules, installments, or allocations.
+Existing loan statuses, collection transactions, historical ECL outcome labels, and journal entries must remain unchanged.
+Default classification, ECL, account 1190, and General Ledger posting remain disabled.
