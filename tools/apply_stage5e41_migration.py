@@ -33,6 +33,16 @@ def _load_env_file(path: Path) -> None:
         os.environ.setdefault(key, value)
 
 
+def _transaction_body(sql: str) -> str:
+    body = sql.strip()
+    if not body.startswith("BEGIN;") or not body.endswith("COMMIT;"):
+        raise SystemExit(
+            "Stage 5E.4.1 migration safety gate failed: expected BEGIN/COMMIT wrapper"
+        )
+    body = body[len("BEGIN;") :].lstrip()
+    return body[: -len("COMMIT;")].rstrip()
+
+
 def _count(connection: psycopg.Connection, relation: str) -> int:
     return int(connection.execute(f"SELECT count(*) FROM {relation}").fetchone()[0])
 
@@ -179,58 +189,60 @@ def main() -> int:
     if not MIGRATION.is_file():
         raise SystemExit(f"Stage 5E.4.1 migration file was not found: {MIGRATION}")
 
-    with psycopg.connect(database_url, autocommit=True) as connection:
-        if connection.execute("SELECT to_regclass('lending.loans')").fetchone()[0] is None:
-            raise SystemExit("Core lending schema is not installed")
-        if connection.execute(
-            "SELECT to_regclass('lending.collection_transactions')"
-        ).fetchone()[0] is None:
-            raise SystemExit("Collection transaction schema is not installed")
+    migration_body = _transaction_body(MIGRATION.read_text(encoding="utf-8"))
 
-        already_installed = connection.execute(
-            "SELECT to_regclass('lending.loan_contract_schedules')"
-        ).fetchone()[0]
-        if already_installed is not None:
-            print("Stage 5E.4.1 is already installed; skipping migration application.")
-            _verify_installed(connection, require_pristine_install=False)
-            return 0
+    try:
+        with psycopg.connect(database_url) as connection:
+            if connection.execute("SELECT to_regclass('lending.loans')").fetchone()[0] is None:
+                raise SystemExit("Core lending schema is not installed")
+            if connection.execute(
+                "SELECT to_regclass('lending.collection_transactions')"
+            ).fetchone()[0] is None:
+                raise SystemExit("Collection transaction schema is not installed")
 
-        before_loans = _count(connection, "lending.loans")
-        before_statuses = _loan_status_counts(connection)
-        before_transactions = _count(connection, "lending.collection_transactions")
-        before_journals = _journal_count(connection)
-        before_reviewed = _historical_reviewed_count(connection)
+            already_installed = connection.execute(
+                "SELECT to_regclass('lending.loan_contract_schedules')"
+            ).fetchone()[0]
+            if already_installed is not None:
+                print("Stage 5E.4.1 is already installed; skipping migration application.")
+                _verify_installed(connection, require_pristine_install=False)
+                return 0
 
-        migration_sql = MIGRATION.read_text(encoding="utf-8")
-        try:
-            connection.execute(migration_sql)
-        except psycopg.Error as error:
-            raise SystemExit(f"Stage 5E.4.1 migration failed: {error}") from error
+            before_loans = _count(connection, "lending.loans")
+            before_statuses = _loan_status_counts(connection)
+            before_transactions = _count(connection, "lending.collection_transactions")
+            before_journals = _journal_count(connection)
+            before_reviewed = _historical_reviewed_count(connection)
 
-        after_loans = _count(connection, "lending.loans")
-        after_statuses = _loan_status_counts(connection)
-        after_transactions = _count(connection, "lending.collection_transactions")
-        after_journals = _journal_count(connection)
-        after_reviewed = _historical_reviewed_count(connection)
+            connection.execute(migration_body)
 
-        if after_loans != before_loans or after_statuses != before_statuses:
-            raise SystemExit(
-                "Stage 5E.4.1 safety gate failed: lending.loans changed during schema install"
-            )
-        if after_transactions != before_transactions:
-            raise SystemExit(
-                "Stage 5E.4.1 safety gate failed: collection transactions changed during schema install"
-            )
-        if after_journals != before_journals:
-            raise SystemExit(
-                "Stage 5E.4.1 safety gate failed: journal entries changed during schema install"
-            )
-        if after_reviewed != before_reviewed:
-            raise SystemExit(
-                "Stage 5E.4.1 safety gate failed: historical ECL outcome labels changed"
-            )
+            after_loans = _count(connection, "lending.loans")
+            after_statuses = _loan_status_counts(connection)
+            after_transactions = _count(connection, "lending.collection_transactions")
+            after_journals = _journal_count(connection)
+            after_reviewed = _historical_reviewed_count(connection)
 
-        _verify_installed(connection, require_pristine_install=True)
+            if after_loans != before_loans or after_statuses != before_statuses:
+                raise SystemExit(
+                    "Stage 5E.4.1 safety gate failed: lending.loans changed during schema install"
+                )
+            if after_transactions != before_transactions:
+                raise SystemExit(
+                    "Stage 5E.4.1 safety gate failed: collection transactions changed during schema install"
+                )
+            if after_journals != before_journals:
+                raise SystemExit(
+                    "Stage 5E.4.1 safety gate failed: journal entries changed during schema install"
+                )
+            if after_reviewed != before_reviewed:
+                raise SystemExit(
+                    "Stage 5E.4.1 safety gate failed: historical ECL outcome labels changed"
+                )
+
+            _verify_installed(connection, require_pristine_install=True)
+            # The connection context commits only after every gate above succeeds.
+    except psycopg.Error as error:
+        raise SystemExit(f"Stage 5E.4.1 migration failed and was rolled back: {error}") from error
 
     print(
         "Stage 5E.4.1 live migration complete. Contractual DPD schema is installed; "
