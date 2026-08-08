@@ -36,7 +36,11 @@ void main() {
     await tester.scrollUntilVisible(pendingCard, 250);
     await tester.tap(pendingCard);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('review-outcome-101')));
+
+    final reviewButton = find.byKey(const Key('review-outcome-101'));
+    await tester.ensureVisible(reviewButton);
+    await tester.pumpAndSettle();
+    await tester.tap(reviewButton);
     await tester.pumpAndSettle();
 
     final save = find.byKey(const Key('save-ecl-outcome-review'));
