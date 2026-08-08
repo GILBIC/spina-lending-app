@@ -12,10 +12,7 @@ BEGIN;
 -- later approved policy can combine them with qualitative and forward-looking
 -- information.
 
-DROP VIEW IF EXISTS accounting.ecl_assessment_summary;
-DROP VIEW IF EXISTS accounting.ecl_assessment_at_cutover;
-
-CREATE VIEW accounting.ecl_assessment_at_cutover AS
+CREATE OR REPLACE VIEW accounting.ecl_assessment_at_cutover AS
 WITH base AS (
     SELECT
         measurement.*,
@@ -102,7 +99,7 @@ SELECT
 FROM arrears
 ORDER BY arrears.calculation_mode, arrears.loan_number;
 
-CREATE VIEW accounting.ecl_assessment_summary AS
+CREATE OR REPLACE VIEW accounting.ecl_assessment_summary AS
 SELECT
     count(*)::bigint AS active_loan_count,
     count(*) FILTER (
