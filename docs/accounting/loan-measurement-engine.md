@@ -28,6 +28,24 @@ When every active loan is measured, Stage 5D exposes dynamic reference amounts f
 
 These are references only. Stage 5D never copies them into proposed workbook debit/credit fields automatically.
 
+## Stage 5D.1 — cent reconciliation
+
+Live validation on the 2026-08-08 cutover exposed a presentation-level rounding difference: the displayed `1100 + 1110 + 1120` components totaled ₱29,343.13 while the independently rounded gross carrying amount was ₱29,343.11. The underlying EIR equation remained correct; the difference came from rounding the loan and accrued-interest components independently before portfolio aggregation.
+
+Stage 5D.1 keeps the existing EIR calculation and cash timing unchanged, preserves the independently rounded accrued-interest component and gross carrying amount, and assigns any cent rounding residual deterministically to the loan component. Therefore every measured loan must satisfy, to the cent:
+
+`loan component + accrued-interest component = gross carrying amount`
+
+The current cutover's reconciliation target is therefore:
+
+- `1100 Loans Receivable - Regular`: ₱19,723.75
+- `1110 Loans Receivable - 7x7`: ₱9,000.00
+- `1120 Accrued Interest Receivable`: ₱619.36
+- Gross carrying amount: ₱29,343.11
+- Component variance: ₱0.00
+
+The read-only `accounting.loan_measurement_reconciliation` view reports both per-loan and portfolio-level reconciliation status. This change does not modify workbook proposed amounts, ECL, opening-journal controls, or automatic source posting.
+
 ## Explicitly excluded
 
 - Expected credit loss measurement and posting.
@@ -36,4 +54,4 @@ These are references only. Stage 5D never copies them into proposed workbook deb
 - Automatic loan/collection journal posting.
 - Final financial statements.
 
-The measurement policy version is `eir_cutover_v1`. A workbook can still move to review ready only through the Stage 5C verification and balancing controls.
+The measurement policy version remains `eir_cutover_v1` because Stage 5D.1 changes only cent presentation/reconciliation, not the EIR method or contractual cash-flow policy. A workbook can still move to review ready only through the Stage 5C verification and balancing controls.
