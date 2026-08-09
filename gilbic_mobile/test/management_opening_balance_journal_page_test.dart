@@ -57,7 +57,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('prepare-opening-journal-draft')));
+    final prepareButton = find.byKey(const Key('prepare-opening-journal-draft'));
+    await tester.scrollUntilVisible(
+      prepareButton,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(prepareButton);
     await tester.pumpAndSettle();
     expect(find.text('Prepare opening journal draft?'), findsOneWidget);
     expect(journalRepository.prepared, isFalse);
