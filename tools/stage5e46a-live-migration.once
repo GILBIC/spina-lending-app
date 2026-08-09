@@ -1,0 +1,5 @@
+Stage 5E.4.6A live per-loan contractual collection activation schema gate.
+
+This marker permits the guarded migration step only on a main-branch push.
+The migration must create zero activation events and zero active contractual-collection loans.
+It must not change loans, schedules, installments, payment allocations, verified registrations, DPD state, historical ECL labels, journal entries, Default/ECL state, or posting readiness.
