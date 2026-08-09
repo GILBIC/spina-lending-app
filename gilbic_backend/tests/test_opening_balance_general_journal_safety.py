@@ -49,6 +49,15 @@ def test_protected_opening_balance_draft_is_hidden_from_general_journal_actions(
     assert _visible_general_journal_entry(entry(source_type="manual", status="draft")) is True
 
 
+def test_repository_filters_protected_drafts_before_sql_limit() -> None:
+    source = inspect.getsource(PostgresGeneralJournalRepository.list_journals)
+    filter_marker = "journal.source_type = 'opening_balance'"
+    limit_marker = "limit %s"
+    assert filter_marker in source
+    assert "journal.status = 'draft'" in source
+    assert source.index(filter_marker) < source.index(limit_marker)
+
+
 def test_trial_balance_no_longer_excludes_retired_accounts() -> None:
     source = inspect.getsource(PostgresGeneralJournalRepository.trial_balance)
     assert "account.is_active = true" not in source
