@@ -96,8 +96,7 @@ class _ManagementOpeningBalanceJournalPageState
         title: const Text('Prepare opening journal draft?'),
         content: const Text(
           'This copies the fully reviewed workbook into one protected system journal draft. '
-          'It does not post to the General Ledger, does not enable automatic posting, and '
-          'the prepared workbook can no longer be reopened until the draft is resolved.',
+          'It does not post to the General Ledger and automatic source posting remains disabled.',
         ),
         actions: [
           TextButton(
@@ -143,6 +142,85 @@ class _ManagementOpeningBalanceJournalPageState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Opening journal draft preparation failed.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _postJournal() async {
+    final workbookId = _workbook?.summary.workbookId;
+    final journal = _journal;
+    final journalEntryId = journal?.journalEntryId;
+    if (workbookId == null ||
+        journal == null ||
+        journalEntryId == null ||
+        !journal.canPost ||
+        _busy) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Post opening balances to General Ledger?'),
+        content: Text(
+          'You are about to post the protected opening-balance journal.\n\n'
+          'Debit: ${_money(journal.totalDebit)}\n'
+          'Credit: ${_money(journal.totalCredit)}\n\n'
+          'The server will revalidate the workbook, journal, accounting period, accounts, and source readiness before posting. '
+          'The posted entry becomes immutable; corrections require a controlled reversal. Automatic source posting remains disabled.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: const Key('confirm-post-opening-journal'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Post Opening Balance'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      final identity = await widget.deviceIdentityProvider.load();
+      final posted = await _journalRepository.post(
+        widget.session,
+        deviceId: identity.installationId,
+        workbookId: workbookId,
+        journalEntryId: journalEntryId,
+        totalDebit: journal.totalDebit,
+        totalCredit: journal.totalCredit,
+      );
+      if (mounted) {
+        setState(() {
+          _journal = posted;
+          _error = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Opening balances posted as ${posted.entryNumber ?? 'protected journal'}.',
+            ),
+          ),
+        );
+      }
+    } on SpinaApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Opening-balance posting failed. Nothing was changed.')),
         );
       }
     } finally {
@@ -196,6 +274,9 @@ class _ManagementOpeningBalanceJournalPageState
     final canPreparePermission = widget.session.permissions.contains(
       'accounting.opening_balance.prepare',
     );
+    final canPostPermission = widget.session.permissions.contains(
+      'accounting.opening_balance.post',
+    );
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -235,11 +316,7 @@ class _ManagementOpeningBalanceJournalPageState
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ),
-                      Chip(
-                        label: Text(
-                          journal.draftPrepared ? 'Draft prepared' : 'Not prepared',
-                        ),
-                      ),
+                      Chip(label: Text(_journalStateLabel(journal))),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -256,7 +333,16 @@ class _ManagementOpeningBalanceJournalPageState
                     _DetailRow('Debit', _money(journal.totalDebit)),
                     _DetailRow('Credit', _money(journal.totalCredit)),
                   ],
-                  _DetailRow('General Ledger posting', 'Disabled'),
+                  if (journal.entryNumber != null)
+                    _DetailRow('Entry number', journal.entryNumber!),
+                  _DetailRow(
+                    'General Ledger posting',
+                    journal.isPosted
+                        ? 'Posted'
+                        : journal.openingBalancePostingEnabled
+                            ? 'Protected / explicit only'
+                            : 'Disabled',
+                  ),
                   _DetailRow('Automatic source posting', 'Disabled'),
                 ],
               ),
@@ -271,7 +357,7 @@ class _ManagementOpeningBalanceJournalPageState
                 children: [
                   Text('Preparation gate', style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 8),
-                  Text(_gateMessage(journal, canPreparePermission)),
+                  Text(_preparationGateMessage(journal, canPreparePermission)),
                   if (!journal.draftPrepared) ...[
                     const SizedBox(height: 12),
                     FilledButton.icon(
@@ -286,7 +372,33 @@ class _ManagementOpeningBalanceJournalPageState
                   if (journal.draftPrepared) ...[
                     const SizedBox(height: 10),
                     const Text(
-                      'The draft is protected and cannot be edited, deleted, or posted through General Journal.',
+                      'Preparation is complete. The protected draft cannot be edited or deleted through General Journal.',
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            key: const Key('opening-journal-posting-gate'),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Posting gate', style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: 8),
+                  Text(_postingGateMessage(journal, canPostPermission)),
+                  if (!journal.isPosted) ...[
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      key: const Key('post-opening-journal'),
+                      onPressed: journal.canPost && canPostPermission && !_busy
+                          ? _postJournal
+                          : null,
+                      icon: const Icon(Icons.account_balance_outlined),
+                      label: Text(_busy ? 'Posting…' : 'Post to General Ledger'),
                     ),
                   ],
                 ],
@@ -299,12 +411,18 @@ class _ManagementOpeningBalanceJournalPageState
   }
 }
 
-String _gateMessage(
+String _journalStateLabel(OpeningBalanceJournalDraftStatus journal) {
+  if (journal.isPosted) return 'Posted';
+  if (journal.draftPrepared) return 'Draft prepared';
+  return 'Not prepared';
+}
+
+String _preparationGateMessage(
   OpeningBalanceJournalDraftStatus journal,
   bool hasPermission,
 ) {
   if (journal.draftPrepared) {
-    return 'Preparation complete. Posting remains disabled until the protected posting stage is implemented and separately approved.';
+    return 'Preparation complete. The draft remains protected from normal General Journal editing.';
   }
   if (!journal.preparationReady) {
     final blocker = journal.preparationBlocker ??
@@ -315,6 +433,25 @@ String _gateMessage(
     return 'Blocked: your current session does not have opening-balance preparation permission.';
   }
   return 'Ready to prepare a protected draft. This action does not post any accounting entry.';
+}
+
+String _postingGateMessage(
+  OpeningBalanceJournalDraftStatus journal,
+  bool hasPermission,
+) {
+  if (journal.isPosted) {
+    return 'Posted as ${journal.entryNumber}. The entry is immutable; corrections require a controlled reversal.';
+  }
+  if (!journal.openingBalancePostingEnabled) {
+    return 'Posting controls are not installed yet.';
+  }
+  if (!journal.postingReady) {
+    return 'Blocked: ${journal.postingBlocker ?? 'Protected opening-balance posting requirements are not complete.'}';
+  }
+  if (!hasPermission) {
+    return 'Blocked: your current session does not have opening-balance posting permission.';
+  }
+  return 'Ready for explicit Management posting. The server will revalidate every accounting safety gate before committing.';
 }
 
 class _DetailRow extends StatelessWidget {
