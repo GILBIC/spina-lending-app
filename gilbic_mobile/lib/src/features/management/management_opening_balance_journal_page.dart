@@ -306,8 +306,10 @@ String _gateMessage(
   if (journal.draftPrepared) {
     return 'Preparation complete. Posting remains disabled until the protected posting stage is implemented and separately approved.';
   }
-  if (journal.workbookStatus != 'review_ready') {
-    return 'Blocked: the Opening Balance Workbook must first pass all verification, evidence, balance, and P&L policy gates and be marked Review Ready.';
+  if (!journal.preparationReady) {
+    final blocker = journal.preparationBlocker ??
+        'Opening-balance journal preparation requirements are not complete.';
+    return 'Blocked: $blocker';
   }
   if (!hasPermission) {
     return 'Blocked: your current session does not have opening-balance preparation permission.';
