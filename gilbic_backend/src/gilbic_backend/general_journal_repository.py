@@ -319,7 +319,6 @@ class PostgresGeneralJournalRepository:
                       on line.account_id = account.id
                     left join accounting.journal_entries journal
                       on journal.id = line.journal_entry_id
-                    where account.is_active = true
                     group by account.id
                     order by account.code
                     """,
@@ -465,6 +464,7 @@ class PostgresGeneralJournalRepository:
             or "already has a reversal" in lowered
             or "can only be posted to an open" in lowered
             or "no open accounting period" in lowered
+            or "protected opening-balance posting workflow" in lowered
         ):
             return JournalConflict(message)
         if (
