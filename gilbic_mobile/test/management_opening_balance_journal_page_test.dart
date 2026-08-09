@@ -29,10 +29,50 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Opening Balance Journal'), findsOneWidget);
-    expect(find.textContaining('Blocked: the Opening Balance Workbook'), findsOneWidget);
+    expect(find.textContaining('Blocked: Opening Balance Workbook'), findsOneWidget);
     final button = tester.widget<FilledButton>(
       find.byKey(const Key('prepare-opening-journal-draft')),
     );
+    expect(button.onPressed, isNull);
+    expect(journalRepository.prepared, isFalse);
+  });
+
+  testWidgets('Review ready workbook still shows stricter exact-balance blocker', (
+    tester,
+  ) async {
+    final workbookRepository = _FakeWorkbookRepository(status: 'review_ready');
+    final journalRepository = _FakeJournalRepository(
+      workbookStatus: 'review_ready',
+      preparationReady: false,
+      preparationBlocker:
+          'Reviewed workbook must balance exactly to the cent before journal preparation.',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementOpeningBalanceJournalPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          workbookRepository: workbookRepository,
+          journalRepository: journalRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final prepareButton = find.byKey(const Key('prepare-opening-journal-draft'));
+    await tester.scrollUntilVisible(
+      prepareButton,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Reviewed workbook must balance exactly to the cent'),
+      findsOneWidget,
+    );
+    final button = tester.widget<FilledButton>(prepareButton);
     expect(button.onPressed, isNull);
     expect(journalRepository.prepared, isFalse);
   });
@@ -151,9 +191,15 @@ class _FakeWorkbookRepository implements OpeningBalanceWorkbookRepository {
 }
 
 class _FakeJournalRepository implements OpeningBalanceJournalRepository {
-  _FakeJournalRepository({required this.workbookStatus});
+  _FakeJournalRepository({
+    required this.workbookStatus,
+    this.preparationReady,
+    this.preparationBlocker,
+  });
 
   final String workbookStatus;
+  final bool? preparationReady;
+  final String? preparationBlocker;
   bool prepared = false;
 
   @override
@@ -174,6 +220,14 @@ class _FakeJournalRepository implements OpeningBalanceJournalRepository {
   }
 
   OpeningBalanceJournalDraftStatus _status() {
+    final ready = !prepared &&
+        (preparationReady ?? workbookStatus == 'review_ready');
+    final blocker = prepared
+        ? 'Protected opening-balance journal draft is already prepared.'
+        : ready
+            ? null
+            : preparationBlocker ??
+                'Opening Balance Workbook must be Review Ready before journal preparation.';
     return OpeningBalanceJournalDraftStatus(
       workbookId: 'workbook-1',
       cutoverDate: DateTime(2026, 8, 8),
@@ -185,6 +239,8 @@ class _FakeJournalRepository implements OpeningBalanceJournalRepository {
       totalDebit: prepared ? 1000 : 0,
       totalCredit: prepared ? 1000 : 0,
       draftPrepared: prepared,
+      preparationReady: ready,
+      preparationBlocker: blocker,
       openingBalancePostingEnabled: false,
       automaticSourcePostingEnabled: false,
       notice: 'Protected draft only. Posting remains disabled.',
