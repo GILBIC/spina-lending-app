@@ -1,0 +1,2 @@
+Apply 0037_add_opening_balance_journal_draft.sql on main only through the guarded installer.
+The installer must create zero opening-balance journal drafts and enable no posting.
