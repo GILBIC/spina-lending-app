@@ -48,11 +48,19 @@ def test_snapshot_rows_and_batches_are_immutable_and_only_insert_during_preparat
     assert "UNIQUE (journal_entry_id, loan_id)" in sql
 
 
-def test_preparation_trigger_serializes_source_and_captures_exact_active_loan_count() -> None:
+def test_preparation_trigger_serializes_source_in_writer_order_and_captures_exact_active_loan_count() -> None:
     sql = _sql()
 
     assert "CREATE OR REPLACE FUNCTION accounting.capture_opening_balance_loan_eir_snapshots()" in sql
     assert "BEFORE INSERT ON accounting.opening_balance_journal_preparations" in sql
+    writer_order_lock = (
+        "    LOCK TABLE\n"
+        "        lending.loan_collection_state,\n"
+        "        lending.loans,\n"
+        "        lending.loan_types\n"
+        "    IN SHARE MODE;"
+    )
+    assert writer_order_lock in sql
     assert "lending.loans," in sql
     assert "lending.loan_types," in sql
     assert "lending.loan_collection_state" in sql
