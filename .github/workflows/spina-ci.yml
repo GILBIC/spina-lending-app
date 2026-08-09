@@ -6,6 +6,12 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      upload_apk:
+        description: Upload the built APK as a temporary artifact
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -120,25 +126,23 @@ jobs:
           for %%I in ("%APK_OUT%\app-debug.apk") do echo APK size: %%~zI bytes
           popd
 
-      # PR validation proves that the APK builds successfully without storing a
-      # large artifact on every intermediate commit. Only main/manual runs try
-      # to publish an APK, and storage/billing availability is non-blocking.
-      - name: Upload Android debug APK
-        if: github.event_name != 'pull_request'
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: gilbic-mobile-debug-${{ github.sha }}
-          path: gilbic_mobile/build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
-          retention-days: 1
-
       - name: Require a clean committed tree
         shell: cmd
         run: |
           git diff --check || exit /b 1
           git diff --exit-code || exit /b 1
           git diff --cached --exit-code || exit /b 1
+
+      # Every validation still proves that Android builds successfully. The large
+      # APK is stored only when a person explicitly asks for it from Run workflow.
+      - name: Upload Android debug APK
+        if: github.event_name == 'workflow_dispatch' && inputs.upload_apk
+        uses: actions/upload-artifact@v4
+        with:
+          name: gilbic-mobile-debug-${{ github.sha }}
+          path: gilbic_mobile/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 1
 
       - name: One-time Stage 5E.2 live historical import
         if: github.event_name == 'push' && hashFiles('tools/stage5e2-import.once') != ''
