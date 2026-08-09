@@ -1,0 +1,2 @@
+Install migration 0038 protected opening-balance journal posting controls on main only.
+The installer must create zero posting records, post zero journals, and leave automatic source posting disabled.
