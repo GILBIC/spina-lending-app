@@ -18,6 +18,7 @@ TX1 = UUID("22222222-2222-4222-8222-222222222222")
 TX2 = UUID("33333333-3333-4333-8333-333333333333")
 TX3 = UUID("44444444-4444-4444-8444-444444444444")
 CUTOVER = date(2026, 8, 8)
+DUE_DATE = date(2026, 12, 6)
 
 
 def state(**overrides: object) -> EirCutoverState:
@@ -25,6 +26,7 @@ def state(**overrides: object) -> EirCutoverState:
         "loan_id": LOAN_ID,
         "calculation_mode": "fixed_daily",
         "cutover_date": CUTOVER,
+        "due_date": DUE_DATE,
         "measurement_status": "measured",
         "daily_eir": Decimal("0.01"),
         "loan_component": Decimal("100.00"),
@@ -104,11 +106,7 @@ def test_next_day_interest_uses_reconciled_prior_cash_boundary() -> None:
         state(),
         (
             event(TX1, amount="15.00"),
-            event(
-                TX2,
-                collection_date=date(2026, 8, 10),
-                amount="1.00",
-            ),
+            event(TX2, collection_date=date(2026, 8, 10), amount="1.00"),
         ),
     )
 
@@ -137,7 +135,6 @@ def test_advance_is_cash_on_collection_date_not_covered_date() -> None:
     )
 
     allocation = result.allocations[0]
-    # Two elapsed EIR days: 1.10 then 1.111 = 2.211 -> 2.21 at event boundary.
     assert allocation.effective_interest_accrued_since_prior_event == Decimal("2.21")
     assert allocation.accrued_interest_before == Decimal("12.21")
     assert allocation.cash_to_accrued_interest == Decimal("12.21")
@@ -166,11 +163,7 @@ def test_cent_reconciliation_keeps_gross_equal_to_components_after_each_cash_eve
         reconciled,
         (
             event(TX1, amount="10.01"),
-            event(
-                TX2,
-                collection_date=date(2026, 8, 10),
-                amount="10.00",
-            ),
+            event(TX2, collection_date=date(2026, 8, 10), amount="10.00"),
         ),
     )
 
@@ -191,11 +184,7 @@ def test_cash_exceeding_eir_carrying_amount_blocks_this_and_later_allocations() 
         state(),
         (
             event(TX1, amount="200.00"),
-            event(
-                TX2,
-                collection_date=date(2026, 8, 10),
-                amount="1.00",
-            ),
+            event(TX2, collection_date=date(2026, 8, 10), amount="1.00"),
         ),
     )
 
@@ -242,6 +231,31 @@ def test_7x7_remains_policy_blocked_instead_of_guessing_prepayment_allocation() 
     assert result.status == "seven_by_seven_policy_review"
     assert result.allocations == ()
     assert result.posting_eligible is False
+
+
+def test_post_maturity_cash_is_blocked_without_extrapolating_original_eir() -> None:
+    result = allocate_event_date_eir_cash(
+        state(due_date=date(2026, 8, 9)),
+        (
+            event(TX1, collection_date=date(2026, 8, 9), amount="15.00"),
+            event(TX2, collection_date=date(2026, 8, 10), amount="1.00"),
+        ),
+    )
+
+    assert result.status == "post_maturity_review_required"
+    assert len(result.allocations) == 1
+    assert result.allocations[0].transaction_id == TX1
+    assert result.total_effective_interest_accrued == Decimal("1.10")
+    assert result.closing_gross_carrying_amount == Decimal("96.10")
+
+
+def test_cutover_after_maturity_is_blocked_before_rollforward() -> None:
+    result = allocate_event_date_eir_cash(
+        state(due_date=date(2026, 8, 7)),
+        (event(TX1),),
+    )
+    assert result.status == "post_maturity_review_required"
+    assert result.allocations == ()
 
 
 def test_no_cash_events_preserve_cutover_components_without_creating_entries() -> None:
