@@ -18,6 +18,15 @@ abstract interface class OpeningBalanceJournalRepository {
     required String deviceId,
     required String workbookId,
   });
+
+  Future<OpeningBalanceJournalDraftStatus> post(
+    UserSession session, {
+    required String deviceId,
+    required String workbookId,
+    required String journalEntryId,
+    required String totalDebit,
+    required String totalCredit,
+  });
 }
 
 class SpinaOpeningBalanceJournalRepository
@@ -58,6 +67,34 @@ class SpinaOpeningBalanceJournalRepository
           endpoint,
           headers: _headers(session, deviceId, jsonBody: true),
           body: jsonEncode(<String, Object>{'confirm': true}),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Future<OpeningBalanceJournalDraftStatus> post(
+    UserSession session, {
+    required String deviceId,
+    required String workbookId,
+    required String journalEntryId,
+    required String totalDebit,
+    required String totalCredit,
+  }) async {
+    final endpoint = ApiConfig.endpoint(
+      '/api/mobile/v1/management/financial-accounting/opening-balance-workbook/$workbookId/journal-draft/post',
+    );
+    return _parse(
+      await _request(
+        () => _client.post(
+          endpoint,
+          headers: _headers(session, deviceId, jsonBody: true),
+          body: jsonEncode(<String, Object>{
+            'confirm': true,
+            'journal_entry_id': journalEntryId,
+            'total_debit': totalDebit,
+            'total_credit': totalCredit,
+          }),
         ),
       ),
     );

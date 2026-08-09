@@ -35,6 +35,7 @@ void main() {
     );
     expect(button.onPressed, isNull);
     expect(journalRepository.prepared, isFalse);
+    expect(journalRepository.posted, isFalse);
   });
 
   testWidgets('Review ready workbook still shows stricter exact-balance blocker', (
@@ -77,7 +78,7 @@ void main() {
     expect(journalRepository.prepared, isFalse);
   });
 
-  testWidgets('Explicit confirmation prepares draft but never enables posting', (
+  testWidgets('Draft preparation and ledger posting require separate confirmations', (
     tester,
   ) async {
     final workbookRepository = _FakeWorkbookRepository(status: 'review_ready');
@@ -113,10 +114,74 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(journalRepository.prepared, isTrue);
+    expect(journalRepository.posted, isFalse);
     expect(find.text('Draft prepared'), findsOneWidget);
-    expect(find.text('General Ledger posting'), findsOneWidget);
+
+    final postButton = find.byKey(const Key('post-opening-journal'));
+    await tester.scrollUntilVisible(
+      postButton,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    final enabledPostButton = tester.widget<FilledButton>(postButton);
+    expect(enabledPostButton.onPressed, isNotNull);
+
+    await tester.tap(postButton);
+    await tester.pumpAndSettle();
+    expect(find.text('Post opening balances to General Ledger?'), findsOneWidget);
+    expect(find.textContaining('Debit: ₱1,000.00'), findsOneWidget);
+    expect(find.textContaining('Credit: ₱1,000.00'), findsOneWidget);
+    expect(journalRepository.posted, isFalse);
+
+    await tester.tap(find.byKey(const Key('confirm-post-opening-journal')));
+    await tester.pumpAndSettle();
+
+    expect(journalRepository.posted, isTrue);
+    expect(find.text('Posted'), findsWidgets);
+    expect(find.text('JE-202608-00000001'), findsOneWidget);
+    expect(find.text('Automatic source posting'), findsOneWidget);
     expect(find.text('Disabled'), findsWidgets);
-    expect(find.textContaining('cannot be edited, deleted, or posted'), findsOneWidget);
+    expect(find.textContaining('corrections require a controlled reversal'), findsWidgets);
+  });
+
+  testWidgets('Posting gate stays blocked when server readiness is false', (
+    tester,
+  ) async {
+    final workbookRepository = _FakeWorkbookRepository(status: 'review_ready');
+    final journalRepository = _FakeJournalRepository(
+      workbookStatus: 'review_ready',
+      initiallyPrepared: true,
+      postingReady: false,
+      postingBlocker: 'Cutover accounting period must remain open before posting.',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementOpeningBalanceJournalPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          workbookRepository: workbookRepository,
+          journalRepository: journalRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final postButton = find.byKey(const Key('post-opening-journal'));
+    await tester.scrollUntilVisible(
+      postButton,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Cutover accounting period must remain open'),
+      findsOneWidget,
+    );
+    expect(tester.widget<FilledButton>(postButton).onPressed, isNull);
+    expect(journalRepository.posted, isFalse);
   });
 }
 
@@ -130,6 +195,7 @@ const UserSession _session = UserSession(
   permissions: <String>[
     'accounting.view',
     'accounting.opening_balance.prepare',
+    'accounting.opening_balance.post',
   ],
 );
 
@@ -195,12 +261,18 @@ class _FakeJournalRepository implements OpeningBalanceJournalRepository {
     required this.workbookStatus,
     this.preparationReady,
     this.preparationBlocker,
-  });
+    this.postingReady,
+    this.postingBlocker,
+    bool initiallyPrepared = false,
+  }) : prepared = initiallyPrepared;
 
   final String workbookStatus;
   final bool? preparationReady;
   final String? preparationBlocker;
-  bool prepared = false;
+  final bool? postingReady;
+  final String? postingBlocker;
+  bool prepared;
+  bool posted = false;
 
   @override
   Future<OpeningBalanceJournalDraftStatus> load(
@@ -219,31 +291,63 @@ class _FakeJournalRepository implements OpeningBalanceJournalRepository {
     return _status();
   }
 
+  @override
+  Future<OpeningBalanceJournalDraftStatus> post(
+    UserSession session, {
+    required String deviceId,
+    required String workbookId,
+    required String journalEntryId,
+    required String totalDebit,
+    required String totalCredit,
+  }) async {
+    expect(journalEntryId, 'journal-1');
+    expect(totalDebit, '1000.00');
+    expect(totalCredit, '1000.00');
+    posted = true;
+    return _status();
+  }
+
   OpeningBalanceJournalDraftStatus _status() {
-    final ready = !prepared &&
+    final prepareReady = !prepared &&
         (preparationReady ?? workbookStatus == 'review_ready');
-    final blocker = prepared
+    final prepareBlocker = prepared
         ? 'Protected opening-balance journal draft is already prepared.'
-        : ready
+        : prepareReady
             ? null
             : preparationBlocker ??
                 'Opening Balance Workbook must be Review Ready before journal preparation.';
+    final postReady = prepared && !posted && (postingReady ?? true);
+    final postBlocker = posted
+        ? 'Opening-balance journal is already posted.'
+        : prepared && !postReady
+            ? postingBlocker ?? 'Protected posting requirements are not complete.'
+            : prepared
+                ? null
+                : 'Prepare the protected opening-balance journal draft before posting.';
     return OpeningBalanceJournalDraftStatus(
       workbookId: 'workbook-1',
       cutoverDate: DateTime(2026, 8, 8),
       workbookStatus: workbookStatus,
       journalEntryId: prepared ? 'journal-1' : null,
-      journalStatus: prepared ? 'draft' : null,
-      entryNumber: null,
+      journalStatus: prepared ? (posted ? 'posted' : 'draft') : null,
+      entryNumber: posted ? 'JE-202608-00000001' : null,
       journalLineCount: prepared ? 3 : 0,
       totalDebit: prepared ? 1000 : 0,
       totalCredit: prepared ? 1000 : 0,
+      totalDebitExact: prepared ? '1000.00' : '0.00',
+      totalCreditExact: prepared ? '1000.00' : '0.00',
       draftPrepared: prepared,
-      preparationReady: ready,
-      preparationBlocker: blocker,
-      openingBalancePostingEnabled: false,
+      preparationReady: prepareReady,
+      preparationBlocker: prepareBlocker,
+      openingBalancePostingEnabled: true,
       automaticSourcePostingEnabled: false,
-      notice: 'Protected draft only. Posting remains disabled.',
+      postingReady: postReady,
+      postingBlocker: postBlocker,
+      postedByUserId: posted ? 'management-1' : null,
+      postedAt: posted ? DateTime(2026, 8, 9, 20, 0) : null,
+      notice: posted
+          ? 'Opening balances are posted and immutable; corrections require a controlled reversal.'
+          : 'Protected journal. Explicit Management posting is required.',
     );
   }
 }
