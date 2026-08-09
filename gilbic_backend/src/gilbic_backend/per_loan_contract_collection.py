@@ -7,7 +7,7 @@ from psycopg import Connection
 from psycopg.rows import dict_row
 
 from spina_mobile_collections.contracts import CollectionCommand
-from spina_mobile_collections.service import CollectionRejected
+from spina_mobile_collections.service import CollectionConflict, CollectionRejected
 
 from .contract_collection_posting import (
     ContractAwareCrossCollectorCollectionPostingBridge,
@@ -47,6 +47,7 @@ class PerLoanContractAwareCrossCollectorCollectionPostingBridge(
                         as mobile_balance_mode,
                     coalesce(state.remaining_balance, loan.principal)::numeric(18,2)
                         as remaining_balance,
+                    coalesce(state.is_reconciled, false) as collection_state_reconciled,
                     assessment.schedule_id,
                     assessment.schedule_version,
                     assessment.payment_frequency,
@@ -99,6 +100,12 @@ class PerLoanContractAwareCrossCollectorCollectionPostingBridge(
                 code="contract_activation_state_invalid",
             )
 
+        if not bool(row["collection_state_reconciled"]):
+            raise CollectionRejected(
+                "This loan's official collection state is not reconciled. "
+                "Management must reconcile it before contractual collection can continue.",
+                code="loan_state_not_reconciled",
+            )
         if not bool(row["mobile_collections_enabled"]):
             raise CollectionRejected(
                 "This loan was activated for contractual collection, but mobile "
@@ -161,3 +168,67 @@ class PerLoanContractAwareCrossCollectorCollectionPostingBridge(
             remaining_balance=remaining_balance,
             unpaid_contractual_amount=unpaid_contractual_amount,
         )
+
+    def _validate_loan_and_route(
+        self,
+        cursor: Any,
+        *,
+        loan: dict[str, Any],
+        collector_user_id: Any,
+        command: CollectionCommand,
+    ) -> None:
+        # The official bridge has already acquired FOR UPDATE locks on the loan,
+        # client and collection-state rows before this method is called. Activation
+        # and deactivation use the same loan-row lock, so this second read closes the
+        # race where Management could deactivate after the initial pre-lock gate read.
+        super()._validate_loan_and_route(
+            cursor,
+            loan=loan,
+            collector_user_id=collector_user_id,
+            command=command,
+        )
+        if not self._contract_mode:
+            return
+        self._verify_activation_after_loan_lock(
+            cursor,
+            loan_id=self._uuid(command.loan_id, "loan"),
+        )
+
+    @staticmethod
+    def _verify_activation_after_loan_lock(cursor: Any, *, loan_id: Any) -> None:
+        cursor.execute(
+            """
+            select
+                coalesce(activation.event_action, '') as activation_action,
+                activation.schedule_id as activation_schedule_id,
+                assessment.schedule_id as current_schedule_id,
+                registration.id as registration_id
+            from lending.loans loan
+            left join accounting.loan_contract_dpd_assessment assessment
+              on assessment.loan_id = loan.id
+            left join lending.loan_contract_schedule_registrations registration
+              on registration.schedule_id = assessment.schedule_id
+            left join lending.loan_contract_collection_activation_state activation
+              on activation.loan_id = loan.id
+            where loan.id = %s
+            """,
+            (loan_id,),
+        )
+        row = cursor.fetchone()
+        if row is None or str(row["activation_action"] or "") != "activate":
+            raise CollectionConflict(
+                "Contractual collection activation changed while this payment was waiting "
+                "for the loan lock. Refresh the route before trying again.",
+                code="contract_activation_changed",
+            )
+        if (
+            row["activation_schedule_id"] is None
+            or row["current_schedule_id"] is None
+            or row["registration_id"] is None
+            or row["activation_schedule_id"] != row["current_schedule_id"]
+        ):
+            raise CollectionConflict(
+                "The contractual collection activation no longer matches the current "
+                "verified schedule. Refresh the route and ask Management to review it.",
+                code="contract_activation_schedule_changed",
+            )
