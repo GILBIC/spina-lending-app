@@ -33,6 +33,7 @@ def preview(**changes):
         loan_type_name="Regular",
         loan_status="active",
         remaining_balance=Decimal("270.00"),
+        collection_state_reconciled=True,
         mobile_collections_enabled=True,
         mobile_balance_mode="direct_remaining_balance",
         schedule_id=SCHEDULE_ID,
@@ -70,6 +71,7 @@ def test_stage5e46b_ready_verified_reconciled_loan_can_activate() -> None:
 
 def test_stage5e46b_activation_is_blocked_by_each_protected_readiness_gate() -> None:
     cases = (
+        preview(collection_state_reconciled=False),
         preview(mobile_collections_enabled=False),
         preview(mobile_balance_mode="statement_only"),
         preview(schedule_id=None, registration_id=None, dpd_data_status="contract_schedule_required"),
@@ -84,6 +86,18 @@ def test_stage5e46b_activation_is_blocked_by_each_protected_readiness_gate() -> 
     for item in cases:
         assert item.can_activate is False
         assert item.blockers
+
+
+def test_stage5e46b_official_reconciliation_is_not_replaced_by_balance_coincidence() -> None:
+    item = preview(
+        collection_state_reconciled=False,
+        remaining_balance=Decimal("270.00"),
+        contractual_schedule_total=Decimal("270.00"),
+        allocated_schedule_total=Decimal("0.00"),
+    )
+    assert item.balance_reconciled is False
+    assert item.can_activate is False
+    assert any("Official loan collection state" in blocker for blocker in item.blockers)
 
 
 def test_stage5e46b_active_state_is_per_loan_and_schedule_specific() -> None:
@@ -125,6 +139,7 @@ def test_stage5e46b_activation_repository_is_append_only_and_never_writes_busine
     assert "loan_contract_collection_activation_events" in REPOSITORY_SOURCE
     assert "event_action" in REPOSITORY_SOURCE
     assert "insert into lending.loan_contract_collection_activation_events" in REPOSITORY_SOURCE
+    assert "state.is_reconciled" in REPOSITORY_SOURCE
     forbidden_writes = (
         "update lending.loans",
         "update lending.loan_collection_state",
