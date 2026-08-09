@@ -86,11 +86,11 @@ def _pack_payload(pack: SourceEventAccountingPreviewPack) -> dict[str, object]:
         ),
         "events": [_event_payload(event) for event in pack.events],
         "notice": (
-            "Read-only source-event accounting preview. No journal draft or posted entry is created. "
-            "PAYMENT and ADV cash are previewed as debit Cash - Collector Custody and credit the "
-            "loan carrying amount. PASS is non-cash. EIR interest income remains a separate "
-            "accounting event. Voided collections require no entry when never accounted, or a "
-            "controlled reversal when a source journal had already posted."
+            "Read-only source-event accounting classification. No journal draft or posted entry is created. "
+            "PAYMENT and ADV identify authoritative cash sources, but journal lines remain blocked until "
+            "event-date EIR allocation can split cash between accrued effective interest and the loan component. "
+            "PASS is non-cash. Voided collections require no entry when never accounted, or a controlled reversal "
+            "when a source journal had already posted. Automatic source posting remains disabled."
         ),
     }
 
