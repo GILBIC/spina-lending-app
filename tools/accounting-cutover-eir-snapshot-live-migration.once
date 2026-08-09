@@ -1,0 +1,2 @@
+Install migration 0039 protected per-loan cutover EIR snapshot controls on main only.
+The installer must create zero snapshot batches, create zero snapshot rows, prepare/post zero journals, and leave automatic source posting disabled.

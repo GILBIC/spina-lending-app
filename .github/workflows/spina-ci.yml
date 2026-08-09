@@ -65,6 +65,7 @@ jobs:
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_stage5e46a_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_opening_journal_draft_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_opening_journal_posting_migration.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_cutover_eir_snapshot_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m compileall -q spina_app gilbic_backend\src spina_backend_mobile\src || exit /b 1
 
       - name: Run backend and database tests
@@ -195,3 +196,10 @@ jobs:
         run: |
           set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_accounting_opening_journal_posting_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+
+      - name: One-time protected cutover EIR snapshot migration
+        if: github.event_name == 'push' && hashFiles('tools/accounting-cutover-eir-snapshot-live-migration.once') != ''
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          "%VENV%\Scripts\python.exe" tools\apply_accounting_cutover_eir_snapshot_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
