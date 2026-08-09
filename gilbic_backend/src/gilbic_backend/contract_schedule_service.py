@@ -159,7 +159,8 @@ def allocate_collection_transaction(
     concurrent payments for the same loan cannot both consume the same unpaid
     installment. Re-running a fully allocated transaction is idempotent.
     Partial pre-existing allocations are treated as a conflict rather than
-    guessed or silently repaired.
+    guessed or silently repaired. Allocations belonging to a voided collection
+    remain immutable evidence but no longer consume installment capacity.
     """
 
     cursor.execute(
@@ -251,11 +252,14 @@ def allocate_collection_transaction(
             installment.installment_number,
             installment.due_date,
             installment.contractual_amount,
-            coalesce(sum(allocation.amount_applied), 0)::numeric(18,2)
-                as allocated_amount
+            coalesce(sum(allocation.amount_applied) filter (
+                where allocation_transaction.is_voided = false
+            ), 0)::numeric(18,2) as allocated_amount
         from lending.loan_contract_installments installment
         left join lending.loan_installment_payment_allocations allocation
           on allocation.installment_id = installment.id
+        left join lending.collection_transactions allocation_transaction
+          on allocation_transaction.id = allocation.transaction_id
         where installment.schedule_id = %s
         group by
             installment.id,

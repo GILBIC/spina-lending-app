@@ -20,6 +20,7 @@ from .collection_correction_repository import (
     CollectionCorrectionRecord,
     PostgresCollectionCorrectionRepository,
 )
+from .contract_collection_correction import ContractSafeCollectionCorrectionRepository
 from .request_auth import authenticated_device_context
 
 
@@ -34,7 +35,7 @@ class CollectionCorrectionBody(BaseModel):
 
 
 def correction_repository_dependency() -> PostgresCollectionCorrectionRepository:
-    return PostgresCollectionCorrectionRepository()
+    return ContractSafeCollectionCorrectionRepository()
 
 
 def _record_payload(record: CollectionCorrectionRecord) -> dict[str, object]:

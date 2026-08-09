@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from fastapi import Depends, Header, HTTPException
-
-from spina_mobile_collections.contracts import ActorContext
-from spina_mobile_collections.postgres import PostgresCollectionExecutor
-from spina_mobile_collections.router import create_collection_router
 from spina_mobile_collections.service import CollectionSubmissionService
 
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
-from .cross_collector_posting import CrossCollectorCollectionPostingBridge
+from .contract_collection_posting import (
+    ContractAwareCrossCollectorCollectionPostingBridge,
+)
 from .database import connect_database
 from .request_auth import authenticated_device_context
+
+from fastapi import Depends, Header, HTTPException
+from spina_mobile_collections.contracts import ActorContext
+from spina_mobile_collections.postgres import PostgresCollectionExecutor
+from spina_mobile_collections.router import create_collection_router
 
 
 def collection_actor_dependency(
@@ -45,7 +47,7 @@ def collection_actor_dependency(
 def collection_service_dependency() -> CollectionSubmissionService:
     executor = PostgresCollectionExecutor(
         connection_factory=connect_database,
-        posting_bridge=CrossCollectorCollectionPostingBridge(),
+        posting_bridge=ContractAwareCrossCollectorCollectionPostingBridge(),
     )
     return CollectionSubmissionService(executor)
 
