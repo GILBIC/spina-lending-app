@@ -94,6 +94,12 @@ class FakeOpeningBalanceJournalRepository:
             total_debit=Decimal("29343.11") if self.prepared else Decimal("0"),
             total_credit=Decimal("29343.11") if self.prepared else Decimal("0"),
             draft_prepared=self.prepared,
+            preparation_ready=not self.prepared,
+            preparation_blocker=(
+                "Protected opening-balance journal draft is already prepared."
+                if self.prepared
+                else None
+            ),
             opening_balance_posting_enabled=False,
             automatic_source_posting_enabled=False,
         )
@@ -128,6 +134,8 @@ def test_management_can_view_opening_balance_journal_preparation_status() -> Non
     assert response.status_code == 200
     item = response.json()["data"]["journal_draft"]
     assert item["draft_prepared"] is False
+    assert item["preparation_ready"] is True
+    assert item["preparation_blocker"] is None
     assert item["opening_balance_posting_enabled"] is False
     assert item["automatic_source_posting_enabled"] is False
 
@@ -162,6 +170,7 @@ def test_authorized_management_can_prepare_draft_without_posting() -> None:
     assert item["journal_entry_id"] == str(JOURNAL_ID)
     assert item["journal_status"] == "draft"
     assert item["entry_number"] is None
+    assert item["preparation_ready"] is False
     assert item["opening_balance_posting_enabled"] is False
 
 
