@@ -44,20 +44,18 @@ def event(**overrides: object) -> CollectionSourceEvent:
     return CollectionSourceEvent(**values)  # type: ignore[arg-type]
 
 
-def test_regular_cash_collection_maps_only_cash_and_loan_carrying_amount() -> None:
+def test_regular_cash_source_is_valid_but_eir_allocation_is_required() -> None:
     preview = build_collection_accounting_preview(event(), cutover_date=CUTOVER)
 
-    assert preview.disposition == "preview_ready"
+    assert preview.disposition == "eir_allocation_required"
     assert preview.posting_eligible is False
     assert preview.source_event_key == f"collection:{TX_ID}"
-    assert [(line.account_system_key, line.side, line.amount) for line in preview.proposed_lines] == [
-        ("cash_collector_custody", "debit", Decimal("200.00")),
-        ("loans_receivable_regular", "credit", Decimal("200.00")),
-    ]
-    assert "EIR interest recognition remains a separate accounting event" in preview.message
+    assert preview.proposed_lines == ()
+    assert "accrued EIR first" in preview.message
+    assert "Automatic source posting remains disabled" in preview.message
 
 
-def test_7x7_cash_collection_credits_7x7_carrying_amount_not_interest_income() -> None:
+def test_7x7_cash_source_never_assumes_full_credit_to_principal() -> None:
     preview = build_collection_accounting_preview(
         event(
             loan_type_code="7X7",
@@ -68,23 +66,20 @@ def test_7x7_cash_collection_credits_7x7_carrying_amount_not_interest_income() -
         cutover_date=CUTOVER,
     )
 
-    assert preview.disposition == "preview_ready"
-    assert [(line.account_system_key, line.side) for line in preview.proposed_lines] == [
-        ("cash_collector_custody", "debit"),
-        ("loans_receivable_7x7", "credit"),
-    ]
-    assert all("interest_income" not in line.account_system_key for line in preview.proposed_lines)
+    assert preview.disposition == "eir_allocation_required"
+    assert preview.proposed_lines == ()
+    assert "loan component and accrued effective interest" in preview.message
 
 
-def test_advance_is_cash_collection_not_interest_recognition() -> None:
+def test_advance_is_cash_source_but_still_requires_eir_allocation() -> None:
     preview = build_collection_accounting_preview(
         event(entry_type="advance", amount=Decimal("600.00")),
         cutover_date=CUTOVER,
     )
 
-    assert preview.disposition == "preview_ready"
+    assert preview.disposition == "eir_allocation_required"
     assert preview.amount == Decimal("600.00")
-    assert len(preview.proposed_lines) == 2
+    assert preview.proposed_lines == ()
 
 
 def test_pass_is_non_cash_and_never_proposes_a_journal() -> None:
@@ -116,7 +111,7 @@ def test_pass_with_existing_journal_is_flagged_as_inconsistent() -> None:
     [
         (date(2026, 8, 7), "pre_cutover"),
         (date(2026, 8, 8), "cutover_date_review"),
-        (date(2026, 8, 9), "preview_ready"),
+        (date(2026, 8, 9), "eir_allocation_required"),
     ],
 )
 def test_cutover_boundary_never_double_counts(collection_date: date, expected: str) -> None:
@@ -125,8 +120,7 @@ def test_cutover_boundary_never_double_counts(collection_date: date, expected: s
         cutover_date=CUTOVER,
     )
     assert preview.disposition == expected
-    if expected != "preview_ready":
-        assert preview.proposed_lines == ()
+    assert preview.proposed_lines == ()
 
 
 def test_missing_cutover_blocks_mapping() -> None:
@@ -198,7 +192,7 @@ def test_voided_posted_collection_reports_existing_reversal_state() -> None:
     assert posted.disposition == "reversed"
 
 
-def test_existing_source_journal_prevents_duplicate_proposal() -> None:
+def test_existing_source_journal_prevents_duplicate_source_event() -> None:
     draft = build_collection_accounting_preview(
         event(journal_entry_id=JOURNAL_ID, journal_status="draft"),
         cutover_date=CUTOVER,
@@ -214,6 +208,8 @@ def test_existing_source_journal_prevents_duplicate_proposal() -> None:
     assert draft.disposition == "draft_exists"
     assert posted.disposition == "already_posted"
     assert draft.source_event_key == posted.source_event_key
+    assert draft.proposed_lines == ()
+    assert posted.proposed_lines == ()
 
 
 def test_source_event_key_is_deterministic() -> None:
