@@ -17,6 +17,9 @@ from gilbic_backend.contract_collection_posting import (
     ContractAwareCrossCollectorCollectionPostingBridge,
     ContractCollectionGate,
 )
+from gilbic_backend.per_loan_contract_collection import (
+    PerLoanContractAwareCrossCollectorCollectionPostingBridge,
+)
 from spina_mobile_collections.contracts import (
     ActorContext,
     CollectionCommand,
@@ -126,6 +129,21 @@ def gate_row(**changes: Any) -> dict[str, Any]:
     return row
 
 
+def per_loan_gate_row(**changes: Any) -> dict[str, Any]:
+    row = gate_row()
+    row.pop("allocation_enabled")
+    row.update(
+        {
+            "activation_is_active": True,
+            "activation_schedule_id": SCHEDULE_ID,
+            "mobile_collections_enabled": True,
+            "mobile_balance_mode": "direct_remaining_balance",
+        }
+    )
+    row.update(changes)
+    return row
+
+
 def contract_gate() -> ContractCollectionGate:
     return ContractCollectionGate(
         loan_id=LOAN_ID,
@@ -138,9 +156,12 @@ def contract_gate() -> ContractCollectionGate:
     )
 
 
-def test_stage5e44_live_collection_api_uses_contract_aware_bridge() -> None:
-    assert "ContractAwareCrossCollectorCollectionPostingBridge" in COLLECTION_API
-    assert "posting_bridge=ContractAwareCrossCollectorCollectionPostingBridge()" in COLLECTION_API
+def test_stage5e46b_live_collection_api_uses_per_loan_contract_bridge() -> None:
+    assert "PerLoanContractAwareCrossCollectorCollectionPostingBridge" in COLLECTION_API
+    assert (
+        "posting_bridge=PerLoanContractAwareCrossCollectorCollectionPostingBridge()"
+        in COLLECTION_API
+    )
 
 
 def test_stage5e44_correction_api_uses_contract_safe_repository() -> None:
@@ -155,6 +176,48 @@ def test_stage5e44_feature_gate_is_dormant_by_default() -> None:
     assert bridge._load_contract_gate(  # noqa: SLF001
         OneCursorConnection(cursor), command=command()
     ) is None
+
+
+def test_stage5e46b_per_loan_gate_is_off_without_active_event() -> None:
+    bridge = PerLoanContractAwareCrossCollectorCollectionPostingBridge()
+    cursor = OneRowCursor(row=per_loan_gate_row(activation_is_active=False))
+    assert bridge._load_contract_gate(  # noqa: SLF001
+        OneCursorConnection(cursor), command=command()
+    ) is None
+
+
+def test_stage5e46b_per_loan_gate_uses_only_current_activated_schedule() -> None:
+    bridge = PerLoanContractAwareCrossCollectorCollectionPostingBridge()
+    cursor = OneRowCursor(row=per_loan_gate_row())
+    gate = bridge._load_contract_gate(  # noqa: SLF001
+        OneCursorConnection(cursor), command=command()
+    )
+    assert gate is not None
+    assert gate.loan_id == LOAN_ID
+    assert gate.schedule_id == SCHEDULE_ID
+
+    stale = OneRowCursor(
+        row=per_loan_gate_row(activation_schedule_id=UUID(int=999))
+    )
+    with pytest.raises(CollectionRejected) as caught:
+        bridge._load_contract_gate(  # noqa: SLF001
+            OneCursorConnection(stale), command=command()
+        )
+    assert caught.value.code == "contract_activation_schedule_changed"
+
+
+def test_stage5e46b_per_loan_gate_rechecks_operational_mode() -> None:
+    bridge = PerLoanContractAwareCrossCollectorCollectionPostingBridge()
+    for changes in (
+        {"mobile_collections_enabled": False},
+        {"mobile_balance_mode": "statement_only"},
+    ):
+        cursor = OneRowCursor(row=per_loan_gate_row(**changes))
+        with pytest.raises(CollectionRejected) as caught:
+            bridge._load_contract_gate(  # noqa: SLF001
+                OneCursorConnection(cursor), command=command()
+            )
+        assert caught.value.code == "contract_activation_operational_mode_changed"
 
 
 def test_stage5e44_normal_payment_does_not_force_collection_date_coverage() -> None:
