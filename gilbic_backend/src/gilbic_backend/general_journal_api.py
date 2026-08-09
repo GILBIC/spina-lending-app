@@ -198,6 +198,10 @@ def _line_dicts(body: ManualJournalRequest) -> list[dict[str, object]]:
     ]
 
 
+def _visible_general_journal_entry(entry: JournalEntry) -> bool:
+    return not (entry.source_type == "opening_balance" and entry.status == "draft")
+
+
 def create_general_journal_router() -> APIRouter:
     router = APIRouter(tags=["management general journal"])
 
@@ -223,10 +227,15 @@ def create_general_journal_router() -> APIRouter:
             accounts=accounts,
             manage=False,
         )
+        entries = tuple(
+            item
+            for item in journal.list_journals(limit=limit)
+            if _visible_general_journal_entry(item)
+        )
         return {
             "success": True,
             "data": {
-                "entries": [_entry_payload(item) for item in journal.list_journals(limit=limit)],
+                "entries": [_entry_payload(item) for item in entries],
                 "can_manage": "accounting.journal.manage" in actor.permissions,
                 "automatic_loan_posting_enabled": False,
             },
