@@ -14,6 +14,10 @@ from .eir_cash_allocation_repository import (
     EirCashAllocationPack,
     PostgresEirCashAllocationRepository,
 )
+from .regular_collection_journal_preview import (
+    RegularCollectionJournalLine,
+    RegularCollectionJournalPreview,
+)
 from .request_auth import authenticated_device_context
 
 
@@ -80,6 +84,38 @@ def _result_payload(result: EirAllocationResult) -> dict[str, object]:
     }
 
 
+def _journal_line_payload(line: RegularCollectionJournalLine) -> dict[str, object]:
+    return {
+        "account_system_key": line.account_system_key,
+        "side": line.side,
+        "amount": _money(line.amount),
+        "label": line.label,
+    }
+
+
+def _journal_preview_payload(
+    preview: RegularCollectionJournalPreview,
+) -> dict[str, object]:
+    return {
+        "transaction_id": str(preview.transaction_id),
+        "source_event_key": preview.source_event_key,
+        "collection_date": preview.collection_date.isoformat(),
+        "amount": _money(preview.amount),
+        "required_eir_accrual_before_collection": _money(
+            preview.required_eir_accrual_before_collection
+        ),
+        "disposition": preview.disposition,
+        "posting_eligible": preview.posting_eligible,
+        "message": preview.message,
+        "proposed_lines": [
+            _journal_line_payload(line) for line in preview.proposed_lines
+        ],
+        "total_debit": _money(preview.total_debit),
+        "total_credit": _money(preview.total_credit),
+        "balanced": preview.balanced,
+    }
+
+
 def _pack_payload(pack: EirCashAllocationPack) -> dict[str, object]:
     return {
         "loan_id": str(pack.loan_id),
@@ -99,11 +135,17 @@ def _pack_payload(pack: EirCashAllocationPack) -> dict[str, object]:
         "blocker_code": pack.blocker_code,
         "blocker_message": pack.blocker_message,
         "automatic_source_posting_enabled": pack.automatic_source_posting_enabled,
+        "account_configuration_ready": pack.account_configuration_ready,
+        "account_configuration_blocker": pack.account_configuration_blocker,
+        "collection_journal_previews": [
+            _journal_preview_payload(preview)
+            for preview in pack.collection_journal_previews
+        ],
         "allocation": (
             _result_payload(pack.allocation) if pack.allocation is not None else None
         ),
         "notice": (
-            "Read-only event-date EIR cash allocation reference. Before opening-balance journal preparation, Regular cash can be reviewed against the current measured cutover state. During protected preparation, migration 0039 captures immutable per-loan EIR snapshots under the same source locks used by protected posting. After preparation, allocation uses only a fully reconciled protected snapshot batch; mutable Stage 5D remeasurement is never used as the ledger anchor. No EIR accrual or collection journal is created or posted by this endpoint."
+            "Read-only event-date EIR cash allocation and Regular collection journal-line preview. Collection lines appear only after the protected opening journal has posted, the immutable snapshot reconciles, source history is complete, accounts are ready, and no journal already exists for the source key. The required earlier EIR accrual is reported separately; no EIR accrual, collection journal draft, or posted entry is created by this endpoint."
         ),
     }
 
