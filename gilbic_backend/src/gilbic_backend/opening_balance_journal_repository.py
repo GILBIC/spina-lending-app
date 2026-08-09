@@ -118,13 +118,35 @@ class PostgresOpeningBalanceJournalRepository:
                     as opening_balance_posting_enabled,
                 coalesce(posting.automatic_source_posting_enabled, false)
                     as automatic_source_posting_enabled,
-                coalesce(posting.posting_ready, false) as posting_ready,
-                posting.posting_blocker,
+                coalesce(posting.posting_ready, false)
+                    and (
+                        identity_journal.id is null
+                        or (
+                            identity_journal.source_type = 'opening_balance'
+                            and identity_journal.source_reference = prep.workbook_id::text
+                            and identity_journal.source_event_key =
+                                'opening_balance:' || prep.workbook_id::text
+                        )
+                    ) as posting_ready,
+                case
+                    when coalesce(posting.posting_ready, false)
+                         and identity_journal.id is not null
+                         and not (
+                            identity_journal.source_type = 'opening_balance'
+                            and identity_journal.source_reference = prep.workbook_id::text
+                            and identity_journal.source_event_key =
+                                'opening_balance:' || prep.workbook_id::text
+                         )
+                        then 'Prepared opening-balance journal identity is invalid.'
+                    else posting.posting_blocker
+                end as posting_blocker,
                 posting.posted_by_user_id,
                 posting.posted_at
             from accounting.opening_balance_journal_preparation_status prep
             left join accounting.opening_balance_journal_posting_status posting
               on posting.workbook_id = prep.workbook_id
+            left join accounting.journal_entries identity_journal
+              on identity_journal.id = prep.journal_entry_id
             where prep.workbook_id = %s
             """,
             (workbook_id,),
