@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -65,15 +66,26 @@ def decode_source_event_cursor(value: str) -> SourceEventCursor:
         raise ValueError("Source-event cursor cannot be blank.")
     try:
         padded = text + "=" * (-len(text) % 4)
-        payload = json.loads(base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8"))
+        decoded = base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8")
+        payload = json.loads(decoded)
         if not isinstance(payload, dict):
+            raise ValueError
+        accepted_at = datetime.fromisoformat(str(payload["accepted_at"]))
+        if accepted_at.tzinfo is None:
             raise ValueError
         return SourceEventCursor(
             collection_date=date.fromisoformat(str(payload["collection_date"])),
-            accepted_at=datetime.fromisoformat(str(payload["accepted_at"])),
+            accepted_at=accepted_at,
             transaction_id=UUID(str(payload["transaction_id"])),
         )
-    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+    except (
+        KeyError,
+        TypeError,
+        ValueError,
+        UnicodeDecodeError,
+        binascii.Error,
+        json.JSONDecodeError,
+    ) as error:
         raise ValueError("Source-event cursor is invalid.") from error
 
 
