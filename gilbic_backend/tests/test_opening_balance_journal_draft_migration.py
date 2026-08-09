@@ -40,6 +40,14 @@ def test_preparation_requires_review_evidence_balance_and_open_period() -> None:
     assert "account.is_active = false OR account.is_posting = false" in sql
 
 
+def test_status_exposes_stricter_exact_balance_gate_before_prepare_action() -> None:
+    sql = migration_sql()
+    assert "AS preparation_ready" in sql
+    assert "AS preparation_blocker" in sql
+    assert "workbook_readiness.total_debit = workbook_readiness.total_credit" in sql
+    assert "Reviewed workbook must balance exactly to the cent before journal preparation." in sql
+
+
 def test_generated_draft_is_idempotent_and_system_owned() -> None:
     sql = migration_sql()
     assert "source_event_key" in sql
