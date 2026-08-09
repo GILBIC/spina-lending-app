@@ -131,14 +131,14 @@ class _FakeStatementsRepository implements FinancialStatementsRepository {
     this.periodId = periodId;
     final isJuly = periodId == 'period-jul-2026';
     final period = isJuly
-        ? const FinancialStatementPeriod(
+        ? FinancialStatementPeriod(
             periodId: 'period-jul-2026',
             label: 'July 2026',
             startDate: _julyStart,
             endDate: _julyEnd,
             status: 'closed',
           )
-        : const FinancialStatementPeriod(
+        : FinancialStatementPeriod(
             periodId: 'period-aug-2026',
             label: 'August 2026',
             startDate: _augustStart,
@@ -218,7 +218,7 @@ class _FakeStatementsRepository implements FinancialStatementsRepository {
   }
 }
 
-const DateTime _augustStart = DateTime(2026, 8, 1);
-const DateTime _augustEnd = DateTime(2026, 8, 31);
-const DateTime _julyStart = DateTime(2026, 7, 1);
-const DateTime _julyEnd = DateTime(2026, 7, 31);
+final DateTime _augustStart = DateTime(2026, 8, 1);
+final DateTime _augustEnd = DateTime(2026, 8, 31);
+final DateTime _julyStart = DateTime(2026, 7, 1);
+final DateTime _julyEnd = DateTime(2026, 7, 31);
