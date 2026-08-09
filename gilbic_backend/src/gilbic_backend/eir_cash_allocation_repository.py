@@ -17,6 +17,7 @@ from .eir_cash_allocation import (
 
 
 MAX_SOURCE_EVENTS = 5000
+PROTECTED_MEASUREMENT_POLICY_VERSION = "eir_cutover_v1"
 
 
 class EirCashAllocationError(RuntimeError):
@@ -41,6 +42,9 @@ class EirCashAllocationPack:
     blocker_code: str | None
     blocker_message: str | None
     allocation: EirAllocationResult | None
+    protected_snapshot_available: bool = False
+    protected_snapshot_reconciled: bool = False
+    protected_snapshot_blocker: str | None = None
     automatic_source_posting_enabled: bool = False
 
 
@@ -65,21 +69,18 @@ class PostgresEirCashAllocationRepository:
 
                 cutover = self._load_current_cutover(cursor)
                 if cutover is None:
-                    return EirCashAllocationPack(
+                    return self._blocked_pack(
                         loan_id=loan_id,
-                        loan_number=str(loan["loan_number"]),
-                        client_name=str(loan["client_name"]),
+                        loan=loan,
                         cutover_date=None,
                         opening_balance_prepared=False,
                         opening_balance_posted=False,
                         opening_balance_entry_number=None,
-                        source_event_count=0,
-                        source_history_complete=True,
                         blocker_code="cutover_required",
                         blocker_message="Create and verify the protected opening-balance cutover before event-date EIR allocation.",
-                        allocation=None,
                     )
 
+                workbook_id = UUID(str(cutover["workbook_id"]))
                 cutover_date = cutover["cutover_date"]
                 opening_balance_prepared = bool(cutover["opening_balance_prepared"])
                 opening_balance_posted = bool(cutover["opening_balance_posted"])
@@ -89,66 +90,119 @@ class PostgresEirCashAllocationRepository:
                     else None
                 )
 
-                # The current Stage 5D function recomputes from mutable lending
-                # source rows. Once the protected opening journal has been
-                # prepared, that is no longer a safe ledger anchor. Do not
-                # silently produce a different loan-level opening state.
+                protected_snapshot_available = False
+                protected_snapshot_reconciled = False
+                protected_snapshot_blocker: str | None = None
+
                 if opening_balance_prepared:
-                    return EirCashAllocationPack(
+                    reconciliation = self._load_snapshot_reconciliation(
+                        cursor,
+                        workbook_id=workbook_id,
+                    )
+                    measurement = self._load_protected_snapshot(
+                        cursor,
+                        workbook_id=workbook_id,
                         loan_id=loan_id,
-                        loan_number=str(loan["loan_number"]),
-                        client_name=str(loan["client_name"]),
-                        cutover_date=cutover_date,
-                        opening_balance_prepared=True,
-                        opening_balance_posted=opening_balance_posted,
-                        opening_balance_entry_number=opening_balance_entry_number,
-                        source_event_count=0,
-                        source_history_complete=False,
-                        blocker_code="protected_cutover_snapshot_required",
-                        blocker_message=(
-                            "The opening-balance journal has already been prepared. "
-                            "This stage will not recompute the loan-level opening EIR "
-                            "state from mutable lending rows. A protected per-loan "
-                            "cutover snapshot is required before post-cutover "
-                            "allocation can be ledger-anchored."
-                        ),
-                        allocation=None,
+                    )
+                    protected_snapshot_available = measurement is not None
+                    protected_snapshot_reconciled = bool(
+                        reconciliation is not None
+                        and reconciliation["ledger_anchor_ready"]
+                    )
+                    protected_snapshot_blocker = (
+                        str(reconciliation["ledger_anchor_blocker"])
+                        if reconciliation is not None
+                        and reconciliation["ledger_anchor_blocker"]
+                        else None
                     )
 
-                cursor.execute(
-                    """
-                    select count(*) as same_day_cash_count
-                    from lending.collection_transactions t
-                    where t.loan_id = %s
-                      and t.collection_date = %s
-                      and t.is_voided = false
-                      and t.entry_type in ('payment', 'advance')
-                      and t.amount > 0
-                    """,
-                    (loan_id, cutover_date),
-                )
-                same_day_cash_count = int(cursor.fetchone()["same_day_cash_count"])
-                if same_day_cash_count > 0:
-                    return EirCashAllocationPack(
+                    if reconciliation is None or measurement is None:
+                        return self._blocked_pack(
+                            loan_id=loan_id,
+                            loan=loan,
+                            cutover_date=cutover_date,
+                            opening_balance_prepared=True,
+                            opening_balance_posted=opening_balance_posted,
+                            opening_balance_entry_number=opening_balance_entry_number,
+                            blocker_code="protected_cutover_snapshot_required",
+                            blocker_message=(
+                                "The opening-balance journal is prepared but this loan "
+                                "does not have the required immutable cutover EIR "
+                                "snapshot batch. Mutable Stage 5D remeasurement is not "
+                                "used after preparation."
+                            ),
+                            protected_snapshot_available=protected_snapshot_available,
+                            protected_snapshot_reconciled=False,
+                            protected_snapshot_blocker=protected_snapshot_blocker,
+                        )
+
+                    if (
+                        str(reconciliation["measurement_policy_version"])
+                        != PROTECTED_MEASUREMENT_POLICY_VERSION
+                    ):
+                        return self._blocked_pack(
+                            loan_id=loan_id,
+                            loan=loan,
+                            cutover_date=cutover_date,
+                            opening_balance_prepared=True,
+                            opening_balance_posted=opening_balance_posted,
+                            opening_balance_entry_number=opening_balance_entry_number,
+                            blocker_code="protected_cutover_snapshot_policy_mismatch",
+                            blocker_message="Protected cutover snapshot policy version is not supported by this allocator.",
+                            protected_snapshot_available=True,
+                            protected_snapshot_reconciled=False,
+                            protected_snapshot_blocker="Unsupported protected snapshot policy version.",
+                        )
+
+                    if not protected_snapshot_reconciled:
+                        return self._blocked_pack(
+                            loan_id=loan_id,
+                            loan=loan,
+                            cutover_date=cutover_date,
+                            opening_balance_prepared=True,
+                            opening_balance_posted=opening_balance_posted,
+                            opening_balance_entry_number=opening_balance_entry_number,
+                            blocker_code="protected_cutover_snapshot_not_reconciled",
+                            blocker_message=(
+                                protected_snapshot_blocker
+                                or "Protected cutover snapshots do not reconcile to the prepared opening journal."
+                            ),
+                            protected_snapshot_available=True,
+                            protected_snapshot_reconciled=False,
+                            protected_snapshot_blocker=protected_snapshot_blocker,
+                        )
+                else:
+                    cursor.execute(
+                        """
+                        select count(*) as same_day_cash_count
+                        from lending.collection_transactions t
+                        where t.loan_id = %s
+                          and t.collection_date = %s
+                          and t.is_voided = false
+                          and t.entry_type in ('payment', 'advance')
+                          and t.amount > 0
+                        """,
+                        (loan_id, cutover_date),
+                    )
+                    same_day_cash_count = int(cursor.fetchone()["same_day_cash_count"])
+                    if same_day_cash_count > 0:
+                        return self._blocked_pack(
+                            loan_id=loan_id,
+                            loan=loan,
+                            cutover_date=cutover_date,
+                            opening_balance_prepared=False,
+                            opening_balance_posted=False,
+                            opening_balance_entry_number=None,
+                            blocker_code="cutover_date_cash_review",
+                            blocker_message="Cash exists on the date-only cutover boundary. Confirm whether it is included in the protected opening balance before rolling forward post-cutover EIR.",
+                        )
+
+                    measurement = self._load_measurement(
+                        cursor,
                         loan_id=loan_id,
-                        loan_number=str(loan["loan_number"]),
-                        client_name=str(loan["client_name"]),
                         cutover_date=cutover_date,
-                        opening_balance_prepared=False,
-                        opening_balance_posted=False,
-                        opening_balance_entry_number=None,
-                        source_event_count=0,
-                        source_history_complete=False,
-                        blocker_code="cutover_date_cash_review",
-                        blocker_message="Cash exists on the date-only cutover boundary. Confirm whether it is included in the protected opening balance before rolling forward post-cutover EIR.",
-                        allocation=None,
                     )
 
-                measurement = self._load_measurement(
-                    cursor,
-                    loan_id=loan_id,
-                    cutover_date=cutover_date,
-                )
                 events = self._load_source_events(
                     cursor,
                     loan_id=loan_id,
@@ -156,19 +210,19 @@ class PostgresEirCashAllocationRepository:
                 )
 
         if len(events) > MAX_SOURCE_EVENTS:
-            return EirCashAllocationPack(
+            return self._blocked_pack(
                 loan_id=loan_id,
-                loan_number=str(loan["loan_number"]),
-                client_name=str(loan["client_name"]),
+                loan=loan,
                 cutover_date=cutover_date,
-                opening_balance_prepared=False,
-                opening_balance_posted=False,
-                opening_balance_entry_number=None,
-                source_event_count=len(events),
-                source_history_complete=False,
+                opening_balance_prepared=opening_balance_prepared,
+                opening_balance_posted=opening_balance_posted,
+                opening_balance_entry_number=opening_balance_entry_number,
                 blocker_code="source_history_too_large",
                 blocker_message="More than 5,000 post-cutover source events exist for this loan. Allocation is blocked rather than silently truncating history.",
-                allocation=None,
+                source_event_count=len(events),
+                protected_snapshot_available=protected_snapshot_available,
+                protected_snapshot_reconciled=protected_snapshot_reconciled,
+                protected_snapshot_blocker=protected_snapshot_blocker,
             )
 
         state = EirCutoverState(
@@ -215,14 +269,57 @@ class PostgresEirCashAllocationRepository:
             loan_number=str(loan["loan_number"]),
             client_name=str(loan["client_name"]),
             cutover_date=cutover_date,
-            opening_balance_prepared=False,
-            opening_balance_posted=False,
-            opening_balance_entry_number=None,
+            opening_balance_prepared=opening_balance_prepared,
+            opening_balance_posted=opening_balance_posted,
+            opening_balance_entry_number=opening_balance_entry_number,
             source_event_count=len(source_events),
             source_history_complete=True,
             blocker_code=None,
             blocker_message=None,
             allocation=allocation,
+            protected_snapshot_available=protected_snapshot_available,
+            protected_snapshot_reconciled=protected_snapshot_reconciled,
+            protected_snapshot_blocker=protected_snapshot_blocker,
+        )
+
+    @staticmethod
+    def _blocked_pack(
+        *,
+        loan_id: UUID,
+        loan,
+        cutover_date: date | None,
+        opening_balance_prepared: bool,
+        opening_balance_posted: bool,
+        opening_balance_entry_number: str | None,
+        blocker_code: str,
+        blocker_message: str,
+        source_event_count: int = 0,
+        protected_snapshot_available: bool = False,
+        protected_snapshot_reconciled: bool = False,
+        protected_snapshot_blocker: str | None = None,
+    ) -> EirCashAllocationPack:
+        return EirCashAllocationPack(
+            loan_id=loan_id,
+            loan_number=str(loan["loan_number"]),
+            client_name=str(loan["client_name"]),
+            cutover_date=cutover_date,
+            opening_balance_prepared=opening_balance_prepared,
+            opening_balance_posted=opening_balance_posted,
+            opening_balance_entry_number=opening_balance_entry_number,
+            source_event_count=source_event_count,
+            source_history_complete=(
+                blocker_code not in {
+                    "source_history_too_large",
+                    "protected_cutover_snapshot_required",
+                    "protected_cutover_snapshot_not_reconciled",
+                }
+            ),
+            blocker_code=blocker_code,
+            blocker_message=blocker_message,
+            allocation=None,
+            protected_snapshot_available=protected_snapshot_available,
+            protected_snapshot_reconciled=protected_snapshot_reconciled,
+            protected_snapshot_blocker=protected_snapshot_blocker,
         )
 
     @staticmethod
@@ -259,6 +356,43 @@ class PostgresEirCashAllocationRepository:
         if row is None:
             raise EirCashAllocationLoanNotFound("Loan measurement source was not found.")
         return row
+
+    @staticmethod
+    def _load_protected_snapshot(cursor, *, workbook_id: UUID, loan_id: UUID):
+        cursor.execute(
+            """
+            select
+                snapshot.calculation_mode,
+                snapshot.cutover_date,
+                snapshot.due_date,
+                snapshot.measurement_status,
+                snapshot.daily_eir,
+                snapshot.loan_component,
+                snapshot.accrued_interest_component,
+                snapshot.gross_carrying_amount,
+                snapshot.measurement_policy_version
+            from accounting.opening_balance_loan_measurement_snapshots snapshot
+            where snapshot.workbook_id = %s
+              and snapshot.loan_id = %s
+            """,
+            (workbook_id, loan_id),
+        )
+        return cursor.fetchone()
+
+    @staticmethod
+    def _load_snapshot_reconciliation(cursor, *, workbook_id: UUID):
+        cursor.execute(
+            """
+            select
+                measurement_policy_version,
+                ledger_anchor_ready,
+                ledger_anchor_blocker
+            from accounting.opening_balance_loan_snapshot_reconciliation
+            where workbook_id = %s
+            """,
+            (workbook_id,),
+        )
+        return cursor.fetchone()
 
     @staticmethod
     def _load_source_events(cursor, *, loan_id: UUID, cutover_date):
