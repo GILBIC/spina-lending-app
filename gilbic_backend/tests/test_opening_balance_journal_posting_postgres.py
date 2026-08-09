@@ -183,10 +183,10 @@ def test_protected_opening_balance_posting_is_explicit_idempotent_and_ledger_gua
             )
 
             # The ordinary General Journal wrapper must remain unable to post this
-            # system-generated opening balance. A savepoint keeps the synthetic
-            # transaction usable after the expected database exception.
-            with connection.transaction():
-                with pytest.raises(psycopg.Error):
+            # system-generated opening balance. Let the exception leave the nested
+            # transaction so psycopg rolls the savepoint back before pytest catches it.
+            with pytest.raises(psycopg.Error):
+                with connection.transaction():
                     connection.execute(
                         "select accounting.post_manual_journal_entry(%s, %s)",
                         (journal_id, actor_id),
