@@ -24,8 +24,8 @@ abstract interface class OpeningBalanceJournalRepository {
     required String deviceId,
     required String workbookId,
     required String journalEntryId,
-    required double totalDebit,
-    required double totalCredit,
+    required String totalDebit,
+    required String totalCredit,
   });
 }
 
@@ -78,8 +78,8 @@ class SpinaOpeningBalanceJournalRepository
     required String deviceId,
     required String workbookId,
     required String journalEntryId,
-    required double totalDebit,
-    required double totalCredit,
+    required String totalDebit,
+    required String totalCredit,
   }) async {
     final endpoint = ApiConfig.endpoint(
       '/api/mobile/v1/management/financial-accounting/opening-balance-workbook/$workbookId/journal-draft/post',
