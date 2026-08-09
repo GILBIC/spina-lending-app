@@ -254,6 +254,17 @@ BEGIN
         RAISE EXCEPTION 'Opening-balance journal can only be posted while its cutover accounting period is open.';
     END IF;
 
+    -- Hold a stable source-readiness snapshot through the irreversible journal
+    -- commit. These SHARE table locks conflict with the ROW EXCLUSIVE locks that
+    -- INSERT/UPDATE/DELETE writers (including collection void/correction paths)
+    -- must acquire. A writer that committed first is visible to the check below;
+    -- a writer that arrives after these locks must wait until this post commits.
+    LOCK TABLE
+        lending.loans,
+        lending.loan_types,
+        lending.loan_collection_state
+    IN SHARE MODE;
+
     SELECT count(*) FILTER (
         WHERE status = 'active' AND readiness_status = 'blocked'
     )
