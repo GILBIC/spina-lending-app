@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
@@ -31,7 +32,8 @@ class EirCashAllocationPack:
     loan_id: UUID
     loan_number: str
     client_name: str
-    cutover_date: object | None
+    cutover_date: date | None
+    opening_balance_prepared: bool
     opening_balance_posted: bool
     opening_balance_entry_number: str | None
     source_event_count: int
@@ -68,6 +70,7 @@ class PostgresEirCashAllocationRepository:
                         loan_number=str(loan["loan_number"]),
                         client_name=str(loan["client_name"]),
                         cutover_date=None,
+                        opening_balance_prepared=False,
                         opening_balance_posted=False,
                         opening_balance_entry_number=None,
                         source_event_count=0,
@@ -78,6 +81,40 @@ class PostgresEirCashAllocationRepository:
                     )
 
                 cutover_date = cutover["cutover_date"]
+                opening_balance_prepared = bool(cutover["opening_balance_prepared"])
+                opening_balance_posted = bool(cutover["opening_balance_posted"])
+                opening_balance_entry_number = (
+                    str(cutover["opening_balance_entry_number"])
+                    if cutover["opening_balance_entry_number"]
+                    else None
+                )
+
+                # The current Stage 5D function recomputes from mutable lending
+                # source rows. Once the protected opening journal has been
+                # prepared, that is no longer a safe ledger anchor. Do not
+                # silently produce a different loan-level opening state.
+                if opening_balance_prepared:
+                    return EirCashAllocationPack(
+                        loan_id=loan_id,
+                        loan_number=str(loan["loan_number"]),
+                        client_name=str(loan["client_name"]),
+                        cutover_date=cutover_date,
+                        opening_balance_prepared=True,
+                        opening_balance_posted=opening_balance_posted,
+                        opening_balance_entry_number=opening_balance_entry_number,
+                        source_event_count=0,
+                        source_history_complete=False,
+                        blocker_code="protected_cutover_snapshot_required",
+                        blocker_message=(
+                            "The opening-balance journal has already been prepared. "
+                            "This stage will not recompute the loan-level opening EIR "
+                            "state from mutable lending rows. A protected per-loan "
+                            "cutover snapshot is required before post-cutover "
+                            "allocation can be ledger-anchored."
+                        ),
+                        allocation=None,
+                    )
+
                 cursor.execute(
                     """
                     select count(*) as same_day_cash_count
@@ -97,12 +134,9 @@ class PostgresEirCashAllocationRepository:
                         loan_number=str(loan["loan_number"]),
                         client_name=str(loan["client_name"]),
                         cutover_date=cutover_date,
-                        opening_balance_posted=bool(cutover["opening_balance_posted"]),
-                        opening_balance_entry_number=(
-                            str(cutover["opening_balance_entry_number"])
-                            if cutover["opening_balance_entry_number"]
-                            else None
-                        ),
+                        opening_balance_prepared=False,
+                        opening_balance_posted=False,
+                        opening_balance_entry_number=None,
                         source_event_count=0,
                         source_history_complete=False,
                         blocker_code="cutover_date_cash_review",
@@ -127,12 +161,9 @@ class PostgresEirCashAllocationRepository:
                 loan_number=str(loan["loan_number"]),
                 client_name=str(loan["client_name"]),
                 cutover_date=cutover_date,
-                opening_balance_posted=bool(cutover["opening_balance_posted"]),
-                opening_balance_entry_number=(
-                    str(cutover["opening_balance_entry_number"])
-                    if cutover["opening_balance_entry_number"]
-                    else None
-                ),
+                opening_balance_prepared=False,
+                opening_balance_posted=False,
+                opening_balance_entry_number=None,
                 source_event_count=len(events),
                 source_history_complete=False,
                 blocker_code="source_history_too_large",
@@ -184,12 +215,9 @@ class PostgresEirCashAllocationRepository:
             loan_number=str(loan["loan_number"]),
             client_name=str(loan["client_name"]),
             cutover_date=cutover_date,
-            opening_balance_posted=bool(cutover["opening_balance_posted"]),
-            opening_balance_entry_number=(
-                str(cutover["opening_balance_entry_number"])
-                if cutover["opening_balance_entry_number"]
-                else None
-            ),
+            opening_balance_prepared=False,
+            opening_balance_posted=False,
+            opening_balance_entry_number=None,
             source_event_count=len(source_events),
             source_history_complete=True,
             blocker_code=None,
@@ -204,9 +232,12 @@ class PostgresEirCashAllocationRepository:
             select
                 workbook.id as workbook_id,
                 workbook.cutover_date,
+                (prep.workbook_id is not null) as opening_balance_prepared,
                 (posting.workbook_id is not null) as opening_balance_posted,
                 posting.entry_number as opening_balance_entry_number
             from accounting.opening_balance_workbooks workbook
+            left join accounting.opening_balance_journal_preparations prep
+              on prep.workbook_id = workbook.id
             left join accounting.opening_balance_journal_postings posting
               on posting.workbook_id = workbook.id
             order by workbook.created_at desc
