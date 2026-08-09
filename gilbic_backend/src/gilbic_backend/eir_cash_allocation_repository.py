@@ -14,6 +14,11 @@ from .eir_cash_allocation import (
     EirCutoverState,
     allocate_event_date_eir_cash,
 )
+from .regular_collection_journal_preview import (
+    REGULAR_COLLECTION_ACCOUNT_KEYS,
+    RegularCollectionJournalPreview,
+    build_regular_collection_journal_preview,
+)
 
 
 MAX_SOURCE_EVENTS = 5000
@@ -46,6 +51,9 @@ class EirCashAllocationPack:
     protected_snapshot_reconciled: bool = False
     protected_snapshot_blocker: str | None = None
     automatic_source_posting_enabled: bool = False
+    account_configuration_ready: bool = False
+    account_configuration_blocker: str | None = None
+    collection_journal_previews: tuple[RegularCollectionJournalPreview, ...] = ()
 
 
 class PostgresEirCashAllocationRepository:
@@ -67,6 +75,10 @@ class PostgresEirCashAllocationRepository:
                 if loan is None:
                     raise EirCashAllocationLoanNotFound("Loan was not found.")
 
+                (
+                    account_configuration_ready,
+                    account_configuration_blocker,
+                ) = self._account_configuration(cursor)
                 cutover = self._load_current_cutover(cursor)
                 if cutover is None:
                     return self._blocked_pack(
@@ -78,6 +90,8 @@ class PostgresEirCashAllocationRepository:
                         opening_balance_entry_number=None,
                         blocker_code="cutover_required",
                         blocker_message="Create and verify the protected opening-balance cutover before event-date EIR allocation.",
+                        account_configuration_ready=account_configuration_ready,
+                        account_configuration_blocker=account_configuration_blocker,
                     )
 
                 workbook_id = UUID(str(cutover["workbook_id"]))
@@ -134,6 +148,8 @@ class PostgresEirCashAllocationRepository:
                             protected_snapshot_available=protected_snapshot_available,
                             protected_snapshot_reconciled=False,
                             protected_snapshot_blocker=protected_snapshot_blocker,
+                            account_configuration_ready=account_configuration_ready,
+                            account_configuration_blocker=account_configuration_blocker,
                         )
 
                     if (
@@ -152,6 +168,8 @@ class PostgresEirCashAllocationRepository:
                             protected_snapshot_available=True,
                             protected_snapshot_reconciled=False,
                             protected_snapshot_blocker="Unsupported protected snapshot policy version.",
+                            account_configuration_ready=account_configuration_ready,
+                            account_configuration_blocker=account_configuration_blocker,
                         )
 
                     if not protected_snapshot_reconciled:
@@ -170,6 +188,8 @@ class PostgresEirCashAllocationRepository:
                             protected_snapshot_available=True,
                             protected_snapshot_reconciled=False,
                             protected_snapshot_blocker=protected_snapshot_blocker,
+                            account_configuration_ready=account_configuration_ready,
+                            account_configuration_blocker=account_configuration_blocker,
                         )
                 else:
                     cursor.execute(
@@ -195,6 +215,8 @@ class PostgresEirCashAllocationRepository:
                             opening_balance_entry_number=None,
                             blocker_code="cutover_date_cash_review",
                             blocker_message="Cash exists on the date-only cutover boundary. Confirm whether it is included in the protected opening balance before rolling forward post-cutover EIR.",
+                            account_configuration_ready=account_configuration_ready,
+                            account_configuration_blocker=account_configuration_blocker,
                         )
 
                     measurement = self._load_measurement(
@@ -223,6 +245,8 @@ class PostgresEirCashAllocationRepository:
                 protected_snapshot_available=protected_snapshot_available,
                 protected_snapshot_reconciled=protected_snapshot_reconciled,
                 protected_snapshot_blocker=protected_snapshot_blocker,
+                account_configuration_ready=account_configuration_ready,
+                account_configuration_blocker=account_configuration_blocker,
             )
 
         state = EirCutoverState(
@@ -264,6 +288,34 @@ class PostgresEirCashAllocationRepository:
             for row in events
         )
         allocation = allocate_event_date_eir_cash(state, source_events)
+        event_state = {
+            UUID(str(row["transaction_id"])): row
+            for row in events
+        }
+        collection_journal_previews = tuple(
+            build_regular_collection_journal_preview(
+                item,
+                allocation_result_status=allocation.status,
+                opening_balance_posted=opening_balance_posted,
+                protected_snapshot_available=protected_snapshot_available,
+                protected_snapshot_reconciled=protected_snapshot_reconciled,
+                source_history_complete=True,
+                account_configuration_ready=account_configuration_ready,
+                account_configuration_blocker=account_configuration_blocker,
+                is_voided=bool(event_state[item.transaction_id]["is_voided"]),
+                existing_journal_status=(
+                    str(event_state[item.transaction_id]["journal_status"])
+                    if event_state[item.transaction_id]["journal_status"]
+                    else None
+                ),
+                reversal_status=(
+                    str(event_state[item.transaction_id]["reversal_status"])
+                    if event_state[item.transaction_id]["reversal_status"]
+                    else None
+                ),
+            )
+            for item in allocation.allocations
+        )
         return EirCashAllocationPack(
             loan_id=loan_id,
             loan_number=str(loan["loan_number"]),
@@ -280,6 +332,9 @@ class PostgresEirCashAllocationRepository:
             protected_snapshot_available=protected_snapshot_available,
             protected_snapshot_reconciled=protected_snapshot_reconciled,
             protected_snapshot_blocker=protected_snapshot_blocker,
+            account_configuration_ready=account_configuration_ready,
+            account_configuration_blocker=account_configuration_blocker,
+            collection_journal_previews=collection_journal_previews,
         )
 
     @staticmethod
@@ -297,6 +352,8 @@ class PostgresEirCashAllocationRepository:
         protected_snapshot_available: bool = False,
         protected_snapshot_reconciled: bool = False,
         protected_snapshot_blocker: str | None = None,
+        account_configuration_ready: bool,
+        account_configuration_blocker: str | None,
     ) -> EirCashAllocationPack:
         return EirCashAllocationPack(
             loan_id=loan_id,
@@ -320,7 +377,43 @@ class PostgresEirCashAllocationRepository:
             protected_snapshot_available=protected_snapshot_available,
             protected_snapshot_reconciled=protected_snapshot_reconciled,
             protected_snapshot_blocker=protected_snapshot_blocker,
+            account_configuration_ready=account_configuration_ready,
+            account_configuration_blocker=account_configuration_blocker,
         )
+
+    @staticmethod
+    def _account_configuration(cursor) -> tuple[bool, str | None]:
+        cursor.execute(
+            """
+            select system_key, is_active, is_posting
+            from accounting.accounts
+            where system_key = any(%s)
+            """,
+            (list(REGULAR_COLLECTION_ACCOUNT_KEYS),),
+        )
+        rows = {str(row["system_key"]): row for row in cursor.fetchall()}
+        missing = [
+            key for key in REGULAR_COLLECTION_ACCOUNT_KEYS
+            if key not in rows
+        ]
+        invalid = [
+            key
+            for key, row in rows.items()
+            if not bool(row["is_active"]) or not bool(row["is_posting"])
+        ]
+        if missing:
+            return (
+                False,
+                "Missing required Regular collection account mapping: "
+                + ", ".join(missing),
+            )
+        if invalid:
+            return (
+                False,
+                "Required Regular collection accounts are inactive or non-posting: "
+                + ", ".join(invalid),
+            )
+        return True, None
 
     @staticmethod
     def _load_current_cutover(cursor):
@@ -404,8 +497,14 @@ class PostgresEirCashAllocationRepository:
                 t.accepted_at,
                 t.entry_type,
                 t.amount,
-                t.is_voided
+                t.is_voided,
+                journal.status as journal_status,
+                reversal.status as reversal_status
             from lending.collection_transactions t
+            left join accounting.journal_entries journal
+              on journal.source_event_key = 'collection:' || t.id::text
+            left join accounting.journal_entries reversal
+              on reversal.reversal_of_entry_id = journal.id
             where t.loan_id = %s
               and t.collection_date > %s
             order by t.collection_date, t.accepted_at, t.id
