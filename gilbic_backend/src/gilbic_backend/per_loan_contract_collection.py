@@ -39,6 +39,7 @@ class PerLoanContractAwareCrossCollectorCollectionPostingBridge(
                 """
                 select
                     coalesce(activation.event_action, '') as activation_action,
+                    coalesce(activation.is_active, false) as activation_is_active,
                     activation.schedule_id as activation_schedule_id,
                     lower(coalesce(loan_type.settings->>'mobile_collections_enabled', ''))
                         in ('true', '1', 'yes', 'on') as mobile_collections_enabled,
@@ -75,16 +76,24 @@ class PerLoanContractAwareCrossCollectorCollectionPostingBridge(
             )
             row = cursor.fetchone()
 
-        # No activation history means the loan remains on the established official path.
-        if row is None or not str(row["activation_action"] or ""):
+        if row is None:
             return None
-        if str(row["activation_action"]) == "deactivate":
+        # `activation_is_active` fallback keeps the bridge easy to unit-test with
+        # small synthetic rows while production always supplies event_action.
+        activation_action = str(row.get("activation_action") or "")
+        if not activation_action and bool(row.get("activation_is_active")):
+            activation_action = "activate"
+
+        # No activation history means the loan remains on the established official path.
+        if not activation_action:
+            return None
+        if activation_action == "deactivate":
             raise CollectionRejected(
                 "Contractual mobile collection is deactivated for this loan. "
                 "Management must reactivate it before another mobile collection is saved.",
                 code="contract_collection_deactivated",
             )
-        if str(row["activation_action"]) != "activate":
+        if activation_action != "activate":
             raise CollectionRejected(
                 "This loan has an unknown contractual collection activation state.",
                 code="contract_activation_state_invalid",
