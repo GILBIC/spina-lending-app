@@ -6,6 +6,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/financial_statements.dart';
 import 'package:gilbic_mobile/src/core/management/financial_statements_repository.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_statements_page.dart';
 
 void main() {
@@ -73,6 +74,39 @@ void main() {
 
     expect(repository.periodId, 'period-jul-2026');
   });
+
+  testWidgets('Failed period load never leaves previous period figures visible', (
+    tester,
+  ) async {
+    final repository = _FakeStatementsRepository(
+      failPeriodId: 'period-jul-2026',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialStatementsPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          periods: _periods,
+          statementsRepository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Statement of Profit or Loss'), findsOneWidget);
+    expect(find.text('₱1,500.00'), findsWidgets);
+
+    await tester.tap(find.byKey(const Key('financial-statements-period')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('July 2026 • Closed').last);
+    await tester.pumpAndSettle();
+
+    expect(repository.periodId, 'period-jul-2026');
+    expect(find.text('Statement load failed.'), findsOneWidget);
+    expect(find.text('Statement of Profit or Loss'), findsNothing);
+    expect(find.text('₱1,500.00'), findsNothing);
+  });
 }
 
 const UserSession _session = UserSession(
@@ -118,6 +152,9 @@ DeviceIdentityProvider _deviceIdentityProvider() {
 }
 
 class _FakeStatementsRepository implements FinancialStatementsRepository {
+  _FakeStatementsRepository({this.failPeriodId});
+
+  final String? failPeriodId;
   String? deviceId;
   String? periodId;
 
@@ -129,6 +166,12 @@ class _FakeStatementsRepository implements FinancialStatementsRepository {
   }) async {
     this.deviceId = deviceId;
     this.periodId = periodId;
+    if (periodId == failPeriodId) {
+      throw const SpinaApiException(
+        'Statement load failed.',
+        code: 'statement_load_failed',
+      );
+    }
     final isJuly = periodId == 'period-jul-2026';
     final period = isJuly
         ? FinancialStatementPeriod(
