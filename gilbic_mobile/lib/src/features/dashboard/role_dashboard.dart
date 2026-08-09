@@ -16,6 +16,7 @@ import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.
 import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_financial_statements_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_general_journal_launcher_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_operations_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_portfolio_page.dart';
@@ -210,6 +211,17 @@ class RoleDashboard extends StatelessWidget {
       _push(
         context,
         ManagementFinancialAccountingPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      );
+      return;
+    }
+    if (session.role == AppRole.management &&
+        action == 'management-financial-statements') {
+      _push(
+        context,
+        ManagementFinancialStatementsPage(
           session: session,
           deviceIdentityProvider: deviceIdentityProvider,
         ),
@@ -482,6 +494,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Manual journals, immutable posting, reversals, and Trial Balance',
           Icons.menu_book_outlined,
           action: 'management-general-journal',
+        ),
+        _DashboardModule(
+          'Financial Statements',
+          'Posted-ledger Profit or Loss and Financial Position',
+          Icons.assessment_outlined,
+          action: 'management-financial-statements',
         ),
         _DashboardModule('Billing & Taxation',
             'Billing records and tax schedules', Icons.request_quote),
