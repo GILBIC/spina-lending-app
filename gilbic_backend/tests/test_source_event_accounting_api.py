@@ -62,7 +62,7 @@ class FakeAccounts:
 
 class FakePreviewRepository:
     def __init__(self) -> None:
-        self.calls: list[tuple[date | None, date | None, int]] = []
+        self.calls: list[tuple[date | None, date | None, int, str | None]] = []
 
     def load_collection_preview(
         self,
@@ -70,8 +70,11 @@ class FakePreviewRepository:
         start_date: date | None = None,
         end_date: date | None = None,
         limit: int = 100,
+        cursor: str | None = None,
     ) -> SourceEventAccountingPreviewPack:
-        self.calls.append((start_date, end_date, limit))
+        self.calls.append((start_date, end_date, limit, cursor))
+        if cursor == "bad-cursor":
+            raise ValueError("Source-event cursor is invalid.")
         event = CollectionAccountingPreview(
             transaction_id=TX_ID,
             source_event_key=f"collection:{TX_ID}",
@@ -109,6 +112,8 @@ class FakePreviewRepository:
             account_configuration_blocker=None,
             automatic_source_posting_enabled=False,
             eir_income_included_in_collection_mapping=False,
+            has_more=cursor is None,
+            next_cursor="next-page" if cursor is None else None,
             events=(event,),
         )
 
@@ -141,17 +146,45 @@ def test_management_can_load_read_only_collection_accounting_preview() -> None:
     )
 
     assert response.status_code == 200
-    assert repository.calls == [(date(2026, 8, 9), date(2026, 8, 10), 25)]
+    assert repository.calls == [(date(2026, 8, 9), date(2026, 8, 10), 25, None)]
     data = response.json()["data"]["collection_source_events"]
     assert data["automatic_source_posting_enabled"] is False
     assert data["eir_income_included_in_collection_mapping"] is False
     assert data["cutover"]["cutover_date"] == "2026-08-08"
+    assert data["has_more"] is True
+    assert data["next_cursor"] == "next-page"
     item = data["events"][0]
     assert item["posting_eligible"] is False
     assert item["source_event_key"] == f"collection:{TX_ID}"
     assert item["disposition"] == "eir_allocation_required"
     assert item["proposed_lines"] == []
     assert "EIR allocation" in item["message"]
+
+
+def test_cursor_is_forwarded_for_complete_same_day_pagination() -> None:
+    client, repository = _client()
+    response = client.get(
+        "/api/mobile/v1/management/financial-accounting/source-events/collections",
+        params={"limit": 250, "cursor": "next-page"},
+        headers=_headers(),
+    )
+    assert response.status_code == 200
+    assert repository.calls == [(None, None, 250, "next-page")]
+    data = response.json()["data"]["collection_source_events"]
+    assert data["has_more"] is False
+    assert data["next_cursor"] is None
+
+
+def test_invalid_cursor_is_rejected() -> None:
+    client, repository = _client()
+    response = client.get(
+        "/api/mobile/v1/management/financial-accounting/source-events/collections",
+        params={"cursor": "bad-cursor"},
+        headers=_headers(),
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "invalid_source_event_cursor"
+    assert repository.calls == [(None, None, 100, "bad-cursor")]
 
 
 def test_invalid_date_range_is_rejected_before_repository_read() -> None:
