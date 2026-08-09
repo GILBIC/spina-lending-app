@@ -26,7 +26,6 @@ void main() {
     expect(find.byKey(const Key('contract-collection-summary')), findsOneWidget);
     expect(find.text('Ready to activate'), findsWidgets);
     expect(find.text('Synthetic Ready Client'), findsOneWidget);
-    expect(find.text('Synthetic Blocked Client'), findsOneWidget);
     expect(repository.deviceId, 'management-device');
 
     expect(
@@ -37,7 +36,9 @@ void main() {
     final blocked = find.byKey(
       const Key('contract-collection-loan-blocked-loan'),
     );
-    await tester.ensureVisible(blocked);
+    await tester.scrollUntilVisible(blocked, 250);
+    await tester.pumpAndSettle();
+    expect(find.text('Synthetic Blocked Client'), findsOneWidget);
     await tester.tap(blocked);
     await tester.pumpAndSettle();
     expect(find.text('Signed contract required'), findsWidgets);
@@ -64,7 +65,8 @@ void main() {
     final activate = find.byKey(
       const Key('activate-contract-collection-ready-loan'),
     );
-    await tester.ensureVisible(activate);
+    await tester.scrollUntilVisible(activate, 200);
+    await tester.pumpAndSettle();
     await tester.tap(activate);
     await tester.pumpAndSettle();
 
