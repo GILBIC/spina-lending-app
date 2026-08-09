@@ -46,7 +46,7 @@ def _decimal(value: Decimal) -> str:
 
 
 def _payload(item: OpeningBalanceJournalPreparation) -> dict[str, object]:
-    posted = item.journal_status == "posted"
+    posted = item.journal_status == "posted" and item.posted_at is not None
     return {
         "workbook_id": str(item.workbook_id),
         "cutover_date": item.cutover_date.isoformat(),
