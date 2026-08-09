@@ -90,6 +90,8 @@ class PostgresEirCashAllocationRepository:
                         opening_balance_entry_number=None,
                         blocker_code="cutover_required",
                         blocker_message="Create and verify the protected opening-balance cutover before event-date EIR allocation.",
+                        account_configuration_ready=account_configuration_ready,
+                        account_configuration_blocker=account_configuration_blocker,
                     )
 
                 workbook_id = UUID(str(cutover["workbook_id"]))
@@ -146,6 +148,8 @@ class PostgresEirCashAllocationRepository:
                             protected_snapshot_available=protected_snapshot_available,
                             protected_snapshot_reconciled=False,
                             protected_snapshot_blocker=protected_snapshot_blocker,
+                            account_configuration_ready=account_configuration_ready,
+                            account_configuration_blocker=account_configuration_blocker,
                         )
 
                     if (
@@ -164,6 +168,8 @@ class PostgresEirCashAllocationRepository:
                             protected_snapshot_available=True,
                             protected_snapshot_reconciled=False,
                             protected_snapshot_blocker="Unsupported protected snapshot policy version.",
+                            account_configuration_ready=account_configuration_ready,
+                            account_configuration_blocker=account_configuration_blocker,
                         )
 
                     if not protected_snapshot_reconciled:
@@ -182,6 +188,8 @@ class PostgresEirCashAllocationRepository:
                             protected_snapshot_available=True,
                             protected_snapshot_reconciled=False,
                             protected_snapshot_blocker=protected_snapshot_blocker,
+                            account_configuration_ready=account_configuration_ready,
+                            account_configuration_blocker=account_configuration_blocker,
                         )
                 else:
                     cursor.execute(
@@ -207,6 +215,8 @@ class PostgresEirCashAllocationRepository:
                             opening_balance_entry_number=None,
                             blocker_code="cutover_date_cash_review",
                             blocker_message="Cash exists on the date-only cutover boundary. Confirm whether it is included in the protected opening balance before rolling forward post-cutover EIR.",
+                            account_configuration_ready=account_configuration_ready,
+                            account_configuration_blocker=account_configuration_blocker,
                         )
 
                     measurement = self._load_measurement(
@@ -235,6 +245,8 @@ class PostgresEirCashAllocationRepository:
                 protected_snapshot_available=protected_snapshot_available,
                 protected_snapshot_reconciled=protected_snapshot_reconciled,
                 protected_snapshot_blocker=protected_snapshot_blocker,
+                account_configuration_ready=account_configuration_ready,
+                account_configuration_blocker=account_configuration_blocker,
             )
 
         state = EirCutoverState(
@@ -340,6 +352,8 @@ class PostgresEirCashAllocationRepository:
         protected_snapshot_available: bool = False,
         protected_snapshot_reconciled: bool = False,
         protected_snapshot_blocker: str | None = None,
+        account_configuration_ready: bool,
+        account_configuration_blocker: str | None,
     ) -> EirCashAllocationPack:
         return EirCashAllocationPack(
             loan_id=loan_id,
@@ -363,6 +377,8 @@ class PostgresEirCashAllocationRepository:
             protected_snapshot_available=protected_snapshot_available,
             protected_snapshot_reconciled=protected_snapshot_reconciled,
             protected_snapshot_blocker=protected_snapshot_blocker,
+            account_configuration_ready=account_configuration_ready,
+            account_configuration_blocker=account_configuration_blocker,
         )
 
     @staticmethod
