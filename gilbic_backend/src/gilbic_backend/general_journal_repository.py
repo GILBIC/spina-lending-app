@@ -112,6 +112,10 @@ class PostgresGeneralJournalRepository:
                       on posted_by.id = journal.posted_by_user_id
                     left join accounting.journal_lines line
                       on line.journal_entry_id = journal.id
+                    where not (
+                        journal.source_type = 'opening_balance'
+                        and journal.status = 'draft'
+                    )
                     group by
                         journal.id,
                         period.label,
