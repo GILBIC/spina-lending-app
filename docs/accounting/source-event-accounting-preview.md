@@ -6,19 +6,21 @@ This stage is a read-only bridge between authoritative lending events and future
 
 The first supported source family is `lending.collection_transactions` because accepted collection rows are immutable operational cash events and Management voids have an explicit audited state.
 
-## Approved preview mapping
+## Collection cash is a valid source, but journal allocation is not guessed
 
-For a non-voided post-cutover `payment` or `advance`:
+A non-voided post-cutover `payment` or `advance` is an authoritative cash event. However, this stage deliberately does **not** emit debit/credit journal lines yet.
 
-- debit `cash_collector_custody` for the exact accepted cash amount;
-- credit `loans_receivable_regular` when the loan type uses `fixed_daily`;
-- credit `loans_receivable_7x7` when the loan type uses `seven_by_seven`.
+The Stage 5D EIR measurement engine carries each loan using accounting components:
 
-This is a cash / amortized-cost carrying-amount movement only. The collection amount is **not** treated as interest income. PFRS 9 EIR interest recognition remains a separate accounting event and will be implemented and reconciled separately.
+- Regular loan component -> `loans_receivable_regular` (1100);
+- 7x7 loan component -> `loans_receivable_7x7` (1110);
+- accrued effective interest -> `accrued_interest_receivable` (1120).
 
-`pass` is non-cash and never produces a journal proposal.
+The EIR engine applies cash to accrued effective interest first and then to the loan component. Therefore crediting the full operational collection amount directly to 1100 or 1110 would be unsafe whenever accrued EIR exists. PAYMENT/ADV is classified as `eir_allocation_required` until an event-date EIR allocation layer can determine the exact split and reconcile it to the carrying amount.
 
-Custom or unknown loan calculation modes remain `policy_review` instead of being guessed as Regular or 7x7.
+This also prevents contractual 7x7 interest from being mistaken for PFRS 9 EIR interest income.
+
+`pass` is non-cash and never produces a journal proposal. Custom or unknown loan calculation modes remain `policy_review` instead of being guessed as Regular or 7x7.
 
 ## Cutover boundary
 
@@ -26,7 +28,7 @@ The opening-balance workbook stores a date, not a timestamp. To prevent double c
 
 - source events before the cutover date are `pre_cutover` and are never proposed again;
 - events on the cutover date are `cutover_date_review` because their order relative to the date-only opening snapshot cannot be proven;
-- only events strictly after cutover can reach `preview_ready`.
+- only events strictly after cutover can reach the EIR-allocation readiness stage.
 
 If no opening-balance cutover exists, source-event mapping is blocked as `cutover_required`.
 
@@ -38,7 +40,7 @@ Every collection uses the deterministic future accounting source key:
 
 `collection:<collection_transaction_uuid>`
 
-The preview checks `accounting.journal_entries.source_event_key`. If a draft or posted journal already exists, it reports `draft_exists` or `already_posted` rather than proposing a duplicate.
+The preview checks `accounting.journal_entries.source_event_key`. If a draft or posted journal already exists, it reports `draft_exists` or `already_posted` rather than treating the source event as new.
 
 ## Voids and reversals
 
@@ -54,19 +56,21 @@ Future reversal automation must use the existing controlled `accounting.create_r
 
 ## Account configuration
 
-The repository validates these stable accounting `system_key` values before reporting configuration ready:
+The repository validates these stable accounting `system_key` values before reporting configuration ready for the future EIR allocation layer:
 
 - `cash_collector_custody`
 - `loans_receivable_regular`
 - `loans_receivable_7x7`
+- `accrued_interest_receivable`
 
 They must exist and remain active posting accounts. UUIDs are never embedded as accounting mappings.
 
 ## Explicitly excluded from this slice
 
+- collection journal-line allocation until event-date EIR allocation is proven;
 - loan-release/disbursement journals: a `lending.loans` row and `date_released` alone do not prove the authoritative cash-disbursement event or funding account;
 - renewal/restructure accounting: signed settlement/restructure treatment must be proven first;
-- EIR interest accrual;
+- EIR accrual journal creation;
 - remittance transfer accounting between Collector Custody, Office Cash, bank, or GCash;
 - journal draft creation;
 - automatic General Ledger posting;
