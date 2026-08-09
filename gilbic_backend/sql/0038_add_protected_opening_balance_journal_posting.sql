@@ -215,15 +215,6 @@ BEGIN
     LEFT JOIN accounting.opening_balance_workbook_lines workbook_line
       ON workbook_line.workbook_id = p_workbook_id
      AND workbook_line.account_id = journal_line.account_id
-     AND coalesce(workbook_line.proposed_debit, 0) > 0 OR false
-    WHERE journal_line.journal_entry_id = journal.id;
-
-    SELECT count(*)
-    INTO journal_to_workbook_mismatch_count
-    FROM accounting.journal_lines journal_line
-    LEFT JOIN accounting.opening_balance_workbook_lines workbook_line
-      ON workbook_line.workbook_id = p_workbook_id
-     AND workbook_line.account_id = journal_line.account_id
     WHERE journal_line.journal_entry_id = journal.id
       AND (
           workbook_line.account_id IS NULL
@@ -313,60 +304,14 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE VIEW accounting.opening_balance_journal_preparation_status AS
+CREATE OR REPLACE VIEW accounting.opening_balance_journal_posting_status AS
 SELECT
     workbook.id AS workbook_id,
-    workbook.cutover_date,
-    workbook.status AS workbook_status,
-    prep.journal_entry_id,
-    journal.status AS journal_status,
-    journal.entry_number,
-    journal.created_at AS journal_created_at,
-    prep.prepared_by_user_id,
-    prep.prepared_at,
-    coalesce(journal_lines.line_count, 0)::bigint AS journal_line_count,
-    coalesce(journal_lines.total_debit, 0)::numeric(18,2) AS total_debit,
-    coalesce(journal_lines.total_credit, 0)::numeric(18,2) AS total_credit,
-    (prep.journal_entry_id IS NOT NULL) AS draft_prepared,
-    (
-        prep.journal_entry_id IS NULL
-        AND workbook.status = 'review_ready'
-        AND workbook.profit_loss_policy_confirmed = true
-        AND workbook_readiness.line_count > 0
-        AND workbook_readiness.verified_count = workbook_readiness.line_count
-        AND workbook_readiness.nonzero_line_count >= 2
-        AND workbook_readiness.total_debit > 0
-        AND workbook_readiness.total_debit = workbook_readiness.total_credit
-        AND workbook_readiness.invalid_account_count = 0
-        AND period_gate.open_period_exists = true
-        AND source_gate.blocked_count = 0
-    ) AS preparation_ready,
-    CASE
-        WHEN prep.journal_entry_id IS NOT NULL
-            THEN 'Protected opening-balance journal draft is already prepared.'
-        WHEN workbook.status <> 'review_ready'
-            THEN 'Opening Balance Workbook must be Review Ready before journal preparation.'
-        WHEN workbook.profit_loss_policy_confirmed = false
-            THEN 'Confirm the P&L migration policy before journal preparation.'
-        WHEN workbook_readiness.line_count = 0
-             OR workbook_readiness.verified_count <> workbook_readiness.line_count
-            THEN 'Every workbook line must remain explicitly verified with evidence and an amount.'
-        WHEN workbook_readiness.nonzero_line_count < 2
-            THEN 'Opening-balance journal requires at least two nonzero lines.'
-        WHEN workbook_readiness.total_debit <= 0
-            THEN 'Opening-balance journal requires a positive balanced amount.'
-        WHEN workbook_readiness.total_debit <> workbook_readiness.total_credit
-            THEN 'Reviewed workbook must balance exactly to the cent before journal preparation.'
-        WHEN workbook_readiness.invalid_account_count > 0
-            THEN 'A nonzero workbook line uses an inactive or non-posting account.'
-        WHEN period_gate.open_period_exists = false
-            THEN 'Cutover date must remain inside an open accounting period.'
-        WHEN source_gate.blocked_count > 0
-            THEN 'Blocked loan sources must be resolved before journal preparation.'
-        ELSE NULL
-    END AS preparation_blocker,
     true AS opening_balance_posting_enabled,
     false AS automatic_source_posting_enabled,
+    posting.posted_by_user_id,
+    posting.posted_at,
+    posting.entry_number AS posted_entry_number,
     (
         prep.journal_entry_id IS NOT NULL
         AND journal.status = 'draft'
@@ -380,11 +325,12 @@ SELECT
         AND workbook_readiness.total_debit > 0
         AND workbook_readiness.total_debit = workbook_readiness.total_credit
         AND workbook_readiness.invalid_account_count = 0
-        AND journal_lines.line_count = workbook_readiness.nonzero_line_count
-        AND journal_lines.total_debit = workbook_readiness.total_debit
-        AND journal_lines.total_credit = workbook_readiness.total_credit
-        AND journal_lines.invalid_account_count = 0
-        AND journal_lines.mismatch_count = 0
+        AND journal_readiness.line_count = workbook_readiness.nonzero_line_count
+        AND journal_readiness.total_debit = workbook_readiness.total_debit
+        AND journal_readiness.total_credit = workbook_readiness.total_credit
+        AND journal_readiness.invalid_account_count = 0
+        AND journal_readiness.journal_to_workbook_mismatch_count = 0
+        AND workbook_match.workbook_to_journal_mismatch_count = 0
         AND period_gate.open_period_exists = true
         AND source_gate.blocked_count = 0
     ) AS posting_ready,
@@ -399,7 +345,7 @@ SELECT
             THEN 'Opening Balance Workbook must remain Review Ready before posting.'
         WHEN workbook.profit_loss_policy_confirmed = false
             THEN 'Confirm the P&L migration policy before posting.'
-        WHEN journal.posting_date <> workbook.cutover_date
+        WHEN journal.posting_date IS DISTINCT FROM workbook.cutover_date
             THEN 'Journal posting date no longer matches the approved cutover date.'
         WHEN workbook_readiness.line_count = 0
              OR workbook_readiness.verified_count <> workbook_readiness.line_count
@@ -411,21 +357,20 @@ SELECT
             THEN 'Reviewed workbook must remain exactly balanced before posting.'
         WHEN workbook_readiness.invalid_account_count > 0
             THEN 'A nonzero workbook line uses an inactive or non-posting account.'
-        WHEN journal_lines.line_count <> workbook_readiness.nonzero_line_count
-             OR journal_lines.total_debit <> workbook_readiness.total_debit
-             OR journal_lines.total_credit <> workbook_readiness.total_credit
-             OR journal_lines.mismatch_count > 0
+        WHEN journal_readiness.line_count <> workbook_readiness.nonzero_line_count
+             OR journal_readiness.total_debit <> workbook_readiness.total_debit
+             OR journal_readiness.total_credit <> workbook_readiness.total_credit
+             OR journal_readiness.journal_to_workbook_mismatch_count > 0
+             OR workbook_match.workbook_to_journal_mismatch_count > 0
             THEN 'Protected journal no longer exactly matches the reviewed workbook.'
-        WHEN journal_lines.invalid_account_count > 0
+        WHEN journal_readiness.invalid_account_count > 0
             THEN 'Protected journal contains an inactive or non-posting account.'
         WHEN period_gate.open_period_exists = false
             THEN 'Cutover accounting period must remain open before posting.'
         WHEN source_gate.blocked_count > 0
             THEN 'Blocked loan sources must be resolved before posting.'
         ELSE NULL
-    END AS posting_blocker,
-    posting.posted_by_user_id,
-    posting.posted_at
+    END AS posting_blocker
 FROM accounting.opening_balance_workbooks workbook
 LEFT JOIN accounting.opening_balance_journal_preparations prep
   ON prep.workbook_id = workbook.id
@@ -446,14 +391,14 @@ LEFT JOIN LATERAL (
                OR (coalesce(workbook_line.proposed_debit, 0) = 0 AND coalesce(workbook_line.proposed_credit, 0) = 0)
                OR line.debit <> coalesce(workbook_line.proposed_debit, 0)
                OR line.credit <> coalesce(workbook_line.proposed_credit, 0)
-        ) AS mismatch_count
+        ) AS journal_to_workbook_mismatch_count
     FROM accounting.journal_lines line
     JOIN accounting.accounts account ON account.id = line.account_id
     LEFT JOIN accounting.opening_balance_workbook_lines workbook_line
       ON workbook_line.workbook_id = workbook.id
      AND workbook_line.account_id = line.account_id
     WHERE line.journal_entry_id = prep.journal_entry_id
-) journal_lines ON true
+) journal_readiness ON true
 LEFT JOIN LATERAL (
     SELECT
         count(*) AS line_count,
@@ -476,6 +421,20 @@ LEFT JOIN LATERAL (
     JOIN accounting.accounts account ON account.id = line.account_id
     WHERE line.workbook_id = workbook.id
 ) workbook_readiness ON true
+LEFT JOIN LATERAL (
+    SELECT count(*) AS workbook_to_journal_mismatch_count
+    FROM accounting.opening_balance_workbook_lines workbook_line
+    LEFT JOIN accounting.journal_lines journal_line
+      ON journal_line.journal_entry_id = prep.journal_entry_id
+     AND journal_line.account_id = workbook_line.account_id
+    WHERE workbook_line.workbook_id = workbook.id
+      AND (coalesce(workbook_line.proposed_debit, 0) > 0 OR coalesce(workbook_line.proposed_credit, 0) > 0)
+      AND (
+          journal_line.id IS NULL
+          OR journal_line.debit <> coalesce(workbook_line.proposed_debit, 0)
+          OR journal_line.credit <> coalesce(workbook_line.proposed_credit, 0)
+      )
+) workbook_match ON true
 LEFT JOIN LATERAL (
     SELECT EXISTS (
         SELECT 1
