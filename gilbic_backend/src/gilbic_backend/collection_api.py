@@ -5,10 +5,10 @@ from spina_mobile_collections.service import CollectionSubmissionService
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
-from .contract_collection_posting import (
-    ContractAwareCrossCollectorCollectionPostingBridge,
-)
 from .database import connect_database
+from .per_loan_contract_collection import (
+    PerLoanContractAwareCrossCollectorCollectionPostingBridge,
+)
 from .request_auth import authenticated_device_context
 
 from fastapi import Depends, Header, HTTPException
@@ -47,7 +47,7 @@ def collection_actor_dependency(
 def collection_service_dependency() -> CollectionSubmissionService:
     executor = PostgresCollectionExecutor(
         connection_factory=connect_database,
-        posting_bridge=ContractAwareCrossCollectorCollectionPostingBridge(),
+        posting_bridge=PerLoanContractAwareCrossCollectorCollectionPostingBridge(),
     )
     return CollectionSubmissionService(executor)
 
