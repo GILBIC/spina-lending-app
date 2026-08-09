@@ -4,15 +4,31 @@ import inspect
 
 from gilbic_backend.eir_cash_allocation_repository import (
     MAX_SOURCE_EVENTS,
+    PROTECTED_MEASUREMENT_POLICY_VERSION,
     PostgresEirCashAllocationRepository,
 )
 
 
-def test_repository_uses_current_cutover_and_reconciled_measurement_source() -> None:
+def test_repository_uses_current_cutover_and_protected_snapshot_after_preparation() -> None:
     source = inspect.getsource(PostgresEirCashAllocationRepository)
 
     assert "order by workbook.created_at desc" in source
+    assert "if opening_balance_prepared" in source
+    assert "accounting.opening_balance_loan_measurement_snapshots" in source
+    assert "accounting.opening_balance_loan_snapshot_reconciliation" in source
+    assert "protected_cutover_snapshot_required" in source
+    assert "protected_cutover_snapshot_not_reconciled" in source
+    assert "ledger_anchor_ready" in source
     assert "accounting.measure_loan_at_cutover" in source
+    assert source.index("if opening_balance_prepared") < source.index(
+        "measurement = self._load_measurement"
+    )
+    assert PROTECTED_MEASUREMENT_POLICY_VERSION == "eir_cutover_v1"
+
+
+def test_repository_keeps_dynamic_preview_and_complete_post_cutover_source_history() -> None:
+    source = inspect.getsource(PostgresEirCashAllocationRepository)
+
     assert "same_day_cash_count" in source
     assert "t.collection_date > %s" in source
     assert "order by t.collection_date, t.accepted_at, t.id" in source
