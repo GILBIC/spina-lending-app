@@ -35,6 +35,7 @@ class ContractCollectionActivationPreview:
     loan_type_name: str
     loan_status: str
     remaining_balance: Decimal
+    collection_state_reconciled: bool
     mobile_collections_enabled: bool
     mobile_balance_mode: str
     schedule_id: UUID | None
@@ -76,7 +77,8 @@ class ContractCollectionActivationPreview:
     @property
     def balance_reconciled(self) -> bool:
         return (
-            self.dpd_data_status == "ready"
+            self.collection_state_reconciled
+            and self.dpd_data_status == "ready"
             and self.remaining_balance == self.unpaid_contractual_amount
         )
 
@@ -97,6 +99,8 @@ class ContractCollectionActivationPreview:
         values: list[str] = []
         if self.loan_status != "active":
             values.append("Loan is not active.")
+        if not self.collection_state_reconciled:
+            values.append("Official loan collection state is not reconciled.")
         if not self.mobile_collections_enabled:
             values.append("Mobile collections are disabled for this loan type.")
         if self.mobile_balance_mode != "direct_remaining_balance":
@@ -253,6 +257,7 @@ class PostgresContractCollectionActivationRepository:
                 loan.status as loan_status,
                 coalesce(state.remaining_balance, loan.principal)::numeric(18,2)
                     as remaining_balance,
+                coalesce(state.is_reconciled, false) as collection_state_reconciled,
                 lower(coalesce(loan_type.settings->>'mobile_collections_enabled', ''))
                     in ('true', '1', 'yes', 'on') as mobile_collections_enabled,
                 coalesce(loan_type.settings->>'mobile_balance_mode', '')
@@ -304,6 +309,7 @@ class PostgresContractCollectionActivationRepository:
             loan_type_name=str(row["loan_type_name"]),
             loan_status=str(row["loan_status"]),
             remaining_balance=_money(row["remaining_balance"]),
+            collection_state_reconciled=bool(row["collection_state_reconciled"]),
             mobile_collections_enabled=bool(row["mobile_collections_enabled"]),
             mobile_balance_mode=str(row["mobile_balance_mode"] or ""),
             schedule_id=row["schedule_id"],
