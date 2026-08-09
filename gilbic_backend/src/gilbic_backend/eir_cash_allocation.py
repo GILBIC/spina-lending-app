@@ -19,6 +19,7 @@ class EirCutoverState:
     loan_id: UUID
     calculation_mode: str
     cutover_date: date
+    due_date: date
     measurement_status: str
     daily_eir: Decimal | None
     loan_component: Decimal | None
@@ -62,6 +63,7 @@ class EirAllocationResult:
     message: str
     calculation_mode: str
     cutover_date: date
+    due_date: date
     daily_eir: Decimal | None
     opening_gross_carrying_amount: Decimal | None
     opening_accrued_interest_component: Decimal | None
@@ -80,6 +82,7 @@ def _blocked(state: EirCutoverState, status: str, message: str) -> EirAllocation
         message=message,
         calculation_mode=state.calculation_mode,
         cutover_date=state.cutover_date,
+        due_date=state.due_date,
         daily_eir=state.daily_eir,
         opening_gross_carrying_amount=(
             money(state.gross_carrying_amount)
@@ -118,6 +121,10 @@ def allocate_event_date_eir_cash(
     convention: accrued EIR keeps its directly rounded amount and the loan
     component receives the cent residual so gross = accrued + loan exactly.
 
+    The original EIR schedule is not extrapolated beyond contractual maturity.
+    Post-maturity cash is blocked for separate credit-deterioration / accounting
+    review rather than automatically accruing further interest.
+
     The returned split is not posting-ready. A later controlled stage must post
     the corresponding EIR accrual before a collection journal can clear account
     1120, and must separately prove fiscal-period / source-write concurrency.
@@ -128,6 +135,12 @@ def allocate_event_date_eir_cash(
             state,
             "cutover_measurement_required",
             "The loan does not have a measured cutover EIR state.",
+        )
+    if state.cutover_date > state.due_date:
+        return _blocked(
+            state,
+            "post_maturity_review_required",
+            "The protected cutover is after contractual maturity, so this roll-forward cannot use the original EIR schedule.",
         )
     if state.calculation_mode == "seven_by_seven":
         return _blocked(
@@ -199,6 +212,28 @@ def allocate_event_date_eir_cash(
     allocations: list[EirCashAllocation] = []
 
     for event in ordered:
+        if event.collection_date > state.due_date:
+            gross_before = money(loan_raw + accrued_raw)
+            accrued_before = money(max(accrued_raw, Decimal("0")))
+            loan_before = money(gross_before - accrued_before)
+            return EirAllocationResult(
+                status="post_maturity_review_required",
+                message="A cash event is after contractual maturity. Earlier allocation references are preserved, but the original EIR schedule is not extrapolated beyond maturity.",
+                calculation_mode=state.calculation_mode,
+                cutover_date=state.cutover_date,
+                due_date=state.due_date,
+                daily_eir=daily_eir,
+                opening_gross_carrying_amount=opening_gross,
+                opening_accrued_interest_component=opening_accrued,
+                opening_loan_component=opening_loan,
+                total_effective_interest_accrued=money(total_interest_raw),
+                closing_gross_carrying_amount=gross_before,
+                closing_accrued_interest_component=accrued_before,
+                closing_loan_component=loan_before,
+                allocations=tuple(allocations),
+                posting_eligible=False,
+            )
+
         accrued_since_prior = Decimal("0")
         next_day = last_accrual_date + timedelta(days=1)
         while next_day <= event.collection_date:
@@ -240,6 +275,7 @@ def allocate_event_date_eir_cash(
                 message="A collection exceeds the measured EIR carrying amount, so later allocations cannot be derived safely.",
                 calculation_mode=state.calculation_mode,
                 cutover_date=state.cutover_date,
+                due_date=state.due_date,
                 daily_eir=daily_eir,
                 opening_gross_carrying_amount=opening_gross,
                 opening_accrued_interest_component=opening_accrued,
@@ -292,6 +328,7 @@ def allocate_event_date_eir_cash(
         message="Regular post-cutover cash has a deterministic event-date EIR allocation reference. No journal is created or posted.",
         calculation_mode=state.calculation_mode,
         cutover_date=state.cutover_date,
+        due_date=state.due_date,
         daily_eir=daily_eir,
         opening_gross_carrying_amount=opening_gross,
         opening_accrued_interest_component=opening_accrued,
