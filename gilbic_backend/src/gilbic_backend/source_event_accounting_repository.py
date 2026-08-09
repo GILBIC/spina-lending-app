@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import base64
+import json
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -24,6 +26,13 @@ REQUIRED_ACCOUNT_KEYS = (
 
 
 @dataclass(frozen=True, slots=True)
+class SourceEventCursor:
+    collection_date: date
+    accepted_at: datetime
+    transaction_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
 class SourceEventAccountingPreviewPack:
     cutover_date: date | None
     workbook_status: str | None
@@ -33,7 +42,39 @@ class SourceEventAccountingPreviewPack:
     account_configuration_blocker: str | None
     automatic_source_posting_enabled: bool
     eir_income_included_in_collection_mapping: bool
+    has_more: bool
+    next_cursor: str | None
     events: tuple[CollectionAccountingPreview, ...]
+
+
+def encode_source_event_cursor(event: CollectionSourceEvent) -> str:
+    raw = json.dumps(
+        {
+            "collection_date": event.collection_date.isoformat(),
+            "accepted_at": event.accepted_at.isoformat(),
+            "transaction_id": str(event.transaction_id),
+        },
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def decode_source_event_cursor(value: str) -> SourceEventCursor:
+    text = value.strip()
+    if not text:
+        raise ValueError("Source-event cursor cannot be blank.")
+    try:
+        padded = text + "=" * (-len(text) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError
+        return SourceEventCursor(
+            collection_date=date.fromisoformat(str(payload["collection_date"])),
+            accepted_at=datetime.fromisoformat(str(payload["accepted_at"])),
+            transaction_id=UUID(str(payload["transaction_id"])),
+        )
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise ValueError("Source-event cursor is invalid.") from error
 
 
 class PostgresSourceEventAccountingRepository:
@@ -43,19 +84,27 @@ class PostgresSourceEventAccountingRepository:
         start_date: date | None = None,
         end_date: date | None = None,
         limit: int = 100,
+        cursor: str | None = None,
     ) -> SourceEventAccountingPreviewPack:
         safe_limit = max(1, min(int(limit), 250))
+        decoded_cursor = decode_source_event_cursor(cursor) if cursor is not None else None
         with open_connection() as connection:
-            with connection.cursor(row_factory=dict_row) as cursor:
-                cutover = self._load_cutover(cursor)
-                account_ready, account_blocker = self._account_configuration(cursor)
-                events = self._load_collection_events(
-                    cursor,
+            with connection.cursor(row_factory=dict_row) as db_cursor:
+                cutover = self._load_cutover(db_cursor)
+                account_ready, account_blocker = self._account_configuration(db_cursor)
+                loaded = self._load_collection_events(
+                    db_cursor,
                     start_date=start_date,
                     end_date=end_date,
-                    limit=safe_limit,
+                    cursor=decoded_cursor,
+                    limit=safe_limit + 1,
                 )
 
+        has_more = len(loaded) > safe_limit
+        events = loaded[:safe_limit]
+        next_cursor = (
+            encode_source_event_cursor(events[-1]) if has_more and events else None
+        )
         previews = tuple(
             build_collection_accounting_preview(
                 event,
@@ -76,6 +125,8 @@ class PostgresSourceEventAccountingRepository:
             account_configuration_blocker=account_blocker,
             automatic_source_posting_enabled=False,
             eir_income_included_in_collection_mapping=False,
+            has_more=has_more,
+            next_cursor=next_cursor,
             events=previews,
         )
 
@@ -91,7 +142,7 @@ class PostgresSourceEventAccountingRepository:
             from accounting.opening_balance_workbooks workbook
             left join accounting.opening_balance_journal_postings posting
               on posting.workbook_id = workbook.id
-            order by workbook.cutover_date desc, workbook.created_at desc
+            order by workbook.created_at desc
             limit 1
             """
         )
@@ -126,6 +177,7 @@ class PostgresSourceEventAccountingRepository:
         *,
         start_date: date | None,
         end_date: date | None,
+        cursor: SourceEventCursor | None,
         limit: int,
     ) -> tuple[CollectionSourceEvent, ...]:
         cursor.execute(
@@ -163,10 +215,28 @@ class PostgresSourceEventAccountingRepository:
               on reversal.reversal_of_entry_id = journal.id
             where (%s::date is null or transaction.collection_date >= %s::date)
               and (%s::date is null or transaction.collection_date <= %s::date)
+              and (
+                    %s::date is null
+                    or (
+                        transaction.collection_date,
+                        transaction.accepted_at,
+                        transaction.id
+                    ) < (%s::date, %s::timestamptz, %s::uuid)
+              )
             order by transaction.collection_date desc, transaction.accepted_at desc, transaction.id desc
             limit %s
             """,
-            (start_date, start_date, end_date, end_date, limit),
+            (
+                start_date,
+                start_date,
+                end_date,
+                end_date,
+                cursor.collection_date if cursor else None,
+                cursor.collection_date if cursor else None,
+                cursor.accepted_at if cursor else None,
+                cursor.transaction_id if cursor else None,
+                limit,
+            ),
         )
         return tuple(
             CollectionSourceEvent(
