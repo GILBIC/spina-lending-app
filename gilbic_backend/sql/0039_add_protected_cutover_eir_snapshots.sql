@@ -115,15 +115,15 @@ DECLARE
     captured_count BIGINT;
 BEGIN
     -- Preparation has already created the protected journal inside this same
-    -- transaction. Acquire the same source serialization boundary used by the
-    -- protected posting workflow before capturing the loan-level ledger anchor.
+    -- transaction. Acquire the source serialization boundary in the writer order
+    -- used by collection posting: state first, then loan, then loan type.
     -- Collection/payment/void/correction writers require ROW EXCLUSIVE locks on
     -- these lending tables, so they either commit before this snapshot and are
     -- visible here, or wait until the whole preparation transaction commits.
     LOCK TABLE
+        lending.loan_collection_state,
         lending.loans,
-        lending.loan_types,
-        lending.loan_collection_state
+        lending.loan_types
     IN SHARE MODE;
 
     SELECT workbook.cutover_date
