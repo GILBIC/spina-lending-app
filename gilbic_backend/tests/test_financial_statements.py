@@ -16,6 +16,7 @@ from gilbic_backend.financial_statements_repository import (
     AccountMovement,
     AccountingStatementPeriod,
     FinancialStatementPack,
+    PostgresFinancialStatementsRepository,
     StatementPeriodNotFound,
     build_financial_statement_pack,
 )
@@ -73,6 +74,28 @@ class FakeStatementsRepository:
         if self.missing:
             raise StatementPeriodNotFound("Accounting period was not found.")
         return sample_pack()
+
+
+class CapturingMovementCursor:
+    def __init__(self) -> None:
+        self.sql = ""
+        self.params = ()
+
+    def execute(self, sql, params) -> None:
+        self.sql = str(sql)
+        self.params = tuple(params)
+
+    def fetchall(self):
+        return [
+            {
+                "code": "4999",
+                "name": "Retired Historical Income",
+                "account_type": "income",
+                "normal_balance": "credit",
+                "total_debit": Decimal("0.00"),
+                "total_credit": Decimal("125.00"),
+            }
+        ]
 
 
 def movement(
@@ -172,6 +195,21 @@ def test_statement_builder_uses_period_profit_and_cumulative_position() -> None:
 
     allowance = next(line for line in pack.asset_lines if line.account_code == "1190")
     assert allowance.amount == Decimal("-200.00")
+
+
+def test_movement_query_keeps_retired_accounts_with_posted_history() -> None:
+    cursor = CapturingMovementCursor()
+
+    movements = PostgresFinancialStatementsRepository._load_movements(
+        cursor,
+        period_id=PERIOD_ID,
+        through_date=None,
+        exclude_period_close=True,
+    )
+
+    assert "account.is_active" not in cursor.sql
+    assert movements[0].account_code == "4999"
+    assert movements[0].total_credit == Decimal("125.00")
 
 
 def test_management_can_view_posted_ledger_financial_statements() -> None:
