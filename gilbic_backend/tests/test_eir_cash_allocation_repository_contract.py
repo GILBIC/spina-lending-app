@@ -36,6 +36,18 @@ def test_repository_keeps_dynamic_preview_and_complete_post_cutover_source_histo
     assert MAX_SOURCE_EVENTS == 5000
 
 
+def test_repository_fail_closes_collection_proposals_against_accounts_and_journal_state() -> None:
+    source = inspect.getsource(PostgresEirCashAllocationRepository)
+
+    assert "REGULAR_COLLECTION_ACCOUNT_KEYS" in source
+    assert "build_regular_collection_journal_preview" in source
+    assert "from accounting.accounts" in source
+    assert "left join accounting.journal_entries journal" in source
+    assert "left join accounting.journal_entries reversal" in source
+    assert "journal.status as journal_status" in source
+    assert "reversal.status as reversal_status" in source
+
+
 def test_repository_contains_no_accounting_or_lending_write_statement() -> None:
     source = inspect.getsource(PostgresEirCashAllocationRepository).lower()
 
