@@ -169,15 +169,6 @@ DECLARE
     total_debit NUMERIC(18,2);
     total_credit NUMERIC(18,2);
 BEGIN
-    SELECT prep.journal_entry_id
-    INTO existing_journal_id
-    FROM accounting.opening_balance_journal_preparations prep
-    WHERE prep.workbook_id = p_workbook_id;
-
-    IF existing_journal_id IS NOT NULL THEN
-        RETURN existing_journal_id;
-    END IF;
-
     SELECT *
     INTO workbook
     FROM accounting.opening_balance_workbooks
@@ -187,6 +178,16 @@ BEGIN
     IF workbook.id IS NULL THEN
         RAISE EXCEPTION 'Opening-balance workbook was not found.';
     END IF;
+
+    SELECT prep.journal_entry_id
+    INTO existing_journal_id
+    FROM accounting.opening_balance_journal_preparations prep
+    WHERE prep.workbook_id = p_workbook_id;
+
+    IF existing_journal_id IS NOT NULL THEN
+        RETURN existing_journal_id;
+    END IF;
+
     IF workbook.status <> 'review_ready' THEN
         RAISE EXCEPTION 'Opening-balance journal preparation requires a review-ready workbook.';
     END IF;
