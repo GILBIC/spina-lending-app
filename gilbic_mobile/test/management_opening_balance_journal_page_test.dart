@@ -297,12 +297,12 @@ class _FakeJournalRepository implements OpeningBalanceJournalRepository {
     required String deviceId,
     required String workbookId,
     required String journalEntryId,
-    required double totalDebit,
-    required double totalCredit,
+    required String totalDebit,
+    required String totalCredit,
   }) async {
     expect(journalEntryId, 'journal-1');
-    expect(totalDebit, 1000);
-    expect(totalCredit, 1000);
+    expect(totalDebit, '1000.00');
+    expect(totalCredit, '1000.00');
     posted = true;
     return _status();
   }
@@ -334,6 +334,8 @@ class _FakeJournalRepository implements OpeningBalanceJournalRepository {
       journalLineCount: prepared ? 3 : 0,
       totalDebit: prepared ? 1000 : 0,
       totalCredit: prepared ? 1000 : 0,
+      totalDebitExact: prepared ? '1000.00' : '0.00',
+      totalCreditExact: prepared ? '1000.00' : '0.00',
       draftPrepared: prepared,
       preparationReady: prepareReady,
       preparationBlocker: prepareBlocker,
