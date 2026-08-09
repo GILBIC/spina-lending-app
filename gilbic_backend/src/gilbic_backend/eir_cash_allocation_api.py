@@ -88,6 +88,7 @@ def _pack_payload(pack: EirCashAllocationPack) -> dict[str, object]:
         "cutover_date": (
             pack.cutover_date.isoformat() if pack.cutover_date is not None else None
         ),
+        "opening_balance_prepared": pack.opening_balance_prepared,
         "opening_balance_posted": pack.opening_balance_posted,
         "opening_balance_entry_number": pack.opening_balance_entry_number,
         "source_event_count": pack.source_event_count,
@@ -99,7 +100,7 @@ def _pack_payload(pack: EirCashAllocationPack) -> dict[str, object]:
             _result_payload(pack.allocation) if pack.allocation is not None else None
         ),
         "notice": (
-            "Read-only event-date EIR cash allocation reference. Regular cash is split between accrued effective interest and the loan component using the measured cutover EIR roll-forward. No journal draft or posted entry is created. EIR accrual posting, 7x7 modification policy, post-maturity treatment, fiscal-period controls, and automatic source posting remain separate protected stages."
+            "Read-only event-date EIR cash allocation reference. Before opening-balance journal preparation, Regular cash can be reviewed against the current measured cutover state. Once the protected opening journal is prepared, recomputation from mutable lending rows is blocked until a protected per-loan cutover snapshot exists. No journal draft or posted entry is created. EIR accrual posting, 7x7 modification policy, post-maturity treatment, fiscal-period controls, and automatic source posting remain separate protected stages."
         ),
     }
 
