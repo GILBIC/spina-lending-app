@@ -47,6 +47,27 @@ void main() {
     expect(button.onPressed, isNotNull);
     expect(find.text('Pay'), findsOneWidget);
   });
+
+  testWidgets('expanded route shows contractual readiness guidance', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CollectorRoutePage(
+          session: _session,
+          loader: _RouteLoader(isFromCache: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('signed-contract verification'), findsNothing);
+    await tester.tap(find.byKey(const Key('route-client-client-1')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Contract schedule: signed-contract verification'),
+      findsOneWidget,
+    );
+  });
 }
 
 const UserSession _session = UserSession(
@@ -85,6 +106,10 @@ class _RouteLoader implements CollectorRouteLoader {
             status: 'Pending',
             passCount: 0,
             routeRevision: 'revision-1',
+            collectionMessage:
+                'Ready for mobile collection. Contract schedule: signed-contract verification is still required.',
+            contractReadinessMessage:
+                'Contract schedule: signed-contract verification is still required.',
           ),
         ],
       ),

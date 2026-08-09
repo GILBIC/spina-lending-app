@@ -6,7 +6,10 @@ from decimal import Decimal
 from uuid import UUID
 
 from gilbic_backend import collector_route_repository as module
-from gilbic_backend.collector_route_repository import PostgresCollectorRouteRepository
+from gilbic_backend.collector_route_repository import (
+    CollectorRouteEntryRecord,
+    PostgresCollectorRouteRepository,
+)
 
 
 COLLECTOR_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
@@ -56,6 +59,25 @@ class FakeConnection:
                     "is_reconciled": True,
                     "mobile_collections_enabled": True,
                     "mobile_balance_mode": "direct_remaining_balance",
+                    "contract_allocation_enabled": False,
+                    "contract_schedule_version": 2,
+                    "contract_payment_frequency": "weekly",
+                    "contract_reference": "CTR-2026-001",
+                    "contract_grace_days": 0,
+                    "contract_dpd_status": "ready",
+                    "contract_days_past_due": 0,
+                    "contract_schedule_total": Decimal("5000.00"),
+                    "contract_allocated_total": Decimal("200.00"),
+                    "contract_automatic_default": False,
+                    "contract_ecl_included": False,
+                    "contract_ecl_amount": None,
+                    "contract_ready_to_post": False,
+                    "contract_schedule_verified": True,
+                    "contract_today_installment_count": 1,
+                    "contract_today_scheduled_amount": Decimal("200.00"),
+                    "contract_today_unpaid_amount": Decimal("0.00"),
+                    "contract_next_unpaid_date": date(2026, 8, 8),
+                    "contract_next_unpaid_amount": Decimal("200.00"),
                     "processed_today": True,
                     "today_entry_type": "advance",
                     "today_collector_name": "Collector One",
@@ -117,6 +139,17 @@ def test_repository_returns_assigned_areas_and_authoritative_state(monkeypatch) 
     assert entry.can_collect_mobile is True
     assert entry.can_enter_payment is True
     assert entry.collection_message == "Today's collection has already been recorded."
+    assert entry.contract_schedule_verified is True
+    assert entry.contract_payment_frequency == "weekly"
+    assert entry.contract_schedule_version == 2
+    assert entry.contract_balance_reconciled is True
+    assert entry.contract_schedule_ready is True
+    assert entry.contract_collection_ready is False
+    assert entry.contract_today_scheduled_amount == Decimal("200.00")
+    assert entry.contract_today_unpaid_amount == Decimal("0.00")
+    assert entry.contract_today_already_covered is True
+    assert entry.contract_next_unpaid_date == date(2026, 8, 8)
+    assert entry.contract_next_unpaid_amount == Decimal("200.00")
     assert entry.processed_today is True
     assert entry.today_entry_type == "advance"
     assert entry.today_collector_name == "Collector One"
@@ -134,8 +167,39 @@ def test_repository_returns_assigned_areas_and_authoritative_state(monkeypatch) 
     entry_parameters = connection.entry_cursor.executions[0][1]
     assert area_parameters == (COLLECTOR_USER_ID,)
     assert entry_parameters == (
+        module.CONTRACT_ALLOCATION_SETTING,
+        route_date,
         route_date,
         route_date,
         route_date,
         COLLECTOR_USER_ID,
     )
+
+
+def test_contract_setting_blocks_pay_until_verified_gate_is_ready() -> None:
+    entry = CollectorRouteEntryRecord(
+        route_entry_id=LOAN_ID,
+        client_id=CLIENT_ID,
+        loan_id=LOAN_ID,
+        client_name="Ana Client",
+        area="Cardona",
+        loan_type="Regular",
+        daily_amount=Decimal("200.00"),
+        remaining_balance=Decimal("4800.00"),
+        pass_count=0,
+        last_payment_date=None,
+        advance_until=None,
+        status="Pending",
+        note="",
+        is_reconciled=True,
+        mobile_collections_enabled=True,
+        mobile_balance_mode="direct_remaining_balance",
+        contract_allocation_enabled=True,
+        contract_schedule_verified=True,
+        contract_dpd_status="ready",
+        contract_balance_reconciled=False,
+    )
+
+    assert entry.can_collect_mobile is True
+    assert entry.can_enter_payment is False
+    assert "does not match the operational balance" in entry.collection_message

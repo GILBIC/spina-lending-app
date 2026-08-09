@@ -10,6 +10,10 @@ from psycopg.rows import dict_row
 from .database import open_connection
 
 
+MONEY = Decimal("0.01")
+CONTRACT_ALLOCATION_SETTING = "mobile_contract_schedule_allocation_enabled"
+
+
 @dataclass(frozen=True, slots=True)
 class CollectorRouteEntryRecord:
     route_entry_id: UUID
@@ -29,6 +33,22 @@ class CollectorRouteEntryRecord:
     is_reconciled: bool = False
     mobile_collections_enabled: bool = False
     mobile_balance_mode: str = ""
+    contract_allocation_enabled: bool = False
+    contract_schedule_verified: bool = False
+    contract_dpd_status: str = "contract_schedule_required"
+    contract_payment_frequency: str = ""
+    contract_reference: str = ""
+    contract_schedule_version: int | None = None
+    contract_grace_days: int = 0
+    contract_balance_reconciled: bool = False
+    contract_schedule_ready: bool = False
+    contract_collection_ready: bool = False
+    contract_days_past_due: int | None = None
+    contract_today_scheduled_amount: Decimal = Decimal("0.00")
+    contract_today_unpaid_amount: Decimal = Decimal("0.00")
+    contract_today_already_covered: bool = False
+    contract_next_unpaid_date: date | None = None
+    contract_next_unpaid_amount: Decimal = Decimal("0.00")
     processed_today: bool = False
     today_entry_type: str = ""
     today_collector_name: str = ""
@@ -51,7 +71,67 @@ class CollectorRouteEntryRecord:
 
     @property
     def can_enter_payment(self) -> bool:
-        return self.can_collect_mobile and self.mobile_balance_mode == "direct_remaining_balance"
+        base_ready = (
+            self.can_collect_mobile
+            and self.mobile_balance_mode == "direct_remaining_balance"
+        )
+        if not base_ready:
+            return False
+        if self.contract_allocation_enabled:
+            return self.contract_collection_ready
+        return True
+
+    @property
+    def contract_readiness_message(self) -> str:
+        status = self.contract_dpd_status.strip() or "contract_schedule_required"
+        if status == "contract_schedule_required":
+            return "Contract schedule: signed-contract verification is still required."
+        if not self.contract_schedule_verified:
+            return "Contract schedule exists, but Management verification is still required."
+        if status == "contract_installments_required":
+            return "Verified contract schedule is missing its exact installment dates or amounts."
+        if status == "payment_allocation_required":
+            return "Verified contract schedule needs prior payment allocation reconciliation."
+        if status != "ready":
+            return f"Contract schedule readiness: {status.replace('_', ' ')}."
+        if not self.contract_balance_reconciled:
+            return "Verified contract schedule is ready, but its unpaid amount does not match the operational balance."
+        if not self.contract_schedule_ready:
+            return "Contract schedule failed a protected accounting safety check."
+
+        context: list[str] = []
+        if self.contract_today_scheduled_amount > Decimal("0.00"):
+            context.append(
+                "Today's scheduled payment: "
+                f"₱{self.contract_today_scheduled_amount:,.2f}."
+            )
+            if self.contract_today_already_covered:
+                context.append("Today is already covered by advance.")
+            elif self.contract_today_unpaid_amount > Decimal("0.00"):
+                context.append(
+                    "Still unpaid today: "
+                    f"₱{self.contract_today_unpaid_amount:,.2f}."
+                )
+        else:
+            context.append("No contractual installment is due today.")
+
+        if self.contract_next_unpaid_date is not None:
+            context.append(
+                "Next unpaid installment: "
+                f"{self.contract_next_unpaid_date.isoformat()} – "
+                f"₱{self.contract_next_unpaid_amount:,.2f}."
+            )
+        if self.contract_days_past_due is not None:
+            context.append(f"Contract DPD: {self.contract_days_past_due}.")
+
+        if self.contract_allocation_enabled:
+            lead = "Verified contractual collection is ready."
+        else:
+            lead = (
+                "Contract schedule is verified and reconciled; contractual mobile "
+                "allocation is not enabled yet."
+            )
+        return " ".join([lead, *context])
 
     @property
     def collection_message(self) -> str:
@@ -63,9 +143,11 @@ class CollectorRouteEntryRecord:
             return "Checking this loan against SPINA records."
         if not self.mobile_collections_enabled:
             return "Use the SPINA desktop app for this loan type."
-        if not self.can_enter_payment:
+        if self.mobile_balance_mode != "direct_remaining_balance":
             return "Unable-to-pay is available, but payments still use SPINA desktop."
-        return "Ready for mobile collection."
+        if self.contract_allocation_enabled and not self.contract_collection_ready:
+            return self.contract_readiness_message
+        return f"Ready for mobile collection. {self.contract_readiness_message}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -141,6 +223,34 @@ class PostgresCollectorRouteRepository:
                         lower(coalesce(lt.settings->>'mobile_collections_enabled', ''))
                             in ('true', '1', 'yes', 'on') as mobile_collections_enabled,
                         coalesce(lt.settings->>'mobile_balance_mode', '') as mobile_balance_mode,
+                        lower(coalesce(lt.settings->>%s, ''))
+                            in ('true', '1', 'yes', 'on') as contract_allocation_enabled,
+                        assessment.schedule_version as contract_schedule_version,
+                        coalesce(assessment.payment_frequency, '') as contract_payment_frequency,
+                        coalesce(assessment.contract_reference, '') as contract_reference,
+                        coalesce(assessment.grace_days, 0) as contract_grace_days,
+                        coalesce(assessment.dpd_data_status, 'contract_schedule_required')
+                            as contract_dpd_status,
+                        assessment.days_past_due as contract_days_past_due,
+                        coalesce(assessment.contractual_schedule_total, 0)::numeric(18,2)
+                            as contract_schedule_total,
+                        coalesce(assessment.allocated_schedule_total, 0)::numeric(18,2)
+                            as contract_allocated_total,
+                        coalesce(assessment.automatic_default_label_written, false)
+                            as contract_automatic_default,
+                        coalesce(assessment.ecl_included, false) as contract_ecl_included,
+                        assessment.ecl_amount as contract_ecl_amount,
+                        coalesce(assessment.ready_to_post, false) as contract_ready_to_post,
+                        registration.id is not null as contract_schedule_verified,
+                        coalesce(contract_today.installment_count, 0)::bigint
+                            as contract_today_installment_count,
+                        coalesce(contract_today.scheduled_amount, 0)::numeric(18,2)
+                            as contract_today_scheduled_amount,
+                        coalesce(contract_today.unpaid_amount, 0)::numeric(18,2)
+                            as contract_today_unpaid_amount,
+                        contract_next.due_date as contract_next_unpaid_date,
+                        coalesce(contract_next.unpaid_amount, 0)::numeric(18,2)
+                            as contract_next_unpaid_amount,
                         today.entry_type is not null as processed_today,
                         coalesce(today.entry_type, '') as today_entry_type,
                         coalesce(today.collector_name, '') as today_collector_name,
@@ -163,6 +273,10 @@ class PostgresCollectorRouteRepository:
                      and lt.is_active = true
                     left join lending.loan_collection_state s
                       on s.loan_id = l.id
+                    left join accounting.loan_contract_dpd_assessment assessment
+                      on assessment.loan_id = l.id
+                    left join lending.loan_contract_schedule_registrations registration
+                      on registration.schedule_id = assessment.schedule_id
                     left join lateral (
                         select
                             coalesce(bool_or(cd.covered_date = %s), false) as covered_today,
@@ -205,6 +319,60 @@ class PostgresCollectorRouteRepository:
                         order by t.accepted_at desc, t.id desc
                         limit 1
                     ) today on true
+                    left join lateral (
+                        select
+                            count(installment.id)::bigint as installment_count,
+                            coalesce(sum(installment.contractual_amount), 0)::numeric(18,2)
+                                as scheduled_amount,
+                            coalesce(sum(greatest(
+                                installment.contractual_amount
+                                - coalesce(applied.allocated_amount, 0),
+                                0
+                            )), 0)::numeric(18,2) as unpaid_amount
+                        from lending.loan_contract_installments installment
+                        left join lateral (
+                            select coalesce(sum(allocation.amount_applied) filter (
+                                where transaction.is_voided = false
+                            ), 0)::numeric(18,2) as allocated_amount
+                            from lending.loan_installment_payment_allocations allocation
+                            join lending.collection_transactions transaction
+                              on transaction.id = allocation.transaction_id
+                            where allocation.installment_id = installment.id
+                        ) applied on true
+                        where installment.schedule_id = assessment.schedule_id
+                          and installment.due_date = %s
+                    ) contract_today on true
+                    left join lateral (
+                        select
+                            balance.due_date,
+                            sum(balance.remaining_amount)::numeric(18,2) as unpaid_amount
+                        from (
+                            select
+                                installment.id,
+                                installment.due_date,
+                                greatest(
+                                    installment.contractual_amount
+                                    - coalesce(sum(allocation.amount_applied) filter (
+                                        where transaction.is_voided = false
+                                    ), 0),
+                                    0
+                                )::numeric(18,2) as remaining_amount
+                            from lending.loan_contract_installments installment
+                            left join lending.loan_installment_payment_allocations allocation
+                              on allocation.installment_id = installment.id
+                            left join lending.collection_transactions transaction
+                              on transaction.id = allocation.transaction_id
+                            where installment.schedule_id = assessment.schedule_id
+                            group by
+                                installment.id,
+                                installment.due_date,
+                                installment.contractual_amount
+                        ) balance
+                        where balance.remaining_amount > 0
+                        group by balance.due_date
+                        order by balance.due_date
+                        limit 1
+                    ) contract_next on true
                     where a.collector_user_id = %s
                       and a.is_active = true
                       and coalesce(s.remaining_balance, l.principal) > 0
@@ -214,50 +382,119 @@ class PostgresCollectorRouteRepository:
                         l.date_released,
                         l.id
                     """,
-                    (route_date, route_date, route_date, collector_user_id),
+                    (
+                        CONTRACT_ALLOCATION_SETTING,
+                        route_date,
+                        route_date,
+                        route_date,
+                        route_date,
+                        collector_user_id,
+                    ),
                 )
                 rows = cursor.fetchall()
 
-        entries = tuple(
-            CollectorRouteEntryRecord(
-                route_entry_id=row["route_entry_id"],
-                client_id=row["client_id"],
-                loan_id=row["loan_id"],
-                client_name=row["client_name"],
-                area=row["area"] or "",
-                loan_type=row["loan_type"],
-                daily_amount=row["daily_amount"],
-                remaining_balance=row["remaining_balance"],
-                pass_count=row["pass_count"],
-                last_payment_date=row["last_payment_date"],
-                advance_until=row["advance_until"],
-                status=row["collection_status"],
-                note=row["note"],
-                state_version=int(row["state_version"]),
-                is_reconciled=bool(row["is_reconciled"]),
-                mobile_collections_enabled=bool(row["mobile_collections_enabled"]),
-                mobile_balance_mode=str(row["mobile_balance_mode"] or ""),
-                processed_today=bool(row["processed_today"]),
-                today_entry_type=str(row["today_entry_type"] or ""),
-                today_collector_name=str(row["today_collector_name"] or ""),
-                today_transaction_id=row["today_transaction_id"],
-                today_collector_user_id=row["today_collector_user_id"],
-                today_is_locked=bool(row["today_is_locked"]),
-                can_edit_today=(
-                    row["today_transaction_id"] is not None
-                    and row["today_collector_user_id"] == collector_user_id
-                    and not bool(row["today_is_locked"])
-                ),
-                today_amount=Decimal(row["today_amount"]),
-                today_note=str(row["today_note"] or ""),
-                today_covered_dates=tuple(row["today_covered_dates"] or ()),
-                covered_dates=tuple(row["covered_dates"] or ()),
+        entries: list[CollectorRouteEntryRecord] = []
+        for row in rows:
+            remaining_balance = Decimal(row["remaining_balance"]).quantize(MONEY)
+            contract_schedule_total = Decimal(row["contract_schedule_total"]).quantize(MONEY)
+            contract_allocated_total = Decimal(row["contract_allocated_total"]).quantize(MONEY)
+            contract_unpaid_total = (contract_schedule_total - contract_allocated_total).quantize(MONEY)
+            contract_dpd_status = str(row["contract_dpd_status"] or "contract_schedule_required")
+            contract_schedule_verified = bool(row["contract_schedule_verified"])
+            contract_balance_reconciled = (
+                contract_dpd_status == "ready"
+                and remaining_balance == contract_unpaid_total
             )
-            for row in rows
-        )
+            accounting_safe = not (
+                bool(row["contract_automatic_default"])
+                or bool(row["contract_ecl_included"])
+                or row["contract_ecl_amount"] is not None
+                or bool(row["contract_ready_to_post"])
+            )
+            contract_schedule_ready = (
+                contract_schedule_verified
+                and contract_dpd_status == "ready"
+                and contract_balance_reconciled
+                and accounting_safe
+            )
+            contract_allocation_enabled = bool(row["contract_allocation_enabled"])
+            contract_collection_ready = (
+                contract_allocation_enabled and contract_schedule_ready
+            )
+            today_scheduled = Decimal(row["contract_today_scheduled_amount"]).quantize(MONEY)
+            today_unpaid = Decimal(row["contract_today_unpaid_amount"]).quantize(MONEY)
+            today_has_installment = int(row["contract_today_installment_count"]) > 0
+
+            entries.append(
+                CollectorRouteEntryRecord(
+                    route_entry_id=row["route_entry_id"],
+                    client_id=row["client_id"],
+                    loan_id=row["loan_id"],
+                    client_name=row["client_name"],
+                    area=row["area"] or "",
+                    loan_type=row["loan_type"],
+                    daily_amount=row["daily_amount"],
+                    remaining_balance=remaining_balance,
+                    pass_count=row["pass_count"],
+                    last_payment_date=row["last_payment_date"],
+                    advance_until=row["advance_until"],
+                    status=row["collection_status"],
+                    note=row["note"],
+                    state_version=int(row["state_version"]),
+                    is_reconciled=bool(row["is_reconciled"]),
+                    mobile_collections_enabled=bool(row["mobile_collections_enabled"]),
+                    mobile_balance_mode=str(row["mobile_balance_mode"] or ""),
+                    contract_allocation_enabled=contract_allocation_enabled,
+                    contract_schedule_verified=contract_schedule_verified,
+                    contract_dpd_status=contract_dpd_status,
+                    contract_payment_frequency=str(row["contract_payment_frequency"] or ""),
+                    contract_reference=str(row["contract_reference"] or ""),
+                    contract_schedule_version=(
+                        int(row["contract_schedule_version"])
+                        if row["contract_schedule_version"] is not None
+                        else None
+                    ),
+                    contract_grace_days=int(row["contract_grace_days"] or 0),
+                    contract_balance_reconciled=contract_balance_reconciled,
+                    contract_schedule_ready=contract_schedule_ready,
+                    contract_collection_ready=contract_collection_ready,
+                    contract_days_past_due=(
+                        int(row["contract_days_past_due"])
+                        if row["contract_days_past_due"] is not None
+                        else None
+                    ),
+                    contract_today_scheduled_amount=today_scheduled,
+                    contract_today_unpaid_amount=today_unpaid,
+                    contract_today_already_covered=(
+                        today_has_installment
+                        and today_scheduled > Decimal("0.00")
+                        and today_unpaid == Decimal("0.00")
+                    ),
+                    contract_next_unpaid_date=row["contract_next_unpaid_date"],
+                    contract_next_unpaid_amount=Decimal(
+                        row["contract_next_unpaid_amount"]
+                    ).quantize(MONEY),
+                    processed_today=bool(row["processed_today"]),
+                    today_entry_type=str(row["today_entry_type"] or ""),
+                    today_collector_name=str(row["today_collector_name"] or ""),
+                    today_transaction_id=row["today_transaction_id"],
+                    today_collector_user_id=row["today_collector_user_id"],
+                    today_is_locked=bool(row["today_is_locked"]),
+                    can_edit_today=(
+                        row["today_transaction_id"] is not None
+                        and row["today_collector_user_id"] == collector_user_id
+                        and not bool(row["today_is_locked"])
+                    ),
+                    today_amount=Decimal(row["today_amount"]),
+                    today_note=str(row["today_note"] or ""),
+                    today_covered_dates=tuple(row["today_covered_dates"] or ()),
+                    covered_dates=tuple(row["covered_dates"] or ()),
+                )
+            )
+
         return CollectorRouteRecord(
             route_date=route_date,
             collector_name=collector_name,
             areas=areas,
-            entries=entries,
+            entries=tuple(entries),
         )
