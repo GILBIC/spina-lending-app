@@ -26,7 +26,18 @@ Immediately before posting, the database locks and revalidates the workbook, pre
 - the cutover fiscal period remains open;
 - there are no active blocked loan cutover sources.
 
-The API also requires the journal ID and exact debit/credit totals that Management just reviewed. If those values changed before the request reaches the server, the request is rejected as stale and must be refreshed.
+### Source-readiness serialization
+
+Before the final source-readiness query, the protected posting transaction acquires `SHARE` table locks on `lending.loans`, `lending.loan_types`, and `lending.loan_collection_state` and holds them through commit. Normal collection/correction writers require conflicting write locks on these tables. Therefore:
+
+- if a source-changing writer commits first, the posting transaction sees that new state before deciding whether it can post;
+- if the posting transaction obtains the source locks first, the writer must wait until the opening journal has committed or rolled back.
+
+This prevents a concurrent collection void/correction from changing the cutover source-readiness state between the final check and the irreversible journal commit.
+
+### Exact confirmation values
+
+The API requires the journal ID and exact debit/credit totals that Management just reviewed. The backend exposes PostgreSQL decimal totals as strings and the mobile client preserves those strings without converting them to IEEE-754 floating-point values for confirmation or display. The POST request sends the exact decimal strings back to the API, which parses them as `Decimal` and compares them exactly. A changed journal ID or total is rejected as stale and must be refreshed.
 
 ## Ledger controls
 
@@ -40,7 +51,7 @@ A successful post:
 - inserts one immutable opening-balance posting audit row;
 - is idempotent: repeating the protected request returns the same posted entry and does not create another posting record/event.
 
-After posting, corrections must use a controlled reversal rather than editing or deleting the posted entry.
+After posting, corrections must use a controlled reversal rather than editing or deleting the posted entry. The UI only reports the opening balance as Posted when the protected posting audit exists.
 
 ## Deployment safety
 
