@@ -10,13 +10,13 @@ Migration 0039 therefore captures an immutable **per-loan cutover EIR snapshot i
 
 ## Transactional capture and source serialization
 
-The preparation capture trigger acquires the same lending `SHARE` table locks used by protected opening-balance posting:
+The preparation capture trigger acquires the lending `SHARE` table locks in the writer-compatible order used by collection posting:
 
+- `lending.loan_collection_state`
 - `lending.loans`
 - `lending.loan_types`
-- `lending.loan_collection_state`
 
-Collection/payment/void/correction paths require conflicting write locks on those sources. A source writer that commits first is visible to snapshot capture; a writer arriving after the snapshot locks waits until the preparation transaction completes.
+Collection/payment/void/correction paths require conflicting write locks on those sources. Using the same state-before-loan order prevents a final-payment writer and snapshot capture from waiting on each other in reverse order. A source writer that commits first is visible to snapshot capture; a writer arriving after the snapshot locks waits until the preparation transaction completes.
 
 After the locks are held, the trigger rechecks `accounting.loan_cutover_readiness`. A blocked active loan aborts snapshot capture and therefore rolls back the whole journal-preparation transaction.
 
