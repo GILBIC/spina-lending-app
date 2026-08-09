@@ -14,6 +14,10 @@ class OpeningBalanceJournalDraftStatus {
     required this.preparationBlocker,
     required this.openingBalancePostingEnabled,
     required this.automaticSourcePostingEnabled,
+    required this.postingReady,
+    required this.postingBlocker,
+    required this.postedByUserId,
+    required this.postedAt,
     required this.notice,
   });
 
@@ -31,12 +35,21 @@ class OpeningBalanceJournalDraftStatus {
   final String? preparationBlocker;
   final bool openingBalancePostingEnabled;
   final bool automaticSourcePostingEnabled;
+  final bool postingReady;
+  final String? postingBlocker;
+  final String? postedByUserId;
+  final DateTime? postedAt;
   final String notice;
 
-  bool get canPrepare =>
-      preparationReady &&
-      !draftPrepared &&
-      !openingBalancePostingEnabled &&
+  bool get isPosted => journalStatus == 'posted' && entryNumber != null;
+
+  bool get canPrepare => preparationReady && !draftPrepared;
+
+  bool get canPost =>
+      openingBalancePostingEnabled &&
+      postingReady &&
+      journalStatus == 'draft' &&
+      journalEntryId != null &&
       !automaticSourcePostingEnabled;
 
   factory OpeningBalanceJournalDraftStatus.fromPayload(
@@ -59,6 +72,10 @@ class OpeningBalanceJournalDraftStatus {
           payload['opening_balance_posting_enabled'] == true,
       automaticSourcePostingEnabled:
           payload['automatic_source_posting_enabled'] == true,
+      postingReady: payload['posting_ready'] == true,
+      postingBlocker: _optionalText(payload['posting_blocker']),
+      postedByUserId: _optionalText(payload['posted_by_user_id']),
+      postedAt: _optionalDateTime(payload['posted_at']),
       notice: payload['notice']?.toString() ?? '',
     );
   }
@@ -67,6 +84,11 @@ class OpeningBalanceJournalDraftStatus {
 String? _optionalText(Object? value) {
   final text = value?.toString().trim();
   return text == null || text.isEmpty ? null : text;
+}
+
+DateTime? _optionalDateTime(Object? value) {
+  final text = _optionalText(value);
+  return text == null ? null : DateTime.tryParse(text);
 }
 
 int _int(Object? value) {
