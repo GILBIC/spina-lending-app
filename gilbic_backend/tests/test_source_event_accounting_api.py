@@ -13,10 +13,7 @@ from gilbic_backend.main import create_app
 from gilbic_backend.source_event_accounting_api import (
     source_event_accounting_repository_dependency,
 )
-from gilbic_backend.source_event_accounting_preview import (
-    AccountingPreviewLine,
-    CollectionAccountingPreview,
-)
+from gilbic_backend.source_event_accounting_preview import CollectionAccountingPreview
 from gilbic_backend.source_event_accounting_repository import SourceEventAccountingPreviewPack
 
 
@@ -92,23 +89,10 @@ class FakePreviewRepository:
             amount=Decimal("200.00"),
             is_voided=False,
             voided_at=None,
-            disposition="preview_ready",
+            disposition="eir_allocation_required",
             posting_eligible=False,
-            message="Read-only proposal only.",
-            proposed_lines=(
-                AccountingPreviewLine(
-                    account_system_key="cash_collector_custody",
-                    side="debit",
-                    amount=Decimal("200.00"),
-                    label="Cash - Collector Custody",
-                ),
-                AccountingPreviewLine(
-                    account_system_key="loans_receivable_regular",
-                    side="credit",
-                    amount=Decimal("200.00"),
-                    label="Loans Receivable - Regular",
-                ),
-            ),
+            message="Event-date EIR allocation is required before journal lines can be proposed.",
+            proposed_lines=(),
             existing_journal_entry_id=None,
             existing_journal_status=None,
             existing_journal_entry_number=None,
@@ -165,20 +149,9 @@ def test_management_can_load_read_only_collection_accounting_preview() -> None:
     item = data["events"][0]
     assert item["posting_eligible"] is False
     assert item["source_event_key"] == f"collection:{TX_ID}"
-    assert item["proposed_lines"] == [
-        {
-            "account_system_key": "cash_collector_custody",
-            "side": "debit",
-            "amount": "200.00",
-            "label": "Cash - Collector Custody",
-        },
-        {
-            "account_system_key": "loans_receivable_regular",
-            "side": "credit",
-            "amount": "200.00",
-            "label": "Loans Receivable - Regular",
-        },
-    ]
+    assert item["disposition"] == "eir_allocation_required"
+    assert item["proposed_lines"] == []
+    assert "EIR allocation" in item["message"]
 
 
 def test_invalid_date_range_is_rejected_before_repository_read() -> None:
