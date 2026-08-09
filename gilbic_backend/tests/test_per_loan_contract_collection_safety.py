@@ -11,7 +11,7 @@ from gilbic_backend.per_loan_contract_collection import (
     PerLoanContractAwareCrossCollectorCollectionPostingBridge,
 )
 from spina_mobile_collections.contracts import CollectionCommand, CollectionEntryType
-from spina_mobile_collections.service import CollectionRejected
+from spina_mobile_collections.service import CollectionConflict, CollectionRejected
 
 
 LOAN_ID = UUID("44444444-4444-4444-8444-444444444444")
@@ -22,6 +22,7 @@ SCHEDULE_ID = UUID("66666666-6666-4666-8666-666666666666")
 class _Cursor:
     def __init__(self, row: dict[str, Any]) -> None:
         self.row = row
+        self.statements: list[str] = []
 
     def __enter__(self):
         return self
@@ -30,6 +31,7 @@ class _Cursor:
         return False
 
     def execute(self, statement, parameters=None):
+        self.statements.append(str(statement))
         return self
 
     def fetchone(self):
@@ -68,6 +70,7 @@ def _row(**changes: Any) -> dict[str, Any]:
         "mobile_collections_enabled": True,
         "mobile_balance_mode": "direct_remaining_balance",
         "remaining_balance": Decimal("270.00"),
+        "collection_state_reconciled": True,
         "schedule_id": SCHEDULE_ID,
         "schedule_version": 1,
         "payment_frequency": "daily",
@@ -79,6 +82,17 @@ def _row(**changes: Any) -> dict[str, Any]:
         "ecl_included": False,
         "ecl_amount": None,
         "ready_to_post": False,
+        "registration_id": 1,
+    }
+    row.update(changes)
+    return row
+
+
+def _locked_activation_row(**changes: Any) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "activation_action": "activate",
+        "activation_schedule_id": SCHEDULE_ID,
+        "current_schedule_id": SCHEDULE_ID,
         "registration_id": 1,
     }
     row.update(changes)
@@ -103,6 +117,16 @@ def test_explicitly_deactivated_contract_loan_cannot_fall_back_to_legacy_mobile_
     assert caught.value.code == "contract_collection_deactivated"
 
 
+def test_unreconciled_official_state_blocks_contract_gate_even_if_balances_match() -> None:
+    bridge = PerLoanContractAwareCrossCollectorCollectionPostingBridge()
+    with pytest.raises(CollectionRejected) as caught:
+        bridge._load_contract_gate(  # noqa: SLF001
+            _Connection(_row(collection_state_reconciled=False)),
+            command=_command(),
+        )
+    assert caught.value.code == "loan_state_not_reconciled"
+
+
 def test_stale_active_schedule_is_blocked_instead_of_falling_back() -> None:
     bridge = PerLoanContractAwareCrossCollectorCollectionPostingBridge()
     with pytest.raises(CollectionRejected) as caught:
@@ -111,3 +135,37 @@ def test_stale_active_schedule_is_blocked_instead_of_falling_back() -> None:
             command=_command(),
         )
     assert caught.value.code == "contract_activation_schedule_changed"
+
+
+def test_activation_is_rechecked_after_loan_lock_and_deactivation_wins() -> None:
+    cursor = _Cursor(_locked_activation_row(activation_action="deactivate"))
+    bridge = PerLoanContractAwareCrossCollectorCollectionPostingBridge()
+    with pytest.raises(CollectionConflict) as caught:
+        bridge._verify_activation_after_loan_lock(  # noqa: SLF001
+            cursor,
+            loan_id=LOAN_ID,
+        )
+    assert caught.value.code == "contract_activation_changed"
+    assert any("loan_contract_collection_activation_state" in sql for sql in cursor.statements)
+
+
+def test_locked_activation_must_still_match_current_verified_schedule() -> None:
+    cursor = _Cursor(
+        _locked_activation_row(current_schedule_id=UUID(int=999))
+    )
+    bridge = PerLoanContractAwareCrossCollectorCollectionPostingBridge()
+    with pytest.raises(CollectionConflict) as caught:
+        bridge._verify_activation_after_loan_lock(  # noqa: SLF001
+            cursor,
+            loan_id=LOAN_ID,
+        )
+    assert caught.value.code == "contract_activation_schedule_changed"
+
+
+def test_locked_current_activation_is_accepted() -> None:
+    cursor = _Cursor(_locked_activation_row())
+    bridge = PerLoanContractAwareCrossCollectorCollectionPostingBridge()
+    bridge._verify_activation_after_loan_lock(  # noqa: SLF001
+        cursor,
+        loan_id=LOAN_ID,
+    )
