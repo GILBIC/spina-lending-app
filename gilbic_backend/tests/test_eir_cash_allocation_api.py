@@ -105,6 +105,7 @@ class FakeRepository:
             loan_number="L-001",
             client_name="Synthetic Borrower",
             cutover_date=date(2026, 8, 8),
+            opening_balance_prepared=False,
             opening_balance_posted=False,
             opening_balance_entry_number=None,
             source_event_count=1,
@@ -145,6 +146,7 @@ def test_management_can_load_exact_decimal_eir_cash_allocation_reference() -> No
     assert repository.calls == [LOAN_ID]
     data = response.json()["data"]["eir_cash_allocation"]
     assert data["automatic_source_posting_enabled"] is False
+    assert data["opening_balance_prepared"] is False
     assert data["opening_balance_posted"] is False
     assert data["source_history_complete"] is True
     allocation = data["allocation"]
