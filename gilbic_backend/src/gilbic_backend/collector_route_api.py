@@ -12,6 +12,7 @@ from .collector_route_repository import (
     CollectorRouteRecord,
     PostgresCollectorRouteRepository,
 )
+from .per_loan_collector_route import PerLoanPostgresCollectorRouteRepository
 from .request_auth import authenticated_device_context
 
 
@@ -19,7 +20,7 @@ PHILIPPINES_TIMEZONE = timezone(timedelta(hours=8), name="Asia/Manila")
 
 
 def collector_route_repository_dependency() -> PostgresCollectorRouteRepository:
-    return PostgresCollectorRouteRepository()
+    return PerLoanPostgresCollectorRouteRepository()
 
 
 def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
