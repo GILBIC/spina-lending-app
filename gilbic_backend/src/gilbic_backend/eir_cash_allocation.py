@@ -120,6 +120,8 @@ def allocate_event_date_eir_cash(
     At every cash-event boundary, cents are reconciled using the Stage 5D.1
     convention: accrued EIR keeps its directly rounded amount and the loan
     component receives the cent residual so gross = accrued + loan exactly.
+    Reported total EIR is the sum of those recognized cent-boundary accruals;
+    sub-cent amounts discarded at a boundary are not allowed to reappear later.
 
     The original EIR schedule is not extrapolated beyond contractual maturity.
     Post-maturity cash is blocked for separate credit-deterioration / accounting
@@ -208,7 +210,7 @@ def allocate_event_date_eir_cash(
     loan_raw = Decimal(opening_loan)
     accrued_raw = Decimal(opening_accrued)
     last_accrual_date = state.cutover_date
-    total_interest_raw = Decimal("0")
+    total_interest_recognized = ZERO
     allocations: list[EirCashAllocation] = []
 
     for event in ordered:
@@ -226,7 +228,7 @@ def allocate_event_date_eir_cash(
                 opening_gross_carrying_amount=opening_gross,
                 opening_accrued_interest_component=opening_accrued,
                 opening_loan_component=opening_loan,
-                total_effective_interest_accrued=money(total_interest_raw),
+                total_effective_interest_accrued=total_interest_recognized,
                 closing_gross_carrying_amount=gross_before,
                 closing_accrued_interest_component=accrued_before,
                 closing_loan_component=loan_before,
@@ -234,19 +236,22 @@ def allocate_event_date_eir_cash(
                 posting_eligible=False,
             )
 
-        accrued_since_prior = Decimal("0")
+        accrued_since_prior_raw = Decimal("0")
         next_day = last_accrual_date + timedelta(days=1)
         while next_day <= event.collection_date:
             daily_interest = (loan_raw + accrued_raw) * daily_eir
             accrued_raw += daily_interest
-            accrued_since_prior += daily_interest
-            total_interest_raw += daily_interest
+            accrued_since_prior_raw += daily_interest
             next_day += timedelta(days=1)
         last_accrual_date = event.collection_date
 
         gross_before = money(loan_raw + accrued_raw)
         accrued_before = money(max(accrued_raw, Decimal("0")))
         loan_before = money(gross_before - accrued_before)
+        recognized_interest = money(accrued_since_prior_raw)
+        total_interest_recognized = money(
+            total_interest_recognized + recognized_interest
+        )
         cash = money(event.amount)
 
         if cash > gross_before:
@@ -256,7 +261,7 @@ def allocate_event_date_eir_cash(
                     source_event_key=f"collection:{event.transaction_id}",
                     collection_date=event.collection_date,
                     amount=cash,
-                    effective_interest_accrued_since_prior_event=money(accrued_since_prior),
+                    effective_interest_accrued_since_prior_event=recognized_interest,
                     gross_carrying_before=gross_before,
                     accrued_interest_before=accrued_before,
                     loan_component_before=loan_before,
@@ -280,7 +285,7 @@ def allocate_event_date_eir_cash(
                 opening_gross_carrying_amount=opening_gross,
                 opening_accrued_interest_component=opening_accrued,
                 opening_loan_component=opening_loan,
-                total_effective_interest_accrued=money(total_interest_raw),
+                total_effective_interest_accrued=total_interest_recognized,
                 closing_gross_carrying_amount=gross_before,
                 closing_accrued_interest_component=accrued_before,
                 closing_loan_component=loan_before,
@@ -300,7 +305,7 @@ def allocate_event_date_eir_cash(
                 source_event_key=f"collection:{event.transaction_id}",
                 collection_date=event.collection_date,
                 amount=cash,
-                effective_interest_accrued_since_prior_event=money(accrued_since_prior),
+                effective_interest_accrued_since_prior_event=recognized_interest,
                 gross_carrying_before=gross_before,
                 accrued_interest_before=accrued_before,
                 loan_component_before=loan_before,
@@ -316,7 +321,8 @@ def allocate_event_date_eir_cash(
         )
 
         # Each source-cash boundary becomes the next exact cent ledger basis.
-        # This applies the same Stage 5D.1 residual convention after cash.
+        # This applies the same Stage 5D.1 residual convention after cash and
+        # discards any sub-cent accrued amount that was not recognized there.
         accrued_raw = Decimal(accrued_after)
         loan_raw = Decimal(loan_after)
 
@@ -333,7 +339,7 @@ def allocate_event_date_eir_cash(
         opening_gross_carrying_amount=opening_gross,
         opening_accrued_interest_component=opening_accrued,
         opening_loan_component=opening_loan,
-        total_effective_interest_accrued=money(total_interest_raw),
+        total_effective_interest_accrued=total_interest_recognized,
         closing_gross_carrying_amount=closing_gross,
         closing_accrued_interest_component=closing_accrued,
         closing_loan_component=closing_loan,
