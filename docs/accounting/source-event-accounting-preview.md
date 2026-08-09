@@ -24,6 +24,8 @@ This also prevents contractual 7x7 interest from being mistaken for PFRS 9 EIR i
 
 ## Cutover boundary
 
+The preview uses the same current-workbook rule as the existing opening-balance workflow: the most recently created workbook (`created_at DESC`). It does not switch to a different workbook merely because another row has a later cutover date.
+
 The opening-balance workbook stores a date, not a timestamp. To prevent double counting:
 
 - source events before the cutover date are `pre_cutover` and are never proposed again;
@@ -33,6 +35,12 @@ The opening-balance workbook stores a date, not a timestamp. To prevent double c
 If no opening-balance cutover exists, source-event mapping is blocked as `cutover_required`.
 
 The preview also reports whether the opening-balance journal has actually posted, but this stage remains non-posting regardless of that state.
+
+## Complete pagination
+
+The API uses keyset pagination ordered by `(collection_date, accepted_at, transaction_id)` descending. It requests one extra row to determine `has_more` and returns an opaque `next_cursor` based on the last visible event. Supplying that cursor continues strictly after the prior page boundary, so more than 250 events on the same collection date remain reachable without duplicates or gaps caused by a date-only cursor.
+
+Malformed cursors are rejected with a validation error rather than being treated as a new page.
 
 ## Deterministic identity and duplicates
 
