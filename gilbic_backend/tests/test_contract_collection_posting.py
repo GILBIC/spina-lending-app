@@ -138,6 +138,7 @@ def per_loan_gate_row(**changes: Any) -> dict[str, Any]:
             "activation_schedule_id": SCHEDULE_ID,
             "mobile_collections_enabled": True,
             "mobile_balance_mode": "direct_remaining_balance",
+            "collection_state_reconciled": True,
         }
     )
     row.update(changes)
