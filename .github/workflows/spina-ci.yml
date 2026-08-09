@@ -120,13 +120,18 @@ jobs:
           for %%I in ("%APK_OUT%\app-debug.apk") do echo APK size: %%~zI bytes
           popd
 
+      # PR validation proves that the APK builds successfully without storing a
+      # large artifact on every intermediate commit. Only main/manual runs try
+      # to publish an APK, and storage/billing availability is non-blocking.
       - name: Upload Android debug APK
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: gilbic-mobile-debug-${{ github.sha }}
           path: gilbic_mobile/build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 1
 
       - name: Require a clean committed tree
         shell: cmd
