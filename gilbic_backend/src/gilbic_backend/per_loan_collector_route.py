@@ -16,9 +16,10 @@ from .database import open_connection
 class PerLoanPostgresCollectorRouteRepository(PostgresCollectorRouteRepository):
     """Overlay immutable Stage 5E.4.6A activation on the existing route record.
 
-    The Stage 5E.4.5 route SQL remains the authoritative schedule/readiness source.
-    This wrapper replaces only the old broad loan-type activation indicator with
-    the latest explicit state for each individual loan.
+    Loans with no activation history keep their established route behavior. A loan
+    that was explicitly deactivated, or whose activation belongs to an older
+    schedule, is conservatively blocked from mobile collection rather than falling
+    back to legacy date-based collection. Actual posting rechecks the same state.
     """
 
     def get_today_route(
@@ -43,7 +44,7 @@ class PerLoanPostgresCollectorRouteRepository(PostgresCollectorRouteRepository):
                     """
                     select
                         activation.loan_id,
-                        activation.is_active,
+                        activation.event_action,
                         activation.schedule_id,
                         assessment.schedule_id as current_schedule_id
                     from lending.loan_contract_collection_activation_state activation
@@ -55,24 +56,46 @@ class PerLoanPostgresCollectorRouteRepository(PostgresCollectorRouteRepository):
                 )
                 activation_rows = cursor.fetchall()
 
-        active_current = {
-            row["loan_id"]: (
-                bool(row["is_active"])
-                and row["schedule_id"] is not None
-                and row["schedule_id"] == row["current_schedule_id"]
-            )
-            for row in activation_rows
-        }
+        states = {row["loan_id"]: row for row in activation_rows}
+        entries = []
+        for entry in route.entries:
+            state = states.get(entry.loan_id)
+            if state is None:
+                # Never activated: preserve the established official collection path.
+                entries.append(
+                    replace(
+                        entry,
+                        contract_allocation_enabled=False,
+                        contract_collection_ready=False,
+                    )
+                )
+                continue
 
-        entries = tuple(
-            replace(
-                entry,
-                contract_allocation_enabled=active_current.get(entry.loan_id, False),
-                contract_collection_ready=(
-                    active_current.get(entry.loan_id, False)
-                    and entry.contract_schedule_ready
-                ),
+            action = str(state["event_action"] or "")
+            active_current = (
+                action == "activate"
+                and state["schedule_id"] is not None
+                and state["schedule_id"] == state["current_schedule_id"]
             )
-            for entry in route.entries
-        )
-        return replace(route, entries=entries)
+            if active_current:
+                entries.append(
+                    replace(
+                        entry,
+                        contract_allocation_enabled=True,
+                        contract_collection_ready=entry.contract_schedule_ready,
+                    )
+                )
+                continue
+
+            # A deactivated or stale activation must not reopen the legacy mobile
+            # path. Desktop/Management intervention is required first.
+            entries.append(
+                replace(
+                    entry,
+                    mobile_collections_enabled=False,
+                    contract_allocation_enabled=False,
+                    contract_collection_ready=False,
+                )
+            )
+
+        return replace(route, entries=tuple(entries))
