@@ -11,6 +11,7 @@ class ManagementFinancialStatementsPage extends StatefulWidget {
   const ManagementFinancialStatementsPage({
     required this.session,
     required this.deviceIdentityProvider,
+    this.periods,
     this.accountingRepository,
     this.statementsRepository,
     super.key,
@@ -18,6 +19,7 @@ class ManagementFinancialStatementsPage extends StatefulWidget {
 
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
+  final List<AccountingFiscalPeriod>? periods;
   final FinancialAccountingRepository? accountingRepository;
   final FinancialStatementsRepository? statementsRepository;
 
@@ -55,12 +57,15 @@ class _ManagementFinancialStatementsPageState
     try {
       final identity = await widget.deviceIdentityProvider.load();
       if (initial || _periods.isEmpty) {
-        final overview = await _accountingRepository.loadOverview(
-          widget.session,
-          deviceId: identity.installationId,
-        );
-        final periods = [...overview.fiscalPeriods]
-          ..sort((a, b) => b.endDate.compareTo(a.endDate));
+        final suppliedPeriods = widget.periods;
+        final periods = suppliedPeriods == null
+            ? [...(await _accountingRepository.loadOverview(
+                widget.session,
+                deviceId: identity.installationId,
+              ))
+                .fiscalPeriods]
+            : [...suppliedPeriods];
+        periods.sort((a, b) => b.endDate.compareTo(a.endDate));
         if (periods.isEmpty) {
           throw const SpinaApiException(
             'Create an accounting period before generating Financial Statements.',
@@ -147,7 +152,7 @@ class _ManagementFinancialStatementsPageState
                 children: [
                   const Icon(Icons.verified_outlined),
                   const SizedBox(width: 12),
-                  Expanded(
+                  const Expanded(
                     child: Text(
                       'Read-only statements from posted General Ledger entries. Draft journals are excluded.',
                     ),
