@@ -10,6 +10,8 @@ class OpeningBalanceJournalDraftStatus {
     required this.totalDebit,
     required this.totalCredit,
     required this.draftPrepared,
+    required this.preparationReady,
+    required this.preparationBlocker,
     required this.openingBalancePostingEnabled,
     required this.automaticSourcePostingEnabled,
     required this.notice,
@@ -25,12 +27,14 @@ class OpeningBalanceJournalDraftStatus {
   final double totalDebit;
   final double totalCredit;
   final bool draftPrepared;
+  final bool preparationReady;
+  final String? preparationBlocker;
   final bool openingBalancePostingEnabled;
   final bool automaticSourcePostingEnabled;
   final String notice;
 
   bool get canPrepare =>
-      workbookStatus == 'review_ready' &&
+      preparationReady &&
       !draftPrepared &&
       !openingBalancePostingEnabled &&
       !automaticSourcePostingEnabled;
@@ -49,6 +53,8 @@ class OpeningBalanceJournalDraftStatus {
       totalDebit: _double(payload['total_debit']),
       totalCredit: _double(payload['total_credit']),
       draftPrepared: payload['draft_prepared'] == true,
+      preparationReady: payload['preparation_ready'] == true,
+      preparationBlocker: _optionalText(payload['preparation_blocker']),
       openingBalancePostingEnabled:
           payload['opening_balance_posting_enabled'] == true,
       automaticSourcePostingEnabled:
