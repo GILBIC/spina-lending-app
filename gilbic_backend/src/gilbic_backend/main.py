@@ -33,6 +33,7 @@ from .other_area_api import create_other_area_router
 from .remittance_api import create_remittance_router
 from .remittance_photo_api import create_remittance_photo_router
 from .renewal_api import create_renewal_router
+from .source_event_accounting_api import create_source_event_accounting_router
 from .support_api import create_support_router
 
 
@@ -66,6 +67,7 @@ def create_app() -> FastAPI:
     app.include_router(create_management_operations_router())
     app.include_router(create_financial_accounting_router())
     app.include_router(create_financial_statements_router())
+    app.include_router(create_source_event_accounting_router())
     app.include_router(create_contract_schedule_registration_router())
     app.include_router(create_contract_collection_activation_router())
     app.include_router(create_ecl_outcome_review_router())
