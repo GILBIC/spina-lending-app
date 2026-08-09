@@ -44,6 +44,27 @@ def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
         "can_collect_mobile": entry.can_collect_mobile,
         "can_enter_payment": entry.can_enter_payment,
         "collection_message": entry.collection_message,
+        "contract_allocation_enabled": entry.contract_allocation_enabled,
+        "contract_schedule_verified": entry.contract_schedule_verified,
+        "contract_dpd_status": entry.contract_dpd_status,
+        "contract_payment_frequency": entry.contract_payment_frequency,
+        "contract_reference": entry.contract_reference,
+        "contract_schedule_version": entry.contract_schedule_version,
+        "contract_grace_days": entry.contract_grace_days,
+        "contract_balance_reconciled": entry.contract_balance_reconciled,
+        "contract_schedule_ready": entry.contract_schedule_ready,
+        "contract_collection_ready": entry.contract_collection_ready,
+        "contract_days_past_due": entry.contract_days_past_due,
+        "contract_today_scheduled_amount": str(entry.contract_today_scheduled_amount),
+        "contract_today_unpaid_amount": str(entry.contract_today_unpaid_amount),
+        "contract_today_already_covered": entry.contract_today_already_covered,
+        "contract_next_unpaid_date": (
+            entry.contract_next_unpaid_date.isoformat()
+            if entry.contract_next_unpaid_date
+            else None
+        ),
+        "contract_next_unpaid_amount": str(entry.contract_next_unpaid_amount),
+        "contract_readiness_message": entry.contract_readiness_message,
         "processed_today": entry.processed_today,
         "today_entry_type": entry.today_entry_type,
         "today_collector_name": entry.today_collector_name,

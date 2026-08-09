@@ -104,6 +104,23 @@ class CollectorRouteEntry {
     this.canCollectMobile = true,
     this.canEnterPayment = true,
     this.collectionMessage = '',
+    this.contractAllocationEnabled = false,
+    this.contractScheduleVerified = false,
+    this.contractDpdStatus = 'contract_schedule_required',
+    this.contractPaymentFrequency = '',
+    this.contractReference = '',
+    this.contractScheduleVersion,
+    this.contractGraceDays = 0,
+    this.contractBalanceReconciled = false,
+    this.contractScheduleReady = false,
+    this.contractCollectionReady = false,
+    this.contractDaysPastDue,
+    this.contractTodayScheduledAmount = 0,
+    this.contractTodayUnpaidAmount = 0,
+    this.contractTodayAlreadyCovered = false,
+    this.contractNextUnpaidDate,
+    this.contractNextUnpaidAmount = 0,
+    this.contractReadinessMessage = '',
     this.processedToday = false,
     this.todayEntryType = '',
     this.todayCollectorName = '',
@@ -133,6 +150,23 @@ class CollectorRouteEntry {
   final bool canCollectMobile;
   final bool canEnterPayment;
   final String collectionMessage;
+  final bool contractAllocationEnabled;
+  final bool contractScheduleVerified;
+  final String contractDpdStatus;
+  final String contractPaymentFrequency;
+  final String contractReference;
+  final int? contractScheduleVersion;
+  final int contractGraceDays;
+  final bool contractBalanceReconciled;
+  final bool contractScheduleReady;
+  final bool contractCollectionReady;
+  final int? contractDaysPastDue;
+  final double contractTodayScheduledAmount;
+  final double contractTodayUnpaidAmount;
+  final bool contractTodayAlreadyCovered;
+  final DateTime? contractNextUnpaidDate;
+  final double contractNextUnpaidAmount;
+  final String contractReadinessMessage;
   final bool processedToday;
   final String todayEntryType;
   final String todayCollectorName;
@@ -165,6 +199,23 @@ class CollectorRouteEntry {
       'can_collect_mobile': canCollectMobile,
       'can_enter_payment': canEnterPayment,
       'collection_message': collectionMessage,
+      'contract_allocation_enabled': contractAllocationEnabled,
+      'contract_schedule_verified': contractScheduleVerified,
+      'contract_dpd_status': contractDpdStatus,
+      'contract_payment_frequency': contractPaymentFrequency,
+      'contract_reference': contractReference,
+      'contract_schedule_version': contractScheduleVersion,
+      'contract_grace_days': contractGraceDays,
+      'contract_balance_reconciled': contractBalanceReconciled,
+      'contract_schedule_ready': contractScheduleReady,
+      'contract_collection_ready': contractCollectionReady,
+      'contract_days_past_due': contractDaysPastDue,
+      'contract_today_scheduled_amount': contractTodayScheduledAmount,
+      'contract_today_unpaid_amount': contractTodayUnpaidAmount,
+      'contract_today_already_covered': contractTodayAlreadyCovered,
+      'contract_next_unpaid_date': contractNextUnpaidDate?.toIso8601String(),
+      'contract_next_unpaid_amount': contractNextUnpaidAmount,
+      'contract_readiness_message': contractReadinessMessage,
       'processed_today': processedToday,
       'today_entry_type': todayEntryType,
       'today_collector_name': todayCollectorName,
@@ -298,6 +349,74 @@ class CollectorRouteEntry {
       collectionMessage: firstNonEmptyString(<Object?>[
             data['collection_message'],
             data['status_message'],
+          ]) ??
+          '',
+      contractAllocationEnabled: _boolValue(
+        data['contract_allocation_enabled'],
+        fallback: false,
+      ),
+      contractScheduleVerified: _boolValue(
+        data['contract_schedule_verified'],
+        fallback: false,
+      ),
+      contractDpdStatus: firstNonEmptyString(<Object?>[
+            data['contract_dpd_status'],
+          ]) ??
+          'contract_schedule_required',
+      contractPaymentFrequency: firstNonEmptyString(<Object?>[
+            data['contract_payment_frequency'],
+          ]) ??
+          '',
+      contractReference: firstNonEmptyString(<Object?>[
+            data['contract_reference'],
+          ]) ??
+          '',
+      contractScheduleVersion: firstNumber(<Object?>[
+        data['contract_schedule_version'],
+      ])?.toInt(),
+      contractGraceDays: firstNumber(<Object?>[
+            data['contract_grace_days'],
+          ])?.toInt() ??
+          0,
+      contractBalanceReconciled: _boolValue(
+        data['contract_balance_reconciled'],
+        fallback: false,
+      ),
+      contractScheduleReady: _boolValue(
+        data['contract_schedule_ready'],
+        fallback: false,
+      ),
+      contractCollectionReady: _boolValue(
+        data['contract_collection_ready'],
+        fallback: false,
+      ),
+      contractDaysPastDue: firstNumber(<Object?>[
+        data['contract_days_past_due'],
+      ])?.toInt(),
+      contractTodayScheduledAmount: firstNumber(<Object?>[
+            data['contract_today_scheduled_amount'],
+          ])?.toDouble() ??
+          0,
+      contractTodayUnpaidAmount: firstNumber(<Object?>[
+            data['contract_today_unpaid_amount'],
+          ])?.toDouble() ??
+          0,
+      contractTodayAlreadyCovered: _boolValue(
+        data['contract_today_already_covered'],
+        fallback: false,
+      ),
+      contractNextUnpaidDate: DateTime.tryParse(
+        firstNonEmptyString(<Object?>[
+              data['contract_next_unpaid_date'],
+            ]) ??
+            '',
+      ),
+      contractNextUnpaidAmount: firstNumber(<Object?>[
+            data['contract_next_unpaid_amount'],
+          ])?.toDouble() ??
+          0,
+      contractReadinessMessage: firstNonEmptyString(<Object?>[
+            data['contract_readiness_message'],
           ]) ??
           '',
       processedToday: _boolValue(
