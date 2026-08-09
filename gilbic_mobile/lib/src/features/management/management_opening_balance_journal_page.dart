@@ -167,8 +167,8 @@ class _ManagementOpeningBalanceJournalPageState
         title: const Text('Post opening balances to General Ledger?'),
         content: Text(
           'You are about to post the protected opening-balance journal.\n\n'
-          'Debit: ${_money(journal.totalDebit)}\n'
-          'Credit: ${_money(journal.totalCredit)}\n\n'
+          'Debit: ${_moneyExact(journal.totalDebitExact)}\n'
+          'Credit: ${_moneyExact(journal.totalCreditExact)}\n\n'
           'The server will revalidate the workbook, journal, accounting period, accounts, and source readiness before posting. '
           'The posted entry becomes immutable; corrections require a controlled reversal. Automatic source posting remains disabled.',
         ),
@@ -195,8 +195,8 @@ class _ManagementOpeningBalanceJournalPageState
         deviceId: identity.installationId,
         workbookId: workbookId,
         journalEntryId: journalEntryId,
-        totalDebit: journal.totalDebit,
-        totalCredit: journal.totalCredit,
+        totalDebit: journal.totalDebitExact,
+        totalCredit: journal.totalCreditExact,
       );
       if (mounted) {
         setState(() {
@@ -330,8 +330,8 @@ class _ManagementOpeningBalanceJournalPageState
                   ),
                   if (journal.draftPrepared) ...[
                     _DetailRow('Lines', journal.journalLineCount.toString()),
-                    _DetailRow('Debit', _money(journal.totalDebit)),
-                    _DetailRow('Credit', _money(journal.totalCredit)),
+                    _DetailRow('Debit', _moneyExact(journal.totalDebitExact)),
+                    _DetailRow('Credit', _moneyExact(journal.totalCreditExact)),
                   ],
                   if (journal.entryNumber != null)
                     _DetailRow('Entry number', journal.entryNumber!),
@@ -546,17 +546,21 @@ class _ErrorPanel extends StatelessWidget {
   }
 }
 
-String _money(double amount) {
-  final absolute = amount.abs().toStringAsFixed(2);
-  final parts = absolute.split('.');
-  final whole = parts.first;
+String _moneyExact(String amount) {
+  var raw = amount.trim();
+  final negative = raw.startsWith('-');
+  if (negative) raw = raw.substring(1);
+  final parts = raw.split('.');
+  final whole = parts.isEmpty || parts.first.isEmpty ? '0' : parts.first;
+  final sourceFraction = parts.length > 1 ? parts[1] : '';
+  final fraction = sourceFraction.padRight(2, '0').substring(0, 2);
   final grouped = StringBuffer();
   for (var i = 0; i < whole.length; i += 1) {
     if (i > 0 && (whole.length - i) % 3 == 0) grouped.write(',');
     grouped.write(whole[i]);
   }
-  final text = '₱${grouped.toString()}.${parts.last}';
-  return amount < 0 ? '($text)' : text;
+  final text = '₱${grouped.toString()}.$fraction';
+  return negative ? '($text)' : text;
 }
 
 String _date(DateTime value) {
