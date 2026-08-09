@@ -105,7 +105,10 @@ class _ManagementFinancialStatementsPageState
     if (periodId == null || periodId == _selectedPeriodId) {
       return;
     }
-    setState(() => _selectedPeriodId = periodId);
+    setState(() {
+      _selectedPeriodId = periodId;
+      _statements = null;
+    });
     await _load();
   }
 
