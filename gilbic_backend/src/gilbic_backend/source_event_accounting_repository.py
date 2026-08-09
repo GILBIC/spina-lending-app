@@ -19,6 +19,7 @@ REQUIRED_ACCOUNT_KEYS = (
     "cash_collector_custody",
     "loans_receivable_regular",
     "loans_receivable_7x7",
+    "accrued_interest_receivable",
 )
 
 
