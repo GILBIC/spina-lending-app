@@ -239,25 +239,6 @@ BEGIN
         NEW.prepared_by_user_id
     );
 
-    INSERT INTO accounting.journal_events (
-        journal_entry_id,
-        event_type,
-        actor_user_id,
-        details
-    )
-    VALUES (
-        NEW.journal_entry_id,
-        'cutover_loan_snapshot_captured',
-        NEW.prepared_by_user_id,
-        jsonb_build_object(
-            'workbook_id', NEW.workbook_id,
-            'measurement_policy_version', 'eir_cutover_v1',
-            'expected_active_loan_count', expected_count,
-            'captured_loan_count', captured_count,
-            'automatic_posting', false
-        )
-    );
-
     RETURN NEW;
 END;
 $$;
