@@ -61,10 +61,6 @@ def test_preparation_trigger_serializes_source_in_writer_order_and_captures_exac
         "    IN SHARE MODE;"
     )
     assert writer_order_lock in sql
-    assert "lending.loans," in sql
-    assert "lending.loan_types," in sql
-    assert "lending.loan_collection_state" in sql
-    assert "IN SHARE MODE" in sql
     assert "Blocked loan sources must be resolved" in sql
     assert "CROSS JOIN LATERAL accounting.measure_loan_at_cutover" in sql
     assert "WHERE readiness.status = 'active'" in sql
