@@ -1,0 +1,6 @@
+Stage 5E.4.3 live verified contract-schedule registration gate.
+
+This marker allows the unified workflow to install migration 0035 only on a push to main.
+The migration must not create, infer, backfill, supersede, or otherwise change any live loan schedule, installment, or payment allocation.
+Existing loans remain exactly as they were before installation until Management explicitly verifies signed-contract terms through the protected registration workflow.
+Automatic Default/Non-default classification, ECL/account 1190, and General Ledger posting remain disabled.

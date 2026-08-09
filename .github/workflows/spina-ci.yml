@@ -55,6 +55,7 @@ jobs:
           "%VENV%\Scripts\python.exe" -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_stage5e3_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_stage5e41_migration.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_stage5e43_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m compileall -q spina_app gilbic_backend\src spina_backend_mobile\src || exit /b 1
 
       - name: Run backend and database tests
@@ -154,3 +155,10 @@ jobs:
         run: |
           set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_stage5e41_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+
+      - name: One-time Stage 5E.4.3 live verified contract registration migration
+        if: github.event_name == 'push' && hashFiles('tools/stage5e43-live-migration.once') != ''
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          "%VENV%\Scripts\python.exe" tools\apply_stage5e43_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
