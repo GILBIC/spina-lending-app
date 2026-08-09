@@ -14,6 +14,9 @@ from gilbic_backend.eir_cash_allocation_api import (
     eir_cash_allocation_repository_dependency,
 )
 from gilbic_backend.eir_cash_allocation_repository import EirCashAllocationPack
+from gilbic_backend.regular_collection_journal_preview import (
+    build_regular_collection_journal_preview,
+)
 from gilbic_backend.main import create_app
 
 
@@ -100,19 +103,32 @@ class FakeRepository:
             allocations=(item,),
             posting_eligible=False,
         )
+        preview = build_regular_collection_journal_preview(
+            item,
+            allocation_result_status=result.status,
+            opening_balance_posted=True,
+            protected_snapshot_available=True,
+            protected_snapshot_reconciled=True,
+            source_history_complete=True,
+            account_configuration_ready=True,
+        )
         return EirCashAllocationPack(
             loan_id=loan_id,
             loan_number="L-001",
             client_name="Synthetic Borrower",
             cutover_date=date(2026, 8, 8),
-            opening_balance_prepared=False,
-            opening_balance_posted=False,
-            opening_balance_entry_number=None,
+            opening_balance_prepared=True,
+            opening_balance_posted=True,
+            opening_balance_entry_number="JE-202608-00000001",
             source_event_count=1,
             source_history_complete=True,
             blocker_code=None,
             blocker_message=None,
             allocation=result,
+            protected_snapshot_available=True,
+            protected_snapshot_reconciled=True,
+            account_configuration_ready=True,
+            collection_journal_previews=(preview,),
         )
 
 
@@ -146,8 +162,8 @@ def test_management_can_load_exact_decimal_eir_cash_allocation_reference() -> No
     assert repository.calls == [LOAN_ID]
     data = response.json()["data"]["eir_cash_allocation"]
     assert data["automatic_source_posting_enabled"] is False
-    assert data["opening_balance_prepared"] is False
-    assert data["opening_balance_posted"] is False
+    assert data["opening_balance_prepared"] is True
+    assert data["opening_balance_posted"] is True
     assert data["source_history_complete"] is True
     allocation = data["allocation"]
     assert allocation["posting_eligible"] is False
@@ -158,6 +174,34 @@ def test_management_can_load_exact_decimal_eir_cash_allocation_reference() -> No
     assert item["cash_to_accrued_interest"] == "11.10"
     assert item["cash_to_loan_component"] == "3.90"
     assert item["source_event_key"] == f"collection:{TX_ID}"
+    assert data["account_configuration_ready"] is True
+    preview = data["collection_journal_previews"][0]
+    assert preview["source_event_key"] == f"collection:{TX_ID}"
+    assert preview["posting_eligible"] is False
+    assert preview["balanced"] is True
+    assert preview["required_eir_accrual_before_collection"] == "1.10"
+    assert preview["total_debit"] == "15.00"
+    assert preview["total_credit"] == "15.00"
+    assert preview["proposed_lines"] == [
+        {
+            "account_system_key": "cash_collector_custody",
+            "side": "debit",
+            "amount": "15.00",
+            "label": "Accepted collection cash",
+        },
+        {
+            "account_system_key": "accrued_interest_receivable",
+            "side": "credit",
+            "amount": "11.10",
+            "label": "Cash applied to accrued effective interest",
+        },
+        {
+            "account_system_key": "loans_receivable_regular",
+            "side": "credit",
+            "amount": "3.90",
+            "label": "Cash applied to Regular loan component",
+        },
+    ]
 
 
 def test_eir_cash_allocation_requires_accounting_view_permission() -> None:
