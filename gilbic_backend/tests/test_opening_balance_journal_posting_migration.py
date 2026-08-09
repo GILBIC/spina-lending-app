@@ -24,8 +24,7 @@ def test_posting_migration_is_transactional_and_never_posts_during_install() -> 
     assert "false AS automatic_source_posting_enabled" in sql
 
     # Deployment installs controls only. The protected function may be defined,
-    # but the migration itself must never invoke it or call the generic posting
-    # function outside that protected function body.
+    # but the migration itself must never invoke it.
     assert "SELECT accounting.post_opening_balance_journal" not in sql
     assert "select accounting.post_opening_balance_journal" not in sql
 
@@ -42,6 +41,16 @@ def test_protected_post_revalidates_workbook_journal_period_and_sources() -> Non
     assert "period.status <> 'open'" in sql
     assert "readiness_status = 'blocked'" in sql
     assert "account.is_active = false OR account.is_posting = false" in sql
+
+
+def test_protected_post_serializes_source_writers_through_commit() -> None:
+    sql = migration_sql()
+    assert "LOCK TABLE" in sql
+    assert "lending.loans," in sql
+    assert "lending.loan_types," in sql
+    assert "lending.loan_collection_state" in sql
+    assert "IN SHARE MODE" in sql
+    assert sql.index("IN SHARE MODE") < sql.index("INTO blocked_count")
 
 
 def test_protected_post_uses_existing_ledger_guard_and_immutable_audit() -> None:
