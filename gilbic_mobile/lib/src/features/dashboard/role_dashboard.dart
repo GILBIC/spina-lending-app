@@ -20,6 +20,7 @@ import 'package:gilbic_mobile/src/features/management/management_financial_state
 import 'package:gilbic_mobile/src/features/management/management_general_journal_launcher_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_operations_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_portfolio_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_opening_balance_journal_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
@@ -222,6 +223,17 @@ class RoleDashboard extends StatelessWidget {
       _push(
         context,
         ManagementFinancialStatementsPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      );
+      return;
+    }
+    if (session.role == AppRole.management &&
+        action == 'management-opening-balance-journal') {
+      _push(
+        context,
+        ManagementOpeningBalanceJournalPage(
           session: session,
           deviceIdentityProvider: deviceIdentityProvider,
         ),
@@ -488,6 +500,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Accounting periods, chart of accounts, and loan policy controls',
           Icons.calculate,
           action: 'management-financial-accounting',
+        ),
+        _DashboardModule(
+          'Opening Balance Journal',
+          'Prepare one protected cutover journal draft; posting remains disabled',
+          Icons.lock_clock_outlined,
+          action: 'management-opening-balance-journal',
         ),
         _DashboardModule(
           'General Journal',
