@@ -84,6 +84,8 @@ def _pack_payload(pack: SourceEventAccountingPreviewPack) -> dict[str, object]:
         "eir_income_included_in_collection_mapping": (
             pack.eir_income_included_in_collection_mapping
         ),
+        "has_more": pack.has_more,
+        "next_cursor": pack.next_cursor,
         "events": [_event_payload(event) for event in pack.events],
         "notice": (
             "Read-only source-event accounting classification. No journal draft or posted entry is created. "
@@ -107,6 +109,7 @@ def create_source_event_accounting_router() -> APIRouter:
         start_date: date | None = Query(default=None),
         end_date: date | None = Query(default=None),
         limit: int = Query(default=100, ge=1, le=250),
+        cursor: str | None = Query(default=None),
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
@@ -139,11 +142,21 @@ def create_source_event_accounting_router() -> APIRouter:
                     "message": "End date cannot be before start date.",
                 },
             )
-        pack = repository.load_collection_preview(
-            start_date=start_date,
-            end_date=end_date,
-            limit=limit,
-        )
+        try:
+            pack = repository.load_collection_preview(
+                start_date=start_date,
+                end_date=end_date,
+                limit=limit,
+                cursor=cursor,
+            )
+        except ValueError as error:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "invalid_source_event_cursor",
+                    "message": str(error),
+                },
+            ) from error
         return {
             "success": True,
             "data": {"collection_source_events": _pack_payload(pack)},
