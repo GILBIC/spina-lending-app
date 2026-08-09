@@ -63,6 +63,8 @@ def _payload(item: OpeningBalanceJournalPreparation) -> dict[str, object]:
         "total_debit": _decimal(item.total_debit),
         "total_credit": _decimal(item.total_credit),
         "draft_prepared": item.draft_prepared,
+        "preparation_ready": item.preparation_ready,
+        "preparation_blocker": item.preparation_blocker,
         "opening_balance_posting_enabled": item.opening_balance_posting_enabled,
         "automatic_source_posting_enabled": item.automatic_source_posting_enabled,
         "notice": (
