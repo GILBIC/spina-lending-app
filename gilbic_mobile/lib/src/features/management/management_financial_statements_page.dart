@@ -438,7 +438,17 @@ class _ErrorPanel extends StatelessWidget {
 
 String _money(double amount) {
   final absolute = amount.abs().toStringAsFixed(2);
-  return amount < 0 ? '(₱$absolute)' : '₱$absolute';
+  final parts = absolute.split('.');
+  final whole = parts.first;
+  final grouped = StringBuffer();
+  for (var index = 0; index < whole.length; index += 1) {
+    if (index > 0 && (whole.length - index) % 3 == 0) {
+      grouped.write(',');
+    }
+    grouped.write(whole[index]);
+  }
+  final formatted = '${grouped.toString()}.${parts.last}';
+  return amount < 0 ? '(₱$formatted)' : '₱$formatted';
 }
 
 String _date(DateTime value) {
