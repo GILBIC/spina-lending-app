@@ -7,6 +7,7 @@ from uuid import UUID
 
 
 ZERO = Decimal("0.00")
+SUPPORTED_EIR_MODES = frozenset({"fixed_daily", "seven_by_seven"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,51 +78,20 @@ def collection_source_event_key(transaction_id: UUID) -> str:
     return f"collection:{transaction_id}"
 
 
-def _receivable_key(calculation_mode: str) -> str | None:
-    if calculation_mode == "fixed_daily":
-        return "loans_receivable_regular"
-    if calculation_mode == "seven_by_seven":
-        return "loans_receivable_7x7"
-    return None
-
-
-def _lines(event: CollectionSourceEvent) -> tuple[AccountingPreviewLine, ...]:
-    receivable_key = _receivable_key(event.calculation_mode)
-    if receivable_key is None or event.amount <= ZERO:
-        return ()
-    receivable_label = (
-        "Loans Receivable - 7x7"
-        if receivable_key == "loans_receivable_7x7"
-        else "Loans Receivable - Regular"
-    )
-    return (
-        AccountingPreviewLine(
-            account_system_key="cash_collector_custody",
-            side="debit",
-            amount=event.amount,
-            label="Cash - Collector Custody",
-        ),
-        AccountingPreviewLine(
-            account_system_key=receivable_key,
-            side="credit",
-            amount=event.amount,
-            label=receivable_label,
-        ),
-    )
-
-
 def build_collection_accounting_preview(
     event: CollectionSourceEvent,
     *,
     cutover_date: date | None,
 ) -> CollectionAccountingPreview:
-    """Build a read-only accounting interpretation of one collection event.
+    """Classify one collection for future accounting without inventing entries.
 
-    This intentionally maps only cash movement against the amortized-cost loan
-    carrying amount. EIR interest recognition is a separate accounting event and
-    is never inferred from PAYMENT/ADV cash. PASS is non-cash. Voids are shown as
-    either no-accounting-needed or controlled-reversal-required depending on
-    whether a future source journal already exists.
+    The Stage 5D EIR engine carries loans in two accounting components: a loan
+    component (1100 Regular or 1110 7x7) plus accrued effective interest (1120).
+    Cash is applied to accrued EIR first and then the loan component. Therefore
+    PAYMENT/ADV cannot safely become a journal line from the operational cash
+    amount alone. This preview proves source identity, cutover, void/reversal and
+    duplicate state, then blocks journal mapping as ``eir_allocation_required``
+    until an event-date EIR allocation layer is implemented and reconciled.
     """
 
     source_key = collection_source_event_key(event.transaction_id)
@@ -250,13 +220,12 @@ def build_collection_accounting_preview(
             proposed_lines=(),
         )
 
-    receivable_key = _receivable_key(event.calculation_mode)
-    if receivable_key is None:
+    if event.calculation_mode not in SUPPORTED_EIR_MODES:
         return CollectionAccountingPreview(
             **base,
             disposition="policy_review",
             posting_eligible=False,
-            message="This loan calculation mode has no approved accounting source-event mapping yet.",
+            message="This loan calculation mode has no approved EIR source-event allocation policy yet.",
             proposed_lines=(),
         )
 
@@ -266,32 +235,32 @@ def build_collection_accounting_preview(
                 **base,
                 disposition="already_posted",
                 posting_eligible=False,
-                message="A posted accounting journal already exists for this deterministic collection source key.",
-                proposed_lines=_lines(event),
+                message="A posted accounting journal already exists for this deterministic collection source key. Review its EIR allocation before enabling any future automation.",
+                proposed_lines=(),
             )
         if event.journal_status == "draft":
             return CollectionAccountingPreview(
                 **base,
                 disposition="draft_exists",
                 posting_eligible=False,
-                message="An accounting journal draft already exists for this deterministic collection source key.",
-                proposed_lines=_lines(event),
+                message="An accounting journal draft already exists for this deterministic collection source key. It must be reviewed against the EIR allocation policy before posting.",
+                proposed_lines=(),
             )
         return CollectionAccountingPreview(
             **base,
             disposition="accounting_state_review",
             posting_eligible=False,
             message="An unexpected accounting journal state exists for this source event.",
-            proposed_lines=_lines(event),
+            proposed_lines=(),
         )
 
     return CollectionAccountingPreview(
         **base,
-        disposition="preview_ready",
+        disposition="eir_allocation_required",
         posting_eligible=False,
         message=(
-            "Read-only proposal only: debit Cash - Collector Custody and credit the loan carrying amount. "
-            "EIR interest recognition remains a separate accounting event. Automatic source posting is disabled."
+            "The collection is an authoritative post-cutover cash source, but no journal lines are proposed yet. "
+            "The EIR carrying amount is split between the loan component and accrued effective interest; cash must be allocated to accrued EIR first and then principal/carrying amount using an event-date EIR schedule. Automatic source posting remains disabled."
         ),
-        proposed_lines=_lines(event),
+        proposed_lines=(),
     )
