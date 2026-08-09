@@ -158,11 +158,13 @@ class PostgresFinancialStatementsRepository:
                     cursor,
                     period_id=period.period_id,
                     through_date=None,
+                    exclude_period_close=True,
                 )
                 cumulative_movements = self._load_movements(
                     cursor,
                     period_id=None,
                     through_date=period.end_date,
+                    exclude_period_close=False,
                 )
                 return build_financial_statement_pack(
                     period=period,
@@ -207,6 +209,7 @@ class PostgresFinancialStatementsRepository:
         *,
         period_id: UUID | None,
         through_date: date | None,
+        exclude_period_close: bool,
     ) -> tuple[AccountMovement, ...]:
         cursor.execute(
             """
@@ -219,11 +222,13 @@ class PostgresFinancialStatementsRepository:
                     where journal.status = 'posted'
                       and (%s::uuid is null or journal.fiscal_period_id = %s::uuid)
                       and (%s::date is null or journal.posting_date <= %s::date)
+                      and (%s::boolean = false or coalesce(journal.source_type, '') <> 'period_close')
                 ), 0) as total_debit,
                 coalesce(sum(line.credit) filter (
                     where journal.status = 'posted'
                       and (%s::uuid is null or journal.fiscal_period_id = %s::uuid)
                       and (%s::date is null or journal.posting_date <= %s::date)
+                      and (%s::boolean = false or coalesce(journal.source_type, '') <> 'period_close')
                 ), 0) as total_credit
             from accounting.accounts account
             left join accounting.journal_lines line
@@ -239,10 +244,12 @@ class PostgresFinancialStatementsRepository:
                 period_id,
                 through_date,
                 through_date,
+                exclude_period_close,
                 period_id,
                 period_id,
                 through_date,
                 through_date,
+                exclude_period_close,
             ),
         )
         return tuple(
