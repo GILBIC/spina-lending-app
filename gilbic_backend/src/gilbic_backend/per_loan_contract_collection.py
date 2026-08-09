@@ -20,10 +20,11 @@ class PerLoanContractAwareCrossCollectorCollectionPostingBridge(
 ):
     """Use Stage 5E.4.6A immutable per-loan activation as the only live switch.
 
-    Loans without an active per-loan event stay on the existing official collection
-    path. A loan with an active event must still pass every signed-contract,
-    DPD-readiness, balance-reconciliation, operational-mode, and accounting guard
-    before the inherited contractual allocation logic can run.
+    A loan with no activation history stays on the existing official collection
+    path. Once Management has explicitly activated contractual collection, a later
+    deactivation blocks mobile collection instead of silently reverting the loan to
+    legacy date-based handling. Active loans must still pass every signed-contract,
+    DPD-readiness, balance-reconciliation, operational-mode, and accounting guard.
     """
 
     def _load_contract_gate(
@@ -37,7 +38,7 @@ class PerLoanContractAwareCrossCollectorCollectionPostingBridge(
             cursor.execute(
                 """
                 select
-                    activation.is_active as activation_is_active,
+                    coalesce(activation.event_action, '') as activation_action,
                     activation.schedule_id as activation_schedule_id,
                     lower(coalesce(loan_type.settings->>'mobile_collections_enabled', ''))
                         in ('true', '1', 'yes', 'on') as mobile_collections_enabled,
@@ -74,9 +75,20 @@ class PerLoanContractAwareCrossCollectorCollectionPostingBridge(
             )
             row = cursor.fetchone()
 
-        # A loan with no explicit active event remains on the existing official path.
-        if row is None or not bool(row["activation_is_active"]):
+        # No activation history means the loan remains on the established official path.
+        if row is None or not str(row["activation_action"] or ""):
             return None
+        if str(row["activation_action"]) == "deactivate":
+            raise CollectionRejected(
+                "Contractual mobile collection is deactivated for this loan. "
+                "Management must reactivate it before another mobile collection is saved.",
+                code="contract_collection_deactivated",
+            )
+        if str(row["activation_action"]) != "activate":
+            raise CollectionRejected(
+                "This loan has an unknown contractual collection activation state.",
+                code="contract_activation_state_invalid",
+            )
 
         if not bool(row["mobile_collections_enabled"]):
             raise CollectionRejected(
