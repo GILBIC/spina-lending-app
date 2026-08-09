@@ -26,6 +26,8 @@ class OpeningBalanceJournalPreparation:
     total_debit: Decimal
     total_credit: Decimal
     draft_prepared: bool
+    preparation_ready: bool
+    preparation_blocker: str | None
     opening_balance_posting_enabled: bool
     automatic_source_posting_enabled: bool
 
@@ -88,6 +90,8 @@ class PostgresOpeningBalanceJournalRepository:
                 total_debit,
                 total_credit,
                 draft_prepared,
+                preparation_ready,
+                preparation_blocker,
                 opening_balance_posting_enabled,
                 automatic_source_posting_enabled
             from accounting.opening_balance_journal_preparation_status
@@ -122,6 +126,12 @@ class PostgresOpeningBalanceJournalRepository:
             total_debit=Decimal(row["total_debit"] or 0),
             total_credit=Decimal(row["total_credit"] or 0),
             draft_prepared=bool(row["draft_prepared"]),
+            preparation_ready=bool(row["preparation_ready"]),
+            preparation_blocker=(
+                str(row["preparation_blocker"])
+                if row["preparation_blocker"]
+                else None
+            ),
             opening_balance_posting_enabled=bool(
                 row["opening_balance_posting_enabled"]
             ),
