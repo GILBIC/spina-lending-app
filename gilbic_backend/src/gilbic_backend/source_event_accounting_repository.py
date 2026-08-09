@@ -108,7 +108,7 @@ class PostgresSourceEventAccountingRepository:
                     db_cursor,
                     start_date=start_date,
                     end_date=end_date,
-                    cursor=decoded_cursor,
+                    page_cursor=decoded_cursor,
                     limit=safe_limit + 1,
                 )
 
@@ -143,8 +143,8 @@ class PostgresSourceEventAccountingRepository:
         )
 
     @staticmethod
-    def _load_cutover(cursor):
-        cursor.execute(
+    def _load_cutover(db_cursor):
+        db_cursor.execute(
             """
             select
                 workbook.cutover_date,
@@ -158,11 +158,11 @@ class PostgresSourceEventAccountingRepository:
             limit 1
             """
         )
-        return cursor.fetchone()
+        return db_cursor.fetchone()
 
     @staticmethod
-    def _account_configuration(cursor) -> tuple[bool, str | None]:
-        cursor.execute(
+    def _account_configuration(db_cursor) -> tuple[bool, str | None]:
+        db_cursor.execute(
             """
             select system_key, is_active, is_posting
             from accounting.accounts
@@ -170,7 +170,7 @@ class PostgresSourceEventAccountingRepository:
             """,
             (list(REQUIRED_ACCOUNT_KEYS),),
         )
-        rows = {str(row["system_key"]): row for row in cursor.fetchall()}
+        rows = {str(row["system_key"]): row for row in db_cursor.fetchall()}
         missing = [key for key in REQUIRED_ACCOUNT_KEYS if key not in rows]
         invalid = [
             key
@@ -185,14 +185,14 @@ class PostgresSourceEventAccountingRepository:
 
     @staticmethod
     def _load_collection_events(
-        cursor,
+        db_cursor,
         *,
         start_date: date | None,
         end_date: date | None,
-        cursor: SourceEventCursor | None,
+        page_cursor: SourceEventCursor | None,
         limit: int,
     ) -> tuple[CollectionSourceEvent, ...]:
-        cursor.execute(
+        db_cursor.execute(
             """
             select
                 transaction.id as transaction_id,
@@ -243,10 +243,10 @@ class PostgresSourceEventAccountingRepository:
                 start_date,
                 end_date,
                 end_date,
-                cursor.collection_date if cursor else None,
-                cursor.collection_date if cursor else None,
-                cursor.accepted_at if cursor else None,
-                cursor.transaction_id if cursor else None,
+                page_cursor.collection_date if page_cursor else None,
+                page_cursor.collection_date if page_cursor else None,
+                page_cursor.accepted_at if page_cursor else None,
+                page_cursor.transaction_id if page_cursor else None,
                 limit,
             ),
         )
@@ -295,5 +295,5 @@ class PostgresSourceEventAccountingRepository:
                     else None
                 ),
             )
-            for row in cursor.fetchall()
+            for row in db_cursor.fetchall()
         )
