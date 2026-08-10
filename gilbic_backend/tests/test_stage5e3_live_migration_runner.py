@@ -36,8 +36,12 @@ def test_stage5e3_live_runner_is_idempotent() -> None:
     assert "Stage 5E.3 is already installed; skipping migration application" in RUNNER
 
 
-def test_workflow_only_runs_live_migration_on_main_push() -> None:
-    assert "One-time Stage 5E.3 live outcome-review migration" in WORKFLOW
-    assert "github.event_name == 'push'" in WORKFLOW
-    assert "tools/stage5e3-live-migration.once" in WORKFLOW
-    assert "--expected-episodes 992 --expected-usable 919" in WORKFLOW
+def test_workflow_runs_stage5e3_live_migration_only_by_manual_dispatch() -> None:
+    name = "Manual Stage 5E.3 live outcome-review migration"
+    assert name in WORKFLOW
+    step = WORKFLOW.split(f"      - name: {name}", 1)[1].split("\n      - name:", 1)[0]
+    assert "github.event_name == 'workflow_dispatch'" in step
+    assert "inputs.run_legacy_live_migrations" in step
+    assert "github.event_name == 'push'" not in step
+    assert "tools/stage5e3-live-migration.once" in step
+    assert "--expected-episodes 992 --expected-usable 919" in step
