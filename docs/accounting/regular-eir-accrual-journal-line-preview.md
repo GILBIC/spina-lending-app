@@ -1,8 +1,8 @@
 # Read-only fiscal-period-aware Regular EIR accrual proposals
 
-Status: **backend-only accounting preview**. This slice creates no migration,
-journal draft, posted General Ledger entry, lending mutation, or automatic source
-posting.
+Status: **Stage 5D.7 backend-only accounting preview**. This slice creates no
+migration, journal draft, posted General Ledger entry, lending mutation, or
+automatic source posting.
 
 ## Purpose
 
@@ -24,33 +24,55 @@ The recognized EIR interval is `(prior cash boundary, current collection date]`.
 Lines appear only when one **open** fiscal period covers every calendar day in
 that interval.
 
-The current allocator rounds recognized EIR at the cash-event boundary. If an
-interval crosses fiscal periods, this preview returns
-`fiscal_period_split_required` and no lines. It does not guess how to divide an
-already-rounded boundary amount. A later policy must prove daily/period boundary
-rounding before split-period proposals are allowed.
+The allocator rounds recognized EIR at the cash-event boundary using the existing
+`ROUND_HALF_UP` convention. If an interval crosses fiscal periods, Stage 5D.7
+applies the approved `regular_eir_period_split_v1` policy to the preserved exact
+daily evidence. It exposes a reconciled allocation preview but still emits no
+journal lines. Period-specific journal proposal and posting controls remain a
+later protected stage.
 
 If the allocator recognizes zero cents at a boundary, the result is
 `no_eir_accrual_required`; no zero-value journal is proposed.
 
 ## Cross-period split evidence
 
-When an interval crosses fiscal periods, the allocator now preserves the exact,
+When an interval crosses fiscal periods, the allocator preserves the exact,
 unrounded EIR calculated for every elapsed calendar day. The preview groups that
 evidence by fiscal period and reports:
 
 - the exact accrual dates and day count assigned to each period;
 - the period's unrounded EIR amount;
+- a four-decimal audit-display amount that never replaces the exact value;
 - that period's independently rounded cent amount;
-- the total of the independently rounded periods; and
-- the residual versus the EIR cent already recognized at the cash-event boundary.
+- its whole-cent floor and exact fractional-cent remainder;
+- deterministic allocation rank and awarded residual cent;
+- its final two-decimal allocated PHP amount;
+- the total of the independently rounded periods and their pre-allocation
+  residual; and
+- the final allocated total and zero unallocated residual.
 
-This makes the rounding decision auditable without silently making it. A residual
-may exist because rounding each period independently can differ from rounding the
-complete cash-event interval once. The preview therefore continues to return
-`fiscal_period_split_required`, `split_policy_required=true`, no proposed lines,
-and `posting_eligible=false` until Management approves a deterministic residual-
-cent allocation policy.
+The policy starts each positive period at its whole-cent floor. It awards the
+remaining cent or cents in this order:
+
+1. largest fractional-cent remainder;
+2. larger exact period amount;
+3. earlier fiscal-period start date; and
+4. stable fiscal-period UUID.
+
+The output is chronological and independent of input order. A residual may be
+positive or negative when compared with independently rounding each period, but
+the final allocated period total must equal the already-recognized cash-boundary
+EIR cent exactly. `fiscal_period_split_allocation_preview_ready` therefore
+requires `period_allocation_reconciled=true` and `unallocated_residual=0.00`.
+
+Four decimals are display-only. Exact `Decimal` evidence remains the calculation
+basis, while final PHP ledger candidates remain two decimals. No sub-cent amount
+is carried into a later event, and no separate rounding account is introduced.
+
+If any affected fiscal period is `review` or `closed`, the result is
+`fiscal_period_split_period_not_open`. If exact daily coverage, period coverage,
+or target reconciliation cannot be proven, the preview fails closed. None of
+these paths proposes journal lines or claims posting eligibility.
 
 The daily evidence is internal calculation support. The API exposes only the
 period aggregates needed for review; it does not expose or persist a new lending

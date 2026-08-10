@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
 import pytest
 
-from gilbic_backend.eir_cash_allocation import EirCashAllocation
+from gilbic_backend.eir_cash_allocation import (
+    EirCashAllocation,
+    EirCashSourceEvent,
+    EirCutoverState,
+    allocate_event_date_eir_cash,
+)
 from gilbic_backend.regular_accounting_sequence_preview import (
     build_regular_accounting_sequence_preview,
 )
@@ -165,7 +170,68 @@ def test_cross_period_accrual_blocks_the_whole_sequence() -> None:
     result = build_regular_accounting_sequence_preview(accrual, collection)
 
     assert result.disposition == "regular_accounting_sequence_preview_blocked"
-    assert result.blocker_code == "fiscal_period_split_required"
+    assert result.blocker_code == "fiscal_period_split_evidence_required"
+    assert result.ordered_entries == ()
+    assert result.posting_eligible is False
+
+
+def test_allocated_cross_period_evidence_still_blocks_sequence() -> None:
+    state = EirCutoverState(
+        loan_id=UUID("55555555-5555-4555-8555-555555555555"),
+        calculation_mode="fixed_daily",
+        cutover_date=date(2026, 7, 30),
+        due_date=date(2026, 12, 6),
+        measurement_status="measured",
+        daily_eir=Decimal("0.000025"),
+        loan_component=Decimal("100.00"),
+        accrued_interest_component=Decimal("0.00"),
+        gross_carrying_amount=Decimal("100.00"),
+    )
+    event = EirCashSourceEvent(
+        transaction_id=TX_ID,
+        collection_date=date(2026, 8, 1),
+        accepted_at=datetime(2026, 8, 1, 9, tzinfo=timezone.utc),
+        entry_type="payment",
+        amount=Decimal("1.00"),
+    )
+    allocation_result = allocate_event_date_eir_cash(state, (event,))
+    item = allocation_result.allocations[0]
+    collection = build_regular_collection_journal_preview(
+        item,
+        allocation_result_status=allocation_result.status,
+        opening_balance_posted=True,
+        protected_snapshot_available=True,
+        protected_snapshot_reconciled=True,
+        source_history_complete=True,
+        account_configuration_ready=True,
+    )
+    july = fiscal_period(
+        period_id=JULY_ID,
+        label="July 2026",
+        start=date(2026, 7, 1),
+        end=date(2026, 7, 31),
+    )
+    august = fiscal_period(
+        start=date(2026, 8, 1),
+        end=date(2026, 8, 31),
+    )
+    accrual = build_regular_eir_accrual_journal_preview(
+        item,
+        allocation_result_status=allocation_result.status,
+        accrual_start_date=state.cutover_date,
+        fiscal_periods=(july, august),
+        opening_balance_posted=True,
+        protected_snapshot_available=True,
+        protected_snapshot_reconciled=True,
+        source_history_complete=True,
+        account_configuration_ready=True,
+    )
+
+    result = build_regular_accounting_sequence_preview(accrual, collection)
+
+    assert accrual.disposition == "fiscal_period_split_allocation_preview_ready"
+    assert accrual.period_allocation_reconciled is True
+    assert result.blocker_code == "fiscal_period_split_allocation_preview_ready"
     assert result.ordered_entries == ()
     assert result.posting_eligible is False
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -40,6 +40,13 @@ def _money(value: Decimal | None) -> str | None:
 
 def _exact_decimal(value: Decimal) -> str:
     return format(value, "f")
+
+
+def _audit_four_places(value: Decimal) -> str:
+    return format(
+        value.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP),
+        ".4f",
+    )
 
 
 def _allocation_item_payload(item: EirCashAllocation) -> dict[str, object]:
@@ -159,9 +166,26 @@ def _eir_accrual_period_evidence_payload(
         "effective_interest_raw": _exact_decimal(
             evidence.effective_interest_raw
         ),
+        "effective_interest_audit_4dp": _audit_four_places(
+            evidence.effective_interest_raw
+        ),
         "effective_interest_rounded": _money(
             evidence.effective_interest_rounded
         ),
+        "effective_interest_floor": _money(
+            evidence.effective_interest_floor
+        ),
+        "fractional_cent_remainder": _exact_decimal(
+            evidence.fractional_cent_remainder
+        ),
+        "allocation_rank": evidence.allocation_rank,
+        "residual_cent_adjustment": _money(
+            evidence.residual_cent_adjustment
+        ),
+        "effective_interest_allocated": _money(
+            evidence.effective_interest_allocated
+        ),
+        "received_residual_cent": evidence.received_residual_cent,
     }
 
 
@@ -205,6 +229,10 @@ def _eir_accrual_preview_payload(
         "period_rounded_total": _money(preview.period_rounded_total),
         "rounding_residual": _money(preview.rounding_residual),
         "split_policy_required": preview.split_policy_required,
+        "period_split_policy_version": preview.period_split_policy_version,
+        "period_allocated_total": _money(preview.period_allocated_total),
+        "unallocated_residual": _money(preview.unallocated_residual),
+        "period_allocation_reconciled": preview.period_allocation_reconciled,
     }
 
 
@@ -289,9 +317,10 @@ def _pack_payload(pack: EirCashAllocationPack) -> dict[str, object]:
             "Read-only event-date EIR cash allocation plus fiscal-period-aware "
             "Regular EIR accrual and collection journal-line previews. Accrual "
             "lines appear only when one open fiscal period covers the full "
-            "recognized interval. Cross-period intervals expose exact raw and "
-            "independently rounded period evidence but remain fail-closed until "
-            "Management approves how any residual cent is allocated. Exact ready "
+            "recognized interval. Cross-period intervals expose exact raw, "
+            "four-decimal audit-display, and deterministic cent-allocation evidence "
+            "under regular_eir_period_split_v1, while journal lines remain "
+            "fail-closed. Exact ready "
             "previews are also paired into an all-or-none sequence in which the "
             "required EIR accrual precedes its matching collection. No journal "
             "draft, posted entry, lending mutation, or automatic source posting "

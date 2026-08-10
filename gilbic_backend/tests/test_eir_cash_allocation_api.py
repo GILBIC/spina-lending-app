@@ -227,6 +227,10 @@ def test_management_can_load_exact_decimal_eir_cash_allocation_reference() -> No
     assert accrual["period_rounded_total"] == "0.00"
     assert accrual["rounding_residual"] == "0.00"
     assert accrual["split_policy_required"] is False
+    assert accrual["period_split_policy_version"] is None
+    assert accrual["period_allocated_total"] == "0.00"
+    assert accrual["unallocated_residual"] == "0.00"
+    assert accrual["period_allocation_reconciled"] is False
     assert accrual["proposed_lines"] == [
         {
             "account_system_key": "accrued_interest_receivable",
@@ -319,6 +323,12 @@ def test_cross_period_eir_evidence_serializes_raw_and_cent_values_separately() -
         day_count=1,
         effective_interest_raw=Decimal("0.00250000"),
         effective_interest_rounded=Decimal("0.00"),
+        effective_interest_floor=Decimal("0.00"),
+        fractional_cent_remainder=Decimal("0.00250000"),
+        allocation_rank=2,
+        residual_cent_adjustment=Decimal("0.00"),
+        effective_interest_allocated=Decimal("0.00"),
+        received_residual_cent=False,
     )
     august = RegularEirAccrualPeriodEvidence(
         period_id=UUID("66666666-6666-4666-8666-666666666666"),
@@ -331,6 +341,12 @@ def test_cross_period_eir_evidence_serializes_raw_and_cent_values_separately() -
         day_count=1,
         effective_interest_raw=Decimal("0.00250006250000"),
         effective_interest_rounded=Decimal("0.00"),
+        effective_interest_floor=Decimal("0.00"),
+        fractional_cent_remainder=Decimal("0.00250006250000"),
+        allocation_rank=1,
+        residual_cent_adjustment=Decimal("0.01"),
+        effective_interest_allocated=Decimal("0.01"),
+        received_residual_cent=True,
     )
     preview = RegularEirAccrualJournalPreview(
         transaction_id=TX_ID,
@@ -343,9 +359,9 @@ def test_cross_period_eir_evidence_serializes_raw_and_cent_values_separately() -
         fiscal_period_label=None,
         fiscal_period_status=None,
         amount=Decimal("0.01"),
-        disposition="fiscal_period_split_required",
+        disposition="fiscal_period_split_allocation_preview_ready",
         posting_eligible=False,
-        message="Management-approved residual policy required.",
+        message="Approved read-only allocation evidence.",
         proposed_lines=(),
         total_debit=Decimal("0.00"),
         total_credit=Decimal("0.00"),
@@ -353,14 +369,24 @@ def test_cross_period_eir_evidence_serializes_raw_and_cent_values_separately() -
         period_split_evidence=(july, august),
         period_rounded_total=Decimal("0.00"),
         rounding_residual=Decimal("0.01"),
-        split_policy_required=True,
+        split_policy_required=False,
+        period_split_policy_version="regular_eir_period_split_v1",
+        period_allocated_total=Decimal("0.01"),
+        unallocated_residual=Decimal("0.00"),
+        period_allocation_reconciled=True,
     )
 
     payload = _eir_accrual_preview_payload(preview)
 
-    assert payload["split_policy_required"] is True
+    assert payload["split_policy_required"] is False
+    assert payload["period_split_policy_version"] == (
+        "regular_eir_period_split_v1"
+    )
     assert payload["period_rounded_total"] == "0.00"
     assert payload["rounding_residual"] == "0.01"
+    assert payload["period_allocated_total"] == "0.01"
+    assert payload["unallocated_residual"] == "0.00"
+    assert payload["period_allocation_reconciled"] is True
     assert payload["proposed_lines"] == []
     evidence = payload["period_split_evidence"]
     assert isinstance(evidence, list)
@@ -371,6 +397,19 @@ def test_cross_period_eir_evidence_serializes_raw_and_cent_values_separately() -
     assert [item["effective_interest_rounded"] for item in evidence] == [
         "0.00",
         "0.00",
+    ]
+    assert [item["effective_interest_audit_4dp"] for item in evidence] == [
+        "0.0025",
+        "0.0025",
+    ]
+    assert [item["allocation_rank"] for item in evidence] == [2, 1]
+    assert [item["effective_interest_allocated"] for item in evidence] == [
+        "0.00",
+        "0.01",
+    ]
+    assert [item["received_residual_cent"] for item in evidence] == [
+        False,
+        True,
     ]
 
 
