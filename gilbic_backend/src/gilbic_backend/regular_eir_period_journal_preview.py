@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_FLOOR
 from uuid import UUID
 
 from .eir_cash_allocation import EirCashAllocation, money
@@ -95,19 +95,40 @@ def _source_allocation_is_exact(
     preview: RegularEirAccrualJournalPreview,
     protected_allocation: EirCashAllocation,
 ) -> bool:
+    expected_collection_source_key = (
+        f"collection:{protected_allocation.transaction_id}"
+    )
     return (
         protected_allocation.disposition == "allocation_reference_ready"
         and protected_allocation.posting_eligible is False
+        and protected_allocation.source_event_key == expected_collection_source_key
         and protected_allocation.transaction_id == preview.transaction_id
         and protected_allocation.source_event_key
         == preview.related_collection_source_event_key
         and preview.source_event_key
-        == f"eir_accrual:{protected_allocation.source_event_key}"
+        == f"eir_accrual:{expected_collection_source_key}"
         and protected_allocation.collection_date
         == preview.accrual_end_date_inclusive
         and protected_allocation.collection_date == preview.posting_date
         and protected_allocation.effective_interest_accrued_since_prior_event
         == preview.amount
+        and preview.amount > ZERO
+        and preview.amount == money(preview.amount)
+    )
+
+
+def _source_preview_control_envelope_is_exact(
+    preview: RegularEirAccrualJournalPreview,
+) -> bool:
+    return (
+        preview.fiscal_period_id is None
+        and preview.fiscal_period_label is None
+        and preview.fiscal_period_status is None
+        and preview.proposed_lines == ()
+        and preview.total_debit == ZERO
+        and preview.total_credit == ZERO
+        and preview.balanced is False
+        and preview.split_policy_required is False
     )
 
 
@@ -123,27 +144,34 @@ def _fiscal_period_references_are_exact(
     ):
         return False
 
+    period_by_id = {
+        period.period_id: period for period in protected_fiscal_periods
+    }
     matched_period_ids: set[UUID] = set()
     for item in evidence:
-        matching_periods = tuple(
-            period
-            for period in protected_fiscal_periods
-            if period.start_date <= item.accrual_start_date_inclusive
-            and item.accrual_end_date_inclusive <= period.end_date
-        )
-        if len(matching_periods) != 1:
-            return False
-        period = matching_periods[0]
+        period = period_by_id.get(item.period_id)
         if (
-            period.period_id in matched_period_ids
+            period is None
+            or period.period_id in matched_period_ids
             or period.status != "open"
-            or item.period_id != period.period_id
             or item.label != period.label
             or item.period_start_date != period.start_date
             or item.period_end_date != period.end_date
             or item.status != period.status
         ):
             return False
+
+        current_date = item.accrual_start_date_inclusive
+        while current_date <= item.accrual_end_date_inclusive:
+            owners = tuple(
+                candidate
+                for candidate in protected_fiscal_periods
+                if candidate.start_date <= current_date <= candidate.end_date
+            )
+            if len(owners) != 1 or owners[0].period_id != period.period_id:
+                return False
+            current_date += timedelta(days=1)
+
         matched_period_ids.add(period.period_id)
 
     return True
@@ -187,7 +215,11 @@ def _daily_evidence_is_exact(
         daily_by_date[item.accrual_date] = item.effective_interest_raw
         daily_raw_total += item.effective_interest_raw
 
-    if money(daily_raw_total) != preview.amount:
+    if (
+        previous_closing is None
+        or money(previous_closing) != protected_allocation.gross_carrying_before
+        or money(daily_raw_total) != preview.amount
+    ):
         return False
 
     for item in evidence:
@@ -239,6 +271,7 @@ def _evidence_is_exact(
     expected_last_accrual_date = preview.accrual_end_date_inclusive
 
     raw_total = Decimal("0")
+    rounded_total = ZERO
     allocated_total = ZERO
     base_total = ZERO
     previous_accrual_end: date | None = None
@@ -246,6 +279,11 @@ def _evidence_is_exact(
         segment_day_count = (
             item.accrual_end_date_inclusive - item.accrual_start_date_inclusive
         ).days + 1
+        expected_floor = item.effective_interest_raw.quantize(
+            CENT,
+            rounding=ROUND_FLOOR,
+        )
+        expected_remainder = item.effective_interest_raw - expected_floor
         if (
             item.status != "open"
             or item.day_count <= 0
@@ -269,14 +307,8 @@ def _evidence_is_exact(
             )
             or item.effective_interest_raw < 0
             or item.effective_interest_rounded != money(item.effective_interest_raw)
-            or item.effective_interest_floor < ZERO
-            or item.effective_interest_floor
-            != item.effective_interest_floor.quantize(CENT)
-            or item.effective_interest_floor > item.effective_interest_raw
-            or item.fractional_cent_remainder
-            != item.effective_interest_raw - item.effective_interest_floor
-            or item.fractional_cent_remainder < 0
-            or item.fractional_cent_remainder >= CENT
+            or item.effective_interest_floor != expected_floor
+            or item.fractional_cent_remainder != expected_remainder
             or item.allocation_rank is None
             or item.allocation_rank <= 0
             or item.allocation_rank > len(evidence)
@@ -292,6 +324,7 @@ def _evidence_is_exact(
             return False
         previous_accrual_end = item.accrual_end_date_inclusive
         raw_total += item.effective_interest_raw
+        rounded_total += item.effective_interest_rounded
         allocated_total += item.effective_interest_allocated
         base_total += item.effective_interest_floor
 
@@ -337,8 +370,11 @@ def _evidence_is_exact(
         ):
             return False
 
+    expected_rounding_residual = money(preview.amount - rounded_total)
     return (
         money(raw_total) == preview.amount
+        and preview.period_rounded_total == rounded_total
+        and preview.rounding_residual == expected_rounding_residual
         and allocated_total == preview.amount
         and allocated_total == preview.period_allocated_total
         and preview.unallocated_residual == ZERO
@@ -381,10 +417,12 @@ def _period_proposal(
         ),
     )
     total_debit = sum(
-        (line.amount for line in lines if line.side == "debit"), ZERO
+        (line.amount for line in lines if line.side == "debit"),
+        ZERO,
     )
     total_credit = sum(
-        (line.amount for line in lines if line.side == "credit"), ZERO
+        (line.amount for line in lines if line.side == "credit"),
+        ZERO,
     )
     return RegularEirFiscalPeriodJournalProposal(
         fiscal_period_id=evidence.period_id,
@@ -467,6 +505,16 @@ def build_regular_eir_period_journal_proposal_preview(
                 "the recognized cash-boundary amount."
             ),
         )
+    if not _source_preview_control_envelope_is_exact(preview):
+        return _blocked(
+            preview,
+            blocker_code="eir_period_source_preview_not_exact",
+            message=(
+                "The source cross-period preview contains an unexpected single-"
+                "period identity, journal line, balance state, or split-policy "
+                "control. No per-period journal lines are exposed."
+            ),
+        )
     if not _evidence_is_exact(
         preview,
         preview.period_split_evidence,
@@ -479,23 +527,32 @@ def build_regular_eir_period_journal_proposal_preview(
             message=(
                 "The fiscal-period evidence does not satisfy the deterministic "
                 "allocation, protected source/daily-EIR binding, protected fiscal-"
-                "period identity, and complete accrual-coverage contract. No "
-                "journal lines are exposed."
+                "period identity, complete accrual-coverage, and audit-reconciliation "
+                "contract. No journal lines are exposed."
             ),
         )
 
     proposals = tuple(
-        _period_proposal(evidence) for evidence in preview.period_split_evidence
+        _period_proposal(evidence)
+        for evidence in preview.period_split_evidence
     )
     if any(not proposal.balanced for proposal in proposals):
         return _blocked(
             preview,
             blocker_code="eir_period_journal_lines_not_balanced",
-            message="At least one fiscal-period journal-line proposal is not balanced.",
+            message=(
+                "At least one fiscal-period journal-line proposal is not balanced."
+            ),
         )
 
-    total_debit = sum((proposal.total_debit for proposal in proposals), ZERO)
-    total_credit = sum((proposal.total_credit for proposal in proposals), ZERO)
+    total_debit = sum(
+        (proposal.total_debit for proposal in proposals),
+        ZERO,
+    )
+    total_credit = sum(
+        (proposal.total_credit for proposal in proposals),
+        ZERO,
+    )
     if total_debit != total_credit or total_debit != preview.amount:
         return _blocked(
             preview,
@@ -512,7 +569,9 @@ def build_regular_eir_period_journal_proposal_preview(
         source_event_key=preview.source_event_key,
         amount=preview.amount,
         period_split_policy_version=preview.period_split_policy_version,
-        journal_preview_policy_version=REGULAR_EIR_PERIOD_JOURNAL_PREVIEW_POLICY_VERSION,
+        journal_preview_policy_version=(
+            REGULAR_EIR_PERIOD_JOURNAL_PREVIEW_POLICY_VERSION
+        ),
         period_allocated_total=preview.period_allocated_total,
         unallocated_residual=preview.unallocated_residual,
         disposition="eir_period_journal_lines_preview_ready",
