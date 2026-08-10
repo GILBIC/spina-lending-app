@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       upload_apk:
-        description: Upload the built APK as a temporary artifact
+        description: Build and upload the Android debug APK as a temporary artifact
         required: false
         default: false
         type: boolean
@@ -107,6 +107,7 @@ jobs:
         run: flutter test || exit /b 1
 
       - name: Build Android debug APK in generated host
+        if: github.event_name == 'workflow_dispatch' && inputs.upload_apk
         shell: cmd
         run: |
           set "HOST=%RUNNER_TEMP%\gilbic-android-host"
@@ -135,8 +136,8 @@ jobs:
           git diff --exit-code || exit /b 1
           git diff --cached --exit-code || exit /b 1
 
-      # Every validation still proves that Android builds successfully. The large
-      # APK is stored only when a person explicitly asks for it from Run workflow.
+      # Normal validation skips the large Android build. A manual Run workflow
+      # with upload_apk enabled builds and stores the temporary APK.
       - name: Upload Android debug APK
         if: github.event_name == 'workflow_dispatch' && inputs.upload_apk
         uses: actions/upload-artifact@v4
