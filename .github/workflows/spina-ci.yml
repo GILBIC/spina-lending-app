@@ -81,7 +81,7 @@ jobs:
           set "PROBE_OUTPUT=%RUNNER_TEMP%\spina-base-validation-proof.txt"
           if exist "%PROBE_OUTPUT%" del /q "%PROBE_OUTPUT%"
           python tools\reuse_validated_pr_ci.py --repository "${{ github.repository }}" --commit-sha "${{ github.event.pull_request.base.sha }}" --workflow-file "spina-ci.yml" --base-ref "main" --github-output "%PROBE_OUTPUT%" || exit /b 1
-          findstr /x /c:"reuse_validation=true" "%PROBE_OUTPUT%" >nul || exit /b 1
+          python -c "from pathlib import Path; assert Path(r'%RUNNER_TEMP%\spina-base-validation-proof.txt').read_text(encoding='utf-8').splitlines()[0] == 'reuse_validation=true'" || exit /b 1
 
       - name: Verify Python runtime
         shell: cmd
