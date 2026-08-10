@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
@@ -94,9 +94,11 @@ def _evidence_is_exact(
     preview: RegularEirAccrualJournalPreview,
     evidence: tuple[RegularEirAccrualPeriodEvidence, ...],
 ) -> bool:
-    if len(evidence) < 2:
-        return False
-    if len({item.period_id for item in evidence}) != len(evidence):
+    if (
+        len(evidence) < 2
+        or preview.accrual_start_date_exclusive >= preview.accrual_end_date_inclusive
+        or len({item.period_id for item in evidence}) != len(evidence)
+    ):
         return False
 
     chronological = tuple(
@@ -112,13 +114,24 @@ def _evidence_is_exact(
     if evidence != chronological:
         return False
 
-    ranks: set[int] = set()
+    expected_first_accrual_date = (
+        preview.accrual_start_date_exclusive + timedelta(days=1)
+    )
+    expected_last_accrual_date = preview.accrual_end_date_inclusive
+
     raw_total = Decimal("0")
     allocated_total = ZERO
-    for item in evidence:
+    base_total = ZERO
+    previous_accrual_end: date | None = None
+    for index, item in enumerate(evidence):
+        segment_day_count = (
+            item.accrual_end_date_inclusive
+            - item.accrual_start_date_inclusive
+        ).days + 1
         if (
             item.status != "open"
             or item.day_count <= 0
+            or item.day_count != segment_day_count
             or item.period_start_date > item.period_end_date
             or item.accrual_start_date_inclusive
             > item.accrual_end_date_inclusive
@@ -127,6 +140,16 @@ def _evidence_is_exact(
                 <= item.accrual_start_date_inclusive
                 <= item.accrual_end_date_inclusive
                 <= item.period_end_date
+            )
+            or (
+                index == 0
+                and item.accrual_start_date_inclusive
+                != expected_first_accrual_date
+            )
+            or (
+                previous_accrual_end is not None
+                and item.accrual_start_date_inclusive
+                != previous_accrual_end + timedelta(days=1)
             )
             or item.effective_interest_raw < 0
             or item.effective_interest_rounded
@@ -142,7 +165,6 @@ def _evidence_is_exact(
             or item.allocation_rank is None
             or item.allocation_rank <= 0
             or item.allocation_rank > len(evidence)
-            or item.allocation_rank in ranks
             or item.residual_cent_adjustment not in {ZERO, CENT}
             or item.received_residual_cent
             != (item.residual_cent_adjustment == CENT)
@@ -153,13 +175,62 @@ def _evidence_is_exact(
             != money(item.effective_interest_allocated)
         ):
             return False
-        ranks.add(item.allocation_rank)
+        previous_accrual_end = item.accrual_end_date_inclusive
         raw_total += item.effective_interest_raw
         allocated_total += item.effective_interest_allocated
+        base_total += item.effective_interest_floor
+
+    if previous_accrual_end != expected_last_accrual_date:
+        return False
+
+    ranked = tuple(
+        sorted(
+            evidence,
+            key=lambda item: (
+                -item.fractional_cent_remainder,
+                -item.effective_interest_raw,
+                item.period_start_date,
+                str(item.period_id),
+            ),
+        )
+    )
+    expected_ranks = {
+        item.period_id: rank
+        for rank, item in enumerate(ranked, start=1)
+    }
+    if any(
+        item.allocation_rank != expected_ranks[item.period_id]
+        for item in evidence
+    ):
+        return False
+
+    cents_to_award_raw = (preview.amount - base_total) / CENT
+    cents_to_award = int(cents_to_award_raw)
+    if (
+        cents_to_award_raw != Decimal(cents_to_award)
+        or cents_to_award < 0
+        or cents_to_award > len(evidence)
+    ):
+        return False
+
+    expected_recipients = {
+        item.period_id for item in ranked[:cents_to_award]
+    }
+    for item in evidence:
+        expected_adjustment = (
+            CENT if item.period_id in expected_recipients else ZERO
+        )
+        if (
+            item.residual_cent_adjustment != expected_adjustment
+            or item.received_residual_cent
+            != (item.period_id in expected_recipients)
+            or item.effective_interest_allocated
+            != item.effective_interest_floor + expected_adjustment
+        ):
+            return False
 
     return (
-        ranks == set(range(1, len(evidence) + 1))
-        and money(raw_total) == preview.amount
+        money(raw_total) == preview.amount
         and allocated_total == preview.amount
         and allocated_total == preview.period_allocated_total
         and preview.unallocated_residual == ZERO
@@ -284,7 +355,8 @@ def build_regular_eir_period_journal_proposal_preview(
             blocker_code="eir_period_split_evidence_not_exact",
             message=(
                 "The fiscal-period evidence does not satisfy the deterministic "
-                "allocation contract. No journal lines are exposed."
+                "allocation and complete accrual-coverage contract. No journal "
+                "lines are exposed."
             ),
         )
 
