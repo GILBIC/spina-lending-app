@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
-from .eir_cash_allocation import EirDailyAccrual, money
+from .eir_cash_allocation import EirCashAllocation, money
 from .regular_eir_accrual_journal_preview import (
     REGULAR_EIR_PERIOD_SPLIT_POLICY_VERSION,
     AccountingFiscalPeriodReference,
@@ -91,6 +91,26 @@ def _blocked(
     )
 
 
+def _source_allocation_is_exact(
+    preview: RegularEirAccrualJournalPreview,
+    protected_allocation: EirCashAllocation,
+) -> bool:
+    return (
+        protected_allocation.disposition == "allocation_reference_ready"
+        and protected_allocation.posting_eligible is False
+        and protected_allocation.transaction_id == preview.transaction_id
+        and protected_allocation.source_event_key
+        == preview.related_collection_source_event_key
+        and preview.source_event_key
+        == f"eir_accrual:{protected_allocation.source_event_key}"
+        and protected_allocation.collection_date
+        == preview.accrual_end_date_inclusive
+        and protected_allocation.collection_date == preview.posting_date
+        and protected_allocation.effective_interest_accrued_since_prior_event
+        == preview.amount
+    )
+
+
 def _fiscal_period_references_are_exact(
     evidence: tuple[RegularEirAccrualPeriodEvidence, ...],
     protected_fiscal_periods: tuple[AccountingFiscalPeriodReference, ...],
@@ -99,10 +119,7 @@ def _fiscal_period_references_are_exact(
         not protected_fiscal_periods
         or len({period.period_id for period in protected_fiscal_periods})
         != len(protected_fiscal_periods)
-        or any(
-            period.start_date > period.end_date
-            for period in protected_fiscal_periods
-        )
+        or any(period.start_date > period.end_date for period in protected_fiscal_periods)
     ):
         return False
 
@@ -135,7 +152,7 @@ def _fiscal_period_references_are_exact(
 def _daily_evidence_is_exact(
     preview: RegularEirAccrualJournalPreview,
     evidence: tuple[RegularEirAccrualPeriodEvidence, ...],
-    protected_daily_accruals: tuple[EirDailyAccrual, ...],
+    protected_allocation: EirCashAllocation,
 ) -> bool:
     expected_dates: list[date] = []
     current_date = preview.accrual_start_date_exclusive + timedelta(days=1)
@@ -143,6 +160,7 @@ def _daily_evidence_is_exact(
         expected_dates.append(current_date)
         current_date += timedelta(days=1)
 
+    protected_daily_accruals = protected_allocation.daily_accruals
     if (
         not protected_daily_accruals
         or tuple(item.accrual_date for item in protected_daily_accruals)
@@ -190,7 +208,7 @@ def _daily_evidence_is_exact(
 def _evidence_is_exact(
     preview: RegularEirAccrualJournalPreview,
     evidence: tuple[RegularEirAccrualPeriodEvidence, ...],
-    protected_daily_accruals: tuple[EirDailyAccrual, ...],
+    protected_allocation: EirCashAllocation,
     protected_fiscal_periods: tuple[AccountingFiscalPeriodReference, ...],
 ) -> bool:
     if (
@@ -212,10 +230,7 @@ def _evidence_is_exact(
     )
     if evidence != chronological:
         return False
-    if not _fiscal_period_references_are_exact(
-        evidence,
-        protected_fiscal_periods,
-    ):
+    if not _fiscal_period_references_are_exact(evidence, protected_fiscal_periods):
         return False
 
     expected_first_accrual_date = (
@@ -229,16 +244,14 @@ def _evidence_is_exact(
     previous_accrual_end: date | None = None
     for index, item in enumerate(evidence):
         segment_day_count = (
-            item.accrual_end_date_inclusive
-            - item.accrual_start_date_inclusive
+            item.accrual_end_date_inclusive - item.accrual_start_date_inclusive
         ).days + 1
         if (
             item.status != "open"
             or item.day_count <= 0
             or item.day_count != segment_day_count
             or item.period_start_date > item.period_end_date
-            or item.accrual_start_date_inclusive
-            > item.accrual_end_date_inclusive
+            or item.accrual_start_date_inclusive > item.accrual_end_date_inclusive
             or not (
                 item.period_start_date
                 <= item.accrual_start_date_inclusive
@@ -247,8 +260,7 @@ def _evidence_is_exact(
             )
             or (
                 index == 0
-                and item.accrual_start_date_inclusive
-                != expected_first_accrual_date
+                and item.accrual_start_date_inclusive != expected_first_accrual_date
             )
             or (
                 previous_accrual_end is not None
@@ -256,8 +268,7 @@ def _evidence_is_exact(
                 != previous_accrual_end + timedelta(days=1)
             )
             or item.effective_interest_raw < 0
-            or item.effective_interest_rounded
-            != money(item.effective_interest_raw)
+            or item.effective_interest_rounded != money(item.effective_interest_raw)
             or item.effective_interest_floor < ZERO
             or item.effective_interest_floor
             != item.effective_interest_floor.quantize(CENT)
@@ -286,11 +297,7 @@ def _evidence_is_exact(
 
     if previous_accrual_end != expected_last_accrual_date:
         return False
-    if not _daily_evidence_is_exact(
-        preview,
-        evidence,
-        protected_daily_accruals,
-    ):
+    if not _daily_evidence_is_exact(preview, evidence, protected_allocation):
         return False
 
     ranked = tuple(
@@ -305,13 +312,9 @@ def _evidence_is_exact(
         )
     )
     expected_ranks = {
-        item.period_id: rank
-        for rank, item in enumerate(ranked, start=1)
+        item.period_id: rank for rank, item in enumerate(ranked, start=1)
     }
-    if any(
-        item.allocation_rank != expected_ranks[item.period_id]
-        for item in evidence
-    ):
+    if any(item.allocation_rank != expected_ranks[item.period_id] for item in evidence):
         return False
 
     cents_to_award_raw = (preview.amount - base_total) / CENT
@@ -323,17 +326,12 @@ def _evidence_is_exact(
     ):
         return False
 
-    expected_recipients = {
-        item.period_id for item in ranked[:cents_to_award]
-    }
+    expected_recipients = {item.period_id for item in ranked[:cents_to_award]}
     for item in evidence:
-        expected_adjustment = (
-            CENT if item.period_id in expected_recipients else ZERO
-        )
+        expected_adjustment = CENT if item.period_id in expected_recipients else ZERO
         if (
             item.residual_cent_adjustment != expected_adjustment
-            or item.received_residual_cent
-            != (item.period_id in expected_recipients)
+            or item.received_residual_cent != (item.period_id in expected_recipients)
             or item.effective_interest_allocated
             != item.effective_interest_floor + expected_adjustment
         ):
@@ -408,16 +406,16 @@ def _period_proposal(
 def build_regular_eir_period_journal_proposal_preview(
     preview: RegularEirAccrualJournalPreview,
     *,
-    protected_daily_accruals: tuple[EirDailyAccrual, ...],
+    protected_allocation: EirCashAllocation,
     protected_fiscal_periods: tuple[AccountingFiscalPeriodReference, ...],
 ) -> RegularEirPeriodJournalProposalPreview:
     """Map reconciled cross-period EIR cents to balanced read-only lines.
 
-    This Stage 5D.8 mapper consumes the protected Stage 5D.7 allocation evidence,
-    exact protected daily EIR rows, and protected fiscal-period references. It
-    creates no journal draft, posting date, write path, or posting identity. The
-    higher-level Regular accounting sequence therefore remains fail-closed until a
-    separate protected cross-period sequencing stage exists.
+    This Stage 5D.8 mapper consumes the protected Stage 5D.7 allocation preview,
+    its protected source allocation (including exact daily EIR rows), and protected
+    fiscal-period references. It creates no journal draft, posting write path, or
+    posting identity. The higher-level Regular accounting sequence therefore
+    remains fail-closed until a separate protected cross-period sequencing stage.
     """
 
     if preview.posting_eligible:
@@ -429,6 +427,15 @@ def build_regular_eir_period_journal_proposal_preview(
                 "Per-period journal-line proposals remain blocked."
             ),
         )
+    if not _source_allocation_is_exact(preview, protected_allocation):
+        return _blocked(
+            preview,
+            blocker_code="eir_period_source_allocation_not_exact",
+            message=(
+                "The replayed Regular EIR preview is not exactly bound to the "
+                "protected source allocation. No journal lines are exposed."
+            ),
+        )
     if preview.disposition != "fiscal_period_split_allocation_preview_ready":
         return _blocked(
             preview,
@@ -438,10 +445,7 @@ def build_regular_eir_period_journal_proposal_preview(
                 "required before per-period journal lines can be proposed."
             ),
         )
-    if (
-        preview.period_split_policy_version
-        != REGULAR_EIR_PERIOD_SPLIT_POLICY_VERSION
-    ):
+    if preview.period_split_policy_version != REGULAR_EIR_PERIOD_SPLIT_POLICY_VERSION:
         return _blocked(
             preview,
             blocker_code="eir_period_split_policy_mismatch",
@@ -466,7 +470,7 @@ def build_regular_eir_period_journal_proposal_preview(
     if not _evidence_is_exact(
         preview,
         preview.period_split_evidence,
-        protected_daily_accruals,
+        protected_allocation,
         protected_fiscal_periods,
     ):
         return _blocked(
@@ -474,9 +478,9 @@ def build_regular_eir_period_journal_proposal_preview(
             blocker_code="eir_period_split_evidence_not_exact",
             message=(
                 "The fiscal-period evidence does not satisfy the deterministic "
-                "allocation, protected daily-EIR binding, protected fiscal-period "
-                "identity, and complete accrual-coverage contract. No journal "
-                "lines are exposed."
+                "allocation, protected source/daily-EIR binding, protected fiscal-"
+                "period identity, and complete accrual-coverage contract. No "
+                "journal lines are exposed."
             ),
         )
 
@@ -487,9 +491,7 @@ def build_regular_eir_period_journal_proposal_preview(
         return _blocked(
             preview,
             blocker_code="eir_period_journal_lines_not_balanced",
-            message=(
-                "At least one fiscal-period journal-line proposal is not balanced."
-            ),
+            message="At least one fiscal-period journal-line proposal is not balanced.",
         )
 
     total_debit = sum((proposal.total_debit for proposal in proposals), ZERO)
@@ -506,15 +508,11 @@ def build_regular_eir_period_journal_proposal_preview(
 
     return RegularEirPeriodJournalProposalPreview(
         transaction_id=preview.transaction_id,
-        related_collection_source_event_key=(
-            preview.related_collection_source_event_key
-        ),
+        related_collection_source_event_key=preview.related_collection_source_event_key,
         source_event_key=preview.source_event_key,
         amount=preview.amount,
         period_split_policy_version=preview.period_split_policy_version,
-        journal_preview_policy_version=(
-            REGULAR_EIR_PERIOD_JOURNAL_PREVIEW_POLICY_VERSION
-        ),
+        journal_preview_policy_version=REGULAR_EIR_PERIOD_JOURNAL_PREVIEW_POLICY_VERSION,
         period_allocated_total=preview.period_allocated_total,
         unallocated_residual=preview.unallocated_residual,
         disposition="eir_period_journal_lines_preview_ready",
