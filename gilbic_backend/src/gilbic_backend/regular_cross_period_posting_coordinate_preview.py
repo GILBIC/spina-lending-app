@@ -109,6 +109,32 @@ def _protected_periods_are_structurally_exact(
     )
 
 
+def _period_reference_replay_is_exact(
+    period_journal: RegularEirPeriodJournalProposalPreview,
+    periods: tuple[AccountingFiscalPeriodReference, ...],
+) -> bool:
+    by_id = {period.period_id: period for period in periods}
+    proposals = period_journal.period_proposals
+    if (
+        not proposals
+        or len({proposal.fiscal_period_id for proposal in proposals}) != len(proposals)
+    ):
+        return False
+
+    for proposal in proposals:
+        period = by_id.get(proposal.fiscal_period_id)
+        if period is None:
+            return False
+        if (
+            period.label != proposal.fiscal_period_label
+            or period.start_date != proposal.period_start_date
+            or period.end_date != proposal.period_end_date
+            or period.status != proposal.fiscal_period_status
+        ):
+            return False
+    return True
+
+
 def _sequence_is_structurally_exact(
     sequence: RegularCrossPeriodAccountingSequencePreview,
 ) -> bool:
@@ -245,12 +271,14 @@ def build_regular_cross_period_posting_coordinate_preview(
 
     Stage 5D.12 intentionally stops at read-only ledger coordinates. The supplied
     Stage 5D.10 sequence is first replayed from its protected Stage 5D.8 period
-    journal and collection previews and must match exactly. Every proposed posting
-    date then equals the already-proven recognition date and must fall in exactly
-    the intended open fiscal period. No source_type, source_reference,
-    source_event_key, journal number, draft, persistence record, or posting
-    permission is created here. Deterministic posting identity remains a separate
-    later policy decision.
+    journal and collection previews and must match exactly. Every protected fiscal
+    period used by Stage 5D.8 must also replay exactly by ID, label, dates, and
+    status. Every proposed posting date then equals the already-proven recognition
+    date and must fall in exactly the intended open fiscal period.
+
+    No source_type, source_reference, source_event_key, journal number, draft,
+    persistence record, or posting permission is created here. Deterministic
+    posting identity remains a separate later policy decision.
     """
 
     if sequence.posting_eligible or sequence.automatic_source_posting_enabled:
@@ -292,6 +320,18 @@ def build_regular_cross_period_posting_coordinate_preview(
             message=(
                 "Protected fiscal-period references must have unique identities, "
                 "valid ranges and statuses, and no date overlap."
+            ),
+        )
+    if not _period_reference_replay_is_exact(
+        protected_period_journal,
+        protected_fiscal_periods,
+    ):
+        return _blocked(
+            sequence,
+            blocker_code="posting_coordinate_fiscal_period_replay_not_exact",
+            message=(
+                "Protected fiscal-period references do not exactly match the Stage "
+                "5D.8 period evidence by ID, label, dates, and status."
             ),
         )
 
