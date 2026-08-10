@@ -23,11 +23,13 @@ def _pull_request(
     head_repo: str | None = REPOSITORY,
     repository_identity: str = REPOSITORY,
     user_login: str = "GILBIC",
+    merged: bool = True,
+    merged_at: str | None = "2026-08-10T06:00:00Z",
+    include_merge_detail: bool = True,
 ) -> dict[str, object]:
-    return {
+    pull_request: dict[str, object] = {
         "number": 286,
         "state": "closed",
-        "merged_at": "2026-08-10T06:00:00Z",
         "merge_commit_sha": MAIN_SHA,
         "user": {"login": user_login},
         "head": {
@@ -40,6 +42,10 @@ def _pull_request(
             "repo": {"full_name": repository_identity},
         },
     }
+    if include_merge_detail:
+        pull_request["merged"] = merged
+        pull_request["merged_at"] = merged_at
+    return pull_request
 
 
 def _workflow_run(
@@ -70,6 +76,7 @@ class ValidationReuseDecisionTests(unittest.TestCase):
         pulls: object,
         workflow_runs: object,
         fallback_pulls: object | None = None,
+        pull_detail: object | None = None,
         main_tree_sha: str | None = TREE_SHA,
         head_tree_sha: str | None = TREE_SHA,
     ) -> object:
@@ -83,6 +90,8 @@ class ValidationReuseDecisionTests(unittest.TestCase):
                 self.assertIn("sort=updated", url)
                 self.assertIn("direction=desc", url)
                 return [] if fallback_pulls is None else fallback_pulls
+            if url.endswith("/pulls/286"):
+                return _pull_request() if pull_detail is None else pull_detail
             if f"/git/commits/{MAIN_SHA}" in url:
                 return {"tree": {"sha": main_tree_sha}} if main_tree_sha else {}
             if f"/git/commits/{HEAD_SHA}" in url:
@@ -107,7 +116,7 @@ class ValidationReuseDecisionTests(unittest.TestCase):
 
     def test_exact_successful_owner_pr_reuses_full_validation(self) -> None:
         decision = self._decide(
-            pulls=[_pull_request()],
+            pulls=[_pull_request(include_merge_detail=False)],
             workflow_runs=[_workflow_run()],
         )
 
@@ -125,7 +134,7 @@ class ValidationReuseDecisionTests(unittest.TestCase):
     def test_closed_pr_fallback_handles_commit_association_lag(self) -> None:
         decision = self._decide(
             pulls=[],
-            fallback_pulls=[_pull_request()],
+            fallback_pulls=[_pull_request(include_merge_detail=False)],
             workflow_runs=[_workflow_run()],
         )
 
@@ -155,6 +164,7 @@ class ValidationReuseDecisionTests(unittest.TestCase):
     def test_missing_pr_head_repo_uses_successful_run_repository_proof(self) -> None:
         decision = self._decide(
             pulls=[_pull_request(head_repo=None)],
+            pull_detail=_pull_request(head_repo=None),
             workflow_runs=[_workflow_run()],
         )
 
@@ -178,6 +188,26 @@ class ValidationReuseDecisionTests(unittest.TestCase):
 
         self.assertFalse(decision.reuse_validation)
         self.assertEqual(decision.pull_request_number, 286)
+
+    def test_unmerged_pull_request_detail_fails_closed(self) -> None:
+        decision = self._decide(
+            pulls=[_pull_request(include_merge_detail=False)],
+            pull_detail=_pull_request(merged=False, merged_at=None),
+            workflow_runs=[_workflow_run()],
+        )
+
+        self.assertFalse(decision.reuse_validation)
+        self.assertIn("not tied", decision.reason)
+
+    def test_invalid_pull_request_detail_fails_closed(self) -> None:
+        decision = self._decide(
+            pulls=[_pull_request(include_merge_detail=False)],
+            pull_detail={"invalid": True},
+            workflow_runs=[_workflow_run()],
+        )
+
+        self.assertFalse(decision.reuse_validation)
+        self.assertIn("detail response was invalid", decision.reason)
 
     def test_different_merged_tree_fails_closed_to_full_validation(self) -> None:
         decision = self._decide(
@@ -212,6 +242,7 @@ class ValidationReuseDecisionTests(unittest.TestCase):
     def test_fork_pr_is_not_reused(self) -> None:
         decision = self._decide(
             pulls=[_pull_request(head_repo="someone/fork")],
+            pull_detail=_pull_request(head_repo="someone/fork"),
             workflow_runs=[_workflow_run(head_repository="someone/fork")],
         )
 
@@ -227,6 +258,8 @@ class ValidationReuseDecisionTests(unittest.TestCase):
                 return next(associated_responses)
             if "/pulls?" in url:
                 return []
+            if url.endswith("/pulls/286"):
+                return _pull_request()
             if f"/git/commits/{MAIN_SHA}" in url:
                 return {"tree": {"sha": TREE_SHA}}
             if f"/git/commits/{HEAD_SHA}" in url:
