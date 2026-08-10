@@ -9,6 +9,7 @@ from pathlib import Path
 REPOSITORY = "GILBIC/spina-lending-app"
 MAIN_SHA = "a" * 40
 HEAD_SHA = "b" * 40
+TREE_SHA = "c" * 40
 TOOL_PATH = Path(__file__).resolve().parents[2] / "tools" / "reuse_validated_pr_ci.py"
 SPEC = importlib.util.spec_from_file_location("reuse_validated_pr_ci", TOOL_PATH)
 assert SPEC is not None and SPEC.loader is not None
@@ -60,11 +61,17 @@ class ValidationReuseDecisionTests(unittest.TestCase):
         *,
         pulls: object,
         workflow_runs: object,
+        main_tree_sha: str | None = TREE_SHA,
+        head_tree_sha: str | None = TREE_SHA,
     ) -> object:
         def fetch_json(url: str, token: str) -> object:
             self.assertEqual(token, "token")
             if url.endswith("/pulls"):
                 return pulls
+            if f"/git/commits/{MAIN_SHA}" in url:
+                return {"tree": {"sha": main_tree_sha}} if main_tree_sha else {}
+            if f"/git/commits/{HEAD_SHA}" in url:
+                return {"tree": {"sha": head_tree_sha}} if head_tree_sha else {}
             self.assertIn("/actions/workflows/spina-ci.yml/runs?", url)
             self.assertIn(f"head_sha={HEAD_SHA}", url)
             self.assertIn("event=pull_request", url)
@@ -105,6 +112,28 @@ class ValidationReuseDecisionTests(unittest.TestCase):
 
         self.assertFalse(decision.reuse_validation)
         self.assertEqual(decision.pull_request_number, 286)
+
+    def test_different_merged_tree_fails_closed_to_full_validation(self) -> None:
+        decision = self._decide(
+            pulls=[_pull_request()],
+            workflow_runs=[_workflow_run()],
+            head_tree_sha="d" * 40,
+        )
+
+        self.assertFalse(decision.reuse_validation)
+        self.assertIn("tree differs", decision.reason)
+        self.assertEqual(decision.pull_request_number, 286)
+        self.assertEqual(decision.validated_head_sha, HEAD_SHA)
+
+    def test_missing_commit_tree_metadata_fails_closed_to_full_validation(self) -> None:
+        decision = self._decide(
+            pulls=[_pull_request()],
+            workflow_runs=[_workflow_run()],
+            main_tree_sha=None,
+        )
+
+        self.assertFalse(decision.reuse_validation)
+        self.assertIn("tree metadata was invalid", decision.reason)
 
     def test_successful_run_for_another_pr_is_not_reused(self) -> None:
         decision = self._decide(
