@@ -61,6 +61,7 @@ class ValidationReuseDecisionTests(unittest.TestCase):
         *,
         pulls: object,
         workflow_runs: object,
+        fallback_pulls: object | None = None,
         main_tree_sha: str | None = TREE_SHA,
         head_tree_sha: str | None = TREE_SHA,
     ) -> object:
@@ -68,6 +69,12 @@ class ValidationReuseDecisionTests(unittest.TestCase):
             self.assertEqual(token, "token")
             if url.endswith("/pulls"):
                 return pulls
+            if "/pulls?" in url:
+                self.assertIn("state=closed", url)
+                self.assertIn("base=main", url)
+                self.assertIn("sort=updated", url)
+                self.assertIn("direction=desc", url)
+                return [] if fallback_pulls is None else fallback_pulls
             if f"/git/commits/{MAIN_SHA}" in url:
                 return {"tree": {"sha": main_tree_sha}} if main_tree_sha else {}
             if f"/git/commits/{HEAD_SHA}" in url:
@@ -103,6 +110,28 @@ class ValidationReuseDecisionTests(unittest.TestCase):
 
         self.assertFalse(decision.reuse_validation)
         self.assertIn("not tied", decision.reason)
+
+    def test_closed_pr_fallback_handles_commit_association_lag(self) -> None:
+        decision = self._decide(
+            pulls=[],
+            fallback_pulls=[_pull_request()],
+            workflow_runs=[_workflow_run()],
+        )
+
+        self.assertTrue(decision.reuse_validation)
+        self.assertEqual(decision.pull_request_number, 286)
+        self.assertEqual(decision.validated_head_sha, HEAD_SHA)
+        self.assertEqual(decision.workflow_run_id, 123456)
+
+    def test_invalid_closed_pr_fallback_fails_closed(self) -> None:
+        decision = self._decide(
+            pulls=[],
+            fallback_pulls={"invalid": True},
+            workflow_runs=[_workflow_run()],
+        )
+
+        self.assertFalse(decision.reuse_validation)
+        self.assertIn("closed pull-request response was invalid", decision.reason)
 
     def test_failed_pr_run_fails_closed_to_full_validation(self) -> None:
         decision = self._decide(
