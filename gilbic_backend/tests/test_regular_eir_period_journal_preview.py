@@ -25,10 +25,10 @@ TX_ID = UUID("22222222-2222-4222-8222-222222222222")
 OTHER_TX_ID = UUID("55555555-5555-4555-8555-555555555555")
 JULY_ID = UUID("33333333-3333-4333-8333-333333333333")
 AUGUST_ID = UUID("44444444-4444-4444-8444-444444444444")
+OVERLAP_ID = UUID("66666666-6666-4666-8666-666666666666")
 
 
-def _cross_period_source():
-    cutover_date = date(2026, 7, 30)
+def _cross_period_source(*, cutover_date: date = date(2026, 7, 30)):
     state = EirCutoverState(
         loan_id=LOAN_ID,
         calculation_mode="fixed_daily",
@@ -187,6 +187,22 @@ def test_replayed_transaction_identity_fails_closed_against_protected_allocation
     assert result.posting_eligible is False
 
 
+def test_non_deterministic_protected_source_key_fails_closed() -> None:
+    source, allocation, fiscal_periods = _cross_period_source()
+    source_key = f"manual:{TX_ID}"
+    allocation = replace(allocation, source_event_key=source_key)
+    source = replace(
+        source,
+        related_collection_source_event_key=source_key,
+        source_event_key=f"eir_accrual:{source_key}",
+    )
+
+    result = _build(source, allocation, fiscal_periods)
+
+    assert result.blocker_code == "eir_period_source_allocation_not_exact"
+    assert result.period_proposals == ()
+
+
 def test_tampered_residual_cent_recipient_fails_closed() -> None:
     source, allocation, fiscal_periods = _cross_period_source()
     july, august = source.period_split_evidence
@@ -310,6 +326,66 @@ def test_swapped_period_identity_fails_closed_against_protected_references() -> 
     assert result.blocker_code == "eir_period_split_evidence_not_exact"
     assert result.period_proposals == ()
     assert result.posting_eligible is False
+
+
+def test_partial_protected_period_overlap_fails_closed() -> None:
+    source, allocation, fiscal_periods = _cross_period_source(
+        cutover_date=date(2026, 7, 29)
+    )
+    overlap = AccountingFiscalPeriodReference(
+        period_id=OVERLAP_ID,
+        label="Overlap July 31",
+        start_date=date(2026, 7, 31),
+        end_date=date(2026, 7, 31),
+        status="open",
+    )
+
+    result = _build(
+        source,
+        allocation,
+        fiscal_periods + (overlap,),
+    )
+
+    assert source.disposition == "fiscal_period_split_allocation_preview_ready"
+    assert result.blocker_code == "eir_period_split_evidence_not_exact"
+    assert result.period_proposals == ()
+
+
+def test_source_preview_control_envelope_tamper_fails_closed() -> None:
+    source, allocation, fiscal_periods = _cross_period_source()
+    tampered = replace(source, balanced=True, split_policy_required=True)
+
+    result = _build(tampered, allocation, fiscal_periods)
+
+    assert result.blocker_code == "eir_period_source_preview_not_exact"
+    assert result.period_proposals == ()
+
+
+def test_rounding_audit_totals_tamper_fails_closed() -> None:
+    source, allocation, fiscal_periods = _cross_period_source()
+    tampered = replace(
+        source,
+        period_rounded_total=source.period_rounded_total + Decimal("0.01"),
+        rounding_residual=source.rounding_residual - Decimal("0.01"),
+    )
+
+    result = _build(tampered, allocation, fiscal_periods)
+
+    assert result.blocker_code == "eir_period_split_evidence_not_exact"
+    assert result.period_proposals == ()
+
+
+def test_daily_chain_must_reconcile_to_source_gross_before() -> None:
+    source, allocation, fiscal_periods = _cross_period_source()
+    allocation = replace(
+        allocation,
+        gross_carrying_before=allocation.gross_carrying_before + Decimal("0.01"),
+    )
+
+    result = _build(source, allocation, fiscal_periods)
+
+    assert result.blocker_code == "eir_period_split_evidence_not_exact"
+    assert result.period_proposals == ()
 
 
 def test_missing_protected_daily_evidence_fails_closed() -> None:
