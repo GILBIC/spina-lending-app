@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
@@ -105,20 +105,22 @@ def _context(*, daily_eir: Decimal = Decimal("0.0001")):
         collection,
     )
     assert sequence.disposition == "regular_cross_period_accounting_sequence_preview_ready"
-    return sequence, periods
+    return sequence, periods, period_journal, collection
 
 
-def _build(sequence, periods):
+def _build(sequence, periods, period_journal, collection):
     return build_regular_cross_period_posting_coordinate_preview(
         sequence,
+        protected_period_journal=period_journal,
+        protected_collection=collection,
         protected_fiscal_periods=periods,
     )
 
 
 def test_positive_periods_receive_exact_open_period_posting_coordinates() -> None:
-    sequence, periods = _context()
+    sequence, periods, period_journal, collection_preview = _context()
 
-    result = _build(sequence, periods)
+    result = _build(sequence, periods, period_journal, collection_preview)
 
     assert result.disposition == "regular_cross_period_posting_coordinate_preview_ready"
     assert result.blocker_code is None
@@ -140,6 +142,8 @@ def test_positive_periods_receive_exact_open_period_posting_coordinates() -> Non
 
     assert july.fiscal_period_id == JULY_ID
     assert july.fiscal_period_label == "July 2026"
+    assert july.fiscal_period_start_date == date(2026, 7, 1)
+    assert july.fiscal_period_end_date == date(2026, 7, 31)
     assert july.recognition_date == date(2026, 7, 31)
     assert july.proposed_posting_date == date(2026, 7, 31)
     assert july.amount == Decimal("0.01")
@@ -159,9 +163,9 @@ def test_positive_periods_receive_exact_open_period_posting_coordinates() -> Non
 
 
 def test_coordinate_preview_deliberately_has_no_posting_source_identity() -> None:
-    sequence, periods = _context()
+    sequence, periods, period_journal, collection = _context()
 
-    result = _build(sequence, periods)
+    result = _build(sequence, periods, period_journal, collection)
 
     assert result.posting_identity_ready is False
     for item in result.ordered_coordinates:
@@ -173,10 +177,12 @@ def test_coordinate_preview_deliberately_has_no_posting_source_identity() -> Non
 
 
 def test_zero_cent_period_remains_evidence_without_fake_coordinate() -> None:
-    sequence, periods = _context(daily_eir=Decimal("0.000025"))
+    sequence, periods, period_journal, collection_preview = _context(
+        daily_eir=Decimal("0.000025")
+    )
     assert sequence.zero_cent_fiscal_period_ids == (JULY_ID,)
 
-    result = _build(sequence, periods)
+    result = _build(sequence, periods, period_journal, collection_preview)
 
     assert result.disposition == "regular_cross_period_posting_coordinate_preview_ready"
     assert result.zero_cent_fiscal_period_ids == (JULY_ID,)
@@ -191,19 +197,19 @@ def test_zero_cent_period_remains_evidence_without_fake_coordinate() -> None:
 
 
 def test_same_inputs_replay_to_identical_coordinates() -> None:
-    sequence, periods = _context()
+    sequence, periods, period_journal, collection = _context()
 
-    first = _build(sequence, periods)
-    second = _build(sequence, periods)
+    first = _build(sequence, periods, period_journal, collection)
+    second = _build(sequence, periods, period_journal, collection)
 
     assert first == second
 
 
 def test_upstream_posting_eligibility_fails_closed() -> None:
-    sequence, periods = _context()
+    sequence, periods, period_journal, collection = _context()
     sequence = replace(sequence, posting_eligible=True)
 
-    result = _build(sequence, periods)
+    result = _build(sequence, periods, period_journal, collection)
 
     assert result.disposition == "regular_cross_period_posting_coordinate_preview_blocked"
     assert result.blocker_code == "posting_coordinate_posting_control_review"
@@ -212,27 +218,27 @@ def test_upstream_posting_eligibility_fails_closed() -> None:
 
 
 def test_upstream_automatic_source_posting_fails_closed() -> None:
-    sequence, periods = _context()
+    sequence, periods, period_journal, collection = _context()
     sequence = replace(sequence, automatic_source_posting_enabled=True)
 
-    result = _build(sequence, periods)
+    result = _build(sequence, periods, period_journal, collection)
 
     assert result.blocker_code == "posting_coordinate_posting_control_review"
     assert result.ordered_coordinates == ()
 
 
-def test_sequence_policy_tampering_fails_closed() -> None:
-    sequence, periods = _context()
+def test_sequence_policy_tampering_fails_protected_replay() -> None:
+    sequence, periods, period_journal, collection = _context()
     sequence = replace(sequence, sequence_policy_version="tampered-policy")
 
-    result = _build(sequence, periods)
+    result = _build(sequence, periods, period_journal, collection)
 
-    assert result.blocker_code == "posting_coordinate_sequence_not_exact"
+    assert result.blocker_code == "posting_coordinate_sequence_replay_not_exact"
     assert result.ordered_coordinates == ()
 
 
-def test_sequence_preview_identity_tampering_fails_closed() -> None:
-    sequence, periods = _context()
+def test_sequence_preview_identity_tampering_fails_protected_replay() -> None:
+    sequence, periods, period_journal, collection = _context()
     first = sequence.ordered_entries[0]
     sequence = replace(
         sequence,
@@ -242,25 +248,59 @@ def test_sequence_preview_identity_tampering_fails_closed() -> None:
         ),
     )
 
-    result = _build(sequence, periods)
+    result = _build(sequence, periods, period_journal, collection)
 
-    assert result.blocker_code == "posting_coordinate_sequence_not_exact"
+    assert result.blocker_code == "posting_coordinate_sequence_replay_not_exact"
+    assert result.ordered_coordinates == ()
+
+
+def test_zero_cent_period_substitution_fails_protected_replay() -> None:
+    sequence, periods, period_journal, collection = _context(
+        daily_eir=Decimal("0.000025")
+    )
+    sequence = replace(sequence, zero_cent_fiscal_period_ids=(OTHER_ID,))
+    september = AccountingFiscalPeriodReference(
+        period_id=OTHER_ID,
+        label="September 2026",
+        start_date=date(2026, 9, 1),
+        end_date=date(2026, 9, 30),
+        status="open",
+    )
+
+    result = _build(
+        sequence,
+        (*periods, september),
+        period_journal,
+        collection,
+    )
+
+    assert result.blocker_code == "posting_coordinate_sequence_replay_not_exact"
+    assert result.ordered_coordinates == ()
+
+
+def test_tampered_protected_collection_fails_sequence_replay() -> None:
+    sequence, periods, period_journal, collection = _context()
+    collection = replace(collection, total_credit=Decimal("0.99"))
+
+    result = _build(sequence, periods, period_journal, collection)
+
+    assert result.blocker_code == "posting_coordinate_sequence_replay_not_exact"
     assert result.ordered_coordinates == ()
 
 
 def test_duplicate_fiscal_period_identity_fails_closed() -> None:
-    sequence, periods = _context()
+    sequence, periods, period_journal, collection = _context()
     july, august = periods
     periods = (july, replace(august, period_id=JULY_ID))
 
-    result = _build(sequence, periods)
+    result = _build(sequence, periods, period_journal, collection)
 
     assert result.blocker_code == "posting_coordinate_fiscal_period_set_not_exact"
     assert result.ordered_coordinates == ()
 
 
 def test_overlapping_protected_fiscal_periods_fail_closed() -> None:
-    sequence, periods = _context()
+    sequence, periods, period_journal, collection = _context()
     july, august = periods
     overlap = AccountingFiscalPeriodReference(
         period_id=OTHER_ID,
@@ -270,121 +310,101 @@ def test_overlapping_protected_fiscal_periods_fail_closed() -> None:
         status="open",
     )
 
-    result = _build(sequence, (july, overlap, august))
+    result = _build(sequence, (july, overlap, august), period_journal, collection)
 
     assert result.blocker_code == "posting_coordinate_fiscal_period_set_not_exact"
     assert result.ordered_coordinates == ()
 
 
-def test_positive_eir_period_must_still_be_open() -> None:
-    sequence, periods = _context()
+def test_protected_period_label_must_replay_stage5d8_evidence() -> None:
+    sequence, periods, period_journal, collection = _context()
     july, august = periods
 
-    result = _build(sequence, (replace(july, status="closed"), august))
+    result = _build(
+        sequence,
+        (replace(july, label="Tampered July"), august),
+        period_journal,
+        collection,
+    )
 
-    assert result.blocker_code == "posting_coordinate_period_not_open"
+    assert result.blocker_code == "posting_coordinate_fiscal_period_replay_not_exact"
     assert result.ordered_coordinates == ()
 
 
-def test_zero_cent_affected_period_must_still_be_open() -> None:
-    sequence, periods = _context(daily_eir=Decimal("0.000025"))
+def test_protected_period_dates_must_replay_stage5d8_evidence() -> None:
+    sequence, periods, period_journal, collection = _context()
+    july, august = periods
+
+    result = _build(
+        sequence,
+        (replace(july, start_date=date(2026, 7, 2)), august),
+        period_journal,
+        collection,
+    )
+
+    assert result.blocker_code == "posting_coordinate_fiscal_period_replay_not_exact"
+    assert result.ordered_coordinates == ()
+
+
+def test_positive_period_status_change_fails_protected_period_replay() -> None:
+    sequence, periods, period_journal, collection = _context()
+    july, august = periods
+
+    result = _build(
+        sequence,
+        (replace(july, status="closed"), august),
+        period_journal,
+        collection,
+    )
+
+    assert result.blocker_code == "posting_coordinate_fiscal_period_replay_not_exact"
+    assert result.ordered_coordinates == ()
+
+
+def test_zero_cent_period_status_change_fails_protected_period_replay() -> None:
+    sequence, periods, period_journal, collection = _context(
+        daily_eir=Decimal("0.000025")
+    )
     july, august = periods
     assert sequence.zero_cent_fiscal_period_ids == (JULY_ID,)
 
-    result = _build(sequence, (replace(july, status="review"), august))
+    result = _build(
+        sequence,
+        (replace(july, status="review"), august),
+        period_journal,
+        collection,
+    )
 
-    assert result.blocker_code == "posting_coordinate_period_not_open"
+    assert result.blocker_code == "posting_coordinate_fiscal_period_replay_not_exact"
     assert result.ordered_coordinates == ()
 
 
-def test_collection_period_must_still_be_open() -> None:
-    sequence, periods = _context()
-    july, august = periods
-
-    result = _build(sequence, (july, replace(august, status="closed")))
-
-    assert result.blocker_code == "posting_coordinate_period_not_open"
-    assert result.ordered_coordinates == ()
-
-
-def test_collection_date_requires_exact_protected_period() -> None:
-    sequence, periods = _context()
+def test_missing_collection_period_fails_protected_period_replay() -> None:
+    sequence, periods, period_journal, collection = _context()
     july, _ = periods
 
-    result = _build(sequence, (july,))
+    result = _build(sequence, (july,), period_journal, collection)
 
-    assert result.blocker_code == "posting_coordinate_protected_period_missing"
+    assert result.blocker_code == "posting_coordinate_fiscal_period_replay_not_exact"
     assert result.ordered_coordinates == ()
 
 
-def test_prior_period_candidate_date_must_remain_period_end() -> None:
-    sequence, periods = _context()
-    first = sequence.ordered_entries[0]
-    assert first.fiscal_period_id == JULY_ID
-    assert first.recognition_date == date(2026, 7, 31)
-    sequence = replace(
-        sequence,
-        ordered_entries=(
-            replace(first, recognition_date=date(2026, 7, 30)),
-            *sequence.ordered_entries[1:],
-        ),
+def test_unrelated_future_closed_period_does_not_change_coordinates() -> None:
+    sequence, periods, period_journal, collection = _context()
+    future = AccountingFiscalPeriodReference(
+        period_id=OTHER_ID,
+        label="September 2026",
+        start_date=date(2026, 9, 1),
+        end_date=date(2026, 9, 30),
+        status="closed",
     )
 
-    result = _build(sequence, periods)
+    result = _build(sequence, (*periods, future), period_journal, collection)
 
-    assert result.blocker_code == "posting_coordinate_prior_period_end_not_exact"
-    assert result.ordered_coordinates == ()
-
-
-def test_recognition_date_outside_protected_period_fails_closed() -> None:
-    sequence, periods = _context()
-    first = sequence.ordered_entries[0]
-    sequence = replace(
-        sequence,
-        ordered_entries=(
-            replace(first, recognition_date=date(2026, 8, 1)),
-            *sequence.ordered_entries[1:],
-        ),
-    )
-
-    result = _build(sequence, periods)
-
-    assert result.blocker_code == "posting_coordinate_recognition_outside_period"
-    assert result.ordered_coordinates == ()
-
-
-def test_same_day_final_eir_must_resolve_to_collection_period() -> None:
-    sequence, periods = _context()
-    first, second, collection = sequence.ordered_entries
-    assert second.fiscal_period_id == AUGUST_ID
-    sequence = replace(
-        sequence,
-        ordered_entries=(
-            first,
-            replace(second, fiscal_period_id=JULY_ID),
-            collection,
-        ),
-    )
-
-    result = _build(sequence, periods)
-
-    assert result.blocker_code == "posting_coordinate_sequence_not_exact"
-    assert result.ordered_coordinates == ()
-
-
-def test_reordered_recognition_dates_fail_closed() -> None:
-    sequence, periods = _context()
-    first, second, collection = sequence.ordered_entries
-    sequence = replace(
-        sequence,
-        ordered_entries=(
-            first,
-            replace(second, recognition_date=first.recognition_date - timedelta(days=1)),
-            collection,
-        ),
-    )
-
-    result = _build(sequence, periods)
-
-    assert result.blocker_code == "posting_coordinate_sequence_not_exact"
-    assert result.ordered_coordinates == ()
+    assert result.disposition == "regular_cross_period_posting_coordinate_preview_ready"
+    assert [item.fiscal_period_id for item in result.ordered_coordinates] == [
+        JULY_ID,
+        AUGUST_ID,
+        AUGUST_ID,
+    ]
+    assert result.posting_identity_ready is False
