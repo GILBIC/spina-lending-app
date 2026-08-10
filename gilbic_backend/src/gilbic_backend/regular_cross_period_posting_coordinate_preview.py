@@ -6,12 +6,17 @@ from decimal import Decimal
 from uuid import UUID
 
 from .eir_cash_allocation import money
+from .regular_collection_journal_preview import RegularCollectionJournalPreview
 from .regular_cross_period_accounting_sequence_preview import (
     REGULAR_CROSS_PERIOD_ACCOUNTING_SEQUENCE_PREVIEW_POLICY_VERSION,
     RegularCrossPeriodAccountingSequenceEntryPreview,
     RegularCrossPeriodAccountingSequencePreview,
+    build_regular_cross_period_accounting_sequence_preview,
 )
 from .regular_eir_accrual_journal_preview import AccountingFiscalPeriodReference
+from .regular_eir_period_journal_preview import (
+    RegularEirPeriodJournalProposalPreview,
+)
 
 
 ZERO = Decimal("0.00")
@@ -139,7 +144,7 @@ def _sequence_is_structurally_exact(
     positive_period_ids: set[UUID] = set()
     eir_total = ZERO
     previous_date: date | None = None
-    for entry in entries:
+    for index, entry in enumerate(entries):
         if (
             entry.posting_eligible
             or entry.amount <= ZERO
@@ -152,9 +157,12 @@ def _sequence_is_structurally_exact(
 
         if entry.entry_type == "eir_accrual_period":
             if (
-                entry.fiscal_period_id is None
+                index == len(entries) - 1
+                or entry.fiscal_period_id is None
                 or entry.fiscal_period_id in positive_period_ids
                 or entry.related_source_event_key != expected_eir_key
+                or entry.disposition
+                != "eir_accrual_journal_lines_preview_ready_for_period"
                 or entry.preview_entry_key
                 != (
                     "regular_eir_period_sequence_preview:collection:"
@@ -167,12 +175,13 @@ def _sequence_is_structurally_exact(
             eir_total += entry.amount
             continue
 
-        if entry is not entries[-1]:
+        if index != len(entries) - 1:
             return False
         if (
             entry.entry_type != "collection"
             or entry.fiscal_period_id is not None
             or entry.related_source_event_key != expected_collection_key
+            or entry.disposition != "collection_journal_lines_preview_ready"
             or entry.preview_entry_key
             != f"regular_collection_sequence_preview:collection:{sequence.transaction_id}"
             or entry.recognition_date != sequence.collection_date
@@ -228,16 +237,20 @@ def _coordinate(
 def build_regular_cross_period_posting_coordinate_preview(
     sequence: RegularCrossPeriodAccountingSequencePreview,
     *,
+    protected_period_journal: RegularEirPeriodJournalProposalPreview,
+    protected_collection: RegularCollectionJournalPreview,
     protected_fiscal_periods: tuple[AccountingFiscalPeriodReference, ...],
 ) -> RegularCrossPeriodPostingCoordinatePreview:
     """Prove candidate posting dates and fiscal periods without posting identity.
 
-    Stage 5D.12 intentionally stops at read-only ledger coordinates. For every
-    exact Stage 5D.10 sequence entry, the proposed posting date equals the
-    already-proven recognition date and must fall in exactly the intended open
-    fiscal period. No source_type, source_reference, source_event_key, journal
-    number, draft, persistence record, or posting permission is created here.
-    Deterministic posting identity remains a separate later policy decision.
+    Stage 5D.12 intentionally stops at read-only ledger coordinates. The supplied
+    Stage 5D.10 sequence is first replayed from its protected Stage 5D.8 period
+    journal and collection previews and must match exactly. Every proposed posting
+    date then equals the already-proven recognition date and must fall in exactly
+    the intended open fiscal period. No source_type, source_reference,
+    source_event_key, journal number, draft, persistence record, or posting
+    permission is created here. Deterministic posting identity remains a separate
+    later policy decision.
     """
 
     if sequence.posting_eligible or sequence.automatic_source_posting_enabled:
@@ -247,6 +260,20 @@ def build_regular_cross_period_posting_coordinate_preview(
             message=(
                 "The upstream sequence unexpectedly enables posting. Posting "
                 "coordinate evidence remains blocked."
+            ),
+        )
+
+    replayed_sequence = build_regular_cross_period_accounting_sequence_preview(
+        protected_period_journal,
+        protected_collection,
+    )
+    if replayed_sequence != sequence:
+        return _blocked(
+            sequence,
+            blocker_code="posting_coordinate_sequence_replay_not_exact",
+            message=(
+                "The supplied Stage 5D.10 sequence does not exactly replay from "
+                "the protected Stage 5D.8 period journal and collection previews."
             ),
         )
     if not _sequence_is_structurally_exact(sequence):
