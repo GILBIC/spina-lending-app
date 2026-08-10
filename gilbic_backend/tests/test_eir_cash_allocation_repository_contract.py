@@ -50,6 +50,10 @@ def test_repository_fail_closes_collection_proposals_against_accounts_and_journa
     assert "reversal.status as reversal_status" in source
     assert "REGULAR_EIR_ACCRUAL_ACCOUNT_KEYS" in source
     assert "build_regular_eir_accrual_journal_preview" in source
+    assert "build_regular_accounting_sequence_preview" in source
+    assert "accounting_sequence_previews" in source
+    assert "zip(" in source
+    assert "strict=True" in source
     assert "from accounting.fiscal_periods" in source
     assert "'eir_accrual:collection:' || t.id::text" in source
     assert "accrual_journal.status as accrual_journal_status" in source
