@@ -46,8 +46,12 @@ def test_stage5e41_live_runner_keeps_classification_ecl_and_posting_disabled() -
     assert "unexpectedly enabled" in RUNNER
 
 
-def test_workflow_only_runs_stage5e41_live_migration_on_main_push() -> None:
-    assert "One-time Stage 5E.4.1 live contractual DPD migration" in WORKFLOW
-    assert "github.event_name == 'push'" in WORKFLOW
-    assert "tools/stage5e41-live-migration.once" in WORKFLOW
-    assert "tools\\apply_stage5e41_migration.py" in WORKFLOW
+def test_workflow_runs_stage5e41_live_migration_only_by_manual_dispatch() -> None:
+    name = "Manual Stage 5E.4.1 live contractual DPD migration"
+    assert name in WORKFLOW
+    step = WORKFLOW.split(f"      - name: {name}", 1)[1].split("\n      - name:", 1)[0]
+    assert "github.event_name == 'workflow_dispatch'" in step
+    assert "inputs.run_legacy_live_migrations" in step
+    assert "github.event_name == 'push'" not in step
+    assert "tools/stage5e41-live-migration.once" in step
+    assert "tools\\apply_stage5e41_migration.py" in step
