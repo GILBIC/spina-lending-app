@@ -18,21 +18,26 @@ sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
 
 
-def _pull_request(*, head_repo: str = REPOSITORY) -> dict[str, object]:
+def _pull_request(
+    *,
+    head_repo: str | None = REPOSITORY,
+    repository_identity: str = REPOSITORY,
+    user_login: str = "GILBIC",
+) -> dict[str, object]:
     return {
         "number": 286,
         "state": "closed",
         "merged_at": "2026-08-10T06:00:00Z",
         "merge_commit_sha": MAIN_SHA,
-        "user": {"login": "GILBIC"},
+        "user": {"login": user_login},
         "head": {
             "sha": HEAD_SHA,
             "ref": "agent/focused-accounting-ci",
-            "repo": {"full_name": head_repo},
+            "repo": {"full_name": head_repo} if head_repo else None,
         },
         "base": {
             "ref": "main",
-            "repo": {"full_name": REPOSITORY},
+            "repo": {"full_name": repository_identity},
         },
     }
 
@@ -41,6 +46,8 @@ def _workflow_run(
     *,
     conclusion: str = "success",
     pull_request_number: int = 286,
+    head_repository: str = REPOSITORY,
+    actor_login: str = "GILBIC",
 ) -> dict[str, object]:
     return {
         "id": 123456,
@@ -50,7 +57,8 @@ def _workflow_run(
         "conclusion": conclusion,
         "head_sha": HEAD_SHA,
         "head_branch": "agent/focused-accounting-ci",
-        "actor": {"login": "GILBIC"},
+        "actor": {"login": actor_login},
+        "head_repository": {"full_name": head_repository},
         "pull_requests": [{"number": pull_request_number}],
     }
 
@@ -92,6 +100,9 @@ class ValidationReuseDecisionTests(unittest.TestCase):
             base_ref="main",
             token="token",
             fetch_json=fetch_json,
+            association_attempts=1,
+            association_retry_seconds=0,
+            sleep=lambda _: None,
         )
 
     def test_exact_successful_owner_pr_reuses_full_validation(self) -> None:
@@ -122,6 +133,32 @@ class ValidationReuseDecisionTests(unittest.TestCase):
         self.assertEqual(decision.pull_request_number, 286)
         self.assertEqual(decision.validated_head_sha, HEAD_SHA)
         self.assertEqual(decision.workflow_run_id, 123456)
+
+    def test_identity_matching_is_case_insensitive(self) -> None:
+        decision = self._decide(
+            pulls=[
+                _pull_request(
+                    repository_identity="gilbic/spina-lending-app",
+                    user_login="gilbic",
+                )
+            ],
+            workflow_runs=[
+                _workflow_run(
+                    head_repository="gilbic/spina-lending-app",
+                    actor_login="gilbic",
+                )
+            ],
+        )
+
+        self.assertTrue(decision.reuse_validation)
+
+    def test_missing_pr_head_repo_uses_successful_run_repository_proof(self) -> None:
+        decision = self._decide(
+            pulls=[_pull_request(head_repo=None)],
+            workflow_runs=[_workflow_run()],
+        )
+
+        self.assertTrue(decision.reuse_validation)
 
     def test_invalid_closed_pr_fallback_fails_closed(self) -> None:
         decision = self._decide(
@@ -175,10 +212,41 @@ class ValidationReuseDecisionTests(unittest.TestCase):
     def test_fork_pr_is_not_reused(self) -> None:
         decision = self._decide(
             pulls=[_pull_request(head_repo="someone/fork")],
-            workflow_runs=[_workflow_run()],
+            workflow_runs=[_workflow_run(head_repository="someone/fork")],
         )
 
         self.assertFalse(decision.reuse_validation)
+
+    def test_commit_association_is_retried_before_failing_closed(self) -> None:
+        associated_responses = iter([[], [_pull_request()]])
+        sleeps: list[float] = []
+
+        def fetch_json(url: str, token: str) -> object:
+            self.assertEqual(token, "token")
+            if url.endswith("/pulls"):
+                return next(associated_responses)
+            if "/pulls?" in url:
+                return []
+            if f"/git/commits/{MAIN_SHA}" in url:
+                return {"tree": {"sha": TREE_SHA}}
+            if f"/git/commits/{HEAD_SHA}" in url:
+                return {"tree": {"sha": TREE_SHA}}
+            return {"workflow_runs": [_workflow_run()]}
+
+        decision = MODULE.decide_validation_reuse(
+            repository=REPOSITORY,
+            commit_sha=MAIN_SHA,
+            workflow_file="spina-ci.yml",
+            base_ref="main",
+            token="token",
+            fetch_json=fetch_json,
+            association_attempts=2,
+            association_retry_seconds=3,
+            sleep=sleeps.append,
+        )
+
+        self.assertTrue(decision.reuse_validation)
+        self.assertEqual(sleeps, [3])
 
     def test_github_outputs_are_explicit_for_reuse_and_fallback(self) -> None:
         output_path = Path(__file__).with_suffix(".outputs.tmp")
