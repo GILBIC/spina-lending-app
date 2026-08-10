@@ -17,6 +17,10 @@ from gilbic_backend.eir_cash_allocation_repository import EirCashAllocationPack
 from gilbic_backend.regular_collection_journal_preview import (
     build_regular_collection_journal_preview,
 )
+from gilbic_backend.regular_eir_accrual_journal_preview import (
+    AccountingFiscalPeriodReference,
+    build_regular_eir_accrual_journal_preview,
+)
 from gilbic_backend.main import create_app
 
 
@@ -112,6 +116,24 @@ class FakeRepository:
             source_history_complete=True,
             account_configuration_ready=True,
         )
+        period = AccountingFiscalPeriodReference(
+            period_id=UUID("55555555-5555-4555-8555-555555555555"),
+            label="August 2026",
+            start_date=date(2026, 8, 1),
+            end_date=date(2026, 8, 31),
+            status="open",
+        )
+        accrual_preview = build_regular_eir_accrual_journal_preview(
+            item,
+            allocation_result_status=result.status,
+            accrual_start_date=date(2026, 8, 8),
+            fiscal_periods=(period,),
+            opening_balance_posted=True,
+            protected_snapshot_available=True,
+            protected_snapshot_reconciled=True,
+            source_history_complete=True,
+            account_configuration_ready=True,
+        )
         return EirCashAllocationPack(
             loan_id=loan_id,
             loan_number="L-001",
@@ -128,6 +150,8 @@ class FakeRepository:
             protected_snapshot_available=True,
             protected_snapshot_reconciled=True,
             account_configuration_ready=True,
+            eir_accrual_account_configuration_ready=True,
+            eir_accrual_previews=(accrual_preview,),
             collection_journal_previews=(preview,),
         )
 
@@ -175,6 +199,33 @@ def test_management_can_load_exact_decimal_eir_cash_allocation_reference() -> No
     assert item["cash_to_loan_component"] == "3.90"
     assert item["source_event_key"] == f"collection:{TX_ID}"
     assert data["account_configuration_ready"] is True
+    assert data["eir_accrual_account_configuration_ready"] is True
+    accrual = data["eir_accrual_previews"][0]
+    assert accrual["related_collection_source_event_key"] == f"collection:{TX_ID}"
+    assert accrual["source_event_key"] == f"eir_accrual:collection:{TX_ID}"
+    assert accrual["accrual_start_date_exclusive"] == "2026-08-08"
+    assert accrual["accrual_end_date_inclusive"] == "2026-08-09"
+    assert accrual["posting_date"] == "2026-08-09"
+    assert accrual["fiscal_period_label"] == "August 2026"
+    assert accrual["fiscal_period_status"] == "open"
+    assert accrual["amount"] == "1.10"
+    assert accrual["posting_eligible"] is False
+    assert accrual["balanced"] is True
+    assert accrual["total_debit"] == accrual["total_credit"] == "1.10"
+    assert accrual["proposed_lines"] == [
+        {
+            "account_system_key": "accrued_interest_receivable",
+            "side": "debit",
+            "amount": "1.10",
+            "label": "Regular effective interest accrued",
+        },
+        {
+            "account_system_key": "interest_income_regular",
+            "side": "credit",
+            "amount": "1.10",
+            "label": "Regular effective interest income",
+        },
+    ]
     preview = data["collection_journal_previews"][0]
     assert preview["source_event_key"] == f"collection:{TX_ID}"
     assert preview["posting_eligible"] is False
