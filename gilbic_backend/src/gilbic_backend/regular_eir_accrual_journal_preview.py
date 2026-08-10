@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_FLOOR
 from uuid import UUID
 
 from .eir_cash_allocation import EirCashAllocation, money
 
 
 ZERO = Decimal("0.00")
+CENT = Decimal("0.01")
+REGULAR_EIR_PERIOD_SPLIT_POLICY_VERSION = "regular_eir_period_split_v1"
 REGULAR_EIR_ACCRUAL_ACCOUNT_KEYS = (
     "accrued_interest_receivable",
     "interest_income_regular",
@@ -36,6 +38,12 @@ class RegularEirAccrualPeriodEvidence:
     day_count: int
     effective_interest_raw: Decimal
     effective_interest_rounded: Decimal
+    effective_interest_floor: Decimal = ZERO
+    fractional_cent_remainder: Decimal = Decimal("0")
+    allocation_rank: int | None = None
+    residual_cent_adjustment: Decimal = ZERO
+    effective_interest_allocated: Decimal = ZERO
+    received_residual_cent: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,6 +77,10 @@ class RegularEirAccrualJournalPreview:
     period_rounded_total: Decimal = ZERO
     rounding_residual: Decimal = ZERO
     split_policy_required: bool = False
+    period_split_policy_version: str | None = None
+    period_allocated_total: Decimal = ZERO
+    unallocated_residual: Decimal = ZERO
+    period_allocation_reconciled: bool = False
 
 
 def _source_event_key(allocation: EirCashAllocation) -> str:
@@ -86,6 +98,10 @@ def _blocked(
     period_rounded_total: Decimal = ZERO,
     rounding_residual: Decimal = ZERO,
     split_policy_required: bool = False,
+    period_split_policy_version: str | None = None,
+    period_allocated_total: Decimal = ZERO,
+    unallocated_residual: Decimal = ZERO,
+    period_allocation_reconciled: bool = False,
 ) -> RegularEirAccrualJournalPreview:
     return RegularEirAccrualJournalPreview(
         transaction_id=allocation.transaction_id,
@@ -109,7 +125,116 @@ def _blocked(
         period_rounded_total=period_rounded_total,
         rounding_residual=rounding_residual,
         split_policy_required=split_policy_required,
+        period_split_policy_version=period_split_policy_version,
+        period_allocated_total=period_allocated_total,
+        unallocated_residual=unallocated_residual,
+        period_allocation_reconciled=period_allocation_reconciled,
     )
+
+
+def allocate_regular_eir_period_split(
+    evidence: tuple[RegularEirAccrualPeriodEvidence, ...],
+    *,
+    target_amount: Decimal,
+) -> tuple[RegularEirAccrualPeriodEvidence, ...] | None:
+    """Allocate a recognized cent total by largest fractional remainder.
+
+    Exact raw amounts remain untouched. Each positive period first receives its
+    whole-cent floor. Remaining cents are awarded by descending fractional-cent
+    remainder, then larger raw amount, earlier period, and stable period UUID.
+    The result is chronological and independent of input order.
+    """
+
+    if (
+        not evidence
+        or target_amount < ZERO
+        or target_amount != money(target_amount)
+        or len({item.period_id for item in evidence}) != len(evidence)
+    ):
+        return None
+
+    bases: dict[UUID, Decimal] = {}
+    remainders: dict[UUID, Decimal] = {}
+    total_raw = Decimal("0")
+    for item in evidence:
+        if (
+            item.status != "open"
+            or item.day_count <= 0
+            or item.period_start_date > item.period_end_date
+            or item.accrual_start_date_inclusive
+            > item.accrual_end_date_inclusive
+            or not (
+                item.period_start_date
+                <= item.accrual_start_date_inclusive
+                <= item.accrual_end_date_inclusive
+                <= item.period_end_date
+            )
+            or item.effective_interest_raw < 0
+            or item.effective_interest_rounded
+            != money(item.effective_interest_raw)
+        ):
+            return None
+        base = item.effective_interest_raw.quantize(CENT, rounding=ROUND_FLOOR)
+        bases[item.period_id] = base
+        remainders[item.period_id] = item.effective_interest_raw - base
+        total_raw += item.effective_interest_raw
+
+    if money(total_raw) != target_amount:
+        return None
+
+    base_total = sum(bases.values(), ZERO)
+    cents_to_award_raw = (target_amount - base_total) / CENT
+    cents_to_award = int(cents_to_award_raw)
+    if (
+        cents_to_award_raw != Decimal(cents_to_award)
+        or cents_to_award < 0
+        or cents_to_award > len(evidence)
+    ):
+        return None
+
+    ranked = sorted(
+        evidence,
+        key=lambda item: (
+            -remainders[item.period_id],
+            -item.effective_interest_raw,
+            item.period_start_date,
+            str(item.period_id),
+        ),
+    )
+    ranks = {item.period_id: index for index, item in enumerate(ranked, start=1)}
+    recipients = {item.period_id for item in ranked[:cents_to_award]}
+
+    allocated = tuple(
+        replace(
+            item,
+            effective_interest_floor=bases[item.period_id],
+            fractional_cent_remainder=remainders[item.period_id],
+            allocation_rank=ranks[item.period_id],
+            residual_cent_adjustment=(
+                CENT if item.period_id in recipients else ZERO
+            ),
+            effective_interest_allocated=(
+                bases[item.period_id]
+                + (CENT if item.period_id in recipients else ZERO)
+            ),
+            received_residual_cent=item.period_id in recipients,
+        )
+        for item in sorted(
+            evidence,
+            key=lambda item: (
+                item.period_start_date,
+                item.period_end_date,
+                str(item.period_id),
+            ),
+        )
+    )
+    allocated_total = sum(
+        (item.effective_interest_allocated for item in allocated),
+        ZERO,
+    )
+    if allocated_total != target_amount:
+        return None
+    return allocated
 
 
 def _build_period_split_evidence(
@@ -122,7 +247,7 @@ def _build_period_split_evidence(
     Decimal,
     Decimal,
 ] | None:
-    """Aggregate exact daily EIR by period without assigning a residual cent."""
+    """Aggregate exact daily EIR by period before policy allocation."""
 
     expected_dates: list[date] = []
     current_date = accrual_start_date + timedelta(days=1)
@@ -231,9 +356,9 @@ def build_regular_eir_accrual_journal_preview(
 
     The allocator recognizes EIR at a cash-event cent boundary. This stage assigns
     that exact amount to Dr 1120 / Cr 4000 only when every accrued calendar day
-    belongs to one open fiscal period. An interval that crosses period boundaries
-    remains blocked because splitting the already-rounded boundary amount requires
-    a separate, explicitly validated rounding policy.
+    belongs to one open fiscal period. For a cross-period interval, the approved
+    largest-remainder policy produces reconciled read-only period evidence, while
+    journal-line creation remains blocked for a later protected stage.
     """
 
     if (
@@ -407,35 +532,97 @@ def build_regular_eir_accrual_journal_preview(
             )
             if split_evidence is not None:
                 evidence, period_rounded_total, rounding_residual = split_evidence
+                if any(item.status != "open" for item in evidence):
+                    return _blocked(
+                        allocation,
+                        accrual_start_date=accrual_start_date,
+                        disposition="fiscal_period_split_period_not_open",
+                        message=(
+                            "The approved period-split policy is available, but every "
+                            "affected fiscal period must be open before allocated "
+                            "evidence can be exposed."
+                        ),
+                        period_split_evidence=evidence,
+                        period_rounded_total=period_rounded_total,
+                        rounding_residual=rounding_residual,
+                        split_policy_required=False,
+                        period_split_policy_version=(
+                            REGULAR_EIR_PERIOD_SPLIT_POLICY_VERSION
+                        ),
+                    )
+                allocated_evidence = allocate_regular_eir_period_split(
+                    evidence,
+                    target_amount=amount,
+                )
+                if allocated_evidence is None:
+                    return _blocked(
+                        allocation,
+                        accrual_start_date=accrual_start_date,
+                        disposition="fiscal_period_split_allocation_review",
+                        message=(
+                            "Exact period evidence could not be reconciled under the "
+                            "approved deterministic policy. No allocation or journal "
+                            "lines are exposed."
+                        ),
+                        period_split_evidence=evidence,
+                        period_rounded_total=period_rounded_total,
+                        rounding_residual=rounding_residual,
+                        split_policy_required=False,
+                        period_split_policy_version=(
+                            REGULAR_EIR_PERIOD_SPLIT_POLICY_VERSION
+                        ),
+                    )
+                period_allocated_total = sum(
+                    (
+                        item.effective_interest_allocated
+                        for item in allocated_evidence
+                    ),
+                    ZERO,
+                )
+                unallocated_residual = money(amount - period_allocated_total)
                 return _blocked(
                     allocation,
                     accrual_start_date=accrual_start_date,
-                    disposition=disposition,
+                    disposition="fiscal_period_split_allocation_preview_ready",
                     message=(
                         "The EIR interval crosses fiscal periods. Exact daily EIR "
-                        "has been grouped into auditable raw and independently "
-                        "rounded period amounts, but no residual cent is assigned "
-                        "and no lines are proposed until Management approves a "
-                        "period-split rounding policy."
+                        "has been allocated to cents under the approved deterministic "
+                        "largest-remainder policy. The evidence reconciles exactly, "
+                        "but journal-line creation remains disabled."
                     ),
-                    period_split_evidence=evidence,
+                    period_split_evidence=allocated_evidence,
                     period_rounded_total=period_rounded_total,
                     rounding_residual=rounding_residual,
-                    split_policy_required=True,
+                    split_policy_required=False,
+                    period_split_policy_version=(
+                        REGULAR_EIR_PERIOD_SPLIT_POLICY_VERSION
+                    ),
+                    period_allocated_total=period_allocated_total,
+                    unallocated_residual=unallocated_residual,
+                    period_allocation_reconciled=(unallocated_residual == ZERO),
                 )
         message = (
             "The EIR interval crosses fiscal periods, but complete exact daily "
-            "accrual evidence is unavailable. A validated period-splitting and "
-            "cent-rounding policy is required before lines can be proposed."
+            "accrual evidence is unavailable. Allocation remains blocked rather "
+            "than inferring missing daily or fiscal-period evidence."
             if disposition == "fiscal_period_split_required"
             else "One fiscal period must cover every day in the EIR accrual interval."
         )
         return _blocked(
             allocation,
             accrual_start_date=accrual_start_date,
-            disposition=disposition,
+            disposition=(
+                "fiscal_period_split_evidence_required"
+                if disposition == "fiscal_period_split_required"
+                else disposition
+            ),
             message=message,
-            split_policy_required=(disposition == "fiscal_period_split_required"),
+            split_policy_required=False,
+            period_split_policy_version=(
+                REGULAR_EIR_PERIOD_SPLIT_POLICY_VERSION
+                if disposition == "fiscal_period_split_required"
+                else None
+            ),
         )
 
     period = covering[0]
