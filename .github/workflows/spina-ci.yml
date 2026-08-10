@@ -59,6 +59,66 @@ jobs:
         run: |
           python tools\reuse_validated_pr_ci.py --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --workflow-file "spina-ci.yml" --base-ref "main" --github-output "%GITHUB_OUTPUT%" || exit /b 1
 
+      - name: Inspect validation reuse API contract
+        if: github.event_name == 'pull_request' && github.head_ref == 'agent/ci-validation-reuse-identity-proof'
+        shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $headers = @{
+            Accept = "application/vnd.github+json"
+            Authorization = "Bearer $env:GITHUB_TOKEN"
+            "X-GitHub-Api-Version" = "2026-03-10"
+          }
+          $repository = "${{ github.repository }}"
+          $mergeSha = "${{ github.event.pull_request.base.sha }}"
+          $validatedHeadSha = "243abf62da15e0851f5fadb5f9bcae903cd4293d"
+
+          function Write-PullFact([string] $source, $pull) {
+            [ordered]@{
+              source = $source
+              number = $pull.number
+              state = $pull.state
+              merged = $pull.merged
+              merged_at = $pull.merged_at
+              merge_commit_sha = $pull.merge_commit_sha
+              user = $pull.user.login
+              head_ref = $pull.head.ref
+              head_repo = $pull.head.repo.full_name
+              base_ref = $pull.base.ref
+              base_repo = $pull.base.repo.full_name
+            } | ConvertTo-Json -Compress
+          }
+
+          $associated = @(Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$repository/commits/$mergeSha/pulls")
+          Write-Output "associated_count=$($associated.Count)"
+          $associated | Select-Object -First 3 | ForEach-Object { Write-PullFact "associated" $_ }
+
+          $closed = @(Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$repository/pulls?state=closed&base=main&sort=updated&direction=desc&per_page=100")
+          Write-Output "closed_count=$($closed.Count)"
+          $closed | Select-Object -First 3 | ForEach-Object { Write-PullFact "closed" $_ }
+
+          $detail = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$repository/pulls/287"
+          Write-PullFact "detail" $detail
+
+          $runs = Invoke-RestMethod -Headers $headers -Uri "https://api.github.com/repos/$repository/actions/workflows/spina-ci.yml/runs?event=pull_request&head_sha=$validatedHeadSha&status=success&per_page=10"
+          Write-Output "workflow_run_count=$($runs.workflow_runs.Count)"
+          $runs.workflow_runs | Select-Object -First 3 | ForEach-Object {
+            [ordered]@{
+              source = "workflow_run"
+              id = $_.id
+              event = $_.event
+              status = $_.status
+              conclusion = $_.conclusion
+              head_sha = $_.head_sha
+              head_branch = $_.head_branch
+              actor = $_.actor.login
+              head_repository = $_.head_repository.full_name
+              pull_requests = @(($_.pull_requests | ForEach-Object { $_.number })) -join ","
+            } | ConvertTo-Json -Compress
+          }
+
       # Temporary exact-API contract probe for the focused identity fix. This
       # branch-only step is removed after it proves the current merged base can
       # reuse its already-successful PR validation through the live GitHub API.
