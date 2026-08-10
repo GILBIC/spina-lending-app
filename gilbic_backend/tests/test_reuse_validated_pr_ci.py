@@ -21,8 +21,10 @@ SPEC.loader.exec_module(MODULE)
 def _pull_request(
     *,
     head_repo: str | None = REPOSITORY,
+    head_sha: str = HEAD_SHA,
     repository_identity: str = REPOSITORY,
     user_login: str = "GILBIC",
+    merge_commit_sha: str | None = None,
     merged: bool = True,
     merged_at: str | None = "2026-08-10T06:00:00Z",
     include_merge_detail: bool = True,
@@ -30,10 +32,10 @@ def _pull_request(
     pull_request: dict[str, object] = {
         "number": 286,
         "state": "closed",
-        "merge_commit_sha": MAIN_SHA,
+        "merge_commit_sha": merge_commit_sha,
         "user": {"login": user_login},
         "head": {
-            "sha": HEAD_SHA,
+            "sha": head_sha,
             "ref": "agent/focused-accounting-ci",
             "repo": {"full_name": head_repo} if head_repo else None,
         },
@@ -51,7 +53,7 @@ def _pull_request(
 def _workflow_run(
     *,
     conclusion: str = "success",
-    pull_request_number: int = 286,
+    pull_request_number: int | None = None,
     head_repository: str = REPOSITORY,
     actor_login: str = "GILBIC",
 ) -> dict[str, object]:
@@ -65,7 +67,11 @@ def _workflow_run(
         "head_branch": "agent/focused-accounting-ci",
         "actor": {"login": actor_login},
         "head_repository": {"full_name": head_repository},
-        "pull_requests": [{"number": pull_request_number}],
+        "pull_requests": (
+            [{"number": pull_request_number}]
+            if pull_request_number is not None
+            else []
+        ),
     }
 
 
@@ -75,7 +81,6 @@ class ValidationReuseDecisionTests(unittest.TestCase):
         *,
         pulls: object,
         workflow_runs: object,
-        fallback_pulls: object | None = None,
         pull_detail: object | None = None,
         main_tree_sha: str | None = TREE_SHA,
         head_tree_sha: str | None = TREE_SHA,
@@ -84,12 +89,6 @@ class ValidationReuseDecisionTests(unittest.TestCase):
             self.assertEqual(token, "token")
             if url.endswith("/pulls"):
                 return pulls
-            if "/pulls?" in url:
-                self.assertIn("state=closed", url)
-                self.assertIn("base=main", url)
-                self.assertIn("sort=updated", url)
-                self.assertIn("direction=desc", url)
-                return [] if fallback_pulls is None else fallback_pulls
             if url.endswith("/pulls/286"):
                 return _pull_request() if pull_detail is None else pull_detail
             if f"/git/commits/{MAIN_SHA}" in url:
@@ -131,17 +130,14 @@ class ValidationReuseDecisionTests(unittest.TestCase):
         self.assertFalse(decision.reuse_validation)
         self.assertIn("not tied", decision.reason)
 
-    def test_closed_pr_fallback_handles_commit_association_lag(self) -> None:
+    def test_invalid_commit_association_response_fails_closed(self) -> None:
         decision = self._decide(
-            pulls=[],
-            fallback_pulls=[_pull_request(include_merge_detail=False)],
+            pulls={"invalid": True},
             workflow_runs=[_workflow_run()],
         )
 
-        self.assertTrue(decision.reuse_validation)
-        self.assertEqual(decision.pull_request_number, 286)
-        self.assertEqual(decision.validated_head_sha, HEAD_SHA)
-        self.assertEqual(decision.workflow_run_id, 123456)
+        self.assertFalse(decision.reuse_validation)
+        self.assertIn("associated pull-request response was invalid", decision.reason)
 
     def test_identity_matching_is_case_insensitive(self) -> None:
         decision = self._decide(
@@ -169,16 +165,6 @@ class ValidationReuseDecisionTests(unittest.TestCase):
         )
 
         self.assertTrue(decision.reuse_validation)
-
-    def test_invalid_closed_pr_fallback_fails_closed(self) -> None:
-        decision = self._decide(
-            pulls=[],
-            fallback_pulls={"invalid": True},
-            workflow_runs=[_workflow_run()],
-        )
-
-        self.assertFalse(decision.reuse_validation)
-        self.assertIn("closed pull-request response was invalid", decision.reason)
 
     def test_failed_pr_run_fails_closed_to_full_validation(self) -> None:
         decision = self._decide(
@@ -208,6 +194,16 @@ class ValidationReuseDecisionTests(unittest.TestCase):
 
         self.assertFalse(decision.reuse_validation)
         self.assertIn("detail response was invalid", decision.reason)
+
+    def test_pull_request_summary_detail_disagreement_fails_closed(self) -> None:
+        decision = self._decide(
+            pulls=[_pull_request(head_sha="d" * 40, include_merge_detail=False)],
+            pull_detail=_pull_request(),
+            workflow_runs=[_workflow_run()],
+        )
+
+        self.assertFalse(decision.reuse_validation)
+        self.assertIn("summary and detail disagreed", decision.reason)
 
     def test_different_merged_tree_fails_closed_to_full_validation(self) -> None:
         decision = self._decide(
@@ -256,8 +252,6 @@ class ValidationReuseDecisionTests(unittest.TestCase):
             self.assertEqual(token, "token")
             if url.endswith("/pulls"):
                 return next(associated_responses)
-            if "/pulls?" in url:
-                return []
             if url.endswith("/pulls/286"):
                 return _pull_request()
             if f"/git/commits/{MAIN_SHA}" in url:
