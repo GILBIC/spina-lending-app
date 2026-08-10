@@ -21,6 +21,7 @@ from .regular_collection_journal_preview import (
 from .regular_eir_accrual_journal_preview import (
     RegularEirAccrualJournalLine,
     RegularEirAccrualJournalPreview,
+    RegularEirAccrualPeriodEvidence,
 )
 from .request_auth import authenticated_device_context
 
@@ -31,6 +32,10 @@ def eir_cash_allocation_repository_dependency() -> PostgresEirCashAllocationRepo
 
 def _money(value: Decimal | None) -> str | None:
     return format(value, ".2f") if value is not None else None
+
+
+def _exact_decimal(value: Decimal) -> str:
+    return format(value, "f")
 
 
 def _allocation_item_payload(item: EirCashAllocation) -> dict[str, object]:
@@ -131,6 +136,31 @@ def _eir_accrual_line_payload(
     }
 
 
+def _eir_accrual_period_evidence_payload(
+    evidence: RegularEirAccrualPeriodEvidence,
+) -> dict[str, object]:
+    return {
+        "fiscal_period_id": str(evidence.period_id),
+        "fiscal_period_label": evidence.label,
+        "fiscal_period_status": evidence.status,
+        "period_start_date": evidence.period_start_date.isoformat(),
+        "period_end_date": evidence.period_end_date.isoformat(),
+        "accrual_start_date_inclusive": (
+            evidence.accrual_start_date_inclusive.isoformat()
+        ),
+        "accrual_end_date_inclusive": (
+            evidence.accrual_end_date_inclusive.isoformat()
+        ),
+        "day_count": evidence.day_count,
+        "effective_interest_raw": _exact_decimal(
+            evidence.effective_interest_raw
+        ),
+        "effective_interest_rounded": _money(
+            evidence.effective_interest_rounded
+        ),
+    }
+
+
 def _eir_accrual_preview_payload(
     preview: RegularEirAccrualJournalPreview,
 ) -> dict[str, object]:
@@ -164,6 +194,13 @@ def _eir_accrual_preview_payload(
         "total_debit": _money(preview.total_debit),
         "total_credit": _money(preview.total_credit),
         "balanced": preview.balanced,
+        "period_split_evidence": [
+            _eir_accrual_period_evidence_payload(evidence)
+            for evidence in preview.period_split_evidence
+        ],
+        "period_rounded_total": _money(preview.period_rounded_total),
+        "rounding_residual": _money(preview.rounding_residual),
+        "split_policy_required": preview.split_policy_required,
     }
 
 
@@ -206,7 +243,14 @@ def _pack_payload(pack: EirCashAllocationPack) -> dict[str, object]:
             _result_payload(pack.allocation) if pack.allocation is not None else None
         ),
         "notice": (
-            "Read-only event-date EIR cash allocation plus fiscal-period-aware Regular EIR accrual and collection journal-line previews. Accrual lines appear only when one open fiscal period covers the full recognized interval; cross-period intervals fail closed until a validated split-rounding policy exists. No journal draft, posted entry, lending mutation, or automatic source posting is created by this endpoint."
+            "Read-only event-date EIR cash allocation plus fiscal-period-aware "
+            "Regular EIR accrual and collection journal-line previews. Accrual "
+            "lines appear only when one open fiscal period covers the full "
+            "recognized interval. Cross-period intervals expose exact raw and "
+            "independently rounded period evidence but remain fail-closed until "
+            "Management approves how any residual cent is allocated. No journal "
+            "draft, posted entry, lending mutation, or automatic source posting "
+            "is created by this endpoint."
         ),
     }
 

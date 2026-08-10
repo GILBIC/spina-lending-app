@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
-from .eir_cash_allocation import EirCashAllocation
+from .eir_cash_allocation import EirCashAllocation, money
 
 
 ZERO = Decimal("0.00")
@@ -22,6 +22,20 @@ class AccountingFiscalPeriodReference:
     start_date: date
     end_date: date
     status: str
+
+
+@dataclass(frozen=True, slots=True)
+class RegularEirAccrualPeriodEvidence:
+    period_id: UUID
+    label: str
+    period_start_date: date
+    period_end_date: date
+    status: str
+    accrual_start_date_inclusive: date
+    accrual_end_date_inclusive: date
+    day_count: int
+    effective_interest_raw: Decimal
+    effective_interest_rounded: Decimal
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +65,10 @@ class RegularEirAccrualJournalPreview:
     total_debit: Decimal
     total_credit: Decimal
     balanced: bool
+    period_split_evidence: tuple[RegularEirAccrualPeriodEvidence, ...] = ()
+    period_rounded_total: Decimal = ZERO
+    rounding_residual: Decimal = ZERO
+    split_policy_required: bool = False
 
 
 def _source_event_key(allocation: EirCashAllocation) -> str:
@@ -64,6 +82,10 @@ def _blocked(
     disposition: str,
     message: str,
     period: AccountingFiscalPeriodReference | None = None,
+    period_split_evidence: tuple[RegularEirAccrualPeriodEvidence, ...] = (),
+    period_rounded_total: Decimal = ZERO,
+    rounding_residual: Decimal = ZERO,
+    split_policy_required: bool = False,
 ) -> RegularEirAccrualJournalPreview:
     return RegularEirAccrualJournalPreview(
         transaction_id=allocation.transaction_id,
@@ -83,7 +105,109 @@ def _blocked(
         total_debit=ZERO,
         total_credit=ZERO,
         balanced=False,
+        period_split_evidence=period_split_evidence,
+        period_rounded_total=period_rounded_total,
+        rounding_residual=rounding_residual,
+        split_policy_required=split_policy_required,
     )
+
+
+def _build_period_split_evidence(
+    allocation: EirCashAllocation,
+    *,
+    accrual_start_date: date,
+    fiscal_periods: tuple[AccountingFiscalPeriodReference, ...],
+) -> tuple[
+    tuple[RegularEirAccrualPeriodEvidence, ...],
+    Decimal,
+    Decimal,
+] | None:
+    """Aggregate exact daily EIR by period without assigning a residual cent."""
+
+    expected_dates: list[date] = []
+    current_date = accrual_start_date + timedelta(days=1)
+    while current_date <= allocation.collection_date:
+        expected_dates.append(current_date)
+        current_date += timedelta(days=1)
+
+    daily_accruals = allocation.daily_accruals
+    if not daily_accruals or tuple(
+        item.accrual_date for item in daily_accruals
+    ) != tuple(expected_dates):
+        return None
+
+    previous_closing: Decimal | None = None
+    grouped: dict[
+        UUID,
+        tuple[AccountingFiscalPeriodReference, list[tuple[date, Decimal]]],
+    ] = {}
+    total_raw = Decimal("0")
+    for item in daily_accruals:
+        if (
+            item.opening_gross_carrying_raw < 0
+            or item.effective_interest_raw < 0
+            or item.closing_gross_carrying_raw
+            != item.opening_gross_carrying_raw + item.effective_interest_raw
+            or (
+                previous_closing is not None
+                and item.opening_gross_carrying_raw != previous_closing
+            )
+        ):
+            return None
+        previous_closing = item.closing_gross_carrying_raw
+
+        matching_periods = tuple(
+            period
+            for period in fiscal_periods
+            if period.start_date <= item.accrual_date <= period.end_date
+        )
+        if len(matching_periods) != 1:
+            return None
+        period = matching_periods[0]
+        if period.period_id not in grouped:
+            grouped[period.period_id] = (period, [])
+        grouped[period.period_id][1].append(
+            (item.accrual_date, item.effective_interest_raw)
+        )
+        total_raw += item.effective_interest_raw
+
+    if money(total_raw) != allocation.effective_interest_accrued_since_prior_event:
+        return None
+
+    evidence: list[RegularEirAccrualPeriodEvidence] = []
+    for period, rows in sorted(
+        grouped.values(),
+        key=lambda value: (
+            value[0].start_date,
+            value[0].end_date,
+            str(value[0].period_id),
+        ),
+    ):
+        period_raw = sum((amount for _, amount in rows), Decimal("0"))
+        evidence.append(
+            RegularEirAccrualPeriodEvidence(
+                period_id=period.period_id,
+                label=period.label,
+                period_start_date=period.start_date,
+                period_end_date=period.end_date,
+                status=period.status,
+                accrual_start_date_inclusive=rows[0][0],
+                accrual_end_date_inclusive=rows[-1][0],
+                day_count=len(rows),
+                effective_interest_raw=period_raw,
+                effective_interest_rounded=money(period_raw),
+            )
+        )
+
+    period_rounded_total = sum(
+        (item.effective_interest_rounded for item in evidence),
+        ZERO,
+    )
+    rounding_residual = money(
+        allocation.effective_interest_accrued_since_prior_event
+        - period_rounded_total
+    )
+    return tuple(evidence), period_rounded_total, rounding_residual
 
 
 def build_regular_eir_accrual_journal_preview(
@@ -275,9 +399,34 @@ def build_regular_eir_accrual_journal_preview(
             if len(overlapping) > 1
             else "fiscal_period_required"
         )
+        if disposition == "fiscal_period_split_required":
+            split_evidence = _build_period_split_evidence(
+                allocation,
+                accrual_start_date=accrual_start_date,
+                fiscal_periods=overlapping,
+            )
+            if split_evidence is not None:
+                evidence, period_rounded_total, rounding_residual = split_evidence
+                return _blocked(
+                    allocation,
+                    accrual_start_date=accrual_start_date,
+                    disposition=disposition,
+                    message=(
+                        "The EIR interval crosses fiscal periods. Exact daily EIR "
+                        "has been grouped into auditable raw and independently "
+                        "rounded period amounts, but no residual cent is assigned "
+                        "and no lines are proposed until Management approves a "
+                        "period-split rounding policy."
+                    ),
+                    period_split_evidence=evidence,
+                    period_rounded_total=period_rounded_total,
+                    rounding_residual=rounding_residual,
+                    split_policy_required=True,
+                )
         message = (
-            "The EIR interval crosses fiscal periods. A validated period-splitting "
-            "and cent-rounding policy is required before lines can be proposed."
+            "The EIR interval crosses fiscal periods, but complete exact daily "
+            "accrual evidence is unavailable. A validated period-splitting and "
+            "cent-rounding policy is required before lines can be proposed."
             if disposition == "fiscal_period_split_required"
             else "One fiscal period must cover every day in the EIR accrual interval."
         )
@@ -286,6 +435,7 @@ def build_regular_eir_accrual_journal_preview(
             accrual_start_date=accrual_start_date,
             disposition=disposition,
             message=message,
+            split_policy_required=(disposition == "fiscal_period_split_required"),
         )
 
     period = covering[0]

@@ -11,6 +11,7 @@ from gilbic_backend.auth_api import account_repository_dependency, auth_client_d
 from gilbic_backend.auth_client import AuthSession
 from gilbic_backend.eir_cash_allocation import EirAllocationResult, EirCashAllocation
 from gilbic_backend.eir_cash_allocation_api import (
+    _eir_accrual_preview_payload,
     eir_cash_allocation_repository_dependency,
 )
 from gilbic_backend.eir_cash_allocation_repository import EirCashAllocationPack
@@ -19,6 +20,8 @@ from gilbic_backend.regular_collection_journal_preview import (
 )
 from gilbic_backend.regular_eir_accrual_journal_preview import (
     AccountingFiscalPeriodReference,
+    RegularEirAccrualJournalPreview,
+    RegularEirAccrualPeriodEvidence,
     build_regular_eir_accrual_journal_preview,
 )
 from gilbic_backend.main import create_app
@@ -212,6 +215,10 @@ def test_management_can_load_exact_decimal_eir_cash_allocation_reference() -> No
     assert accrual["posting_eligible"] is False
     assert accrual["balanced"] is True
     assert accrual["total_debit"] == accrual["total_credit"] == "1.10"
+    assert accrual["period_split_evidence"] == []
+    assert accrual["period_rounded_total"] == "0.00"
+    assert accrual["rounding_residual"] == "0.00"
+    assert accrual["split_policy_required"] is False
     assert accrual["proposed_lines"] == [
         {
             "account_system_key": "accrued_interest_receivable",
@@ -263,6 +270,73 @@ def test_eir_cash_allocation_requires_accounting_view_permission() -> None:
     )
     assert response.status_code == 403
     assert repository.calls == []
+
+
+def test_cross_period_eir_evidence_serializes_raw_and_cent_values_separately() -> None:
+    july = RegularEirAccrualPeriodEvidence(
+        period_id=UUID("55555555-5555-4555-8555-555555555555"),
+        label="July 2026",
+        period_start_date=date(2026, 7, 1),
+        period_end_date=date(2026, 7, 31),
+        status="open",
+        accrual_start_date_inclusive=date(2026, 7, 31),
+        accrual_end_date_inclusive=date(2026, 7, 31),
+        day_count=1,
+        effective_interest_raw=Decimal("0.00250000"),
+        effective_interest_rounded=Decimal("0.00"),
+    )
+    august = RegularEirAccrualPeriodEvidence(
+        period_id=UUID("66666666-6666-4666-8666-666666666666"),
+        label="August 2026",
+        period_start_date=date(2026, 8, 1),
+        period_end_date=date(2026, 8, 31),
+        status="open",
+        accrual_start_date_inclusive=date(2026, 8, 1),
+        accrual_end_date_inclusive=date(2026, 8, 1),
+        day_count=1,
+        effective_interest_raw=Decimal("0.00250006250000"),
+        effective_interest_rounded=Decimal("0.00"),
+    )
+    preview = RegularEirAccrualJournalPreview(
+        transaction_id=TX_ID,
+        related_collection_source_event_key=f"collection:{TX_ID}",
+        source_event_key=f"eir_accrual:collection:{TX_ID}",
+        accrual_start_date_exclusive=date(2026, 7, 30),
+        accrual_end_date_inclusive=date(2026, 8, 1),
+        posting_date=date(2026, 8, 1),
+        fiscal_period_id=None,
+        fiscal_period_label=None,
+        fiscal_period_status=None,
+        amount=Decimal("0.01"),
+        disposition="fiscal_period_split_required",
+        posting_eligible=False,
+        message="Management-approved residual policy required.",
+        proposed_lines=(),
+        total_debit=Decimal("0.00"),
+        total_credit=Decimal("0.00"),
+        balanced=False,
+        period_split_evidence=(july, august),
+        period_rounded_total=Decimal("0.00"),
+        rounding_residual=Decimal("0.01"),
+        split_policy_required=True,
+    )
+
+    payload = _eir_accrual_preview_payload(preview)
+
+    assert payload["split_policy_required"] is True
+    assert payload["period_rounded_total"] == "0.00"
+    assert payload["rounding_residual"] == "0.01"
+    assert payload["proposed_lines"] == []
+    evidence = payload["period_split_evidence"]
+    assert isinstance(evidence, list)
+    assert [item["effective_interest_raw"] for item in evidence] == [
+        "0.00250000",
+        "0.00250006250000",
+    ]
+    assert [item["effective_interest_rounded"] for item in evidence] == [
+        "0.00",
+        "0.00",
+    ]
 
 
 def test_eir_cash_allocation_requires_management_role() -> None:

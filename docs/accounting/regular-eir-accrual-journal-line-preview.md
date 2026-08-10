@@ -33,6 +33,29 @@ rounding before split-period proposals are allowed.
 If the allocator recognizes zero cents at a boundary, the result is
 `no_eir_accrual_required`; no zero-value journal is proposed.
 
+## Cross-period split evidence
+
+When an interval crosses fiscal periods, the allocator now preserves the exact,
+unrounded EIR calculated for every elapsed calendar day. The preview groups that
+evidence by fiscal period and reports:
+
+- the exact accrual dates and day count assigned to each period;
+- the period's unrounded EIR amount;
+- that period's independently rounded cent amount;
+- the total of the independently rounded periods; and
+- the residual versus the EIR cent already recognized at the cash-event boundary.
+
+This makes the rounding decision auditable without silently making it. A residual
+may exist because rounding each period independently can differ from rounding the
+complete cash-event interval once. The preview therefore continues to return
+`fiscal_period_split_required`, `split_policy_required=true`, no proposed lines,
+and `posting_eligible=false` until Management approves a deterministic residual-
+cent allocation policy.
+
+The daily evidence is internal calculation support. The API exposes only the
+period aggregates needed for review; it does not expose or persist a new lending
+or accounting source record.
+
 ## Protected gates
 
 The proposal also requires:
