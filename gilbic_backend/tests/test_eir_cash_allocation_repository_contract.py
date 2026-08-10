@@ -48,6 +48,12 @@ def test_repository_fail_closes_collection_proposals_against_accounts_and_journa
     assert "left join accounting.journal_entries reversal" in source
     assert "journal.status as journal_status" in source
     assert "reversal.status as reversal_status" in source
+    assert "REGULAR_EIR_ACCRUAL_ACCOUNT_KEYS" in source
+    assert "build_regular_eir_accrual_journal_preview" in source
+    assert "from accounting.fiscal_periods" in source
+    assert "'eir_accrual:collection:' || t.id::text" in source
+    assert "accrual_journal.status as accrual_journal_status" in source
+    assert "accrual_reversal.status as accrual_reversal_status" in source
 
 
 def test_repository_preserves_account_configuration_on_every_blocked_response() -> None:
@@ -66,6 +72,8 @@ def test_repository_preserves_account_configuration_on_every_blocked_response() 
         keyword_names = {keyword.arg for keyword in call.keywords}
         assert "account_configuration_ready" in keyword_names
         assert "account_configuration_blocker" in keyword_names
+        assert "eir_accrual_account_configuration_ready" in keyword_names
+        assert "eir_accrual_account_configuration_blocker" in keyword_names
 
     loan_id = UUID("00000000-0000-0000-0000-000000000001")
     loan = {"loan_number": "REG-1", "client_name": "Test Client"}
@@ -80,6 +88,8 @@ def test_repository_preserves_account_configuration_on_every_blocked_response() 
         blocker_message="Cutover is required.",
         account_configuration_ready=True,
         account_configuration_blocker=None,
+        eir_accrual_account_configuration_ready=True,
+        eir_accrual_account_configuration_blocker=None,
     )
     account_blocker = "Missing required Regular collection account mapping: loans_receivable_regular"
     blocked_pack = PostgresEirCashAllocationRepository._blocked_pack(
@@ -93,12 +103,20 @@ def test_repository_preserves_account_configuration_on_every_blocked_response() 
         blocker_message="Cutover is required.",
         account_configuration_ready=False,
         account_configuration_blocker=account_blocker,
+        eir_accrual_account_configuration_ready=False,
+        eir_accrual_account_configuration_blocker="Missing required Regular EIR accrual account mapping: interest_income_regular",
     )
 
     assert ready_pack.account_configuration_ready is True
     assert ready_pack.account_configuration_blocker is None
     assert blocked_pack.account_configuration_ready is False
     assert blocked_pack.account_configuration_blocker == account_blocker
+    assert ready_pack.eir_accrual_account_configuration_ready is True
+    assert ready_pack.eir_accrual_account_configuration_blocker is None
+    assert blocked_pack.eir_accrual_account_configuration_ready is False
+    assert "interest_income_regular" in (
+        blocked_pack.eir_accrual_account_configuration_blocker or ""
+    )
 
 
 def test_repository_contains_no_accounting_or_lending_write_statement() -> None:
