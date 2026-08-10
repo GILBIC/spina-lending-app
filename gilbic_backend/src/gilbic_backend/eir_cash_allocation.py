@@ -38,6 +38,16 @@ class EirCashSourceEvent:
 
 
 @dataclass(frozen=True, slots=True)
+class EirDailyAccrual:
+    """Exact, unrounded EIR evidence for one elapsed calendar day."""
+
+    accrual_date: date
+    opening_gross_carrying_raw: Decimal
+    effective_interest_raw: Decimal
+    closing_gross_carrying_raw: Decimal
+
+
+@dataclass(frozen=True, slots=True)
 class EirCashAllocation:
     transaction_id: UUID
     source_event_key: str
@@ -55,6 +65,7 @@ class EirCashAllocation:
     posting_eligible: bool
     disposition: str
     message: str
+    daily_accruals: tuple[EirDailyAccrual, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -237,11 +248,21 @@ def allocate_event_date_eir_cash(
             )
 
         accrued_since_prior_raw = Decimal("0")
+        daily_accruals: list[EirDailyAccrual] = []
         next_day = last_accrual_date + timedelta(days=1)
         while next_day <= event.collection_date:
-            daily_interest = (loan_raw + accrued_raw) * daily_eir
+            opening_gross_raw = loan_raw + accrued_raw
+            daily_interest = opening_gross_raw * daily_eir
             accrued_raw += daily_interest
             accrued_since_prior_raw += daily_interest
+            daily_accruals.append(
+                EirDailyAccrual(
+                    accrual_date=next_day,
+                    opening_gross_carrying_raw=opening_gross_raw,
+                    effective_interest_raw=daily_interest,
+                    closing_gross_carrying_raw=loan_raw + accrued_raw,
+                )
+            )
             next_day += timedelta(days=1)
         last_accrual_date = event.collection_date
 
@@ -273,6 +294,7 @@ def allocate_event_date_eir_cash(
                     posting_eligible=False,
                     disposition="cash_exceeds_carrying_review",
                     message="Cash exceeds the measured EIR gross carrying amount. Allocation stops for source review.",
+                    daily_accruals=tuple(daily_accruals),
                 )
             )
             return EirAllocationResult(
@@ -317,6 +339,7 @@ def allocate_event_date_eir_cash(
                 posting_eligible=False,
                 disposition="allocation_reference_ready",
                 message="Read-only EIR cash split is reconciled. Posting remains blocked until the related EIR accrual is posted through a separate protected accounting stage.",
+                daily_accruals=tuple(daily_accruals),
             )
         )
 
