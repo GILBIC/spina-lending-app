@@ -110,7 +110,7 @@ def test_zero_cent_boundary_requires_no_accrual_journal() -> None:
     assert result.posting_eligible is False
 
 
-def test_cross_period_interval_fails_closed_until_split_policy_exists() -> None:
+def test_cross_period_interval_without_daily_evidence_fails_closed() -> None:
     july = period(
         period_id=JULY_ID,
         label="July 2026",
@@ -123,11 +123,12 @@ def test_cross_period_interval_fails_closed_until_split_policy_exists() -> None:
         fiscal_periods=(july, period()),
     )
 
-    assert result.disposition == "fiscal_period_split_required"
+    assert result.disposition == "fiscal_period_split_evidence_required"
     assert result.proposed_lines == ()
     assert result.balanced is False
     assert result.period_split_evidence == ()
-    assert result.split_policy_required is True
+    assert result.split_policy_required is False
+    assert result.period_split_policy_version == "regular_eir_period_split_v1"
 
 
 @pytest.mark.parametrize("status", ["review", "closed"])
