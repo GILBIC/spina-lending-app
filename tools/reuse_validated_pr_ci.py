@@ -27,6 +27,16 @@ class ValidationReuseDecision:
 JsonFetcher = Callable[[str, str], object]
 
 
+def _commit_tree_sha(payload: object) -> str | None:
+    if not isinstance(payload, dict):
+        return None
+    tree = payload.get("tree")
+    if not isinstance(tree, dict):
+        return None
+    tree_sha = str(tree.get("sha", "")).lower()
+    return tree_sha if SHA_PATTERN.fullmatch(tree_sha) else None
+
+
 def _github_json(url: str, token: str) -> object:
     request = Request(
         url,
@@ -112,6 +122,31 @@ def decide_validation_reuse(
     head_ref = head.get("ref")
     if not isinstance(pull_request_number, int) or not SHA_PATTERN.fullmatch(head_sha):
         return ValidationReuseDecision(False, "merged pull request head metadata was invalid")
+
+    main_commit_url = (
+        f"{api_url.rstrip('/')}/repos/{encoded_repo}/git/commits/"
+        f"{quote(normalized_sha, safe='')}"
+    )
+    head_commit_url = (
+        f"{api_url.rstrip('/')}/repos/{encoded_repo}/git/commits/"
+        f"{quote(head_sha, safe='')}"
+    )
+    main_tree_sha = _commit_tree_sha(fetch_json(main_commit_url, token))
+    head_tree_sha = _commit_tree_sha(fetch_json(head_commit_url, token))
+    if main_tree_sha is None or head_tree_sha is None:
+        return ValidationReuseDecision(
+            False,
+            "merged or validated-head commit tree metadata was invalid",
+            pull_request_number=pull_request_number,
+            validated_head_sha=head_sha,
+        )
+    if main_tree_sha != head_tree_sha:
+        return ValidationReuseDecision(
+            False,
+            "merged commit tree differs from the validated pull-request head tree",
+            pull_request_number=pull_request_number,
+            validated_head_sha=head_sha,
+        )
 
     query = urlencode(
         {
