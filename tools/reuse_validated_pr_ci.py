@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import re
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -25,6 +26,7 @@ class ValidationReuseDecision:
 
 
 JsonFetcher = Callable[[str, str], object]
+Sleeper = Callable[[float], None]
 
 
 def _matching_merged_owner_pulls(
@@ -38,6 +40,8 @@ def _matching_merged_owner_pulls(
     if not isinstance(payload, list):
         return None
 
+    repository_identity = repository.casefold()
+    owner_identity = owner.casefold()
     candidates: list[dict[str, Any]] = []
     for item in payload:
         if not isinstance(item, dict):
@@ -47,18 +51,16 @@ def _matching_merged_owner_pulls(
         user = item.get("user")
         if not isinstance(head, dict) or not isinstance(base, dict) or not isinstance(user, dict):
             continue
-        head_repo = head.get("repo")
         base_repo = base.get("repo")
-        if not isinstance(head_repo, dict) or not isinstance(base_repo, dict):
+        if not isinstance(base_repo, dict):
             continue
         if (
             item.get("state") == "closed"
             and item.get("merged_at")
             and str(item.get("merge_commit_sha", "")).lower() == commit_sha
             and base.get("ref") == base_ref
-            and base_repo.get("full_name") == repository
-            and head_repo.get("full_name") == repository
-            and user.get("login") == owner
+            and str(base_repo.get("full_name", "")).casefold() == repository_identity
+            and str(user.get("login", "")).casefold() == owner_identity
         ):
             candidates.append(item)
     return candidates
@@ -97,6 +99,9 @@ def decide_validation_reuse(
     token: str,
     api_url: str = "https://api.github.com",
     fetch_json: JsonFetcher = _github_json,
+    association_attempts: int = 6,
+    association_retry_seconds: float = 8.0,
+    sleep: Sleeper = time.sleep,
 ) -> ValidationReuseDecision:
     """Prove that a main commit came from an exact successful owner PR run.
 
@@ -112,49 +117,60 @@ def decide_validation_reuse(
         return ValidationReuseDecision(False, "commit SHA is not a full 40-character SHA")
     if not workflow_file or not base_ref or not token:
         return ValidationReuseDecision(False, "required GitHub validation context is missing")
+    if association_attempts < 1 or association_retry_seconds < 0:
+        return ValidationReuseDecision(False, "association retry configuration was invalid")
 
     encoded_repo = f"{quote(owner, safe='')}/{quote(repo_name, safe='')}"
     pulls_url = (
         f"{api_url.rstrip('/')}/repos/{encoded_repo}/commits/"
         f"{quote(normalized_sha, safe='')}/pulls"
     )
-    pulls_payload = fetch_json(pulls_url, token)
-    candidates = _matching_merged_owner_pulls(
-        pulls_payload,
-        repository=repository,
-        owner=owner,
-        base_ref=base_ref,
-        commit_sha=normalized_sha,
+    closed_pulls_query = urlencode(
+        {
+            "state": "closed",
+            "base": base_ref,
+            "sort": "updated",
+            "direction": "desc",
+            "per_page": 100,
+        }
     )
-    if candidates is None:
-        return ValidationReuseDecision(False, "associated pull-request response was invalid")
+    closed_pulls_url = (
+        f"{api_url.rstrip('/')}/repos/{encoded_repo}/pulls?{closed_pulls_query}"
+    )
 
-    # GitHub can start the push workflow before the commit-associated PR index
-    # exposes a just-completed squash merge. Fall back to the newest closed PR
-    # records and retain the same exact merge-SHA, owner, repository, and base
-    # predicates. Missing or ambiguous fallback evidence still fails closed.
-    if not candidates:
-        closed_pulls_query = urlencode(
-            {
-                "state": "closed",
-                "base": base_ref,
-                "sort": "updated",
-                "direction": "desc",
-                "per_page": 100,
-            }
-        )
-        closed_pulls_url = (
-            f"{api_url.rstrip('/')}/repos/{encoded_repo}/pulls?{closed_pulls_query}"
-        )
+    candidates: list[dict[str, Any]] = []
+    for attempt in range(association_attempts):
         candidates = _matching_merged_owner_pulls(
-            fetch_json(closed_pulls_url, token),
+            fetch_json(pulls_url, token),
             repository=repository,
             owner=owner,
             base_ref=base_ref,
             commit_sha=normalized_sha,
         )
         if candidates is None:
-            return ValidationReuseDecision(False, "closed pull-request response was invalid")
+            return ValidationReuseDecision(False, "associated pull-request response was invalid")
+
+        # GitHub can start the push workflow before the commit-associated PR
+        # index exposes a just-completed squash merge. Fall back to the newest
+        # closed PR records and retain the same exact merge-SHA, owner,
+        # repository, and base predicates.
+        if not candidates:
+            candidates = _matching_merged_owner_pulls(
+                fetch_json(closed_pulls_url, token),
+                repository=repository,
+                owner=owner,
+                base_ref=base_ref,
+                commit_sha=normalized_sha,
+            )
+            if candidates is None:
+                return ValidationReuseDecision(False, "closed pull-request response was invalid")
+
+        if len(candidates) == 1:
+            break
+        if len(candidates) > 1:
+            break
+        if attempt + 1 < association_attempts:
+            sleep(association_retry_seconds)
 
     if len(candidates) != 1:
         return ValidationReuseDecision(
@@ -220,7 +236,12 @@ def decide_validation_reuse(
             continue
         run_pull_requests = run.get("pull_requests")
         actor = run.get("actor")
-        if not isinstance(run_pull_requests, list) or not isinstance(actor, dict):
+        head_repository = run.get("head_repository")
+        if (
+            not isinstance(run_pull_requests, list)
+            or not isinstance(actor, dict)
+            or not isinstance(head_repository, dict)
+        ):
             continue
         run_pr_numbers = {
             candidate.get("number")
@@ -234,7 +255,9 @@ def decide_validation_reuse(
             and str(run.get("head_sha", "")).lower() == head_sha
             and run.get("head_branch") == head_ref
             and pull_request_number in run_pr_numbers
-            and actor.get("login") == owner
+            and str(actor.get("login", "")).casefold() == owner.casefold()
+            and str(head_repository.get("full_name", "")).casefold()
+            == repository.casefold()
         ):
             matching_runs.append(run)
 
