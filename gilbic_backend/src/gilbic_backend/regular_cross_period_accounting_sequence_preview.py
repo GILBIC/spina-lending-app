@@ -7,6 +7,9 @@ from uuid import UUID
 
 from .eir_cash_allocation import money
 from .regular_collection_journal_preview import RegularCollectionJournalPreview
+from .regular_eir_accrual_journal_preview import (
+    REGULAR_EIR_PERIOD_SPLIT_POLICY_VERSION,
+)
 from .regular_eir_period_journal_preview import (
     REGULAR_EIR_PERIOD_JOURNAL_PREVIEW_POLICY_VERSION,
     RegularEirFiscalPeriodJournalProposal,
@@ -215,6 +218,8 @@ def _period_preview_is_exact(
         or preview.source_event_key != f"eir_accrual:{expected_collection_key}"
         or preview.disposition != "eir_period_journal_lines_preview_ready"
         or preview.blocker_code is not None
+        or preview.period_split_policy_version
+        != REGULAR_EIR_PERIOD_SPLIT_POLICY_VERSION
         or preview.journal_preview_policy_version
         != REGULAR_EIR_PERIOD_JOURNAL_PREVIEW_POLICY_VERSION
         or preview.posting_eligible
@@ -241,14 +246,11 @@ def _period_preview_is_exact(
             return False
         if previous is not None:
             if (
-                proposal.period_start_date <= previous.period_start_date
-                or proposal.accrual_start_date_inclusive
-                != previous.accrual_end_date_inclusive + timedelta(days=1)
+                previous.accrual_end_date_inclusive != previous.period_end_date
+                or proposal.accrual_start_date_inclusive != proposal.period_start_date
+                or proposal.period_start_date
+                != previous.period_end_date + timedelta(days=1)
             ):
-                return False
-            # Every earlier affected fiscal-period segment must close at its
-            # protected period end before recognition can move to the next period.
-            if previous.accrual_end_date_inclusive != previous.period_end_date:
                 return False
         previous = proposal
         allocated_total += proposal.allocated_amount
@@ -311,7 +313,7 @@ def build_regular_cross_period_accounting_sequence_preview(
             message=(
                 "The protected per-period Regular EIR proposals do not satisfy the "
                 "exact cross-period identity, cent, chronological coverage, period-"
-                "end recognition, and reconciliation contract."
+                "end recognition, approved-policy, and reconciliation contract."
             ),
         )
 
@@ -357,6 +359,12 @@ def build_regular_cross_period_accounting_sequence_preview(
             collection,
             blocker_code="cross_period_sequence_entry_posting_control_review",
             message="A sequence entry unexpectedly claims posting eligibility.",
+        )
+    if len({entry.preview_entry_key for entry in entries}) != len(entries):
+        return _blocked(
+            collection,
+            blocker_code="cross_period_sequence_preview_identity_conflict",
+            message="Preview-only sequence entry identities must be unique.",
         )
     if [entry.sequence_order for entry in entries] != list(
         range(1, len(entries) + 1)
