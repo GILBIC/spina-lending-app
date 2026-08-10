@@ -269,6 +269,39 @@ def test_protected_fiscal_period_tampering_blocks_all_api_proposals() -> None:
     assert result.automatic_source_posting_enabled is False
 
 
+def test_incomplete_source_preview_set_fails_closed() -> None:
+    pack, fiscal_periods, _, _ = _cross_period_context()
+    pack = replace(pack, eir_accrual_previews=())
+
+    result = build_regular_eir_period_journal_api_result(
+        pack,
+        protected_fiscal_periods=fiscal_periods,
+    )
+
+    assert result.status == "eir_period_journal_preview_blocked"
+    assert result.blocker_code == "eir_period_source_preview_set_not_exact"
+    assert result.previews == ()
+
+
+def test_upstream_accrual_blocker_is_not_reported_as_no_cross_period_need() -> None:
+    pack, fiscal_periods, accrual_preview, _ = _cross_period_context()
+    blocked_accrual = replace(
+        accrual_preview,
+        disposition="fiscal_period_split_period_not_open",
+        period_allocation_reconciled=False,
+    )
+    pack = replace(pack, eir_accrual_previews=(blocked_accrual,))
+
+    result = build_regular_eir_period_journal_api_result(
+        pack,
+        protected_fiscal_periods=fiscal_periods,
+    )
+
+    assert result.status == "eir_period_journal_preview_blocked"
+    assert result.blocker_code == "fiscal_period_split_period_not_open"
+    assert result.previews == ()
+
+
 def test_unexpected_automatic_source_posting_blocks_api_proposals() -> None:
     pack, fiscal_periods, _, _ = _cross_period_context()
     pack = replace(pack, automatic_source_posting_enabled=True)
