@@ -29,13 +29,14 @@ JsonFetcher = Callable[[str, str], object]
 Sleeper = Callable[[float], None]
 
 
-def _matching_merged_owner_pulls(
+def _matching_owner_pull_records(
     payload: object,
     *,
     repository: str,
     owner: str,
     base_ref: str,
     commit_sha: str,
+    require_merged_detail: bool = False,
 ) -> list[dict[str, Any]] | None:
     if not isinstance(payload, list):
         return None
@@ -56,11 +57,14 @@ def _matching_merged_owner_pulls(
             continue
         if (
             item.get("state") == "closed"
-            and item.get("merged_at")
             and str(item.get("merge_commit_sha", "")).lower() == commit_sha
             and base.get("ref") == base_ref
             and str(base_repo.get("full_name", "")).casefold() == repository_identity
             and str(user.get("login", "")).casefold() == owner_identity
+            and (
+                not require_merged_detail
+                or (item.get("merged") is True and bool(item.get("merged_at")))
+            )
         ):
             candidates.append(item)
     return candidates
@@ -140,30 +144,56 @@ def decide_validation_reuse(
 
     candidates: list[dict[str, Any]] = []
     for attempt in range(association_attempts):
-        candidates = _matching_merged_owner_pulls(
+        summaries = _matching_owner_pull_records(
             fetch_json(pulls_url, token),
             repository=repository,
             owner=owner,
             base_ref=base_ref,
             commit_sha=normalized_sha,
         )
-        if candidates is None:
+        if summaries is None:
             return ValidationReuseDecision(False, "associated pull-request response was invalid")
 
         # GitHub can start the push workflow before the commit-associated PR
         # index exposes a just-completed squash merge. Fall back to the newest
         # closed PR records and retain the same exact merge-SHA, owner,
         # repository, and base predicates.
-        if not candidates:
-            candidates = _matching_merged_owner_pulls(
+        if not summaries:
+            summaries = _matching_owner_pull_records(
                 fetch_json(closed_pulls_url, token),
                 repository=repository,
                 owner=owner,
                 base_ref=base_ref,
                 commit_sha=normalized_sha,
             )
-            if candidates is None:
+            if summaries is None:
                 return ValidationReuseDecision(False, "closed pull-request response was invalid")
+
+        # Both list endpoints return GitHub's SimplePullRequest schema, which
+        # omits the authoritative `merged` and `merged_at` fields. Resolve each
+        # exact-SHA summary through the full PR endpoint before trusting it.
+        candidates = []
+        for summary in summaries:
+            pull_request_number = summary.get("number")
+            if not isinstance(pull_request_number, int):
+                continue
+            detail_url = (
+                f"{api_url.rstrip('/')}/repos/{encoded_repo}/pulls/"
+                f"{pull_request_number}"
+            )
+            detail = fetch_json(detail_url, token)
+            if not isinstance(detail, dict) or detail.get("number") != pull_request_number:
+                return ValidationReuseDecision(False, "pull-request detail response was invalid")
+            detailed_matches = _matching_owner_pull_records(
+                [detail],
+                repository=repository,
+                owner=owner,
+                base_ref=base_ref,
+                commit_sha=normalized_sha,
+                require_merged_detail=True,
+            )
+            if detailed_matches:
+                candidates.extend(detailed_matches)
 
         if len(candidates) == 1:
             break
