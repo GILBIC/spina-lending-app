@@ -161,3 +161,73 @@ def test_unexpected_source_posting_eligibility_fails_closed() -> None:
     assert result.blocker_code == "eir_period_journal_posting_control_review"
     assert result.period_proposals == ()
     assert result.automatic_source_posting_enabled is False
+
+
+def test_tampered_residual_cent_recipient_fails_closed() -> None:
+    source = _cross_period_preview()
+    july, august = source.period_split_evidence
+    tampered_evidence = (
+        replace(
+            july,
+            residual_cent_adjustment=Decimal("0.01"),
+            effective_interest_allocated=Decimal("0.01"),
+            received_residual_cent=True,
+        ),
+        replace(
+            august,
+            residual_cent_adjustment=Decimal("0.00"),
+            effective_interest_allocated=Decimal("0.00"),
+            received_residual_cent=False,
+        ),
+    )
+    tampered = replace(source, period_split_evidence=tampered_evidence)
+
+    result = build_regular_eir_period_journal_proposal_preview(tampered)
+
+    assert result.disposition == "eir_period_journal_lines_preview_blocked"
+    assert result.blocker_code == "eir_period_split_evidence_not_exact"
+    assert result.period_proposals == ()
+    assert result.posting_eligible is False
+
+
+def test_shifted_source_accrual_coverage_fails_closed() -> None:
+    source = _cross_period_preview()
+    july, august = source.period_split_evidence
+    shifted_july = replace(
+        july,
+        accrual_start_date_inclusive=date(2026, 7, 30),
+        accrual_end_date_inclusive=date(2026, 7, 30),
+    )
+    tampered = replace(
+        source,
+        period_split_evidence=(shifted_july, august),
+    )
+
+    result = build_regular_eir_period_journal_proposal_preview(tampered)
+
+    assert result.disposition == "eir_period_journal_lines_preview_blocked"
+    assert result.blocker_code == "eir_period_split_evidence_not_exact"
+    assert result.period_proposals == ()
+
+
+def test_day_count_or_gap_in_coverage_fails_closed() -> None:
+    source = _cross_period_preview()
+    july, august = source.period_split_evidence
+    bad_day_count = replace(july, day_count=2)
+    gap_in_coverage = replace(
+        august,
+        accrual_start_date_inclusive=date(2026, 8, 2),
+        accrual_end_date_inclusive=date(2026, 8, 2),
+    )
+
+    bad_count_result = build_regular_eir_period_journal_proposal_preview(
+        replace(source, period_split_evidence=(bad_day_count, august))
+    )
+    gap_result = build_regular_eir_period_journal_proposal_preview(
+        replace(source, period_split_evidence=(july, gap_in_coverage))
+    )
+
+    assert bad_count_result.blocker_code == "eir_period_split_evidence_not_exact"
+    assert bad_count_result.period_proposals == ()
+    assert gap_result.blocker_code == "eir_period_split_evidence_not_exact"
+    assert gap_result.period_proposals == ()
