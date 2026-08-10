@@ -18,6 +18,10 @@ from .regular_collection_journal_preview import (
     RegularCollectionJournalLine,
     RegularCollectionJournalPreview,
 )
+from .regular_eir_accrual_journal_preview import (
+    RegularEirAccrualJournalLine,
+    RegularEirAccrualJournalPreview,
+)
 from .request_auth import authenticated_device_context
 
 
@@ -116,6 +120,53 @@ def _journal_preview_payload(
     }
 
 
+def _eir_accrual_line_payload(
+    line: RegularEirAccrualJournalLine,
+) -> dict[str, object]:
+    return {
+        "account_system_key": line.account_system_key,
+        "side": line.side,
+        "amount": _money(line.amount),
+        "label": line.label,
+    }
+
+
+def _eir_accrual_preview_payload(
+    preview: RegularEirAccrualJournalPreview,
+) -> dict[str, object]:
+    return {
+        "transaction_id": str(preview.transaction_id),
+        "related_collection_source_event_key": (
+            preview.related_collection_source_event_key
+        ),
+        "source_event_key": preview.source_event_key,
+        "accrual_start_date_exclusive": (
+            preview.accrual_start_date_exclusive.isoformat()
+        ),
+        "accrual_end_date_inclusive": (
+            preview.accrual_end_date_inclusive.isoformat()
+        ),
+        "posting_date": preview.posting_date.isoformat(),
+        "fiscal_period_id": (
+            str(preview.fiscal_period_id)
+            if preview.fiscal_period_id is not None
+            else None
+        ),
+        "fiscal_period_label": preview.fiscal_period_label,
+        "fiscal_period_status": preview.fiscal_period_status,
+        "amount": _money(preview.amount),
+        "disposition": preview.disposition,
+        "posting_eligible": preview.posting_eligible,
+        "message": preview.message,
+        "proposed_lines": [
+            _eir_accrual_line_payload(line) for line in preview.proposed_lines
+        ],
+        "total_debit": _money(preview.total_debit),
+        "total_credit": _money(preview.total_credit),
+        "balanced": preview.balanced,
+    }
+
+
 def _pack_payload(pack: EirCashAllocationPack) -> dict[str, object]:
     return {
         "loan_id": str(pack.loan_id),
@@ -137,6 +188,16 @@ def _pack_payload(pack: EirCashAllocationPack) -> dict[str, object]:
         "automatic_source_posting_enabled": pack.automatic_source_posting_enabled,
         "account_configuration_ready": pack.account_configuration_ready,
         "account_configuration_blocker": pack.account_configuration_blocker,
+        "eir_accrual_account_configuration_ready": (
+            pack.eir_accrual_account_configuration_ready
+        ),
+        "eir_accrual_account_configuration_blocker": (
+            pack.eir_accrual_account_configuration_blocker
+        ),
+        "eir_accrual_previews": [
+            _eir_accrual_preview_payload(preview)
+            for preview in pack.eir_accrual_previews
+        ],
         "collection_journal_previews": [
             _journal_preview_payload(preview)
             for preview in pack.collection_journal_previews
@@ -145,7 +206,7 @@ def _pack_payload(pack: EirCashAllocationPack) -> dict[str, object]:
             _result_payload(pack.allocation) if pack.allocation is not None else None
         ),
         "notice": (
-            "Read-only event-date EIR cash allocation and Regular collection journal-line preview. Collection lines appear only after the protected opening journal has posted, the immutable snapshot reconciles, source history is complete, accounts are ready, and no journal already exists for the source key. The required earlier EIR accrual is reported separately; no EIR accrual, collection journal draft, or posted entry is created by this endpoint."
+            "Read-only event-date EIR cash allocation plus fiscal-period-aware Regular EIR accrual and collection journal-line previews. Accrual lines appear only when one open fiscal period covers the full recognized interval; cross-period intervals fail closed until a validated split-rounding policy exists. No journal draft, posted entry, lending mutation, or automatic source posting is created by this endpoint."
         ),
     }
 
