@@ -8,6 +8,7 @@ from uuid import UUID
 from .eir_cash_allocation import EirDailyAccrual, money
 from .regular_eir_accrual_journal_preview import (
     REGULAR_EIR_PERIOD_SPLIT_POLICY_VERSION,
+    AccountingFiscalPeriodReference,
     RegularEirAccrualJournalLine,
     RegularEirAccrualJournalPreview,
     RegularEirAccrualPeriodEvidence,
@@ -90,6 +91,47 @@ def _blocked(
     )
 
 
+def _fiscal_period_references_are_exact(
+    evidence: tuple[RegularEirAccrualPeriodEvidence, ...],
+    protected_fiscal_periods: tuple[AccountingFiscalPeriodReference, ...],
+) -> bool:
+    if (
+        not protected_fiscal_periods
+        or len({period.period_id for period in protected_fiscal_periods})
+        != len(protected_fiscal_periods)
+        or any(
+            period.start_date > period.end_date
+            for period in protected_fiscal_periods
+        )
+    ):
+        return False
+
+    matched_period_ids: set[UUID] = set()
+    for item in evidence:
+        matching_periods = tuple(
+            period
+            for period in protected_fiscal_periods
+            if period.start_date <= item.accrual_start_date_inclusive
+            and item.accrual_end_date_inclusive <= period.end_date
+        )
+        if len(matching_periods) != 1:
+            return False
+        period = matching_periods[0]
+        if (
+            period.period_id in matched_period_ids
+            or period.status != "open"
+            or item.period_id != period.period_id
+            or item.label != period.label
+            or item.period_start_date != period.start_date
+            or item.period_end_date != period.end_date
+            or item.status != period.status
+        ):
+            return False
+        matched_period_ids.add(period.period_id)
+
+    return True
+
+
 def _daily_evidence_is_exact(
     preview: RegularEirAccrualJournalPreview,
     evidence: tuple[RegularEirAccrualPeriodEvidence, ...],
@@ -149,6 +191,7 @@ def _evidence_is_exact(
     preview: RegularEirAccrualJournalPreview,
     evidence: tuple[RegularEirAccrualPeriodEvidence, ...],
     protected_daily_accruals: tuple[EirDailyAccrual, ...],
+    protected_fiscal_periods: tuple[AccountingFiscalPeriodReference, ...],
 ) -> bool:
     if (
         len(evidence) < 2
@@ -168,6 +211,11 @@ def _evidence_is_exact(
         )
     )
     if evidence != chronological:
+        return False
+    if not _fiscal_period_references_are_exact(
+        evidence,
+        protected_fiscal_periods,
+    ):
         return False
 
     expected_first_accrual_date = (
@@ -361,12 +409,13 @@ def build_regular_eir_period_journal_proposal_preview(
     preview: RegularEirAccrualJournalPreview,
     *,
     protected_daily_accruals: tuple[EirDailyAccrual, ...],
+    protected_fiscal_periods: tuple[AccountingFiscalPeriodReference, ...],
 ) -> RegularEirPeriodJournalProposalPreview:
     """Map reconciled cross-period EIR cents to balanced read-only lines.
 
-    This Stage 5D.8 mapper consumes the protected Stage 5D.7 allocation evidence
-    plus the exact protected daily EIR rows that produced each period's raw amount.
-    It creates no journal draft, posting date, write path, or posting identity. The
+    This Stage 5D.8 mapper consumes the protected Stage 5D.7 allocation evidence,
+    exact protected daily EIR rows, and protected fiscal-period references. It
+    creates no journal draft, posting date, write path, or posting identity. The
     higher-level Regular accounting sequence therefore remains fail-closed until a
     separate protected cross-period sequencing stage exists.
     """
@@ -418,14 +467,16 @@ def build_regular_eir_period_journal_proposal_preview(
         preview,
         preview.period_split_evidence,
         protected_daily_accruals,
+        protected_fiscal_periods,
     ):
         return _blocked(
             preview,
             blocker_code="eir_period_split_evidence_not_exact",
             message=(
                 "The fiscal-period evidence does not satisfy the deterministic "
-                "allocation, protected daily-EIR binding, and complete accrual-"
-                "coverage contract. No journal lines are exposed."
+                "allocation, protected daily-EIR binding, protected fiscal-period "
+                "identity, and complete accrual-coverage contract. No journal "
+                "lines are exposed."
             ),
         )
 
