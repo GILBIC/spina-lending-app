@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
-from .eir_cash_allocation import money
+from .eir_cash_allocation import EirDailyAccrual, money
 from .regular_eir_accrual_journal_preview import (
     REGULAR_EIR_PERIOD_SPLIT_POLICY_VERSION,
     RegularEirAccrualJournalLine,
@@ -90,9 +90,65 @@ def _blocked(
     )
 
 
+def _daily_evidence_is_exact(
+    preview: RegularEirAccrualJournalPreview,
+    evidence: tuple[RegularEirAccrualPeriodEvidence, ...],
+    protected_daily_accruals: tuple[EirDailyAccrual, ...],
+) -> bool:
+    expected_dates: list[date] = []
+    current_date = preview.accrual_start_date_exclusive + timedelta(days=1)
+    while current_date <= preview.accrual_end_date_inclusive:
+        expected_dates.append(current_date)
+        current_date += timedelta(days=1)
+
+    if (
+        not protected_daily_accruals
+        or tuple(item.accrual_date for item in protected_daily_accruals)
+        != tuple(expected_dates)
+    ):
+        return False
+
+    daily_by_date: dict[date, Decimal] = {}
+    previous_closing: Decimal | None = None
+    daily_raw_total = Decimal("0")
+    for item in protected_daily_accruals:
+        if (
+            item.opening_gross_carrying_raw < 0
+            or item.effective_interest_raw < 0
+            or item.closing_gross_carrying_raw
+            != item.opening_gross_carrying_raw + item.effective_interest_raw
+            or (
+                previous_closing is not None
+                and item.opening_gross_carrying_raw != previous_closing
+            )
+        ):
+            return False
+        previous_closing = item.closing_gross_carrying_raw
+        daily_by_date[item.accrual_date] = item.effective_interest_raw
+        daily_raw_total += item.effective_interest_raw
+
+    if money(daily_raw_total) != preview.amount:
+        return False
+
+    for item in evidence:
+        expected_period_raw = Decimal("0")
+        current_date = item.accrual_start_date_inclusive
+        while current_date <= item.accrual_end_date_inclusive:
+            daily_amount = daily_by_date.get(current_date)
+            if daily_amount is None:
+                return False
+            expected_period_raw += daily_amount
+            current_date += timedelta(days=1)
+        if expected_period_raw != item.effective_interest_raw:
+            return False
+
+    return True
+
+
 def _evidence_is_exact(
     preview: RegularEirAccrualJournalPreview,
     evidence: tuple[RegularEirAccrualPeriodEvidence, ...],
+    protected_daily_accruals: tuple[EirDailyAccrual, ...],
 ) -> bool:
     if (
         len(evidence) < 2
@@ -181,6 +237,12 @@ def _evidence_is_exact(
         base_total += item.effective_interest_floor
 
     if previous_accrual_end != expected_last_accrual_date:
+        return False
+    if not _daily_evidence_is_exact(
+        preview,
+        evidence,
+        protected_daily_accruals,
+    ):
         return False
 
     ranked = tuple(
@@ -297,13 +359,16 @@ def _period_proposal(
 
 def build_regular_eir_period_journal_proposal_preview(
     preview: RegularEirAccrualJournalPreview,
+    *,
+    protected_daily_accruals: tuple[EirDailyAccrual, ...],
 ) -> RegularEirPeriodJournalProposalPreview:
     """Map reconciled cross-period EIR cents to balanced read-only lines.
 
-    This Stage 5D.8 mapper consumes only the protected Stage 5D.7 allocation
-    evidence. It creates no journal draft, posting date, write path, or posting
-    identity. The higher-level Regular accounting sequence therefore remains
-    fail-closed until a separate protected cross-period sequencing stage exists.
+    This Stage 5D.8 mapper consumes the protected Stage 5D.7 allocation evidence
+    plus the exact protected daily EIR rows that produced each period's raw amount.
+    It creates no journal draft, posting date, write path, or posting identity. The
+    higher-level Regular accounting sequence therefore remains fail-closed until a
+    separate protected cross-period sequencing stage exists.
     """
 
     if preview.posting_eligible:
@@ -349,14 +414,18 @@ def build_regular_eir_period_journal_proposal_preview(
                 "the recognized cash-boundary amount."
             ),
         )
-    if not _evidence_is_exact(preview, preview.period_split_evidence):
+    if not _evidence_is_exact(
+        preview,
+        preview.period_split_evidence,
+        protected_daily_accruals,
+    ):
         return _blocked(
             preview,
             blocker_code="eir_period_split_evidence_not_exact",
             message=(
                 "The fiscal-period evidence does not satisfy the deterministic "
-                "allocation and complete accrual-coverage contract. No journal "
-                "lines are exposed."
+                "allocation, protected daily-EIR binding, and complete accrual-"
+                "coverage contract. No journal lines are exposed."
             ),
         )
 
