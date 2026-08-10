@@ -22,6 +22,7 @@ from gilbic_backend.regular_eir_period_journal_preview import (
 
 LOAN_ID = UUID("11111111-1111-4111-8111-111111111111")
 TX_ID = UUID("22222222-2222-4222-8222-222222222222")
+OTHER_TX_ID = UUID("55555555-5555-4555-8555-555555555555")
 JULY_ID = UUID("33333333-3333-4333-8333-333333333333")
 AUGUST_ID = UUID("44444444-4444-4444-8444-444444444444")
 
@@ -73,20 +74,20 @@ def _cross_period_source():
         source_history_complete=True,
         account_configuration_ready=True,
     )
-    return preview, allocation.daily_accruals, (july, august)
+    return preview, allocation, (july, august)
 
 
-def _build(source, daily_accruals, fiscal_periods):
+def _build(source, allocation, fiscal_periods):
     return build_regular_eir_period_journal_proposal_preview(
         source,
-        protected_daily_accruals=daily_accruals,
+        protected_allocation=allocation,
         protected_fiscal_periods=fiscal_periods,
     )
 
 
 def test_reconciled_split_maps_to_balanced_per_period_lines() -> None:
-    source, daily_accruals, fiscal_periods = _cross_period_source()
-    result = _build(source, daily_accruals, fiscal_periods)
+    source, allocation, fiscal_periods = _cross_period_source()
+    result = _build(source, allocation, fiscal_periods)
 
     assert source.disposition == "fiscal_period_split_allocation_preview_ready"
     assert result.disposition == "eir_period_journal_lines_preview_ready"
@@ -125,19 +126,19 @@ def test_reconciled_split_maps_to_balanced_per_period_lines() -> None:
 
 
 def test_period_journal_preview_is_deterministic() -> None:
-    source, daily_accruals, fiscal_periods = _cross_period_source()
+    source, allocation, fiscal_periods = _cross_period_source()
 
-    first = _build(source, daily_accruals, fiscal_periods)
-    second = _build(source, daily_accruals, fiscal_periods)
+    first = _build(source, allocation, fiscal_periods)
+    second = _build(source, allocation, fiscal_periods)
 
     assert first == second
 
 
 def test_non_reconciled_split_fails_closed_without_lines() -> None:
-    source, daily_accruals, fiscal_periods = _cross_period_source()
+    source, allocation, fiscal_periods = _cross_period_source()
     source = replace(source, period_allocation_reconciled=False)
 
-    result = _build(source, daily_accruals, fiscal_periods)
+    result = _build(source, allocation, fiscal_periods)
 
     assert result.disposition == "eir_period_journal_lines_preview_blocked"
     assert result.blocker_code == "eir_period_split_allocation_not_reconciled"
@@ -148,10 +149,10 @@ def test_non_reconciled_split_fails_closed_without_lines() -> None:
 
 
 def test_policy_mismatch_fails_closed() -> None:
-    source, daily_accruals, fiscal_periods = _cross_period_source()
+    source, allocation, fiscal_periods = _cross_period_source()
     source = replace(source, period_split_policy_version="unexpected_policy")
 
-    result = _build(source, daily_accruals, fiscal_periods)
+    result = _build(source, allocation, fiscal_periods)
 
     assert result.blocker_code == "eir_period_split_policy_mismatch"
     assert result.period_proposals == ()
@@ -159,18 +160,35 @@ def test_policy_mismatch_fails_closed() -> None:
 
 
 def test_unexpected_source_posting_eligibility_fails_closed() -> None:
-    source, daily_accruals, fiscal_periods = _cross_period_source()
+    source, allocation, fiscal_periods = _cross_period_source()
     source = replace(source, posting_eligible=True)
 
-    result = _build(source, daily_accruals, fiscal_periods)
+    result = _build(source, allocation, fiscal_periods)
 
     assert result.blocker_code == "eir_period_journal_posting_control_review"
     assert result.period_proposals == ()
     assert result.automatic_source_posting_enabled is False
 
 
+def test_replayed_transaction_identity_fails_closed_against_protected_allocation() -> None:
+    source, allocation, fiscal_periods = _cross_period_source()
+    replayed = replace(
+        source,
+        transaction_id=OTHER_TX_ID,
+        related_collection_source_event_key=f"collection:{OTHER_TX_ID}",
+        source_event_key=f"eir_accrual:collection:{OTHER_TX_ID}",
+    )
+
+    result = _build(replayed, allocation, fiscal_periods)
+
+    assert result.disposition == "eir_period_journal_lines_preview_blocked"
+    assert result.blocker_code == "eir_period_source_allocation_not_exact"
+    assert result.period_proposals == ()
+    assert result.posting_eligible is False
+
+
 def test_tampered_residual_cent_recipient_fails_closed() -> None:
-    source, daily_accruals, fiscal_periods = _cross_period_source()
+    source, allocation, fiscal_periods = _cross_period_source()
     july, august = source.period_split_evidence
     tampered_evidence = (
         replace(
@@ -188,7 +206,7 @@ def test_tampered_residual_cent_recipient_fails_closed() -> None:
     )
     tampered = replace(source, period_split_evidence=tampered_evidence)
 
-    result = _build(tampered, daily_accruals, fiscal_periods)
+    result = _build(tampered, allocation, fiscal_periods)
 
     assert result.disposition == "eir_period_journal_lines_preview_blocked"
     assert result.blocker_code == "eir_period_split_evidence_not_exact"
@@ -197,19 +215,16 @@ def test_tampered_residual_cent_recipient_fails_closed() -> None:
 
 
 def test_shifted_source_accrual_coverage_fails_closed() -> None:
-    source, daily_accruals, fiscal_periods = _cross_period_source()
+    source, allocation, fiscal_periods = _cross_period_source()
     july, august = source.period_split_evidence
     shifted_july = replace(
         july,
         accrual_start_date_inclusive=date(2026, 7, 30),
         accrual_end_date_inclusive=date(2026, 7, 30),
     )
-    tampered = replace(
-        source,
-        period_split_evidence=(shifted_july, august),
-    )
+    tampered = replace(source, period_split_evidence=(shifted_july, august))
 
-    result = _build(tampered, daily_accruals, fiscal_periods)
+    result = _build(tampered, allocation, fiscal_periods)
 
     assert result.disposition == "eir_period_journal_lines_preview_blocked"
     assert result.blocker_code == "eir_period_split_evidence_not_exact"
@@ -217,7 +232,7 @@ def test_shifted_source_accrual_coverage_fails_closed() -> None:
 
 
 def test_day_count_or_gap_in_coverage_fails_closed() -> None:
-    source, daily_accruals, fiscal_periods = _cross_period_source()
+    source, allocation, fiscal_periods = _cross_period_source()
     july, august = source.period_split_evidence
     bad_day_count = replace(july, day_count=2)
     gap_in_coverage = replace(
@@ -228,12 +243,12 @@ def test_day_count_or_gap_in_coverage_fails_closed() -> None:
 
     bad_count_result = _build(
         replace(source, period_split_evidence=(bad_day_count, august)),
-        daily_accruals,
+        allocation,
         fiscal_periods,
     )
     gap_result = _build(
         replace(source, period_split_evidence=(july, gap_in_coverage)),
-        daily_accruals,
+        allocation,
         fiscal_periods,
     )
 
@@ -244,7 +259,7 @@ def test_day_count_or_gap_in_coverage_fails_closed() -> None:
 
 
 def test_swapped_period_raw_amounts_fail_closed_against_daily_evidence() -> None:
-    source, daily_accruals, fiscal_periods = _cross_period_source()
+    source, allocation, fiscal_periods = _cross_period_source()
     july, august = source.period_split_evidence
     tampered_evidence = (
         replace(
@@ -272,7 +287,7 @@ def test_swapped_period_raw_amounts_fail_closed_against_daily_evidence() -> None
     )
     tampered = replace(source, period_split_evidence=tampered_evidence)
 
-    result = _build(tampered, daily_accruals, fiscal_periods)
+    result = _build(tampered, allocation, fiscal_periods)
 
     assert result.disposition == "eir_period_journal_lines_preview_blocked"
     assert result.blocker_code == "eir_period_split_evidence_not_exact"
@@ -281,7 +296,7 @@ def test_swapped_period_raw_amounts_fail_closed_against_daily_evidence() -> None
 
 
 def test_swapped_period_identity_fails_closed_against_protected_references() -> None:
-    source, daily_accruals, fiscal_periods = _cross_period_source()
+    source, allocation, fiscal_periods = _cross_period_source()
     july, august = source.period_split_evidence
     tampered_evidence = (
         replace(july, period_id=AUGUST_ID, label="August 2026"),
@@ -289,7 +304,7 @@ def test_swapped_period_identity_fails_closed_against_protected_references() -> 
     )
     tampered = replace(source, period_split_evidence=tampered_evidence)
 
-    result = _build(tampered, daily_accruals, fiscal_periods)
+    result = _build(tampered, allocation, fiscal_periods)
 
     assert result.disposition == "eir_period_journal_lines_preview_blocked"
     assert result.blocker_code == "eir_period_split_evidence_not_exact"
@@ -298,9 +313,10 @@ def test_swapped_period_identity_fails_closed_against_protected_references() -> 
 
 
 def test_missing_protected_daily_evidence_fails_closed() -> None:
-    source, _, fiscal_periods = _cross_period_source()
+    source, allocation, fiscal_periods = _cross_period_source()
+    allocation = replace(allocation, daily_accruals=())
 
-    result = _build(source, (), fiscal_periods)
+    result = _build(source, allocation, fiscal_periods)
 
     assert result.disposition == "eir_period_journal_lines_preview_blocked"
     assert result.blocker_code == "eir_period_split_evidence_not_exact"
@@ -309,9 +325,9 @@ def test_missing_protected_daily_evidence_fails_closed() -> None:
 
 
 def test_missing_protected_fiscal_period_references_fail_closed() -> None:
-    source, daily_accruals, _ = _cross_period_source()
+    source, allocation, _ = _cross_period_source()
 
-    result = _build(source, daily_accruals, ())
+    result = _build(source, allocation, ())
 
     assert result.disposition == "eir_period_journal_lines_preview_blocked"
     assert result.blocker_code == "eir_period_split_evidence_not_exact"
