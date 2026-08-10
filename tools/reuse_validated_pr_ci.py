@@ -27,6 +27,43 @@ class ValidationReuseDecision:
 JsonFetcher = Callable[[str, str], object]
 
 
+def _matching_merged_owner_pulls(
+    payload: object,
+    *,
+    repository: str,
+    owner: str,
+    base_ref: str,
+    commit_sha: str,
+) -> list[dict[str, Any]] | None:
+    if not isinstance(payload, list):
+        return None
+
+    candidates: list[dict[str, Any]] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        head = item.get("head")
+        base = item.get("base")
+        user = item.get("user")
+        if not isinstance(head, dict) or not isinstance(base, dict) or not isinstance(user, dict):
+            continue
+        head_repo = head.get("repo")
+        base_repo = base.get("repo")
+        if not isinstance(head_repo, dict) or not isinstance(base_repo, dict):
+            continue
+        if (
+            item.get("state") == "closed"
+            and item.get("merged_at")
+            and str(item.get("merge_commit_sha", "")).lower() == commit_sha
+            and base.get("ref") == base_ref
+            and base_repo.get("full_name") == repository
+            and head_repo.get("full_name") == repository
+            and user.get("login") == owner
+        ):
+            candidates.append(item)
+    return candidates
+
+
 def _commit_tree_sha(payload: object) -> str | None:
     if not isinstance(payload, dict):
         return None
@@ -82,32 +119,42 @@ def decide_validation_reuse(
         f"{quote(normalized_sha, safe='')}/pulls"
     )
     pulls_payload = fetch_json(pulls_url, token)
-    if not isinstance(pulls_payload, list):
+    candidates = _matching_merged_owner_pulls(
+        pulls_payload,
+        repository=repository,
+        owner=owner,
+        base_ref=base_ref,
+        commit_sha=normalized_sha,
+    )
+    if candidates is None:
         return ValidationReuseDecision(False, "associated pull-request response was invalid")
 
-    candidates: list[dict[str, Any]] = []
-    for item in pulls_payload:
-        if not isinstance(item, dict):
-            continue
-        head = item.get("head")
-        base = item.get("base")
-        user = item.get("user")
-        if not isinstance(head, dict) or not isinstance(base, dict) or not isinstance(user, dict):
-            continue
-        head_repo = head.get("repo")
-        base_repo = base.get("repo")
-        if not isinstance(head_repo, dict) or not isinstance(base_repo, dict):
-            continue
-        if (
-            item.get("state") == "closed"
-            and item.get("merged_at")
-            and str(item.get("merge_commit_sha", "")).lower() == normalized_sha
-            and base.get("ref") == base_ref
-            and base_repo.get("full_name") == repository
-            and head_repo.get("full_name") == repository
-            and user.get("login") == owner
-        ):
-            candidates.append(item)
+    # GitHub can start the push workflow before the commit-associated PR index
+    # exposes a just-completed squash merge. Fall back to the newest closed PR
+    # records and retain the same exact merge-SHA, owner, repository, and base
+    # predicates. Missing or ambiguous fallback evidence still fails closed.
+    if not candidates:
+        closed_pulls_query = urlencode(
+            {
+                "state": "closed",
+                "base": base_ref,
+                "sort": "updated",
+                "direction": "desc",
+                "per_page": 100,
+            }
+        )
+        closed_pulls_url = (
+            f"{api_url.rstrip('/')}/repos/{encoded_repo}/pulls?{closed_pulls_query}"
+        )
+        candidates = _matching_merged_owner_pulls(
+            fetch_json(closed_pulls_url, token),
+            repository=repository,
+            owner=owner,
+            base_ref=base_ref,
+            commit_sha=normalized_sha,
+        )
+        if candidates is None:
+            return ValidationReuseDecision(False, "closed pull-request response was invalid")
 
     if len(candidates) != 1:
         return ValidationReuseDecision(
