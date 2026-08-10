@@ -35,7 +35,6 @@ def _matching_owner_pull_records(
     repository: str,
     owner: str,
     base_ref: str,
-    commit_sha: str,
     require_merged_detail: bool = False,
 ) -> list[dict[str, Any]] | None:
     if not isinstance(payload, list):
@@ -57,7 +56,6 @@ def _matching_owner_pull_records(
             continue
         if (
             item.get("state") == "closed"
-            and str(item.get("merge_commit_sha", "")).lower() == commit_sha
             and base.get("ref") == base_ref
             and str(base_repo.get("full_name", "")).casefold() == repository_identity
             and str(user.get("login", "")).casefold() == owner_identity
@@ -129,19 +127,6 @@ def decide_validation_reuse(
         f"{api_url.rstrip('/')}/repos/{encoded_repo}/commits/"
         f"{quote(normalized_sha, safe='')}/pulls"
     )
-    closed_pulls_query = urlencode(
-        {
-            "state": "closed",
-            "base": base_ref,
-            "sort": "updated",
-            "direction": "desc",
-            "per_page": 100,
-        }
-    )
-    closed_pulls_url = (
-        f"{api_url.rstrip('/')}/repos/{encoded_repo}/pulls?{closed_pulls_query}"
-    )
-
     candidates: list[dict[str, Any]] = []
     for attempt in range(association_attempts):
         summaries = _matching_owner_pull_records(
@@ -149,29 +134,14 @@ def decide_validation_reuse(
             repository=repository,
             owner=owner,
             base_ref=base_ref,
-            commit_sha=normalized_sha,
         )
         if summaries is None:
             return ValidationReuseDecision(False, "associated pull-request response was invalid")
 
-        # GitHub can start the push workflow before the commit-associated PR
-        # index exposes a just-completed squash merge. Fall back to the newest
-        # closed PR records and retain the same exact merge-SHA, owner,
-        # repository, and base predicates.
-        if not summaries:
-            summaries = _matching_owner_pull_records(
-                fetch_json(closed_pulls_url, token),
-                repository=repository,
-                owner=owner,
-                base_ref=base_ref,
-                commit_sha=normalized_sha,
-            )
-            if summaries is None:
-                return ValidationReuseDecision(False, "closed pull-request response was invalid")
-
-        # Both list endpoints return GitHub's SimplePullRequest schema, which
-        # omits the authoritative `merged` and `merged_at` fields. Resolve each
-        # exact-SHA summary through the full PR endpoint before trusting it.
+        # GitHub defines this endpoint as the merged PR that introduced the
+        # exact queried commit to the default branch. Its summary currently has
+        # merge_commit_sha=null, so resolve the PR number through the full
+        # endpoint and require authoritative merged metadata there.
         candidates = []
         for summary in summaries:
             pull_request_number = summary.get("number")
@@ -184,12 +154,21 @@ def decide_validation_reuse(
             detail = fetch_json(detail_url, token)
             if not isinstance(detail, dict) or detail.get("number") != pull_request_number:
                 return ValidationReuseDecision(False, "pull-request detail response was invalid")
+            summary_head = summary.get("head")
+            detail_head = detail.get("head")
+            if (
+                not isinstance(summary_head, dict)
+                or not isinstance(detail_head, dict)
+                or str(summary_head.get("sha", "")).lower()
+                != str(detail_head.get("sha", "")).lower()
+                or summary_head.get("ref") != detail_head.get("ref")
+            ):
+                return ValidationReuseDecision(False, "pull-request summary and detail disagreed")
             detailed_matches = _matching_owner_pull_records(
                 [detail],
                 repository=repository,
                 owner=owner,
                 base_ref=base_ref,
-                commit_sha=normalized_sha,
                 require_merged_detail=True,
             )
             if detailed_matches:
@@ -278,13 +257,16 @@ def decide_validation_reuse(
             for candidate in run_pull_requests
             if isinstance(candidate, dict)
         }
+        run_pr_identity_is_consistent = (
+            not run_pr_numbers or pull_request_number in run_pr_numbers
+        )
         if (
             run.get("event") == "pull_request"
             and run.get("status") == "completed"
             and run.get("conclusion") == "success"
             and str(run.get("head_sha", "")).lower() == head_sha
             and run.get("head_branch") == head_ref
-            and pull_request_number in run_pr_numbers
+            and run_pr_identity_is_consistent
             and str(actor.get("login", "")).casefold() == owner.casefold()
             and str(head_repository.get("full_name", "")).casefold()
             == repository.casefold()
