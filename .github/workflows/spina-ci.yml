@@ -12,9 +12,16 @@ on:
         required: false
         default: false
         type: boolean
+      run_legacy_live_migrations:
+        description: Run completed Stage 5E legacy live maintenance gates
+        required: false
+        default: false
+        type: boolean
 
 permissions:
+  actions: read
   contents: read
+  pull-requests: read
 
 concurrency:
   group: spina-ci-${{ github.event.pull_request.number || github.ref }}
@@ -38,6 +45,20 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # Squash merging creates a new main SHA even when its tree is identical to
+      # an exact PR head that already passed this workflow. Reuse that full suite
+      # only after GitHub proves the main SHA belongs to one merged owner PR and
+      # the exact PR head has a successful pull_request run. Any missing or
+      # inconsistent evidence fails closed to the complete backend/Flutter suite.
+      - name: Prove exact successful PR validation
+        id: validated_pr
+        if: github.event_name == 'push'
+        shell: cmd
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python tools\reuse_validated_pr_ci.py --repository "${{ github.repository }}" --commit-sha "${{ github.sha }}" --workflow-file "spina-ci.yml" --base-ref "main" --github-output "%GITHUB_OUTPUT%" || exit /b 1
+
       - name: Verify Python runtime
         shell: cmd
         run: |
@@ -51,14 +72,29 @@ jobs:
           if exist "%VENV%" rmdir /s /q "%VENV%"
           python -m venv "%VENV%" || exit /b 1
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+
+      - name: Install full validation dependencies
+        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile" || exit /b 1
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\gilbic_backend[test]" || exit /b 1
 
+      - name: Install Financial Accounting verifier dependencies
+        if: github.event_name == 'push' && steps.validated_pr.outputs.reuse_validation == 'true'
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" || exit /b 1
+
       - name: Compile desktop and backend Python
+        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
           "%VENV%\Scripts\python.exe" -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile tools\reuse_validated_pr_ci.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_stage5e3_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_stage5e41_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_stage5e43_migration.py || exit /b 1
@@ -68,7 +104,24 @@ jobs:
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_cutover_eir_snapshot_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m compileall -q spina_app gilbic_backend\src spina_backend_mobile\src || exit /b 1
 
+      - name: Compile Financial Accounting live verifiers
+        if: github.event_name == 'push' && steps.validated_pr.outputs.reuse_validation == 'true'
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_opening_journal_draft_migration.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_opening_journal_posting_migration.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_cutover_eir_snapshot_migration.py || exit /b 1
+
+      - name: Report reused pull-request validation
+        if: github.event_name == 'push' && steps.validated_pr.outputs.reuse_validation == 'true'
+        shell: cmd
+        run: |
+          echo Reusing successful PR #${{ steps.validated_pr.outputs.validated_pr_number }} validation run ${{ steps.validated_pr.outputs.validated_workflow_run_id }} for exact head ${{ steps.validated_pr.outputs.validated_head_sha }}.
+          echo Main will run only the protected Financial Accounting live verifiers.
+
       - name: Run backend and database tests
+        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
         shell: cmd
         env:
           GILBIC_TEST_DATABASE_URL: ${{ secrets.GILBIC_TEST_DATABASE_URL }}
@@ -77,6 +130,7 @@ jobs:
           "%VENV%\Scripts\python.exe" -m pytest -q gilbic_backend\tests spina_backend_mobile\tests || exit /b 1
 
       - name: Install Flutter 3.44.7
+        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
         shell: cmd
         run: |
           set "FLUTTER_ROOT=%RUNNER_TEMP%\flutter-3.44.7"
@@ -88,20 +142,24 @@ jobs:
           echo %FLUTTER_ROOT%\bin>>"%GITHUB_PATH%"
 
       - name: Verify Flutter runtime
+        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
         shell: cmd
         run: flutter --version || exit /b 1
 
       - name: Resolve Flutter packages
+        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
         shell: cmd
         working-directory: gilbic_mobile
         run: flutter pub get || exit /b 1
 
       - name: Analyze Flutter application
+        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
         shell: cmd
         working-directory: gilbic_mobile
         run: flutter analyze --fatal-infos || exit /b 1
 
       - name: Run Flutter tests
+        if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
         shell: cmd
         working-directory: gilbic_mobile
         run: flutter test || exit /b 1
@@ -147,8 +205,11 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: One-time Stage 5E.2 live historical import
-        if: github.event_name == 'push' && hashFiles('tools/stage5e2-import.once') != ''
+      # Completed Stage 5E live migrations no longer run on every accounting
+      # merge. They remain available only through an explicit manual maintenance
+      # dispatch and preserve every existing fail-closed marker and live gate.
+      - name: Manual Stage 5E.2 live historical import
+        if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e2-import.once') != ''
         shell: cmd
         env:
           GILBIC_TEST_DATABASE_URL: ${{ secrets.GILBIC_TEST_DATABASE_URL }}
@@ -156,49 +217,50 @@ jobs:
           set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
           "%VENV%\Scripts\python.exe" tools\import_ecl_history.py --find-source-name "loans(20260808-080255).db" --search-root "C:\Users\pc" --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL --expected-sha256 3ef840b6221c9d94327c3e5beb10318899f7a5ee96643df87a49b02312d77260 --expected-episodes 992 || exit /b 1
 
-      - name: One-time Stage 5E.3 live outcome-review migration
-        if: github.event_name == 'push' && hashFiles('tools/stage5e3-live-migration.once') != ''
+      - name: Manual Stage 5E.3 live outcome-review migration
+        if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e3-live-migration.once') != ''
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_stage5e3_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL --expected-episodes 992 --expected-usable 919 || exit /b 1
 
-      - name: One-time Stage 5E.4.1 live contractual DPD migration
-        if: github.event_name == 'push' && hashFiles('tools/stage5e41-live-migration.once') != ''
+      - name: Manual Stage 5E.4.1 live contractual DPD migration
+        if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e41-live-migration.once') != ''
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_stage5e41_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
 
-      - name: One-time Stage 5E.4.3 live verified contract registration migration
-        if: github.event_name == 'push' && hashFiles('tools/stage5e43-live-migration.once') != ''
+      - name: Manual Stage 5E.4.3 live verified contract registration migration
+        if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e43-live-migration.once') != ''
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_stage5e43_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
 
-      - name: One-time Stage 5E.4.6A live per-loan activation schema migration
-        if: github.event_name == 'push' && hashFiles('tools/stage5e46a-live-migration.once') != ''
+      - name: Manual Stage 5E.4.6A live per-loan activation schema migration
+        if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e46a-live-migration.once') != ''
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_stage5e46a_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
 
-      - name: One-time protected opening-balance journal draft migration
+      # Main pushes keep only Financial Accounting live-safety verification.
+      - name: Protected opening-balance journal draft verification
         if: github.event_name == 'push' && hashFiles('tools/accounting-opening-journal-draft-live-migration.once') != ''
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_accounting_opening_journal_draft_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
 
-      - name: One-time protected opening-balance journal posting migration
+      - name: Protected opening-balance journal posting verification
         if: github.event_name == 'push' && hashFiles('tools/accounting-opening-journal-posting-live-migration.once') != ''
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_accounting_opening_journal_posting_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
 
-      - name: One-time protected cutover EIR snapshot migration
+      - name: Protected cutover EIR snapshot verification
         if: github.event_name == 'push' && hashFiles('tools/accounting-cutover-eir-snapshot-live-migration.once') != ''
         shell: cmd
         run: |
