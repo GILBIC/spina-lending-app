@@ -43,10 +43,11 @@ posting flag returns `regular_accounting_sequence_preview_blocked` with an empty
 `ordered_entries` array. An underlying blocker is retained as `blocker_code` so
 Management can see why the whole sequence stayed unavailable.
 
-In particular, `fiscal_period_split_required` remains blocked. Its exact daily
-and per-period evidence may still be inspected in the underlying EIR preview,
-but Stage 5D.6 neither invents a residual-cent policy nor exposes a partial
-collection sequence.
+In particular, Stage 5D.7's
+`fiscal_period_split_allocation_preview_ready` remains blocked from the sequence.
+Its exact daily and deterministically allocated per-period evidence may be
+inspected in the underlying EIR preview, but the sequence does not treat evidence
+as journal lines and never exposes a partial collection sequence.
 
 ## Explicit exclusions
 
@@ -56,6 +57,6 @@ Stage 5D.6 changes none of the following:
 - no automatic source posting;
 - no lending source write or collection behavior change;
 - no Default, ECL, account 1190, 7x7, tax, or remittance policy change;
-- no cross-period residual-cent allocation policy; and
+- no cross-period journal-line generation or posting; and
 - no UI or database migration.
 
