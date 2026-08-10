@@ -14,6 +14,10 @@ from .eir_cash_allocation import (
     EirCutoverState,
     allocate_event_date_eir_cash,
 )
+from .regular_accounting_sequence_preview import (
+    RegularAccountingSequencePreview,
+    build_regular_accounting_sequence_preview,
+)
 from .regular_collection_journal_preview import (
     REGULAR_COLLECTION_ACCOUNT_KEYS,
     RegularCollectionJournalPreview,
@@ -63,6 +67,7 @@ class EirCashAllocationPack:
     eir_accrual_account_configuration_blocker: str | None = None
     eir_accrual_previews: tuple[RegularEirAccrualJournalPreview, ...] = ()
     collection_journal_previews: tuple[RegularCollectionJournalPreview, ...] = ()
+    accounting_sequence_previews: tuple[RegularAccountingSequencePreview, ...] = ()
 
 
 class PostgresEirCashAllocationRepository:
@@ -388,6 +393,18 @@ class PostgresEirCashAllocationRepository:
                 )
             )
             prior_accrual_boundary = item.collection_date
+        accounting_sequence_previews = (
+            tuple(
+                build_regular_accounting_sequence_preview(accrual, collection)
+                for accrual, collection in zip(
+                    eir_accrual_previews,
+                    collection_journal_previews,
+                    strict=True,
+                )
+            )
+            if len(eir_accrual_previews) == len(collection_journal_previews)
+            else ()
+        )
         return EirCashAllocationPack(
             loan_id=loan_id,
             loan_number=str(loan["loan_number"]),
@@ -410,6 +427,7 @@ class PostgresEirCashAllocationRepository:
             eir_accrual_account_configuration_blocker=eir_accrual_account_configuration_blocker,
             eir_accrual_previews=tuple(eir_accrual_previews),
             collection_journal_previews=collection_journal_previews,
+            accounting_sequence_previews=accounting_sequence_previews,
         )
 
     @staticmethod

@@ -15,6 +15,9 @@ from gilbic_backend.eir_cash_allocation_api import (
     eir_cash_allocation_repository_dependency,
 )
 from gilbic_backend.eir_cash_allocation_repository import EirCashAllocationPack
+from gilbic_backend.regular_accounting_sequence_preview import (
+    build_regular_accounting_sequence_preview,
+)
 from gilbic_backend.regular_collection_journal_preview import (
     build_regular_collection_journal_preview,
 )
@@ -137,6 +140,10 @@ class FakeRepository:
             source_history_complete=True,
             account_configuration_ready=True,
         )
+        sequence_preview = build_regular_accounting_sequence_preview(
+            accrual_preview,
+            preview,
+        )
         return EirCashAllocationPack(
             loan_id=loan_id,
             loan_number="L-001",
@@ -156,6 +163,7 @@ class FakeRepository:
             eir_accrual_account_configuration_ready=True,
             eir_accrual_previews=(accrual_preview,),
             collection_journal_previews=(preview,),
+            accounting_sequence_previews=(sequence_preview,),
         )
 
 
@@ -258,6 +266,33 @@ def test_management_can_load_exact_decimal_eir_cash_allocation_reference() -> No
             "side": "credit",
             "amount": "3.90",
             "label": "Cash applied to Regular loan component",
+        },
+    ]
+    sequence = data["accounting_sequence_previews"][0]
+    assert sequence["sequence_key"] == (
+        f"regular_accounting_sequence:collection:{TX_ID}"
+    )
+    assert sequence["collection_source_event_key"] == f"collection:{TX_ID}"
+    assert sequence["required_eir_accrual_before_collection"] == "1.10"
+    assert sequence["disposition"] == "regular_accounting_sequence_preview_ready"
+    assert sequence["blocker_code"] is None
+    assert sequence["posting_eligible"] is False
+    assert sequence["ordered_entries"] == [
+        {
+            "sequence_order": 1,
+            "entry_type": "eir_accrual",
+            "source_event_key": f"eir_accrual:collection:{TX_ID}",
+            "posting_date": "2026-08-09",
+            "amount": "1.10",
+            "disposition": "eir_accrual_journal_lines_preview_ready",
+        },
+        {
+            "sequence_order": 2,
+            "entry_type": "collection",
+            "source_event_key": f"collection:{TX_ID}",
+            "posting_date": "2026-08-09",
+            "amount": "15.00",
+            "disposition": "collection_journal_lines_preview_ready",
         },
     ]
 

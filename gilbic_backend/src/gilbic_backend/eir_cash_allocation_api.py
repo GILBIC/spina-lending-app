@@ -14,6 +14,10 @@ from .eir_cash_allocation_repository import (
     EirCashAllocationPack,
     PostgresEirCashAllocationRepository,
 )
+from .regular_accounting_sequence_preview import (
+    RegularAccountingSequenceEntryPreview,
+    RegularAccountingSequencePreview,
+)
 from .regular_collection_journal_preview import (
     RegularCollectionJournalLine,
     RegularCollectionJournalPreview,
@@ -204,6 +208,41 @@ def _eir_accrual_preview_payload(
     }
 
 
+def _accounting_sequence_entry_payload(
+    entry: RegularAccountingSequenceEntryPreview,
+) -> dict[str, object]:
+    return {
+        "sequence_order": entry.sequence_order,
+        "entry_type": entry.entry_type,
+        "source_event_key": entry.source_event_key,
+        "posting_date": entry.posting_date.isoformat(),
+        "amount": _money(entry.amount),
+        "disposition": entry.disposition,
+    }
+
+
+def _accounting_sequence_preview_payload(
+    preview: RegularAccountingSequencePreview,
+) -> dict[str, object]:
+    return {
+        "transaction_id": str(preview.transaction_id),
+        "sequence_key": preview.sequence_key,
+        "collection_source_event_key": preview.collection_source_event_key,
+        "collection_date": preview.collection_date.isoformat(),
+        "required_eir_accrual_before_collection": _money(
+            preview.required_eir_accrual_before_collection
+        ),
+        "disposition": preview.disposition,
+        "blocker_code": preview.blocker_code,
+        "posting_eligible": preview.posting_eligible,
+        "message": preview.message,
+        "ordered_entries": [
+            _accounting_sequence_entry_payload(entry)
+            for entry in preview.ordered_entries
+        ],
+    }
+
+
 def _pack_payload(pack: EirCashAllocationPack) -> dict[str, object]:
     return {
         "loan_id": str(pack.loan_id),
@@ -239,6 +278,10 @@ def _pack_payload(pack: EirCashAllocationPack) -> dict[str, object]:
             _journal_preview_payload(preview)
             for preview in pack.collection_journal_previews
         ],
+        "accounting_sequence_previews": [
+            _accounting_sequence_preview_payload(preview)
+            for preview in pack.accounting_sequence_previews
+        ],
         "allocation": (
             _result_payload(pack.allocation) if pack.allocation is not None else None
         ),
@@ -248,7 +291,9 @@ def _pack_payload(pack: EirCashAllocationPack) -> dict[str, object]:
             "lines appear only when one open fiscal period covers the full "
             "recognized interval. Cross-period intervals expose exact raw and "
             "independently rounded period evidence but remain fail-closed until "
-            "Management approves how any residual cent is allocated. No journal "
+            "Management approves how any residual cent is allocated. Exact ready "
+            "previews are also paired into an all-or-none sequence in which the "
+            "required EIR accrual precedes its matching collection. No journal "
             "draft, posted entry, lending mutation, or automatic source posting "
             "is created by this endpoint."
         ),
