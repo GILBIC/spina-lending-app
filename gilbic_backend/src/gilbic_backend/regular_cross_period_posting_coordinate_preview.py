@@ -5,7 +5,6 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-from .eir_cash_allocation import money
 from .regular_collection_journal_preview import RegularCollectionJournalPreview
 from .regular_cross_period_accounting_sequence_preview import (
     REGULAR_CROSS_PERIOD_ACCOUNTING_SEQUENCE_PREVIEW_POLICY_VERSION,
@@ -14,12 +13,9 @@ from .regular_cross_period_accounting_sequence_preview import (
     build_regular_cross_period_accounting_sequence_preview,
 )
 from .regular_eir_accrual_journal_preview import AccountingFiscalPeriodReference
-from .regular_eir_period_journal_preview import (
-    RegularEirPeriodJournalProposalPreview,
-)
+from .regular_eir_period_journal_preview import RegularEirPeriodJournalProposalPreview
 
 
-ZERO = Decimal("0.00")
 REGULAR_CROSS_PERIOD_POSTING_COORDINATE_PREVIEW_POLICY_VERSION = (
     "regular_cross_period_posting_coordinates_v1"
 )
@@ -109,11 +105,10 @@ def _protected_periods_are_structurally_exact(
     )
 
 
-def _period_reference_replay_is_exact(
+def _affected_period_replay_is_exact(
     period_journal: RegularEirPeriodJournalProposalPreview,
     periods: tuple[AccountingFiscalPeriodReference, ...],
 ) -> bool:
-    by_id = {period.period_id: period for period in periods}
     proposals = period_journal.period_proposals
     if (
         not proposals
@@ -121,6 +116,7 @@ def _period_reference_replay_is_exact(
     ):
         return False
 
+    by_id = {period.period_id: period for period in periods}
     for proposal in proposals:
         period = by_id.get(proposal.fiscal_period_id)
         if period is None:
@@ -129,103 +125,10 @@ def _period_reference_replay_is_exact(
             period.label != proposal.fiscal_period_label
             or period.start_date != proposal.period_start_date
             or period.end_date != proposal.period_end_date
-            or period.status != proposal.fiscal_period_status
+            or period.status != "open"
         ):
             return False
     return True
-
-
-def _sequence_is_structurally_exact(
-    sequence: RegularCrossPeriodAccountingSequencePreview,
-) -> bool:
-    expected_collection_key = f"collection:{sequence.transaction_id}"
-    expected_sequence_key = (
-        f"regular_cross_period_sequence_preview:collection:{sequence.transaction_id}"
-    )
-    entries = sequence.ordered_entries
-    if (
-        sequence.disposition
-        != "regular_cross_period_accounting_sequence_preview_ready"
-        or sequence.blocker_code is not None
-        or sequence.sequence_policy_version
-        != REGULAR_CROSS_PERIOD_ACCOUNTING_SEQUENCE_PREVIEW_POLICY_VERSION
-        or sequence.posting_eligible
-        or sequence.automatic_source_posting_enabled
-        or sequence.collection_source_event_key != expected_collection_key
-        or sequence.sequence_key != expected_sequence_key
-        or sequence.required_eir_accrual_before_collection <= ZERO
-        or sequence.required_eir_accrual_before_collection
-        != money(sequence.required_eir_accrual_before_collection)
-        or len(entries) < 2
-        or entries[-1].entry_type != "collection"
-        or [entry.sequence_order for entry in entries]
-        != list(range(1, len(entries) + 1))
-        or len({entry.preview_entry_key for entry in entries}) != len(entries)
-        or len(set(sequence.zero_cent_fiscal_period_ids))
-        != len(sequence.zero_cent_fiscal_period_ids)
-    ):
-        return False
-
-    expected_eir_key = f"eir_accrual:{expected_collection_key}"
-    positive_period_ids: set[UUID] = set()
-    eir_total = ZERO
-    previous_date: date | None = None
-    for index, entry in enumerate(entries):
-        if (
-            entry.posting_eligible
-            or entry.amount <= ZERO
-            or entry.amount != money(entry.amount)
-        ):
-            return False
-        if previous_date is not None and entry.recognition_date < previous_date:
-            return False
-        previous_date = entry.recognition_date
-
-        if entry.entry_type == "eir_accrual_period":
-            if (
-                index == len(entries) - 1
-                or entry.fiscal_period_id is None
-                or entry.fiscal_period_id in positive_period_ids
-                or entry.related_source_event_key != expected_eir_key
-                or entry.disposition
-                != "eir_accrual_journal_lines_preview_ready_for_period"
-                or entry.preview_entry_key
-                != (
-                    "regular_eir_period_sequence_preview:collection:"
-                    f"{sequence.transaction_id}:fiscal_period:{entry.fiscal_period_id}"
-                )
-                or entry.recognition_date > sequence.collection_date
-            ):
-                return False
-            positive_period_ids.add(entry.fiscal_period_id)
-            eir_total += entry.amount
-            continue
-
-        if index != len(entries) - 1:
-            return False
-        if (
-            entry.entry_type != "collection"
-            or entry.fiscal_period_id is not None
-            or entry.related_source_event_key != expected_collection_key
-            or entry.disposition != "collection_journal_lines_preview_ready"
-            or entry.preview_entry_key
-            != f"regular_collection_sequence_preview:collection:{sequence.transaction_id}"
-            or entry.recognition_date != sequence.collection_date
-        ):
-            return False
-
-    zero_ids = set(sequence.zero_cent_fiscal_period_ids)
-    return (
-        eir_total == sequence.required_eir_accrual_before_collection
-        and not (positive_period_ids & zero_ids)
-        and len(positive_period_ids | zero_ids) >= 2
-    )
-
-
-def _period_by_id(
-    periods: tuple[AccountingFiscalPeriodReference, ...],
-) -> dict[UUID, AccountingFiscalPeriodReference]:
-    return {period.period_id: period for period in periods}
 
 
 def _periods_containing_date(
@@ -269,15 +172,13 @@ def build_regular_cross_period_posting_coordinate_preview(
 ) -> RegularCrossPeriodPostingCoordinatePreview:
     """Prove candidate posting dates and fiscal periods without posting identity.
 
-    Stage 5D.12 intentionally stops at read-only ledger coordinates. The supplied
-    Stage 5D.10 sequence is first replayed from its protected Stage 5D.8 period
-    journal and collection previews and must match exactly. Every protected fiscal
-    period used by Stage 5D.8 must also replay exactly by ID, label, dates, and
-    status. Every proposed posting date then equals the already-proven recognition
-    date and must fall in exactly the intended open fiscal period.
+    The Stage 5D.10 sequence must replay exactly from the protected Stage 5D.8
+    period journal and protected collection preview. Each affected fiscal-period
+    reference must replay by ID, label and date boundaries and must still be open.
+    Candidate posting dates equal the already-proven recognition dates.
 
-    No source_type, source_reference, source_event_key, journal number, draft,
-    persistence record, or posting permission is created here. Deterministic
+    This mapper creates no source_type, source_reference, source_event_key, journal
+    number, journal draft, persistence record, or posting permission. Deterministic
     posting identity remains a separate later policy decision.
     """
 
@@ -304,15 +205,23 @@ def build_regular_cross_period_posting_coordinate_preview(
                 "the protected Stage 5D.8 period journal and collection previews."
             ),
         )
-    if not _sequence_is_structurally_exact(sequence):
+    if (
+        replayed_sequence.disposition
+        != "regular_cross_period_accounting_sequence_preview_ready"
+        or replayed_sequence.blocker_code is not None
+        or replayed_sequence.sequence_policy_version
+        != REGULAR_CROSS_PERIOD_ACCOUNTING_SEQUENCE_PREVIEW_POLICY_VERSION
+        or replayed_sequence.posting_eligible
+        or replayed_sequence.automatic_source_posting_enabled
+        or not replayed_sequence.ordered_entries
+        or replayed_sequence.ordered_entries[-1].entry_type != "collection"
+    ):
         return _blocked(
             sequence,
-            blocker_code="posting_coordinate_sequence_not_exact",
-            message=(
-                "The Stage 5D.10 sequence does not satisfy the exact protected "
-                "identity, amount, order, and recognition-date contract."
-            ),
+            blocker_code="posting_coordinate_sequence_not_ready",
+            message="The protected Stage 5D.10 sequence is not an exact ready preview.",
         )
+
     if not _protected_periods_are_structurally_exact(protected_fiscal_periods):
         return _blocked(
             sequence,
@@ -322,7 +231,7 @@ def build_regular_cross_period_posting_coordinate_preview(
                 "valid ranges and statuses, and no date overlap."
             ),
         )
-    if not _period_reference_replay_is_exact(
+    if not _affected_period_replay_is_exact(
         protected_period_journal,
         protected_fiscal_periods,
     ):
@@ -330,40 +239,14 @@ def build_regular_cross_period_posting_coordinate_preview(
             sequence,
             blocker_code="posting_coordinate_fiscal_period_replay_not_exact",
             message=(
-                "Protected fiscal-period references do not exactly match the Stage "
-                "5D.8 period evidence by ID, label, dates, and status."
+                "Affected fiscal-period references do not exactly replay the Stage "
+                "5D.8 period IDs, labels and date boundaries, or are no longer open."
             ),
         )
 
-    periods_by_id = _period_by_id(protected_fiscal_periods)
-    affected_period_ids = {
-        entry.fiscal_period_id
-        for entry in sequence.ordered_entries
-        if entry.entry_type == "eir_accrual_period"
-        and entry.fiscal_period_id is not None
-    } | set(sequence.zero_cent_fiscal_period_ids)
-
-    for period_id in affected_period_ids:
-        period = periods_by_id.get(period_id)
-        if period is None:
-            return _blocked(
-                sequence,
-                blocker_code="posting_coordinate_protected_period_missing",
-                message=(
-                    "Every positive or zero-cent affected EIR period must exist in "
-                    "the protected fiscal-period reference set."
-                ),
-            )
-        if period.status != "open":
-            return _blocked(
-                sequence,
-                blocker_code="posting_coordinate_period_not_open",
-                message=(
-                    "All affected EIR fiscal periods must still be open before a "
-                    "posting-date coordinate can be considered."
-                ),
-            )
-
+    periods_by_id = {
+        period.period_id: period for period in protected_fiscal_periods
+    }
     collection_periods = _periods_containing_date(
         protected_fiscal_periods,
         sequence.collection_date,
@@ -391,19 +274,18 @@ def build_regular_cross_period_posting_coordinate_preview(
             coordinates.append(_coordinate(entry, collection_period))
             continue
 
-        period_id = entry.fiscal_period_id
-        if period_id is None:
+        if entry.entry_type != "eir_accrual_period" or entry.fiscal_period_id is None:
             return _blocked(
                 sequence,
-                blocker_code="posting_coordinate_period_identity_missing",
-                message="A positive EIR sequence entry is missing its fiscal period.",
+                blocker_code="posting_coordinate_entry_type_review",
+                message="The protected sequence contains an unexpected entry type.",
             )
-        period = periods_by_id.get(period_id)
-        if period is None:
+        period = periods_by_id.get(entry.fiscal_period_id)
+        if period is None or period.status != "open":
             return _blocked(
                 sequence,
-                blocker_code="posting_coordinate_protected_period_missing",
-                message="A positive EIR sequence entry has no protected fiscal period.",
+                blocker_code="posting_coordinate_period_not_open",
+                message="A positive EIR posting coordinate has no exact open period.",
             )
         if not period.start_date <= entry.recognition_date <= period.end_date:
             return _blocked(
