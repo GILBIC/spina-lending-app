@@ -151,9 +151,50 @@ def build_regular_eir_period_journal_api_result(
             ),
         )
 
+    allocations = pack.allocation.allocations
+    accrual_previews = pack.eir_accrual_previews
+    allocation_ids = tuple(item.transaction_id for item in allocations)
+    preview_ids = tuple(preview.transaction_id for preview in accrual_previews)
+    if (
+        len(accrual_previews) != len(allocations)
+        or len(set(allocation_ids)) != len(allocation_ids)
+        or len(set(preview_ids)) != len(preview_ids)
+        or set(preview_ids) != set(allocation_ids)
+    ):
+        return _blocked_result(
+            blocker_code="eir_period_source_preview_set_not_exact",
+            blocker_message=(
+                "Protected EIR allocations and accrual previews do not form one "
+                "complete unique transaction set. No per-period proposals are "
+                "exposed."
+            ),
+        )
+
+    permitted_source_dispositions = {
+        "eir_accrual_journal_lines_preview_ready",
+        "no_eir_accrual_required",
+        "fiscal_period_split_allocation_preview_ready",
+    }
+    unexpected_source = next(
+        (
+            preview
+            for preview in accrual_previews
+            if preview.disposition not in permitted_source_dispositions
+        ),
+        None,
+    )
+    if unexpected_source is not None:
+        return _blocked_result(
+            blocker_code=unexpected_source.disposition,
+            blocker_message=(
+                "An upstream Regular EIR accrual preview is not in a permitted "
+                "read-only state. No per-period proposals are exposed."
+            ),
+        )
+
     candidates = tuple(
         preview
-        for preview in pack.eir_accrual_previews
+        for preview in accrual_previews
         if preview.disposition == "fiscal_period_split_allocation_preview_ready"
     )
     if not candidates:
@@ -164,20 +205,10 @@ def build_regular_eir_period_journal_api_result(
             previews=(),
         )
 
-    allocations = pack.allocation.allocations
     allocation_by_transaction = {
         item.transaction_id: item
         for item in allocations
     }
-    if len(allocation_by_transaction) != len(allocations):
-        return _blocked_result(
-            blocker_code="eir_period_protected_allocation_identity_conflict",
-            blocker_message=(
-                "Protected EIR allocation transaction identities are not unique. "
-                "No per-period proposals are exposed."
-            ),
-        )
-
     results: list[RegularEirPeriodJournalProposalPreview] = []
     for preview in candidates:
         protected_allocation = allocation_by_transaction.get(preview.transaction_id)
