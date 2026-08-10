@@ -126,6 +126,8 @@ def test_cross_period_interval_fails_closed_until_split_policy_exists() -> None:
     assert result.disposition == "fiscal_period_split_required"
     assert result.proposed_lines == ()
     assert result.balanced is False
+    assert result.period_split_evidence == ()
+    assert result.split_policy_required is True
 
 
 @pytest.mark.parametrize("status", ["review", "closed"])
