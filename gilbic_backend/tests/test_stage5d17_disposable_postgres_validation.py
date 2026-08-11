@@ -132,8 +132,8 @@ def test_disposable_drop_waits_and_retries_after_backend_termination() -> None:
 def test_disposable_workflow_builds_fresh_loopback_only_windows_cluster() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
-    # The proof must use a newly initialized PostgreSQL cluster under RUNNER_TEMP,
-    # never the Windows runner's configured remote database or production secrets.
+    # The proof must use a newly initialized PostgreSQL cluster in a dedicated
+    # runner-owned recovery tree, never the configured remote database/secrets.
     assert "runs-on: [self-hosted, Windows, X64]" in workflow
     assert "ubuntu-latest" not in workflow
     assert "services:" not in workflow
@@ -144,16 +144,23 @@ def test_disposable_workflow_builds_fresh_loopback_only_windows_cluster() -> Non
     assert "-h 127.0.0.1" in workflow
     assert "STAGE5D17_PG_PORT: '55432'" in workflow
     assert (
+        "STAGE5D17_CLUSTER_BASE: "
+        "${{ runner.temp }}\\..\\spina-stage5d17-clusters"
+    ) in workflow
+    assert (
         "STAGE5D17_RUN_ROOT: "
-        "${{ runner.temp }}\\spina-stage5d17-${{ github.run_id }}"
+        "${{ runner.temp }}\\..\\spina-stage5d17-clusters\\"
+        "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}"
     ) in workflow
     assert (
         "STAGE5D17_PG_DATA: "
-        "${{ runner.temp }}\\spina-stage5d17-${{ github.run_id }}\\pgdata"
+        "${{ runner.temp }}\\..\\spina-stage5d17-clusters\\"
+        "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\\pgdata"
     ) in workflow
     assert (
         "STAGE5D17_CLUSTER_MARKER: "
-        "${{ runner.temp }}\\spina-stage5d17-${{ github.run_id }}\\cluster-ready.marker"
+        "${{ runner.temp }}\\..\\spina-stage5d17-clusters\\"
+        "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\\cluster-ready.marker"
     ) in workflow
     assert (
         "STAGE5D17_DATABASE_URL: "
@@ -166,8 +173,6 @@ def test_disposable_workflow_builds_fresh_loopback_only_windows_cluster() -> Non
     assert "C:\\SPINA_ONLINE" not in workflow
     assert "${{ secrets." not in workflow
 
-    # The test port must be refused if already occupied, and the whole temporary
-    # cluster must be stopped/deleted independently after the accounting test.
     assert "Reserved Stage 5D.17 test port" in workflow
     assert "Stop and delete temporary PostgreSQL cluster" in workflow
     assert workflow.count("if: always()") == 2
@@ -178,22 +183,44 @@ def test_disposable_workflow_builds_fresh_loopback_only_windows_cluster() -> Non
 def test_disposable_workflow_gates_database_janitor_on_owned_cluster_marker() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
-    # A per-run marker is written only after our own initdb/start/pg_isready
-    # succeeds. Any database-level janitor/pytest connection requires it, so an
-    # occupied reserved port cannot redirect cleanup into an unrelated server.
+    # The marker is written only after our own initdb/start/readiness succeeds.
+    # Every TCP database-level cleanup/test call requires it, so an occupied
+    # reserved port cannot redirect those calls into an unrelated server.
     marker_write = workflow.index('Set-Content -Path $marker -Encoding ascii')
     ready_check = workflow.index("Temporary PostgreSQL cluster did not become ready.")
     assert marker_write > ready_check
     assert "run_id=${{ github.run_id }}" in workflow
+    assert "run_attempt=${{ github.run_attempt }}" in workflow
     assert workflow.count('if not exist "%STAGE5D17_CLUSTER_MARKER%" exit /b 1') == 4
     assert 'if not exist "%STAGE5D17_CLUSTER_MARKER%" exit /b 0' in workflow
 
-    # Previous test clusters are reaped only by their dedicated marker + data
-    # directory using pg_ctl -D; this cleanup never connects to a TCP listener.
+
+def test_disposable_workflow_recovers_owned_orphans_across_reruns_without_tcp() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    # Recovery lives outside a single attempt's temp root, and run_attempt makes
+    # a rerun distinct from the orphan it must find. Recovery identifies only
+    # marker+pgdata pairs and operates by pg_ctl -D, never by connecting to the
+    # fixed PostgreSQL TCP port.
     assert "Reap orphaned owned Stage 5D.17 clusters" in workflow
-    assert "cluster-ready.marker" in workflow
+    assert "STAGE5D17_CLUSTER_BASE" in workflow
+    assert "github.run_attempt" in workflow
+    assert "Get-ChildItem $clusterBase -Directory -Filter 'run-*-attempt-*'" in workflow
     assert "if (-not (Test-Path $marker) -or -not (Test-Path $pgData))" in workflow
+    assert "& $pgCtl -D $pgData status" in workflow
     assert "& $pgCtl -D $pgData -m immediate -w stop" in workflow
+    assert "Failed to stop owned orphan Stage 5D.17 cluster" in workflow
+    assert "Could not verify owned orphan Stage 5D.17 cluster state" in workflow
+
+
+def test_disposable_workflow_never_deletes_a_cluster_it_cannot_stop_or_verify() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "preserving its data directory for safe recovery" in workflow
+    status_index = workflow.rindex("& $pgCtl -D $pgData status")
+    remove_index = workflow.rindex("Remove-Item -Recurse -Force $runRoot")
+    assert status_index < remove_index
+    assert "elseif ($statusExit -ne 3)" in workflow
 
 
 def test_disposable_workflow_serializes_and_reserves_cleanup_budget() -> None:
