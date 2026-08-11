@@ -35,6 +35,9 @@ from .notification_api import create_notification_router
 from .opening_balance_journal_api import create_opening_balance_journal_router
 from .opening_balance_workbook_api import create_opening_balance_workbook_router
 from .other_area_api import create_other_area_router
+from .posting_ready_evidence_review_api import (
+    create_posting_ready_evidence_review_router,
+)
 from .remittance_api import create_remittance_router
 from .remittance_photo_api import create_remittance_photo_router
 from .renewal_api import create_renewal_router
@@ -76,6 +79,7 @@ def create_app() -> FastAPI:
     app.include_router(create_eir_cash_allocation_router())
     app.include_router(create_eir_period_journal_router())
     app.include_router(create_cross_period_accounting_sequence_router())
+    app.include_router(create_posting_ready_evidence_review_router())
     app.include_router(create_contract_schedule_registration_router())
     app.include_router(create_contract_collection_activation_router())
     app.include_router(create_ecl_outcome_review_router())
