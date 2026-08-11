@@ -119,8 +119,20 @@ def test_disposable_janitor_only_accepts_reserved_hex_database_names() -> None:
     assert not MODULE._is_disposable_database_name(prefix + "a" * 16)
 
 
-def test_disposable_workflow_reserves_guaranteed_final_janitor_budget() -> None:
+def test_disposable_drop_waits_and_retries_after_backend_termination() -> None:
+    source = SCRIPT_PATH.read_text(encoding="utf-8")
+    assert MODULE.DROP_RETRY_ATTEMPTS >= 2
+    assert MODULE.DROP_SESSION_WAIT_ATTEMPTS >= 2
+    assert MODULE.DROP_SESSION_WAIT_SECONDS > 0
+    assert "_wait_for_database_sessions_to_end" in source
+    assert "psycopg.errors.ObjectInUse" in source
+    assert "pg_terminate_backend" in source
+
+
+def test_disposable_workflow_serializes_and_reserves_final_janitor_budget() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert "group: stage5d17-disposable-local-postgres" in workflow
+    assert "cancel-in-progress: false" in workflow
     # Every step before/post execution has an explicit maximum. Their documented
     # maximums total 39 minutes, leaving 21 minutes below the 60-minute job cap.
     assert "timeout-minutes: 60" in workflow
