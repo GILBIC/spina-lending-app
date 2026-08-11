@@ -70,6 +70,26 @@ def _function_count(connection: psycopg.Connection, schema: str, name: str) -> i
     )
 
 
+def _trigger_count(
+    connection: psycopg.Connection,
+    *,
+    relation: str,
+    trigger_name: str,
+) -> int:
+    return int(
+        connection.execute(
+            """
+            select count(*)
+            from pg_trigger
+            where tgrelid = %s::regclass
+              and not tgisinternal
+              and tgname = %s
+            """,
+            (relation, trigger_name),
+        ).fetchone()[0]
+    )
+
+
 def _verify_installed(connection: psycopg.Connection) -> dict[str, int]:
     for relation in (
         "lending.loan_renewal_execution_events",
@@ -82,6 +102,7 @@ def _verify_installed(connection: psycopg.Connection) -> dict[str, int]:
 
     for schema, function_name in (
         ("lending", "guard_loan_renewal_execution_event_write"),
+        ("lending", "guard_linked_renewal_release_void"),
         ("accounting", "record_loan_renewal_execution_evidence"),
         ("accounting", "void_loan_renewal_execution_evidence"),
     ):
@@ -93,20 +114,21 @@ def _verify_installed(connection: psycopg.Connection) -> dict[str, int]:
                 + function_name
             )
 
-    trigger_count = int(
-        connection.execute(
-            """
-            select count(*)
-            from pg_trigger
-            where tgrelid = 'lending.loan_renewal_execution_events'::regclass
-              and not tgisinternal
-              and tgname = 'lending_loan_renewal_execution_event_guard'
-            """
-        ).fetchone()[0]
-    )
-    if trigger_count != 1:
+    if _trigger_count(
+        connection,
+        relation="lending.loan_renewal_execution_events",
+        trigger_name="lending_loan_renewal_execution_event_guard",
+    ) != 1:
         raise SystemExit(
             "Stage 5D.24 live verification failed: immutable renewal execution evidence trigger is missing"
+        )
+    if _trigger_count(
+        connection,
+        relation="lending.loan_disbursement_events",
+        trigger_name="lending_loan_renewal_execution_release_void_guard",
+    ) != 1:
+        raise SystemExit(
+            "Stage 5D.24 live verification failed: linked renewal-release void dependency guard is missing"
         )
 
     permission = connection.execute(
@@ -290,8 +312,8 @@ def main() -> int:
                 f"active_renewal_releases={active_renewal_releases}, "
                 f"execution_events={summary['events']}, active_execution_events={summary['active_events']}, "
                 f"evidence_ready={summary['ready']}, missing_execution_evidence={summary['missing']}, "
-                f"policy_review={summary['policy_review']}, journal_lines_enabled=False, "
-                "automatic_source_posting=False."
+                f"policy_review={summary['policy_review']}, dependency_guard=True, "
+                "journal_lines_enabled=False, automatic_source_posting=False."
             )
             return 0
     except psycopg.Error as error:
