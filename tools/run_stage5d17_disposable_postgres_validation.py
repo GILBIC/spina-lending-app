@@ -36,6 +36,7 @@ ENDPOINT_ENV_KEYS = (
 )
 AUTH_SCHEMA_SQL = "CREATE SCHEMA IF NOT EXISTS auth"
 AUTH_USERS_SQL = "CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY)"
+TEST_DATABASE_PREFIX = "spina_stage5d17_"
 BOOTSTRAP_THROUGH = 39
 
 
@@ -155,6 +156,15 @@ def _database_exists(admin_connection: psycopg.Connection, database_name: str) -
     )
 
 
+def _is_disposable_database_name(database_name: str) -> bool:
+    if not database_name.startswith(TEST_DATABASE_PREFIX):
+        return False
+    suffix = database_name[len(TEST_DATABASE_PREFIX) :]
+    return len(suffix) in {12, 32} and all(
+        character in "0123456789abcdef" for character in suffix
+    )
+
+
 def _drop_database(admin_connection: psycopg.Connection, database_name: str) -> None:
     admin_connection.execute(
         "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid()",
@@ -163,6 +173,22 @@ def _drop_database(admin_connection: psycopg.Connection, database_name: str) -> 
     admin_connection.execute(
         sql.SQL("DROP DATABASE IF EXISTS {}").format(sql.Identifier(database_name))
     )
+
+
+def _drop_stale_disposable_databases(admin_connection: psycopg.Connection) -> int:
+    rows = admin_connection.execute(
+        "SELECT datname FROM pg_database WHERE left(datname, %s) = %s ORDER BY datname",
+        (len(TEST_DATABASE_PREFIX), TEST_DATABASE_PREFIX),
+    ).fetchall()
+    names = [str(row[0]) for row in rows]
+    unsafe = [name for name in names if not _is_disposable_database_name(name)]
+    if unsafe:
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL cleanup refused: reserved prefix contains an unexpected database name."
+        )
+    for name in names:
+        _drop_database(admin_connection, name)
+    return len(names)
 
 
 def _install_supabase_auth_prerequisite(test_database_url: str) -> None:
@@ -207,6 +233,7 @@ def main() -> int:
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
     parser.add_argument("--database-url-env", default="GILBIC_DATABASE_URL")
+    parser.add_argument("--cleanup-stale-only", action="store_true")
     args = parser.parse_args()
 
     for env_path in args.env_file:
@@ -219,11 +246,30 @@ def main() -> int:
     base_params = _safe_local_connection_params(database_url)
     _clear_endpoint_environment()
     live_db = base_params["dbname"]
-    test_db = f"spina_stage5d17_{uuid4().hex}"
+    if live_db.startswith(TEST_DATABASE_PREFIX):
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL validation refused: configured live database uses the reserved disposable prefix."
+        )
+
+    admin_url = _conninfo_for_database(base_params, "postgres")
+    if args.cleanup_stale_only:
+        try:
+            with psycopg.connect(admin_url, autocommit=True) as admin:
+                dropped = _drop_stale_disposable_databases(admin)
+            print(
+                f"Stage 5D.17 disposable PostgreSQL janitor passed: dropped={dropped}."
+            )
+            return 0
+        except psycopg.Error as error:
+            raise SystemExit(
+                "Stage 5D.17 disposable PostgreSQL janitor failed: "
+                + str(error).split("CONTEXT:", 1)[0].strip()
+            ) from error
+
+    test_db = f"{TEST_DATABASE_PREFIX}{uuid4().hex}"
     if test_db == live_db:
         raise SystemExit("Stage 5D.17 disposable PostgreSQL validation refused: test database matches live database.")
 
-    admin_url = _conninfo_for_database(base_params, "postgres")
     test_url = _conninfo_for_database(base_params, test_db)
     cleanup_required = False
     primary_error: BaseException | None = None
