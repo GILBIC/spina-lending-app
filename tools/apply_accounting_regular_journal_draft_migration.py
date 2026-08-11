@@ -9,10 +9,9 @@ import psycopg
 
 
 SQL_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "sql"
-MIGRATIONS = (
-    SQL_ROOT / "0040_add_protected_regular_journal_drafts.sql",
-    SQL_ROOT / "0041_harden_regular_journal_manual_post_guard.sql",
-)
+DRAFT_MIGRATION = SQL_ROOT / "0040_add_protected_regular_journal_drafts.sql"
+MANUAL_GUARD_MIGRATION = SQL_ROOT / "0041_harden_regular_journal_manual_post_guard.sql"
+POSTING_MIGRATION = SQL_ROOT / "0042_add_protected_regular_journal_posting.sql"
 
 
 def _load_env_file(path: Path) -> None:
@@ -36,7 +35,7 @@ def _transaction_body(sql: str) -> str:
     body = sql.strip()
     if not body.startswith("BEGIN;") or not body.endswith("COMMIT;"):
         raise SystemExit(
-            "Protected Regular journal draft migration safety gate failed: expected BEGIN/COMMIT wrapper"
+            "Protected Regular accounting migration safety gate failed: expected BEGIN/COMMIT wrapper"
         )
     body = body[len("BEGIN;") :].lstrip()
     return body[: -len("COMMIT;")].rstrip()
@@ -44,6 +43,12 @@ def _transaction_body(sql: str) -> str:
 
 def _count(connection: psycopg.Connection, relation: str) -> int:
     return int(connection.execute(f"SELECT count(*) FROM {relation}").fetchone()[0])
+
+
+def _exists(connection: psycopg.Connection, relation: str) -> bool:
+    return connection.execute(
+        "SELECT to_regclass(%s)", (relation,)
+    ).fetchone()[0] is not None
 
 
 def _loan_status_counts(connection: psycopg.Connection) -> Counter[str]:
@@ -64,10 +69,7 @@ def _accounting_anchor_counts(connection: psycopg.Connection) -> tuple[int, ...]
 
 
 def _historical_reviewed_count(connection: psycopg.Connection) -> int | None:
-    exists = connection.execute(
-        "SELECT to_regclass('accounting.ecl_historical_loan_episodes')"
-    ).fetchone()[0]
-    if exists is None:
+    if not _exists(connection, "accounting.ecl_historical_loan_episodes"):
         return None
     return int(
         connection.execute(
@@ -81,10 +83,7 @@ def _historical_reviewed_count(connection: psycopg.Connection) -> int | None:
 
 
 def _dpd_safety(connection: psycopg.Connection) -> tuple[object, ...] | None:
-    exists = connection.execute(
-        "SELECT to_regclass('accounting.loan_contract_dpd_summary')"
-    ).fetchone()[0]
-    if exists is None:
+    if not _exists(connection, "accounting.loan_contract_dpd_summary"):
         return None
     row = connection.execute(
         """
@@ -100,7 +99,7 @@ def _dpd_safety(connection: psycopg.Connection) -> tuple[object, ...] | None:
     return tuple(row) if row is not None else None
 
 
-def _manual_post_definition(connection: psycopg.Connection) -> str:
+def _manual_post_is_null_safe(connection: psycopg.Connection) -> bool:
     row = connection.execute(
         """
         SELECT pg_get_functiondef(proc.oid)
@@ -110,81 +109,83 @@ def _manual_post_definition(connection: psycopg.Connection) -> str:
           AND proc.proname = 'post_manual_journal_entry'
         """
     ).fetchone()
-    return str(row[0]) if row is not None else ""
-
-
-def _manual_post_is_null_safe(connection: psycopg.Connection) -> bool:
-    definition = _manual_post_definition(connection)
+    definition = str(row[0]) if row is not None else ""
     return (
         "source_type IS DISTINCT FROM 'manual'" in definition
         and "Only a manual draft journal entry can be posted" in definition
     )
 
 
-def _verify_installed(
-    connection: psycopg.Connection,
-    *,
-    require_pristine_install: bool,
-) -> None:
-    required_relations = (
-        "accounting.regular_journal_draft_preparations",
-        "accounting.regular_journal_draft_preparation_entries",
-        "accounting.regular_journal_draft_preparation_status",
-    )
-    missing = [
-        relation
-        for relation in required_relations
-        if connection.execute(
-            "SELECT to_regclass(%s)", (relation,)
-        ).fetchone()[0]
-        is None
-    ]
-    if missing:
-        raise SystemExit(
-            "Protected Regular journal draft verification failed: missing "
-            + ", ".join(missing)
-        )
-
-    function_count = int(
+def _function_count(connection: psycopg.Connection, name: str) -> int:
+    return int(
         connection.execute(
             """
             SELECT count(*)
             FROM pg_proc proc
             JOIN pg_namespace ns ON ns.oid = proc.pronamespace
             WHERE ns.nspname = 'accounting'
-              AND proc.proname = 'create_regular_journal_draft_batch'
-            """
+              AND proc.proname = %s
+            """,
+            (name,),
         ).fetchone()[0]
     )
-    if function_count != 1:
+
+
+def _verify_installed(
+    connection: psycopg.Connection,
+    *,
+    require_zero_new_posting_rows: bool,
+) -> None:
+    required_relations = (
+        "accounting.regular_journal_draft_preparations",
+        "accounting.regular_journal_draft_preparation_entries",
+        "accounting.regular_journal_draft_preparation_status",
+        "accounting.regular_journal_posting_sets",
+        "accounting.regular_journal_posting_entries",
+    )
+    missing = [relation for relation in required_relations if not _exists(connection, relation)]
+    if missing:
         raise SystemExit(
-            "Protected Regular journal draft verification failed: preparation function is missing"
+            "Protected Regular accounting verification failed: missing "
+            + ", ".join(missing)
         )
 
-    permission_count = int(
-        connection.execute(
-            """
-            SELECT count(*)
-            FROM core.permissions
-            WHERE code = 'accounting.regular_journal.prepare'
-            """
-        ).fetchone()[0]
-    )
-    management_permission_count = int(
-        connection.execute(
-            """
-            SELECT count(*)
-            FROM core.role_permissions rp
-            JOIN core.roles role ON role.id = rp.role_id
-            WHERE role.code = 'management'
-              AND rp.permission_code = 'accounting.regular_journal.prepare'
-            """
-        ).fetchone()[0]
-    )
-    if permission_count != 1 or management_permission_count != 1:
+    if _function_count(connection, "create_regular_journal_draft_batch") != 1:
         raise SystemExit(
-            "Protected Regular journal draft verification failed: Management preparation permission is missing"
+            "Protected Regular accounting verification failed: draft preparation function is missing"
         )
+    if _function_count(connection, "post_regular_journal_review_set") != 1:
+        raise SystemExit(
+            "Protected Regular accounting verification failed: protected posting function is missing"
+        )
+
+    for permission in (
+        "accounting.regular_journal.prepare",
+        "accounting.regular_journal.post",
+    ):
+        permission_count = int(
+            connection.execute(
+                "SELECT count(*) FROM core.permissions WHERE code = %s",
+                (permission,),
+            ).fetchone()[0]
+        )
+        management_count = int(
+            connection.execute(
+                """
+                SELECT count(*)
+                FROM core.role_permissions rp
+                JOIN core.roles role ON role.id = rp.role_id
+                WHERE role.code = 'management'
+                  AND rp.permission_code = %s
+                """,
+                (permission,),
+            ).fetchone()[0]
+        )
+        if permission_count != 1 or management_count != 1:
+            raise SystemExit(
+                "Protected Regular accounting verification failed: Management permission is missing: "
+                + permission
+            )
 
     trigger_rows = connection.execute(
         """
@@ -195,7 +196,9 @@ def _verify_installed(
               'accounting_regular_journal_draft_preparation_guard',
               'accounting_regular_journal_draft_preparation_entry_guard',
               'accounting_regular_system_journal_entry_guard',
-              'accounting_regular_system_journal_line_guard'
+              'accounting_regular_system_journal_line_guard',
+              'accounting_regular_journal_posting_set_guard',
+              'accounting_regular_journal_posting_entry_guard'
           )
         """
     ).fetchall()
@@ -205,23 +208,25 @@ def _verify_installed(
         "accounting_regular_journal_draft_preparation_entry_guard",
         "accounting_regular_system_journal_entry_guard",
         "accounting_regular_system_journal_line_guard",
+        "accounting_regular_journal_posting_set_guard",
+        "accounting_regular_journal_posting_entry_guard",
     }
     if trigger_names != required_triggers:
         raise SystemExit(
-            "Protected Regular journal draft verification failed: one or more immutability/posting guards are missing"
+            "Protected Regular accounting verification failed: an immutability/posting guard is missing"
         )
 
     if not _manual_post_is_null_safe(connection):
         raise SystemExit(
-            "Protected Regular journal draft verification failed: manual General Journal posting is not NULL-safe and source-type hardened"
+            "Protected Regular accounting verification failed: manual General Journal posting is not NULL-safe and source-type hardened"
         )
 
-    preparation_count = _count(
-        connection, "accounting.regular_journal_draft_preparations"
-    )
+    preparation_count = _count(connection, "accounting.regular_journal_draft_preparations")
     preparation_entry_count = _count(
         connection, "accounting.regular_journal_draft_preparation_entries"
     )
+    posting_set_count = _count(connection, "accounting.regular_journal_posting_sets")
+    posting_entry_count = _count(connection, "accounting.regular_journal_posting_entries")
     protected_journal_count = int(
         connection.execute(
             """
@@ -245,22 +250,49 @@ def _verify_installed(
                 SELECT 1
                 FROM accounting.regular_journal_draft_preparation_entries prepared
                 WHERE prepared.journal_entry_id = journal.id
-              )
+            )
+            """
+        ).fetchone()[0]
+    )
+    unaudited_posted_count = int(
+        connection.execute(
+            """
+            SELECT count(*)::bigint
+            FROM accounting.journal_entries journal
+            JOIN accounting.regular_journal_draft_preparation_entries prepared
+              ON prepared.journal_entry_id = journal.id
+            LEFT JOIN accounting.regular_journal_posting_entries posted
+              ON posted.journal_entry_id = journal.id
+            WHERE journal.status = 'posted'
+              AND posted.journal_entry_id IS NULL
+            """
+        ).fetchone()[0]
+    )
+    invalid_audit_count = int(
+        connection.execute(
+            """
+            SELECT count(*)::bigint
+            FROM accounting.regular_journal_posting_entries posted
+            JOIN accounting.journal_entries journal
+              ON journal.id = posted.journal_entry_id
+            WHERE journal.status <> 'posted'
+               OR journal.entry_number IS DISTINCT FROM posted.entry_number
+               OR journal.source_event_key IS DISTINCT FROM posted.source_event_key
             """
         ).fetchone()[0]
     )
 
-    if require_pristine_install and (
-        preparation_count != 0
-        or preparation_entry_count != 0
-        or protected_journal_count != 0
-    ):
+    if require_zero_new_posting_rows and (posting_set_count or posting_entry_count):
         raise SystemExit(
-            "Protected Regular journal draft verification failed: schema install must create zero preparations and zero Regular journals"
+            "Protected Regular accounting verification failed: posting-control schema install created live posting audit rows"
         )
-    if posted_protected_count != 0:
+    if unaudited_posted_count != 0 or invalid_audit_count != 0:
         raise SystemExit(
-            "Protected Regular journal draft verification failed: Stage 5D.16 must not post any Regular journal"
+            "Protected Regular accounting verification failed: a posted Regular journal is missing or disagrees with its immutable protected audit"
+        )
+    if posted_protected_count != posting_entry_count:
+        raise SystemExit(
+            "Protected Regular accounting verification failed: posted Regular journal count does not equal protected posting audit entry count"
         )
 
     dpd = _dpd_safety(connection)
@@ -268,14 +300,15 @@ def _verify_installed(
         bool(dpd[1]) or bool(dpd[2]) or dpd[3] is not None or bool(dpd[4])
     ):
         raise SystemExit(
-            "Protected Regular journal draft verification failed: default, ECL, or automatic posting was unexpectedly enabled"
+            "Protected Regular accounting verification failed: default, ECL, or automatic posting was unexpectedly enabled"
         )
 
     print(
-        "Protected Regular journal draft summary: "
+        "Protected Regular accounting summary: "
         f"preparations={preparation_count}, preparation_entries={preparation_entry_count}, "
         f"regular_journals={protected_journal_count}, posted_regular_journals={posted_protected_count}, "
-        "regular_posting_enabled=False, automatic_source_posting=False"
+        f"posting_sets={posting_set_count}, posting_entries={posting_entry_count}, "
+        "regular_posting_enabled=True, automatic_source_posting=False"
         + (
             f", loans={dpd[0]}, automatic_default={dpd[1]}, ecl_included={dpd[2]}, "
             f"ecl_amount={dpd[3]}, ready_to_post={dpd[4]}."
@@ -288,8 +321,8 @@ def _verify_installed(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Install protected Regular source-event journal draft controls "
-            "without preparing or posting any live Regular journal."
+            "Install and verify protected Regular source-event draft and explicit "
+            "full-review-set posting controls without automatically posting anything."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -302,22 +335,22 @@ def main() -> int:
     database_url = os.getenv(args.database_url_env)
     if not database_url:
         raise SystemExit(f"{args.database_url_env} is not configured")
-    missing_migrations = [path for path in MIGRATIONS if not path.is_file()]
-    if missing_migrations:
-        raise SystemExit(
-            "Protected Regular journal draft migration file was not found: "
-            + ", ".join(str(path) for path in missing_migrations)
-        )
 
-    migration_bodies = tuple(
-        _transaction_body(path.read_text(encoding="utf-8"))
-        for path in MIGRATIONS
-    )
-    hardening_body = migration_bodies[-1]
+    migration_paths = (DRAFT_MIGRATION, MANUAL_GUARD_MIGRATION, POSTING_MIGRATION)
+    missing = [path for path in migration_paths if not path.is_file()]
+    if missing:
+        raise SystemExit(
+            "Protected Regular accounting migration file was not found: "
+            + ", ".join(str(path) for path in missing)
+        )
+    bodies = {
+        path: _transaction_body(path.read_text(encoding="utf-8"))
+        for path in migration_paths
+    }
 
     try:
         with psycopg.connect(database_url) as connection:
-            required = (
+            prerequisites = (
                 "lending.loans",
                 "lending.loan_collection_state",
                 "lending.loan_types",
@@ -333,30 +366,19 @@ def main() -> int:
                 "accounting.opening_balance_loan_snapshot_batches",
                 "accounting.opening_balance_loan_measurement_snapshots",
             )
-            for relation in required:
-                if connection.execute(
-                    "SELECT to_regclass(%s)", (relation,)
-                ).fetchone()[0] is None:
+            for relation in prerequisites:
+                if not _exists(connection, relation):
                     raise SystemExit(
-                        "Protected Regular journal draft prerequisite is not installed: "
+                        "Protected Regular accounting prerequisite is not installed: "
                         + relation
                     )
 
-            already_installed = connection.execute(
-                "SELECT to_regclass('accounting.regular_journal_draft_preparations')"
-            ).fetchone()[0]
-            if already_installed is not None:
-                if not _manual_post_is_null_safe(connection):
-                    print(
-                        "Protected Regular journal draft controls are installed but the NULL-safe manual-post hardening is missing; applying 0041 only."
-                    )
-                    connection.execute(hardening_body)
-                else:
-                    print(
-                        "Protected Regular journal draft controls and NULL-safe manual-post hardening are already installed; skipping migration application."
-                    )
-                _verify_installed(connection, require_pristine_install=False)
-                return 0
+            draft_installed = _exists(
+                connection, "accounting.regular_journal_draft_preparations"
+            )
+            posting_installed = _exists(
+                connection, "accounting.regular_journal_posting_sets"
+            )
 
             before_loans = _count(connection, "lending.loans")
             before_loan_statuses = _loan_status_counts(connection)
@@ -368,8 +390,14 @@ def main() -> int:
             before_reviewed = _historical_reviewed_count(connection)
             before_dpd = _dpd_safety(connection)
 
-            for migration_body in migration_bodies:
-                connection.execute(migration_body)
+            if not draft_installed:
+                connection.execute(bodies[DRAFT_MIGRATION])
+                connection.execute(bodies[MANUAL_GUARD_MIGRATION])
+            elif not _manual_post_is_null_safe(connection):
+                connection.execute(bodies[MANUAL_GUARD_MIGRATION])
+
+            if not posting_installed:
+                connection.execute(bodies[POSTING_MIGRATION])
 
             after_loans = _count(connection, "lending.loans")
             after_loan_statuses = _loan_status_counts(connection)
@@ -383,11 +411,11 @@ def main() -> int:
 
             if after_loans != before_loans or after_loan_statuses != before_loan_statuses:
                 raise SystemExit(
-                    "Protected Regular journal draft safety gate failed: live loans changed during schema install"
+                    "Protected Regular accounting safety gate failed: live loans changed during schema install"
                 )
             if after_transactions != before_transactions:
                 raise SystemExit(
-                    "Protected Regular journal draft safety gate failed: collection transactions changed during schema install"
+                    "Protected Regular accounting safety gate failed: collection transactions changed during schema install"
                 )
             if (
                 after_journals != before_journals
@@ -395,30 +423,27 @@ def main() -> int:
                 or after_events != before_events
             ):
                 raise SystemExit(
-                    "Protected Regular journal draft safety gate failed: journal rows changed during schema install"
+                    "Protected Regular accounting safety gate failed: journal rows changed during schema install"
                 )
             if after_anchors != before_anchors:
                 raise SystemExit(
-                    "Protected Regular journal draft safety gate failed: opening-balance/cutover anchor state changed"
+                    "Protected Regular accounting safety gate failed: opening/cutover anchors changed during schema install"
                 )
             if after_reviewed != before_reviewed or after_dpd != before_dpd:
                 raise SystemExit(
-                    "Protected Regular journal draft safety gate failed: ECL/DPD/default readiness state changed"
+                    "Protected Regular accounting safety gate failed: ECL/DPD state changed during schema install"
                 )
 
-            _verify_installed(connection, require_pristine_install=True)
+            _verify_installed(
+                connection,
+                require_zero_new_posting_rows=not posting_installed,
+            )
+            return 0
     except psycopg.Error as error:
         raise SystemExit(
-            "Protected Regular journal draft migration failed and was rolled back: "
-            + str(error)
+            "Protected Regular accounting migration failed: "
+            + str(error).split("CONTEXT:", 1)[0].strip()
         ) from error
-
-    print(
-        "Protected Regular journal draft live migration complete. Controls and "
-        "NULL-safe manual-post hardening are installed with zero live drafts "
-        "created and all Regular posting paths disabled."
-    )
-    return 0
 
 
 if __name__ == "__main__":

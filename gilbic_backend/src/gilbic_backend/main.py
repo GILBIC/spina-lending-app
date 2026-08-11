@@ -39,6 +39,7 @@ from .posting_ready_evidence_review_api import (
     create_posting_ready_evidence_review_router,
 )
 from .regular_journal_draft_api import create_regular_journal_draft_router
+from .regular_journal_posting_api import create_regular_journal_posting_router
 from .remittance_api import create_remittance_router
 from .remittance_photo_api import create_remittance_photo_router
 from .renewal_api import create_renewal_router
@@ -82,6 +83,7 @@ def create_app() -> FastAPI:
     app.include_router(create_cross_period_accounting_sequence_router())
     app.include_router(create_posting_ready_evidence_review_router())
     app.include_router(create_regular_journal_draft_router())
+    app.include_router(create_regular_journal_posting_router())
     app.include_router(create_contract_schedule_registration_router())
     app.include_router(create_contract_collection_activation_router())
     app.include_router(create_ecl_outcome_review_router())
