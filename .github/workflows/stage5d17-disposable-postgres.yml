@@ -24,6 +24,7 @@ jobs:
       STAGE5D17_RUN_ROOT: ${{ runner.temp }}\..\spina-stage5d17-clusters\run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
       STAGE5D17_PG_DATA: ${{ runner.temp }}\..\spina-stage5d17-clusters\run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\pgdata
       STAGE5D17_PG_LOG: ${{ runner.temp }}\..\spina-stage5d17-clusters\run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\postgres.log
+      STAGE5D17_OWNERSHIP_MARKER: ${{ runner.temp }}\..\spina-stage5d17-clusters\run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\cluster-owned.marker
       STAGE5D17_CLUSTER_MARKER: ${{ runner.temp }}\..\spina-stage5d17-clusters\run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\cluster-ready.marker
       STAGE5D17_VENV: ${{ runner.temp }}\..\spina-stage5d17-clusters\run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\venv
       STAGE5D17_DATABASE_URL: postgresql://stage5d17@127.0.0.1:55432/postgres?sslmode=disable
@@ -88,9 +89,9 @@ jobs:
             ForEach-Object {
               $candidateRoot = [System.IO.Path]::GetFullPath($_.FullName).TrimEnd('\')
               if ($candidateRoot -eq $currentRoot) { return }
-              $marker = Join-Path $candidateRoot 'cluster-ready.marker'
+              $ownershipMarker = Join-Path $candidateRoot 'cluster-owned.marker'
               $pgData = Join-Path $candidateRoot 'pgdata'
-              if (-not (Test-Path $marker) -or -not (Test-Path $pgData)) { return }
+              if (-not (Test-Path $ownershipMarker) -or -not (Test-Path $pgData)) { return }
 
               Write-Host "Reaping previously owned Stage 5D.17 cluster at $candidateRoot"
               & $pgCtl -D $pgData status 2>$null
@@ -122,7 +123,8 @@ jobs:
           $runRoot = $env:STAGE5D17_RUN_ROOT
           $pgData = $env:STAGE5D17_PG_DATA
           $pgLog = $env:STAGE5D17_PG_LOG
-          $marker = $env:STAGE5D17_CLUSTER_MARKER
+          $ownershipMarker = $env:STAGE5D17_OWNERSHIP_MARKER
+          $readyMarker = $env:STAGE5D17_CLUSTER_MARKER
           $port = [int]$env:STAGE5D17_PG_PORT
 
           if (Test-Path $runRoot) {
@@ -145,6 +147,15 @@ jobs:
           & $initdb -D $pgData -U $env:STAGE5D17_PG_USER --auth=trust --encoding=UTF8 --no-locale
           if ($LASTEXITCODE -ne 0) { throw 'initdb failed for the Stage 5D.17 temporary cluster.' }
 
+          # Ownership is established before the detached server can start. A later
+          # retry may safely recover this exact pgdata via pg_ctl -D even if the
+          # runner dies between pg_ctl start and the stricter readiness marker.
+          "run_id=${{ github.run_id }}`nrun_attempt=${{ github.run_attempt }}`npgdata=$pgData`nport=$port" |
+            Set-Content -Path $ownershipMarker -Encoding ascii
+          if (-not (Test-Path $ownershipMarker)) {
+            throw 'Temporary PostgreSQL ownership marker was not created.'
+          }
+
           & $pgCtl -D $pgData -l $pgLog -o "-p $port -h 127.0.0.1" -w start
           if ($LASTEXITCODE -ne 0) {
             if (Test-Path $pgLog) { Get-Content $pgLog }
@@ -154,10 +165,10 @@ jobs:
           & $pgIsReady -h 127.0.0.1 -p $port -U $env:STAGE5D17_PG_USER -d postgres
           if ($LASTEXITCODE -ne 0) { throw 'Temporary PostgreSQL cluster did not become ready.' }
 
-          "run_id=${{ github.run_id }}`nrun_attempt=${{ github.run_attempt }}`npgdata=$pgData`nport=$port" |
-            Set-Content -Path $marker -Encoding ascii
-          if (-not (Test-Path $marker)) {
-            throw 'Temporary PostgreSQL ownership marker was not created.'
+          "run_id=${{ github.run_id }}`nrun_attempt=${{ github.run_attempt }}`npgdata=$pgData`nport=$port`nready=true" |
+            Set-Content -Path $readyMarker -Encoding ascii
+          if (-not (Test-Path $readyMarker)) {
+            throw 'Temporary PostgreSQL readiness marker was not created.'
           }
 
       - name: Create isolated verifier environment
