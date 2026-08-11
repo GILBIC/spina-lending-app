@@ -1,0 +1,3 @@
+Stage 5D.20 install-only live verification marker.
+This marker authorizes only the schema/view/permission installation verified by tools/apply_accounting_loan_disbursement_coordinates_migration.py on push to main.
+It does not authorize synthetic data, journal creation, journal posting, capital entries, or automatic source posting.
