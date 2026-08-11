@@ -54,7 +54,7 @@ def test_stage5d22_revalidates_source_draft_period_accounts_lines_and_audit() ->
         "credit_match_count <> 1",
         "existing protected new-loan disbursement posting audit",
     ):
-        assert marker in SQL
+        assert marker in LOWER
 
 
 def test_stage5d22_posting_audit_is_immutable_and_auto_posting_stays_off() -> None:
