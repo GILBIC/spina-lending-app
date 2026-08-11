@@ -12,10 +12,11 @@ jobs:
   validate-stage5d17-posting:
     if: contains(github.event.head_commit.message, '[stage5d17-disposable]')
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
       - name: Check out exact revision
+        timeout-minutes: 5
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
@@ -23,6 +24,7 @@ jobs:
           persist-credentials: false
 
       - name: Create isolated verifier environment
+        timeout-minutes: 10
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
@@ -32,6 +34,7 @@ jobs:
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9" || exit /b 1
 
       - name: Compile disposable PostgreSQL verifier
+        timeout-minutes: 2
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
