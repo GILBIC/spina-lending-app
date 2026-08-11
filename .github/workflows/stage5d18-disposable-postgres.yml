@@ -6,7 +6,9 @@ on:
       - main
     paths:
       - 'gilbic_backend/sql/0043_add_controlled_regular_collection_reversals.sql'
+      - 'gilbic_backend/sql/0044_harden_collection_void_reversal_evidence.sql'
       - 'gilbic_backend/tests/test_regular_collection_reversal_postgres.py'
+      - 'gilbic_backend/tests/test_regular_collection_reversal_hardening_migration.py'
       - 'tools/run_stage5d18_disposable_postgres_validation.py'
       - '.github/workflows/stage5d18-disposable-postgres.yml'
   workflow_dispatch:
