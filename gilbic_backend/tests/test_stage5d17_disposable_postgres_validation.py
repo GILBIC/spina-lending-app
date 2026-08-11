@@ -146,9 +146,6 @@ def test_disposable_workflow_builds_fresh_loopback_only_windows_cluster() -> Non
         "postgresql://stage5d17@127.0.0.1:55432/postgres?sslmode=disable"
     ) in workflow
 
-    # Runner-derived paths are defined only after the job starts. This avoids
-    # invalid use of the runner context in jobs.<job_id>.env while retaining a
-    # stable recovery directory and run_id + run_attempt identity.
     assert "Define isolated runner paths" in workflow
     assert "${{ runner.temp }}" not in workflow
     assert "$env:RUNNER_TEMP" in workflow
@@ -192,6 +189,21 @@ def test_disposable_workflow_never_uses_runner_context_in_job_env() -> None:
     assert "${{ runner." not in job_env
     assert "Define isolated runner paths" in workflow
     assert "$env:RUNNER_TEMP" in workflow
+
+
+def test_disposable_workflow_uses_process_scoped_powershell_bypass() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    safe_shell = (
+        "shell: powershell -NoProfile -NonInteractive "
+        "-ExecutionPolicy Bypass -File {0}"
+    )
+
+    # The self-hosted runner has a restrictive machine/user execution policy.
+    # Use GitHub's custom-shell template support so only these workflow-created
+    # PowerShell processes bypass policy; do not modify the machine policy.
+    assert workflow.count(safe_shell) == 5
+    assert "\n        shell: powershell\n" not in workflow
+    assert "Set-ExecutionPolicy" not in workflow
 
 
 def test_disposable_workflow_separates_ownership_from_tcp_readiness() -> None:
