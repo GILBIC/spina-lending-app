@@ -28,6 +28,7 @@ from .eir_period_journal_api import create_eir_period_journal_router
 from .financial_accounting_api import create_financial_accounting_router
 from .financial_statements_api import create_financial_statements_router
 from .general_journal_api import create_general_journal_router
+from .loan_disbursement_evidence_api import create_loan_disbursement_evidence_router
 from .management_api import create_management_router
 from .management_loan_api import create_management_loan_router
 from .management_operations_api import create_management_operations_router
@@ -78,6 +79,7 @@ def create_app() -> FastAPI:
     app.include_router(create_financial_accounting_router())
     app.include_router(create_financial_statements_router())
     app.include_router(create_source_event_accounting_router())
+    app.include_router(create_loan_disbursement_evidence_router())
     app.include_router(create_eir_cash_allocation_router())
     app.include_router(create_eir_period_journal_router())
     app.include_router(create_cross_period_accounting_sequence_router())
