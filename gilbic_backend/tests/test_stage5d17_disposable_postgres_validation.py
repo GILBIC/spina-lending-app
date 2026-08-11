@@ -158,6 +158,11 @@ def test_disposable_workflow_builds_fresh_loopback_only_windows_cluster() -> Non
         "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\\pgdata"
     ) in workflow
     assert (
+        "STAGE5D17_OWNERSHIP_MARKER: "
+        "${{ runner.temp }}\\..\\spina-stage5d17-clusters\\"
+        "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\\cluster-owned.marker"
+    ) in workflow
+    assert (
         "STAGE5D17_CLUSTER_MARKER: "
         "${{ runner.temp }}\\..\\spina-stage5d17-clusters\\"
         "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\\cluster-ready.marker"
@@ -180,17 +185,21 @@ def test_disposable_workflow_builds_fresh_loopback_only_windows_cluster() -> Non
     assert "temporary PostgreSQL run directory was not removed" in workflow
 
 
-def test_disposable_workflow_gates_database_janitor_on_owned_cluster_marker() -> None:
+def test_disposable_workflow_separates_ownership_from_tcp_readiness() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
-    # The marker is written only after our own initdb/start/readiness succeeds.
-    # Every TCP database-level cleanup/test call requires it, so an occupied
-    # reserved port cannot redirect those calls into an unrelated server.
-    marker_write = workflow.index('Set-Content -Path $marker -Encoding ascii')
-    ready_check = workflow.index("Temporary PostgreSQL cluster did not become ready.")
-    assert marker_write > ready_check
-    assert "run_id=${{ github.run_id }}" in workflow
-    assert "run_attempt=${{ github.run_attempt }}" in workflow
+    initdb_done = workflow.index("if ($LASTEXITCODE -ne 0) { throw 'initdb failed")
+    ownership_write = workflow.index("Set-Content -Path $ownershipMarker -Encoding ascii")
+    server_start = workflow.index('& $pgCtl -D $pgData -l $pgLog -o "-p $port -h 127.0.0.1" -w start')
+    readiness_check = workflow.index("Temporary PostgreSQL cluster did not become ready.")
+    ready_write = workflow.index("Set-Content -Path $readyMarker -Encoding ascii")
+
+    # Recovery ownership exists before a detached server can survive a crash.
+    assert initdb_done < ownership_write < server_start
+    # TCP cleanup/testing remains gated on the stricter post-readiness marker.
+    assert server_start < readiness_check < ready_write
+    assert "Temporary PostgreSQL ownership marker was not created." in workflow
+    assert "Temporary PostgreSQL readiness marker was not created." in workflow
     assert workflow.count('if not exist "%STAGE5D17_CLUSTER_MARKER%" exit /b 1') == 4
     assert 'if not exist "%STAGE5D17_CLUSTER_MARKER%" exit /b 0' in workflow
 
@@ -200,13 +209,13 @@ def test_disposable_workflow_recovers_owned_orphans_across_reruns_without_tcp() 
 
     # Recovery lives outside a single attempt's temp root, and run_attempt makes
     # a rerun distinct from the orphan it must find. Recovery identifies only
-    # marker+pgdata pairs and operates by pg_ctl -D, never by connecting to the
-    # fixed PostgreSQL TCP port.
+    # ownership-marker+pgdata pairs and operates by pg_ctl -D, never by TCP.
     assert "Reap orphaned owned Stage 5D.17 clusters" in workflow
     assert "STAGE5D17_CLUSTER_BASE" in workflow
     assert "github.run_attempt" in workflow
     assert "Get-ChildItem $clusterBase -Directory -Filter 'run-*-attempt-*'" in workflow
-    assert "if (-not (Test-Path $marker) -or -not (Test-Path $pgData))" in workflow
+    assert "cluster-owned.marker" in workflow
+    assert "if (-not (Test-Path $ownershipMarker) -or -not (Test-Path $pgData))" in workflow
     assert "& $pgCtl -D $pgData status" in workflow
     assert "& $pgCtl -D $pgData -m immediate -w stop" in workflow
     assert "Failed to stop owned orphan Stage 5D.17 cluster" in workflow
