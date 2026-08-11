@@ -119,10 +119,14 @@ def test_disposable_janitor_only_accepts_reserved_hex_database_names() -> None:
     assert not MODULE._is_disposable_database_name(prefix + "a" * 16)
 
 
-def test_disposable_workflow_runs_independent_janitor_around_timed_execution() -> None:
+def test_disposable_workflow_reserves_guaranteed_final_janitor_budget() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
-    assert "timeout-minutes: 30" in workflow
-    assert "timeout-minutes: 12" in workflow
+    # Every step before/post execution has an explicit maximum. Their documented
+    # maximums total 39 minutes, leaving 21 minutes below the 60-minute job cap.
+    assert "timeout-minutes: 60" in workflow
+    for timeout in (2, 5, 10, 12):
+        assert f"timeout-minutes: {timeout}" in workflow
+    assert workflow.count("timeout-minutes: 5") == 3
     assert "if: always()" in workflow
     assert workflow.count("--cleanup-stale-only") == 2
     assert "Reap stale Stage 5D.17 disposable databases before execution" in workflow
