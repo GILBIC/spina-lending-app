@@ -1,6 +1,0 @@
-Stage 5D.27 one-time live migration marker.
-
-This marker permits the Stage 5D.27 main-push verifier to install only the read-only
-0053 greenfield Regular protected-ledger reconciliation target view and then run
-its no-history-change safety checks. It does not permit synthetic data, journal
-creation, posting, reversal, or automatic source posting on the live database.
