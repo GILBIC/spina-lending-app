@@ -28,7 +28,7 @@ permissions:
 
 concurrency:
   group: stage5d18-live-migration
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   verify-stage5d18-live-controls:
