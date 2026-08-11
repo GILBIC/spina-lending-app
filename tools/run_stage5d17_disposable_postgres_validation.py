@@ -79,12 +79,20 @@ def _migration_paths() -> list[Path]:
         raise SystemExit(
             "Stage 5D.17 disposable PostgreSQL validation refused: expected migrations 0001 through 0039 are incomplete."
         )
-    expected = list(range(1, BOOTSTRAP_THROUGH + 1))
-    actual = [int(path.name[:4]) for path in paths]
-    if actual != expected:
+
+    expected_numbers = set(range(1, BOOTSTRAP_THROUGH + 1))
+    actual_numbers = {int(path.name[:4]) for path in paths}
+    missing_numbers = sorted(expected_numbers - actual_numbers)
+    if missing_numbers:
+        missing_text = ", ".join(f"{number:04d}" for number in missing_numbers)
         raise SystemExit(
-            "Stage 5D.17 disposable PostgreSQL validation refused: migration sequence 0001..0039 is not contiguous."
+            "Stage 5D.17 disposable PostgreSQL validation refused: missing migration numbers before 0040: "
+            + missing_text
         )
+
+    # Historical migration numbering contains a duplicate 0018. Preserve every
+    # migration file in deterministic filename order instead of pretending the
+    # numeric prefixes are unique.
     return paths
 
 
