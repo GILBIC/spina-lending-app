@@ -8,11 +8,10 @@ from pathlib import Path
 import psycopg
 
 
-MIGRATION = (
-    Path(__file__).resolve().parents[1]
-    / "gilbic_backend"
-    / "sql"
-    / "0040_add_protected_regular_journal_drafts.sql"
+SQL_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "sql"
+MIGRATIONS = (
+    SQL_ROOT / "0040_add_protected_regular_journal_drafts.sql",
+    SQL_ROOT / "0041_harden_regular_journal_manual_post_guard.sql",
 )
 
 
@@ -56,6 +55,7 @@ def _loan_status_counts(connection: psycopg.Connection) -> Counter[str]:
 
 def _accounting_anchor_counts(connection: psycopg.Connection) -> tuple[int, ...]:
     return (
+        _count(connection, "accounting.opening_balance_workbooks"),
         _count(connection, "accounting.opening_balance_journal_preparations"),
         _count(connection, "accounting.opening_balance_journal_postings"),
         _count(connection, "accounting.opening_balance_loan_snapshot_batches"),
@@ -98,6 +98,27 @@ def _dpd_safety(connection: psycopg.Connection) -> tuple[object, ...] | None:
         """
     ).fetchone()
     return tuple(row) if row is not None else None
+
+
+def _manual_post_definition(connection: psycopg.Connection) -> str:
+    row = connection.execute(
+        """
+        SELECT pg_get_functiondef(proc.oid)
+        FROM pg_proc proc
+        JOIN pg_namespace ns ON ns.oid = proc.pronamespace
+        WHERE ns.nspname = 'accounting'
+          AND proc.proname = 'post_manual_journal_entry'
+        """
+    ).fetchone()
+    return str(row[0]) if row is not None else ""
+
+
+def _manual_post_is_null_safe(connection: psycopg.Connection) -> bool:
+    definition = _manual_post_definition(connection)
+    return (
+        "source_type IS DISTINCT FROM 'manual'" in definition
+        and "Only a manual draft journal entry can be posted" in definition
+    )
 
 
 def _verify_installed(
@@ -190,23 +211,9 @@ def _verify_installed(
             "Protected Regular journal draft verification failed: one or more immutability/posting guards are missing"
         )
 
-    manual_post_definition = str(
-        connection.execute(
-            """
-            SELECT pg_get_functiondef(proc.oid)
-            FROM pg_proc proc
-            JOIN pg_namespace ns ON ns.oid = proc.pronamespace
-            WHERE ns.nspname = 'accounting'
-              AND proc.proname = 'post_manual_journal_entry'
-            """
-        ).fetchone()[0]
-    )
-    if (
-        "source_type <> 'manual'" not in manual_post_definition
-        or "Only a manual draft journal entry can be posted" not in manual_post_definition
-    ):
+    if not _manual_post_is_null_safe(connection):
         raise SystemExit(
-            "Protected Regular journal draft verification failed: manual General Journal posting is not source-type hardened"
+            "Protected Regular journal draft verification failed: manual General Journal posting is not NULL-safe and source-type hardened"
         )
 
     preparation_count = _count(
@@ -295,10 +302,18 @@ def main() -> int:
     database_url = os.getenv(args.database_url_env)
     if not database_url:
         raise SystemExit(f"{args.database_url_env} is not configured")
-    if not MIGRATION.is_file():
-        raise SystemExit(f"Migration file was not found: {MIGRATION}")
+    missing_migrations = [path for path in MIGRATIONS if not path.is_file()]
+    if missing_migrations:
+        raise SystemExit(
+            "Protected Regular journal draft migration file was not found: "
+            + ", ".join(str(path) for path in missing_migrations)
+        )
 
-    migration_body = _transaction_body(MIGRATION.read_text(encoding="utf-8"))
+    migration_bodies = tuple(
+        _transaction_body(path.read_text(encoding="utf-8"))
+        for path in MIGRATIONS
+    )
+    hardening_body = migration_bodies[-1]
 
     try:
         with psycopg.connect(database_url) as connection:
@@ -312,6 +327,7 @@ def main() -> int:
                 "accounting.journal_entries",
                 "accounting.journal_lines",
                 "accounting.journal_events",
+                "accounting.opening_balance_workbooks",
                 "accounting.opening_balance_journal_preparations",
                 "accounting.opening_balance_journal_postings",
                 "accounting.opening_balance_loan_snapshot_batches",
@@ -330,9 +346,15 @@ def main() -> int:
                 "SELECT to_regclass('accounting.regular_journal_draft_preparations')"
             ).fetchone()[0]
             if already_installed is not None:
-                print(
-                    "Protected Regular journal draft controls are already installed; skipping migration application."
-                )
+                if not _manual_post_is_null_safe(connection):
+                    print(
+                        "Protected Regular journal draft controls are installed but the NULL-safe manual-post hardening is missing; applying 0041 only."
+                    )
+                    connection.execute(hardening_body)
+                else:
+                    print(
+                        "Protected Regular journal draft controls and NULL-safe manual-post hardening are already installed; skipping migration application."
+                    )
                 _verify_installed(connection, require_pristine_install=False)
                 return 0
 
@@ -346,7 +368,8 @@ def main() -> int:
             before_reviewed = _historical_reviewed_count(connection)
             before_dpd = _dpd_safety(connection)
 
-            connection.execute(migration_body)
+            for migration_body in migration_bodies:
+                connection.execute(migration_body)
 
             after_loans = _count(connection, "lending.loans")
             after_loan_statuses = _loan_status_counts(connection)
@@ -391,8 +414,9 @@ def main() -> int:
         ) from error
 
     print(
-        "Protected Regular journal draft live migration complete. Controls are "
-        "installed with zero live drafts created and all posting paths disabled."
+        "Protected Regular journal draft live migration complete. Controls and "
+        "NULL-safe manual-post hardening are installed with zero live drafts "
+        "created and all Regular posting paths disabled."
     )
     return 0
 
