@@ -1,0 +1,366 @@
+from __future__ import annotations
+
+import argparse
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+from uuid import uuid4
+
+import psycopg
+from psycopg import sql
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
+
+
+SQL_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "sql"
+POSTING_TEST = (
+    Path(__file__).resolve().parents[1]
+    / "gilbic_backend"
+    / "tests"
+    / "test_regular_journal_posting_postgres.py"
+)
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+LOCAL_HOSTADDRS = {"127.0.0.1", "::1"}
+DEFAULT_HOSTADDR = {
+    "localhost": "127.0.0.1",
+    "127.0.0.1": "127.0.0.1",
+    "::1": "::1",
+}
+ENDPOINT_ENV_KEYS = (
+    "PGHOST",
+    "PGHOSTADDR",
+    "PGSERVICE",
+    "PGSERVICEFILE",
+    "PGPORT",
+    "PGDATABASE",
+)
+AUTH_SCHEMA_SQL = "CREATE SCHEMA IF NOT EXISTS auth"
+AUTH_USERS_SQL = "CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY)"
+TEST_DATABASE_PREFIX = "spina_stage5d17_"
+BOOTSTRAP_THROUGH = 39
+DROP_RETRY_ATTEMPTS = 5
+DROP_SESSION_WAIT_ATTEMPTS = 40
+DROP_SESSION_WAIT_SECONDS = 0.25
+
+
+def _load_env_file(path: Path) -> None:
+    if not path.is_file():
+        return
+    for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            continue
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        os.environ.setdefault(key, value)
+
+
+def _safe_local_connection_params(database_url: str) -> dict[str, str]:
+    params = {str(key): str(value) for key, value in conninfo_to_dict(database_url).items()}
+    host = params.get("host", "").strip().lower()
+    hostaddr = params.get("hostaddr", "").strip().lower()
+    service = params.get("service", "").strip()
+    servicefile = params.get("servicefile", "").strip()
+
+    # This verifier creates and drops a database. The endpoint therefore must be
+    # explicit and loopback-only in the connection string itself. Do not allow a
+    # libpq service or omitted endpoint to inherit PGHOST/PGHOSTADDR/PGSERVICE and
+    # redirect the synthetic validation toward a remote server.
+    if service or servicefile:
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL validation refused: libpq service settings are not allowed."
+        )
+    if not host and not hostaddr:
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL validation refused: an explicit loopback host or hostaddr is required."
+        )
+    if host and host not in LOCAL_HOSTS:
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL validation refused: configured database host is not local."
+        )
+    if hostaddr and hostaddr not in LOCAL_HOSTADDRS:
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL validation refused: configured database hostaddr is not loopback."
+        )
+
+    normalized = dict(params)
+    if not host:
+        host = hostaddr
+    if not hostaddr:
+        hostaddr = DEFAULT_HOSTADDR[host]
+    normalized["host"] = host
+    normalized["hostaddr"] = hostaddr
+
+    live_db = normalized.get("dbname", "").strip()
+    if not live_db:
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL validation refused: configured database name is missing."
+        )
+    return normalized
+
+
+def _clear_endpoint_environment() -> None:
+    # Explicit normalized conninfo is the only allowed source of endpoint data.
+    # Credentials such as PGPASSWORD may remain available, but endpoint/service
+    # environment variables must not be able to redirect any connection.
+    for key in ENDPOINT_ENV_KEYS:
+        os.environ.pop(key, None)
+
+
+def _migration_paths() -> list[Path]:
+    paths: list[Path] = []
+    for path in SQL_ROOT.glob("[0-9][0-9][0-9][0-9]_*.sql"):
+        try:
+            migration_number = int(path.name[:4])
+        except ValueError:
+            continue
+        if migration_number <= BOOTSTRAP_THROUGH:
+            paths.append(path)
+    paths.sort(key=lambda item: item.name)
+    if not paths or paths[0].name[:4] != "0001" or paths[-1].name[:4] != f"{BOOTSTRAP_THROUGH:04d}":
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL validation refused: expected migrations 0001 through 0039 are incomplete."
+        )
+
+    expected_numbers = set(range(1, BOOTSTRAP_THROUGH + 1))
+    actual_numbers = {int(path.name[:4]) for path in paths}
+    missing_numbers = sorted(expected_numbers - actual_numbers)
+    if missing_numbers:
+        missing_text = ", ".join(f"{number:04d}" for number in missing_numbers)
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL validation refused: missing migration numbers before 0040: "
+            + missing_text
+        )
+
+    # Historical migration numbering contains a duplicate 0018. Preserve every
+    # migration file in deterministic filename order instead of pretending the
+    # numeric prefixes are unique.
+    return paths
+
+
+def _conninfo_for_database(base_params: dict[str, str], database_name: str) -> str:
+    params = dict(base_params)
+    params["dbname"] = database_name
+    return make_conninfo(**params)
+
+
+def _database_exists(admin_connection: psycopg.Connection, database_name: str) -> bool:
+    return (
+        admin_connection.execute(
+            "SELECT 1 FROM pg_database WHERE datname = %s",
+            (database_name,),
+        ).fetchone()
+        is not None
+    )
+
+
+def _is_disposable_database_name(database_name: str) -> bool:
+    if not database_name.startswith(TEST_DATABASE_PREFIX):
+        return False
+    suffix = database_name[len(TEST_DATABASE_PREFIX) :]
+    return len(suffix) in {12, 32} and all(
+        character in "0123456789abcdef" for character in suffix
+    )
+
+
+def _session_count(admin_connection: psycopg.Connection, database_name: str) -> int:
+    return int(
+        admin_connection.execute(
+            "SELECT count(*) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid()",
+            (database_name,),
+        ).fetchone()[0]
+    )
+
+
+def _wait_for_database_sessions_to_end(
+    admin_connection: psycopg.Connection,
+    database_name: str,
+) -> bool:
+    for _ in range(DROP_SESSION_WAIT_ATTEMPTS):
+        if _session_count(admin_connection, database_name) == 0:
+            return True
+        time.sleep(DROP_SESSION_WAIT_SECONDS)
+    return False
+
+
+def _drop_database(admin_connection: psycopg.Connection, database_name: str) -> None:
+    last_object_in_use: psycopg.Error | None = None
+    for _ in range(DROP_RETRY_ATTEMPTS):
+        admin_connection.execute(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid()",
+            (database_name,),
+        )
+        if not _wait_for_database_sessions_to_end(admin_connection, database_name):
+            continue
+        try:
+            admin_connection.execute(
+                sql.SQL("DROP DATABASE IF EXISTS {}").format(sql.Identifier(database_name))
+            )
+            return
+        except psycopg.errors.ObjectInUse as error:
+            last_object_in_use = error
+            time.sleep(DROP_SESSION_WAIT_SECONDS)
+
+    if last_object_in_use is not None:
+        raise last_object_in_use
+    raise SystemExit(
+        "Stage 5D.17 disposable PostgreSQL cleanup failed: database sessions did not terminate before the cleanup deadline."
+    )
+
+
+def _drop_stale_disposable_databases(admin_connection: psycopg.Connection) -> int:
+    rows = admin_connection.execute(
+        "SELECT datname FROM pg_database WHERE left(datname, %s) = %s ORDER BY datname",
+        (len(TEST_DATABASE_PREFIX), TEST_DATABASE_PREFIX),
+    ).fetchall()
+    names = [str(row[0]) for row in rows]
+    unsafe = [name for name in names if not _is_disposable_database_name(name)]
+    if unsafe:
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL cleanup refused: reserved prefix contains an unexpected database name."
+        )
+    for name in names:
+        _drop_database(admin_connection, name)
+    return len(names)
+
+
+def _install_supabase_auth_prerequisite(test_database_url: str) -> None:
+    # Migration 0002 links core.users.external_auth_id to Supabase auth.users.
+    # A plain template0 database does not contain that schema, so provide only
+    # the minimum referenced object needed to replay the historical schema.
+    with psycopg.connect(test_database_url, autocommit=True) as connection:
+        connection.execute(AUTH_SCHEMA_SQL)
+        connection.execute(AUTH_USERS_SQL)
+
+
+def _bootstrap_database(test_database_url: str) -> None:
+    with psycopg.connect(test_database_url, autocommit=True) as connection:
+        for path in _migration_paths():
+            connection.execute(path.read_text(encoding="utf-8"))
+
+
+def _run_posting_test(test_database_url: str) -> int:
+    if not POSTING_TEST.is_file():
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL validation refused: posting integration test file is missing."
+        )
+    env = os.environ.copy()
+    for key in ENDPOINT_ENV_KEYS:
+        env.pop(key, None)
+    env["GILBIC_TEST_DATABASE_URL"] = test_database_url
+    completed = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", str(POSTING_TEST)],
+        env=env,
+        check=False,
+    )
+    return int(completed.returncode)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Create a local disposable PostgreSQL database, bootstrap SPINA through "
+            "migration 0039, execute the real Stage 5D.17 protected Regular posting "
+            "integration test, then drop the disposable database."
+        )
+    )
+    parser.add_argument("--env-file", action="append", type=Path, default=[])
+    parser.add_argument("--database-url-env", default="GILBIC_DATABASE_URL")
+    parser.add_argument("--cleanup-stale-only", action="store_true")
+    args = parser.parse_args()
+
+    for env_path in args.env_file:
+        _load_env_file(env_path)
+
+    database_url = os.getenv(args.database_url_env)
+    if not database_url:
+        raise SystemExit(f"{args.database_url_env} is not configured")
+
+    base_params = _safe_local_connection_params(database_url)
+    _clear_endpoint_environment()
+    live_db = base_params["dbname"]
+    if live_db.startswith(TEST_DATABASE_PREFIX):
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL validation refused: configured live database uses the reserved disposable prefix."
+        )
+
+    admin_url = _conninfo_for_database(base_params, "postgres")
+    if args.cleanup_stale_only:
+        try:
+            with psycopg.connect(admin_url, autocommit=True) as admin:
+                dropped = _drop_stale_disposable_databases(admin)
+            print(
+                f"Stage 5D.17 disposable PostgreSQL janitor passed: dropped={dropped}."
+            )
+            return 0
+        except psycopg.Error as error:
+            raise SystemExit(
+                "Stage 5D.17 disposable PostgreSQL janitor failed: "
+                + str(error).split("CONTEXT:", 1)[0].strip()
+            ) from error
+
+    test_db = f"{TEST_DATABASE_PREFIX}{uuid4().hex}"
+    if test_db == live_db:
+        raise SystemExit("Stage 5D.17 disposable PostgreSQL validation refused: test database matches live database.")
+
+    test_url = _conninfo_for_database(base_params, test_db)
+    cleanup_required = False
+    primary_error: BaseException | None = None
+
+    try:
+        with psycopg.connect(admin_url, autocommit=True) as admin:
+            if _database_exists(admin, test_db):
+                raise SystemExit(
+                    "Stage 5D.17 disposable PostgreSQL validation refused: generated test database already exists."
+                )
+            # Set this before CREATE DATABASE. If PostgreSQL creates the database
+            # but the connection result is ambiguous, finally still attempts the
+            # idempotent DROP DATABASE cleanup.
+            cleanup_required = True
+            admin.execute(
+                sql.SQL("CREATE DATABASE {} TEMPLATE template0").format(sql.Identifier(test_db))
+            )
+
+        _install_supabase_auth_prerequisite(test_url)
+        _bootstrap_database(test_url)
+        result = _run_posting_test(test_url)
+        if result != 0:
+            raise SystemExit(
+                f"Stage 5D.17 disposable PostgreSQL validation failed: posting integration test exited with code {result}."
+            )
+        print(
+            "Stage 5D.17 disposable PostgreSQL validation passed: atomic protected posting, exact retry, manual-post rejection, immutable audit, and forced rollback were executed in a disposable local database."
+        )
+        return 0
+    except psycopg.Error as error:
+        primary_error = error
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL validation failed: "
+            + str(error).split("CONTEXT:", 1)[0].strip()
+        ) from error
+    except BaseException as error:
+        primary_error = error
+        raise
+    finally:
+        if cleanup_required:
+            try:
+                with psycopg.connect(admin_url, autocommit=True) as admin:
+                    _drop_database(admin, test_db)
+            except (psycopg.Error, SystemExit) as cleanup_error:
+                message = (
+                    "Stage 5D.17 disposable PostgreSQL cleanup failed: "
+                    + str(cleanup_error).split("CONTEXT:", 1)[0].strip()
+                )
+                print(message, file=sys.stderr)
+                if primary_error is None:
+                    raise SystemExit(message) from cleanup_error
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
