@@ -129,21 +129,24 @@ def test_disposable_drop_waits_and_retries_after_backend_termination() -> None:
     assert "pg_terminate_backend" in source
 
 
-def test_disposable_workflow_uses_isolated_hosted_postgres_and_reserves_cleanup_budget() -> None:
+def test_disposable_workflow_builds_fresh_loopback_only_windows_cluster() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
-    # The real posting proof must run on a fresh GitHub-hosted VM with its own
-    # PostgreSQL service. It must never inherit the Windows runner's live .env
-    # files, production URL, or repository secrets.
-    assert "runs-on: ubuntu-latest" in workflow
-    assert "[self-hosted, Windows, X64]" not in workflow
-    assert "image: postgres:16" in workflow
-    assert "POSTGRES_USER: stage5d17" in workflow
-    assert "POSTGRES_DB: stage5d17_anchor" in workflow
+    # The proof must use a newly initialized PostgreSQL cluster under RUNNER_TEMP,
+    # never the Windows runner's configured remote database or production secrets.
+    assert "runs-on: [self-hosted, Windows, X64]" in workflow
+    assert "ubuntu-latest" not in workflow
+    assert "services:" not in workflow
+    assert "initdb.exe" in workflow
+    assert "pg_ctl.exe" in workflow
+    assert "pg_isready.exe" in workflow
+    assert "--auth=trust" in workflow
+    assert "-h 127.0.0.1" in workflow
+    assert "STAGE5D17_PG_PORT: '55432'" in workflow
+    assert "STAGE5D17_PG_DATA: ${{ runner.temp }}\\spina-stage5d17-pgdata" in workflow
     assert (
         "STAGE5D17_DATABASE_URL: "
-        "postgresql://stage5d17:stage5d17-only@127.0.0.1:5432/"
-        "stage5d17_anchor?sslmode=disable"
+        "postgresql://stage5d17@127.0.0.1:55432/postgres?sslmode=disable"
     ) in workflow
     assert "--database-url-env STAGE5D17_DATABASE_URL" in workflow
     assert "GILBIC_DATABASE_URL" not in workflow
@@ -152,22 +155,31 @@ def test_disposable_workflow_uses_isolated_hosted_postgres_and_reserves_cleanup_
     assert "C:\\SPINA_ONLINE" not in workflow
     assert "${{ secrets." not in workflow
 
-    # Preserve the one-time marker gate, exact checkout, serialized execution,
-    # independent pre/post janitors, and a job budget that cannot starve final
-    # cleanup. Maximum explicit step budgets total 44 minutes inside 60 minutes.
+    # The test port must be refused if already occupied, and the whole temporary
+    # cluster must be stopped/deleted independently after the accounting test.
+    assert "Reserved Stage 5D.17 test port" in workflow
+    assert "Stop and delete temporary PostgreSQL cluster" in workflow
+    assert workflow.count("if: always()") == 2
+    assert "Remove-Item -Recurse -Force $pgData" in workflow
+    assert "temporary PostgreSQL data directory was not removed" in workflow
+
+
+def test_disposable_workflow_serializes_and_reserves_cleanup_budget() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
     assert "[stage5d17-disposable]" in workflow
     assert "ref: ${{ github.sha }}" in workflow
-    assert "group: stage5d17-disposable-local-postgres" in workflow
+    assert "group: stage5d17-disposable-windows-postgres" in workflow
     assert "cancel-in-progress: false" in workflow
     assert "timeout-minutes: 60" in workflow
-    for timeout in (2, 5, 10, 12):
-        assert f"timeout-minutes: {timeout}" in workflow
-    assert workflow.count("timeout-minutes: 5") == 4
-    assert "if: always()" in workflow
+    assert workflow.count("timeout-minutes: 5") == 3
+    assert workflow.count("timeout-minutes: 3") == 2
+    assert workflow.count("timeout-minutes: 2") == 2
+    assert workflow.count("timeout-minutes: 10") == 1
+    assert workflow.count("timeout-minutes: 12") == 1
     assert workflow.count("--cleanup-stale-only") == 2
     assert "Reap stale Stage 5D.17 disposable databases before execution" in workflow
     assert "Reap Stage 5D.17 disposable databases after execution" in workflow
-    assert "Execute protected Regular posting in disposable hosted PostgreSQL" in workflow
+    assert "Execute protected Regular posting in temporary local PostgreSQL" in workflow
 
 
 def test_disposable_validator_bootstraps_every_historical_file_through_0039() -> None:
