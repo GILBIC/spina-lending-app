@@ -62,7 +62,7 @@ jobs:
         if: github.event_name == 'pull_request'
         shell: cmd
         run: |
-          python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0050_add_authoritative_renewal_execution_evidence.sql').read_text(encoding='utf-8'); assert s.strip().startswith('BEGIN;') and s.strip().endswith('COMMIT;'); assert 'INSERT INTO lending.loan_renewal_execution_events\nSELECT' not in s; assert 'INSERT INTO accounting.journal_entries' not in s; assert 'INSERT INTO accounting.journal_lines' not in s; assert 'automatic_source_posting\nFROM' not in s" || exit /b 1
+          python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0050_add_authoritative_renewal_execution_evidence.sql').read_text(encoding='utf-8'); assert s.strip().startswith('BEGIN;') and s.strip().endswith('COMMIT;'); assert 'INSERT INTO lending.loan_renewal_execution_events\nSELECT' not in s; assert 'INSERT INTO accounting.journal_entries' not in s; assert 'INSERT INTO accounting.journal_lines' not in s; assert 'true AS automatic_source_posting' not in s" || exit /b 1
 
       - name: Install and verify renewal execution evidence controls on live database
         if: github.event_name == 'push' && hashFiles('tools/accounting-loan-renewal-execution-evidence-live-migration.once') != ''
