@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: stage5d17-disposable-local-postgres
+  cancel-in-progress: false
+
 jobs:
   validate-stage5d17-posting:
     if: contains(github.event.head_commit.message, '[stage5d17-disposable]')
