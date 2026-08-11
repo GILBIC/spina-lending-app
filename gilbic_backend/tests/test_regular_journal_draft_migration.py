@@ -1,22 +1,29 @@
 from pathlib import Path
 
 
-MIGRATION = (
-    Path(__file__).resolve().parents[1]
-    / "sql"
-    / "0040_add_protected_regular_journal_drafts.sql"
+SQL_ROOT = Path(__file__).resolve().parents[1] / "sql"
+PRIMARY_MIGRATION = SQL_ROOT / "0040_add_protected_regular_journal_drafts.sql"
+HARDENING_MIGRATION = (
+    SQL_ROOT / "0041_harden_regular_journal_manual_post_guard.sql"
 )
 
 
 def migration_sql() -> str:
-    return MIGRATION.read_text(encoding="utf-8")
+    return PRIMARY_MIGRATION.read_text(encoding="utf-8")
 
 
-def test_migration_is_transactional_and_creates_no_live_regular_drafts() -> None:
+def hardening_sql() -> str:
+    return HARDENING_MIGRATION.read_text(encoding="utf-8")
+
+
+def test_migrations_are_transactional_and_create_no_live_regular_drafts() -> None:
     sql = migration_sql()
-    stripped = sql.strip()
-    assert stripped.startswith("BEGIN;")
-    assert stripped.endswith("COMMIT;")
+    hardening = hardening_sql()
+    for text in (sql, hardening):
+        stripped = text.strip()
+        assert stripped.startswith("BEGIN;")
+        assert stripped.endswith("COMMIT;")
+
     assert "accounting.regular_journal_draft_preparations" in sql
     assert "accounting.regular_journal_draft_preparation_entries" in sql
     assert "accounting.create_regular_journal_draft_batch" in sql
@@ -27,6 +34,7 @@ def test_migration_is_transactional_and_creates_no_live_regular_drafts() -> None
     # function invocation from the authenticated Management API.
     assert "SELECT accounting.create_regular_journal_draft_batch" not in sql
     assert "select accounting.create_regular_journal_draft_batch" not in sql
+    assert "create_regular_journal_draft_batch" not in hardening
 
 
 def test_preparation_permission_is_management_only_and_separate_from_posting() -> None:
@@ -96,13 +104,15 @@ def test_system_generated_regular_drafts_are_immutable_and_not_manually_postable
     assert 'set_config("accounting.regular_journal_post_allowed"' not in sql
 
 
-def test_manual_general_journal_post_function_is_source_type_hardened() -> None:
-    sql = migration_sql()
-    assert "entry_row.source_type <> 'manual'" in sql
+def test_manual_general_journal_post_function_is_null_safe_and_source_hardened() -> None:
+    sql = hardening_sql()
+    assert "entry_row.source_type IS DISTINCT FROM 'manual'" in sql
+    assert "entry_row.source_type <> 'manual'" not in sql
     assert (
         "Only a manual draft journal entry can be posted through the manual General Journal workflow."
         in sql
     )
+    assert "regular_journal_post_allowed" not in sql
 
 
 def test_draft_creation_writes_no_entry_number_or_posted_state() -> None:
