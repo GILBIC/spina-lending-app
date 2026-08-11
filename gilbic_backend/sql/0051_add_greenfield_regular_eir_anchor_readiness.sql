@@ -137,6 +137,9 @@ WITH protected_release AS (
         event.is_voided AS release_is_voided,
         loan.loan_number,
         loan.client_id AS current_loan_client_id,
+        loan.principal AS current_loan_principal,
+        loan.date_released AS current_loan_date_released,
+        loan_type.calculation_mode AS current_calculation_mode,
         client.client_code,
         client.full_name AS client_name,
         journal.status AS journal_status,
@@ -154,6 +157,8 @@ WITH protected_release AS (
       ON event.id = posting.disbursement_event_id
     JOIN lending.loans loan
       ON loan.id = posting.loan_id
+    JOIN lending.loan_types loan_type
+      ON loan_type.id = loan.loan_type_id
     JOIN lending.clients client
       ON client.id = posting.client_id
     JOIN accounting.journal_entries journal
@@ -336,7 +341,11 @@ SELECT
         WHEN event_kind <> 'new_loan_release'
             THEN 'unsupported_release_kind'
         WHEN current_loan_client_id IS DISTINCT FROM client_id
-            THEN 'loan_client_mismatch'
+          OR current_loan_principal IS DISTINCT FROM principal_snapshot
+          OR current_loan_date_released IS DISTINCT FROM date_released_snapshot
+            THEN 'loan_changed_after_protected_release'
+        WHEN current_calculation_mode IS DISTINCT FROM 'fixed_daily'
+            THEN 'regular_fixed_daily_loan_required'
         WHEN posting_policy_version <> 'new_loan_disbursement_journal_posting_v1'
             THEN 'unsupported_release_posting_policy'
         WHEN journal_status <> 'posted'
@@ -386,10 +395,7 @@ SELECT
             THEN 'same_day_collection_ordering_review'
         ELSE 'greenfield_regular_eir_anchor_ready'
     END AS readiness_status,
-    CASE
-        WHEN posting_id IS NULL THEN NULL
-        ELSE 'greenfield_regular_eir_anchor:' || posting_id::text
-    END AS anchor_source_key,
+    'greenfield_regular_eir_anchor:' || posting_id::text AS anchor_source_key,
     'greenfield_regular_eir_anchor_v1'::text AS anchor_policy_version,
     false AS collection_journal_integration_enabled,
     false AS journal_lines_enabled,
