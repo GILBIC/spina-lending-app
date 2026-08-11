@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
 
@@ -189,9 +190,9 @@ def test_new_regular_release_coordinates_are_exact_and_read_only() -> None:
                 "coordinate_ready",
                 period_id,
                 "loans_receivable_regular",
-                psycopg.types.numeric.Decimal("5000.00"),
+                Decimal("5000.00"),
                 "cash_office",
-                psycopg.types.numeric.Decimal("5000.00"),
+                Decimal("5000.00"),
                 f"loan_disbursement:{event_id}",
                 False,
                 False,
