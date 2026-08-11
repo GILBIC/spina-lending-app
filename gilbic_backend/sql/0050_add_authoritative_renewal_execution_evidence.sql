@@ -306,10 +306,8 @@ BEGIN
            AND existing_row.evidence_note = normalized_note
            AND existing_row.old_loan_principal_snapshot = old_loan.principal
            AND existing_row.old_loan_date_released_snapshot = old_loan.date_released
-           AND existing_row.old_loan_status_snapshot = old_loan.status
            AND existing_row.new_loan_principal_snapshot = new_loan.principal
-           AND existing_row.new_loan_date_released_snapshot = new_loan.date_released
-           AND existing_row.new_loan_status_snapshot = new_loan.status THEN
+           AND existing_row.new_loan_date_released_snapshot = new_loan.date_released THEN
             RETURN existing_row.id;
         END IF;
         RAISE EXCEPTION 'This new loan already has different active renewal execution evidence; void it explicitly before registering a correction.';
@@ -435,8 +433,10 @@ BEGIN
         SELECT 1
         FROM accounting.journal_entries journal
         WHERE journal.source_event_key = 'loan_renewal_execution:' || event_row.id::text
-           OR journal.source_reference = event_row.id::text
-              AND journal.source_type = 'loan_renewal_execution'
+           OR (
+               journal.source_reference = event_row.id::text
+               AND journal.source_type = 'loan_renewal_execution'
+           )
     ) THEN
         RAISE EXCEPTION 'Renewal execution evidence already has accounting journal history; use the future protected accounting cancellation/reversal path.';
     END IF;
@@ -522,10 +522,8 @@ SELECT
             THEN 'settlement_mismatch'
         WHEN execution.old_loan_principal_snapshot IS DISTINCT FROM old_loan.principal
           OR execution.old_loan_date_released_snapshot IS DISTINCT FROM old_loan.date_released
-          OR execution.old_loan_status_snapshot IS DISTINCT FROM old_loan.status
           OR execution.new_loan_principal_snapshot IS DISTINCT FROM new_loan.principal
           OR execution.new_loan_date_released_snapshot IS DISTINCT FROM new_loan.date_released
-          OR execution.new_loan_status_snapshot IS DISTINCT FROM new_loan.status
             THEN 'loan_changed_after_execution_evidence'
         WHEN release_event.principal_snapshot IS DISTINCT FROM new_loan.principal
           OR release_event.date_released_snapshot IS DISTINCT FROM new_loan.date_released
@@ -579,7 +577,7 @@ WHERE release_event.event_kind = 'renewal_release'
   AND release_event.is_voided = false;
 
 COMMENT ON TABLE lending.loan_renewal_execution_events IS
-    'Immutable authoritative evidence linking one old loan to one new loan for an executed renewal. Client renewal requests and loan rows alone are never treated as execution proof.';
+    'Immutable authoritative evidence linking one old loan to one new loan for an executed renewal. Client renewal requests and loan rows alone are never treated as execution proof. Loan status snapshots are audit context only; ordinary later lifecycle status changes do not invalidate the execution evidence.';
 COMMENT ON VIEW accounting.loan_renewal_execution_source_readiness IS
     'Evidence-only renewal execution readiness. This stage never creates journal lines and never enables automatic source posting.';
 COMMENT ON FUNCTION accounting.record_loan_renewal_execution_evidence(
