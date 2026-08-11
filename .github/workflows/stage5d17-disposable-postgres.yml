@@ -15,8 +15,25 @@ concurrency:
 jobs:
   validate-stage5d17-posting:
     if: contains(github.event.head_commit.message, '[stage5d17-disposable]')
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      STAGE5D17_DATABASE_URL: postgresql://stage5d17:stage5d17-only@127.0.0.1:5432/stage5d17_anchor?sslmode=disable
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: stage5d17
+          POSTGRES_PASSWORD: stage5d17-only
+          POSTGRES_DB: stage5d17_anchor
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U stage5d17 -d stage5d17_anchor"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
 
     steps:
       - name: Check out exact revision
@@ -27,42 +44,53 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Install Python 3.12
+        timeout-minutes: 5
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Create isolated verifier environment
         timeout-minutes: 10
-        shell: cmd
+        shell: bash
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
-          if exist "%VENV%" rmdir /s /q "%VENV%"
-          python -m venv "%VENV%" || exit /b 1
-          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
-          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9" || exit /b 1
+          set -euo pipefail
+          VENV="$RUNNER_TEMP/spina-stage5d17-disposable-venv"
+          rm -rf "$VENV"
+          python -m venv "$VENV"
+          "$VENV/bin/python" -m pip install --disable-pip-version-check --upgrade pip
+          "$VENV/bin/python" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9"
 
       - name: Compile disposable PostgreSQL verifier
         timeout-minutes: 2
-        shell: cmd
+        shell: bash
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
-          "%VENV%\Scripts\python.exe" -m py_compile tools\run_stage5d17_disposable_postgres_validation.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_regular_journal_posting_postgres.py || exit /b 1
+          set -euo pipefail
+          VENV="$RUNNER_TEMP/spina-stage5d17-disposable-venv"
+          "$VENV/bin/python" -m py_compile tools/run_stage5d17_disposable_postgres_validation.py
+          "$VENV/bin/python" -m py_compile gilbic_backend/tests/test_regular_journal_posting_postgres.py
 
       - name: Reap stale Stage 5D.17 disposable databases before execution
         timeout-minutes: 5
-        shell: cmd
+        shell: bash
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
-          "%VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+          set -euo pipefail
+          VENV="$RUNNER_TEMP/spina-stage5d17-disposable-venv"
+          "$VENV/bin/python" tools/run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --database-url-env STAGE5D17_DATABASE_URL
 
-      - name: Execute protected Regular posting in disposable local PostgreSQL
+      - name: Execute protected Regular posting in disposable hosted PostgreSQL
         timeout-minutes: 12
-        shell: cmd
+        shell: bash
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
-          "%VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+          set -euo pipefail
+          VENV="$RUNNER_TEMP/spina-stage5d17-disposable-venv"
+          "$VENV/bin/python" tools/run_stage5d17_disposable_postgres_validation.py --database-url-env STAGE5D17_DATABASE_URL
 
       - name: Reap Stage 5D.17 disposable databases after execution
         if: always()
         timeout-minutes: 5
-        shell: cmd
+        shell: bash
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
-          "%VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+          set -euo pipefail
+          VENV="$RUNNER_TEMP/spina-stage5d17-disposable-venv"
+          "$VENV/bin/python" tools/run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --database-url-env STAGE5D17_DATABASE_URL
