@@ -150,6 +150,31 @@ CREATE TRIGGER lending_loan_renewal_execution_event_guard
 BEFORE INSERT OR UPDATE OR DELETE ON lending.loan_renewal_execution_events
 FOR EACH ROW EXECUTE FUNCTION lending.guard_loan_renewal_execution_event_write();
 
+CREATE OR REPLACE FUNCTION lending.guard_linked_renewal_release_void()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF OLD.is_voided = false
+       AND NEW.is_voided = true
+       AND EXISTS (
+           SELECT 1
+           FROM lending.loan_renewal_execution_events execution
+           WHERE execution.disbursement_event_id = OLD.id
+             AND execution.is_voided = false
+       ) THEN
+        RAISE EXCEPTION 'Renewal disbursement evidence is linked to active renewal execution evidence; void the execution evidence first.';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS lending_loan_renewal_execution_release_void_guard
+    ON lending.loan_disbursement_events;
+CREATE TRIGGER lending_loan_renewal_execution_release_void_guard
+BEFORE UPDATE OF is_voided ON lending.loan_disbursement_events
+FOR EACH ROW EXECUTE FUNCTION lending.guard_linked_renewal_release_void();
+
 CREATE OR REPLACE FUNCTION accounting.record_loan_renewal_execution_evidence(
     p_old_loan_id UUID,
     p_new_loan_id UUID,
@@ -433,6 +458,7 @@ BEGIN
         SELECT 1
         FROM accounting.journal_entries journal
         WHERE journal.source_event_key = 'loan_renewal_execution:' || event_row.id::text
+           OR journal.source_event_key = 'loan_disbursement:' || event_row.disbursement_event_id::text
            OR (
                journal.source_reference = event_row.id::text
                AND journal.source_type = 'loan_renewal_execution'
@@ -580,6 +606,8 @@ COMMENT ON TABLE lending.loan_renewal_execution_events IS
     'Immutable authoritative evidence linking one old loan to one new loan for an executed renewal. Client renewal requests and loan rows alone are never treated as execution proof. Loan status snapshots are audit context only; ordinary later lifecycle status changes do not invalidate the execution evidence.';
 COMMENT ON VIEW accounting.loan_renewal_execution_source_readiness IS
     'Evidence-only renewal execution readiness. This stage never creates journal lines and never enables automatic source posting.';
+COMMENT ON FUNCTION lending.guard_linked_renewal_release_void() IS
+    'Prevents authoritative renewal release evidence from being voided while active renewal execution evidence still depends on it.';
 COMMENT ON FUNCTION accounting.record_loan_renewal_execution_evidence(
     UUID, UUID, UUID, UUID, DATE, TIMESTAMPTZ, NUMERIC, TEXT, TEXT, UUID
 ) IS
