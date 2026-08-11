@@ -143,7 +143,18 @@ def test_disposable_workflow_builds_fresh_loopback_only_windows_cluster() -> Non
     assert "--auth=trust" in workflow
     assert "-h 127.0.0.1" in workflow
     assert "STAGE5D17_PG_PORT: '55432'" in workflow
-    assert "STAGE5D17_PG_DATA: ${{ runner.temp }}\\spina-stage5d17-pgdata" in workflow
+    assert (
+        "STAGE5D17_RUN_ROOT: "
+        "${{ runner.temp }}\\spina-stage5d17-${{ github.run_id }}"
+    ) in workflow
+    assert (
+        "STAGE5D17_PG_DATA: "
+        "${{ runner.temp }}\\spina-stage5d17-${{ github.run_id }}\\pgdata"
+    ) in workflow
+    assert (
+        "STAGE5D17_CLUSTER_MARKER: "
+        "${{ runner.temp }}\\spina-stage5d17-${{ github.run_id }}\\cluster-ready.marker"
+    ) in workflow
     assert (
         "STAGE5D17_DATABASE_URL: "
         "postgresql://stage5d17@127.0.0.1:55432/postgres?sslmode=disable"
@@ -160,8 +171,29 @@ def test_disposable_workflow_builds_fresh_loopback_only_windows_cluster() -> Non
     assert "Reserved Stage 5D.17 test port" in workflow
     assert "Stop and delete temporary PostgreSQL cluster" in workflow
     assert workflow.count("if: always()") == 2
-    assert "Remove-Item -Recurse -Force $pgData" in workflow
-    assert "temporary PostgreSQL data directory was not removed" in workflow
+    assert "Remove-Item -Recurse -Force $runRoot" in workflow
+    assert "temporary PostgreSQL run directory was not removed" in workflow
+
+
+def test_disposable_workflow_gates_database_janitor_on_owned_cluster_marker() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    # A per-run marker is written only after our own initdb/start/pg_isready
+    # succeeds. Any database-level janitor/pytest connection requires it, so an
+    # occupied reserved port cannot redirect cleanup into an unrelated server.
+    marker_write = workflow.index('Set-Content -Path $marker -Encoding ascii')
+    ready_check = workflow.index("Temporary PostgreSQL cluster did not become ready.")
+    assert marker_write > ready_check
+    assert "run_id=${{ github.run_id }}" in workflow
+    assert workflow.count('if not exist "%STAGE5D17_CLUSTER_MARKER%" exit /b 1') == 4
+    assert 'if not exist "%STAGE5D17_CLUSTER_MARKER%" exit /b 0' in workflow
+
+    # Previous test clusters are reaped only by their dedicated marker + data
+    # directory using pg_ctl -D; this cleanup never connects to a TCP listener.
+    assert "Reap orphaned owned Stage 5D.17 clusters" in workflow
+    assert "cluster-ready.marker" in workflow
+    assert "if (-not (Test-Path $marker) -or -not (Test-Path $pgData))" in workflow
+    assert "& $pgCtl -D $pgData -m immediate -w stop" in workflow
 
 
 def test_disposable_workflow_serializes_and_reserves_cleanup_budget() -> None:
@@ -172,7 +204,7 @@ def test_disposable_workflow_serializes_and_reserves_cleanup_budget() -> None:
     assert "cancel-in-progress: false" in workflow
     assert "timeout-minutes: 60" in workflow
     assert workflow.count("timeout-minutes: 5") == 3
-    assert workflow.count("timeout-minutes: 3") == 2
+    assert workflow.count("timeout-minutes: 3") == 3
     assert workflow.count("timeout-minutes: 2") == 2
     assert workflow.count("timeout-minutes: 10") == 1
     assert workflow.count("timeout-minutes: 12") == 1
