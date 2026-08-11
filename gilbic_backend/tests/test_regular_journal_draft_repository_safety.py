@@ -16,27 +16,35 @@ def test_prepare_replays_exact_evidence_before_and_after_source_lock() -> None:
     assert "Posting-ready evidence changed during preparation" in source
 
 
-def test_prepare_serializes_same_loan_and_freezes_mutable_source_tables() -> None:
+def test_prepare_serializes_same_loan_and_freezes_every_mutable_replay_source() -> None:
     source = inspect.getsource(PostgresRegularJournalDraftRepository.prepare)
 
     advisory = 'f"regular-journal-draft-loan:{loan_id}"'
-    loan_state = "lending.loan_collection_state"
-    transactions = "lending.collection_transactions"
-    fiscal_periods = "accounting.fiscal_periods"
-    accounts = "accounting.accounts"
+    protected_sources = (
+        "lending.loan_collection_state",
+        "lending.loans",
+        "lending.loan_types",
+        "lending.collection_transactions",
+        "accounting.opening_balance_workbooks",
+        "accounting.opening_balance_journal_preparations",
+        "accounting.opening_balance_journal_postings",
+        "accounting.opening_balance_loan_snapshot_batches",
+        "accounting.opening_balance_loan_measurement_snapshots",
+        "accounting.fiscal_periods",
+        "accounting.accounts",
+        "accounting.journal_entries",
+        "accounting.journal_lines",
+    )
     final_replay = "final_bundles = self._load_exact_bundles"
     batch_create = "accounting.create_regular_journal_draft_batch"
 
     assert advisory in source
     assert "pg_advisory_xact_lock" in source
-    assert loan_state in source
-    assert transactions in source
-    assert fiscal_periods in source
-    assert accounts in source
     assert "in share mode" in source.lower()
     assert source.index(advisory) < source.index(final_replay)
-    assert source.index(transactions) < source.index(final_replay)
-    assert source.index(fiscal_periods) < source.index(final_replay)
+    for protected_source in protected_sources:
+        assert protected_source in source
+        assert source.index(protected_source) < source.index(final_replay)
     assert source.index(final_replay) < source.index(batch_create)
 
 
