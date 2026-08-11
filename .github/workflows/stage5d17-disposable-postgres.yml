@@ -20,8 +20,11 @@ jobs:
     env:
       STAGE5D17_PG_PORT: '55432'
       STAGE5D17_PG_USER: stage5d17
-      STAGE5D17_PG_DATA: ${{ runner.temp }}\spina-stage5d17-pgdata
-      STAGE5D17_PG_LOG: ${{ runner.temp }}\spina-stage5d17-postgres.log
+      STAGE5D17_RUN_ROOT: ${{ runner.temp }}\spina-stage5d17-${{ github.run_id }}
+      STAGE5D17_PG_DATA: ${{ runner.temp }}\spina-stage5d17-${{ github.run_id }}\pgdata
+      STAGE5D17_PG_LOG: ${{ runner.temp }}\spina-stage5d17-${{ github.run_id }}\postgres.log
+      STAGE5D17_CLUSTER_MARKER: ${{ runner.temp }}\spina-stage5d17-${{ github.run_id }}\cluster-ready.marker
+      STAGE5D17_VENV: ${{ runner.temp }}\spina-stage5d17-${{ github.run_id }}\venv
       STAGE5D17_DATABASE_URL: postgresql://stage5d17@127.0.0.1:55432/postgres?sslmode=disable
 
     steps:
@@ -70,6 +73,25 @@ jobs:
           "PG_BIN=$pgBin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Using local PostgreSQL binaries from $pgBin"
 
+      - name: Reap orphaned owned Stage 5D.17 clusters
+        timeout-minutes: 3
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pgCtl = Join-Path $env:PG_BIN 'pg_ctl.exe'
+          $currentRoot = [System.IO.Path]::GetFullPath($env:STAGE5D17_RUN_ROOT).TrimEnd('\')
+          Get-ChildItem $env:RUNNER_TEMP -Directory -Filter 'spina-stage5d17-*' -ErrorAction SilentlyContinue |
+            ForEach-Object {
+              $candidateRoot = [System.IO.Path]::GetFullPath($_.FullName).TrimEnd('\')
+              if ($candidateRoot -eq $currentRoot) { return }
+              $marker = Join-Path $candidateRoot 'cluster-ready.marker'
+              $pgData = Join-Path $candidateRoot 'pgdata'
+              if (-not (Test-Path $marker) -or -not (Test-Path $pgData)) { return }
+              Write-Host "Reaping previously owned Stage 5D.17 cluster at $candidateRoot"
+              & $pgCtl -D $pgData -m immediate -w stop 2>$null
+              Remove-Item -Recurse -Force $candidateRoot
+            }
+
       - name: Initialize isolated temporary PostgreSQL cluster
         timeout-minutes: 5
         shell: powershell
@@ -78,17 +100,16 @@ jobs:
           $initdb = Join-Path $env:PG_BIN 'initdb.exe'
           $pgCtl = Join-Path $env:PG_BIN 'pg_ctl.exe'
           $pgIsReady = Join-Path $env:PG_BIN 'pg_isready.exe'
+          $runRoot = $env:STAGE5D17_RUN_ROOT
           $pgData = $env:STAGE5D17_PG_DATA
           $pgLog = $env:STAGE5D17_PG_LOG
+          $marker = $env:STAGE5D17_CLUSTER_MARKER
           $port = [int]$env:STAGE5D17_PG_PORT
 
-          if (Test-Path $pgData) {
-            & $pgCtl -D $pgData -m immediate -w stop 2>$null
-            Remove-Item -Recurse -Force $pgData
+          if (Test-Path $runRoot) {
+            Remove-Item -Recurse -Force $runRoot
           }
-          if (Test-Path $pgLog) {
-            Remove-Item -Force $pgLog
-          }
+          New-Item -ItemType Directory -Force -Path $runRoot | Out-Null
 
           $probe = New-Object System.Net.Sockets.TcpClient
           try {
@@ -114,46 +135,52 @@ jobs:
           & $pgIsReady -h 127.0.0.1 -p $port -U $env:STAGE5D17_PG_USER -d postgres
           if ($LASTEXITCODE -ne 0) { throw 'Temporary PostgreSQL cluster did not become ready.' }
 
+          "run_id=${{ github.run_id }}`npgdata=$pgData`nport=$port" |
+            Set-Content -Path $marker -Encoding ascii
+          if (-not (Test-Path $marker)) {
+            throw 'Temporary PostgreSQL ownership marker was not created.'
+          }
+
       - name: Create isolated verifier environment
         timeout-minutes: 10
         shell: cmd
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
-          if exist "%VENV%" rmdir /s /q "%VENV%"
-          python -m venv "%VENV%" || exit /b 1
-          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
-          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9" || exit /b 1
+          if not exist "%STAGE5D17_CLUSTER_MARKER%" exit /b 1
+          if exist "%STAGE5D17_VENV%" rmdir /s /q "%STAGE5D17_VENV%"
+          python -m venv "%STAGE5D17_VENV%" || exit /b 1
+          "%STAGE5D17_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%STAGE5D17_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9" || exit /b 1
 
       - name: Compile disposable PostgreSQL verifier
         timeout-minutes: 2
         shell: cmd
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
-          "%VENV%\Scripts\python.exe" -m py_compile tools\run_stage5d17_disposable_postgres_validation.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_regular_journal_posting_postgres.py || exit /b 1
+          if not exist "%STAGE5D17_CLUSTER_MARKER%" exit /b 1
+          "%STAGE5D17_VENV%\Scripts\python.exe" -m py_compile tools\run_stage5d17_disposable_postgres_validation.py || exit /b 1
+          "%STAGE5D17_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_regular_journal_posting_postgres.py || exit /b 1
 
       - name: Reap stale Stage 5D.17 disposable databases before execution
         timeout-minutes: 3
         shell: cmd
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
-          "%VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --database-url-env STAGE5D17_DATABASE_URL || exit /b 1
+          if not exist "%STAGE5D17_CLUSTER_MARKER%" exit /b 1
+          "%STAGE5D17_VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --database-url-env STAGE5D17_DATABASE_URL || exit /b 1
 
       - name: Execute protected Regular posting in temporary local PostgreSQL
         timeout-minutes: 12
         shell: cmd
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
-          "%VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --database-url-env STAGE5D17_DATABASE_URL || exit /b 1
+          if not exist "%STAGE5D17_CLUSTER_MARKER%" exit /b 1
+          "%STAGE5D17_VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --database-url-env STAGE5D17_DATABASE_URL || exit /b 1
 
       - name: Reap Stage 5D.17 disposable databases after execution
         if: always()
         timeout-minutes: 3
         shell: cmd
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
-          if not exist "%VENV%\Scripts\python.exe" exit /b 0
-          "%VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --database-url-env STAGE5D17_DATABASE_URL || exit /b 1
+          if not exist "%STAGE5D17_CLUSTER_MARKER%" exit /b 0
+          if not exist "%STAGE5D17_VENV%\Scripts\python.exe" exit /b 0
+          "%STAGE5D17_VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --database-url-env STAGE5D17_DATABASE_URL || exit /b 1
 
       - name: Stop and delete temporary PostgreSQL cluster
         if: always()
@@ -161,8 +188,8 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Continue'
+          $runRoot = $env:STAGE5D17_RUN_ROOT
           $pgData = $env:STAGE5D17_PG_DATA
-          $pgLog = $env:STAGE5D17_PG_LOG
           if ($env:PG_BIN) {
             $pgCtl = Join-Path $env:PG_BIN 'pg_ctl.exe'
             if ((Test-Path $pgCtl) -and (Test-Path $pgData)) {
@@ -172,12 +199,9 @@ jobs:
               }
             }
           }
-          if (Test-Path $pgData) {
-            Remove-Item -Recurse -Force $pgData
+          if (Test-Path $runRoot) {
+            Remove-Item -Recurse -Force $runRoot
           }
-          if (Test-Path $pgLog) {
-            Remove-Item -Force $pgLog
-          }
-          if (Test-Path $pgData) {
-            throw 'Stage 5D.17 temporary PostgreSQL data directory was not removed.'
+          if (Test-Path $runRoot) {
+            throw 'Stage 5D.17 temporary PostgreSQL run directory was not removed.'
           }
