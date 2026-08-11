@@ -6,11 +6,9 @@ from pathlib import Path
 import pytest
 
 
-SCRIPT_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "tools"
-    / "run_stage5d17_disposable_postgres_validation.py"
-)
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SCRIPT_PATH = REPO_ROOT / "tools" / "run_stage5d17_disposable_postgres_validation.py"
+WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "stage5d17-disposable-postgres.yml"
 SPEC = importlib.util.spec_from_file_location("stage5d17_disposable", SCRIPT_PATH)
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -110,6 +108,25 @@ def test_disposable_validator_arms_cleanup_before_create_database() -> None:
     create_index = source.index('sql.SQL("CREATE DATABASE {} TEMPLATE template0")')
     assert cleanup_index < create_index
     assert "DROP DATABASE IF EXISTS" in source
+
+
+def test_disposable_janitor_only_accepts_reserved_hex_database_names() -> None:
+    prefix = MODULE.TEST_DATABASE_PREFIX
+    assert MODULE._is_disposable_database_name(prefix + "a" * 12)
+    assert MODULE._is_disposable_database_name(prefix + "b" * 32)
+    assert not MODULE._is_disposable_database_name("spina_live")
+    assert not MODULE._is_disposable_database_name(prefix + "g" * 32)
+    assert not MODULE._is_disposable_database_name(prefix + "a" * 16)
+
+
+def test_disposable_workflow_runs_independent_janitor_around_timed_execution() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert "timeout-minutes: 30" in workflow
+    assert "timeout-minutes: 12" in workflow
+    assert "if: always()" in workflow
+    assert workflow.count("--cleanup-stale-only") == 2
+    assert "Reap stale Stage 5D.17 disposable databases before execution" in workflow
+    assert "Reap Stage 5D.17 disposable databases after execution" in workflow
 
 
 def test_disposable_validator_bootstraps_every_historical_file_through_0039() -> None:
