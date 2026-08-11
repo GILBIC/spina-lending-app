@@ -198,9 +198,6 @@ BEGIN
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Loan was not found.';
     END IF;
-    IF loan_row.status IN ('cancelled', 'draft') THEN
-        RAISE EXCEPTION 'Draft or cancelled loans cannot receive authoritative disbursement evidence.';
-    END IF;
 
     SELECT
         account.system_key,
@@ -243,8 +240,7 @@ BEGIN
            AND existing_row.external_reference = normalized_reference
            AND existing_row.evidence_note = normalized_note
            AND existing_row.principal_snapshot = loan_row.principal
-           AND existing_row.date_released_snapshot = loan_row.date_released
-           AND existing_row.loan_status_snapshot = loan_row.status THEN
+           AND existing_row.date_released_snapshot = loan_row.date_released THEN
             RETURN existing_row.id;
         END IF;
         RAISE EXCEPTION 'This loan already has different active disbursement evidence; void it explicitly before registering a correction.';
@@ -286,6 +282,7 @@ BEGIN
         p_actor_user_id
     )
     RETURNING id INTO created_id;
+    PERFORM set_config('lending.loan_disbursement_evidence_insert_allowed', 'off', true);
 
     INSERT INTO core.audit_logs (
         actor_user_id,
@@ -361,6 +358,7 @@ BEGIN
         voided_at = now(),
         void_reason = normalized_reason
     WHERE id = p_event_id;
+    PERFORM set_config('lending.loan_disbursement_evidence_void_allowed', 'off', true);
 
     INSERT INTO core.audit_logs (
         actor_user_id,
@@ -413,7 +411,6 @@ SELECT
         WHEN event.client_id IS DISTINCT FROM loan.client_id
           OR event.principal_snapshot IS DISTINCT FROM loan.principal
           OR event.date_released_snapshot IS DISTINCT FROM loan.date_released
-          OR event.loan_status_snapshot IS DISTINCT FROM loan.status
             THEN 'loan_changed_after_evidence'
         WHEN event.business_date IS DISTINCT FROM loan.date_released
             THEN 'release_date_mismatch'
