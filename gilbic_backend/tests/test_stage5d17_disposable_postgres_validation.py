@@ -132,8 +132,6 @@ def test_disposable_drop_waits_and_retries_after_backend_termination() -> None:
 def test_disposable_workflow_builds_fresh_loopback_only_windows_cluster() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
-    # The proof must use a newly initialized PostgreSQL cluster in a dedicated
-    # runner-owned recovery tree, never the configured remote database/secrets.
     assert "runs-on: [self-hosted, Windows, X64]" in workflow
     assert "ubuntu-latest" not in workflow
     assert "services:" not in workflow
@@ -144,33 +142,32 @@ def test_disposable_workflow_builds_fresh_loopback_only_windows_cluster() -> Non
     assert "-h 127.0.0.1" in workflow
     assert "STAGE5D17_PG_PORT: '55432'" in workflow
     assert (
-        "STAGE5D17_CLUSTER_BASE: "
-        "${{ runner.temp }}\\..\\spina-stage5d17-clusters"
-    ) in workflow
-    assert (
-        "STAGE5D17_RUN_ROOT: "
-        "${{ runner.temp }}\\..\\spina-stage5d17-clusters\\"
-        "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}"
-    ) in workflow
-    assert (
-        "STAGE5D17_PG_DATA: "
-        "${{ runner.temp }}\\..\\spina-stage5d17-clusters\\"
-        "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\\pgdata"
-    ) in workflow
-    assert (
-        "STAGE5D17_OWNERSHIP_MARKER: "
-        "${{ runner.temp }}\\..\\spina-stage5d17-clusters\\"
-        "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\\cluster-owned.marker"
-    ) in workflow
-    assert (
-        "STAGE5D17_CLUSTER_MARKER: "
-        "${{ runner.temp }}\\..\\spina-stage5d17-clusters\\"
-        "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\\cluster-ready.marker"
-    ) in workflow
-    assert (
         "STAGE5D17_DATABASE_URL: "
         "postgresql://stage5d17@127.0.0.1:55432/postgres?sslmode=disable"
     ) in workflow
+
+    # Runner-derived paths are defined only after the job starts. This avoids
+    # invalid use of the runner context in jobs.<job_id>.env while retaining a
+    # stable recovery directory and run_id + run_attempt identity.
+    assert "Define isolated runner paths" in workflow
+    assert "${{ runner.temp }}" not in workflow
+    assert "$env:RUNNER_TEMP" in workflow
+    assert "$env:GITHUB_RUN_ID" in workflow
+    assert "$env:GITHUB_RUN_ATTEMPT" in workflow
+    assert "$env:GITHUB_ENV" in workflow
+    assert "spina-stage5d17-clusters" in workflow
+    assert "'run-{0}-attempt-{1}'" in workflow
+    for exported_name in (
+        "STAGE5D17_CLUSTER_BASE=",
+        "STAGE5D17_RUN_ROOT=",
+        "STAGE5D17_PG_DATA=",
+        "STAGE5D17_PG_LOG=",
+        "STAGE5D17_OWNERSHIP_MARKER=",
+        "STAGE5D17_CLUSTER_MARKER=",
+        "STAGE5D17_VENV=",
+    ):
+        assert exported_name in workflow
+
     assert "--database-url-env STAGE5D17_DATABASE_URL" in workflow
     assert "GILBIC_DATABASE_URL" not in workflow
     assert "--env-file" not in workflow
@@ -185,6 +182,18 @@ def test_disposable_workflow_builds_fresh_loopback_only_windows_cluster() -> Non
     assert "temporary PostgreSQL run directory was not removed" in workflow
 
 
+def test_disposable_workflow_never_uses_runner_context_in_job_env() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    job_env_start = workflow.index("    env:\n", workflow.index("jobs:"))
+    steps_start = workflow.index("    steps:\n", job_env_start)
+    job_env = workflow[job_env_start:steps_start]
+
+    assert "runner." not in job_env
+    assert "${{ runner." not in job_env
+    assert "Define isolated runner paths" in workflow
+    assert "$env:RUNNER_TEMP" in workflow
+
+
 def test_disposable_workflow_separates_ownership_from_tcp_readiness() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
@@ -194,9 +203,7 @@ def test_disposable_workflow_separates_ownership_from_tcp_readiness() -> None:
     readiness_check = workflow.index("Temporary PostgreSQL cluster did not become ready.")
     ready_write = workflow.index("Set-Content -Path $readyMarker -Encoding ascii")
 
-    # Recovery ownership exists before a detached server can survive a crash.
     assert initdb_done < ownership_write < server_start
-    # TCP cleanup/testing remains gated on the stricter post-readiness marker.
     assert server_start < readiness_check < ready_write
     assert "Temporary PostgreSQL ownership marker was not created." in workflow
     assert "Temporary PostgreSQL readiness marker was not created." in workflow
@@ -207,12 +214,10 @@ def test_disposable_workflow_separates_ownership_from_tcp_readiness() -> None:
 def test_disposable_workflow_recovers_owned_orphans_across_reruns_without_tcp() -> None:
     workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
-    # Recovery lives outside a single attempt's temp root, and run_attempt makes
-    # a rerun distinct from the orphan it must find. Recovery identifies only
-    # ownership-marker+pgdata pairs and operates by pg_ctl -D, never by TCP.
     assert "Reap orphaned owned Stage 5D.17 clusters" in workflow
     assert "STAGE5D17_CLUSTER_BASE" in workflow
-    assert "github.run_attempt" in workflow
+    assert "$env:GITHUB_RUN_ID" in workflow
+    assert "$env:GITHUB_RUN_ATTEMPT" in workflow
     assert "Get-ChildItem $clusterBase -Directory -Filter 'run-*-attempt-*'" in workflow
     assert "cluster-owned.marker" in workflow
     assert "if (-not (Test-Path $ownershipMarker) -or -not (Test-Path $pgData))" in workflow
@@ -241,7 +246,7 @@ def test_disposable_workflow_serializes_and_reserves_cleanup_budget() -> None:
     assert "timeout-minutes: 60" in workflow
     assert workflow.count("timeout-minutes: 5") == 3
     assert workflow.count("timeout-minutes: 3") == 3
-    assert workflow.count("timeout-minutes: 2") == 2
+    assert workflow.count("timeout-minutes: 2") == 3
     assert workflow.count("timeout-minutes: 10") == 1
     assert workflow.count("timeout-minutes: 12") == 1
     assert workflow.count("--cleanup-stale-only") == 2
@@ -259,8 +264,6 @@ def test_disposable_validator_bootstraps_every_historical_file_through_0039() ->
     assert paths[-1].name.startswith("0039_")
     assert set(numbers) == set(range(1, 40))
 
-    # The repository intentionally contains two historical 0018 migrations.
-    # Both must be preserved rather than deduplicated by numeric prefix.
     assert numbers.count(18) == 2
     assert len(paths) == 40
 
