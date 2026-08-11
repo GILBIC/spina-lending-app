@@ -12,7 +12,7 @@ jobs:
   validate-stage5d17-posting:
     if: contains(github.event.head_commit.message, '[stage5d17-disposable]')
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Check out exact revision
@@ -38,8 +38,24 @@ jobs:
           "%VENV%\Scripts\python.exe" -m py_compile tools\run_stage5d17_disposable_postgres_validation.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_regular_journal_posting_postgres.py || exit /b 1
 
+      - name: Reap stale Stage 5D.17 disposable databases before execution
+        timeout-minutes: 5
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
+          "%VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+
       - name: Execute protected Regular posting in disposable local PostgreSQL
+        timeout-minutes: 12
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
           "%VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+
+      - name: Reap Stage 5D.17 disposable databases after execution
+        if: always()
+        timeout-minutes: 5
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
+          "%VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
