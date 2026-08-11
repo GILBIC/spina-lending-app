@@ -33,7 +33,7 @@ jobs:
 
       - name: Define isolated runner paths
         timeout-minutes: 2
-        shell: powershell
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
         run: |
           $ErrorActionPreference = 'Stop'
           if (-not $env:RUNNER_TEMP -or -not $env:GITHUB_RUN_ID -or -not $env:GITHUB_RUN_ATTEMPT) {
@@ -66,7 +66,7 @@ jobs:
 
       - name: Discover local PostgreSQL binaries
         timeout-minutes: 2
-        shell: powershell
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
         run: |
           $ErrorActionPreference = 'Stop'
           $pgBin = $null
@@ -103,7 +103,7 @@ jobs:
 
       - name: Reap orphaned owned Stage 5D.17 clusters
         timeout-minutes: 3
-        shell: powershell
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
         run: |
           $ErrorActionPreference = 'Stop'
           $pgCtl = Join-Path $env:PG_BIN 'pg_ctl.exe'
@@ -140,7 +140,7 @@ jobs:
 
       - name: Initialize isolated temporary PostgreSQL cluster
         timeout-minutes: 5
-        shell: powershell
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
         run: |
           $ErrorActionPreference = 'Stop'
           $initdb = Join-Path $env:PG_BIN 'initdb.exe'
@@ -241,7 +241,7 @@ jobs:
       - name: Stop and delete temporary PostgreSQL cluster
         if: always()
         timeout-minutes: 5
-        shell: powershell
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
         run: |
           $ErrorActionPreference = 'Continue'
           $runRoot = $env:STAGE5D17_RUN_ROOT
