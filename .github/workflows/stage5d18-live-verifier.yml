@@ -6,7 +6,9 @@ on:
       - main
     paths:
       - 'gilbic_backend/sql/0043_add_controlled_regular_collection_reversals.sql'
+      - 'gilbic_backend/sql/0044_harden_collection_void_reversal_evidence.sql'
       - 'tools/apply_accounting_regular_collection_reversal_migration.py'
+      - 'tools/apply_accounting_collection_void_evidence_hardening.py'
       - 'tools/accounting-regular-collection-reversal-live-migration.once'
       - '.github/workflows/stage5d18-live-verifier.yml'
   push:
@@ -14,7 +16,9 @@ on:
       - main
     paths:
       - 'gilbic_backend/sql/0043_add_controlled_regular_collection_reversals.sql'
+      - 'gilbic_backend/sql/0044_harden_collection_void_reversal_evidence.sql'
       - 'tools/apply_accounting_regular_collection_reversal_migration.py'
+      - 'tools/apply_accounting_collection_void_evidence_hardening.py'
       - 'tools/accounting-regular-collection-reversal-live-migration.once'
       - '.github/workflows/stage5d18-live-verifier.yml'
   workflow_dispatch:
@@ -54,24 +58,32 @@ jobs:
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" || exit /b 1
 
-      - name: Compile protected live verifier
+      - name: Compile protected live verifiers
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-stage5d18-live-venv"
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_regular_collection_reversal_migration.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_collection_void_evidence_hardening.py || exit /b 1
 
       - name: Verify PR is install-only
         if: github.event_name == 'pull_request'
         shell: cmd
         run: |
-          python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0043_add_controlled_regular_collection_reversals.sql').read_text(encoding='utf-8'); assert s.strip().startswith('BEGIN;') and s.strip().endswith('COMMIT;'); assert 'UPDATE lending.collection_transactions' not in s; assert 'SELECT accounting.reverse_posted_regular_collection' not in s" || exit /b 1
+          python -c "from pathlib import Path; paths=[Path('gilbic_backend/sql/0043_add_controlled_regular_collection_reversals.sql'),Path('gilbic_backend/sql/0044_harden_collection_void_reversal_evidence.sql')]; texts=[p.read_text(encoding='utf-8') for p in paths]; assert all(s.strip().startswith('BEGIN;') and s.strip().endswith('COMMIT;') for s in texts); assert 'UPDATE lending.collection_transactions' not in texts[0]; assert 'SELECT accounting.reverse_posted_regular_collection' not in texts[0]" || exit /b 1
 
-      - name: Install and verify protected controls on live database
+      - name: Install and verify protected reversal controls on live database
         if: github.event_name == 'push' && hashFiles('tools/accounting-regular-collection-reversal-live-migration.once') != ''
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-stage5d18-live-venv"
           "%VENV%\Scripts\python.exe" tools\apply_accounting_regular_collection_reversal_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+
+      - name: Install and verify immutable void evidence on live database
+        if: github.event_name == 'push' && hashFiles('tools/accounting-regular-collection-reversal-live-migration.once') != ''
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-stage5d18-live-venv"
+          "%VENV%\Scripts\python.exe" tools\apply_accounting_collection_void_evidence_hardening.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
 
       - name: Require a clean committed tree
         shell: cmd
