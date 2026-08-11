@@ -61,12 +61,19 @@ def test_disposable_validator_retargets_only_database_name() -> None:
     assert parsed["sslmode"] == "disable"
 
 
-def test_disposable_validator_bootstraps_exactly_through_0039() -> None:
+def test_disposable_validator_bootstraps_every_historical_file_through_0039() -> None:
     paths = MODULE._migration_paths()
-    assert len(paths) == 39
+    numbers = [int(path.name[:4]) for path in paths]
+
+    assert paths == sorted(paths, key=lambda item: item.name)
     assert paths[0].name.startswith("0001_")
     assert paths[-1].name.startswith("0039_")
-    assert [int(path.name[:4]) for path in paths] == list(range(1, 40))
+    assert set(numbers) == set(range(1, 40))
+
+    # The repository intentionally contains two historical 0018 migrations.
+    # Both must be preserved rather than deduplicated by numeric prefix.
+    assert numbers.count(18) == 2
+    assert len(paths) == 40
 
 
 def test_disposable_validator_targets_only_real_regular_posting_test() -> None:
