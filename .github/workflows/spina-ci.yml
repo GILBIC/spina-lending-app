@@ -102,6 +102,7 @@ jobs:
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_opening_journal_draft_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_opening_journal_posting_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_cutover_eir_snapshot_migration.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_regular_journal_draft_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m compileall -q spina_app gilbic_backend\src spina_backend_mobile\src || exit /b 1
 
       - name: Compile Financial Accounting live verifiers
@@ -112,6 +113,7 @@ jobs:
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_opening_journal_draft_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_opening_journal_posting_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_cutover_eir_snapshot_migration.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_regular_journal_draft_migration.py || exit /b 1
 
       - name: Report reused pull-request validation
         if: github.event_name == 'push' && steps.validated_pr.outputs.reuse_validation == 'true'
@@ -266,3 +268,10 @@ jobs:
         run: |
           set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_accounting_cutover_eir_snapshot_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+
+      - name: Protected Regular journal draft verification
+        if: github.event_name == 'push' && hashFiles('tools/accounting-regular-journal-draft-live-migration.once') != ''
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          "%VENV%\Scripts\python.exe" tools\apply_accounting_regular_journal_draft_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
