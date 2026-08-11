@@ -22,6 +22,9 @@ SQL_ROOT = TEST_ROOT.parent / "sql"
 SQL_0043 = (SQL_ROOT / "0043_add_controlled_regular_collection_reversals.sql").read_text(
     encoding="utf-8"
 )
+SQL_0044 = (SQL_ROOT / "0044_harden_collection_void_reversal_evidence.sql").read_text(
+    encoding="utf-8"
+)
 
 # Reuse the already-proven Stage 5D.17 synthetic fixture builders instead of
 # creating a second independent interpretation of protected Regular posting.
@@ -211,7 +214,7 @@ def test_controlled_regular_collection_reversal_executes_and_rolls_back_atomical
                 pytest.skip(f"Accounting prerequisite is not installed: {relation}")
 
         try:
-            for migration in (H.SQL_0040, H.SQL_0041, H.SQL_0042, SQL_0043):
+            for migration in (H.SQL_0040, H.SQL_0041, H.SQL_0042, SQL_0043, SQL_0044):
                 connection.execute(_transaction_body(migration))
 
             fixture = _create_posted_set(
@@ -328,13 +331,57 @@ def test_controlled_regular_collection_reversal_executes_and_rolls_back_atomical
             assert paired_count == 5
             assert _original_snapshot(connection, fixture) == original_before
 
-            # Reversal-set evidence itself must be immutable.
+            # Both accounting reversal audit and the operational void evidence
+            # must now be append-only at the database boundary.
             with pytest.raises(psycopg.Error):
                 with connection.transaction():
                     connection.execute(
                         "delete from accounting.regular_journal_reversal_sets where id = %s",
                         (reversal_set[0],),
                     )
+            with pytest.raises(psycopg.Error):
+                with connection.transaction():
+                    connection.execute(
+                        "delete from lending.collection_transaction_voids where id = %s",
+                        (void_id,),
+                    )
+
+            # Evidence mismatch must fail before a void/reversal is allowed.
+            mismatch_fixture = _create_posted_set(
+                connection,
+                suffix=f"{suffix}m",
+                review_char="e",
+                bundle_char="f",
+            )
+            mismatch_void_id = uuid4()
+            mismatch_time = _void_time(mismatch_fixture["collection_date"])
+            with pytest.raises(psycopg.Error):
+                with connection.transaction():
+                    _insert_void_audit(
+                        connection,
+                        fixture=mismatch_fixture,
+                        void_id=mismatch_void_id,
+                        reason="Evidence reason",
+                        voided_at=mismatch_time,
+                    )
+                    _mark_voided(
+                        connection,
+                        fixture=mismatch_fixture,
+                        reason="Different operational reason",
+                        voided_at=mismatch_time,
+                    )
+            assert connection.execute(
+                "select is_voided from lending.collection_transactions where id = %s",
+                (mismatch_fixture["transaction_id"],),
+            ).fetchone() == (False,)
+            assert connection.execute(
+                "select count(*) from lending.collection_transaction_voids where id = %s",
+                (mismatch_void_id,),
+            ).fetchone()[0] == 0
+            assert connection.execute(
+                "select count(*) from accounting.regular_journal_reversal_sets where transaction_id = %s",
+                (mismatch_fixture["transaction_id"],),
+            ).fetchone()[0] == 0
 
             # Force the second reversal journal to fail. Because reversal creation
             # runs inside the same UPDATE transaction that marks the collection
