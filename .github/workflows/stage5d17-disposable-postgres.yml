@@ -20,11 +20,12 @@ jobs:
     env:
       STAGE5D17_PG_PORT: '55432'
       STAGE5D17_PG_USER: stage5d17
-      STAGE5D17_RUN_ROOT: ${{ runner.temp }}\spina-stage5d17-${{ github.run_id }}
-      STAGE5D17_PG_DATA: ${{ runner.temp }}\spina-stage5d17-${{ github.run_id }}\pgdata
-      STAGE5D17_PG_LOG: ${{ runner.temp }}\spina-stage5d17-${{ github.run_id }}\postgres.log
-      STAGE5D17_CLUSTER_MARKER: ${{ runner.temp }}\spina-stage5d17-${{ github.run_id }}\cluster-ready.marker
-      STAGE5D17_VENV: ${{ runner.temp }}\spina-stage5d17-${{ github.run_id }}\venv
+      STAGE5D17_CLUSTER_BASE: ${{ runner.temp }}\..\spina-stage5d17-clusters
+      STAGE5D17_RUN_ROOT: ${{ runner.temp }}\..\spina-stage5d17-clusters\run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+      STAGE5D17_PG_DATA: ${{ runner.temp }}\..\spina-stage5d17-clusters\run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\pgdata
+      STAGE5D17_PG_LOG: ${{ runner.temp }}\..\spina-stage5d17-clusters\run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\postgres.log
+      STAGE5D17_CLUSTER_MARKER: ${{ runner.temp }}\..\spina-stage5d17-clusters\run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\cluster-ready.marker
+      STAGE5D17_VENV: ${{ runner.temp }}\..\spina-stage5d17-clusters\run-${{ github.run_id }}-attempt-${{ github.run_attempt }}\venv
       STAGE5D17_DATABASE_URL: postgresql://stage5d17@127.0.0.1:55432/postgres?sslmode=disable
 
     steps:
@@ -79,17 +80,35 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $pgCtl = Join-Path $env:PG_BIN 'pg_ctl.exe'
+          $clusterBase = [System.IO.Path]::GetFullPath($env:STAGE5D17_CLUSTER_BASE).TrimEnd('\')
           $currentRoot = [System.IO.Path]::GetFullPath($env:STAGE5D17_RUN_ROOT).TrimEnd('\')
-          Get-ChildItem $env:RUNNER_TEMP -Directory -Filter 'spina-stage5d17-*' -ErrorAction SilentlyContinue |
+          New-Item -ItemType Directory -Force -Path $clusterBase | Out-Null
+
+          Get-ChildItem $clusterBase -Directory -Filter 'run-*-attempt-*' -ErrorAction SilentlyContinue |
             ForEach-Object {
               $candidateRoot = [System.IO.Path]::GetFullPath($_.FullName).TrimEnd('\')
               if ($candidateRoot -eq $currentRoot) { return }
               $marker = Join-Path $candidateRoot 'cluster-ready.marker'
               $pgData = Join-Path $candidateRoot 'pgdata'
               if (-not (Test-Path $marker) -or -not (Test-Path $pgData)) { return }
+
               Write-Host "Reaping previously owned Stage 5D.17 cluster at $candidateRoot"
-              & $pgCtl -D $pgData -m immediate -w stop 2>$null
+              & $pgCtl -D $pgData status 2>$null
+              $statusExit = $LASTEXITCODE
+              if ($statusExit -eq 0) {
+                & $pgCtl -D $pgData -m immediate -w stop
+                if ($LASTEXITCODE -ne 0) {
+                  throw "Failed to stop owned orphan Stage 5D.17 cluster at $candidateRoot."
+                }
+              }
+              elseif ($statusExit -ne 3) {
+                throw "Could not verify owned orphan Stage 5D.17 cluster state at $candidateRoot."
+              }
+
               Remove-Item -Recurse -Force $candidateRoot
+              if (Test-Path $candidateRoot) {
+                throw "Failed to remove owned orphan Stage 5D.17 cluster at $candidateRoot."
+              }
             }
 
       - name: Initialize isolated temporary PostgreSQL cluster
@@ -135,7 +154,7 @@ jobs:
           & $pgIsReady -h 127.0.0.1 -p $port -U $env:STAGE5D17_PG_USER -d postgres
           if ($LASTEXITCODE -ne 0) { throw 'Temporary PostgreSQL cluster did not become ready.' }
 
-          "run_id=${{ github.run_id }}`npgdata=$pgData`nport=$port" |
+          "run_id=${{ github.run_id }}`nrun_attempt=${{ github.run_attempt }}`npgdata=$pgData`nport=$port" |
             Set-Content -Path $marker -Encoding ascii
           if (-not (Test-Path $marker)) {
             throw 'Temporary PostgreSQL ownership marker was not created.'
@@ -193,9 +212,19 @@ jobs:
           if ($env:PG_BIN) {
             $pgCtl = Join-Path $env:PG_BIN 'pg_ctl.exe'
             if ((Test-Path $pgCtl) -and (Test-Path $pgData)) {
-              & $pgCtl -D $pgData -m fast -w stop
-              if ($LASTEXITCODE -ne 0) {
-                & $pgCtl -D $pgData -m immediate -w stop
+              & $pgCtl -D $pgData status 2>$null
+              $statusExit = $LASTEXITCODE
+              if ($statusExit -eq 0) {
+                & $pgCtl -D $pgData -m fast -w stop
+                if ($LASTEXITCODE -ne 0) {
+                  & $pgCtl -D $pgData -m immediate -w stop
+                  if ($LASTEXITCODE -ne 0) {
+                    throw 'Failed to stop the Stage 5D.17 temporary PostgreSQL cluster; preserving its data directory for safe recovery.'
+                  }
+                }
+              }
+              elseif ($statusExit -ne 3) {
+                throw 'Could not verify the Stage 5D.17 temporary PostgreSQL cluster state; preserving its data directory for safe recovery.'
               }
             }
           }
