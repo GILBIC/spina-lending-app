@@ -135,6 +135,20 @@ def test_normal_status_progression_does_not_rewrite_or_invalidate_renewal_eviden
             ).fetchone()
             assert original_status_snapshots == ("active", "active")
 
+            # The active execution bridge depends on the authoritative renewal
+            # release evidence. The release must not be voided first because that
+            # would leave the execution evidence orphaned and hidden from readiness.
+            with pytest.raises(psycopg.Error):
+                with connection.transaction():
+                    connection.execute(
+                        "select accounting.void_loan_disbursement_evidence(%s, %s, %s)",
+                        (release_event_id, actor_id, "Cannot orphan renewal execution"),
+                    )
+            assert connection.execute(
+                "select is_voided from lending.loan_disbursement_events where id = %s",
+                (release_event_id,),
+            ).fetchone() == (False,)
+
             # Closing the settled old loan and later paying the new loan are normal
             # lifecycle changes. They must not rewrite historical evidence or make
             # the exact original evidence request non-idempotent.
