@@ -4,6 +4,7 @@ import argparse
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from uuid import uuid4
 
@@ -38,6 +39,9 @@ AUTH_SCHEMA_SQL = "CREATE SCHEMA IF NOT EXISTS auth"
 AUTH_USERS_SQL = "CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY)"
 TEST_DATABASE_PREFIX = "spina_stage5d17_"
 BOOTSTRAP_THROUGH = 39
+DROP_RETRY_ATTEMPTS = 5
+DROP_SESSION_WAIT_ATTEMPTS = 40
+DROP_SESSION_WAIT_SECONDS = 0.25
 
 
 def _load_env_file(path: Path) -> None:
@@ -165,13 +169,48 @@ def _is_disposable_database_name(database_name: str) -> bool:
     )
 
 
-def _drop_database(admin_connection: psycopg.Connection, database_name: str) -> None:
-    admin_connection.execute(
-        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid()",
-        (database_name,),
+def _session_count(admin_connection: psycopg.Connection, database_name: str) -> int:
+    return int(
+        admin_connection.execute(
+            "SELECT count(*) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid()",
+            (database_name,),
+        ).fetchone()[0]
     )
-    admin_connection.execute(
-        sql.SQL("DROP DATABASE IF EXISTS {}").format(sql.Identifier(database_name))
+
+
+def _wait_for_database_sessions_to_end(
+    admin_connection: psycopg.Connection,
+    database_name: str,
+) -> bool:
+    for _ in range(DROP_SESSION_WAIT_ATTEMPTS):
+        if _session_count(admin_connection, database_name) == 0:
+            return True
+        time.sleep(DROP_SESSION_WAIT_SECONDS)
+    return False
+
+
+def _drop_database(admin_connection: psycopg.Connection, database_name: str) -> None:
+    last_object_in_use: psycopg.Error | None = None
+    for _ in range(DROP_RETRY_ATTEMPTS):
+        admin_connection.execute(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid()",
+            (database_name,),
+        )
+        if not _wait_for_database_sessions_to_end(admin_connection, database_name):
+            continue
+        try:
+            admin_connection.execute(
+                sql.SQL("DROP DATABASE IF EXISTS {}").format(sql.Identifier(database_name))
+            )
+            return
+        except psycopg.errors.ObjectInUse as error:
+            last_object_in_use = error
+            time.sleep(DROP_SESSION_WAIT_SECONDS)
+
+    if last_object_in_use is not None:
+        raise last_object_in_use
+    raise SystemExit(
+        "Stage 5D.17 disposable PostgreSQL cleanup failed: database sessions did not terminate before the cleanup deadline."
     )
 
 
@@ -313,7 +352,7 @@ def main() -> int:
             try:
                 with psycopg.connect(admin_url, autocommit=True) as admin:
                     _drop_database(admin, test_db)
-            except psycopg.Error as cleanup_error:
+            except (psycopg.Error, SystemExit) as cleanup_error:
                 message = (
                     "Stage 5D.17 disposable PostgreSQL cleanup failed: "
                     + str(cleanup_error).split("CONTEXT:", 1)[0].strip()
