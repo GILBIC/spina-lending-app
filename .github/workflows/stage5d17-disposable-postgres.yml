@@ -9,31 +9,20 @@ permissions:
   contents: read
 
 concurrency:
-  group: stage5d17-disposable-local-postgres
+  group: stage5d17-disposable-windows-postgres
   cancel-in-progress: false
 
 jobs:
   validate-stage5d17-posting:
     if: contains(github.event.head_commit.message, '[stage5d17-disposable]')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 60
     env:
-      STAGE5D17_DATABASE_URL: postgresql://stage5d17:stage5d17-only@127.0.0.1:5432/stage5d17_anchor?sslmode=disable
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: stage5d17
-          POSTGRES_PASSWORD: stage5d17-only
-          POSTGRES_DB: stage5d17_anchor
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U stage5d17 -d stage5d17_anchor"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
+      STAGE5D17_PG_PORT: '55432'
+      STAGE5D17_PG_USER: stage5d17
+      STAGE5D17_PG_DATA: ${{ runner.temp }}\spina-stage5d17-pgdata
+      STAGE5D17_PG_LOG: ${{ runner.temp }}\spina-stage5d17-postgres.log
+      STAGE5D17_DATABASE_URL: postgresql://stage5d17@127.0.0.1:55432/postgres?sslmode=disable
 
     steps:
       - name: Check out exact revision
@@ -44,53 +33,151 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Install Python 3.12
+      - name: Discover local PostgreSQL binaries
+        timeout-minutes: 2
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pgBin = $null
+          $initdb = Get-Command initdb.exe -ErrorAction SilentlyContinue
+          if ($initdb) {
+            $pgBin = Split-Path -Parent $initdb.Source
+          }
+          if (-not $pgBin) {
+            $roots = @(
+              'C:\Program Files\PostgreSQL',
+              'C:\Program Files (x86)\PostgreSQL'
+            )
+            foreach ($root in $roots) {
+              if (-not (Test-Path $root)) { continue }
+              $candidate = Get-ChildItem $root -Directory |
+                ForEach-Object { Join-Path $_.FullName 'bin' } |
+                Where-Object {
+                  (Test-Path (Join-Path $_ 'initdb.exe')) -and
+                  (Test-Path (Join-Path $_ 'pg_ctl.exe')) -and
+                  (Test-Path (Join-Path $_ 'pg_isready.exe'))
+                } |
+                Select-Object -First 1
+              if ($candidate) {
+                $pgBin = $candidate
+                break
+              }
+            }
+          }
+          if (-not $pgBin) {
+            throw 'No local PostgreSQL initdb/pg_ctl/pg_isready binaries were found. Refusing to use any remote database.'
+          }
+          "PG_BIN=$pgBin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Using local PostgreSQL binaries from $pgBin"
+
+      - name: Initialize isolated temporary PostgreSQL cluster
         timeout-minutes: 5
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $initdb = Join-Path $env:PG_BIN 'initdb.exe'
+          $pgCtl = Join-Path $env:PG_BIN 'pg_ctl.exe'
+          $pgIsReady = Join-Path $env:PG_BIN 'pg_isready.exe'
+          $pgData = $env:STAGE5D17_PG_DATA
+          $pgLog = $env:STAGE5D17_PG_LOG
+          $port = [int]$env:STAGE5D17_PG_PORT
+
+          if (Test-Path $pgData) {
+            & $pgCtl -D $pgData -m immediate -w stop 2>$null
+            Remove-Item -Recurse -Force $pgData
+          }
+          if (Test-Path $pgLog) {
+            Remove-Item -Force $pgLog
+          }
+
+          $probe = New-Object System.Net.Sockets.TcpClient
+          try {
+            $probe.Connect('127.0.0.1', $port)
+            throw "Reserved Stage 5D.17 test port $port is already in use; refusing to continue."
+          }
+          catch [System.Net.Sockets.SocketException] {
+            # Connection refused is the expected safe state before the test cluster starts.
+          }
+          finally {
+            $probe.Dispose()
+          }
+
+          & $initdb -D $pgData -U $env:STAGE5D17_PG_USER --auth=trust --encoding=UTF8 --no-locale
+          if ($LASTEXITCODE -ne 0) { throw 'initdb failed for the Stage 5D.17 temporary cluster.' }
+
+          & $pgCtl -D $pgData -l $pgLog -o "-p $port -h 127.0.0.1" -w start
+          if ($LASTEXITCODE -ne 0) {
+            if (Test-Path $pgLog) { Get-Content $pgLog }
+            throw 'Temporary PostgreSQL cluster failed to start.'
+          }
+
+          & $pgIsReady -h 127.0.0.1 -p $port -U $env:STAGE5D17_PG_USER -d postgres
+          if ($LASTEXITCODE -ne 0) { throw 'Temporary PostgreSQL cluster did not become ready.' }
 
       - name: Create isolated verifier environment
         timeout-minutes: 10
-        shell: bash
+        shell: cmd
         run: |
-          set -euo pipefail
-          VENV="$RUNNER_TEMP/spina-stage5d17-disposable-venv"
-          rm -rf "$VENV"
-          python -m venv "$VENV"
-          "$VENV/bin/python" -m pip install --disable-pip-version-check --upgrade pip
-          "$VENV/bin/python" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9"
+          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
+          if exist "%VENV%" rmdir /s /q "%VENV%"
+          python -m venv "%VENV%" || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9" || exit /b 1
 
       - name: Compile disposable PostgreSQL verifier
         timeout-minutes: 2
-        shell: bash
+        shell: cmd
         run: |
-          set -euo pipefail
-          VENV="$RUNNER_TEMP/spina-stage5d17-disposable-venv"
-          "$VENV/bin/python" -m py_compile tools/run_stage5d17_disposable_postgres_validation.py
-          "$VENV/bin/python" -m py_compile gilbic_backend/tests/test_regular_journal_posting_postgres.py
+          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
+          "%VENV%\Scripts\python.exe" -m py_compile tools\run_stage5d17_disposable_postgres_validation.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_regular_journal_posting_postgres.py || exit /b 1
 
       - name: Reap stale Stage 5D.17 disposable databases before execution
-        timeout-minutes: 5
-        shell: bash
+        timeout-minutes: 3
+        shell: cmd
         run: |
-          set -euo pipefail
-          VENV="$RUNNER_TEMP/spina-stage5d17-disposable-venv"
-          "$VENV/bin/python" tools/run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --database-url-env STAGE5D17_DATABASE_URL
+          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
+          "%VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --database-url-env STAGE5D17_DATABASE_URL || exit /b 1
 
-      - name: Execute protected Regular posting in disposable hosted PostgreSQL
+      - name: Execute protected Regular posting in temporary local PostgreSQL
         timeout-minutes: 12
-        shell: bash
+        shell: cmd
         run: |
-          set -euo pipefail
-          VENV="$RUNNER_TEMP/spina-stage5d17-disposable-venv"
-          "$VENV/bin/python" tools/run_stage5d17_disposable_postgres_validation.py --database-url-env STAGE5D17_DATABASE_URL
+          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
+          "%VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --database-url-env STAGE5D17_DATABASE_URL || exit /b 1
 
       - name: Reap Stage 5D.17 disposable databases after execution
         if: always()
-        timeout-minutes: 5
-        shell: bash
+        timeout-minutes: 3
+        shell: cmd
         run: |
-          set -euo pipefail
-          VENV="$RUNNER_TEMP/spina-stage5d17-disposable-venv"
-          "$VENV/bin/python" tools/run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --database-url-env STAGE5D17_DATABASE_URL
+          set "VENV=%RUNNER_TEMP%\spina-stage5d17-disposable-venv"
+          if not exist "%VENV%\Scripts\python.exe" exit /b 0
+          "%VENV%\Scripts\python.exe" tools\run_stage5d17_disposable_postgres_validation.py --cleanup-stale-only --database-url-env STAGE5D17_DATABASE_URL || exit /b 1
+
+      - name: Stop and delete temporary PostgreSQL cluster
+        if: always()
+        timeout-minutes: 5
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $pgData = $env:STAGE5D17_PG_DATA
+          $pgLog = $env:STAGE5D17_PG_LOG
+          if ($env:PG_BIN) {
+            $pgCtl = Join-Path $env:PG_BIN 'pg_ctl.exe'
+            if ((Test-Path $pgCtl) -and (Test-Path $pgData)) {
+              & $pgCtl -D $pgData -m fast -w stop
+              if ($LASTEXITCODE -ne 0) {
+                & $pgCtl -D $pgData -m immediate -w stop
+              }
+            }
+          }
+          if (Test-Path $pgData) {
+            Remove-Item -Recurse -Force $pgData
+          }
+          if (Test-Path $pgLog) {
+            Remove-Item -Force $pgLog
+          }
+          if (Test-Path $pgData) {
+            throw 'Stage 5D.17 temporary PostgreSQL data directory was not removed.'
+          }
