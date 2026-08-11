@@ -20,6 +20,20 @@ POSTING_TEST = (
     / "test_regular_journal_posting_postgres.py"
 )
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+LOCAL_HOSTADDRS = {"127.0.0.1", "::1"}
+DEFAULT_HOSTADDR = {
+    "localhost": "127.0.0.1",
+    "127.0.0.1": "127.0.0.1",
+    "::1": "::1",
+}
+ENDPOINT_ENV_KEYS = (
+    "PGHOST",
+    "PGHOSTADDR",
+    "PGSERVICE",
+    "PGSERVICEFILE",
+    "PGPORT",
+    "PGDATABASE",
+)
 BOOTSTRAP_THROUGH = 39
 
 
@@ -44,25 +58,52 @@ def _safe_local_connection_params(database_url: str) -> dict[str, str]:
     params = {str(key): str(value) for key, value in conninfo_to_dict(database_url).items()}
     host = params.get("host", "").strip().lower()
     hostaddr = params.get("hostaddr", "").strip().lower()
+    service = params.get("service", "").strip()
+    servicefile = params.get("servicefile", "").strip()
 
-    # On Windows, an omitted host means libpq's local/default connection. Any
-    # explicit host must be loopback. This verifier must never create or drop a
-    # synthetic database on a remote/production PostgreSQL server.
+    # This verifier creates and drops a database. The endpoint therefore must be
+    # explicit and loopback-only in the connection string itself. Do not allow a
+    # libpq service or omitted endpoint to inherit PGHOST/PGHOSTADDR/PGSERVICE and
+    # redirect the synthetic validation toward a remote server.
+    if service or servicefile:
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL validation refused: libpq service settings are not allowed."
+        )
+    if not host and not hostaddr:
+        raise SystemExit(
+            "Stage 5D.17 disposable PostgreSQL validation refused: an explicit loopback host or hostaddr is required."
+        )
     if host and host not in LOCAL_HOSTS:
         raise SystemExit(
             "Stage 5D.17 disposable PostgreSQL validation refused: configured database host is not local."
         )
-    if hostaddr and hostaddr not in LOCAL_HOSTS:
+    if hostaddr and hostaddr not in LOCAL_HOSTADDRS:
         raise SystemExit(
             "Stage 5D.17 disposable PostgreSQL validation refused: configured database hostaddr is not loopback."
         )
 
-    live_db = params.get("dbname", "").strip()
+    normalized = dict(params)
+    if not host:
+        host = hostaddr
+    if not hostaddr:
+        hostaddr = DEFAULT_HOSTADDR[host]
+    normalized["host"] = host
+    normalized["hostaddr"] = hostaddr
+
+    live_db = normalized.get("dbname", "").strip()
     if not live_db:
         raise SystemExit(
             "Stage 5D.17 disposable PostgreSQL validation refused: configured database name is missing."
         )
-    return params
+    return normalized
+
+
+def _clear_endpoint_environment() -> None:
+    # Explicit normalized conninfo is the only allowed source of endpoint data.
+    # Credentials such as PGPASSWORD may remain available, but endpoint/service
+    # environment variables must not be able to redirect any connection.
+    for key in ENDPOINT_ENV_KEYS:
+        os.environ.pop(key, None)
 
 
 def _migration_paths() -> list[Path]:
@@ -124,6 +165,8 @@ def _run_posting_test(test_database_url: str) -> int:
             "Stage 5D.17 disposable PostgreSQL validation refused: posting integration test file is missing."
         )
     env = os.environ.copy()
+    for key in ENDPOINT_ENV_KEYS:
+        env.pop(key, None)
     env["GILBIC_TEST_DATABASE_URL"] = test_database_url
     completed = subprocess.run(
         [sys.executable, "-m", "pytest", "-q", str(POSTING_TEST)],
@@ -153,6 +196,7 @@ def main() -> int:
         raise SystemExit(f"{args.database_url_env} is not configured")
 
     base_params = _safe_local_connection_params(database_url)
+    _clear_endpoint_environment()
     live_db = base_params["dbname"]
     test_db = f"spina_stage5d17_{uuid4().hex[:12]}"
     if test_db == live_db:
