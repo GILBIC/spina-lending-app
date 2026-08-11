@@ -135,9 +135,11 @@ WITH measurement AS (
 SELECT
     '1100'::text AS account_code,
     CASE WHEN measurement.measurement_status = 'measured'
-        THEN measurement.regular_loan_component ELSE NULL END,
+        THEN measurement.regular_loan_component ELSE NULL END
+        AS measurement_reference_amount,
     measurement.measurement_status,
     'Regular accounting loan component after daily EIR accrual and actual cash allocation. This is a cutover measurement reference, not an automatic workbook entry.'::text
+        AS measurement_note
 FROM measurement
 UNION ALL
 SELECT
