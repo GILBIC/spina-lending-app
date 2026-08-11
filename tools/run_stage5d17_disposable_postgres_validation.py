@@ -34,6 +34,8 @@ ENDPOINT_ENV_KEYS = (
     "PGPORT",
     "PGDATABASE",
 )
+AUTH_SCHEMA_SQL = "CREATE SCHEMA IF NOT EXISTS auth"
+AUTH_USERS_SQL = "CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY)"
 BOOTSTRAP_THROUGH = 39
 
 
@@ -143,6 +145,16 @@ def _conninfo_for_database(base_params: dict[str, str], database_name: str) -> s
     return make_conninfo(**params)
 
 
+def _database_exists(admin_connection: psycopg.Connection, database_name: str) -> bool:
+    return (
+        admin_connection.execute(
+            "SELECT 1 FROM pg_database WHERE datname = %s",
+            (database_name,),
+        ).fetchone()
+        is not None
+    )
+
+
 def _drop_database(admin_connection: psycopg.Connection, database_name: str) -> None:
     admin_connection.execute(
         "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = %s AND pid <> pg_backend_pid()",
@@ -151,6 +163,15 @@ def _drop_database(admin_connection: psycopg.Connection, database_name: str) -> 
     admin_connection.execute(
         sql.SQL("DROP DATABASE IF EXISTS {}").format(sql.Identifier(database_name))
     )
+
+
+def _install_supabase_auth_prerequisite(test_database_url: str) -> None:
+    # Migration 0002 links core.users.external_auth_id to Supabase auth.users.
+    # A plain template0 database does not contain that schema, so provide only
+    # the minimum referenced object needed to replay the historical schema.
+    with psycopg.connect(test_database_url, autocommit=True) as connection:
+        connection.execute(AUTH_SCHEMA_SQL)
+        connection.execute(AUTH_USERS_SQL)
 
 
 def _bootstrap_database(test_database_url: str) -> None:
@@ -198,22 +219,30 @@ def main() -> int:
     base_params = _safe_local_connection_params(database_url)
     _clear_endpoint_environment()
     live_db = base_params["dbname"]
-    test_db = f"spina_stage5d17_{uuid4().hex[:12]}"
+    test_db = f"spina_stage5d17_{uuid4().hex}"
     if test_db == live_db:
         raise SystemExit("Stage 5D.17 disposable PostgreSQL validation refused: test database matches live database.")
 
     admin_url = _conninfo_for_database(base_params, "postgres")
     test_url = _conninfo_for_database(base_params, test_db)
-    created = False
+    cleanup_required = False
     primary_error: BaseException | None = None
 
     try:
         with psycopg.connect(admin_url, autocommit=True) as admin:
+            if _database_exists(admin, test_db):
+                raise SystemExit(
+                    "Stage 5D.17 disposable PostgreSQL validation refused: generated test database already exists."
+                )
+            # Set this before CREATE DATABASE. If PostgreSQL creates the database
+            # but the connection result is ambiguous, finally still attempts the
+            # idempotent DROP DATABASE cleanup.
+            cleanup_required = True
             admin.execute(
                 sql.SQL("CREATE DATABASE {} TEMPLATE template0").format(sql.Identifier(test_db))
             )
-            created = True
 
+        _install_supabase_auth_prerequisite(test_url)
         _bootstrap_database(test_url)
         result = _run_posting_test(test_url)
         if result != 0:
@@ -234,7 +263,7 @@ def main() -> int:
         primary_error = error
         raise
     finally:
-        if created:
+        if cleanup_required:
             try:
                 with psycopg.connect(admin_url, autocommit=True) as admin:
                     _drop_database(admin, test_db)
