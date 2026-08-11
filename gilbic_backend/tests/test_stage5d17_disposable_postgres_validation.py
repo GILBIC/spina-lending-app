@@ -17,17 +17,25 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
-def test_disposable_validator_accepts_loopback_postgres_only() -> None:
+def test_disposable_validator_accepts_and_forces_loopback_endpoint() -> None:
     params = MODULE._safe_local_connection_params(
         "postgresql://postgres:secret@127.0.0.1:5432/spina_live"
     )
     assert params["host"] == "127.0.0.1"
+    assert params["hostaddr"] == "127.0.0.1"
     assert params["dbname"] == "spina_live"
 
     params = MODULE._safe_local_connection_params(
         "postgresql://postgres:secret@localhost:5432/spina_live"
     )
     assert params["host"] == "localhost"
+    assert params["hostaddr"] == "127.0.0.1"
+
+    params = MODULE._safe_local_connection_params(
+        "hostaddr=::1 dbname=spina_live user=postgres password=secret"
+    )
+    assert params["host"] == "::1"
+    assert params["hostaddr"] == "::1"
 
 
 @pytest.mark.parametrize(
@@ -35,6 +43,7 @@ def test_disposable_validator_accepts_loopback_postgres_only() -> None:
     [
         "postgresql://postgres:secret@db.example.com:5432/spina_live",
         "host=10.0.0.50 dbname=spina_live user=postgres password=secret",
+        "host=localhost hostaddr=10.0.0.50 dbname=spina_live user=postgres password=secret",
     ],
 )
 def test_disposable_validator_refuses_remote_postgres(database_url: str) -> None:
@@ -42,11 +51,37 @@ def test_disposable_validator_refuses_remote_postgres(database_url: str) -> None
         MODULE._safe_local_connection_params(database_url)
 
 
+def test_disposable_validator_requires_explicit_endpoint() -> None:
+    with pytest.raises(SystemExit, match="explicit loopback"):
+        MODULE._safe_local_connection_params(
+            "dbname=spina_live user=postgres password=secret"
+        )
+
+
+def test_disposable_validator_refuses_libpq_service_settings() -> None:
+    with pytest.raises(SystemExit, match="service"):
+        MODULE._safe_local_connection_params(
+            "service=spina_local host=localhost dbname=spina_live user=postgres"
+        )
+
+
 def test_disposable_validator_requires_named_database() -> None:
     with pytest.raises(SystemExit, match="database name is missing"):
         MODULE._safe_local_connection_params(
             "host=localhost user=postgres password=secret"
         )
+
+
+def test_disposable_validator_clears_endpoint_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    for key in MODULE.ENDPOINT_ENV_KEYS:
+        monkeypatch.setenv(key, "unsafe-value")
+    monkeypatch.setenv("PGPASSWORD", "keep-me")
+
+    MODULE._clear_endpoint_environment()
+
+    for key in MODULE.ENDPOINT_ENV_KEYS:
+        assert key not in MODULE.os.environ
+    assert MODULE.os.environ["PGPASSWORD"] == "keep-me"
 
 
 def test_disposable_validator_retargets_only_database_name() -> None:
@@ -57,6 +92,7 @@ def test_disposable_validator_retargets_only_database_name() -> None:
     parsed = MODULE.conninfo_to_dict(target)
     assert parsed["dbname"] == "spina_stage5d17_test"
     assert parsed["host"] == "localhost"
+    assert parsed["hostaddr"] == "127.0.0.1"
     assert parsed["user"] == "postgres"
     assert parsed["sslmode"] == "disable"
 
