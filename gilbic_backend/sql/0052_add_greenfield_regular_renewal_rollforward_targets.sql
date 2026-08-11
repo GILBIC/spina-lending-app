@@ -111,11 +111,12 @@ SELECT
             THEN 'greenfield_regular_eir_anchor_required'
         WHEN anchor_readiness_status <> 'greenfield_regular_eir_anchor_ready'
             THEN 'greenfield_regular_eir_anchor_not_ready'
-        WHEN target_date IS NULL OR executed_at IS NULL
+        WHEN execution_business_date IS NULL OR executed_at IS NULL
             THEN 'renewal_execution_target_required'
-        WHEN target_date <= anchor_date
+        WHEN execution_business_date <= anchor_date
             THEN 'renewal_execution_after_anchor_required'
-        WHEN contractual_due_date IS NULL OR target_date > contractual_due_date
+        WHEN contractual_due_date IS NULL
+          OR execution_business_date > contractual_due_date
             THEN 'post_maturity_review_required'
         WHEN same_day_target_collection_count > 0
             THEN 'same_day_renewal_collection_ordering_review'
@@ -133,9 +134,9 @@ SELECT
         WHEN renewal_source_readiness_status = 'renewal_execution_evidence_ready'
          AND anchor_posting_id IS NOT NULL
          AND anchor_readiness_status = 'greenfield_regular_eir_anchor_ready'
-         AND target_date > anchor_date
+         AND execution_business_date > anchor_date
          AND contractual_due_date IS NOT NULL
-         AND target_date <= contractual_due_date
+         AND execution_business_date <= contractual_due_date
          AND same_day_target_collection_count = 0
          AND source_event_count_before_target <= 5000
             THEN true
