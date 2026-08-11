@@ -46,6 +46,17 @@ def _actor(connection, suffix: str):
     ).fetchone()[0]
 
 
+def _device(connection, *, actor_id, suffix: str):
+    return connection.execute(
+        """
+        insert into core.devices (
+            user_id, device_identifier_hash, platform, status
+        ) values (%s, %s, 'desktop', 'active') returning id
+        """,
+        (actor_id, f"d26-device-{suffix}"),
+    ).fetchone()[0]
+
+
 def _client(connection, suffix: str):
     return connection.execute(
         """
@@ -75,21 +86,19 @@ def _loan(
     client_id,
     loan_type_id,
     release_date,
-    principal: str = "5000.00",
 ):
     return connection.execute(
         """
         insert into lending.loans (
             loan_number, client_id, loan_type_id, principal, daily_amount,
             interest_rate, date_released, due_date, status, created_by_user_id
-        ) values (%s, %s, %s, %s, 50.00, 20.0000, %s, %s, 'active', %s)
+        ) values (%s, %s, %s, 5000.00, 50.00, 20.0000, %s, %s, 'active', %s)
         returning id
         """,
         (
             f"D26-L-{suffix}",
             client_id,
             loan_type_id,
-            principal,
             release_date,
             release_date + timedelta(days=120),
             actor_id,
@@ -138,7 +147,7 @@ def _record_disbursement(
     return event_id, disbursed_at
 
 
-def _post_pure_new_release(connection, *, event_id, actor_id, token: str):
+def _post_pure_new_release(connection, *, event_id, actor_id):
     coordinate = connection.execute(
         """
         select
@@ -152,7 +161,7 @@ def _post_pure_new_release(connection, *, event_id, actor_id, token: str):
     ).fetchone()
     assert coordinate is not None
 
-    draft_token = token * 64
+    draft_token = "a" * 64
     preparation_id = connection.execute(
         """
         select accounting.create_new_loan_disbursement_journal_draft(
@@ -186,7 +195,6 @@ def _post_pure_new_release(connection, *, event_id, actor_id, token: str):
     ).fetchone()
     assert status is not None and status[-1] is True
 
-    posting_token = ("f" if token == "a" else "e") * 64
     return connection.execute(
         """
         select accounting.post_new_loan_disbursement_journal(
@@ -196,19 +204,8 @@ def _post_pure_new_release(connection, *, event_id, actor_id, token: str):
         )
         """,
         (
-            status[0],
-            actor_id,
-            posting_token,
-            status[1],
-            status[2],
-            status[3],
-            status[4],
-            status[5],
-            status[6],
-            status[7],
-            status[8],
-            status[9],
-            status[10],
+            status[0], actor_id, "f" * 64, status[1], status[2], status[3],
+            status[4], status[5], status[6], status[7], status[8], status[9], status[10],
         ),
     ).fetchone()[0]
 
@@ -272,29 +269,11 @@ def _collection(
     loan_id,
     client_id,
     actor_id,
+    device_id,
     collection_date,
     sequence: int,
     amount: str,
 ):
-    device_id = connection.execute(
-        """
-        select id from core.devices
-        where user_id = %s and status = 'active'
-        order by created_at
-        limit 1
-        """,
-        (actor_id,),
-    ).fetchone()
-    if device_id is None:
-        device_id = connection.execute(
-            """
-            insert into core.devices (
-                user_id, device_identifier_hash, platform, status
-            ) values (%s, %s, 'desktop', 'active') returning id
-            """,
-            (actor_id, f"d26-device-{suffix}"),
-        ).fetchone()
-    device_id = device_id[0]
     return connection.execute(
         """
         insert into lending.collection_transactions (
@@ -309,16 +288,8 @@ def _collection(
         ) returning id
         """,
         (
-            uuid4(),
-            loan_id,
-            client_id,
-            actor_id,
-            device_id,
-            loan_id,
-            collection_date,
-            amount,
-            sequence,
-            f"D26-R-{suffix}-{sequence}",
+            uuid4(), loan_id, client_id, actor_id, device_id, loan_id,
+            collection_date, amount, sequence, f"D26-R-{suffix}-{sequence}",
         ),
     ).fetchone()[0]
 
@@ -332,13 +303,11 @@ def _renewal_execution(
     actor_id,
     business_date,
     executed_at,
-    settlement: str,
-    reference: str,
 ):
     return connection.execute(
         """
         select accounting.record_loan_renewal_execution_evidence(
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, null
+            %s, %s, %s, %s, %s, %s, 3000.00, %s, %s, null
         )
         """,
         (
@@ -348,8 +317,7 @@ def _renewal_execution(
             actor_id,
             business_date,
             executed_at,
-            settlement,
-            reference,
+            "D26-EXECUTION",
             "Stage 5D.26 authoritative renewal execution",
         ),
     ).fetchone()[0]
@@ -416,6 +384,7 @@ def test_greenfield_regular_renewal_rollforward_is_read_only_and_fail_closed() -
             assert after_install == before_install
 
             actor_id = _actor(connection, suffix)
+            device_id = _device(connection, actor_id=actor_id, suffix=suffix)
             client_id = _client(connection, suffix)
             loan_type_id = _loan_type(connection, suffix)
             max_end = connection.execute(
@@ -429,11 +398,7 @@ def test_greenfield_regular_renewal_rollforward_is_read_only_and_fail_closed() -
                     label, start_date, end_date, status
                 ) values (%s, %s, %s, 'open')
                 """,
-                (
-                    f"D26 {suffix}",
-                    release_date,
-                    release_date + timedelta(days=120),
-                ),
+                (f"D26 {suffix}", release_date, release_date + timedelta(days=120)),
             )
 
             old_loan_id = _loan(
@@ -455,10 +420,7 @@ def test_greenfield_regular_renewal_rollforward_is_read_only_and_fail_closed() -
                 reference="D26-OLD-RELEASE",
             )
             _post_pure_new_release(
-                connection,
-                event_id=old_release_event,
-                actor_id=actor_id,
-                token="a",
+                connection, event_id=old_release_event, actor_id=actor_id
             )
             _register_original_contract(
                 connection,
@@ -467,26 +429,18 @@ def test_greenfield_regular_renewal_rollforward_is_read_only_and_fail_closed() -
                 release_date=release_date,
                 suffix=suffix,
             )
-            _collection(
-                connection,
-                suffix=suffix,
-                loan_id=old_loan_id,
-                client_id=client_id,
-                actor_id=actor_id,
-                collection_date=release_date + timedelta(days=10),
-                sequence=1,
-                amount="100.00",
-            )
-            _collection(
-                connection,
-                suffix=suffix,
-                loan_id=old_loan_id,
-                client_id=client_id,
-                actor_id=actor_id,
-                collection_date=release_date + timedelta(days=20),
-                sequence=2,
-                amount="100.00",
-            )
+            for sequence, day_number in ((1, 10), (2, 20)):
+                _collection(
+                    connection,
+                    suffix=suffix,
+                    loan_id=old_loan_id,
+                    client_id=client_id,
+                    actor_id=actor_id,
+                    device_id=device_id,
+                    collection_date=release_date + timedelta(days=day_number),
+                    sequence=sequence,
+                    amount="100.00",
+                )
 
             new_loan_id = _loan(
                 connection,
@@ -514,8 +468,6 @@ def test_greenfield_regular_renewal_rollforward_is_read_only_and_fail_closed() -
                 actor_id=actor_id,
                 business_date=target_date,
                 executed_at=executed_at,
-                settlement="3000.00",
-                reference="D26-EXECUTION",
             )
 
             target = connection.execute(
@@ -537,12 +489,7 @@ def test_greenfield_regular_renewal_rollforward_is_read_only_and_fail_closed() -
             assert target is not None
             assert target[:7] == (
                 "greenfield_regular_renewal_rollforward_target_ready",
-                True,
-                False,
-                False,
-                False,
-                2,
-                0,
+                True, False, False, False, 2, 0,
             )
 
             events = _source_events(
@@ -580,12 +527,13 @@ def test_greenfield_regular_renewal_rollforward_is_read_only_and_fail_closed() -
             )
             assert preview.total_effective_interest_accrued > 0
             assert len(preview.tail_daily_accruals) == 10
-            assert preview.allocations[0].collection_date == release_date + timedelta(days=10)
-            assert preview.allocations[1].collection_date == release_date + timedelta(days=20)
+            assert [item.collection_date for item in preview.allocations] == [
+                release_date + timedelta(days=10),
+                release_date + timedelta(days=20),
+            ]
 
-            # Stage 5D.26 deliberately does not label the measurement preview as
-            # authoritative accounting carrying amount or turn settlement into a
-            # derecognition/modification result.
+            # Settlement remains separate operational evidence. This stage must
+            # not claim it is the authoritative accounting carrying amount.
             assert connection.execute(
                 """
                 select old_loan_settlement_amount, accounting_carrying_amount_ready
@@ -595,14 +543,14 @@ def test_greenfield_regular_renewal_rollforward_is_read_only_and_fail_closed() -
                 (execution_id,),
             ).fetchone() == (Decimal("3000.00"), False)
 
-            # Any PAYMENT/ADV on the renewal business date blocks the target. The
-            # stage refuses to guess whether it occurred before or after execution.
+            # Same-day renewal cash is deliberately fail-closed.
             _collection(
                 connection,
                 suffix=suffix,
                 loan_id=old_loan_id,
                 client_id=client_id,
                 actor_id=actor_id,
+                device_id=device_id,
                 collection_date=target_date,
                 sequence=3,
                 amount="50.00",
@@ -619,11 +567,7 @@ def test_greenfield_regular_renewal_rollforward_is_read_only_and_fail_closed() -
                 (execution_id,),
             ).fetchone() == (
                 "same_day_renewal_collection_ordering_review",
-                False,
-                1,
-                False,
-                False,
-                False,
+                False, 1, False, False, False,
             )
 
             blocked_preview = build_greenfield_regular_renewal_rollforward(
@@ -650,7 +594,6 @@ def test_greenfield_regular_renewal_rollforward_is_read_only_and_fail_closed() -
             assert blocked_preview.measurement_preview_ready is False
             assert blocked_preview.accounting_carrying_amount_ready is False
 
-            # Installation and previewing do not infer any opening-balance history.
             assert connection.execute(
                 "select count(*) from accounting.opening_balance_workbooks"
             ).fetchone()[0] == 0
