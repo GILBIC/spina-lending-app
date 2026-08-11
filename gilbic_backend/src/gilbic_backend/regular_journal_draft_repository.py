@@ -246,8 +246,9 @@ class PostgresRegularJournalDraftRepository:
             with open_connection() as connection:
                 with connection.cursor(row_factory=dict_row) as cursor:
                     # Serialize preparation attempts for this loan before freezing
-                    # operational source tables. The second connection used by the
-                    # read-only evidence loader can still SELECT through these locks.
+                    # every mutable source read by the final protected replay. The
+                    # second connection used by the read-only evidence loader can
+                    # still SELECT through these SHARE locks.
                     cursor.execute(
                         "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
                         (f"regular-journal-draft-loan:{loan_id}",),
@@ -264,7 +265,16 @@ class PostgresRegularJournalDraftRepository:
                     )
                     cursor.execute(
                         """
-                        lock table accounting.fiscal_periods, accounting.accounts
+                        lock table
+                            accounting.opening_balance_workbooks,
+                            accounting.opening_balance_journal_preparations,
+                            accounting.opening_balance_journal_postings,
+                            accounting.opening_balance_loan_snapshot_batches,
+                            accounting.opening_balance_loan_measurement_snapshots,
+                            accounting.fiscal_periods,
+                            accounting.accounts,
+                            accounting.journal_entries,
+                            accounting.journal_lines
                         in share mode
                         """
                     )
@@ -284,9 +294,10 @@ class PostgresRegularJournalDraftRepository:
                             )
                         return retry
 
-                    # Final TOCTOU replay while collection/fiscal/account source
-                    # state is frozen. Collection writers can only continue after
-                    # this transaction commits or rolls back.
+                    # Final TOCTOU replay while collection, cutover/snapshot,
+                    # fiscal/account, and existing journal source state is frozen.
+                    # Mutating writers can only continue after this transaction
+                    # commits or rolls back.
                     final_bundles = self._load_exact_bundles(loan_id=loan_id)
                     final_fingerprint = regular_journal_draft_review_set_fingerprint(
                         final_bundles
