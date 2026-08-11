@@ -10,12 +10,14 @@ import psycopg
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 
-SQL_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "sql"
-EVIDENCE_TEST = (
-    Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[1]
+SQL_ROOT = ROOT / "gilbic_backend" / "sql"
+EVIDENCE_TESTS = (
+    ROOT / "gilbic_backend" / "tests" / "test_loan_renewal_execution_evidence_postgres.py",
+    ROOT
     / "gilbic_backend"
     / "tests"
-    / "test_loan_renewal_execution_evidence_postgres.py"
+    / "test_loan_renewal_execution_status_progression_postgres.py",
 )
 BOOTSTRAP_THROUGH = 49
 LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
@@ -130,17 +132,19 @@ def _bootstrap_database(database_url: str) -> None:
             connection.execute(path.read_text(encoding="utf-8"))
 
 
-def _run_evidence_test(database_url: str) -> int:
-    if not EVIDENCE_TEST.is_file():
+def _run_evidence_tests(database_url: str) -> int:
+    missing = [str(path) for path in EVIDENCE_TESTS if not path.is_file()]
+    if missing:
         raise SystemExit(
-            "Stage 5D.24 disposable PostgreSQL validation refused: renewal execution evidence integration test file is missing."
+            "Stage 5D.24 disposable PostgreSQL validation refused: evidence integration test file is missing: "
+            + ", ".join(missing)
         )
     env = os.environ.copy()
     for key in ENDPOINT_ENV_KEYS:
         env.pop(key, None)
     env["GILBIC_TEST_DATABASE_URL"] = database_url
     completed = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", str(EVIDENCE_TEST)],
+        [sys.executable, "-m", "pytest", "-q", *(str(path) for path in EVIDENCE_TESTS)],
         env=env,
         check=False,
     )
@@ -152,7 +156,7 @@ def main() -> int:
         description=(
             "Replay SPINA through migration 0049 in an owned loopback-only temporary "
             "PostgreSQL cluster, then execute the real Stage 5D.24 authoritative "
-            "renewal execution evidence proof."
+            "renewal execution evidence proofs."
         )
     )
     parser.add_argument("--database-url-env", default="STAGE5D24_DATABASE_URL")
@@ -173,13 +177,13 @@ def main() -> int:
 
     try:
         _bootstrap_database(normalized_url)
-        result = _run_evidence_test(normalized_url)
+        result = _run_evidence_tests(normalized_url)
         if result != 0:
             raise SystemExit(
-                f"Stage 5D.24 disposable PostgreSQL validation failed: renewal execution evidence integration test exited with code {result}."
+                f"Stage 5D.24 disposable PostgreSQL validation failed: renewal execution evidence integration tests exited with code {result}."
             )
         print(
-            "Stage 5D.24 disposable PostgreSQL validation passed: client renewal requests were not treated as execution proof, old/new loan linkage required an explicit active renewal_release event and exact settlement evidence, direct mutation was blocked, retries were idempotent, policy-review cases stayed blocked, journal creation remained disabled, and evidence with future journal history could not be voided."
+            "Stage 5D.24 disposable PostgreSQL validation passed: client renewal requests were not treated as execution proof, old/new loan linkage required an explicit active renewal_release event and exact settlement evidence, direct mutation was blocked, retries stayed idempotent across normal loan status progression, policy-review cases stayed blocked, journal creation remained disabled, and evidence with future journal history could not be voided."
         )
         return 0
     except psycopg.Error as error:
