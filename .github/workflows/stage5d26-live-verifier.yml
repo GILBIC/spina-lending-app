@@ -5,6 +5,12 @@ on:
     branches: [main]
     paths:
       - 'gilbic_backend/sql/0052_add_greenfield_regular_renewal_rollforward_targets.sql'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_eir_rollforward.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_rollforward_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_rollforward_api.py'
+      - 'gilbic_backend/tests/test_greenfield_regular_renewal_rollforward_postgres.py'
+      - 'gilbic_backend/tests/test_greenfield_regular_renewal_rollforward_api.py'
+      - 'gilbic_backend/src/gilbic_backend/main.py'
       - 'tools/apply_accounting_greenfield_regular_renewal_rollforward_migration.py'
       - 'tools/accounting-greenfield-regular-renewal-rollforward-live-migration.once'
       - '.github/workflows/stage5d26-live-verifier.yml'
@@ -12,6 +18,12 @@ on:
     branches: [main]
     paths:
       - 'gilbic_backend/sql/0052_add_greenfield_regular_renewal_rollforward_targets.sql'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_eir_rollforward.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_rollforward_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_rollforward_api.py'
+      - 'gilbic_backend/tests/test_greenfield_regular_renewal_rollforward_postgres.py'
+      - 'gilbic_backend/tests/test_greenfield_regular_renewal_rollforward_api.py'
+      - 'gilbic_backend/src/gilbic_backend/main.py'
       - 'tools/apply_accounting_greenfield_regular_renewal_rollforward_migration.py'
       - 'tools/accounting-greenfield-regular-renewal-rollforward-live-migration.once'
       - '.github/workflows/stage5d26-live-verifier.yml'
