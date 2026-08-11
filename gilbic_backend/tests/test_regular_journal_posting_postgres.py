@@ -60,7 +60,7 @@ def _create_fixture(connection, suffix: str):
         insert into lending.loan_types (
             code, name, term_days, calculation_mode, daily_interest_per_1000
         )
-        values (%s, %s, 120, 'regular', 0)
+        values (%s, %s, 120, 'fixed_daily', 0)
         returning id
         """,
         (f"RP-{suffix}", f"Regular Posting {suffix}"),
