@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import importlib.util
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -16,19 +17,22 @@ pytestmark = pytest.mark.skipif(
     reason="GILBIC_TEST_DATABASE_URL is not configured",
 )
 
-SQL_ROOT = Path(__file__).resolve().parents[1] / "sql"
-SQL_0040 = (SQL_ROOT / "0040_add_protected_regular_journal_drafts.sql").read_text(
-    encoding="utf-8"
-)
-SQL_0041 = (SQL_ROOT / "0041_harden_regular_journal_manual_post_guard.sql").read_text(
-    encoding="utf-8"
-)
-SQL_0042 = (SQL_ROOT / "0042_add_protected_regular_journal_posting.sql").read_text(
-    encoding="utf-8"
-)
+TEST_ROOT = Path(__file__).resolve().parent
+SQL_ROOT = TEST_ROOT.parent / "sql"
 SQL_0043 = (SQL_ROOT / "0043_add_controlled_regular_collection_reversals.sql").read_text(
     encoding="utf-8"
 )
+
+# Reuse the already-proven Stage 5D.17 synthetic fixture builders instead of
+# creating a second independent interpretation of protected Regular posting.
+_HELPER_PATH = TEST_ROOT / "test_regular_journal_posting_postgres.py"
+_HELPER_SPEC = importlib.util.spec_from_file_location(
+    "_stage5d17_posting_helpers",
+    _HELPER_PATH,
+)
+assert _HELPER_SPEC is not None and _HELPER_SPEC.loader is not None
+H = importlib.util.module_from_spec(_HELPER_SPEC)
+_HELPER_SPEC.loader.exec_module(H)
 
 
 def _transaction_body(source: str) -> str:
@@ -39,306 +43,32 @@ def _transaction_body(source: str) -> str:
     return body[: -len("COMMIT;")].rstrip()
 
 
-def _create_fixture(connection, suffix: str):
-    actor_id = connection.execute(
-        """
-        insert into core.users (username, full_name, status)
-        values (%s, %s, 'active')
-        returning id
-        """,
-        (f"regular-reversal-{suffix}", f"Regular Reversal {suffix}"),
-    ).fetchone()[0]
-    device_id = connection.execute(
-        """
-        insert into core.devices (
-            user_id, device_identifier_hash, platform, status
-        )
-        values (%s, %s, 'desktop', 'active')
-        returning id
-        """,
-        (actor_id, f"regular-reversal-device-{suffix}"),
-    ).fetchone()[0]
-    loan_type_id = connection.execute(
-        """
-        insert into lending.loan_types (
-            code, name, term_days, calculation_mode, daily_interest_per_1000
-        )
-        values (%s, %s, 120, 'fixed_daily', 0)
-        returning id
-        """,
-        (f"RR-{suffix}", f"Regular Reversal {suffix}"),
-    ).fetchone()[0]
-    client_id = connection.execute(
-        """
-        insert into lending.clients (client_code, full_name, status)
-        values (%s, %s, 'active')
-        returning id
-        """,
-        (f"RR-C-{suffix}", f"Regular Reversal Client {suffix}"),
-    ).fetchone()[0]
-
-    max_end = connection.execute(
-        "select coalesce(max(end_date), date '2090-01-01') from accounting.fiscal_periods"
-    ).fetchone()[0]
-    release_date = max_end + timedelta(days=7)
-    loan_id = connection.execute(
-        """
-        insert into lending.loans (
-            loan_number,
-            client_id,
-            loan_type_id,
-            principal,
-            daily_amount,
-            date_released,
-            due_date,
-            status
-        )
-        values (%s, %s, %s, 1000.00, 10.00, %s, %s, 'active')
-        returning id
-        """,
-        (
-            f"RR-L-{suffix}",
-            client_id,
-            loan_type_id,
-            release_date,
-            release_date + timedelta(days=120),
-        ),
-    ).fetchone()[0]
-    return actor_id, device_id, client_id, loan_id, release_date
-
-
-def _create_period(connection, *, suffix: str, label: str, period_date):
-    return connection.execute(
-        """
-        insert into accounting.fiscal_periods (
-            label, start_date, end_date, status
-        )
-        values (%s, %s, %s, 'open')
-        returning id
-        """,
-        (f"{label} {suffix}", period_date, period_date),
-    ).fetchone()[0]
-
-
-def _account_ids(connection):
-    required = {
-        "accrued_interest_receivable",
-        "interest_income_regular",
-        "cash_collector_custody",
-        "loans_receivable_regular",
-    }
-    rows = connection.execute(
-        """
-        select system_key, id
-        from accounting.accounts
-        where system_key = any(%s)
-          and is_active = true
-          and is_posting = true
-        """,
-        (list(required),),
-    ).fetchall()
-    result = {str(key): account_id for key, account_id in rows}
-    if set(result) != required:
-        pytest.skip("Required protected Regular accounting system accounts are unavailable")
-    return result
-
-
-def _create_collection(
+def _create_posted_set(
     connection,
     *,
     suffix: str,
-    loan_id,
-    client_id,
-    actor_id,
-    device_id,
-    sequence: int,
-    collection_date,
+    review_char: str,
+    bundle_char: str,
 ):
-    return connection.execute(
-        """
-        insert into lending.collection_transactions (
-            idempotency_key,
-            loan_id,
-            client_id,
-            collector_user_id,
-            registered_device_id,
-            route_entry_id,
-            collection_date,
-            entry_type,
-            amount,
-            recorded_at,
-            device_sequence,
-            note,
-            previous_balance,
-            official_balance,
-            pass_count_after,
-            advance_until_after,
-            receipt_number,
-            details
-        )
-        values (
-            %s, %s, %s, %s, %s, %s, %s, 'payment', 100.00, now(), %s,
-            '', 1000.00, 900.00, 0, null, %s, '{}'::jsonb
-        )
-        returning id
-        """,
-        (
-            uuid4(),
-            loan_id,
-            client_id,
-            actor_id,
-            device_id,
-            loan_id,
-            collection_date,
-            sequence,
-            f"RR-R-{suffix}-{sequence}",
-        ),
-    ).fetchone()[0]
-
-
-def _create_protected_review_set(
-    connection,
-    *,
-    actor_id,
-    client_id,
-    loan_id,
-    transaction_id,
-    eir_period_id,
-    eir_date,
-    collection_period_id,
-    collection_date,
-    accounts,
-    review_token: str,
-    bundle_token: str,
-):
-    eir_entry_id = connection.execute(
-        """
-        insert into accounting.journal_entries (
-            fiscal_period_id, posting_date, description, status,
-            source_type, source_reference, source_event_key,
-            created_by_user_id, updated_at
-        )
-        values (
-            %s, %s, 'Synthetic protected Regular EIR draft', 'draft',
-            'regular_eir_accrual', %s, %s, %s, now()
-        )
-        returning id
-        """,
-        (
-            eir_period_id,
-            eir_date,
-            f"{transaction_id}:fiscal_period:{eir_period_id}",
-            f"eir_accrual:collection:{transaction_id}:fiscal_period:{eir_period_id}",
-            actor_id,
-        ),
-    ).fetchone()[0]
-    collection_entry_id = connection.execute(
-        """
-        insert into accounting.journal_entries (
-            fiscal_period_id, posting_date, description, status,
-            source_type, source_reference, source_event_key,
-            created_by_user_id, updated_at
-        )
-        values (
-            %s, %s, 'Synthetic protected Regular collection draft', 'draft',
-            'collection', %s, %s, %s, now()
-        )
-        returning id
-        """,
-        (
-            collection_period_id,
-            collection_date,
-            str(transaction_id),
-            f"collection:{transaction_id}",
-            actor_id,
-        ),
-    ).fetchone()[0]
-
-    connection.execute(
-        """
-        insert into accounting.journal_lines (
-            journal_entry_id, line_number, account_id, description,
-            debit, credit, client_id, loan_id
-        )
-        values
-            (%s, 1, %s, 'EIR accrued interest', 2.00, 0.00, %s, %s),
-            (%s, 2, %s, 'Regular interest income', 0.00, 2.00, %s, %s),
-            (%s, 1, %s, 'Collector custody cash', 100.00, 0.00, %s, %s),
-            (%s, 2, %s, 'Clear accrued interest', 0.00, 2.00, %s, %s),
-            (%s, 3, %s, 'Reduce Regular loan principal', 0.00, 98.00, %s, %s)
-        """,
-        (
-            eir_entry_id,
-            accounts["accrued_interest_receivable"], client_id, loan_id,
-            eir_entry_id,
-            accounts["interest_income_regular"], client_id, loan_id,
-            collection_entry_id,
-            accounts["cash_collector_custody"], client_id, loan_id,
-            collection_entry_id,
-            accounts["accrued_interest_receivable"], client_id, loan_id,
-            collection_entry_id,
-            accounts["loans_receivable_regular"], client_id, loan_id,
-        ),
+    actor_id, device_id, client_id, loan_id, base_date = H._create_fixture(
+        connection, suffix
     )
-
-    connection.execute(
-        "select set_config('accounting.regular_journal_prepare_allowed', 'on', true)"
-    )
-    preparation_id = connection.execute(
-        """
-        insert into accounting.regular_journal_draft_preparations (
-            loan_id, transaction_id, review_set_fingerprint, bundle_fingerprint,
-            evidence_policy_version, draft_policy_version,
-            expected_set_transaction_count, expected_entry_count, prepared_by_user_id
-        )
-        values (
-            %s, %s, %s, %s,
-            'regular_cross_period_posting_ready_evidence_v1',
-            'regular_journal_draft_v1', 1, 2, %s
-        )
-        returning id
-        """,
-        (loan_id, transaction_id, review_token, bundle_token, actor_id),
-    ).fetchone()[0]
-    connection.execute(
-        """
-        insert into accounting.regular_journal_draft_preparation_entries (
-            preparation_id, sequence_order, entry_type, journal_entry_id,
-            bundle_entry_key, source_event_key
-        )
-        values
-            (%s, 1, 'eir_accrual_period', %s, %s, %s),
-            (%s, 2, 'collection', %s, %s, %s)
-        """,
-        (
-            preparation_id,
-            eir_entry_id,
-            f"bundle:eir:{transaction_id}:{eir_period_id}",
-            f"eir_accrual:collection:{transaction_id}:fiscal_period:{eir_period_id}",
-            preparation_id,
-            collection_entry_id,
-            f"bundle:collection:{transaction_id}",
-            f"collection:{transaction_id}",
-        ),
-    )
-    return eir_entry_id, collection_entry_id
-
-
-def _create_posted_set(connection, *, suffix: str, token_char: str):
-    actor_id, device_id, client_id, loan_id, base_date = _create_fixture(connection, suffix)
-    accounts = _account_ids(connection)
+    accounts = H._account_ids(connection)
     eir_date = base_date
-    collection_date = base_date + timedelta(days=1)
-    eir_period_id = _create_period(
-        connection, suffix=suffix, label="Synthetic reversal EIR", period_date=eir_date
+    collection_date = base_date + H.timedelta(days=1)
+    eir_period_id = H._create_period(
+        connection,
+        suffix=suffix,
+        label="Synthetic reversal EIR",
+        period_date=eir_date,
     )
-    collection_period_id = _create_period(
+    collection_period_id = H._create_period(
         connection,
         suffix=suffix,
         label="Synthetic reversal collection",
         period_date=collection_date,
     )
-    transaction_id = _create_collection(
+    transaction_id = H._create_collection(
         connection,
         suffix=suffix,
         loan_id=loan_id,
@@ -348,8 +78,8 @@ def _create_posted_set(connection, *, suffix: str, token_char: str):
         sequence=1,
         collection_date=collection_date,
     )
-    review_token = token_char * 64
-    original_ids = _create_protected_review_set(
+    review_token = review_char * 64
+    original_ids = H._create_protected_review_set(
         connection,
         actor_id=actor_id,
         client_id=client_id,
@@ -361,7 +91,7 @@ def _create_posted_set(connection, *, suffix: str, token_char: str):
         collection_date=collection_date,
         accounts=accounts,
         review_token=review_token,
-        bundle_token=(token_char.upper() if token_char.isalpha() else "f") * 64,
+        bundle_token=bundle_char * 64,
     )
     posting_set_id = connection.execute(
         "select accounting.post_regular_journal_review_set(%s, %s, %s)",
@@ -369,7 +99,6 @@ def _create_posted_set(connection, *, suffix: str, token_char: str):
     ).fetchone()[0]
     return {
         "actor_id": actor_id,
-        "client_id": client_id,
         "loan_id": loan_id,
         "transaction_id": transaction_id,
         "collection_date": collection_date,
@@ -378,15 +107,41 @@ def _create_posted_set(connection, *, suffix: str, token_char: str):
     }
 
 
+def _void_time(collection_date):
+    # 04:00 UTC is noon in Asia/Manila, so the protected trigger resolves the
+    # same local business date without depending on the runner's own timezone.
+    return datetime(
+        collection_date.year,
+        collection_date.month,
+        collection_date.day,
+        4,
+        0,
+        tzinfo=timezone.utc,
+    )
+
+
 def _insert_void_audit(connection, *, fixture, void_id, reason: str, voided_at):
     connection.execute(
         """
         insert into lending.collection_transaction_voids (
-            id, transaction_id, voided_by_user_id, reason,
-            transaction_snapshot, previous_covered_dates,
-            state_before, state_after, voided_at
+            id,
+            transaction_id,
+            voided_by_user_id,
+            reason,
+            transaction_snapshot,
+            previous_covered_dates,
+            state_before,
+            state_after,
+            voided_at
         )
-        values (%s, %s, %s, %s, '{}'::jsonb, ARRAY[]::date[], '{}'::jsonb, '{}'::jsonb, %s)
+        values (
+            %s, %s, %s, %s,
+            '{}'::jsonb,
+            ARRAY[]::date[],
+            '{}'::jsonb,
+            '{}'::jsonb,
+            %s
+        )
         """,
         (
             void_id,
@@ -417,6 +172,18 @@ def _mark_voided(connection, *, fixture, reason: str, voided_at):
     )
 
 
+def _original_snapshot(connection, fixture):
+    return connection.execute(
+        """
+        select id, status, entry_number, source_event_key, posted_by_user_id, posted_at
+        from accounting.journal_entries
+        where id = any(%s)
+        order by posting_date, id
+        """,
+        (list(fixture["original_ids"]),),
+    ).fetchall()
+
+
 def test_controlled_regular_collection_reversal_executes_and_rolls_back_atomically() -> None:
     assert DATABASE_URL is not None
     suffix = uuid4().hex[:10]
@@ -438,31 +205,27 @@ def test_controlled_regular_collection_reversal_executes_and_rolls_back_atomical
         )
         for relation in required:
             if connection.execute(
-                "select to_regclass(%s)", (relation,)
+                "select to_regclass(%s)",
+                (relation,),
             ).fetchone()[0] is None:
                 pytest.skip(f"Accounting prerequisite is not installed: {relation}")
 
         try:
-            for migration in (SQL_0040, SQL_0041, SQL_0042, SQL_0043):
+            for migration in (H.SQL_0040, H.SQL_0041, H.SQL_0042, SQL_0043):
                 connection.execute(_transaction_body(migration))
 
             fixture = _create_posted_set(
-                connection, suffix=f"{suffix}a", token_char="a"
+                connection,
+                suffix=f"{suffix}a",
+                review_char="a",
+                bundle_char="b",
             )
-            original_before = connection.execute(
-                """
-                select id, status, entry_number, source_event_key, posted_by_user_id, posted_at
-                from accounting.journal_entries
-                where id = any(%s)
-                order by posting_date, id
-                """,
-                (list(fixture["original_ids"]),),
-            ).fetchall()
+            original_before = _original_snapshot(connection, fixture)
             assert len(original_before) == 2
             assert all(row[1] == "posted" for row in original_before)
 
-            # The generic General Journal reversal primitive may not bypass the
-            # protected Regular collection-void path.
+            # Generic General Journal reversal must not bypass the protected
+            # Regular source-event path even though the journal is posted.
             with pytest.raises(psycopg.Error):
                 with connection.transaction():
                     connection.execute(
@@ -477,11 +240,7 @@ def test_controlled_regular_collection_reversal_executes_and_rolls_back_atomical
 
             reason = "Payment posted to the wrong borrower"
             void_id = uuid4()
-            voided_at = datetime.combine(
-                fixture["collection_date"],
-                datetime.min.time(),
-                tzinfo=timezone.utc,
-            ) + timedelta(hours=4)
+            voided_at = _void_time(fixture["collection_date"])
             with connection.transaction():
                 _insert_void_audit(
                     connection,
@@ -504,10 +263,16 @@ def test_controlled_regular_collection_reversal_executes_and_rolls_back_atomical
 
             reversal_set = connection.execute(
                 """
-                select id, posting_set_id, expected_entry_count, reversed_entry_count,
-                       reversed_by_user_id, reason
+                select
+                    id,
+                    posting_set_id,
+                    expected_entry_count,
+                    reversed_entry_count,
+                    reversed_by_user_id,
+                    reason
                 from accounting.regular_journal_reversal_sets
-                where transaction_id = %s and collection_void_id = %s
+                where transaction_id = %s
+                  and collection_void_id = %s
                 """,
                 (fixture["transaction_id"], void_id),
             ).fetchone()
@@ -519,30 +284,25 @@ def test_controlled_regular_collection_reversal_executes_and_rolls_back_atomical
 
             reversal_rows = connection.execute(
                 """
-                select re.original_journal_entry_id,
-                       re.reversal_journal_entry_id,
-                       re.original_entry_number,
-                       re.reversal_entry_number,
-                       re.original_source_event_key,
-                       re.reversal_source_event_key,
-                       journal.status,
-                       journal.source_type,
-                       journal.reversal_of_entry_id
-                from accounting.regular_journal_reversal_entries re
+                select
+                    audit.original_journal_entry_id,
+                    audit.reversal_journal_entry_id,
+                    journal.status,
+                    journal.source_type,
+                    journal.reversal_of_entry_id
+                from accounting.regular_journal_reversal_entries audit
                 join accounting.journal_entries journal
-                  on journal.id = re.reversal_journal_entry_id
-                where re.reversal_set_id = %s
-                order by re.sequence_order
+                  on journal.id = audit.reversal_journal_entry_id
+                where audit.reversal_set_id = %s
+                order by audit.sequence_order
                 """,
                 (reversal_set[0],),
             ).fetchall()
             assert len(reversal_rows) == 2
-            assert all(row[6] == "posted" for row in reversal_rows)
-            assert all(row[7] == "regular_collection_void_reversal" for row in reversal_rows)
-            assert all(row[0] == row[8] for row in reversal_rows)
+            assert all(row[2] == "posted" for row in reversal_rows)
+            assert all(row[3] == "regular_collection_void_reversal" for row in reversal_rows)
+            assert all(row[0] == row[4] for row in reversal_rows)
 
-            # Every reversing line must be the exact debit/credit swap of the
-            # immutable original line, with no amount drift.
             mismatch_count, paired_count = connection.execute(
                 """
                 select
@@ -566,19 +326,9 @@ def test_controlled_regular_collection_reversal_executes_and_rolls_back_atomical
             ).fetchone()
             assert mismatch_count == 0
             assert paired_count == 5
+            assert _original_snapshot(connection, fixture) == original_before
 
-            original_after = connection.execute(
-                """
-                select id, status, entry_number, source_event_key, posted_by_user_id, posted_at
-                from accounting.journal_entries
-                where id = any(%s)
-                order by posting_date, id
-                """,
-                (list(fixture["original_ids"]),),
-            ).fetchall()
-            assert original_after == original_before
-
-            # Reversal audit is append-only evidence.
+            # Reversal-set evidence itself must be immutable.
             with pytest.raises(psycopg.Error):
                 with connection.transaction():
                     connection.execute(
@@ -586,22 +336,16 @@ def test_controlled_regular_collection_reversal_executes_and_rolls_back_atomical
                         (reversal_set[0],),
                     )
 
-            # Build a second fully posted Regular source event, then force the
-            # second reversing journal to fail. The surrounding operational void
-            # transaction must roll back the void audit, is_voided flag, reversal
-            # journals, and reversal audit as one unit.
+            # Force the second reversal journal to fail. Because reversal creation
+            # runs inside the same UPDATE transaction that marks the collection
+            # voided, every reversal row and the operational void must roll back.
             failed_fixture = _create_posted_set(
-                connection, suffix=f"{suffix}b", token_char="c"
+                connection,
+                suffix=f"{suffix}b",
+                review_char="c",
+                bundle_char="d",
             )
-            failed_original_before = connection.execute(
-                """
-                select id, status, entry_number, source_event_key
-                from accounting.journal_entries
-                where id = any(%s)
-                order by posting_date, id
-                """,
-                (list(failed_fixture["original_ids"]),),
-            ).fetchall()
+            failed_original_before = _original_snapshot(connection, failed_fixture)
 
             connection.execute(
                 """
@@ -639,12 +383,7 @@ def test_controlled_regular_collection_reversal_executes_and_rolls_back_atomical
 
             failed_reason = "Synthetic rollback proof"
             failed_void_id = uuid4()
-            failed_voided_at = datetime.combine(
-                failed_fixture["collection_date"],
-                datetime.min.time(),
-                tzinfo=timezone.utc,
-            ) + timedelta(hours=4)
-
+            failed_voided_at = _void_time(failed_fixture["collection_date"])
             with pytest.raises(psycopg.Error):
                 with connection.transaction():
                     _insert_void_audit(
@@ -662,7 +401,11 @@ def test_controlled_regular_collection_reversal_executes_and_rolls_back_atomical
                     )
 
             assert connection.execute(
-                "select is_voided, voided_at, voided_by_user_id, void_reason from lending.collection_transactions where id = %s",
+                """
+                select is_voided, voided_at, voided_by_user_id, void_reason
+                from lending.collection_transactions
+                where id = %s
+                """,
                 (failed_fixture["transaction_id"],),
             ).fetchone() == (False, None, None, None)
             assert connection.execute(
@@ -674,22 +417,22 @@ def test_controlled_regular_collection_reversal_executes_and_rolls_back_atomical
                 (failed_fixture["transaction_id"],),
             ).fetchone()[0] == 0
             assert connection.execute(
-                "select count(*) from accounting.journal_entries where source_reference = %s and source_type = 'regular_collection_void_reversal'",
+                """
+                select count(*)
+                from accounting.journal_entries
+                where source_reference = %s
+                  and source_type = 'regular_collection_void_reversal'
+                """,
                 (str(failed_void_id),),
             ).fetchone()[0] == 0
             assert connection.execute(
-                "select count(*) from accounting.journal_entries where reversal_of_entry_id = any(%s)",
-                (list(failed_fixture["original_ids"]),),
-            ).fetchone()[0] == 0
-            failed_original_after = connection.execute(
                 """
-                select id, status, entry_number, source_event_key
+                select count(*)
                 from accounting.journal_entries
-                where id = any(%s)
-                order by posting_date, id
+                where reversal_of_entry_id = any(%s)
                 """,
                 (list(failed_fixture["original_ids"]),),
-            ).fetchall()
-            assert failed_original_after == failed_original_before
+            ).fetchone()[0] == 0
+            assert _original_snapshot(connection, failed_fixture) == failed_original_before
         finally:
             connection.rollback()
