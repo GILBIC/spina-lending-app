@@ -97,6 +97,21 @@ def test_disposable_validator_retargets_only_database_name() -> None:
     assert parsed["sslmode"] == "disable"
 
 
+def test_disposable_validator_defines_minimal_supabase_auth_prerequisite() -> None:
+    assert MODULE.AUTH_SCHEMA_SQL == "CREATE SCHEMA IF NOT EXISTS auth"
+    assert MODULE.AUTH_USERS_SQL == (
+        "CREATE TABLE IF NOT EXISTS auth.users (id uuid PRIMARY KEY)"
+    )
+
+
+def test_disposable_validator_arms_cleanup_before_create_database() -> None:
+    source = SCRIPT_PATH.read_text(encoding="utf-8")
+    cleanup_index = source.index("cleanup_required = True")
+    create_index = source.index('sql.SQL("CREATE DATABASE {} TEMPLATE template0")')
+    assert cleanup_index < create_index
+    assert "DROP DATABASE IF EXISTS" in source
+
+
 def test_disposable_validator_bootstraps_every_historical_file_through_0039() -> None:
     paths = MODULE._migration_paths()
     numbers = [int(path.name[:4]) for path in paths]
