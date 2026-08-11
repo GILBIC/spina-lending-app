@@ -1,0 +1,196 @@
+name: Stage 5D.24 disposable PostgreSQL validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'gilbic_backend/sql/0050_add_authoritative_renewal_execution_evidence.sql'
+      - 'gilbic_backend/tests/test_loan_renewal_execution_evidence_postgres.py'
+      - 'tools/run_stage5d24_disposable_postgres_validation.py'
+      - '.github/workflows/stage5d24-disposable-postgres.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'gilbic_backend/sql/0050_add_authoritative_renewal_execution_evidence.sql'
+      - 'gilbic_backend/tests/test_loan_renewal_execution_evidence_postgres.py'
+      - 'tools/run_stage5d24_disposable_postgres_validation.py'
+      - '.github/workflows/stage5d24-disposable-postgres.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stage5d24-disposable-windows-postgres
+  cancel-in-progress: false
+
+jobs:
+  validate-stage5d24-evidence:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 45
+    env:
+      STAGE5D24_PG_PORT: '55439'
+      STAGE5D24_PG_USER: stage5d24
+      STAGE5D24_DATABASE_URL: postgresql://stage5d24@127.0.0.1:55439/postgres?sslmode=disable
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Define isolated runner paths
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $clusterBase = [System.IO.Path]::GetFullPath(
+            (Join-Path $env:RUNNER_TEMP '..\spina-stage5d24-clusters')
+          ).TrimEnd('\')
+          $runRoot = Join-Path $clusterBase (
+            'run-{0}-attempt-{1}' -f $env:GITHUB_RUN_ID, $env:GITHUB_RUN_ATTEMPT
+          )
+          @(
+            "STAGE5D24_CLUSTER_BASE=$clusterBase",
+            "STAGE5D24_RUN_ROOT=$runRoot",
+            "STAGE5D24_PG_DATA=$(Join-Path $runRoot 'pgdata')",
+            "STAGE5D24_PG_LOG=$(Join-Path $runRoot 'postgres.log')",
+            "STAGE5D24_OWNERSHIP_MARKER=$(Join-Path $runRoot 'cluster-owned.marker')",
+            "STAGE5D24_CLUSTER_MARKER=$(Join-Path $runRoot 'cluster-ready.marker')",
+            "STAGE5D24_VENV=$(Join-Path $runRoot 'venv')"
+          ) | ForEach-Object {
+            $_ | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+
+      - name: Discover local PostgreSQL binaries
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pgBin = $null
+          $initdb = Get-Command initdb.exe -ErrorAction SilentlyContinue
+          if ($initdb) { $pgBin = Split-Path -Parent $initdb.Source }
+          if (-not $pgBin) {
+            foreach ($root in @('C:\Program Files\PostgreSQL', 'C:\Program Files (x86)\PostgreSQL')) {
+              if (-not (Test-Path $root)) { continue }
+              $candidate = Get-ChildItem $root -Directory |
+                ForEach-Object { Join-Path $_.FullName 'bin' } |
+                Where-Object {
+                  (Test-Path (Join-Path $_ 'initdb.exe')) -and
+                  (Test-Path (Join-Path $_ 'pg_ctl.exe')) -and
+                  (Test-Path (Join-Path $_ 'pg_isready.exe'))
+                } | Select-Object -First 1
+              if ($candidate) { $pgBin = $candidate; break }
+            }
+          }
+          if (-not $pgBin) {
+            throw 'No local PostgreSQL binaries were found. Refusing to use any remote database.'
+          }
+          "PG_BIN=$pgBin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Reap orphaned owned Stage 5D.24 clusters
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pgCtl = Join-Path $env:PG_BIN 'pg_ctl.exe'
+          $clusterBase = [System.IO.Path]::GetFullPath($env:STAGE5D24_CLUSTER_BASE).TrimEnd('\')
+          $currentRoot = [System.IO.Path]::GetFullPath($env:STAGE5D24_RUN_ROOT).TrimEnd('\')
+          New-Item -ItemType Directory -Force -Path $clusterBase | Out-Null
+          Get-ChildItem $clusterBase -Directory -Filter 'run-*-attempt-*' -ErrorAction SilentlyContinue |
+            ForEach-Object {
+              $candidateRoot = [System.IO.Path]::GetFullPath($_.FullName).TrimEnd('\')
+              if ($candidateRoot -eq $currentRoot) { return }
+              $marker = Join-Path $candidateRoot 'cluster-owned.marker'
+              $data = Join-Path $candidateRoot 'pgdata'
+              if (-not (Test-Path $marker) -or -not (Test-Path $data)) { return }
+              & $pgCtl -D $data status 2>$null
+              if ($LASTEXITCODE -eq 0) {
+                & $pgCtl -D $data -m immediate -w stop
+                if ($LASTEXITCODE -ne 0) { throw "Failed to stop owned Stage 5D.24 orphan $candidateRoot" }
+              }
+              elseif ($LASTEXITCODE -ne 3) {
+                throw "Could not verify owned Stage 5D.24 orphan $candidateRoot"
+              }
+              Remove-Item -Recurse -Force $candidateRoot
+            }
+
+      - name: Initialize isolated temporary PostgreSQL cluster
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $initdb = Join-Path $env:PG_BIN 'initdb.exe'
+          $pgCtl = Join-Path $env:PG_BIN 'pg_ctl.exe'
+          $pgIsReady = Join-Path $env:PG_BIN 'pg_isready.exe'
+          $runRoot = $env:STAGE5D24_RUN_ROOT
+          $data = $env:STAGE5D24_PG_DATA
+          $log = $env:STAGE5D24_PG_LOG
+          $port = [int]$env:STAGE5D24_PG_PORT
+
+          if (Test-Path $runRoot) { Remove-Item -Recurse -Force $runRoot }
+          New-Item -ItemType Directory -Force -Path $runRoot | Out-Null
+
+          $probe = New-Object System.Net.Sockets.TcpClient
+          try {
+            $probe.Connect('127.0.0.1', $port)
+            throw "Reserved Stage 5D.24 port $port is already in use."
+          }
+          catch [System.Net.Sockets.SocketException] { }
+          finally { $probe.Dispose() }
+
+          & $initdb -D $data -U $env:STAGE5D24_PG_USER --auth=trust --encoding=UTF8 --no-locale
+          if ($LASTEXITCODE -ne 0) { throw 'Stage 5D.24 initdb failed.' }
+          "run_id=$env:GITHUB_RUN_ID`npgdata=$data`nport=$port" |
+            Set-Content -Path $env:STAGE5D24_OWNERSHIP_MARKER -Encoding ascii
+
+          & $pgCtl -D $data -l $log -o "-p $port -h 127.0.0.1" -w start
+          if ($LASTEXITCODE -ne 0) { throw 'Stage 5D.24 temporary PostgreSQL failed to start.' }
+          & $pgIsReady -h 127.0.0.1 -p $port -U $env:STAGE5D24_PG_USER -d postgres
+          if ($LASTEXITCODE -ne 0) { throw 'Stage 5D.24 temporary PostgreSQL is not ready.' }
+          "run_id=$env:GITHUB_RUN_ID`npgdata=$data`nport=$port`nready=true" |
+            Set-Content -Path $env:STAGE5D24_CLUSTER_MARKER -Encoding ascii
+
+      - name: Create isolated verifier environment
+        shell: cmd
+        run: |
+          if not exist "%STAGE5D24_CLUSTER_MARKER%" exit /b 1
+          python -m venv "%STAGE5D24_VENV%" || exit /b 1
+          "%STAGE5D24_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%STAGE5D24_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9" || exit /b 1
+
+      - name: Compile Stage 5D.24 verifier
+        shell: cmd
+        run: |
+          "%STAGE5D24_VENV%\Scripts\python.exe" -m py_compile tools\run_stage5d24_disposable_postgres_validation.py || exit /b 1
+          "%STAGE5D24_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_loan_renewal_execution_evidence_postgres.py || exit /b 1
+
+      - name: Execute authoritative renewal execution evidence proof
+        shell: cmd
+        run: |
+          "%STAGE5D24_VENV%\Scripts\python.exe" tools\run_stage5d24_disposable_postgres_validation.py || exit /b 1
+
+      - name: Stop and delete temporary PostgreSQL cluster
+        if: always()
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $runRoot = $env:STAGE5D24_RUN_ROOT
+          $data = $env:STAGE5D24_PG_DATA
+          if ($env:PG_BIN -and (Test-Path $data)) {
+            $pgCtl = Join-Path $env:PG_BIN 'pg_ctl.exe'
+            & $pgCtl -D $data status 2>$null
+            $statusExit = $LASTEXITCODE
+            if ($statusExit -eq 0) {
+              & $pgCtl -D $data -m fast -w stop
+              if ($LASTEXITCODE -ne 0) {
+                & $pgCtl -D $data -m immediate -w stop
+                if ($LASTEXITCODE -ne 0) {
+                  throw 'Failed to stop Stage 5D.24 temporary PostgreSQL; preserving data directory.'
+                }
+              }
+            }
+            elseif ($statusExit -ne 3) {
+              throw 'Could not verify Stage 5D.24 temporary PostgreSQL state; preserving data directory.'
+            }
+          }
+          if (Test-Path $runRoot) { Remove-Item -Recurse -Force $runRoot }
+          if (Test-Path $runRoot) { throw 'Stage 5D.24 temporary run directory was not removed.' }
