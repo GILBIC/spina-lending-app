@@ -14,6 +14,15 @@ def test_stage5e2_creates_accounting_only_history_tables() -> None:
     assert "CREATE OR REPLACE VIEW accounting.ecl_historical_dataset_summary" in SQL
 
 
+def test_stage5e2_preserves_measurement_reference_view_column_names() -> None:
+    # 0032 replaces the four-column view created by 0028/0030/0031. PostgreSQL
+    # requires CREATE OR REPLACE VIEW to preserve the existing column names at
+    # each ordinal position; otherwise an unaliased CASE expression becomes
+    # column "case" and clean historical bootstrap fails before Stage 5D.17.
+    assert "AS measurement_reference_amount" in SQL
+    assert "AS measurement_note" in SQL
+
+
 def test_stage5e2_does_not_infer_default_or_loss_from_renewal_archive_delete() -> None:
     assert "explicit_default_label boolean" in SQL
     assert "explicit_loss_amount numeric" in SQL
