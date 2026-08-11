@@ -153,6 +153,7 @@ def main() -> int:
     admin_url = _conninfo_for_database(base_params, "postgres")
     test_url = _conninfo_for_database(base_params, test_db)
     created = False
+    primary_error: BaseException | None = None
 
     try:
         with psycopg.connect(admin_url, autocommit=True) as admin:
@@ -172,23 +173,27 @@ def main() -> int:
         )
         return 0
     except psycopg.Error as error:
+        primary_error = error
         raise SystemExit(
             "Stage 5D.17 disposable PostgreSQL validation failed: "
             + str(error).split("CONTEXT:", 1)[0].strip()
         ) from error
+    except BaseException as error:
+        primary_error = error
+        raise
     finally:
         if created:
             try:
                 with psycopg.connect(admin_url, autocommit=True) as admin:
                     _drop_database(admin, test_db)
             except psycopg.Error as cleanup_error:
-                print(
+                message = (
                     "Stage 5D.17 disposable PostgreSQL cleanup failed: "
-                    + str(cleanup_error).split("CONTEXT:", 1)[0].strip(),
-                    file=sys.stderr,
+                    + str(cleanup_error).split("CONTEXT:", 1)[0].strip()
                 )
-                if sys.exc_info()[0] is None:
-                    raise
+                print(message, file=sys.stderr)
+                if primary_error is None:
+                    raise SystemExit(message) from cleanup_error
 
 
 if __name__ == "__main__":
