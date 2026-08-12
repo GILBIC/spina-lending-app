@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
 
@@ -244,8 +245,8 @@ def test_remittance_destination_evidence_is_explicit_immutable_and_never_income(
                 f"remittance_transfer:{remittance_id}",
                 "cash_office",
                 "cash_collector_custody",
-                psycopg.types.numeric.Decimal("1500.00"),
-                psycopg.types.numeric.Decimal("1500.00"),
+                Decimal("1500.00"),
+                Decimal("1500.00"),
                 False,
                 False,
                 False,
