@@ -1,5 +1,6 @@
 name: 7x7 EIR carrying policy disposable PostgreSQL validation
 
+# Follow-up touch after workflow registration so the exact PR head receives the dedicated disposable proof.
 on:
   pull_request:
     branches: [main]
