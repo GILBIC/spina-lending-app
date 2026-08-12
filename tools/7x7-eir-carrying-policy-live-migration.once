@@ -1,0 +1,1 @@
+Install migration 0061 once after the exact PR head is validated. The migration adds read-only 7x7 EIR/carrying policy-readiness controls only; it must not create or mutate loans, signed-contract schedules, transactions, accounting decisions, journals, or posting history.
