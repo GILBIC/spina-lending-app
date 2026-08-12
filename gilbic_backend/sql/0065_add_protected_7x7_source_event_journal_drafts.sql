@@ -59,20 +59,22 @@ LANGUAGE sql
 STABLE
 AS $$
     SELECT encode(
-        digest(
-            string_agg(
-                concat_ws(
-                    '|',
-                    coordinate.line_number::text,
-                    coordinate.journal_component,
-                    coordinate.account_id::text,
-                    coordinate.account_system_key,
-                    to_char(coordinate.debit, 'FM999999999999990.00'),
-                    to_char(coordinate.credit, 'FM999999999999990.00')
+        sha256(
+            convert_to(
+                string_agg(
+                    concat_ws(
+                        '|',
+                        coordinate.line_number::text,
+                        coordinate.journal_component,
+                        coordinate.account_id::text,
+                        coordinate.account_system_key,
+                        to_char(coordinate.debit, 'FM999999999999990.00'),
+                        to_char(coordinate.credit, 'FM999999999999990.00')
+                    ),
+                    '||' ORDER BY coordinate.line_number
                 ),
-                '||' ORDER BY coordinate.line_number
-            ),
-            'sha256'
+                'UTF8'
+            )
         ),
         'hex'
     )
@@ -90,7 +92,6 @@ BEGIN
        AND coalesce(current_setting('accounting.seven_by_seven_journal_prepare_allowed', true), '') = 'on' THEN
         RETURN NEW;
     END IF;
-
     RAISE EXCEPTION 'Protected 7x7 journal preparation records are immutable and must use the protected preparation function.';
 END;
 $$;
@@ -119,18 +120,15 @@ BEGIN
         IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
         RETURN NEW;
     END IF;
-
     IF TG_OP = 'DELETE' THEN
         RAISE EXCEPTION 'Protected 7x7 journal drafts cannot be deleted through the General Journal.';
     END IF;
-
     IF OLD.status = 'draft' AND NEW.status = 'posted' THEN
         IF coalesce(current_setting('accounting.seven_by_seven_journal_post_allowed', true), '') <> 'on' THEN
             RAISE EXCEPTION 'Protected 7x7 journal drafts require the future protected 7x7 posting workflow.';
         END IF;
         RETURN NEW;
     END IF;
-
     IF NEW IS DISTINCT FROM OLD THEN
         RAISE EXCEPTION 'Protected 7x7 journal drafts are system generated and cannot be edited.';
     END IF;
@@ -153,7 +151,6 @@ DECLARE
     protected_entry BOOLEAN;
 BEGIN
     target_entry_id := CASE WHEN TG_OP = 'DELETE' THEN OLD.journal_entry_id ELSE NEW.journal_entry_id END;
-
     SELECT EXISTS (
         SELECT 1
         FROM accounting.seven_by_seven_journal_draft_preparations prepared
@@ -164,7 +161,6 @@ BEGIN
        AND coalesce(current_setting('accounting.seven_by_seven_journal_prepare_allowed', true), '') <> 'on' THEN
         RAISE EXCEPTION 'Protected 7x7 journal lines are system generated and immutable.';
     END IF;
-
     IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
     RETURN NEW;
 END;
@@ -195,6 +191,7 @@ AS $$
 DECLARE
     preview_row RECORD;
     existing_preparation accounting.seven_by_seven_journal_draft_preparations%ROWTYPE;
+    current_client_id UUID;
     current_coordinate_digest TEXT;
     current_line_count INTEGER;
     current_total_debit NUMERIC(18,2);
@@ -244,6 +241,7 @@ BEGIN
         lending.collection_transactions,
         lending.loans,
         lending.loan_types,
+        lending.clients,
         accounting.seven_by_seven_eir_initial_carrying_anchors,
         accounting.seven_by_seven_eir_initial_carrying_anchor_voids,
         accounting.fiscal_periods,
@@ -260,6 +258,12 @@ BEGIN
 
     IF preview_row.transaction_id IS NULL THEN
         RAISE EXCEPTION 'Current protected 7x7 source-event preview was not found. Refresh Management review.';
+    END IF;
+    SELECT loan.client_id INTO current_client_id
+    FROM lending.loans loan
+    WHERE loan.id = preview_row.loan_id;
+    IF current_client_id IS NULL THEN
+        RAISE EXCEPTION 'Current protected 7x7 loan/client identity was not found.';
     END IF;
     IF preview_row.accounting_measurement_preview_ready IS DISTINCT FROM true
        OR preview_row.journal_coordinate_preview_ready IS DISTINCT FROM true THEN
@@ -290,22 +294,17 @@ BEGIN
         coalesce(sum(coordinate.credit), 0)::numeric(18,2),
         count(DISTINCT coordinate.journal_component)::integer,
         count(*) FILTER (
-            WHERE coordinate.journal_component NOT IN (
-                'eir_accrual_debit',
-                'eir_accrual_credit',
-                'collection_cash_debit',
-                'collection_eir_interest_credit',
-                'collection_7x7_principal_credit'
-            )
-            OR coordinate.account_system_key NOT IN (
-                'accrued_interest_receivable',
-                'interest_income_7x7',
-                'cash_collector_custody',
-                'loans_receivable_7x7'
-            )
-            OR coordinate.coordinate_preview_ready IS DISTINCT FROM true
-            OR coordinate.journal_lines_enabled IS DISTINCT FROM false
-            OR coordinate.automatic_source_posting IS DISTINCT FROM false
+            WHERE coordinate.coordinate_preview_ready IS DISTINCT FROM true
+               OR coordinate.journal_lines_enabled IS DISTINCT FROM false
+               OR coordinate.automatic_source_posting IS DISTINCT FROM false
+               OR CASE coordinate.journal_component
+                    WHEN 'eir_accrual_debit' THEN coordinate.account_system_key <> 'accrued_interest_receivable'
+                    WHEN 'eir_accrual_credit' THEN coordinate.account_system_key <> 'interest_income_7x7'
+                    WHEN 'collection_cash_debit' THEN coordinate.account_system_key <> 'cash_collector_custody'
+                    WHEN 'collection_eir_interest_credit' THEN coordinate.account_system_key <> 'accrued_interest_receivable'
+                    WHEN 'collection_7x7_principal_credit' THEN coordinate.account_system_key <> 'loans_receivable_7x7'
+                    ELSE true
+                  END
         )::integer
     INTO
         current_coordinate_digest,
@@ -334,13 +333,18 @@ BEGIN
     WHERE prepared.transaction_id = p_transaction_id;
 
     IF existing_preparation.id IS NOT NULL THEN
-        IF existing_preparation.source_event_key <> normalized_source_key
+        IF existing_preparation.loan_id <> preview_row.loan_id
+           OR existing_preparation.client_id <> current_client_id
+           OR existing_preparation.source_event_key <> normalized_source_key
            OR existing_preparation.source_event_review_token <> normalized_review_token
            OR existing_preparation.coordinate_digest <> normalized_coordinate_digest
            OR existing_preparation.draft_policy_version <> p_draft_policy_version
            OR existing_preparation.posting_date <> p_expected_posting_date
            OR existing_preparation.fiscal_period_id <> p_expected_fiscal_period_id
            OR existing_preparation.source_cash_amount <> expected_cash
+           OR existing_preparation.eir_interest_accrual <> preview_row.eir_interest_accrual
+           OR existing_preparation.accounting_eir_interest_received <> preview_row.accounting_eir_interest_received
+           OR existing_preparation.accounting_7x7_principal_received <> preview_row.accounting_7x7_principal_received
            OR existing_preparation.coordinate_line_count <> current_line_count
            OR existing_preparation.total_debit <> expected_debit
            OR existing_preparation.total_credit <> expected_credit THEN
@@ -384,13 +388,11 @@ BEGIN
         OR existing_total_credit <> expected_credit THEN
             RAISE EXCEPTION 'Existing protected 7x7 journal draft failed immutable integrity review.';
         END IF;
-
         RETURN existing_preparation.id;
     END IF;
 
     IF EXISTS (
-        SELECT 1
-        FROM accounting.journal_entries journal
+        SELECT 1 FROM accounting.journal_entries journal
         WHERE journal.source_event_key = normalized_source_key
     ) THEN
         RAISE EXCEPTION 'Accounting journal history already exists for this protected 7x7 source event.';
@@ -407,8 +409,7 @@ BEGIN
         source_reference,
         source_event_key,
         created_by_user_id
-    )
-    VALUES (
+    ) VALUES (
         preview_row.open_fiscal_period_id,
         preview_row.collection_date,
         '7x7 protected collection source event - ' || preview_row.loan_number,
@@ -417,8 +418,7 @@ BEGIN
         p_transaction_id::text,
         preview_row.source_event_key,
         p_actor_user_id
-    )
-    RETURNING id INTO journal_id;
+    ) RETURNING id INTO journal_id;
 
     INSERT INTO accounting.journal_lines (
         journal_entry_id,
@@ -444,7 +444,7 @@ BEGIN
         END,
         coordinate.debit,
         coordinate.credit,
-        preview_row.client_id,
+        current_client_id,
         preview_row.loan_id
     FROM accounting.seven_by_seven_source_event_journal_coordinate_preview coordinate
     WHERE coordinate.transaction_id = p_transaction_id
@@ -470,11 +470,10 @@ BEGIN
         total_debit,
         total_credit,
         prepared_by_user_id
-    )
-    VALUES (
+    ) VALUES (
         p_transaction_id,
         preview_row.loan_id,
-        preview_row.client_id,
+        current_client_id,
         journal_id,
         preview_row.source_event_key,
         normalized_review_token,
@@ -490,18 +489,11 @@ BEGIN
         current_total_debit,
         current_total_credit,
         p_actor_user_id
-    )
-    RETURNING id INTO preparation_id;
+    ) RETURNING id INTO preparation_id;
 
     PERFORM set_config('accounting.seven_by_seven_journal_prepare_allowed', 'off', true);
 
-    INSERT INTO core.audit_logs (
-        actor_user_id,
-        action,
-        target_type,
-        target_id,
-        details
-    )
+    INSERT INTO core.audit_logs (actor_user_id, action, target_type, target_id, details)
     VALUES (
         p_actor_user_id,
         'accounting.seven_by_seven_journal_draft.prepared',
@@ -549,9 +541,9 @@ SELECT
     preview.transaction_id,
     preview.loan_id,
     preview.loan_number,
-    preview.client_id,
-    preview.client_code,
-    preview.client_name,
+    loan.client_id,
+    client.client_code,
+    client.full_name AS client_name,
     preview.collection_date AS posting_date,
     preview.open_fiscal_period_id AS fiscal_period_id,
     preview.source_event_key,
@@ -583,15 +575,12 @@ SELECT
     false AS posting_enabled,
     false AS automatic_source_posting
 FROM accounting.seven_by_seven_source_event_accounting_preview preview
+JOIN lending.loans loan ON loan.id = preview.loan_id
+JOIN lending.clients client ON client.id = loan.client_id
 JOIN coordinate_summary ON coordinate_summary.transaction_id = preview.transaction_id;
 
 CREATE OR REPLACE VIEW accounting.seven_by_seven_journal_draft_status AS
-WITH current_coordinate AS (
-    SELECT
-        review.*
-    FROM accounting.seven_by_seven_journal_draft_review review
-),
-line_summary AS (
+WITH line_summary AS (
     SELECT
         prepared.id AS preparation_id,
         count(line.id)::integer AS line_count,
@@ -641,17 +630,22 @@ SELECT
     line_summary.total_debit,
     line_summary.total_credit,
     CASE
-        WHEN current_coordinate.transaction_id IS NULL THEN false
-        WHEN current_coordinate.draft_review_ready IS DISTINCT FROM true THEN false
-        WHEN current_coordinate.source_event_key <> prepared.source_event_key THEN false
-        WHEN current_coordinate.source_event_review_token <> prepared.source_event_review_token THEN false
-        WHEN current_coordinate.coordinate_digest <> prepared.coordinate_digest THEN false
-        WHEN current_coordinate.posting_date <> prepared.posting_date THEN false
-        WHEN current_coordinate.fiscal_period_id <> prepared.fiscal_period_id THEN false
-        WHEN current_coordinate.source_cash_amount <> prepared.source_cash_amount THEN false
-        WHEN current_coordinate.coordinate_line_count <> prepared.coordinate_line_count THEN false
-        WHEN current_coordinate.total_debit <> prepared.total_debit
-          OR current_coordinate.total_credit <> prepared.total_credit THEN false
+        WHEN current_review.transaction_id IS NULL THEN false
+        WHEN current_review.draft_review_ready IS DISTINCT FROM true THEN false
+        WHEN current_review.loan_id <> prepared.loan_id
+          OR current_review.client_id <> prepared.client_id THEN false
+        WHEN current_review.source_event_key <> prepared.source_event_key THEN false
+        WHEN current_review.source_event_review_token <> prepared.source_event_review_token THEN false
+        WHEN current_review.coordinate_digest <> prepared.coordinate_digest THEN false
+        WHEN current_review.posting_date <> prepared.posting_date
+          OR current_review.fiscal_period_id <> prepared.fiscal_period_id THEN false
+        WHEN current_review.source_cash_amount <> prepared.source_cash_amount THEN false
+        WHEN current_review.eir_interest_accrual <> prepared.eir_interest_accrual
+          OR current_review.accounting_eir_interest_received <> prepared.accounting_eir_interest_received
+          OR current_review.accounting_7x7_principal_received <> prepared.accounting_7x7_principal_received THEN false
+        WHEN current_review.coordinate_line_count <> prepared.coordinate_line_count THEN false
+        WHEN current_review.total_debit <> prepared.total_debit
+          OR current_review.total_credit <> prepared.total_credit THEN false
         WHEN journal.status <> 'draft' OR journal.entry_number IS NOT NULL THEN false
         WHEN journal.source_type <> 'seven_by_seven_collection' THEN false
         WHEN journal.source_reference <> prepared.transaction_id::text THEN false
@@ -671,7 +665,8 @@ FROM accounting.seven_by_seven_journal_draft_preparations prepared
 JOIN accounting.journal_entries journal ON journal.id = prepared.journal_entry_id
 JOIN accounting.fiscal_periods period ON period.id = prepared.fiscal_period_id
 JOIN line_summary ON line_summary.preparation_id = prepared.id
-LEFT JOIN current_coordinate ON current_coordinate.transaction_id = prepared.transaction_id;
+LEFT JOIN accounting.seven_by_seven_journal_draft_review current_review
+  ON current_review.transaction_id = prepared.transaction_id;
 
 COMMENT ON TABLE accounting.seven_by_seven_journal_draft_preparations IS
     'Immutable Management-confirmed preparation audit for one protected 7x7 collection source-event journal draft. Installation creates no preparations or journals.';
