@@ -1,0 +1,1 @@
+Install and verify the read-only remittance destination-evidence controls on the live database after this exact PR is merged. The installer must preserve all operational/accounting history and must not create evidence, journal, or posting rows.
