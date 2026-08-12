@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import timedelta
+from decimal import Decimal
 from uuid import uuid4
 
 import psycopg
@@ -247,7 +248,17 @@ def test_protected_renewal_boundary_eir_posting_is_atomic_immutable_and_idempote
             """,
             (execution_id,),
         ).fetchone()
-        assert status == (1, 1, 1, 0, Decimal("10.00"), Decimal("10.00"), True, False, False)
+        assert status == (
+            1,
+            1,
+            1,
+            0,
+            Decimal("10.00"),
+            Decimal("10.00"),
+            True,
+            False,
+            False,
+        )
 
         repeated_preparation = _prepare(
             connection,
