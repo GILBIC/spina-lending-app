@@ -10,6 +10,7 @@ import psycopg
 
 SQL_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "sql"
 MIGRATIONS = (
+    SQL_ROOT / "0053_add_greenfield_regular_ledger_reconciliation_targets.sql",
     SQL_ROOT / "0054_add_protected_renewal_boundary_eir_journal_posting.sql",
     SQL_ROOT / "0055_harden_renewal_boundary_eir_posting_audit_alias.sql",
 )
@@ -93,6 +94,7 @@ def _history_snapshot(connection: psycopg.Connection) -> tuple[object, ...]:
 
 def _verify_installed(connection: psycopg.Connection) -> dict[str, int]:
     relations = (
+        "accounting.greenfield_regular_renewal_ledger_reconciliation_targets",
         "accounting.renewal_boundary_eir_journal_preparations",
         "accounting.renewal_boundary_eir_journal_preparation_entries",
         "accounting.renewal_boundary_eir_journal_posting_sets",
@@ -203,7 +205,8 @@ def _verify_installed(connection: psycopg.Connection) -> dict[str, int]:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Install and verify protected Regular renewal-boundary EIR journal "
+            "Install the missing read-only renewal-ledger reconciliation view, then "
+            "install and verify protected Regular renewal-boundary EIR journal "
             "preparation/posting controls without creating any live drafts, "
             "postings, source events, or journal history."
         )
@@ -237,7 +240,8 @@ def main() -> int:
                 "lending.collection_transactions",
                 "lending.loan_disbursement_events",
                 "lending.loan_renewal_execution_events",
-                "accounting.greenfield_regular_renewal_ledger_reconciliation_targets",
+                "accounting.greenfield_regular_renewal_rollforward_targets",
+                "accounting.greenfield_regular_eir_anchors",
                 "accounting.journal_entries",
                 "accounting.journal_lines",
                 "accounting.journal_events",
@@ -261,11 +265,12 @@ def main() -> int:
 
             if after != before:
                 raise SystemExit(
-                    "Renewal-boundary EIR live migration safety gate failed: installing protected boundary posting controls changed live operational/accounting history."
+                    "Renewal-boundary EIR live migration safety gate failed: installing the read-only reconciliation view and protected boundary posting controls changed live operational/accounting history."
                 )
 
             print(
                 "Renewal-boundary EIR protected posting live summary: "
+                "renewal_ledger_reconciliation_view=True, "
                 f"preparations={summary['preparations']}, "
                 f"preparation_entries={summary['preparation_entries']}, "
                 f"posting_sets={summary['posting_sets']}, "
