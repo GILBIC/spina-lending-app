@@ -95,6 +95,7 @@ def create_renewal_treatment_readiness_router() -> APIRouter:
                 "blocker_code": result.blocker_code,
                 "message": result.message,
                 "policy_version": result.policy_version,
+                "review_token": record.review_token,
                 "old_gross_carrying_amount": _money(
                     result.old_gross_carrying_amount
                 ),
