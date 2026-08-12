@@ -5,14 +5,18 @@ on:
     branches: [main]
     paths:
       - 'gilbic_backend/sql/0058_add_protected_remittance_transfer_journal_lifecycle.sql'
+      - 'gilbic_backend/sql/0059_harden_remittance_transfer_journal_status.sql'
       - 'tools/apply_remittance_transfer_journal_lifecycle_migration.py'
+      - 'tools/apply_remittance_transfer_journal_status_hardening.py'
       - 'tools/remittance-transfer-journal-live-migration.once'
       - '.github/workflows/remittance-transfer-journal-live-verifier.yml'
   push:
     branches: [main]
     paths:
       - 'gilbic_backend/sql/0058_add_protected_remittance_transfer_journal_lifecycle.sql'
+      - 'gilbic_backend/sql/0059_harden_remittance_transfer_journal_status.sql'
       - 'tools/apply_remittance_transfer_journal_lifecycle_migration.py'
+      - 'tools/apply_remittance_transfer_journal_status_hardening.py'
       - 'tools/remittance-transfer-journal-live-migration.once'
       - '.github/workflows/remittance-transfer-journal-live-verifier.yml'
   workflow_dispatch:
@@ -52,17 +56,19 @@ jobs:
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" || exit /b 1
 
-      - name: Compile protected live verifier
+      - name: Compile protected live verifiers
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-remittance-transfer-journal-live-venv"
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_remittance_transfer_journal_lifecycle_migration.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_remittance_transfer_journal_status_hardening.py || exit /b 1
 
       - name: Verify PR is install-only
         if: github.event_name == 'pull_request'
         shell: cmd
         run: |
           python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0058_add_protected_remittance_transfer_journal_lifecycle.sql').read_text(encoding='utf-8'); assert s.strip().startswith('BEGIN;') and s.strip().endswith('COMMIT;'); p=s.split('CREATE OR REPLACE FUNCTION accounting.create_remittance_transfer_journal_draft',1)[0]; assert 'INSERT INTO accounting.journal_entries' not in p; assert 'INSERT INTO accounting.journal_lines' not in p; assert 'automatic_source_posting' in s; assert 'explicit_management_posting' in s; assert 'income_recognition' in s" || exit /b 1
+          python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0059_harden_remittance_transfer_journal_status.sql').read_text(encoding='utf-8'); assert s.strip().startswith('BEGIN;') and s.strip().endswith('COMMIT;'); assert 'INSERT INTO accounting.journal_entries' not in s; assert 'INSERT INTO accounting.journal_lines' not in s; assert 'transfer_coordinate_ready' in s; assert 'automatic_source_posting' in s" || exit /b 1
 
       - name: Install and verify remittance transfer journal controls on live database
         if: github.event_name == 'push' && hashFiles('tools/remittance-transfer-journal-live-migration.once') != ''
@@ -70,6 +76,7 @@ jobs:
         run: |
           set "VENV=%RUNNER_TEMP%\spina-remittance-transfer-journal-live-venv"
           "%VENV%\Scripts\python.exe" tools\apply_remittance_transfer_journal_lifecycle_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+          "%VENV%\Scripts\python.exe" tools\apply_remittance_transfer_journal_status_hardening.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
 
       - name: Require a clean committed tree
         shell: cmd
