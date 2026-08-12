@@ -160,8 +160,6 @@ SELECT
     ) AS source_event_structure_ready,
     false AS authoritative_current_carrying_amount_ready,
     false AS journal_draft_enabled,
-    false AS journal_lines_enabled,
-    false AS automatic_source_posting,
     CASE
         WHEN anchor.eir_initial_carrying_readiness_status <>
             'eir_initial_carrying_anchor_ready_for_7x7_accounting_lifecycle'
