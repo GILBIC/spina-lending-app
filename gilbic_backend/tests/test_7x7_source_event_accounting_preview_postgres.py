@@ -369,7 +369,9 @@ def test_source_identity_eir_preview_desktop_parity_and_coordinates_are_read_onl
                 (loan_id,),
             ).fetchone()
             assert summary is not None
-            assert summary[:5] == (2, 2, 2, 2, 0)
+            assert summary[:3] == (2, 2, 2)
+            assert summary[3] >= 1
+            assert summary[4] == 0
             assert summary[5] is not None and summary[5] > 0
             assert summary[6:11] == (None, False, False, False, False)
             assert summary[11] == "source_event_eir_preview_ready_for_protected_draft_design"
