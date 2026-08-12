@@ -16,8 +16,9 @@ BEGIN;
 --   a later protected accounting reversal must reverse exact protected journal
 --   history rather than inventing a source reversal transaction.
 -- * Desktop has one effective payment per loan/calendar date. Multiple active
---   positive payment/advance rows on one date fail closed; no accepted_at/UUID
---   ordering is invented as an intraday accounting convention.
+--   positive payment/advance rows on one date fail closed; no recorded_at,
+--   accepted_at, device sequence, or UUID ordering is invented as an intraday
+--   accounting convention.
 -- * authoritative current carrying, drafts, journals, posting and automatic
 --   source posting remain disabled in this slice.
 
@@ -46,9 +47,9 @@ SELECT
     loan_type.name AS loan_type_name,
     loan_type.daily_interest_per_1000,
     transaction.collection_date,
-    transaction.collection_day,
     transaction.entry_type,
     transaction.amount,
+    transaction.recorded_at,
     transaction.accepted_at,
     transaction.device_sequence,
     transaction.registered_device_id,
@@ -195,9 +196,9 @@ RETURNS TABLE (
     source_event_sequence INTEGER,
     collector_user_id UUID,
     collection_date DATE,
-    collection_day INTEGER,
     entry_type TEXT,
     source_cash_amount NUMERIC(18,2),
+    recorded_at TIMESTAMPTZ,
     accepted_at TIMESTAMPTZ,
     device_sequence BIGINT,
     registered_device_id UUID,
@@ -310,9 +311,9 @@ BEGIN
         source_event_sequence := sequence_value;
         collector_user_id := source_row.collector_user_id;
         collection_date := source_row.collection_date;
-        collection_day := source_row.collection_day;
         entry_type := source_row.entry_type;
         source_cash_amount := source_row.amount;
+        recorded_at := source_row.recorded_at;
         accepted_at := source_row.accepted_at;
         device_sequence := source_row.device_sequence;
         registered_device_id := source_row.registered_device_id;
@@ -394,26 +395,14 @@ BEGIN
     END IF;
 
     SELECT round(
-        ceil(inventory.contractual_principal / 1000.0)
-        * inventory.daily_interest_per_1000,
+        ceil(loan.principal / 1000.0) * loan_type.daily_interest_per_1000,
         2
     )::numeric(18,2)
     INTO fixed_interest
-    FROM accounting.seven_by_seven_collection_source_inventory inventory
-    WHERE inventory.loan_id = p_loan_id
-    LIMIT 1;
-
-    IF fixed_interest IS NULL THEN
-        SELECT round(
-            ceil(loan.principal / 1000.0) * loan_type.daily_interest_per_1000,
-            2
-        )::numeric(18,2)
-        INTO fixed_interest
-        FROM lending.loans loan
-        JOIN lending.loan_types loan_type ON loan_type.id = loan.loan_type_id
-        WHERE loan.id = p_loan_id
-          AND loan_type.calculation_mode = 'seven_by_seven';
-    END IF;
+    FROM lending.loans loan
+    JOIN lending.loan_types loan_type ON loan_type.id = loan.loan_type_id
+    WHERE loan.id = p_loan_id
+      AND loan_type.calculation_mode = 'seven_by_seven';
 
     IF fixed_interest IS NULL OR fixed_interest <= 0 THEN
         RETURN;
@@ -529,9 +518,9 @@ SELECT
                     preview.source_event_sequence::text,
                     preview.collector_user_id::text,
                     preview.collection_date::text,
-                    preview.collection_day::text,
                     preview.entry_type,
                     preview.source_cash_amount::text,
+                    preview.recorded_at::text,
                     preview.accepted_at::text,
                     preview.device_sequence::text,
                     coalesce(preview.registered_device_id::text, ''),
