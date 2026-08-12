@@ -38,6 +38,7 @@ ANCHOR_JOURNAL_ID = UUID("99999999-9999-4999-8999-999999999999")
 SCHEDULE_ID = UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
 REGISTRATION_ID = UUID("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")
 RENEWAL_DATE = date(2026, 8, 31)
+REVIEW_TOKEN = "a" * 64
 
 
 class FakeAuthClient:
@@ -161,6 +162,7 @@ class FakeRepository:
         return RenewalTreatmentReadinessRecord(
             source=_source(),
             readiness=_readiness(),
+            review_token=REVIEW_TOKEN,
         )
 
 
@@ -189,6 +191,7 @@ def test_management_can_read_nonclassifying_renewal_treatment_readiness() -> Non
     assert data["old_loan_number"] == "OLD-001"
     assert data["new_loan_number"] == "NEW-001"
     assert data["disposition"] == "renewal_accounting_treatment_review_ready"
+    assert data["review_token"] == REVIEW_TOKEN
     assert data["old_gross_carrying_amount"] == "2000.00"
     assert data["contractual_cash_total"] == "2400.00"
     assert data["present_value_at_original_eir"] == "2227.92"
