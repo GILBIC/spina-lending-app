@@ -3,13 +3,11 @@ BEGIN;
 -- Master Issue #296: continue the 7x7 / EMER EIR/carrying-policy proof
 -- without promoting the operational PHP 7-per-PHP 1,000 rule into accounting.
 --
--- IFRS 9 classification depends on both the entity's business model and the
--- instrument's contractual cash-flow characteristics. Effective-interest-rate
--- estimation also has to consider the contractual terms, including prepayment
--- features, over the expected life. This migration therefore records only an
--- explicit, evidence-backed Management review. It does not infer SPPI from a
--- mathematical rate match, does not invent a prepayment expectation, and does
--- not create an authoritative EIR, carrying amount, journal line, or posting.
+-- This slice records explicit, evidence-backed Management conclusions for the
+-- IFRS 9 business-model / contractual-cash-flow classification gate and the
+-- expected-life / prepayment cash-flow policy used for later EIR measurement.
+-- It deliberately does NOT infer SPPI from a mathematical rate match, invent a
+-- prepayment expectation, create an authoritative EIR/carrying amount, or post.
 
 INSERT INTO core.permissions (code, description)
 VALUES (
@@ -34,9 +32,9 @@ LANGUAGE sql
 STABLE
 AS $$
     SELECT CASE
-        WHEN readiness.contractual_cash_flow_validation_ready
-         AND readiness.base_no_prepayment_daily_eir_preview IS NOT NULL
-         AND readiness.schedule_id IS NOT NULL THEN
+        WHEN readiness.base_no_prepayment_daily_eir_preview IS NOT NULL
+         AND readiness.schedule_id IS NOT NULL
+         AND readiness.policy_readiness_status <> 'contractual_cash_flow_readiness_required' THEN
             encode(
                 sha256(
                     convert_to(
@@ -73,13 +71,12 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION accounting.seven_by_seven_policy_review_token(UUID) IS
-    'Deterministic stale-safe review token for the exact current verified 7x7 contract/EIR-readiness snapshot. NULL until the protected contract gate and mathematical base EIR preview both exist.';
+    'Deterministic stale-safe token for the exact current verified 7x7 contract/EIR-readiness snapshot. NULL until the protected contract gate and mathematical base EIR preview exist.';
 
 CREATE TABLE IF NOT EXISTS accounting.seven_by_seven_policy_decisions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     loan_id UUID NOT NULL REFERENCES lending.loans(id) ON DELETE RESTRICT,
-    schedule_id UUID NOT NULL
-        REFERENCES lending.loan_contract_schedules(id) ON DELETE RESTRICT,
+    schedule_id UUID NOT NULL REFERENCES lending.loan_contract_schedules(id) ON DELETE RESTRICT,
     schedule_version INTEGER NOT NULL CHECK (schedule_version > 0),
     review_token TEXT NOT NULL CHECK (review_token ~ '^[0-9a-f]{64}$'),
     readiness_policy_version TEXT NOT NULL CHECK (
@@ -88,13 +85,13 @@ CREATE TABLE IF NOT EXISTS accounting.seven_by_seven_policy_decisions (
     decision_policy_version TEXT NOT NULL CHECK (
         decision_policy_version = 'seven_by_seven_classification_policy_decision_v1'
     ),
-    loan_number TEXT NOT NULL,
+    loan_number TEXT NOT NULL CHECK (btrim(loan_number) <> ''),
     principal NUMERIC(18,2) NOT NULL CHECK (principal > 0),
     date_released DATE NOT NULL,
     due_date DATE NOT NULL,
     term_days INTEGER NOT NULL CHECK (term_days > 0),
-    contract_reference TEXT NOT NULL,
-    contract_evidence_reference TEXT NOT NULL,
+    contract_reference TEXT NOT NULL CHECK (btrim(contract_reference) <> ''),
+    contract_evidence_reference TEXT NOT NULL CHECK (btrim(contract_evidence_reference) <> ''),
     operational_daily_contractual_interest NUMERIC(18,2) NOT NULL CHECK (
         operational_daily_contractual_interest >= 0
     ),
@@ -106,17 +103,11 @@ CREATE TABLE IF NOT EXISTS accounting.seven_by_seven_policy_decisions (
     ),
     principal_prepayment_allowed BOOLEAN NOT NULL,
     principal_prepayment_changes_daily_interest BOOLEAN NOT NULL,
-    validated_base_schedule_basis TEXT NOT NULL,
+    validated_base_schedule_basis TEXT NOT NULL CHECK (btrim(validated_base_schedule_basis) <> ''),
     business_model_conclusion TEXT NOT NULL CHECK (
-        business_model_conclusion IN (
-            'held_to_collect',
-            'held_to_collect_and_sell',
-            'other'
-        )
+        business_model_conclusion IN ('held_to_collect', 'held_to_collect_and_sell', 'other')
     ),
-    sppi_conclusion TEXT NOT NULL CHECK (
-        sppi_conclusion IN ('passes', 'fails')
-    ),
+    sppi_conclusion TEXT NOT NULL CHECK (sppi_conclusion IN ('passes', 'fails')),
     measurement_category TEXT NOT NULL CHECK (
         measurement_category IN ('amortised_cost', 'fvoci', 'fvpl')
     ),
@@ -127,51 +118,38 @@ CREATE TABLE IF NOT EXISTS accounting.seven_by_seven_policy_decisions (
         )
     ),
     expected_life_policy TEXT NOT NULL CHECK (
-        expected_life_policy IN (
-            'contractual_term',
-            'supported_shorter_expected_life'
-        )
+        expected_life_policy IN ('contractual_term', 'supported_shorter_expected_life')
     ),
     expected_life_days INTEGER NOT NULL CHECK (expected_life_days > 0),
-    accounting_policy_reference TEXT NOT NULL,
-    classification_assessment JSONB NOT NULL,
-    prepayment_expected_cash_flow_assessment JSONB NOT NULL,
-    decision_rationale TEXT NOT NULL,
-    supporting_evidence_reference TEXT NOT NULL,
+    accounting_policy_reference TEXT NOT NULL CHECK (btrim(accounting_policy_reference) <> ''),
+    classification_assessment JSONB NOT NULL CHECK (
+        jsonb_typeof(classification_assessment) = 'object'
+        AND classification_assessment <> '{}'::jsonb
+    ),
+    prepayment_expected_cash_flow_assessment JSONB NOT NULL CHECK (
+        jsonb_typeof(prepayment_expected_cash_flow_assessment) = 'object'
+        AND prepayment_expected_cash_flow_assessment <> '{}'::jsonb
+    ),
+    decision_rationale TEXT NOT NULL CHECK (length(btrim(decision_rationale)) >= 20),
+    supporting_evidence_reference TEXT NOT NULL CHECK (btrim(supporting_evidence_reference) <> ''),
     reviewed_by_user_id UUID NOT NULL REFERENCES core.users(id) ON DELETE RESTRICT,
     reviewed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CHECK (btrim(loan_number) <> ''),
-    CHECK (btrim(contract_reference) <> ''),
-    CHECK (btrim(contract_evidence_reference) <> ''),
-    CHECK (btrim(validated_base_schedule_basis) <> ''),
-    CHECK (btrim(accounting_policy_reference) <> ''),
-    CHECK (jsonb_typeof(classification_assessment) = 'object'),
-    CHECK (classification_assessment <> '{}'::jsonb),
-    CHECK (jsonb_typeof(prepayment_expected_cash_flow_assessment) = 'object'),
-    CHECK (prepayment_expected_cash_flow_assessment <> '{}'::jsonb),
-    CHECK (length(btrim(decision_rationale)) >= 20),
-    CHECK (btrim(supporting_evidence_reference) <> ''),
     CHECK (due_date > date_released),
     CHECK (
         (expected_life_policy = 'contractual_term' AND expected_life_days = term_days)
         OR
-        (expected_life_policy = 'supported_shorter_expected_life'
-         AND expected_life_days < term_days)
+        (expected_life_policy = 'supported_shorter_expected_life' AND expected_life_days < term_days)
     ),
     CHECK (
-        (sppi_conclusion = 'passes'
-         AND business_model_conclusion = 'held_to_collect'
-         AND measurement_category = 'amortised_cost')
+        (sppi_conclusion = 'passes' AND business_model_conclusion = 'held_to_collect'
+            AND measurement_category = 'amortised_cost')
         OR
-        (sppi_conclusion = 'passes'
-         AND business_model_conclusion = 'held_to_collect_and_sell'
-         AND measurement_category = 'fvoci')
+        (sppi_conclusion = 'passes' AND business_model_conclusion = 'held_to_collect_and_sell'
+            AND measurement_category = 'fvoci')
         OR
-        (business_model_conclusion = 'other'
-         AND measurement_category = 'fvpl')
+        (business_model_conclusion = 'other' AND measurement_category = 'fvpl')
         OR
-        (sppi_conclusion = 'fails'
-         AND measurement_category = 'fvpl')
+        (sppi_conclusion = 'fails' AND measurement_category = 'fvpl')
     )
 );
 
@@ -194,10 +172,7 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     IF TG_OP = 'INSERT'
-       AND coalesce(
-            current_setting('accounting.7x7_policy_decision_insert_allowed', true),
-            ''
-       ) = 'on' THEN
+       AND coalesce(current_setting('accounting.7x7_policy_decision_insert_allowed', true), '') = 'on' THEN
         RETURN NEW;
     END IF;
     RAISE EXCEPTION '7x7 classification/EIR policy decision evidence is immutable and must use the protected Management-reviewed decision function.';
@@ -207,8 +182,7 @@ $$;
 DROP TRIGGER IF EXISTS accounting_seven_by_seven_policy_decision_guard
     ON accounting.seven_by_seven_policy_decisions;
 CREATE TRIGGER accounting_seven_by_seven_policy_decision_guard
-BEFORE INSERT OR UPDATE OR DELETE
-ON accounting.seven_by_seven_policy_decisions
+BEFORE INSERT OR UPDATE OR DELETE ON accounting.seven_by_seven_policy_decisions
 FOR EACH ROW EXECUTE FUNCTION accounting.guard_seven_by_seven_policy_decision_write();
 
 CREATE OR REPLACE FUNCTION accounting.guard_seven_by_seven_policy_decision_void_write()
@@ -217,10 +191,7 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     IF TG_OP = 'INSERT'
-       AND coalesce(
-            current_setting('accounting.7x7_policy_decision_void_insert_allowed', true),
-            ''
-       ) = 'on' THEN
+       AND coalesce(current_setting('accounting.7x7_policy_decision_void_insert_allowed', true), '') = 'on' THEN
         RETURN NEW;
     END IF;
     RAISE EXCEPTION '7x7 classification/EIR policy void evidence is immutable and must use the protected void function.';
@@ -230,13 +201,10 @@ $$;
 DROP TRIGGER IF EXISTS accounting_seven_by_seven_policy_decision_void_guard
     ON accounting.seven_by_seven_policy_decision_voids;
 CREATE TRIGGER accounting_seven_by_seven_policy_decision_void_guard
-BEFORE INSERT OR UPDATE OR DELETE
-ON accounting.seven_by_seven_policy_decision_voids
+BEFORE INSERT OR UPDATE OR DELETE ON accounting.seven_by_seven_policy_decision_voids
 FOR EACH ROW EXECUTE FUNCTION accounting.guard_seven_by_seven_policy_decision_void_write();
 
-CREATE OR REPLACE FUNCTION accounting.require_7x7_policy_management_actor(
-    p_actor_user_id UUID
-)
+CREATE OR REPLACE FUNCTION accounting.require_7x7_policy_management_actor(p_actor_user_id UUID)
 RETURNS VOID
 LANGUAGE plpgsql
 STABLE
@@ -246,8 +214,7 @@ BEGIN
         SELECT 1
         FROM core.users actor
         JOIN core.user_roles user_role ON user_role.user_id = actor.id
-        JOIN core.role_permissions role_permission
-          ON role_permission.role_id = user_role.role_id
+        JOIN core.role_permissions role_permission ON role_permission.role_id = user_role.role_id
         WHERE actor.id = p_actor_user_id
           AND actor.status = 'active'
           AND role_permission.permission_code = 'accounting.7x7_classification_policy.manage'
@@ -281,10 +248,10 @@ DECLARE
     existing_row accounting.seven_by_seven_policy_decisions%ROWTYPE;
     created_id UUID;
     current_token TEXT;
+    expected_measurement_category TEXT;
     normalized_policy_reference TEXT := btrim(coalesce(p_accounting_policy_reference, ''));
     normalized_rationale TEXT := btrim(coalesce(p_decision_rationale, ''));
     normalized_support_reference TEXT := btrim(coalesce(p_supporting_evidence_reference, ''));
-    expected_measurement_category TEXT;
 BEGIN
     PERFORM accounting.require_7x7_policy_management_actor(p_actor_user_id);
 
@@ -294,9 +261,7 @@ BEGIN
     IF coalesce(p_review_token, '') !~ '^[0-9a-f]{64}$' THEN
         RAISE EXCEPTION '7x7 classification/EIR policy decision requires the exact current 64-character review token.';
     END IF;
-    IF p_business_model_conclusion NOT IN (
-        'held_to_collect', 'held_to_collect_and_sell', 'other'
-    ) THEN
+    IF p_business_model_conclusion NOT IN ('held_to_collect', 'held_to_collect_and_sell', 'other') THEN
         RAISE EXCEPTION 'Unsupported 7x7 business-model conclusion.';
     END IF;
     IF p_sppi_conclusion NOT IN ('passes', 'fails') THEN
@@ -308,9 +273,7 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'Unsupported 7x7 expected-cash-flow/prepayment policy.';
     END IF;
-    IF p_expected_life_policy NOT IN (
-        'contractual_term', 'supported_shorter_expected_life'
-    ) THEN
+    IF p_expected_life_policy NOT IN ('contractual_term', 'supported_shorter_expected_life') THEN
         RAISE EXCEPTION 'Unsupported 7x7 expected-life policy.';
     END IF;
     IF normalized_policy_reference = '' THEN
@@ -337,20 +300,17 @@ BEGIN
         expected_measurement_category := 'fvpl';
     ELSIF p_business_model_conclusion = 'held_to_collect' THEN
         expected_measurement_category := 'amortised_cost';
-    ELSIF p_business_model_conclusion = 'held_to_collect_and_sell' THEN
+    ELSE
         expected_measurement_category := 'fvoci';
     END IF;
     IF p_measurement_category IS DISTINCT FROM expected_measurement_category THEN
         RAISE EXCEPTION 'Measurement category is inconsistent with the explicit business-model and SPPI conclusions.';
     END IF;
 
-    PERFORM pg_advisory_xact_lock(
-        hashtextextended('seven-by-seven-policy:' || p_loan_id::text, 0)
-    );
+    PERFORM pg_advisory_xact_lock(hashtextextended('seven-by-seven-policy:' || p_loan_id::text, 0));
 
-    SELECT
-        readiness.*,
-        accounting.seven_by_seven_policy_review_token(readiness.loan_id) AS current_review_token
+    SELECT readiness.*,
+           accounting.seven_by_seven_policy_review_token(readiness.loan_id) AS current_review_token
     INTO source_row
     FROM accounting.seven_by_seven_eir_carrying_policy_readiness readiness
     WHERE readiness.loan_id = p_loan_id;
@@ -358,7 +318,7 @@ BEGIN
     IF NOT FOUND THEN
         RAISE EXCEPTION '7x7 EIR/carrying policy readiness row was not found.';
     END IF;
-    IF NOT source_row.contractual_cash_flow_validation_ready
+    IF source_row.policy_readiness_status = 'contractual_cash_flow_readiness_required'
        OR source_row.base_no_prepayment_daily_eir_preview IS NULL
        OR source_row.schedule_id IS NULL THEN
         RAISE EXCEPTION 'Verified 7x7 signed-contract cash-flow readiness and a solved mathematical base EIR preview are required before policy review.';
@@ -384,10 +344,8 @@ BEGIN
     SELECT decision.*
     INTO existing_row
     FROM accounting.seven_by_seven_policy_decisions decision
-    LEFT JOIN accounting.seven_by_seven_policy_decision_voids voided
-      ON voided.decision_id = decision.id
-    WHERE decision.loan_id = p_loan_id
-      AND voided.id IS NULL
+    LEFT JOIN accounting.seven_by_seven_policy_decision_voids voided ON voided.decision_id = decision.id
+    WHERE decision.loan_id = p_loan_id AND voided.id IS NULL
     ORDER BY decision.reviewed_at DESC
     LIMIT 1
     FOR UPDATE OF decision;
@@ -415,80 +373,42 @@ BEGIN
 
     PERFORM set_config('accounting.7x7_policy_decision_insert_allowed', 'on', true);
     INSERT INTO accounting.seven_by_seven_policy_decisions (
-        loan_id,
-        schedule_id,
-        schedule_version,
-        review_token,
-        readiness_policy_version,
-        decision_policy_version,
-        loan_number,
-        principal,
-        date_released,
-        due_date,
-        term_days,
-        contract_reference,
-        contract_evidence_reference,
+        loan_id, schedule_id, schedule_version, review_token,
+        readiness_policy_version, decision_policy_version,
+        loan_number, principal, date_released, due_date, term_days,
+        contract_reference, contract_evidence_reference,
         operational_daily_contractual_interest,
         operational_daily_rate_on_original_principal,
         base_no_prepayment_daily_eir_preview,
-        principal_prepayment_allowed,
-        principal_prepayment_changes_daily_interest,
+        principal_prepayment_allowed, principal_prepayment_changes_daily_interest,
         validated_base_schedule_basis,
-        business_model_conclusion,
-        sppi_conclusion,
-        measurement_category,
-        expected_cash_flow_policy,
-        expected_life_policy,
-        expected_life_days,
-        accounting_policy_reference,
-        classification_assessment,
-        prepayment_expected_cash_flow_assessment,
-        decision_rationale,
-        supporting_evidence_reference,
-        reviewed_by_user_id
+        business_model_conclusion, sppi_conclusion, measurement_category,
+        expected_cash_flow_policy, expected_life_policy, expected_life_days,
+        accounting_policy_reference, classification_assessment,
+        prepayment_expected_cash_flow_assessment, decision_rationale,
+        supporting_evidence_reference, reviewed_by_user_id
     ) VALUES (
-        source_row.loan_id,
-        source_row.schedule_id,
-        source_row.schedule_version,
-        p_review_token,
+        source_row.loan_id, source_row.schedule_id, source_row.schedule_version, p_review_token,
         'seven_by_seven_classification_policy_readiness_v1',
         'seven_by_seven_classification_policy_decision_v1',
-        source_row.loan_number,
-        source_row.principal,
-        source_row.date_released,
-        source_row.due_date,
-        source_row.term_days,
-        source_row.contract_reference,
-        source_row.evidence_reference,
-        source_row.operational_daily_contractual_interest,
+        source_row.loan_number, source_row.principal, source_row.date_released,
+        source_row.due_date, source_row.term_days, source_row.contract_reference,
+        source_row.evidence_reference, source_row.operational_daily_contractual_interest,
         source_row.operational_daily_rate_on_original_principal,
         source_row.base_no_prepayment_daily_eir_preview,
         source_row.principal_prepayment_allowed,
         source_row.principal_prepayment_changes_daily_interest,
         source_row.validated_base_schedule_basis,
-        p_business_model_conclusion,
-        p_sppi_conclusion,
-        p_measurement_category,
-        p_expected_cash_flow_policy,
-        p_expected_life_policy,
-        p_expected_life_days,
-        normalized_policy_reference,
-        p_classification_assessment,
-        p_prepayment_expected_cash_flow_assessment,
-        normalized_rationale,
-        normalized_support_reference,
-        p_actor_user_id
-    )
-    RETURNING id INTO created_id;
+        p_business_model_conclusion, p_sppi_conclusion, p_measurement_category,
+        p_expected_cash_flow_policy, p_expected_life_policy, p_expected_life_days,
+        normalized_policy_reference, p_classification_assessment,
+        p_prepayment_expected_cash_flow_assessment, normalized_rationale,
+        normalized_support_reference, p_actor_user_id
+    ) RETURNING id INTO created_id;
     PERFORM set_config('accounting.7x7_policy_decision_insert_allowed', 'off', true);
 
-    INSERT INTO core.audit_logs (
-        actor_user_id,
-        action,
-        target_type,
-        target_id,
-        details
-    ) VALUES (
+    INSERT INTO core.audit_logs (actor_user_id, action, target_type, target_id, details)
+    VALUES (
         p_actor_user_id,
         'accounting.7x7_classification_policy.recorded',
         'seven_by_seven_policy_decision',
@@ -527,24 +447,21 @@ DECLARE
     created_id UUID;
 BEGIN
     PERFORM accounting.require_7x7_policy_management_actor(p_actor_user_id);
-
     IF length(normalized_reason) < 3 THEN
         RAISE EXCEPTION 'Enter a clear reason for voiding 7x7 classification/EIR policy evidence.';
     END IF;
 
-    SELECT *
-    INTO decision_row
-    FROM accounting.seven_by_seven_policy_decisions decision
-    WHERE decision.id = p_decision_id
+    SELECT * INTO decision_row
+    FROM accounting.seven_by_seven_policy_decisions
+    WHERE id = p_decision_id
     FOR UPDATE;
     IF NOT FOUND THEN
         RAISE EXCEPTION '7x7 classification/EIR policy evidence was not found.';
     END IF;
 
-    SELECT *
-    INTO existing_void
-    FROM accounting.seven_by_seven_policy_decision_voids voided
-    WHERE voided.decision_id = p_decision_id
+    SELECT * INTO existing_void
+    FROM accounting.seven_by_seven_policy_decision_voids
+    WHERE decision_id = p_decision_id
     FOR UPDATE;
     IF FOUND THEN
         IF existing_void.voided_by_user_id = p_actor_user_id
@@ -555,8 +472,7 @@ BEGIN
     END IF;
 
     IF EXISTS (
-        SELECT 1
-        FROM accounting.journal_entries journal
+        SELECT 1 FROM accounting.journal_entries journal
         WHERE journal.source_reference = p_decision_id::text
     ) THEN
         RAISE EXCEPTION '7x7 policy evidence already has protected accounting journal history; use the future controlled accounting correction/reversal path.';
@@ -564,26 +480,14 @@ BEGIN
 
     PERFORM set_config('accounting.7x7_policy_decision_void_insert_allowed', 'on', true);
     INSERT INTO accounting.seven_by_seven_policy_decision_voids (
-        decision_id,
-        loan_id,
-        void_reason,
-        voided_by_user_id
+        decision_id, loan_id, void_reason, voided_by_user_id
     ) VALUES (
-        p_decision_id,
-        decision_row.loan_id,
-        normalized_reason,
-        p_actor_user_id
-    )
-    RETURNING id INTO created_id;
+        p_decision_id, decision_row.loan_id, normalized_reason, p_actor_user_id
+    ) RETURNING id INTO created_id;
     PERFORM set_config('accounting.7x7_policy_decision_void_insert_allowed', 'off', true);
 
-    INSERT INTO core.audit_logs (
-        actor_user_id,
-        action,
-        target_type,
-        target_id,
-        details
-    ) VALUES (
+    INSERT INTO core.audit_logs (actor_user_id, action, target_type, target_id, details)
+    VALUES (
         p_actor_user_id,
         'accounting.7x7_classification_policy.voided',
         'seven_by_seven_policy_decision',
@@ -595,46 +499,13 @@ BEGIN
             'automatic_source_posting', false
         )
     );
-
     RETURN created_id;
 END;
 $$;
 
 CREATE OR REPLACE VIEW accounting.seven_by_seven_policy_decision_status AS
 SELECT
-    decision.id AS decision_id,
-    decision.loan_id,
-    decision.loan_number,
-    decision.schedule_id,
-    decision.schedule_version,
-    decision.review_token,
-    decision.readiness_policy_version,
-    decision.decision_policy_version,
-    decision.principal,
-    decision.date_released,
-    decision.due_date,
-    decision.term_days,
-    decision.contract_reference,
-    decision.contract_evidence_reference,
-    decision.operational_daily_contractual_interest,
-    decision.operational_daily_rate_on_original_principal,
-    decision.base_no_prepayment_daily_eir_preview,
-    decision.principal_prepayment_allowed,
-    decision.principal_prepayment_changes_daily_interest,
-    decision.validated_base_schedule_basis,
-    decision.business_model_conclusion,
-    decision.sppi_conclusion,
-    decision.measurement_category,
-    decision.expected_cash_flow_policy,
-    decision.expected_life_policy,
-    decision.expected_life_days,
-    decision.accounting_policy_reference,
-    decision.classification_assessment,
-    decision.prepayment_expected_cash_flow_assessment,
-    decision.decision_rationale,
-    decision.supporting_evidence_reference,
-    decision.reviewed_by_user_id,
-    decision.reviewed_at,
+    decision.*,
     voided.id AS void_id,
     voided.void_reason,
     voided.voided_by_user_id,
@@ -651,9 +522,8 @@ LEFT JOIN accounting.seven_by_seven_policy_decision_voids voided
 CREATE OR REPLACE VIEW accounting.seven_by_seven_classification_policy_readiness AS
 SELECT
     readiness.*,
-    accounting.seven_by_seven_policy_review_token(readiness.loan_id)
-        AS current_policy_review_token,
-    decision.decision_id,
+    accounting.seven_by_seven_policy_review_token(readiness.loan_id) AS current_policy_review_token,
+    decision.id AS decision_id,
     decision.review_token AS decision_review_token,
     decision.business_model_conclusion,
     decision.sppi_conclusion,
@@ -668,30 +538,30 @@ SELECT
     decision.supporting_evidence_reference,
     decision.reviewed_by_user_id,
     decision.reviewed_at,
-    (decision.decision_id IS NOT NULL) AS active_policy_decision_exists,
+    (decision.id IS NOT NULL) AS active_policy_decision_exists,
     (
-        decision.decision_id IS NOT NULL
+        decision.id IS NOT NULL
         AND decision.review_token = accounting.seven_by_seven_policy_review_token(readiness.loan_id)
     ) AS active_policy_decision_is_current,
     (
-        decision.decision_id IS NOT NULL
+        decision.id IS NOT NULL
         AND decision.review_token = accounting.seven_by_seven_policy_review_token(readiness.loan_id)
     ) AS business_model_classification_concluded,
     (
-        decision.decision_id IS NOT NULL
+        decision.id IS NOT NULL
         AND decision.review_token = accounting.seven_by_seven_policy_review_token(readiness.loan_id)
     ) AS sppi_classification_concluded,
     (
-        decision.decision_id IS NOT NULL
+        decision.id IS NOT NULL
         AND decision.review_token = accounting.seven_by_seven_policy_review_token(readiness.loan_id)
     ) AS expected_cash_flow_policy_approved,
     (
-        decision.decision_id IS NOT NULL
+        decision.id IS NOT NULL
         AND decision.review_token = accounting.seven_by_seven_policy_review_token(readiness.loan_id)
         AND decision.measurement_category = 'amortised_cost'
     ) AS amortised_cost_path_supported,
     (
-        decision.decision_id IS NOT NULL
+        decision.id IS NOT NULL
         AND decision.review_token = accounting.seven_by_seven_policy_review_token(readiness.loan_id)
         AND decision.measurement_category = 'amortised_cost'
         AND decision.expected_cash_flow_policy = 'verified_no_prepayment_schedule_is_expected_cash_flow_estimate'
@@ -706,11 +576,11 @@ SELECT
     false AS journal_lines_enabled,
     false AS automatic_source_posting,
     CASE
-        WHEN NOT readiness.contractual_cash_flow_validation_ready
+        WHEN readiness.policy_readiness_status = 'contractual_cash_flow_readiness_required'
             THEN 'contractual_cash_flow_readiness_required'
         WHEN readiness.base_no_prepayment_daily_eir_preview IS NULL
             THEN 'base_eir_preview_not_solved'
-        WHEN decision.decision_id IS NULL
+        WHEN decision.id IS NULL
             THEN 'management_classification_policy_evidence_required'
         WHEN decision.review_token IS DISTINCT FROM accounting.seven_by_seven_policy_review_token(readiness.loan_id)
             THEN 'stale_management_policy_evidence_requires_new_review'
@@ -728,32 +598,24 @@ FROM accounting.seven_by_seven_eir_carrying_policy_readiness readiness
 LEFT JOIN LATERAL (
     SELECT status.*
     FROM accounting.seven_by_seven_policy_decision_status status
-    WHERE status.loan_id = readiness.loan_id
-      AND status.is_active
+    WHERE status.loan_id = readiness.loan_id AND status.is_active
     ORDER BY status.reviewed_at DESC
     LIMIT 1
 ) decision ON true;
 
 COMMENT ON VIEW accounting.seven_by_seven_classification_policy_readiness IS
-    'Protected Master Issue #296 7x7 classification/EIR policy evidence boundary. Explicit Management business-model, SPPI, measurement-category, expected-life and prepayment/EIR policy evidence can be recorded, but authoritative EIR/carrying measurement and journal lines remain disabled until a later protected promotion/reconciliation stage.';
+    'Protected 7x7 classification/EIR policy evidence boundary. Explicit Management business-model, SPPI, measurement-category, expected-life and prepayment/EIR policy evidence may be recorded, but authoritative EIR/carrying measurement and journal lines remain disabled until a later protected promotion/reconciliation stage.';
 
 CREATE OR REPLACE VIEW accounting.seven_by_seven_classification_policy_summary AS
 SELECT
     count(*)::bigint AS seven_by_seven_loan_count,
-    count(*) FILTER (WHERE active_policy_decision_exists)::bigint
-        AS active_policy_decision_count,
-    count(*) FILTER (WHERE active_policy_decision_is_current)::bigint
-        AS current_policy_decision_count,
-    count(*) FILTER (WHERE business_model_classification_concluded)::bigint
-        AS business_model_concluded_count,
-    count(*) FILTER (WHERE sppi_classification_concluded)::bigint
-        AS sppi_concluded_count,
-    count(*) FILTER (WHERE expected_cash_flow_policy_approved)::bigint
-        AS expected_cash_flow_policy_approved_count,
-    count(*) FILTER (WHERE amortised_cost_path_supported)::bigint
-        AS amortised_cost_path_supported_count,
-    count(*) FILTER (WHERE classification_policy_evidence_ready_for_eir_promotion)::bigint
-        AS eir_promotion_review_ready_count,
+    count(*) FILTER (WHERE active_policy_decision_exists)::bigint AS active_policy_decision_count,
+    count(*) FILTER (WHERE active_policy_decision_is_current)::bigint AS current_policy_decision_count,
+    count(*) FILTER (WHERE business_model_classification_concluded)::bigint AS business_model_concluded_count,
+    count(*) FILTER (WHERE sppi_classification_concluded)::bigint AS sppi_concluded_count,
+    count(*) FILTER (WHERE expected_cash_flow_policy_approved)::bigint AS expected_cash_flow_policy_approved_count,
+    count(*) FILTER (WHERE amortised_cost_path_supported)::bigint AS amortised_cost_path_supported_count,
+    count(*) FILTER (WHERE classification_policy_evidence_ready_for_eir_promotion)::bigint AS eir_promotion_review_ready_count,
     count(*) FILTER (
         WHERE classification_policy_readiness_status = 'expected_prepayment_cash_flow_evidence_required'
     )::bigint AS expected_prepayment_cash_flow_evidence_required_count,
