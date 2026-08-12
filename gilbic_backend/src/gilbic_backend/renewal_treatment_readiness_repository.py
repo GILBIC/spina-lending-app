@@ -22,12 +22,14 @@ from .renewal_treatment_readiness import (
     RenewalTreatmentReadiness,
     build_renewal_treatment_readiness,
 )
+from .renewal_treatment_review_token import build_renewal_treatment_review_token
 
 
 @dataclass(frozen=True, slots=True)
 class RenewalTreatmentReadinessRecord:
     source: GreenfieldRegularLedgerReconciliationPreview
     readiness: RenewalTreatmentReadiness
+    review_token: str | None
 
 
 class RenewalTreatmentReadinessError(RuntimeError):
@@ -128,9 +130,11 @@ class PostgresRenewalTreatmentReadinessRepository:
             evidence_reference=source.get("evidence_reference"),
             installments=installments,
         )
+        readiness = build_renewal_treatment_readiness(evidence)
         return RenewalTreatmentReadinessRecord(
             source=final_source,
-            readiness=build_renewal_treatment_readiness(evidence),
+            readiness=readiness,
+            review_token=build_renewal_treatment_review_token(evidence, readiness),
         )
 
     @staticmethod
