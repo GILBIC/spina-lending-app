@@ -68,6 +68,7 @@ from .renewal_api import create_renewal_router
 from .renewal_boundary_eir_journal_api import (
     create_renewal_boundary_eir_journal_router,
 )
+from .renewal_treatment_decision_api import create_renewal_treatment_decision_router
 from .renewal_treatment_readiness_api import create_renewal_treatment_readiness_router
 from .source_event_accounting_api import create_source_event_accounting_router
 from .support_api import create_support_router
@@ -114,6 +115,7 @@ def create_app() -> FastAPI:
     app.include_router(create_renewal_boundary_eir_journal_router())
     app.include_router(create_greenfield_regular_renewal_final_reconciliation_router())
     app.include_router(create_renewal_treatment_readiness_router())
+    app.include_router(create_renewal_treatment_decision_router())
     app.include_router(create_eir_cash_allocation_router())
     app.include_router(create_eir_period_journal_router())
     app.include_router(create_cross_period_accounting_sequence_router())
