@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from uuid import UUID
@@ -8,6 +9,9 @@ import psycopg
 from psycopg.rows import dict_row
 
 from .database import open_connection
+from .greenfield_regular_ledger_reconciliation_repository import (
+    GreenfieldRegularLedgerReconciliationPreview,
+)
 from .greenfield_regular_renewal_final_reconciliation_repository import (
     GreenfieldRegularRenewalFinalReconciliationError,
     PostgresGreenfieldRegularRenewalFinalReconciliationRepository,
@@ -18,6 +22,12 @@ from .renewal_treatment_readiness import (
     RenewalTreatmentReadiness,
     build_renewal_treatment_readiness,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class RenewalTreatmentReadinessRecord:
+    source: GreenfieldRegularLedgerReconciliationPreview
+    readiness: RenewalTreatmentReadiness
 
 
 class RenewalTreatmentReadinessError(RuntimeError):
@@ -44,7 +54,7 @@ class PostgresRenewalTreatmentReadinessRepository:
         self,
         *,
         renewal_execution_event_id: UUID,
-    ) -> RenewalTreatmentReadiness:
+    ) -> RenewalTreatmentReadinessRecord:
         try:
             final_record = self._final_reconciliation_repository.load(
                 renewal_execution_event_id=renewal_execution_event_id,
@@ -118,7 +128,10 @@ class PostgresRenewalTreatmentReadinessRepository:
             evidence_reference=source.get("evidence_reference"),
             installments=installments,
         )
-        return build_renewal_treatment_readiness(evidence)
+        return RenewalTreatmentReadinessRecord(
+            source=final_source,
+            readiness=build_renewal_treatment_readiness(evidence),
+        )
 
     @staticmethod
     def _load_source(cursor, *, renewal_execution_event_id: UUID) -> dict:
