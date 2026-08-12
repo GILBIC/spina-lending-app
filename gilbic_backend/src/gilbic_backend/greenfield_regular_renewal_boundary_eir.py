@@ -87,10 +87,8 @@ def _validate_tail_chain(
 ) -> bool:
     daily = rollforward.tail_daily_accruals
     amount = money(rollforward.tail_effective_interest_accrued)
-    if amount == ZERO:
-        return not daily
     if not daily:
-        return False
+        return amount == ZERO
 
     last_boundary = (
         rollforward.allocations[-1].collection_date
@@ -162,33 +160,6 @@ def build_greenfield_regular_renewal_boundary_eir_preview(
             blocker_code="renewal_boundary_eir_amount_invalid",
             message="Renewal-boundary EIR cannot be negative.",
         )
-    if target_amount == ZERO:
-        if rollforward.tail_daily_accruals:
-            return _blocked(
-                rollforward,
-                renewal_execution_event_id=renewal_execution_event_id,
-                blocker_code="renewal_boundary_eir_daily_evidence_not_exact",
-                message=(
-                    "Zero renewal-boundary EIR must not carry non-empty daily "
-                    "accrual evidence."
-                ),
-            )
-        return GreenfieldRegularRenewalBoundaryEirPreview(
-            renewal_execution_event_id=renewal_execution_event_id,
-            loan_id=rollforward.loan_id,
-            target_date=rollforward.target_date,
-            amount=ZERO,
-            disposition="no_renewal_boundary_eir_required",
-            blocker_code=None,
-            message="No no-cash EIR remains at the renewal boundary.",
-            period_proposals=(),
-            total_debit=ZERO,
-            total_credit=ZERO,
-            balanced=True,
-            posting_eligible=False,
-            automatic_source_posting=False,
-        )
-
     if not _validate_tail_chain(rollforward):
         return _blocked(
             rollforward,
@@ -198,6 +169,25 @@ def build_greenfield_regular_renewal_boundary_eir_preview(
                 "The renewal-boundary daily EIR chain is incomplete, non-contiguous, "
                 "or does not reconcile to the measured tail amount."
             ),
+        )
+    if target_amount == ZERO:
+        return GreenfieldRegularRenewalBoundaryEirPreview(
+            renewal_execution_event_id=renewal_execution_event_id,
+            loan_id=rollforward.loan_id,
+            target_date=rollforward.target_date,
+            amount=ZERO,
+            disposition="no_renewal_boundary_eir_required",
+            blocker_code=None,
+            message=(
+                "The exact daily chain reaches the renewal boundary without a cent "
+                "of EIR to recognize."
+            ),
+            period_proposals=(),
+            total_debit=ZERO,
+            total_credit=ZERO,
+            balanced=True,
+            posting_eligible=False,
+            automatic_source_posting=False,
         )
 
     grouped: dict[
