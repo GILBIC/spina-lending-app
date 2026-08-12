@@ -1,0 +1,99 @@
+name: Renewal boundary EIR live migration verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'gilbic_backend/sql/0054_add_protected_renewal_boundary_eir_journal_posting.sql'
+      - 'gilbic_backend/sql/0055_harden_renewal_boundary_eir_posting_audit_alias.sql'
+      - 'gilbic_backend/src/gilbic_backend/renewal_boundary_eir_journal_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/renewal_boundary_eir_journal_api.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_final_reconciliation.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_final_reconciliation_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_final_reconciliation_api.py'
+      - 'gilbic_backend/src/gilbic_backend/main.py'
+      - 'tools/apply_accounting_renewal_boundary_eir_posting_migration.py'
+      - 'tools/accounting-renewal-boundary-eir-posting-live-migration.once'
+      - '.github/workflows/renewal-boundary-eir-live-verifier.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'gilbic_backend/sql/0054_add_protected_renewal_boundary_eir_journal_posting.sql'
+      - 'gilbic_backend/sql/0055_harden_renewal_boundary_eir_posting_audit_alias.sql'
+      - 'gilbic_backend/src/gilbic_backend/renewal_boundary_eir_journal_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/renewal_boundary_eir_journal_api.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_final_reconciliation.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_final_reconciliation_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_final_reconciliation_api.py'
+      - 'gilbic_backend/src/gilbic_backend/main.py'
+      - 'tools/apply_accounting_renewal_boundary_eir_posting_migration.py'
+      - 'tools/accounting-renewal-boundary-eir-posting-live-migration.once'
+      - '.github/workflows/renewal-boundary-eir-live-verifier.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renewal-boundary-eir-live-migration
+  cancel-in-progress: false
+
+jobs:
+  verify-renewal-boundary-eir-live-controls:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify Python runtime
+        shell: cmd
+        run: |
+          python --version || exit /b 1
+          python -c "import sys; assert sys.version_info >= (3, 11), sys.version" || exit /b 1
+
+      - name: Create isolated verifier environment
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-renewal-boundary-eir-live-venv"
+          if exist "%VENV%" rmdir /s /q "%VENV%"
+          python -m venv "%VENV%" || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" || exit /b 1
+
+      - name: Compile protected live verifier and accounting modules
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-renewal-boundary-eir-live-venv"
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_renewal_boundary_eir_posting_migration.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\renewal_boundary_eir_journal_repository.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\renewal_boundary_eir_journal_api.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\greenfield_regular_renewal_final_reconciliation.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\greenfield_regular_renewal_final_reconciliation_repository.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\greenfield_regular_renewal_final_reconciliation_api.py || exit /b 1
+
+      - name: Verify PR live path is install-only
+        if: github.event_name == 'pull_request'
+        shell: cmd
+        run: |
+          python -c "from pathlib import Path; s=Path('tools/apply_accounting_renewal_boundary_eir_posting_migration.py').read_text(encoding='utf-8'); assert '_history_snapshot' in s; assert 'if after != before' in s; assert 'select accounting.create_renewal_boundary_eir_journal_draft_batch' not in s.lower(); assert 'select accounting.post_renewal_boundary_eir_journal_review_set' not in s.lower(); assert 'automatic_source_posting' in s" || exit /b 1
+          python -c "from pathlib import Path; a=Path('gilbic_backend/sql/0054_add_protected_renewal_boundary_eir_journal_posting.sql').read_text(encoding='utf-8'); b=Path('gilbic_backend/sql/0055_harden_renewal_boundary_eir_posting_audit_alias.sql').read_text(encoding='utf-8'); assert a.strip().startswith('BEGIN;') and a.strip().endswith('COMMIT;'); assert b.strip().startswith('BEGIN;') and b.strip().endswith('COMMIT;'); assert 'automatic_source_posting' in a" || exit /b 1
+
+      - name: Install and verify protected renewal-boundary EIR controls on live database
+        if: github.event_name == 'push' && hashFiles('tools/accounting-renewal-boundary-eir-posting-live-migration.once') != ''
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-renewal-boundary-eir-live-venv"
+          "%VENV%\Scripts\python.exe" tools\apply_accounting_renewal_boundary_eir_posting_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+
+      - name: Require a clean committed tree
+        shell: cmd
+        run: |
+          git diff --check || exit /b 1
+          git diff --exit-code || exit /b 1
+          git diff --cached --exit-code || exit /b 1

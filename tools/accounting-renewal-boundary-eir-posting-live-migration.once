@@ -1,0 +1,1 @@
+Install protected renewal-boundary EIR preparation/posting controls on the live database once after merge. The live verifier must not create preparations, postings, source events, or journal history.
