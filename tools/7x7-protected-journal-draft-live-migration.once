@@ -1,0 +1,1 @@
+Install migration 0065 once after merge. Installation must create only schema/permission controls and must not create any 7x7 draft journal history. Posting, reversal and automatic source posting remain disabled.

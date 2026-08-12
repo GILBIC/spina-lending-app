@@ -75,6 +75,7 @@ from .renewal_treatment_accounting_target_api import (
 )
 from .renewal_treatment_decision_api import create_renewal_treatment_decision_router
 from .renewal_treatment_readiness_api import create_renewal_treatment_readiness_router
+from .seven_by_seven_journal_draft_api import create_seven_by_seven_journal_draft_router
 from .source_event_accounting_api import create_source_event_accounting_router
 from .support_api import create_support_router
 
@@ -110,6 +111,7 @@ def create_app() -> FastAPI:
     app.include_router(create_financial_accounting_router())
     app.include_router(create_financial_statements_router())
     app.include_router(create_source_event_accounting_router())
+    app.include_router(create_seven_by_seven_journal_draft_router())
     app.include_router(create_loan_disbursement_evidence_router())
     app.include_router(create_loan_disbursement_journal_draft_router())
     app.include_router(create_loan_disbursement_journal_posting_router())
