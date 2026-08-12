@@ -119,8 +119,8 @@ def test_cross_period_tail_reuses_exact_deterministic_cent_allocation():
         target=date(2026, 9, 1),
         tail="30.05",
         daily_rows=(
-            _daily(date(2026, 8, 31), "5000.00", "15.004"),
-            _daily(date(2026, 9, 1), "5015.004", "15.041"),
+            _daily(date(2026, 8, 31), "5000.00", "15.001"),
+            _daily(date(2026, 9, 1), "5015.001", "15.044"),
         ),
     )
     periods = (
