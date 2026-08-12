@@ -24,11 +24,12 @@ def test_7x7_source_event_preview_is_read_only_and_uses_authoritative_schema() -
     assert "SEVEN_BY_SEVEN_SOURCE_EVENT_JOURNAL_COORDINATE_PREVIEW" in normalized
     assert "SEVEN_BY_SEVEN_SOURCE_EVENT_ACCOUNTING_SUMMARY" in normalized
 
-    # Current PostgreSQL source schema uses lowercase payment/advance/pass.
+    # Current PostgreSQL source schema uses lowercase payment/advance/pass and
+    # does not contain pre-allocated interest/principal or reversal-row columns.
     assert "ENTRY_TYPE IN ('PAYMENT', 'ADVANCE')" in normalized
     assert "ENTRY_TYPE = 'PASS'" in normalized
-    assert "INTEREST_PAID" not in normalized
-    assert "PRINCIPAL_PAID" not in normalized
+    assert "TRANSACTION.INTEREST_PAID" not in normalized
+    assert "TRANSACTION.PRINCIPAL_PAID" not in normalized
     assert "REVERSAL_TRANSACTION_ID" not in normalized
     assert "REVERSES_TRANSACTION_ID" not in normalized
 
@@ -39,6 +40,7 @@ def test_7x7_source_event_preview_is_read_only_and_uses_authoritative_schema() -
     assert "FALSE AS OPERATIONAL_ALLOCATION_SUBSTITUTED_FOR_ACCOUNTING" in normalized
     assert "SAME_DAY_MULTIPLE_FINANCIAL_SOURCE_EVENTS" in normalized
     assert "SAME_DAY_OR_PRE_ANCHOR_CASH_ORDERING_REVIEW" in normalized
+    assert "DATE_RELEASED - 1" in normalized
 
     # Read-only journal coordinates use the established account system keys.
     assert "'ACCRUED_INTEREST_RECEIVABLE'" in normalized
