@@ -14,7 +14,7 @@ import run_stage5d17_disposable_postgres_validation as disposable
 
 
 TEST_DATABASE_PREFIX = "spina_renewal_boundary_eir_"
-BOOTSTRAP_THROUGH = 54
+BOOTSTRAP_THROUGH = 55
 INTEGRATION_TEST = (
     Path(__file__).resolve().parents[1]
     / "gilbic_backend"
@@ -49,7 +49,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA "
-            "migrations through 0054, execute protected renewal-boundary EIR "
+            "migrations through 0055, execute protected renewal-boundary EIR "
             "posting integration tests, then remove the database."
         )
     )
