@@ -241,7 +241,7 @@ def main() -> int:
                 "lending.loan_disbursement_events",
                 "lending.loan_renewal_execution_events",
                 "accounting.greenfield_regular_renewal_rollforward_targets",
-                "accounting.greenfield_regular_eir_anchors",
+                "accounting.greenfield_regular_eir_anchor_readiness",
                 "accounting.journal_entries",
                 "accounting.journal_lines",
                 "accounting.journal_events",
