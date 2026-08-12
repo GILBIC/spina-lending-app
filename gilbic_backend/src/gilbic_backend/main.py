@@ -62,6 +62,9 @@ from .regular_journal_posting_api import create_regular_journal_posting_router
 from .remittance_api import create_remittance_router
 from .remittance_photo_api import create_remittance_photo_router
 from .renewal_api import create_renewal_router
+from .renewal_boundary_eir_journal_api import (
+    create_renewal_boundary_eir_journal_router,
+)
 from .source_event_accounting_api import create_source_event_accounting_router
 from .support_api import create_support_router
 
@@ -104,6 +107,7 @@ def create_app() -> FastAPI:
     app.include_router(create_loan_renewal_execution_evidence_router())
     app.include_router(create_greenfield_regular_eir_anchor_router())
     app.include_router(create_greenfield_regular_renewal_rollforward_router())
+    app.include_router(create_renewal_boundary_eir_journal_router())
     app.include_router(create_eir_cash_allocation_router())
     app.include_router(create_eir_period_journal_router())
     app.include_router(create_cross_period_accounting_sequence_router())
