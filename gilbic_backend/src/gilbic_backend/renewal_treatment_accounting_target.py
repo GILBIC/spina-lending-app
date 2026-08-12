@@ -6,7 +6,7 @@ from uuid import UUID
 
 
 MONEY = Decimal("0.01")
-POLICY_VERSION = "renewal_treatment_accounting_target_v1"
+POLICY_VERSION = "renewal_treatment_accounting_target_v2"
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,8 +36,9 @@ class RenewalTreatmentAccountingTarget:
     revised_gross_carrying_amount: Decimal | None
     original_daily_eir: Decimal
     modification_adjustment_amount: Decimal | None
+    modification_signed_adjustment_amount: Decimal | None
     modification_profit_or_loss: str | None
-    accounting_asset_continues: bool
+    accounting_asset_continues: bool | None
     new_financial_asset_recognition_required: bool
     new_financial_asset_measurement_required: bool
     treatment_journal_coordinates_ready: bool
@@ -68,8 +69,9 @@ def build_renewal_treatment_accounting_target(
             revised_gross_carrying_amount=None,
             original_daily_eir=evidence.original_daily_eir,
             modification_adjustment_amount=None,
+            modification_signed_adjustment_amount=None,
             modification_profit_or_loss=None,
-            accounting_asset_continues=False,
+            accounting_asset_continues=None,
             new_financial_asset_recognition_required=False,
             new_financial_asset_measurement_required=False,
             treatment_journal_coordinates_ready=False,
@@ -95,6 +97,7 @@ def build_renewal_treatment_accounting_target(
             revised_gross_carrying_amount=None,
             original_daily_eir=evidence.original_daily_eir,
             modification_adjustment_amount=None,
+            modification_signed_adjustment_amount=None,
             modification_profit_or_loss=None,
             accounting_asset_continues=False,
             new_financial_asset_recognition_required=True,
@@ -116,8 +119,9 @@ def build_renewal_treatment_accounting_target(
             revised_gross_carrying_amount=None,
             original_daily_eir=evidence.original_daily_eir,
             modification_adjustment_amount=None,
+            modification_signed_adjustment_amount=None,
             modification_profit_or_loss=None,
-            accounting_asset_continues=False,
+            accounting_asset_continues=None,
             new_financial_asset_recognition_required=False,
             new_financial_asset_measurement_required=False,
             treatment_journal_coordinates_ready=False,
@@ -137,6 +141,7 @@ def build_renewal_treatment_accounting_target(
             revised_gross_carrying_amount=None,
             original_daily_eir=evidence.original_daily_eir,
             modification_adjustment_amount=None,
+            modification_signed_adjustment_amount=None,
             modification_profit_or_loss=None,
             accounting_asset_continues=True,
             new_financial_asset_recognition_required=False,
@@ -159,6 +164,7 @@ def build_renewal_treatment_accounting_target(
             revised_gross_carrying_amount=None,
             original_daily_eir=evidence.original_daily_eir,
             modification_adjustment_amount=None,
+            modification_signed_adjustment_amount=None,
             modification_profit_or_loss=None,
             accounting_asset_continues=True,
             new_financial_asset_recognition_required=False,
@@ -191,6 +197,7 @@ def build_renewal_treatment_accounting_target(
         revised_gross_carrying_amount=revised_carrying,
         original_daily_eir=evidence.original_daily_eir,
         modification_adjustment_amount=abs(change),
+        modification_signed_adjustment_amount=change,
         modification_profit_or_loss=profit_or_loss,
         accounting_asset_continues=True,
         new_financial_asset_recognition_required=False,
