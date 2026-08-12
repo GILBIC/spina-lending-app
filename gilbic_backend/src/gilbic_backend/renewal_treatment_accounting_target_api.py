@@ -117,6 +117,9 @@ def create_renewal_treatment_accounting_target_router() -> APIRouter:
                 "modification_adjustment_amount": _money(
                     target.modification_adjustment_amount
                 ),
+                "modification_signed_adjustment_amount": _money(
+                    target.modification_signed_adjustment_amount
+                ),
                 "modification_profit_or_loss": target.modification_profit_or_loss,
                 "accounting_asset_continues": target.accounting_asset_continues,
                 "new_financial_asset_recognition_required": (
