@@ -65,6 +65,7 @@ from .regular_journal_posting_api import create_regular_journal_posting_router
 from .remittance_accounting_api import create_remittance_accounting_router
 from .remittance_api import create_remittance_router
 from .remittance_photo_api import create_remittance_photo_router
+from .remittance_transfer_journal_api import create_remittance_transfer_journal_router
 from .renewal_api import create_renewal_router
 from .renewal_boundary_eir_journal_api import (
     create_renewal_boundary_eir_journal_router,
@@ -122,6 +123,7 @@ def create_app() -> FastAPI:
     app.include_router(create_renewal_treatment_decision_router())
     app.include_router(create_renewal_treatment_accounting_target_router())
     app.include_router(create_remittance_accounting_router())
+    app.include_router(create_remittance_transfer_journal_router())
     app.include_router(create_eir_cash_allocation_router())
     app.include_router(create_eir_period_journal_router())
     app.include_router(create_cross_period_accounting_sequence_router())
