@@ -1,11 +1,11 @@
 BEGIN;
 
--- Stage 5D.27 connects the immutable Stage 5D.17/5D.18 protected Regular
--- posting/reversal audit chain to the Stage 5D.25 greenfield anchor and the
--- Stage 5D.26 renewal-date measurement target. This view is deliberately only
--- a coarse read-only gate. Exact EIR period cents, source identities, journal
--- lines and ledger components are replayed in Python before any carrying amount
--- can be called authoritative.
+-- Read-only renewal ledger reconciliation support for the existing
+-- renewal/refinance/restructure accounting requirement. It connects the
+-- immutable protected Regular posting/reversal audit chain to the greenfield
+-- anchor and renewal-date measurement. Exact EIR period cents, source
+-- identities, journal lines and ledger components are replayed in Python before
+-- any carrying amount can be called authoritative.
 
 CREATE OR REPLACE VIEW accounting.greenfield_regular_renewal_ledger_reconciliation_targets AS
 WITH target AS (
@@ -182,6 +182,6 @@ SELECT
 FROM assembled;
 
 COMMENT ON VIEW accounting.greenfield_regular_renewal_ledger_reconciliation_targets IS
-    'Read-only Stage 5D.27 coarse gate connecting Stage 5D.17/5D.18 protected Regular journal audit history to Stage 5D.25/5D.26 greenfield renewal targets. Exact source identities, period cents, lines and carrying components are replayed separately; this view never creates journals or enables automatic posting.';
+    'Read-only reconciliation gate for greenfield Regular renewal accounting. Exact source identities, period cents, lines and carrying components are replayed separately; this view never creates journals or enables automatic posting.';
 
 COMMIT;
