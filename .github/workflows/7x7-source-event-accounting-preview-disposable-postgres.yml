@@ -8,6 +8,7 @@ on:
       - 'gilbic_backend/tests/test_7x7_source_event_accounting_preview_migration.py'
       - 'gilbic_backend/tests/test_7x7_source_event_accounting_preview_postgres.py'
       - 'tools/run_7x7_source_event_accounting_preview_disposable_postgres_validation.py'
+      - 'tools/7x7-source-event-accounting-preview-live-migration.once'
       - '.github/workflows/7x7-source-event-accounting-preview-disposable-postgres.yml'
   push:
     branches: [main]
@@ -16,6 +17,7 @@ on:
       - 'gilbic_backend/tests/test_7x7_source_event_accounting_preview_migration.py'
       - 'gilbic_backend/tests/test_7x7_source_event_accounting_preview_postgres.py'
       - 'tools/run_7x7_source_event_accounting_preview_disposable_postgres_validation.py'
+      - 'tools/7x7-source-event-accounting-preview-live-migration.once'
       - '.github/workflows/7x7-source-event-accounting-preview-disposable-postgres.yml'
 
 permissions:
