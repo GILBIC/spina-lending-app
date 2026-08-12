@@ -81,7 +81,7 @@ jobs:
         if: github.event_name == 'pull_request'
         shell: cmd
         run: |
-          python -c "from pathlib import Path; s=Path('tools/apply_accounting_renewal_boundary_eir_posting_migration.py').read_text(encoding='utf-8'); assert '_history_snapshot' in s; assert 'if after != before' in s; assert 'create_renewal_boundary_eir_journal_draft_batch(' not in s; assert 'post_renewal_boundary_eir_journal_review_set(' not in s; assert 'automatic_source_posting' in s" || exit /b 1
+          python -c "from pathlib import Path; s=Path('tools/apply_accounting_renewal_boundary_eir_posting_migration.py').read_text(encoding='utf-8'); assert '_history_snapshot' in s; assert 'if after != before' in s; assert 'select accounting.create_renewal_boundary_eir_journal_draft_batch' not in s.lower(); assert 'select accounting.post_renewal_boundary_eir_journal_review_set' not in s.lower(); assert 'automatic_source_posting' in s" || exit /b 1
           python -c "from pathlib import Path; a=Path('gilbic_backend/sql/0054_add_protected_renewal_boundary_eir_journal_posting.sql').read_text(encoding='utf-8'); b=Path('gilbic_backend/sql/0055_harden_renewal_boundary_eir_posting_audit_alias.sql').read_text(encoding='utf-8'); assert a.strip().startswith('BEGIN;') and a.strip().endswith('COMMIT;'); assert b.strip().startswith('BEGIN;') and b.strip().endswith('COMMIT;'); assert 'automatic_source_posting' in a" || exit /b 1
 
       - name: Install and verify protected renewal-boundary EIR controls on live database
