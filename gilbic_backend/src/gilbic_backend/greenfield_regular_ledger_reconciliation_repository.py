@@ -20,6 +20,10 @@ from .greenfield_regular_ledger_reconciliation import (
     GreenfieldRegularLedgerReconciliation,
     build_greenfield_regular_ledger_reconciliation,
 )
+from .greenfield_regular_renewal_boundary_eir import (
+    GreenfieldRegularRenewalBoundaryEirPreview,
+    build_greenfield_regular_renewal_boundary_eir_preview,
+)
 from .regular_eir_accrual_journal_preview import AccountingFiscalPeriodReference
 
 
@@ -68,6 +72,7 @@ class GreenfieldRegularLedgerReconciliationPreview:
     automatic_source_posting: bool
     rollforward: GreenfieldRegularRenewalRollForward | None
     reconciliation: GreenfieldRegularLedgerReconciliation | None
+    renewal_boundary_eir_preview: GreenfieldRegularRenewalBoundaryEirPreview | None
 
 
 class PostgresGreenfieldRegularLedgerReconciliationRepository:
@@ -117,6 +122,7 @@ class PostgresGreenfieldRegularLedgerReconciliationRepository:
                     for row in rows:
                         rollforward = None
                         reconciliation = None
+                        renewal_boundary_eir_preview = None
                         if (
                             str(row["rollforward_readiness_status"])
                             == "greenfield_regular_renewal_rollforward_target_ready"
@@ -177,11 +183,27 @@ class PostgresGreenfieldRegularLedgerReconciliationRepository:
                                         ),
                                     )
                                 )
+                                if (
+                                    reconciliation.blocker_code
+                                    == "renewal_boundary_eir_accrual_not_posted"
+                                ):
+                                    renewal_boundary_eir_preview = (
+                                        build_greenfield_regular_renewal_boundary_eir_preview(
+                                            rollforward,
+                                            renewal_execution_event_id=row[
+                                                "renewal_execution_event_id"
+                                            ],
+                                            fiscal_periods=periods,
+                                        )
+                                    )
                         previews.append(
                             self._from_row(
                                 row,
                                 rollforward=rollforward,
                                 reconciliation=reconciliation,
+                                renewal_boundary_eir_preview=(
+                                    renewal_boundary_eir_preview
+                                ),
                             )
                         )
             return tuple(previews)
@@ -472,6 +494,7 @@ class PostgresGreenfieldRegularLedgerReconciliationRepository:
         *,
         rollforward: GreenfieldRegularRenewalRollForward | None,
         reconciliation: GreenfieldRegularLedgerReconciliation | None,
+        renewal_boundary_eir_preview: GreenfieldRegularRenewalBoundaryEirPreview | None,
     ) -> GreenfieldRegularLedgerReconciliationPreview:
         return GreenfieldRegularLedgerReconciliationPreview(
             renewal_execution_event_id=row["renewal_execution_event_id"],
@@ -543,4 +566,5 @@ class PostgresGreenfieldRegularLedgerReconciliationRepository:
             automatic_source_posting=False,
             rollforward=rollforward,
             reconciliation=reconciliation,
+            renewal_boundary_eir_preview=renewal_boundary_eir_preview,
         )
