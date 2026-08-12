@@ -188,3 +188,29 @@ def test_boundary_preview_fails_closed_when_fiscal_period_is_not_open():
     assert preview.period_proposals == ()
     assert preview.posting_eligible is False
     assert preview.automatic_source_posting is False
+
+
+def test_zero_cent_boundary_eir_requires_no_journal_even_with_exact_daily_chain():
+    rollforward = _rollforward(
+        target=date(2026, 8, 2),
+        tail="0.00",
+        daily_rows=(
+            _daily(date(2026, 8, 2), "0.00", "0.00"),
+        ),
+    )
+
+    preview = build_greenfield_regular_renewal_boundary_eir_preview(
+        rollforward,
+        renewal_execution_event_id=EXECUTION_ID,
+        fiscal_periods=(),
+    )
+
+    assert preview.disposition == "no_renewal_boundary_eir_required"
+    assert preview.blocker_code is None
+    assert preview.amount == Decimal("0.00")
+    assert preview.period_proposals == ()
+    assert preview.total_debit == Decimal("0.00")
+    assert preview.total_credit == Decimal("0.00")
+    assert preview.balanced is True
+    assert preview.posting_eligible is False
+    assert preview.automatic_source_posting is False
