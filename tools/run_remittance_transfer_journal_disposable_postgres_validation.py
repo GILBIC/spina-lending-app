@@ -15,11 +15,10 @@ import run_stage5d17_disposable_postgres_validation as disposable
 
 TEST_DATABASE_PREFIX = "spina_remittance_journal_"
 BOOTSTRAP_THROUGH = 57
-INTEGRATION_TEST = (
-    Path(__file__).resolve().parents[1]
-    / "gilbic_backend"
-    / "tests"
-    / "test_remittance_transfer_journal_lifecycle_postgres.py"
+TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
+INTEGRATION_TESTS = (
+    TEST_ROOT / "test_remittance_transfer_journal_lifecycle_postgres.py",
+    TEST_ROOT / "test_remittance_transfer_journal_status_hardening_postgres.py",
 )
 
 
@@ -28,17 +27,25 @@ def _configure_shared_safety_helpers() -> None:
     disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
 
 
-def _run_test(test_database_url: str) -> int:
-    if not INTEGRATION_TEST.is_file():
+def _run_tests(test_database_url: str) -> int:
+    missing = [str(path) for path in INTEGRATION_TESTS if not path.is_file()]
+    if missing:
         raise SystemExit(
-            "Remittance transfer journal disposable validation refused: integration test file is missing."
+            "Remittance transfer journal disposable validation refused: integration test file is missing: "
+            + ", ".join(missing)
         )
     env = os.environ.copy()
     for key in disposable.ENDPOINT_ENV_KEYS:
         env.pop(key, None)
     env["GILBIC_TEST_DATABASE_URL"] = test_database_url
     completed = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", str(INTEGRATION_TEST)],
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            *(str(path) for path in INTEGRATION_TESTS),
+        ],
         env=env,
         check=False,
     )
@@ -50,8 +57,8 @@ def main() -> int:
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA "
             "migrations through 0057, prove the protected remittance transfer "
-            "draft/post/reversal lifecycle from authoritative destination evidence, "
-            "then remove the database."
+            "draft/post/reversal lifecycle and fail-closed status hardening from "
+            "authoritative destination evidence, then remove the database."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -104,11 +111,11 @@ def main() -> int:
 
         disposable._install_supabase_auth_prerequisite(test_url)
         disposable._bootstrap_database(test_url)
-        result = _run_test(test_url)
+        result = _run_tests(test_url)
         if result != 0:
             raise SystemExit(
                 "Remittance transfer journal disposable PostgreSQL validation failed: "
-                f"integration test exited with code {result}."
+                f"integration tests exited with code {result}."
             )
         print(
             "Remittance transfer journal disposable PostgreSQL validation passed: "
@@ -116,8 +123,9 @@ def main() -> int:
             "cash / Cr Collector Custody drafts were protected; generic posting and "
             "generic reversal bypasses failed; explicit Management posting and exact "
             "retry succeeded; controlled reversal exactly swapped the original lines; "
-            "original plus reversal reconciled to zero; no income was recognized; and "
-            "automatic source posting remained disabled."
+            "original plus reversal reconciled to zero; posting readiness failed closed "
+            "when the period or destination-account controls changed; no income was "
+            "recognized; and automatic source posting remained disabled."
         )
         return 0
     except psycopg.Error as error:
