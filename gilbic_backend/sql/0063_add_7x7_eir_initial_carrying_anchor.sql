@@ -246,6 +246,9 @@ BEGIN
     IF p_initial_gross_carrying_amount IS NULL OR p_initial_gross_carrying_amount <= 0 THEN
         RAISE EXCEPTION 'A positive evidence-backed IFRS 9 initial gross carrying amount is required.';
     END IF;
+    IF p_initial_gross_carrying_amount IS DISTINCT FROM round(p_initial_gross_carrying_amount, 2) THEN
+        RAISE EXCEPTION '7x7 initial gross carrying amount must be stated exactly to currency-cent precision.';
+    END IF;
     IF normalized_measurement_basis IS DISTINCT FROM 'management_evidence_backed_ifrs9_initial_measurement' THEN
         RAISE EXCEPTION 'Unsupported 7x7 initial measurement basis.';
     END IF;
@@ -313,7 +316,7 @@ BEGIN
            AND existing_row.schedule_id = source_row.schedule_id
            AND existing_row.schedule_version = source_row.schedule_version
            AND existing_row.anchor_review_token = p_anchor_review_token
-           AND existing_row.authoritative_initial_gross_carrying_amount = round(p_initial_gross_carrying_amount, 2)
+           AND existing_row.authoritative_initial_gross_carrying_amount = p_initial_gross_carrying_amount
            AND existing_row.initial_measurement_basis = normalized_measurement_basis
            AND existing_row.initial_measurement_assessment = p_initial_measurement_assessment
            AND existing_row.initial_measurement_evidence_reference = normalized_evidence_reference
@@ -351,7 +354,7 @@ BEGIN
         source_row.sppi_conclusion, source_row.measurement_category,
         source_row.expected_cash_flow_policy, source_row.expected_life_policy,
         source_row.expected_life_days, source_row.base_no_prepayment_daily_eir_preview,
-        round(p_initial_gross_carrying_amount, 2), normalized_measurement_basis,
+        p_initial_gross_carrying_amount, normalized_measurement_basis,
         p_initial_measurement_assessment, normalized_evidence_reference,
         promoted_daily_eir, round(promoted_daily_eir * 100, 8),
         promoted_daily_eir - source_row.base_no_prepayment_daily_eir_preview,
@@ -368,7 +371,7 @@ BEGIN
         jsonb_build_object(
             'loan_id', p_loan_id::text,
             'policy_decision_id', source_row.decision_id::text,
-            'initial_gross_carrying_amount', round(p_initial_gross_carrying_amount, 2),
+            'initial_gross_carrying_amount', p_initial_gross_carrying_amount,
             'authoritative_daily_eir', promoted_daily_eir,
             'current_carrying_amount_ready', false,
             'journal_lines_enabled', false,
@@ -513,19 +516,19 @@ SELECT
     anchor.reviewed_at,
     anchor.recomputed_daily_eir,
     (anchor.id IS NOT NULL) AS active_anchor_exists,
-    (
+    coalesce((
         anchor.id IS NOT NULL
         AND anchor.anchor_review_token = accounting.seven_by_seven_eir_anchor_review_token(readiness.loan_id)
         AND anchor.policy_decision_id = readiness.decision_id
         AND anchor.schedule_id = readiness.schedule_id
         AND anchor.schedule_version = readiness.schedule_version
-    ) AS active_anchor_is_current,
-    (
+    ), false) AS active_anchor_is_current,
+    coalesce((
         anchor.id IS NOT NULL
         AND anchor.recomputed_daily_eir IS NOT NULL
         AND anchor.authoritative_daily_eir = anchor.recomputed_daily_eir
-    ) AS anchor_eir_reconciles,
-    (
+    ), false) AS anchor_eir_reconciles,
+    coalesce((
         anchor.id IS NOT NULL
         AND anchor.anchor_review_token = accounting.seven_by_seven_eir_anchor_review_token(readiness.loan_id)
         AND anchor.policy_decision_id = readiness.decision_id
@@ -533,22 +536,22 @@ SELECT
         AND anchor.schedule_version = readiness.schedule_version
         AND anchor.recomputed_daily_eir IS NOT NULL
         AND anchor.authoritative_daily_eir = anchor.recomputed_daily_eir
-    ) AS eir_policy_ready,
-    (
+    ), false) AS eir_policy_ready,
+    coalesce((
         anchor.id IS NOT NULL
         AND anchor.anchor_review_token = accounting.seven_by_seven_eir_anchor_review_token(readiness.loan_id)
         AND anchor.recomputed_daily_eir IS NOT NULL
         AND anchor.authoritative_daily_eir = anchor.recomputed_daily_eir
-    ) AS initial_carrying_amount_ready,
+    ), false) AS initial_carrying_amount_ready,
     NULL::numeric(18,2) AS authoritative_current_gross_carrying_amount,
     false AS current_carrying_amount_ready,
     false AS carrying_amount_ready,
-    (
+    coalesce((
         anchor.id IS NOT NULL
         AND anchor.anchor_review_token = accounting.seven_by_seven_eir_anchor_review_token(readiness.loan_id)
         AND anchor.recomputed_daily_eir IS NOT NULL
         AND anchor.authoritative_daily_eir = anchor.recomputed_daily_eir
-    ) AS carrying_policy_ready,
+    ), false) AS carrying_policy_ready,
     false AS journal_lines_enabled,
     false AS automatic_source_posting,
     CASE
