@@ -171,10 +171,11 @@ def test_status_posting_ready_fails_closed_when_current_controls_change() -> Non
                 (preparation_id,),
             ).fetchone() == (True,)
 
-            connection.execute(
-                "update accounting.fiscal_periods set status = 'review' where id = %s",
-                (period_id,),
-            )
+            transitioned = connection.execute(
+                "select accounting.set_fiscal_period_status(%s, 'review', %s)",
+                (period_id, actor_id),
+            ).fetchone()[0]
+            assert transitioned == "review"
             assert connection.execute(
                 """
                 select posting_ready
