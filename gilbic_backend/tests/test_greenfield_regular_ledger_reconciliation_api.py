@@ -16,6 +16,11 @@ from gilbic_backend.greenfield_regular_ledger_reconciliation_repository import (
     GreenfieldRegularLedgerReconciliationError,
     GreenfieldRegularLedgerReconciliationPreview,
 )
+from gilbic_backend.greenfield_regular_renewal_boundary_eir import (
+    GreenfieldRegularRenewalBoundaryEirLine,
+    GreenfieldRegularRenewalBoundaryEirPeriodProposal,
+    GreenfieldRegularRenewalBoundaryEirPreview,
+)
 from gilbic_backend.greenfield_regular_renewal_rollforward_api import (
     greenfield_regular_ledger_reconciliation_repository_dependency,
 )
@@ -31,6 +36,7 @@ EXECUTION_ID = UUID("66666666-6666-4666-8666-666666666666")
 RENEWAL_DISBURSEMENT_ID = UUID("77777777-7777-4777-8777-777777777777")
 ANCHOR_POSTING_ID = UUID("88888888-8888-4888-8888-888888888888")
 ANCHOR_JOURNAL_ID = UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
+FISCAL_PERIOD_ID = UUID("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")
 
 
 class FakeAuthClient:
@@ -104,6 +110,51 @@ class FakeRepository:
             journal_lines_enabled=False,
             automatic_source_posting=False,
         )
+        boundary_preview = GreenfieldRegularRenewalBoundaryEirPreview(
+            renewal_execution_event_id=EXECUTION_ID,
+            loan_id=OLD_LOAN_ID,
+            target_date=date(2026, 8, 31),
+            amount=Decimal("161.22"),
+            disposition="renewal_boundary_eir_journal_preview_ready",
+            blocker_code=None,
+            message="Exact read-only renewal-boundary EIR coordinates are available.",
+            period_proposals=(
+                GreenfieldRegularRenewalBoundaryEirPeriodProposal(
+                    fiscal_period_id=FISCAL_PERIOD_ID,
+                    fiscal_period_label="August 2026",
+                    accrual_start_date_inclusive=date(2026, 8, 21),
+                    accrual_end_date_inclusive=date(2026, 8, 31),
+                    posting_date=date(2026, 8, 31),
+                    day_count=11,
+                    amount=Decimal("161.22"),
+                    source_type="regular_renewal_eir_accrual",
+                    source_reference=(
+                        f"{EXECUTION_ID}:fiscal_period:{FISCAL_PERIOD_ID}"
+                    ),
+                    source_event_key=(
+                        "renewal_eir_accrual:"
+                        f"{EXECUTION_ID}:fiscal_period:{FISCAL_PERIOD_ID}"
+                    ),
+                    proposed_lines=(
+                        GreenfieldRegularRenewalBoundaryEirLine(
+                            account_system_key="accrued_interest_receivable",
+                            side="debit",
+                            amount=Decimal("161.22"),
+                        ),
+                        GreenfieldRegularRenewalBoundaryEirLine(
+                            account_system_key="interest_income_regular",
+                            side="credit",
+                            amount=Decimal("161.22"),
+                        ),
+                    ),
+                ),
+            ),
+            total_debit=Decimal("161.22"),
+            total_credit=Decimal("161.22"),
+            balanced=True,
+            posting_eligible=False,
+            automatic_source_posting=False,
+        )
         return (
             GreenfieldRegularLedgerReconciliationPreview(
                 renewal_execution_event_id=EXECUTION_ID,
@@ -141,6 +192,7 @@ class FakeRepository:
                 automatic_source_posting=False,
                 rollforward=None,
                 reconciliation=reconciliation,
+                renewal_boundary_eir_preview=boundary_preview,
             ),
         )
 
@@ -189,6 +241,34 @@ def test_management_can_read_greenfield_regular_ledger_reconciliation() -> None:
     assert result["blocker_code"] == "renewal_boundary_eir_accrual_not_posted"
     assert result["tail_effective_interest_accrued"] == "161.22"
     assert result["accounting_carrying_amount_ready"] is False
+
+    boundary = target["renewal_boundary_eir_preview"]
+    assert boundary["disposition"] == "renewal_boundary_eir_journal_preview_ready"
+    assert boundary["amount"] == "161.22"
+    assert boundary["total_debit"] == "161.22"
+    assert boundary["total_credit"] == "161.22"
+    assert boundary["balanced"] is True
+    assert boundary["posting_eligible"] is False
+    assert boundary["automatic_source_posting"] is False
+    proposal = boundary["period_proposals"][0]
+    assert proposal["fiscal_period_id"] == str(FISCAL_PERIOD_ID)
+    assert proposal["posting_date"] == "2026-08-31"
+    assert proposal["source_type"] == "regular_renewal_eir_accrual"
+    assert proposal["source_event_key"] == (
+        f"renewal_eir_accrual:{EXECUTION_ID}:fiscal_period:{FISCAL_PERIOD_ID}"
+    )
+    assert proposal["proposed_lines"] == [
+        {
+            "account_system_key": "accrued_interest_receivable",
+            "side": "debit",
+            "amount": "161.22",
+        },
+        {
+            "account_system_key": "interest_income_regular",
+            "side": "credit",
+            "amount": "161.22",
+        },
+    ]
     assert repository.request == {
         "reconciliation_readiness_status": "greenfield_regular_ledger_reconciliation_candidate",
         "renewal_execution_event_id": EXECUTION_ID,
