@@ -1,0 +1,191 @@
+name: Renewal boundary EIR disposable PostgreSQL validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'gilbic_backend/sql/0054_add_protected_renewal_boundary_eir_journal_posting.sql'
+      - 'gilbic_backend/src/gilbic_backend/renewal_boundary_eir_journal_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/renewal_boundary_eir_journal_api.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_final_reconciliation.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_final_reconciliation_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_final_reconciliation_api.py'
+      - 'gilbic_backend/tests/test_renewal_boundary_eir_posting_postgres.py'
+      - 'tools/run_renewal_boundary_eir_disposable_postgres_validation.py'
+      - '.github/workflows/renewal-boundary-eir-disposable-postgres.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'gilbic_backend/sql/0054_add_protected_renewal_boundary_eir_journal_posting.sql'
+      - 'gilbic_backend/src/gilbic_backend/renewal_boundary_eir_journal_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/renewal_boundary_eir_journal_api.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_final_reconciliation.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_final_reconciliation_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/greenfield_regular_renewal_final_reconciliation_api.py'
+      - 'gilbic_backend/tests/test_renewal_boundary_eir_posting_postgres.py'
+      - 'tools/run_renewal_boundary_eir_disposable_postgres_validation.py'
+      - '.github/workflows/renewal-boundary-eir-disposable-postgres.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renewal-boundary-eir-disposable-postgres
+  cancel-in-progress: false
+
+jobs:
+  validate-protected-boundary-posting:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 60
+    env:
+      RBEIR_PG_PORT: '55434'
+      RBEIR_PG_USER: renewalboundary
+      RBEIR_DATABASE_URL: postgresql://renewalboundary@127.0.0.1:55434/postgres?sslmode=disable
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Define isolated runner paths
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $clusterBase = [System.IO.Path]::GetFullPath(
+            (Join-Path $env:RUNNER_TEMP '..\spina-renewal-boundary-eir-clusters')
+          ).TrimEnd('\')
+          $runRoot = Join-Path $clusterBase (
+            'run-{0}-attempt-{1}' -f $env:GITHUB_RUN_ID, $env:GITHUB_RUN_ATTEMPT
+          )
+          @(
+            "RBEIR_CLUSTER_BASE=$clusterBase",
+            "RBEIR_RUN_ROOT=$runRoot",
+            "RBEIR_PG_DATA=$(Join-Path $runRoot 'pgdata')",
+            "RBEIR_PG_LOG=$(Join-Path $runRoot 'postgres.log')",
+            "RBEIR_OWNERSHIP_MARKER=$(Join-Path $runRoot 'cluster-owned.marker')",
+            "RBEIR_READY_MARKER=$(Join-Path $runRoot 'cluster-ready.marker')",
+            "RBEIR_VENV=$(Join-Path $runRoot 'venv')"
+          ) | ForEach-Object {
+            $_ | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+
+      - name: Discover local PostgreSQL binaries
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pgBin = $null
+          $initdb = Get-Command initdb.exe -ErrorAction SilentlyContinue
+          if ($initdb) { $pgBin = Split-Path -Parent $initdb.Source }
+          if (-not $pgBin) {
+            foreach ($root in @('C:\Program Files\PostgreSQL', 'C:\Program Files (x86)\PostgreSQL')) {
+              if (-not (Test-Path $root)) { continue }
+              $candidate = Get-ChildItem $root -Directory |
+                ForEach-Object { Join-Path $_.FullName 'bin' } |
+                Where-Object {
+                  (Test-Path (Join-Path $_ 'initdb.exe')) -and
+                  (Test-Path (Join-Path $_ 'pg_ctl.exe')) -and
+                  (Test-Path (Join-Path $_ 'pg_isready.exe'))
+                } | Select-Object -First 1
+              if ($candidate) { $pgBin = $candidate; break }
+            }
+          }
+          if (-not $pgBin) {
+            throw 'No local PostgreSQL binaries were found. Refusing to use any remote database.'
+          }
+          "RBEIR_PG_BIN=$pgBin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Reap orphaned owned boundary-EIR clusters
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pgCtl = Join-Path $env:RBEIR_PG_BIN 'pg_ctl.exe'
+          New-Item -ItemType Directory -Force -Path $env:RBEIR_CLUSTER_BASE | Out-Null
+          Get-ChildItem $env:RBEIR_CLUSTER_BASE -Directory -Filter 'run-*-attempt-*' -ErrorAction SilentlyContinue |
+            ForEach-Object {
+              if ($_.FullName -eq $env:RBEIR_RUN_ROOT) { return }
+              $marker = Join-Path $_.FullName 'cluster-owned.marker'
+              $pgData = Join-Path $_.FullName 'pgdata'
+              if (-not (Test-Path $marker) -or -not (Test-Path $pgData)) { return }
+              & $pgCtl -D $pgData status 2>$null
+              if ($LASTEXITCODE -eq 0) {
+                & $pgCtl -D $pgData -m immediate -w stop
+                if ($LASTEXITCODE -ne 0) { throw "Failed to stop owned orphan $($_.FullName)." }
+              }
+              elseif ($LASTEXITCODE -ne 3) {
+                throw "Could not verify owned orphan state at $($_.FullName)."
+              }
+              Remove-Item -Recurse -Force $_.FullName
+            }
+
+      - name: Initialize isolated temporary PostgreSQL cluster
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (Test-Path $env:RBEIR_RUN_ROOT) { Remove-Item -Recurse -Force $env:RBEIR_RUN_ROOT }
+          New-Item -ItemType Directory -Force -Path $env:RBEIR_RUN_ROOT | Out-Null
+          $probe = New-Object System.Net.Sockets.TcpClient
+          try {
+            $probe.Connect('127.0.0.1', [int]$env:RBEIR_PG_PORT)
+            throw "Reserved test port $env:RBEIR_PG_PORT is already in use."
+          }
+          catch [System.Net.Sockets.SocketException] { }
+          finally { $probe.Dispose() }
+
+          $initdb = Join-Path $env:RBEIR_PG_BIN 'initdb.exe'
+          $pgCtl = Join-Path $env:RBEIR_PG_BIN 'pg_ctl.exe'
+          $pgReady = Join-Path $env:RBEIR_PG_BIN 'pg_isready.exe'
+          & $initdb -D $env:RBEIR_PG_DATA -U $env:RBEIR_PG_USER --auth=trust --encoding=UTF8 --no-locale
+          if ($LASTEXITCODE -ne 0) { throw 'initdb failed.' }
+          "run_id=$env:GITHUB_RUN_ID`npgdata=$env:RBEIR_PG_DATA" |
+            Set-Content -Path $env:RBEIR_OWNERSHIP_MARKER -Encoding ascii
+          & $pgCtl -D $env:RBEIR_PG_DATA -l $env:RBEIR_PG_LOG -o "-p $env:RBEIR_PG_PORT -h 127.0.0.1" -w start
+          if ($LASTEXITCODE -ne 0) { throw 'Temporary PostgreSQL cluster failed to start.' }
+          & $pgReady -h 127.0.0.1 -p $env:RBEIR_PG_PORT -U $env:RBEIR_PG_USER -d postgres
+          if ($LASTEXITCODE -ne 0) { throw 'Temporary PostgreSQL cluster is not ready.' }
+          'ready=true' | Set-Content -Path $env:RBEIR_READY_MARKER -Encoding ascii
+
+      - name: Create isolated verifier environment
+        shell: cmd
+        run: |
+          if not exist "%RBEIR_READY_MARKER%" exit /b 1
+          python -m venv "%RBEIR_VENV%" || exit /b 1
+          "%RBEIR_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%RBEIR_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9" || exit /b 1
+
+      - name: Compile protected verifier
+        shell: cmd
+        run: |
+          "%RBEIR_VENV%\Scripts\python.exe" -m py_compile tools\run_renewal_boundary_eir_disposable_postgres_validation.py || exit /b 1
+          "%RBEIR_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_renewal_boundary_eir_posting_postgres.py || exit /b 1
+
+      - name: Execute protected renewal-boundary EIR posting in disposable PostgreSQL
+        shell: cmd
+        run: |
+          "%RBEIR_VENV%\Scripts\python.exe" tools\run_renewal_boundary_eir_disposable_postgres_validation.py --database-url-env RBEIR_DATABASE_URL || exit /b 1
+
+      - name: Stop and delete temporary PostgreSQL cluster
+        if: always()
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Continue'
+          if ($env:RBEIR_PG_BIN -and (Test-Path $env:RBEIR_PG_DATA)) {
+            $pgCtl = Join-Path $env:RBEIR_PG_BIN 'pg_ctl.exe'
+            & $pgCtl -D $env:RBEIR_PG_DATA status 2>$null
+            if ($LASTEXITCODE -eq 0) {
+              & $pgCtl -D $env:RBEIR_PG_DATA -m fast -w stop
+              if ($LASTEXITCODE -ne 0) { & $pgCtl -D $env:RBEIR_PG_DATA -m immediate -w stop }
+            }
+          }
+          if (Test-Path $env:RBEIR_RUN_ROOT) { Remove-Item -Recurse -Force $env:RBEIR_RUN_ROOT }
+          if (Test-Path $env:RBEIR_RUN_ROOT) { throw 'Temporary renewal-boundary EIR run directory was not removed.' }
+
+      - name: Require a clean committed tree
+        if: always()
+        shell: cmd
+        run: |
+          git diff --check || exit /b 1
+          git diff --exit-code || exit /b 1
+          git diff --cached --exit-code || exit /b 1
