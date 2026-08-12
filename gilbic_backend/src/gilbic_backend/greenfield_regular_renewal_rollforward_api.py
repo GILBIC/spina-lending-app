@@ -217,6 +217,56 @@ def _ledger_reconciliation_payload(
     }
 
 
+def _renewal_boundary_eir_payload(
+    record: GreenfieldRegularLedgerReconciliationPreview,
+):
+    preview = record.renewal_boundary_eir_preview
+    if preview is None:
+        return None
+    return {
+        "renewal_execution_event_id": str(preview.renewal_execution_event_id),
+        "loan_id": str(preview.loan_id),
+        "target_date": preview.target_date.isoformat(),
+        "amount": _decimal(preview.amount),
+        "disposition": preview.disposition,
+        "blocker_code": preview.blocker_code,
+        "message": preview.message,
+        "policy_version": preview.policy_version,
+        "total_debit": _decimal(preview.total_debit),
+        "total_credit": _decimal(preview.total_credit),
+        "balanced": preview.balanced,
+        "posting_eligible": preview.posting_eligible,
+        "automatic_source_posting": preview.automatic_source_posting,
+        "period_proposals": [
+            {
+                "fiscal_period_id": str(proposal.fiscal_period_id),
+                "fiscal_period_label": proposal.fiscal_period_label,
+                "accrual_start_date_inclusive": (
+                    proposal.accrual_start_date_inclusive.isoformat()
+                ),
+                "accrual_end_date_inclusive": (
+                    proposal.accrual_end_date_inclusive.isoformat()
+                ),
+                "posting_date": proposal.posting_date.isoformat(),
+                "day_count": proposal.day_count,
+                "amount": _decimal(proposal.amount),
+                "source_type": proposal.source_type,
+                "source_reference": proposal.source_reference,
+                "source_event_key": proposal.source_event_key,
+                "proposed_lines": [
+                    {
+                        "account_system_key": line.account_system_key,
+                        "side": line.side,
+                        "amount": _decimal(line.amount),
+                    }
+                    for line in proposal.proposed_lines
+                ],
+            }
+            for proposal in preview.period_proposals
+        ],
+    }
+
+
 def _ledger_reconciliation_target_payload(
     record: GreenfieldRegularLedgerReconciliationPreview,
 ) -> dict[str, object]:
@@ -273,6 +323,7 @@ def _ledger_reconciliation_target_payload(
         "journal_lines_enabled": record.journal_lines_enabled,
         "automatic_source_posting": record.automatic_source_posting,
         "reconciliation": _ledger_reconciliation_payload(record),
+        "renewal_boundary_eir_preview": _renewal_boundary_eir_payload(record),
     }
 
 
@@ -378,9 +429,9 @@ def create_greenfield_regular_renewal_rollforward_router() -> APIRouter:
                 "automatic_source_posting": False,
                 "notice": (
                     "Protected Regular journal history is reconciled to the "
-                    "greenfield EIR measurement. A positive no-cash EIR tail at "
-                    "the renewal boundary remains blocked until protected renewal "
-                    "accounting handles that boundary."
+                    "greenfield EIR measurement. When the only remaining blocker "
+                    "is renewal-boundary no-cash EIR, exact read-only boundary "
+                    "journal coordinates are exposed without enabling posting."
                 ),
                 "renewal_targets": [
                     _ledger_reconciliation_target_payload(record)
