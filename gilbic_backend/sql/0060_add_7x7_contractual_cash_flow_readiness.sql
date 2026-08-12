@@ -162,9 +162,6 @@ WITH source AS (
             AS contractual_schedule_total,
         count(*) FILTER (WHERE line.line_status <> 'line_ready')::bigint
             AS line_mismatch_count,
-        count(*) FILTER (
-            WHERE line.installment_number < line.expected_due_date - line.expected_due_date + 1
-        )::bigint AS impossible_guard_count,
         coalesce(sum(line.expected_interest_component), 0)::numeric(18,2)
             AS expected_interest_total_from_lines,
         coalesce(sum(line.expected_principal_component), 0)::numeric(18,2)
