@@ -125,8 +125,6 @@ def test_explicit_management_7x7_posting_is_exact_audited_idempotent_and_void_bl
             )
             journal_entry_id = before[4]
 
-            # Generic/manual posting must still be rejected by the 0065 protected
-            # journal guard; only the 0066 posting function may open the GUC.
             with pytest.raises(psycopg.Error, match="protected 7x7 posting workflow"):
                 with connection.transaction():
                     connection.execute(
@@ -189,7 +187,6 @@ def test_explicit_management_7x7_posting_is_exact_audited_idempotent_and_void_bl
                 with connection.transaction():
                     _post(connection, actor_id, before, token="e" * 64)
 
-            # A manual reversal journal cannot bypass the future controlled path.
             with pytest.raises(psycopg.Error, match="cannot be reversed through the manual General Journal"):
                 with connection.transaction():
                     connection.execute(
@@ -211,9 +208,6 @@ def test_explicit_management_7x7_posting_is_exact_audited_idempotent_and_void_bl
                         ),
                     )
 
-            # Supply the operational void evidence first so the 0044 evidence
-            # guard passes; the new posted-7x7 guard must then stop the void until
-            # the controlled reversal slice exists.
             voided_at = datetime.now(timezone.utc)
             connection.execute(
                 """
@@ -248,17 +242,17 @@ def test_explicit_management_7x7_posting_is_exact_audited_idempotent_and_void_bl
             connection.rollback()
 
 
-def test_7x7_posting_revalidates_open_period_and_rolls_back_if_audit_insert_fails() -> None:
+def test_7x7_posting_revalidates_open_period_and_audit_failure_rolls_back_atomically() -> None:
     assert DATABASE_URL is not None
     suffix = uuid4().hex[:10]
 
     with psycopg.connect(DATABASE_URL) as connection:
         try:
             connection.execute(_transaction_body(SQL_0066))
-
             actor_id, _, period_id, transaction_id, status = _prepared_case(
-                connection, suffix + "p"
+                connection, suffix
             )
+
             connection.execute(
                 "select accounting.set_fiscal_period_status(%s, 'review', %s)",
                 (period_id, actor_id),
@@ -271,9 +265,15 @@ def test_7x7_posting_revalidates_open_period_and_rolls_back_if_audit_insert_fail
                 (status[4],),
             ).fetchone()[0] == "draft"
 
-            actor_id, _, _, transaction_id, status = _prepared_case(
-                connection, suffix + "a"
+            # Reopen the same controlled period instead of creating an overlapping
+            # fixture, then force only the immutable posting-audit insert to fail.
+            connection.execute(
+                "select accounting.set_fiscal_period_status(%s, 'open', %s)",
+                (period_id, actor_id),
             )
+            status = _posting_status(connection, transaction_id)
+            assert status is not None and status[25] is True
+
             connection.execute(
                 """
                 create or replace function accounting.test_fail_7x7_posting_audit_insert()
@@ -296,8 +296,6 @@ def test_7x7_posting_revalidates_open_period_and_rolls_back_if_audit_insert_fail
                 with connection.transaction():
                     _post(connection, actor_id, status)
 
-            # The journal transition and immutable posting audit are one atomic
-            # transaction: forcing the audit insert to fail leaves the draft intact.
             journal_state = connection.execute(
                 "select status, entry_number, posted_by_user_id, posted_at from accounting.journal_entries where id = %s",
                 (status[4],),
