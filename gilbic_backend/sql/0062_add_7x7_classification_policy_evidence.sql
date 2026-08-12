@@ -2,12 +2,10 @@ BEGIN;
 
 -- Master Issue #296: continue the 7x7 / EMER EIR/carrying-policy proof
 -- without promoting the operational PHP 7-per-PHP 1,000 rule into accounting.
---
--- This slice records explicit, evidence-backed Management conclusions for the
--- IFRS 9 business-model / contractual-cash-flow classification gate and the
--- expected-life / prepayment cash-flow policy used for later EIR measurement.
--- It deliberately does NOT infer SPPI from a mathematical rate match, invent a
--- prepayment expectation, create an authoritative EIR/carrying amount, or post.
+-- This slice records explicit evidence-backed Management conclusions for the
+-- IFRS 9 business-model / SPPI classification gate and expected-life /
+-- prepayment cash-flow policy. It creates no authoritative EIR, carrying
+-- amount, journal line, or automatic posting.
 
 INSERT INTO core.permissions (code, description)
 VALUES (
@@ -24,9 +22,7 @@ JOIN core.permissions permission
 WHERE role.code = 'management'
 ON CONFLICT DO NOTHING;
 
-CREATE OR REPLACE FUNCTION accounting.seven_by_seven_policy_review_token(
-    p_loan_id UUID
-)
+CREATE OR REPLACE FUNCTION accounting.seven_by_seven_policy_review_token(p_loan_id UUID)
 RETURNS TEXT
 LANGUAGE sql
 STABLE
@@ -69,9 +65,6 @@ AS $$
     FROM accounting.seven_by_seven_eir_carrying_policy_readiness readiness
     WHERE readiness.loan_id = p_loan_id;
 $$;
-
-COMMENT ON FUNCTION accounting.seven_by_seven_policy_review_token(UUID) IS
-    'Deterministic stale-safe token for the exact current verified 7x7 contract/EIR-readiness snapshot. NULL until the protected contract gate and mathematical base EIR preview exist.';
 
 CREATE TABLE IF NOT EXISTS accounting.seven_by_seven_policy_decisions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -172,7 +165,10 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     IF TG_OP = 'INSERT'
-       AND coalesce(current_setting('accounting.7x7_policy_decision_insert_allowed', true), '') = 'on' THEN
+       AND coalesce(
+            current_setting('accounting.seven_by_seven_policy_decision_insert_allowed', true),
+            ''
+       ) = 'on' THEN
         RETURN NEW;
     END IF;
     RAISE EXCEPTION '7x7 classification/EIR policy decision evidence is immutable and must use the protected Management-reviewed decision function.';
@@ -191,7 +187,10 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     IF TG_OP = 'INSERT'
-       AND coalesce(current_setting('accounting.7x7_policy_decision_void_insert_allowed', true), '') = 'on' THEN
+       AND coalesce(
+            current_setting('accounting.seven_by_seven_policy_decision_void_insert_allowed', true),
+            ''
+       ) = 'on' THEN
         RETURN NEW;
     END IF;
     RAISE EXCEPTION '7x7 classification/EIR policy void evidence is immutable and must use the protected void function.';
@@ -276,8 +275,10 @@ BEGIN
     IF p_expected_life_policy NOT IN ('contractual_term', 'supported_shorter_expected_life') THEN
         RAISE EXCEPTION 'Unsupported 7x7 expected-life policy.';
     END IF;
-    IF normalized_policy_reference = '' THEN
-        RAISE EXCEPTION 'Accounting policy reference is required.';
+    IF normalized_policy_reference = ''
+       OR length(normalized_rationale) < 20
+       OR normalized_support_reference = '' THEN
+        RAISE EXCEPTION 'Substantive accounting policy reference, rationale and supporting evidence are required.';
     END IF;
     IF p_classification_assessment IS NULL
        OR jsonb_typeof(p_classification_assessment) <> 'object'
@@ -288,12 +289,6 @@ BEGIN
        OR jsonb_typeof(p_prepayment_expected_cash_flow_assessment) <> 'object'
        OR p_prepayment_expected_cash_flow_assessment = '{}'::jsonb THEN
         RAISE EXCEPTION 'A non-empty expected-life/prepayment cash-flow assessment object is required.';
-    END IF;
-    IF length(normalized_rationale) < 20 THEN
-        RAISE EXCEPTION 'Enter a substantive rationale for the 7x7 classification/EIR policy decision.';
-    END IF;
-    IF normalized_support_reference = '' THEN
-        RAISE EXCEPTION 'Supporting accounting evidence reference is required.';
     END IF;
 
     IF p_business_model_conclusion = 'other' OR p_sppi_conclusion = 'fails' THEN
@@ -371,7 +366,7 @@ BEGIN
         RAISE EXCEPTION 'Different active 7x7 classification/EIR policy evidence already exists; void it explicitly before recording a correction.';
     END IF;
 
-    PERFORM set_config('accounting.7x7_policy_decision_insert_allowed', 'on', true);
+    PERFORM set_config('accounting.seven_by_seven_policy_decision_insert_allowed', 'on', true);
     INSERT INTO accounting.seven_by_seven_policy_decisions (
         loan_id, schedule_id, schedule_version, review_token,
         readiness_policy_version, decision_policy_version,
@@ -405,7 +400,7 @@ BEGIN
         p_prepayment_expected_cash_flow_assessment, normalized_rationale,
         normalized_support_reference, p_actor_user_id
     ) RETURNING id INTO created_id;
-    PERFORM set_config('accounting.7x7_policy_decision_insert_allowed', 'off', true);
+    PERFORM set_config('accounting.seven_by_seven_policy_decision_insert_allowed', 'off', true);
 
     INSERT INTO core.audit_logs (actor_user_id, action, target_type, target_id, details)
     VALUES (
@@ -415,14 +410,11 @@ BEGIN
         created_id,
         jsonb_build_object(
             'loan_id', p_loan_id::text,
-            'review_token', p_review_token,
             'business_model_conclusion', p_business_model_conclusion,
             'sppi_conclusion', p_sppi_conclusion,
             'measurement_category', p_measurement_category,
             'expected_cash_flow_policy', p_expected_cash_flow_policy,
-            'expected_life_policy', p_expected_life_policy,
             'authoritative_eir_enabled', false,
-            'authoritative_carrying_amount_enabled', false,
             'journal_lines_enabled', false,
             'automatic_source_posting', false
         )
@@ -478,13 +470,13 @@ BEGIN
         RAISE EXCEPTION '7x7 policy evidence already has protected accounting journal history; use the future controlled accounting correction/reversal path.';
     END IF;
 
-    PERFORM set_config('accounting.7x7_policy_decision_void_insert_allowed', 'on', true);
+    PERFORM set_config('accounting.seven_by_seven_policy_decision_void_insert_allowed', 'on', true);
     INSERT INTO accounting.seven_by_seven_policy_decision_voids (
         decision_id, loan_id, void_reason, voided_by_user_id
     ) VALUES (
         p_decision_id, decision_row.loan_id, normalized_reason, p_actor_user_id
     ) RETURNING id INTO created_id;
-    PERFORM set_config('accounting.7x7_policy_decision_void_insert_allowed', 'off', true);
+    PERFORM set_config('accounting.seven_by_seven_policy_decision_void_insert_allowed', 'off', true);
 
     INSERT INTO core.audit_logs (actor_user_id, action, target_type, target_id, details)
     VALUES (
@@ -521,7 +513,29 @@ LEFT JOIN accounting.seven_by_seven_policy_decision_voids voided
 
 CREATE OR REPLACE VIEW accounting.seven_by_seven_classification_policy_readiness AS
 SELECT
-    readiness.*,
+    readiness.loan_id,
+    readiness.loan_number,
+    readiness.loan_status,
+    readiness.loan_type_code,
+    readiness.loan_type_name,
+    readiness.principal,
+    readiness.date_released,
+    readiness.due_date,
+    readiness.term_days,
+    readiness.schedule_id,
+    readiness.schedule_version,
+    readiness.contract_reference,
+    readiness.evidence_reference,
+    readiness.operational_daily_contractual_interest,
+    readiness.operational_daily_rate_on_original_principal,
+    readiness.base_no_prepayment_daily_eir_preview,
+    readiness.base_no_prepayment_daily_eir_percent,
+    readiness.operational_rate_matches_base_math_preview,
+    readiness.principal_prepayment_allowed,
+    readiness.principal_prepayment_changes_daily_interest,
+    readiness.validated_base_schedule_basis,
+    readiness.policy_readiness_status AS prior_policy_readiness_status,
+    readiness.policy_note AS prior_policy_note,
     accounting.seven_by_seven_policy_review_token(readiness.loan_id) AS current_policy_review_token,
     decision.id AS decision_id,
     decision.review_token AS decision_review_token,
@@ -602,9 +616,6 @@ LEFT JOIN LATERAL (
     ORDER BY status.reviewed_at DESC
     LIMIT 1
 ) decision ON true;
-
-COMMENT ON VIEW accounting.seven_by_seven_classification_policy_readiness IS
-    'Protected 7x7 classification/EIR policy evidence boundary. Explicit Management business-model, SPPI, measurement-category, expected-life and prepayment/EIR policy evidence may be recorded, but authoritative EIR/carrying measurement and journal lines remain disabled until a later protected promotion/reconciliation stage.';
 
 CREATE OR REPLACE VIEW accounting.seven_by_seven_classification_policy_summary AS
 SELECT
