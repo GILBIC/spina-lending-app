@@ -3,20 +3,23 @@ BEGIN;
 -- Master Issue #296: first protected slice of the remaining 7x7 accounting
 -- lifecycle. This migration is read-only accounting evidence/preview only.
 -- It consumes the immutable 0063 original-EIR / initial-carrying anchor and
--- exact collection transaction UUIDs, proves deterministic event identity and
--- rolls accounting EIR/carrying components forward without creating journals.
+-- exact collection transaction UUIDs, proves deterministic source identity,
+-- rolls accounting EIR/carrying components forward, and separately reproduces
+-- the protected Desktop operational allocator for regression comparison.
 --
--- Important policy boundary:
--- * the operational fixed PHP 7-per-PHP 1,000 allocation is comparison evidence
---   only; source interest_paid/principal_paid never drive accounting allocation;
--- * Desktop 7x7 has one effective payment cell per loan/calendar date. Multiple
---   active positive PAYMENT/ADV rows on one date therefore fail closed rather
---   than inventing intraday chronology;
--- * PASS/unable-to-pay creates no accounting cash event;
--- * operational REVERSAL rows are not normal posting events. A later protected
---   accounting reversal must reverse exact protected journal history;
--- * authoritative current carrying, journal drafts, posting and automatic
---   source posting all remain disabled in this slice.
+-- Policy boundary:
+-- * PostgreSQL collection entry_type values are lowercase payment/advance/pass.
+-- * payment/advance source amounts are accounting cash evidence; operational
+--   allocation is never substituted for accounting EIR allocation.
+-- * pass creates no accounting cash event.
+-- * voided payment/advance rows are excluded from the normal forward preview;
+--   a later protected accounting reversal must reverse exact protected journal
+--   history rather than inventing a source reversal transaction.
+-- * Desktop has one effective payment per loan/calendar date. Multiple active
+--   positive payment/advance rows on one date fail closed; no accepted_at/UUID
+--   ordering is invented as an intraday accounting convention.
+-- * authoritative current carrying, drafts, journals, posting and automatic
+--   source posting remain disabled in this slice.
 
 CREATE OR REPLACE FUNCTION accounting.seven_by_seven_collection_source_event_key(
     p_transaction_id UUID
@@ -32,6 +35,7 @@ $$;
 CREATE OR REPLACE VIEW accounting.seven_by_seven_collection_source_inventory AS
 SELECT
     transaction.id AS transaction_id,
+    transaction.collector_user_id,
     transaction.loan_id,
     loan.loan_number,
     loan.status AS loan_status,
@@ -40,50 +44,50 @@ SELECT
     loan.due_date,
     loan_type.code AS loan_type_code,
     loan_type.name AS loan_type_name,
+    loan_type.daily_interest_per_1000,
     transaction.collection_date,
     transaction.collection_day,
     transaction.entry_type,
     transaction.amount,
-    transaction.interest_paid AS operational_interest_paid,
-    transaction.principal_paid AS operational_principal_paid,
-    transaction.source,
-    transaction.source_id,
-    transaction.recorded_at,
     transaction.accepted_at,
     transaction.device_sequence,
     transaction.registered_device_id,
+    transaction.route_revision,
+    transaction.remittance_id,
+    transaction.is_locked,
     transaction.is_voided,
     transaction.voided_at,
-    transaction.reverses_transaction_id,
-    transaction.reversal_transaction_id,
+    transaction.voided_by_user_id,
+    transaction.void_reason,
     (
         NOT transaction.is_voided
-        AND transaction.entry_type IN ('PAYMENT', 'ADV')
+        AND transaction.entry_type IN ('payment', 'advance')
         AND transaction.amount > 0
     ) AS is_active_positive_cash_event,
     (
         NOT transaction.is_voided
-        AND transaction.entry_type IN ('PAYMENT', 'ADV')
+        AND transaction.entry_type IN ('payment', 'advance')
         AND transaction.amount <= 0
     ) AS is_nonpositive_financial_source_event,
     (
-        transaction.entry_type = 'REVERSAL'
-        OR transaction.reverses_transaction_id IS NOT NULL
-    ) AS is_operational_reversal,
+        NOT transaction.is_voided
+        AND transaction.entry_type = 'pass'
+        AND transaction.amount > 0
+    ) AS is_unsupported_positive_pass,
     CASE
         WHEN NOT transaction.is_voided
-         AND transaction.entry_type IN ('PAYMENT', 'ADV')
+         AND transaction.entry_type IN ('payment', 'advance')
          AND transaction.amount > 0
             THEN accounting.seven_by_seven_collection_source_event_key(transaction.id)
         ELSE NULL
     END AS source_event_key,
     count(*) FILTER (
         WHERE NOT transaction.is_voided
-          AND transaction.entry_type IN ('PAYMENT', 'ADV')
+          AND transaction.entry_type IN ('payment', 'advance')
           AND transaction.amount > 0
     ) OVER (
         PARTITION BY transaction.loan_id, transaction.collection_date
-    ) AS active_positive_cash_events_on_date
+    )::bigint AS active_positive_cash_events_on_date
 FROM lending.collection_transactions transaction
 JOIN lending.loans loan ON loan.id = transaction.loan_id
 JOIN lending.loan_types loan_type ON loan_type.id = loan.loan_type_id
@@ -112,16 +116,11 @@ WITH inventory_summary AS (
             WHERE inventory.is_nonpositive_financial_source_event
         )::bigint AS nonpositive_financial_source_event_count,
         count(inventory.transaction_id) FILTER (
-            WHERE NOT inventory.is_voided
-              AND inventory.amount > 0
-              AND inventory.entry_type NOT IN ('PAYMENT', 'ADV', 'REVERSAL')
-        )::bigint AS unsupported_positive_source_event_count,
-        count(inventory.transaction_id) FILTER (
-            WHERE inventory.is_operational_reversal
-        )::bigint AS operational_reversal_row_count,
+            WHERE inventory.is_unsupported_positive_pass
+        )::bigint AS unsupported_positive_pass_count,
         count(inventory.transaction_id) FILTER (
             WHERE inventory.is_voided
-              AND inventory.entry_type IN ('PAYMENT', 'ADV')
+              AND inventory.entry_type IN ('payment', 'advance')
         )::bigint AS voided_original_cash_event_count
     FROM accounting.seven_by_seven_eir_initial_carrying_readiness anchor
     LEFT JOIN accounting.seven_by_seven_collection_source_inventory inventory
@@ -140,10 +139,8 @@ SELECT
         AS post_maturity_cash_event_count,
     coalesce(summary.nonpositive_financial_source_event_count, 0)::bigint
         AS nonpositive_financial_source_event_count,
-    coalesce(summary.unsupported_positive_source_event_count, 0)::bigint
-        AS unsupported_positive_source_event_count,
-    coalesce(summary.operational_reversal_row_count, 0)::bigint
-        AS operational_reversal_row_count,
+    coalesce(summary.unsupported_positive_pass_count, 0)::bigint
+        AS unsupported_positive_pass_count,
     coalesce(summary.voided_original_cash_event_count, 0)::bigint
         AS voided_original_cash_event_count,
     (
@@ -158,9 +155,10 @@ SELECT
         AND coalesce(summary.same_day_or_pre_anchor_cash_event_count, 0) = 0
         AND coalesce(summary.post_maturity_cash_event_count, 0) = 0
         AND coalesce(summary.nonpositive_financial_source_event_count, 0) = 0
-        AND coalesce(summary.unsupported_positive_source_event_count, 0) = 0
+        AND coalesce(summary.unsupported_positive_pass_count, 0) = 0
     ) AS source_event_structure_ready,
-    false AS current_carrying_amount_ready,
+    false AS authoritative_current_carrying_amount_ready,
+    false AS journal_draft_enabled,
     false AS journal_lines_enabled,
     false AS automatic_source_posting,
     CASE
@@ -175,281 +173,344 @@ SELECT
             THEN 'post_maturity_cash_event_policy_review'
         WHEN coalesce(summary.nonpositive_financial_source_event_count, 0) > 0
             THEN 'nonpositive_payment_or_advance_source_review'
-        WHEN coalesce(summary.unsupported_positive_source_event_count, 0) > 0
-            THEN 'unsupported_positive_source_event_type'
+        WHEN coalesce(summary.unsupported_positive_pass_count, 0) > 0
+            THEN 'positive_pass_source_review'
         ELSE 'source_event_structure_ready_for_eir_preview'
     END AS source_event_readiness_status
 FROM accounting.seven_by_seven_eir_initial_carrying_readiness anchor
 LEFT JOIN inventory_summary summary ON summary.loan_id = anchor.loan_id;
 
-CREATE OR REPLACE VIEW accounting.seven_by_seven_source_event_accounting_preview AS
-WITH RECURSIVE ordered_events AS (
-    SELECT
-        readiness.loan_id,
-        readiness.loan_number,
-        readiness.date_released,
-        readiness.due_date,
-        readiness.anchor_id,
-        readiness.anchor_review_token,
-        readiness.authoritative_daily_eir,
-        readiness.authoritative_initial_gross_carrying_amount,
-        inventory.transaction_id,
-        inventory.collection_date,
-        inventory.entry_type,
-        inventory.amount,
-        inventory.operational_interest_paid,
-        inventory.operational_principal_paid,
-        inventory.source,
-        inventory.source_id,
-        inventory.recorded_at,
-        inventory.accepted_at,
-        inventory.device_sequence,
-        inventory.registered_device_id,
-        inventory.source_event_key,
-        row_number() OVER (
-            PARTITION BY readiness.loan_id
-            ORDER BY inventory.collection_date, inventory.transaction_id
-        )::integer AS source_event_sequence
-    FROM accounting.seven_by_seven_source_event_accounting_readiness readiness
-    JOIN accounting.seven_by_seven_collection_source_inventory inventory
-      ON inventory.loan_id = readiness.loan_id
-     AND inventory.is_active_positive_cash_event
-    WHERE readiness.source_event_structure_ready
-),
-rollforward AS (
-    SELECT
-        event.*,
-        event.date_released AS previous_event_date,
-        (event.collection_date - event.date_released)::integer AS days_since_previous_event,
-        event.authoritative_initial_gross_carrying_amount::numeric(18,2)
-            AS opening_gross_carrying_amount,
-        0.00::numeric(18,2) AS opening_accrued_eir_interest,
-        event.authoritative_initial_gross_carrying_amount::numeric(18,2)
-            AS opening_7x7_loan_component,
-        calc.eir_interest_accrual,
-        calc.accrued_interest_available,
-        calc.accounting_eir_interest_received,
-        calc.accounting_7x7_principal_received,
-        calc.closing_accrued_eir_interest,
-        calc.closing_7x7_loan_component,
-        calc.closing_gross_carrying_amount,
-        calc.event_preview_ready,
-        calc.preview_status
-    FROM ordered_events event
-    CROSS JOIN LATERAL (
-        SELECT round(
-            event.authoritative_initial_gross_carrying_amount
-            * (
-                power(
-                    1::numeric + event.authoritative_daily_eir,
-                    (event.collection_date - event.date_released)::numeric
-                ) - 1::numeric
-            ),
-            2
-        )::numeric(18,2) AS eir_interest_accrual
-    ) interest_calc
-    CROSS JOIN LATERAL (
-        SELECT
-            interest_calc.eir_interest_accrual AS accrued_interest_available,
-            least(event.amount, interest_calc.eir_interest_accrual)::numeric(18,2)
-                AS accounting_eir_interest_received
-    ) allocation_base
-    CROSS JOIN LATERAL (
-        SELECT
-            interest_calc.eir_interest_accrual,
-            allocation_base.accrued_interest_available,
-            allocation_base.accounting_eir_interest_received,
-            (event.amount - allocation_base.accounting_eir_interest_received)::numeric(18,2)
-                AS accounting_7x7_principal_received,
-            (
-                allocation_base.accrued_interest_available
-                - allocation_base.accounting_eir_interest_received
-            )::numeric(18,2) AS closing_accrued_eir_interest,
-            (
-                event.authoritative_initial_gross_carrying_amount
-                - (event.amount - allocation_base.accounting_eir_interest_received)
-            )::numeric(18,2) AS closing_7x7_loan_component,
-            (
-                event.authoritative_initial_gross_carrying_amount
-                + interest_calc.eir_interest_accrual
-                - event.amount
-            )::numeric(18,2) AS closing_gross_carrying_amount,
-            (
-                event.amount <= event.authoritative_initial_gross_carrying_amount
-                    + interest_calc.eir_interest_accrual
-                AND (event.amount - allocation_base.accounting_eir_interest_received)
-                    <= event.authoritative_initial_gross_carrying_amount
-            ) AS event_preview_ready,
-            CASE
-                WHEN event.amount > event.authoritative_initial_gross_carrying_amount
-                    + interest_calc.eir_interest_accrual
-                    THEN 'cash_exceeds_opening_gross_plus_eir_accrual'
-                WHEN (event.amount - allocation_base.accounting_eir_interest_received)
-                    > event.authoritative_initial_gross_carrying_amount
-                    THEN 'cash_exceeds_7x7_loan_component'
-                ELSE 'event_eir_preview_ready'
-            END AS preview_status
-    ) calc
-    WHERE event.source_event_sequence = 1
-
-    UNION ALL
-
-    SELECT
-        event.*,
-        prior.collection_date AS previous_event_date,
-        (event.collection_date - prior.collection_date)::integer AS days_since_previous_event,
-        CASE WHEN prior.event_preview_ready
-            THEN prior.closing_gross_carrying_amount ELSE NULL END::numeric(18,2)
-            AS opening_gross_carrying_amount,
-        CASE WHEN prior.event_preview_ready
-            THEN prior.closing_accrued_eir_interest ELSE NULL END::numeric(18,2)
-            AS opening_accrued_eir_interest,
-        CASE WHEN prior.event_preview_ready
-            THEN prior.closing_7x7_loan_component ELSE NULL END::numeric(18,2)
-            AS opening_7x7_loan_component,
-        calc.eir_interest_accrual,
-        calc.accrued_interest_available,
-        calc.accounting_eir_interest_received,
-        calc.accounting_7x7_principal_received,
-        calc.closing_accrued_eir_interest,
-        calc.closing_7x7_loan_component,
-        calc.closing_gross_carrying_amount,
-        calc.event_preview_ready,
-        calc.preview_status
-    FROM rollforward prior
-    JOIN ordered_events event
-      ON event.loan_id = prior.loan_id
-     AND event.source_event_sequence = prior.source_event_sequence + 1
-    CROSS JOIN LATERAL (
-        SELECT CASE WHEN prior.event_preview_ready THEN round(
-            prior.closing_gross_carrying_amount
-            * (
-                power(
-                    1::numeric + event.authoritative_daily_eir,
-                    (event.collection_date - prior.collection_date)::numeric
-                ) - 1::numeric
-            ),
-            2
-        )::numeric(18,2) ELSE NULL::numeric(18,2) END AS eir_interest_accrual
-    ) interest_calc
-    CROSS JOIN LATERAL (
-        SELECT
-            CASE WHEN prior.event_preview_ready
-                THEN prior.closing_accrued_eir_interest + interest_calc.eir_interest_accrual
-                ELSE NULL::numeric(18,2)
-            END AS accrued_interest_available
-    ) available_calc
-    CROSS JOIN LATERAL (
-        SELECT CASE WHEN prior.event_preview_ready
-            THEN least(event.amount, available_calc.accrued_interest_available)
-            ELSE NULL::numeric(18,2)
-        END AS accounting_eir_interest_received
-    ) interest_received_calc
-    CROSS JOIN LATERAL (
-        SELECT
-            interest_calc.eir_interest_accrual,
-            available_calc.accrued_interest_available::numeric(18,2),
-            interest_received_calc.accounting_eir_interest_received::numeric(18,2),
-            CASE WHEN prior.event_preview_ready THEN
-                (event.amount - interest_received_calc.accounting_eir_interest_received)::numeric(18,2)
-            ELSE NULL::numeric(18,2) END AS accounting_7x7_principal_received,
-            CASE WHEN prior.event_preview_ready THEN
-                (
-                    available_calc.accrued_interest_available
-                    - interest_received_calc.accounting_eir_interest_received
-                )::numeric(18,2)
-            ELSE NULL::numeric(18,2) END AS closing_accrued_eir_interest,
-            CASE WHEN prior.event_preview_ready THEN
-                (
-                    prior.closing_7x7_loan_component
-                    - (event.amount - interest_received_calc.accounting_eir_interest_received)
-                )::numeric(18,2)
-            ELSE NULL::numeric(18,2) END AS closing_7x7_loan_component,
-            CASE WHEN prior.event_preview_ready THEN
-                (
-                    prior.closing_gross_carrying_amount
-                    + interest_calc.eir_interest_accrual
-                    - event.amount
-                )::numeric(18,2)
-            ELSE NULL::numeric(18,2) END AS closing_gross_carrying_amount,
-            (
-                prior.event_preview_ready
-                AND event.amount <= prior.closing_gross_carrying_amount
-                    + interest_calc.eir_interest_accrual
-                AND (event.amount - interest_received_calc.accounting_eir_interest_received)
-                    <= prior.closing_7x7_loan_component
-            ) AS event_preview_ready,
-            CASE
-                WHEN NOT prior.event_preview_ready
-                    THEN 'prior_source_event_preview_blocked'
-                WHEN event.amount > prior.closing_gross_carrying_amount
-                    + interest_calc.eir_interest_accrual
-                    THEN 'cash_exceeds_opening_gross_plus_eir_accrual'
-                WHEN (event.amount - interest_received_calc.accounting_eir_interest_received)
-                    > prior.closing_7x7_loan_component
-                    THEN 'cash_exceeds_7x7_loan_component'
-                ELSE 'event_eir_preview_ready'
-            END AS preview_status
-    ) calc
+CREATE OR REPLACE FUNCTION accounting.preview_seven_by_seven_source_event_accounting(
+    p_loan_id UUID
 )
+RETURNS TABLE (
+    loan_id UUID,
+    loan_number TEXT,
+    anchor_id UUID,
+    anchor_review_token TEXT,
+    authoritative_daily_eir NUMERIC(24,12),
+    authoritative_initial_gross_carrying_amount NUMERIC(18,2),
+    transaction_id UUID,
+    source_event_key TEXT,
+    source_event_sequence INTEGER,
+    collector_user_id UUID,
+    collection_date DATE,
+    collection_day INTEGER,
+    entry_type TEXT,
+    source_cash_amount NUMERIC(18,2),
+    accepted_at TIMESTAMPTZ,
+    device_sequence BIGINT,
+    registered_device_id UUID,
+    previous_event_date DATE,
+    days_since_previous_event INTEGER,
+    opening_gross_carrying_amount NUMERIC(18,2),
+    opening_accrued_eir_interest NUMERIC(18,2),
+    opening_7x7_loan_component NUMERIC(18,2),
+    eir_interest_accrual NUMERIC(18,2),
+    accrued_interest_available NUMERIC(18,2),
+    accounting_eir_interest_received NUMERIC(18,2),
+    accounting_7x7_principal_received NUMERIC(18,2),
+    closing_accrued_eir_interest NUMERIC(18,2),
+    closing_7x7_loan_component NUMERIC(18,2),
+    closing_gross_carrying_amount NUMERIC(18,2),
+    event_preview_ready BOOLEAN,
+    preview_status TEXT
+)
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+    readiness RECORD;
+    source_row RECORD;
+    previous_date_value DATE;
+    opening_gross NUMERIC(18,2);
+    opening_accrued NUMERIC(18,2);
+    opening_loan NUMERIC(18,2);
+    accrual NUMERIC(18,2);
+    available NUMERIC(18,2);
+    interest_received NUMERIC(18,2);
+    principal_received NUMERIC(18,2);
+    closing_accrued NUMERIC(18,2);
+    closing_loan NUMERIC(18,2);
+    closing_gross NUMERIC(18,2);
+    sequence_value INTEGER := 0;
+    ready_value BOOLEAN;
+    status_value TEXT;
+BEGIN
+    SELECT source_readiness.*
+    INTO readiness
+    FROM accounting.seven_by_seven_source_event_accounting_readiness source_readiness
+    WHERE source_readiness.loan_id = p_loan_id;
+
+    IF NOT FOUND OR NOT readiness.source_event_structure_ready THEN
+        RETURN;
+    END IF;
+
+    previous_date_value := readiness.date_released;
+    opening_gross := readiness.authoritative_initial_gross_carrying_amount;
+    opening_accrued := 0.00;
+    opening_loan := readiness.authoritative_initial_gross_carrying_amount;
+
+    FOR source_row IN
+        SELECT inventory.*
+        FROM accounting.seven_by_seven_collection_source_inventory inventory
+        WHERE inventory.loan_id = p_loan_id
+          AND inventory.is_active_positive_cash_event
+        -- Duplicate same-day events are rejected above, so transaction_id never
+        -- acts as a financial intraday-order convention on a ready loan.
+        ORDER BY inventory.collection_date, inventory.transaction_id
+    LOOP
+        sequence_value := sequence_value + 1;
+        accrual := round(
+            opening_gross
+            * (
+                power(
+                    1::numeric + readiness.authoritative_daily_eir,
+                    (source_row.collection_date - previous_date_value)::numeric
+                ) - 1::numeric
+            ),
+            2
+        )::numeric(18,2);
+        available := (opening_accrued + accrual)::numeric(18,2);
+        interest_received := least(source_row.amount, available)::numeric(18,2);
+        principal_received := (source_row.amount - interest_received)::numeric(18,2);
+        closing_accrued := (available - interest_received)::numeric(18,2);
+        closing_loan := (opening_loan - principal_received)::numeric(18,2);
+        closing_gross := (closing_loan + closing_accrued)::numeric(18,2);
+
+        ready_value := (
+            principal_received <= opening_loan
+            AND source_row.amount <= opening_gross + accrual
+            AND closing_loan >= 0
+            AND closing_accrued >= 0
+            AND closing_gross >= 0
+            AND closing_gross = closing_loan + closing_accrued
+        );
+        status_value := CASE
+            WHEN principal_received > opening_loan
+                THEN 'cash_exceeds_7x7_loan_component'
+            WHEN source_row.amount > opening_gross + accrual
+                THEN 'cash_exceeds_opening_gross_plus_eir_accrual'
+            WHEN closing_loan < 0 OR closing_accrued < 0 OR closing_gross < 0
+                THEN 'negative_carrying_component_blocked'
+            WHEN closing_gross <> closing_loan + closing_accrued
+                THEN 'closing_component_reconciliation_failed'
+            ELSE 'event_eir_preview_ready'
+        END;
+
+        loan_id := readiness.loan_id;
+        loan_number := readiness.loan_number;
+        anchor_id := readiness.anchor_id;
+        anchor_review_token := readiness.anchor_review_token;
+        authoritative_daily_eir := readiness.authoritative_daily_eir;
+        authoritative_initial_gross_carrying_amount :=
+            readiness.authoritative_initial_gross_carrying_amount;
+        transaction_id := source_row.transaction_id;
+        source_event_key := source_row.source_event_key;
+        source_event_sequence := sequence_value;
+        collector_user_id := source_row.collector_user_id;
+        collection_date := source_row.collection_date;
+        collection_day := source_row.collection_day;
+        entry_type := source_row.entry_type;
+        source_cash_amount := source_row.amount;
+        accepted_at := source_row.accepted_at;
+        device_sequence := source_row.device_sequence;
+        registered_device_id := source_row.registered_device_id;
+        previous_event_date := previous_date_value;
+        days_since_previous_event := source_row.collection_date - previous_date_value;
+        opening_gross_carrying_amount := opening_gross;
+        opening_accrued_eir_interest := opening_accrued;
+        opening_7x7_loan_component := opening_loan;
+        eir_interest_accrual := accrual;
+        accrued_interest_available := available;
+        accounting_eir_interest_received := interest_received;
+        accounting_7x7_principal_received := principal_received;
+        closing_accrued_eir_interest := closing_accrued;
+        closing_7x7_loan_component := closing_loan;
+        closing_gross_carrying_amount := closing_gross;
+        event_preview_ready := ready_value;
+        preview_status := status_value;
+        RETURN NEXT;
+
+        IF NOT ready_value THEN
+            RETURN;
+        END IF;
+
+        previous_date_value := source_row.collection_date;
+        opening_gross := closing_gross;
+        opening_accrued := closing_accrued;
+        opening_loan := closing_loan;
+    END LOOP;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION accounting.preview_seven_by_seven_operational_allocation(
+    p_loan_id UUID
+)
+RETURNS TABLE (
+    loan_id UUID,
+    transaction_id UUID,
+    source_event_sequence INTEGER,
+    collection_date DATE,
+    source_cash_amount NUMERIC(18,2),
+    fixed_operational_daily_interest NUMERIC(18,2),
+    operational_gap_days INTEGER,
+    opening_operational_remaining_principal NUMERIC(18,2),
+    opening_operational_interest_arrears NUMERIC(18,2),
+    operational_interest_due NUMERIC(18,2),
+    operational_interest_paid NUMERIC(18,2),
+    operational_principal_paid NUMERIC(18,2),
+    operational_unallocated_cash NUMERIC(18,2),
+    closing_operational_remaining_principal NUMERIC(18,2),
+    closing_operational_interest_arrears NUMERIC(18,2),
+    operational_event_applied BOOLEAN,
+    operational_preview_status TEXT
+)
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+    readiness RECORD;
+    source_row RECORD;
+    previous_date_value DATE;
+    fixed_interest NUMERIC(18,2);
+    remaining_principal NUMERIC(18,2);
+    interest_arrears NUMERIC(18,2) := 0.00;
+    gap_days INTEGER;
+    interest_due NUMERIC(18,2);
+    interest_paid NUMERIC(18,2);
+    principal_paid NUMERIC(18,2);
+    unallocated NUMERIC(18,2);
+    sequence_value INTEGER := 0;
+    allocator_complete BOOLEAN := false;
+BEGIN
+    SELECT source_readiness.*
+    INTO readiness
+    FROM accounting.seven_by_seven_source_event_accounting_readiness source_readiness
+    WHERE source_readiness.loan_id = p_loan_id;
+
+    IF NOT FOUND OR NOT readiness.source_event_structure_ready THEN
+        RETURN;
+    END IF;
+
+    SELECT round(
+        ceil(inventory.contractual_principal / 1000.0)
+        * inventory.daily_interest_per_1000,
+        2
+    )::numeric(18,2)
+    INTO fixed_interest
+    FROM accounting.seven_by_seven_collection_source_inventory inventory
+    WHERE inventory.loan_id = p_loan_id
+    LIMIT 1;
+
+    IF fixed_interest IS NULL THEN
+        SELECT round(
+            ceil(loan.principal / 1000.0) * loan_type.daily_interest_per_1000,
+            2
+        )::numeric(18,2)
+        INTO fixed_interest
+        FROM lending.loans loan
+        JOIN lending.loan_types loan_type ON loan_type.id = loan.loan_type_id
+        WHERE loan.id = p_loan_id
+          AND loan_type.calculation_mode = 'seven_by_seven';
+    END IF;
+
+    IF fixed_interest IS NULL OR fixed_interest <= 0 THEN
+        RETURN;
+    END IF;
+
+    remaining_principal := readiness.principal;
+    -- Desktop allocate_x7_payments starts previous_date at payment_start - 1.
+    -- For the anchored greenfield loan the protected payment_start comparison
+    -- is the loan release date. Same-day release cash is blocked above.
+    previous_date_value := readiness.date_released - 1;
+
+    FOR source_row IN
+        SELECT inventory.*
+        FROM accounting.seven_by_seven_collection_source_inventory inventory
+        WHERE inventory.loan_id = p_loan_id
+          AND inventory.is_active_positive_cash_event
+        ORDER BY inventory.collection_date, inventory.transaction_id
+    LOOP
+        sequence_value := sequence_value + 1;
+
+        loan_id := readiness.loan_id;
+        transaction_id := source_row.transaction_id;
+        source_event_sequence := sequence_value;
+        collection_date := source_row.collection_date;
+        source_cash_amount := source_row.amount;
+        fixed_operational_daily_interest := fixed_interest;
+        opening_operational_remaining_principal := remaining_principal;
+        opening_operational_interest_arrears := interest_arrears;
+
+        IF allocator_complete THEN
+            operational_gap_days := 0;
+            operational_interest_due := interest_arrears;
+            operational_interest_paid := 0.00;
+            operational_principal_paid := 0.00;
+            operational_unallocated_cash := source_row.amount;
+            closing_operational_remaining_principal := remaining_principal;
+            closing_operational_interest_arrears := interest_arrears;
+            operational_event_applied := false;
+            operational_preview_status := 'desktop_allocator_would_stop_before_event';
+            RETURN NEXT;
+            CONTINUE;
+        END IF;
+
+        gap_days := greatest(1, source_row.collection_date - previous_date_value);
+        interest_due := (fixed_interest * gap_days + interest_arrears)::numeric(18,2);
+        interest_paid := least(source_row.amount, interest_due)::numeric(18,2);
+        principal_paid := least(
+            remaining_principal,
+            greatest(0::numeric, source_row.amount - interest_paid)
+        )::numeric(18,2);
+        unallocated := greatest(
+            0::numeric,
+            source_row.amount - interest_paid - principal_paid
+        )::numeric(18,2);
+
+        remaining_principal := greatest(0::numeric, remaining_principal - principal_paid)::numeric(18,2);
+        interest_arrears := greatest(0::numeric, interest_due - interest_paid)::numeric(18,2);
+
+        operational_gap_days := gap_days;
+        operational_interest_due := interest_due;
+        operational_interest_paid := interest_paid;
+        operational_principal_paid := principal_paid;
+        operational_unallocated_cash := unallocated;
+        closing_operational_remaining_principal := remaining_principal;
+        closing_operational_interest_arrears := interest_arrears;
+        operational_event_applied := true;
+        operational_preview_status := CASE
+            WHEN unallocated > 0 THEN 'desktop_allocator_unallocated_overpayment'
+            ELSE 'desktop_operational_allocation_reproduced'
+        END;
+        RETURN NEXT;
+
+        previous_date_value := source_row.collection_date;
+        IF remaining_principal <= 0.004 AND interest_arrears <= 0.004 THEN
+            remaining_principal := 0.00;
+            interest_arrears := 0.00;
+            allocator_complete := true;
+        END IF;
+    END LOOP;
+END;
+$$;
+
+CREATE OR REPLACE VIEW accounting.seven_by_seven_source_event_accounting_preview AS
 SELECT
-    rollforward.loan_id,
-    rollforward.loan_number,
-    rollforward.anchor_id,
-    rollforward.anchor_review_token,
-    rollforward.authoritative_daily_eir,
-    rollforward.authoritative_initial_gross_carrying_amount,
-    rollforward.transaction_id,
-    rollforward.source_event_key,
-    rollforward.source_event_sequence,
-    rollforward.collection_date,
-    rollforward.entry_type,
-    rollforward.amount AS source_cash_amount,
-    rollforward.source,
-    rollforward.source_id,
-    rollforward.recorded_at,
-    rollforward.accepted_at,
-    rollforward.device_sequence,
-    rollforward.registered_device_id,
-    rollforward.previous_event_date,
-    rollforward.days_since_previous_event,
-    rollforward.opening_gross_carrying_amount,
-    rollforward.opening_accrued_eir_interest,
-    rollforward.opening_7x7_loan_component,
-    rollforward.eir_interest_accrual,
-    rollforward.accrued_interest_available,
-    rollforward.accounting_eir_interest_received,
-    rollforward.accounting_7x7_principal_received,
-    rollforward.closing_accrued_eir_interest,
-    rollforward.closing_7x7_loan_component,
-    rollforward.closing_gross_carrying_amount,
-    rollforward.operational_interest_paid,
-    rollforward.operational_principal_paid,
-    (rollforward.operational_interest_paid - rollforward.accounting_eir_interest_received)::numeric(18,2)
-        AS operational_minus_accounting_interest_difference,
-    (rollforward.operational_principal_paid - rollforward.accounting_7x7_principal_received)::numeric(18,2)
-        AS operational_minus_accounting_principal_difference,
-    (
-        rollforward.operational_interest_paid = rollforward.accounting_eir_interest_received
-        AND rollforward.operational_principal_paid = rollforward.accounting_7x7_principal_received
-    ) AS operational_allocation_matches_accounting_eir,
-    (
-        rollforward.closing_gross_carrying_amount
-        = rollforward.closing_accrued_eir_interest + rollforward.closing_7x7_loan_component
-    ) AS closing_components_reconcile,
+    preview.*,
     period.id AS open_fiscal_period_id,
-    coalesce(periods.open_fiscal_period_count, 0)::bigint AS open_fiscal_period_count,
-    rollforward.event_preview_ready,
+    coalesce(period_count.open_fiscal_period_count, 0)::bigint AS open_fiscal_period_count,
     (
-        rollforward.event_preview_ready
-        AND rollforward.closing_gross_carrying_amount
-            = rollforward.closing_accrued_eir_interest + rollforward.closing_7x7_loan_component
+        preview.event_preview_ready
+        AND preview.closing_gross_carrying_amount
+            = preview.closing_accrued_eir_interest + preview.closing_7x7_loan_component
     ) AS accounting_measurement_preview_ready,
     (
-        rollforward.event_preview_ready
-        AND rollforward.closing_gross_carrying_amount
-            = rollforward.closing_accrued_eir_interest + rollforward.closing_7x7_loan_component
-        AND coalesce(periods.open_fiscal_period_count, 0) = 1
+        preview.event_preview_ready
+        AND preview.closing_gross_carrying_amount
+            = preview.closing_accrued_eir_interest + preview.closing_7x7_loan_component
+        AND coalesce(period_count.open_fiscal_period_count, 0) = 1
         AND period.id IS NOT NULL
     ) AS journal_coordinate_preview_ready,
     encode(
@@ -458,32 +519,33 @@ SELECT
                 concat_ws(
                     '|',
                     'seven_by_seven_source_event_accounting_preview_v1',
-                    rollforward.loan_id::text,
-                    rollforward.anchor_id::text,
-                    rollforward.anchor_review_token,
-                    rollforward.authoritative_daily_eir::text,
-                    rollforward.authoritative_initial_gross_carrying_amount::text,
-                    rollforward.transaction_id::text,
-                    rollforward.source_event_key,
-                    rollforward.source_event_sequence::text,
-                    rollforward.collection_date::text,
-                    rollforward.entry_type,
-                    rollforward.amount::text,
-                    rollforward.operational_interest_paid::text,
-                    rollforward.operational_principal_paid::text,
-                    coalesce(rollforward.source, ''),
-                    coalesce(rollforward.source_id, ''),
-                    rollforward.previous_event_date::text,
-                    rollforward.days_since_previous_event::text,
-                    rollforward.opening_gross_carrying_amount::text,
-                    rollforward.opening_accrued_eir_interest::text,
-                    rollforward.opening_7x7_loan_component::text,
-                    rollforward.eir_interest_accrual::text,
-                    rollforward.accounting_eir_interest_received::text,
-                    rollforward.accounting_7x7_principal_received::text,
-                    rollforward.closing_accrued_eir_interest::text,
-                    rollforward.closing_7x7_loan_component::text,
-                    rollforward.closing_gross_carrying_amount::text,
+                    preview.loan_id::text,
+                    preview.anchor_id::text,
+                    preview.anchor_review_token,
+                    preview.authoritative_daily_eir::text,
+                    preview.authoritative_initial_gross_carrying_amount::text,
+                    preview.transaction_id::text,
+                    preview.source_event_key,
+                    preview.source_event_sequence::text,
+                    preview.collector_user_id::text,
+                    preview.collection_date::text,
+                    preview.collection_day::text,
+                    preview.entry_type,
+                    preview.source_cash_amount::text,
+                    preview.accepted_at::text,
+                    preview.device_sequence::text,
+                    coalesce(preview.registered_device_id::text, ''),
+                    preview.previous_event_date::text,
+                    preview.days_since_previous_event::text,
+                    preview.opening_gross_carrying_amount::text,
+                    preview.opening_accrued_eir_interest::text,
+                    preview.opening_7x7_loan_component::text,
+                    preview.eir_interest_accrual::text,
+                    preview.accounting_eir_interest_received::text,
+                    preview.accounting_7x7_principal_received::text,
+                    preview.closing_accrued_eir_interest::text,
+                    preview.closing_7x7_loan_component::text,
+                    preview.closing_gross_carrying_amount::text,
                     coalesce(period.id::text, '')
                 ),
                 'UTF8'
@@ -493,55 +555,146 @@ SELECT
     ) AS source_event_review_token,
     false AS operational_allocation_substituted_for_accounting,
     false AS authoritative_current_carrying_amount_ready,
+    false AS journal_draft_enabled,
     false AS journal_lines_enabled,
     false AS automatic_source_posting,
     CASE
-        WHEN NOT rollforward.event_preview_ready THEN rollforward.preview_status
-        WHEN rollforward.closing_gross_carrying_amount < 0
-          OR rollforward.closing_accrued_eir_interest < 0
-          OR rollforward.closing_7x7_loan_component < 0
-            THEN 'negative_carrying_component_blocked'
-        WHEN rollforward.closing_gross_carrying_amount <>
-             rollforward.closing_accrued_eir_interest + rollforward.closing_7x7_loan_component
+        WHEN NOT preview.event_preview_ready THEN preview.preview_status
+        WHEN preview.closing_gross_carrying_amount <>
+             preview.closing_accrued_eir_interest + preview.closing_7x7_loan_component
             THEN 'closing_component_reconciliation_failed'
-        WHEN coalesce(periods.open_fiscal_period_count, 0) = 0
+        WHEN coalesce(period_count.open_fiscal_period_count, 0) = 0
             THEN 'measurement_preview_ready_open_fiscal_period_required_for_draft'
-        WHEN coalesce(periods.open_fiscal_period_count, 0) > 1
+        WHEN coalesce(period_count.open_fiscal_period_count, 0) > 1
             THEN 'overlapping_open_fiscal_periods_blocked'
         ELSE 'source_event_preview_and_journal_coordinates_ready'
     END AS source_event_preview_status
-FROM rollforward
+FROM accounting.seven_by_seven_source_event_accounting_readiness readiness
+CROSS JOIN LATERAL accounting.preview_seven_by_seven_source_event_accounting(
+    readiness.loan_id
+) preview
 LEFT JOIN LATERAL (
     SELECT count(*)::bigint AS open_fiscal_period_count
     FROM accounting.fiscal_periods fiscal_period
-    WHERE rollforward.collection_date BETWEEN fiscal_period.start_date AND fiscal_period.end_date
+    WHERE preview.collection_date BETWEEN fiscal_period.start_date AND fiscal_period.end_date
       AND fiscal_period.status = 'open'
-) periods ON true
+) period_count ON true
 LEFT JOIN LATERAL (
     SELECT fiscal_period.id
     FROM accounting.fiscal_periods fiscal_period
-    WHERE rollforward.collection_date BETWEEN fiscal_period.start_date AND fiscal_period.end_date
+    WHERE preview.collection_date BETWEEN fiscal_period.start_date AND fiscal_period.end_date
       AND fiscal_period.status = 'open'
     ORDER BY fiscal_period.start_date, fiscal_period.id
     LIMIT 1
 ) period ON true;
 
+CREATE OR REPLACE VIEW accounting.seven_by_seven_operational_allocation_parity_preview AS
+SELECT
+    accounting_preview.loan_id,
+    accounting_preview.transaction_id,
+    accounting_preview.source_event_key,
+    accounting_preview.source_event_sequence,
+    accounting_preview.collection_date,
+    accounting_preview.source_cash_amount,
+    accounting_preview.authoritative_daily_eir,
+    accounting_preview.accounting_eir_interest_received,
+    accounting_preview.accounting_7x7_principal_received,
+    operational.fixed_operational_daily_interest,
+    operational.operational_gap_days,
+    operational.opening_operational_remaining_principal,
+    operational.opening_operational_interest_arrears,
+    operational.operational_interest_due,
+    operational.operational_interest_paid,
+    operational.operational_principal_paid,
+    operational.operational_unallocated_cash,
+    operational.closing_operational_remaining_principal,
+    operational.closing_operational_interest_arrears,
+    operational.operational_event_applied,
+    operational.operational_preview_status,
+    (
+        operational.operational_interest_paid
+        - accounting_preview.accounting_eir_interest_received
+    )::numeric(18,2) AS operational_minus_accounting_interest_difference,
+    (
+        operational.operational_principal_paid
+        - accounting_preview.accounting_7x7_principal_received
+    )::numeric(18,2) AS operational_minus_accounting_principal_difference,
+    (
+        operational.operational_event_applied
+        AND operational.operational_interest_paid
+            = accounting_preview.accounting_eir_interest_received
+        AND operational.operational_principal_paid
+            = accounting_preview.accounting_7x7_principal_received
+        AND operational.operational_unallocated_cash = 0
+    ) AS operational_allocation_matches_accounting_eir,
+    false AS operational_allocation_substituted_for_accounting,
+    false AS journal_lines_enabled,
+    false AS automatic_source_posting
+FROM accounting.seven_by_seven_source_event_accounting_preview accounting_preview
+JOIN LATERAL accounting.preview_seven_by_seven_operational_allocation(
+    accounting_preview.loan_id
+) operational
+  ON operational.transaction_id = accounting_preview.transaction_id;
+
 CREATE OR REPLACE VIEW accounting.seven_by_seven_source_event_journal_coordinate_preview AS
 WITH account_map AS (
     SELECT
-        max(id) FILTER (
-            WHERE system_key = 'accrued_interest_receivable' AND is_active AND is_posting
+        (
+            SELECT account.id
+            FROM accounting.accounts account
+            WHERE account.system_key = 'accrued_interest_receivable'
+              AND account.is_active AND account.is_posting
+            ORDER BY account.id
+            LIMIT 1
         ) AS accrued_interest_receivable_account_id,
-        max(id) FILTER (
-            WHERE system_key = 'interest_income_7x7' AND is_active AND is_posting
+        (
+            SELECT count(*)
+            FROM accounting.accounts account
+            WHERE account.system_key = 'accrued_interest_receivable'
+              AND account.is_active AND account.is_posting
+        )::bigint AS accrued_interest_receivable_account_count,
+        (
+            SELECT account.id
+            FROM accounting.accounts account
+            WHERE account.system_key = 'interest_income_7x7'
+              AND account.is_active AND account.is_posting
+            ORDER BY account.id
+            LIMIT 1
         ) AS interest_income_7x7_account_id,
-        max(id) FILTER (
-            WHERE system_key = 'cash_collector_custody' AND is_active AND is_posting
+        (
+            SELECT count(*)
+            FROM accounting.accounts account
+            WHERE account.system_key = 'interest_income_7x7'
+              AND account.is_active AND account.is_posting
+        )::bigint AS interest_income_7x7_account_count,
+        (
+            SELECT account.id
+            FROM accounting.accounts account
+            WHERE account.system_key = 'cash_collector_custody'
+              AND account.is_active AND account.is_posting
+            ORDER BY account.id
+            LIMIT 1
         ) AS cash_collector_custody_account_id,
-        max(id) FILTER (
-            WHERE system_key = 'loans_receivable_7x7' AND is_active AND is_posting
-        ) AS loans_receivable_7x7_account_id
-    FROM accounting.accounts
+        (
+            SELECT count(*)
+            FROM accounting.accounts account
+            WHERE account.system_key = 'cash_collector_custody'
+              AND account.is_active AND account.is_posting
+        )::bigint AS cash_collector_custody_account_count,
+        (
+            SELECT account.id
+            FROM accounting.accounts account
+            WHERE account.system_key = 'loans_receivable_7x7'
+              AND account.is_active AND account.is_posting
+            ORDER BY account.id
+            LIMIT 1
+        ) AS loans_receivable_7x7_account_id,
+        (
+            SELECT count(*)
+            FROM accounting.accounts account
+            WHERE account.system_key = 'loans_receivable_7x7'
+              AND account.is_active AND account.is_posting
+        )::bigint AS loans_receivable_7x7_account_count
 ),
 line_source AS (
     SELECT preview.*, account_map.*
@@ -566,10 +719,10 @@ SELECT
     line.credit,
     (
         line_source.journal_coordinate_preview_ready
-        AND line_source.accrued_interest_receivable_account_id IS NOT NULL
-        AND line_source.interest_income_7x7_account_id IS NOT NULL
-        AND line_source.cash_collector_custody_account_id IS NOT NULL
-        AND line_source.loans_receivable_7x7_account_id IS NOT NULL
+        AND line_source.accrued_interest_receivable_account_count = 1
+        AND line_source.interest_income_7x7_account_count = 1
+        AND line_source.cash_collector_custody_account_count = 1
+        AND line_source.loans_receivable_7x7_account_count = 1
         AND line.account_id IS NOT NULL
     ) AS coordinate_preview_ready,
     false AS journal_lines_enabled,
@@ -631,15 +784,17 @@ WITH preview_summary AS (
             WHERE preview.journal_coordinate_preview_ready
         )::bigint AS coordinate_ready_event_count,
         count(preview.transaction_id) FILTER (
-            WHERE preview.accounting_measurement_preview_ready
-              AND NOT preview.operational_allocation_matches_accounting_eir
-        )::bigint AS operational_accounting_allocation_difference_event_count,
-        count(preview.transaction_id) FILTER (
             WHERE NOT preview.accounting_measurement_preview_ready
-        )::bigint AS blocked_preview_event_count
+        )::bigint AS blocked_preview_event_count,
+        count(parity.transaction_id) FILTER (
+            WHERE parity.operational_event_applied
+              AND NOT parity.operational_allocation_matches_accounting_eir
+        )::bigint AS operational_accounting_allocation_difference_event_count
     FROM accounting.seven_by_seven_source_event_accounting_readiness readiness
     LEFT JOIN accounting.seven_by_seven_source_event_accounting_preview preview
       ON preview.loan_id = readiness.loan_id
+    LEFT JOIN accounting.seven_by_seven_operational_allocation_parity_preview parity
+      ON parity.transaction_id = preview.transaction_id
     GROUP BY readiness.loan_id
 ),
 last_preview AS (
@@ -668,8 +823,7 @@ SELECT
     readiness.same_day_or_pre_anchor_cash_event_count,
     readiness.post_maturity_cash_event_count,
     readiness.nonpositive_financial_source_event_count,
-    readiness.unsupported_positive_source_event_count,
-    readiness.operational_reversal_row_count,
+    readiness.unsupported_positive_pass_count,
     readiness.voided_original_cash_event_count,
     coalesce(summary.preview_event_count, 0)::bigint AS preview_event_count,
     coalesce(summary.measurement_ready_event_count, 0)::bigint AS measurement_ready_event_count,
@@ -708,7 +862,7 @@ SELECT
     END AS preview_current_7x7_loan_component,
     last_preview.last_source_event_review_token,
     NULL::numeric(18,2) AS authoritative_current_gross_carrying_amount,
-    false AS current_carrying_amount_ready,
+    false AS authoritative_current_carrying_amount_ready,
     false AS journal_draft_enabled,
     false AS journal_lines_enabled,
     false AS automatic_source_posting,
@@ -728,9 +882,12 @@ LEFT JOIN preview_summary summary ON summary.loan_id = readiness.loan_id
 LEFT JOIN last_preview ON last_preview.loan_id = readiness.loan_id;
 
 COMMENT ON VIEW accounting.seven_by_seven_source_event_accounting_preview IS
-    'Read-only 7x7 source-event accounting EIR/carrying preview. Exact transaction UUIDs define source identity; accounting allocation uses the immutable 0063 original EIR, never operational interest_paid/principal_paid. Multiple positive events on one date fail closed. No journal draft/posting or authoritative current carrying is enabled.';
+    'Read-only 7x7 source-event EIR/carrying preview. Exact collection transaction UUIDs define source identity; accounting allocation uses the immutable 0063 original EIR and never substitutes the Desktop operational allocator. Multiple active positive events on one date fail closed. No authoritative current carrying, journal draft/posting or automatic source posting is enabled.';
+
+COMMENT ON VIEW accounting.seven_by_seven_operational_allocation_parity_preview IS
+    'Read-only regression parity against the protected Desktop 7x7 allocator: fixed original-principal daily interest, payment_start minus one day initial gap, interest-arrears first, then principal. Differences from accounting EIR allocation are exposed, not substituted.';
 
 COMMENT ON VIEW accounting.seven_by_seven_source_event_journal_coordinate_preview IS
-    'Read-only 7x7 journal coordinate preview: EIR accrual Dr Accrued Interest Receivable / Cr Interest Income - 7x7; cash collection Dr Cash - Collector Custody / Cr Accrued Interest Receivable and Loans Receivable - 7x7 using accounting EIR allocation. journal_lines_enabled and automatic_source_posting remain false.';
+    'Read-only 7x7 journal-coordinate preview: EIR accrual Dr Accrued Interest Receivable / Cr Interest Income - 7x7; cash collection Dr Cash - Collector Custody / Cr Accrued Interest Receivable and Loans Receivable - 7x7 using accounting EIR allocation. journal_lines_enabled and automatic_source_posting remain false.';
 
 COMMIT;
