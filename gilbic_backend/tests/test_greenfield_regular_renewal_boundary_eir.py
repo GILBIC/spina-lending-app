@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
@@ -23,9 +23,11 @@ P2 = UUID("44444444-4444-4444-8444-444444444444")
 
 
 def _rollforward(*, target: date, daily_rows, tail: str):
+    rows = tuple(daily_rows)
+    anchor = rows[0].accrual_date - timedelta(days=1) if rows else target - timedelta(days=1)
     return GreenfieldRegularRenewalRollForward(
         loan_id=LOAN_ID,
-        anchor_date=date(2026, 8, 1),
+        anchor_date=anchor,
         target_date=target,
         contractual_due_date=date(2026, 11, 29),
         daily_eir=Decimal("0.003"),
@@ -43,7 +45,7 @@ def _rollforward(*, target: date, daily_rows, tail: str):
         accrued_interest_component_at_target=Decimal(tail),
         loan_component_at_target=Decimal("5000.00"),
         allocations=(),
-        tail_daily_accruals=tuple(daily_rows),
+        tail_daily_accruals=rows,
         measurement_preview_ready=True,
         accounting_carrying_amount_ready=False,
         journal_lines_enabled=False,
@@ -65,7 +67,7 @@ def _daily(day: date, opening: str, interest: str):
 def test_single_period_renewal_boundary_eir_preview_is_balanced_and_read_only():
     rollforward = _rollforward(
         target=date(2026, 8, 3),
-        tail="30.09",
+        tail="30.05",
         daily_rows=(
             _daily(date(2026, 8, 2), "5000.00", "15.00"),
             _daily(date(2026, 8, 3), "5015.00", "15.045"),
@@ -103,7 +105,10 @@ def test_single_period_renewal_boundary_eir_preview_is_balanced_and_read_only():
     assert proposal.source_event_key == (
         f"renewal_eir_accrual:{EXECUTION_ID}:fiscal_period:{P1}"
     )
-    assert [(line.account_system_key, line.side, line.amount) for line in proposal.proposed_lines] == [
+    assert [
+        (line.account_system_key, line.side, line.amount)
+        for line in proposal.proposed_lines
+    ] == [
         ("accrued_interest_receivable", "debit", Decimal("30.05")),
         ("interest_income_regular", "credit", Decimal("30.05")),
     ]
@@ -112,7 +117,7 @@ def test_single_period_renewal_boundary_eir_preview_is_balanced_and_read_only():
 def test_cross_period_tail_reuses_exact_deterministic_cent_allocation():
     rollforward = _rollforward(
         target=date(2026, 9, 1),
-        tail="30.09",
+        tail="30.05",
         daily_rows=(
             _daily(date(2026, 8, 31), "5000.00", "15.004"),
             _daily(date(2026, 9, 1), "5015.004", "15.041"),
@@ -147,7 +152,9 @@ def test_cross_period_tail_reuses_exact_deterministic_cent_allocation():
         Decimal("15.00"),
         Decimal("15.05"),
     ]
-    assert sum((item.amount for item in preview.period_proposals), Decimal("0")) == Decimal("30.05")
+    assert sum(
+        (item.amount for item in preview.period_proposals), Decimal("0")
+    ) == Decimal("30.05")
     assert preview.total_debit == preview.total_credit == Decimal("30.05")
     assert preview.posting_eligible is False
 
