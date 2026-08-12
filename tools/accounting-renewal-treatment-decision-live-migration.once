@@ -1,0 +1,1 @@
+Run the protected renewal treatment decision evidence installer/verifier on merged main. This marker authorizes installation of migration 0056 only; it must not create decision evidence or journal history.
