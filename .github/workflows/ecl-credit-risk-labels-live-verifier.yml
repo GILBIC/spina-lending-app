@@ -11,16 +11,23 @@ on:
       - 'gilbic_backend/sql/0074_integrate_ecl_forward_looking_readiness.sql'
       - 'gilbic_backend/sql/0075_add_read_only_quantitative_ecl_measurement.sql'
       - 'gilbic_backend/sql/0076_harden_read_only_quantitative_ecl_measurement.sql'
+      - 'gilbic_backend/sql/0077_add_protected_ecl_allowance_posting.sql'
+      - 'gilbic_backend/sql/0078_harden_ecl_allowance_posting_queue.sql'
       - 'gilbic_backend/tests/test_ecl_credit_risk_labels_migration.py'
       - 'gilbic_backend/tests/test_ecl_read_only_measurement_migration.py'
       - 'gilbic_backend/tests/test_ecl_quantitative_measurement_api_contract.py'
+      - 'gilbic_backend/tests/test_ecl_allowance_posting_migration.py'
+      - 'gilbic_backend/tests/test_ecl_allowance_posting_api_contract.py'
       - 'docs/accounting/ecl-credit-risk-label-policy.md'
       - 'docs/accounting/ecl-read-only-measurement-policy.md'
+      - 'docs/accounting/ecl-allowance-posting-policy.md'
       - 'tools/apply_ecl_credit_risk_labels_migration.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_repository.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_api.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_quantitative_measurement_repository.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_quantitative_measurement_api.py'
+      - 'gilbic_backend/src/gilbic_backend/ecl_allowance_posting_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/ecl_allowance_posting_api.py'
       - '.github/workflows/ecl-credit-risk-labels-live-verifier.yml'
   push:
     branches: [main]
@@ -32,16 +39,23 @@ on:
       - 'gilbic_backend/sql/0074_integrate_ecl_forward_looking_readiness.sql'
       - 'gilbic_backend/sql/0075_add_read_only_quantitative_ecl_measurement.sql'
       - 'gilbic_backend/sql/0076_harden_read_only_quantitative_ecl_measurement.sql'
+      - 'gilbic_backend/sql/0077_add_protected_ecl_allowance_posting.sql'
+      - 'gilbic_backend/sql/0078_harden_ecl_allowance_posting_queue.sql'
       - 'gilbic_backend/tests/test_ecl_credit_risk_labels_migration.py'
       - 'gilbic_backend/tests/test_ecl_read_only_measurement_migration.py'
       - 'gilbic_backend/tests/test_ecl_quantitative_measurement_api_contract.py'
+      - 'gilbic_backend/tests/test_ecl_allowance_posting_migration.py'
+      - 'gilbic_backend/tests/test_ecl_allowance_posting_api_contract.py'
       - 'docs/accounting/ecl-credit-risk-label-policy.md'
       - 'docs/accounting/ecl-read-only-measurement-policy.md'
+      - 'docs/accounting/ecl-allowance-posting-policy.md'
       - 'tools/apply_ecl_credit_risk_labels_migration.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_repository.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_api.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_quantitative_measurement_repository.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_quantitative_measurement_api.py'
+      - 'gilbic_backend/src/gilbic_backend/ecl_allowance_posting_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/ecl_allowance_posting_api.py'
       - '.github/workflows/ecl-credit-risk-labels-live-verifier.yml'
   workflow_dispatch:
 
@@ -89,8 +103,10 @@ jobs:
           "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\ecl_credit_risk_label_api.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\ecl_quantitative_measurement_repository.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\ecl_quantitative_measurement_api.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\ecl_allowance_posting_repository.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\ecl_allowance_posting_api.py || exit /b 1
 
-      - name: Verify PR remains evidence-only and fail closed
+      - name: Verify PR protected ECL controls remain explicit and fail closed
         if: github.event_name == 'pull_request'
         shell: cmd
         run: |
@@ -99,6 +115,8 @@ jobs:
           python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0072_add_ecl_quantitative_input_readiness.sql').read_text(encoding='utf-8'); u=s.upper(); assert 'ECL_QUANTITATIVE_INPUT_READINESS' in u; assert 'APPROVED_FORWARD_LOOKING_EVIDENCE_REQUIRED' in u; assert 'NULL::NUMERIC(18,2) AS ECL_AMOUNT' in u; assert 'FALSE AS ACCOUNT_1190_POSTING_ENABLED' in u; assert 'INSERT INTO ACCOUNTING.JOURNAL_ENTRIES' not in u" || exit /b 1
           python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0075_add_read_only_quantitative_ecl_measurement.sql').read_text(encoding='utf-8'); u=s.upper(); assert s.strip().startswith('BEGIN;') and s.strip().endswith('COMMIT;'); assert 'LOAN_LEVEL_PROBABILITY_WEIGHTED_DISCOUNTED_CASH_SHORTFALL_V1' in u; assert 'STAGE_1_12_MONTH' in u and '12_MONTH' in u and 'LIFETIME' in u; assert 'CALCULATION_DIGEST' in u and 'SHA256' in u; assert 'QUANTITATIVE ECL INPUT GATE IS BLOCKED' in u; assert 'FALSE AS ACCOUNT_1190_POSTING_ENABLED' in u; assert 'FALSE AS AUTOMATIC_SOURCE_POSTING' in u; assert 'INSERT INTO ACCOUNTING.JOURNAL_ENTRIES' not in u; assert 'INSERT INTO ACCOUNTING.JOURNAL_LINES' not in u" || exit /b 1
           python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0076_harden_read_only_quantitative_ecl_measurement.sql').read_text(encoding='utf-8'); u=s.upper(); assert 'SELECT DISTINCT RAW_ID::UUID AS EVIDENCE_UUID' in u; assert 'ARRAY_AGG(DISTINCT USED.EVIDENCE_UUID ORDER BY USED.EVIDENCE_UUID)' in u; assert 'MEASUREMENT_FORWARD_EVIDENCE_CURRENT' in u; assert 'NEW_MEASUREMENT_REQUIRED' in u; assert 'FALSE AS ACCOUNT_1190_POSTING_ENABLED' in u; assert 'INSERT INTO ACCOUNTING.JOURNAL_ENTRIES' not in u" || exit /b 1
+          python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0077_add_protected_ecl_allowance_posting.sql').read_text(encoding='utf-8'); u=s.upper(); assert s.strip().startswith('BEGIN;') and s.strip().endswith('COMMIT;'); assert 'PREPARE_INITIAL_ECL_ALLOWANCE_JOURNAL' in u and 'POST_INITIAL_ECL_ALLOWANCE_JOURNAL' in u; assert 'CREDIT_LOSS_EXPENSE' in u and """'5000'""" in s and 'ALLOWANCE_EXPECTED_CREDIT_LOSS' in u and """'1190'""" in s; assert 'PRIOR ALLOWANCE BALANCE 0.00' in u; assert 'ACCOUNT 1190 ALLOWANCE FOR EXPECTED CREDIT LOSS CAN ONLY BE CHANGED' in u; assert 'TRUE AS ACCOUNT_1190_POSTING_ENABLED' in u; assert 'FALSE AS AUTOMATIC_SOURCE_POSTING' in u; assert "automatic_source_posting', true" not in s.lower()" || exit /b 1
+          python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0078_harden_ecl_allowance_posting_queue.sql').read_text(encoding='utf-8'); u=s.upper(); assert 'PREPARATION_BLOCKED' in u; assert 'MEASUREMENT_NOT_AUTHORITATIVE' in u; assert 'A5_REMEASUREMENT_REQUIRED' in u; assert 'TRUE AS ACCOUNT_1190_POSTING_ENABLED' in u; assert 'FALSE AS AUTOMATIC_SOURCE_POSTING' in u; assert 'INSERT INTO ACCOUNTING.JOURNAL_ENTRIES' not in u" || exit /b 1
 
       - name: Require the live database runner for non-PR execution
         if: github.event_name != 'pull_request'
@@ -109,7 +127,7 @@ jobs:
             throw "Live ECL migration requires SPINA-WINDOWS because approved database env files are local to that runner; current runner is $env:RUNNER_NAME."
           }
 
-      - name: Install and verify ECL credit-risk labels and input readiness on live database
+      - name: Install and verify ECL controls through protected allowance posting on live database
         if: github.event_name != 'pull_request'
         shell: cmd
         run: |
