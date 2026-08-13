@@ -17,13 +17,14 @@ TEST_DATABASE_PREFIX = "spina_ecl_labels_"
 BOOTSTRAP_THROUGH = 69
 TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
 # Reuse one dedicated ECL disposable PostgreSQL workflow for the whole protected
-# label/readiness/evidence/measurement chain; do not duplicate identical CI.
+# label/readiness/evidence/measurement/allowance chain; do not duplicate CI.
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_ecl_credit_risk_labels_postgres.py",
     TEST_ROOT / "test_ecl_cash_recovery_chronology_postgres.py",
     TEST_ROOT / "test_ecl_quantitative_input_readiness_postgres.py",
     TEST_ROOT / "test_ecl_forward_looking_evidence_postgres.py",
     TEST_ROOT / "test_ecl_read_only_measurement_postgres.py",
+    TEST_ROOT / "test_ecl_allowance_posting_postgres.py",
 )
 
 
@@ -57,7 +58,8 @@ def main() -> int:
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
             "through 0069, then prove protected 0070 labels, 0071 recovery chronology, "
             "0072 quantitative-input blockers, 0073/0074 forward-looking evidence governance, "
-            "and 0075/0076 read-only quantitative ECL measurement/hardening."
+            "0075/0076 read-only quantitative ECL measurement/hardening, and 0077/0078 "
+            "explicit protected initial account-1190 allowance preparation/posting."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -119,8 +121,12 @@ def main() -> int:
             "0075/0076 proved Stage 1 12-month and lifetime probability-weighted discounted "
             "expected-cash-shortfall measurements, applicable original-EIR discounting, exact "
             "input/version snapshots, deterministic semantic retries/digests, fail-closed stale "
-            "evidence, blocked-loan NULL authoritative amounts, and immutable read-only audit. "
-            "No PD/LGD/scenario assumption was invented and account 1190/automatic posting stayed disabled."
+            "evidence, blocked-loan NULL authoritative amounts, and immutable read-only audit; "
+            "0077/0078 proved explicit Management-confirmed initial allowance preparation/posting "
+            "from the exact current measurement, Dr 5000 / Cr 1190, exact retry idempotency, "
+            "immutable posting audit, generic/manual account-1190 and reversal bypass rejection, "
+            "open-period/prior-balance revalidation and atomic rollback on forced audit failure. "
+            "Automatic source posting remained disabled throughout."
         )
         return 0
     except psycopg.Error as error:
