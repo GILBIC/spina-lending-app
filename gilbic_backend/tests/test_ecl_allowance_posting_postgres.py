@@ -35,6 +35,7 @@ MIGRATIONS = tuple(
         "0075_add_read_only_quantitative_ecl_measurement.sql",
         "0076_harden_read_only_quantitative_ecl_measurement.sql",
         "0077_add_protected_ecl_allowance_posting.sql",
+        "0078_harden_ecl_allowance_posting_queue.sql",
     )
 )
 
@@ -138,9 +139,16 @@ def _measured_case(connection, suffix: str):
     account_ids = connection.execute(
         """
         SELECT
-            max(id) FILTER (WHERE system_key = 'credit_loss_expense'),
-            max(id) FILTER (WHERE system_key = 'allowance_expected_credit_loss')
-        FROM accounting.accounts
+            (
+                SELECT id
+                FROM accounting.accounts
+                WHERE system_key = 'credit_loss_expense'
+            ),
+            (
+                SELECT id
+                FROM accounting.accounts
+                WHERE system_key = 'allowance_expected_credit_loss'
+            )
         """
     ).fetchone()
     assert account_ids is not None and all(account_ids)
