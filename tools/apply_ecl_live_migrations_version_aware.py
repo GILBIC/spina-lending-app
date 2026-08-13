@@ -6,6 +6,11 @@ from pathlib import Path
 
 import psycopg
 
+
+TOOLS_ROOT = Path(__file__).resolve().parent
+if str(TOOLS_ROOT) not in sys.path:
+    sys.path.insert(0, str(TOOLS_ROOT))
+
 import apply_ecl_credit_risk_labels_migration as ecl
 
 
