@@ -75,12 +75,14 @@ SELECT
         prepared.allowance_account_id,
         account_coordinates.allowance_account_id
     ) AS allowance_account_id,
-    coalesce(prepared.allowance_amount, measurement_queue.authoritative_ecl_amount)
-        AS allowance_amount,
+    coalesce(
+        prepared.allowance_amount,
+        measurement_queue.authoritative_ecl_amount
+    )::numeric(18,2) AS allowance_amount,
     coalesce(
         prepared.prior_allowance_balance,
         accounting.ecl_loan_allowance_balance(measurement_queue.loan_id)
-    ) AS prior_allowance_balance,
+    )::numeric(18,2) AS prior_allowance_balance,
     prepared.preparation_review_token,
     prepared.preparation_digest,
     coalesce(prepared.draft_policy_version, 'ecl_allowance_initial_journal_draft_v1')
