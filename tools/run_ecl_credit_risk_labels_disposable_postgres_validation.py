@@ -16,12 +16,13 @@ import run_stage5d17_disposable_postgres_validation as disposable
 TEST_DATABASE_PREFIX = "spina_ecl_labels_"
 BOOTSTRAP_THROUGH = 69
 TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
-# Run the original label proof, focused chronology hardening, and quantitative
-# input-readiness proof together against one freshly bootstrapped local database.
+# Reuse one dedicated ECL disposable PostgreSQL workflow for the whole protected
+# label/readiness/evidence chain; do not duplicate identical CI.
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_ecl_credit_risk_labels_postgres.py",
     TEST_ROOT / "test_ecl_cash_recovery_chronology_postgres.py",
     TEST_ROOT / "test_ecl_quantitative_input_readiness_postgres.py",
+    TEST_ROOT / "test_ecl_forward_looking_evidence_postgres.py",
 )
 
 
@@ -34,7 +35,7 @@ def _run_test(test_database_url: str) -> int:
     missing = [str(path) for path in INTEGRATION_TESTS if not path.is_file()]
     if missing:
         raise SystemExit(
-            "ECL credit-risk label validation refused: integration test file is missing: "
+            "ECL validation refused: integration test file is missing: "
             + ", ".join(missing)
         )
     env = os.environ.copy()
@@ -53,9 +54,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
-            "through 0069, then apply and prove protected 0070 ECL credit-risk labels, "
-            "0071 strict cash-recovery chronology, and 0072 fail-closed quantitative-input "
-            "readiness blockers."
+            "through 0069, then prove protected 0070 labels, 0071 recovery chronology, "
+            "0072 quantitative-input blockers, 0073 forward-looking evidence governance, "
+            "and 0074 forward-looking readiness integration."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -76,14 +77,14 @@ def main() -> int:
     configured_database = base_params["dbname"]
     if configured_database.startswith(TEST_DATABASE_PREFIX):
         raise SystemExit(
-            "ECL credit-risk label validation refused: configured database uses the reserved disposable prefix."
+            "ECL validation refused: configured database uses the reserved disposable prefix."
         )
 
     admin_url = disposable._conninfo_for_database(base_params, "postgres")
     if args.cleanup_stale_only:
         with psycopg.connect(admin_url, autocommit=True) as admin:
             dropped = disposable._drop_stale_disposable_databases(admin)
-        print(f"ECL credit-risk label janitor passed: dropped={dropped}.")
+        print(f"ECL disposable PostgreSQL janitor passed: dropped={dropped}.")
         return 0
 
     test_database = f"{TEST_DATABASE_PREFIX}{uuid4().hex}"
@@ -93,9 +94,7 @@ def main() -> int:
     try:
         with psycopg.connect(admin_url, autocommit=True) as admin:
             if disposable._database_exists(admin, test_database):
-                raise SystemExit(
-                    "ECL credit-risk label validation refused: generated database already exists."
-                )
+                raise SystemExit("ECL validation refused: generated database already exists.")
             cleanup_required = True
             admin.execute(
                 sql.SQL("CREATE DATABASE {} TEMPLATE template0").format(
@@ -108,22 +107,23 @@ def main() -> int:
         result = _run_test(test_url)
         if result != 0:
             raise SystemExit(
-                "ECL credit-risk label disposable PostgreSQL validation failed: "
+                "ECL disposable PostgreSQL validation failed: "
                 f"integration tests exited with code {result}."
             )
         print(
-            "ECL credit-risk label disposable PostgreSQL validation passed: "
-            "0070 enforced explicit Management stage/default/write-off-support/recovery/cure "
-            "labels; 0071 required authoritative strict recovery chronology; and 0072 exposed "
-            "deterministic per-loan quantitative-ECL input blockers without substituting notes. "
-            "Forward-looking evidence remains explicitly blocked until A2. Quantitative ECL, "
-            "account 1190 posting, write-off execution and automatic source posting remained disabled."
+            "ECL disposable PostgreSQL validation passed: 0070 enforced explicit Management "
+            "credit-risk labels; 0071 required authoritative strict recovery chronology; 0072 "
+            "exposed deterministic per-loan quantitative-input blockers; 0073/0074 proved "
+            "immutable versioned Management-approved forward-looking evidence, explicit "
+            "supersession/revocation/stale-safe readiness, and removal/restoration of only the "
+            "forward-looking blocker. No scenario probability, multiplier, overlay, ECL amount, "
+            "account 1190 posting, write-off execution or automatic source posting was invented/enabled."
         )
         return 0
     except psycopg.Error as error:
         primary_error = error
         raise SystemExit(
-            "ECL credit-risk label disposable PostgreSQL validation failed: "
+            "ECL disposable PostgreSQL validation failed: "
             + str(error).split("CONTEXT:", 1)[0].strip()
         ) from error
     except BaseException as error:
@@ -136,7 +136,7 @@ def main() -> int:
                     disposable._drop_database(admin, test_database)
             except (psycopg.Error, SystemExit) as cleanup_error:
                 message = (
-                    "ECL credit-risk label disposable PostgreSQL cleanup failed: "
+                    "ECL disposable PostgreSQL cleanup failed: "
                     + str(cleanup_error).split("CONTEXT:", 1)[0].strip()
                 )
                 print(message, file=sys.stderr)
