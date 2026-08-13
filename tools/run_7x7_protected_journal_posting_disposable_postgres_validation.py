@@ -13,13 +13,17 @@ from psycopg import sql
 import run_stage5d17_disposable_postgres_validation as disposable
 
 
-TEST_DATABASE_PREFIX = "spina_7x7_journal_posting_"
-BOOTSTRAP_THROUGH = 65
-INTEGRATION_TEST = (
+TEST_DATABASE_PREFIX = "spina_7x7_journal_lifecycle_"
+BOOTSTRAP_THROUGH = 66
+INTEGRATION_TESTS = (
     Path(__file__).resolve().parents[1]
     / "gilbic_backend"
     / "tests"
-    / "test_7x7_protected_journal_posting_postgres.py"
+    / "test_7x7_protected_journal_posting_postgres.py",
+    Path(__file__).resolve().parents[1]
+    / "gilbic_backend"
+    / "tests"
+    / "test_7x7_controlled_collection_reversal_postgres.py",
 )
 
 
@@ -28,17 +32,19 @@ def _configure_shared_safety_helpers() -> None:
     disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
 
 
-def _run_test(test_database_url: str) -> int:
-    if not INTEGRATION_TEST.is_file():
+def _run_tests(test_database_url: str) -> int:
+    missing = [str(path) for path in INTEGRATION_TESTS if not path.is_file()]
+    if missing:
         raise SystemExit(
-            "7x7 protected journal-posting validation refused: integration test file is missing."
+            "7x7 protected journal-lifecycle validation refused: integration test file is missing: "
+            + ", ".join(missing)
         )
     env = os.environ.copy()
     for key in disposable.ENDPOINT_ENV_KEYS:
         env.pop(key, None)
     env["GILBIC_TEST_DATABASE_URL"] = test_database_url
     completed = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", str(INTEGRATION_TEST)],
+        [sys.executable, "-m", "pytest", "-q", *(str(path) for path in INTEGRATION_TESTS)],
         env=env,
         check=False,
     )
@@ -49,8 +55,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
-            "through 0065, then prove explicit Management protected 7x7 posting with exact "
-            "source/coordinate/draft revalidation, immutable audit and rollback safety."
+            "through 0066, then prove explicit Management protected 7x7 posting plus the "
+            "controlled posted-collection void/reversal with exact immutable line swaps."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -71,14 +77,14 @@ def main() -> int:
     configured_database = base_params["dbname"]
     if configured_database.startswith(TEST_DATABASE_PREFIX):
         raise SystemExit(
-            "7x7 journal-posting validation refused: configured database uses the reserved disposable prefix."
+            "7x7 journal-lifecycle validation refused: configured database uses the reserved disposable prefix."
         )
 
     admin_url = disposable._conninfo_for_database(base_params, "postgres")
     if args.cleanup_stale_only:
         with psycopg.connect(admin_url, autocommit=True) as admin:
             dropped = disposable._drop_stale_disposable_databases(admin)
-        print(f"7x7 journal-posting janitor passed: dropped={dropped}.")
+        print(f"7x7 journal-lifecycle janitor passed: dropped={dropped}.")
         return 0
 
     test_database = f"{TEST_DATABASE_PREFIX}{uuid4().hex}"
@@ -89,7 +95,7 @@ def main() -> int:
         with psycopg.connect(admin_url, autocommit=True) as admin:
             if disposable._database_exists(admin, test_database):
                 raise SystemExit(
-                    "7x7 journal-posting validation refused: generated database already exists."
+                    "7x7 journal-lifecycle validation refused: generated database already exists."
                 )
             cleanup_required = True
             admin.execute(
@@ -100,24 +106,25 @@ def main() -> int:
 
         disposable._install_supabase_auth_prerequisite(test_url)
         disposable._bootstrap_database(test_url)
-        result = _run_test(test_url)
+        result = _run_tests(test_url)
         if result != 0:
             raise SystemExit(
-                "7x7 protected journal-posting disposable PostgreSQL validation failed: "
-                f"integration test exited with code {result}."
+                "7x7 protected journal-lifecycle disposable PostgreSQL validation failed: "
+                f"integration tests exited with code {result}."
             )
         print(
-            "7x7 protected journal-posting disposable PostgreSQL validation passed: "
-            "generic posting was rejected; exact Management posting revalidated the current "
-            "0064 source token/coordinates and immutable 0065 draft; immutable posting and line "
-            "audits matched; exact retry was idempotent; forced audit failure rolled posting back; "
-            "manual reversal and operational void stayed blocked; automatic source posting stayed off."
+            "7x7 protected journal-lifecycle disposable PostgreSQL validation passed: "
+            "exact Management posting stayed audited/idempotent; controlled posted-collection "
+            "void created one exact debit/credit-swapped reversing journal from immutable 0066 "
+            "posting snapshots; original posting stayed unchanged; manual reversal was rejected; "
+            "forced reversal-audit failure rolled operational void and reversal back atomically; "
+            "automatic source posting stayed off."
         )
         return 0
     except psycopg.Error as error:
         primary_error = error
         raise SystemExit(
-            "7x7 protected journal-posting disposable PostgreSQL validation failed: "
+            "7x7 protected journal-lifecycle disposable PostgreSQL validation failed: "
             + str(error).split("CONTEXT:", 1)[0].strip()
         ) from error
     except BaseException as error:
@@ -130,7 +137,7 @@ def main() -> int:
                     disposable._drop_database(admin, test_database)
             except (psycopg.Error, SystemExit) as cleanup_error:
                 message = (
-                    "7x7 protected journal-posting disposable PostgreSQL cleanup failed: "
+                    "7x7 protected journal-lifecycle disposable PostgreSQL cleanup failed: "
                     + str(cleanup_error).split("CONTEXT:", 1)[0].strip()
                 )
                 print(message, file=sys.stderr)
