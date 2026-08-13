@@ -3,10 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 
-SQL = (
-    Path(__file__).resolve().parents[1]
-    / "sql"
-    / "0067_add_controlled_7x7_collection_reversals.sql"
+SQL_ROOT = Path(__file__).resolve().parents[1] / "sql"
+SQL = (SQL_ROOT / "0067_add_controlled_7x7_collection_reversals.sql").read_text(
+    encoding="utf-8"
+)
+HARDENING_SQL = (
+    SQL_ROOT / "0068_harden_controlled_7x7_collection_reversal_guard.sql"
 ).read_text(encoding="utf-8")
 
 
@@ -54,3 +56,17 @@ def test_7x7_reversal_audit_is_immutable_and_install_is_history_free() -> None:
     # inserts operational collection voids, protected postings, or reversals.
     assert "INSERT INTO LENDING.COLLECTION_TRANSACTION_VOIDS" not in normalized
     assert "INSERT INTO ACCOUNTING.SEVEN_BY_SEVEN_JOURNAL_POSTINGS" not in normalized
+
+
+def test_0068_hardens_final_void_guard_without_ambiguous_local_names() -> None:
+    normalized = HARDENING_SQL.upper()
+    assert HARDENING_SQL.strip().startswith("BEGIN;")
+    assert HARDENING_SQL.strip().endswith("COMMIT;")
+    assert "GUARD_POSTED_SEVEN_BY_SEVEN_COLLECTION_VOID" in normalized
+    assert "MATCHED_REVERSAL_ID UUID" in normalized
+    assert "MATCHED_REVERSAL_ENTRY_ID UUID" in normalized
+    assert "SNAPSHOT.REVERSAL_ID = MATCHED_REVERSAL_ID" in normalized
+    assert "LINE.JOURNAL_ENTRY_ID = MATCHED_REVERSAL_ENTRY_ID" in normalized
+    assert "WHERE SNAPSHOT.REVERSAL_ID = REVERSAL_ID" not in normalized
+    assert "WHERE LINE.JOURNAL_ENTRY_ID = REVERSAL_ENTRY_ID" not in normalized
+    assert "INSERT INTO" not in normalized
