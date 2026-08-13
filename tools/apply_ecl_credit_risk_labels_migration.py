@@ -11,6 +11,7 @@ SQL_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "sql"
 MIGRATIONS = (
     SQL_ROOT / "0070_add_ecl_credit_risk_labels.sql",
     SQL_ROOT / "0071_harden_ecl_cash_recovery_chronology.sql",
+    SQL_ROOT / "0072_add_ecl_quantitative_input_readiness.sql",
 )
 
 
@@ -61,7 +62,7 @@ def _history_counts(connection: psycopg.Connection) -> tuple[int, int, int, int]
     )
 
 
-def _verify(connection: psycopg.Connection) -> tuple:
+def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple]:
     objects = connection.execute(
         """
         SELECT
@@ -69,6 +70,8 @@ def _verify(connection: psycopg.Connection) -> tuple:
             to_regclass('accounting.ecl_credit_risk_label_policy_v1'),
             to_regclass('accounting.ecl_credit_risk_label_queue'),
             to_regclass('accounting.ecl_credit_risk_label_summary'),
+            to_regclass('accounting.ecl_quantitative_input_readiness'),
+            to_regclass('accounting.ecl_quantitative_input_readiness_summary'),
             to_regprocedure(
                 'accounting.review_ecl_credit_risk_labels(uuid,text,boolean,text,text,text,text,text,boolean,boolean,text,text,text,text,uuid,uuid)'
             ),
@@ -77,7 +80,7 @@ def _verify(connection: psycopg.Connection) -> tuple:
     ).fetchone()
     if any(item is None for item in objects):
         raise SystemExit(
-            "ECL credit-risk label verification failed: required protected objects are missing"
+            "ECL credit-risk label verification failed: required protected label/readiness objects are missing"
         )
 
     chronology_trigger_count = connection.execute(
@@ -176,7 +179,7 @@ def _verify(connection: psycopg.Connection) -> tuple:
             f"ECL credit-risk label verification failed: policy mismatch {policy!r}"
         )
 
-    summary = connection.execute(
+    label_summary = connection.execute(
         """
         SELECT
             loan_count,
@@ -200,19 +203,86 @@ def _verify(connection: psycopg.Connection) -> tuple:
         FROM accounting.ecl_credit_risk_label_summary
         """
     ).fetchone()
-    if summary is None:
-        raise SystemExit("ECL credit-risk label verification failed: summary is missing")
-    if bool(summary[13]) or summary[14] is not None or any(bool(v) for v in summary[15:]):
+    if label_summary is None:
+        raise SystemExit("ECL credit-risk label verification failed: label summary is missing")
+    if bool(label_summary[13]) or label_summary[14] is not None or any(
+        bool(value) for value in label_summary[15:]
+    ):
         raise SystemExit(
             "ECL credit-risk label verification failed: quantitative ECL or posting was unexpectedly enabled"
         )
-    return summary
+
+    readiness_summary = connection.execute(
+        """
+        SELECT
+            loan_count,
+            quantitative_input_ready_count,
+            contractual_schedule_dpd_blocked_count,
+            credit_risk_label_blocked_count,
+            original_eir_initial_carrying_blocked_count,
+            protected_history_blocked_count,
+            current_carrying_blocked_count,
+            outcome_evidence_blocked_count,
+            forward_looking_evidence_blocked_count,
+            quantitative_ecl_ready,
+            ecl_amount,
+            ecl_calculation_enabled,
+            account_1190_posting_enabled,
+            automatic_source_posting
+        FROM accounting.ecl_quantitative_input_readiness_summary
+        """
+    ).fetchone()
+    if readiness_summary is None:
+        raise SystemExit(
+            "ECL credit-risk label verification failed: quantitative input-readiness summary is missing"
+        )
+    if int(readiness_summary[0]) != int(label_summary[0]):
+        raise SystemExit(
+            "ECL quantitative input-readiness verification failed: loan population does not match the protected label queue"
+        )
+    if int(readiness_summary[1]) != 0:
+        raise SystemExit(
+            "ECL quantitative input-readiness verification failed: a loan became ready before A2 forward-looking evidence governance"
+        )
+    if int(readiness_summary[8]) != int(readiness_summary[0]):
+        raise SystemExit(
+            "ECL quantitative input-readiness verification failed: every current loan must expose the A2 forward-looking evidence blocker"
+        )
+    if bool(readiness_summary[9]) or readiness_summary[10] is not None or any(
+        bool(value) for value in readiness_summary[11:]
+    ):
+        raise SystemExit(
+            "ECL quantitative input-readiness verification failed: calculation or posting was unexpectedly enabled"
+        )
+
+    invalid_forward_boundary = connection.execute(
+        """
+        SELECT count(*)
+        FROM accounting.ecl_quantitative_input_readiness
+        WHERE approved_forward_looking_evidence_ready
+           OR quantitative_input_ready
+           OR NOT (
+                blocker_codes @> ARRAY['approved_forward_looking_evidence_required']::text[]
+           )
+           OR ecl_amount IS NOT NULL
+           OR ecl_calculation_enabled
+           OR account_1190_posting_enabled
+           OR automatic_source_posting
+        """
+    ).fetchone()[0]
+    if int(invalid_forward_boundary) != 0:
+        raise SystemExit(
+            "ECL quantitative input-readiness verification failed: fail-closed A1/A2 boundary is not preserved"
+        )
+
+    return label_summary, readiness_summary
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Install and verify protected SPINA V1 ECL credit-risk label controls plus strict cash-recovery chronology on the approved live database."
+            "Install and verify protected SPINA V1 ECL labels, strict recovery chronology, "
+            "and the fail-closed per-loan quantitative-input readiness gate on the approved live database."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -235,34 +305,43 @@ def main() -> int:
             """
             SELECT
                 to_regclass('accounting.ecl_methodology_policy_v1'),
-                to_regclass('accounting.loan_contract_dpd_assessment')
+                to_regclass('accounting.loan_contract_dpd_assessment'),
+                to_regclass('accounting.greenfield_regular_eir_anchor_readiness'),
+                to_regclass('accounting.seven_by_seven_eir_initial_carrying_readiness'),
+                to_regclass('accounting.regular_journal_posting_entries'),
+                to_regclass('accounting.regular_journal_reversal_sets'),
+                to_regclass('accounting.seven_by_seven_journal_postings'),
+                to_regclass('accounting.seven_by_seven_journal_reversals')
             """
         ).fetchone()
         if any(item is None for item in prerequisites):
             raise SystemExit(
-                "ECL credit-risk label migration refused: 0069 methodology policy and contract-driven DPD foundation must be installed"
+                "ECL readiness migration refused: protected methodology, DPD, EIR/carrying, posting and reversal foundations must be installed"
             )
 
         before = _history_counts(connection)
         for migration in MIGRATIONS:
             connection.execute(migration.read_text(encoding="utf-8"))
-        summary = _verify(connection)
+        label_summary, readiness_summary = _verify(connection)
         after = _history_counts(connection)
         if after != before:
             raise SystemExit(
-                f"ECL credit-risk label verification failed: protected history changed from {before} to {after}"
+                f"ECL readiness verification failed: protected history changed from {before} to {after}"
             )
 
     print(
-        "ECL credit-risk label live summary: "
-        f"loans={summary[0]}, dpd_ready={summary[1]}, dpd_blocked={summary[2]}, "
-        f"review_required={summary[3]}, refresh_required={summary[4]}, "
-        f"current_labels={summary[5]}, stage1={summary[6]}, stage2={summary[7]}, "
-        f"stage3={summary[8]}, defaults={summary[9]}, writeoff_supported={summary[10]}, "
-        f"cash_recovery={summary[11]}, cured={summary[12]}, history_unchanged=True, "
-        "strict_cash_recovery_chronology=True, explicit_management_review=True, "
-        "automatic_staging_enabled=False, automatic_default_enabled=False, "
-        "automatic_write_off_enabled=False, automatic_recovery_enabled=False, "
+        "ECL credit-risk label/readiness live summary: "
+        f"loans={label_summary[0]}, dpd_ready={label_summary[1]}, dpd_blocked={label_summary[2]}, "
+        f"review_required={label_summary[3]}, refresh_required={label_summary[4]}, "
+        f"current_labels={label_summary[5]}, stage1={label_summary[6]}, stage2={label_summary[7]}, "
+        f"stage3={label_summary[8]}, defaults={label_summary[9]}, writeoff_supported={label_summary[10]}, "
+        f"cash_recovery={label_summary[11]}, cured={label_summary[12]}, "
+        f"input_ready={readiness_summary[1]}, schedule_dpd_blocked={readiness_summary[2]}, "
+        f"label_blocked={readiness_summary[3]}, eir_anchor_blocked={readiness_summary[4]}, "
+        f"protected_history_blocked={readiness_summary[5]}, current_carrying_blocked={readiness_summary[6]}, "
+        f"outcome_blocked={readiness_summary[7]}, forward_looking_blocked={readiness_summary[8]}, "
+        "history_unchanged=True, strict_cash_recovery_chronology=True, "
+        "deterministic_input_blockers=True, forward_looking_governance_installed=False, "
         "quantitative_ecl_ready=False, ecl_calculation_enabled=False, "
         "account_1190_posting_enabled=False, automatic_source_posting=False."
     )
