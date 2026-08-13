@@ -44,13 +44,14 @@ def _measurement(connection, measurement_id):
     ).fetchone()
 
 
-def _case(connection, suffix: str):
+def _case(connection, suffix: str, *, period_id=None):
     actor_id = a3._actor(connection, suffix)
     today = connection.execute("SELECT current_date").fetchone()[0]
-    period_id = connection.execute(
-        "INSERT INTO accounting.fiscal_periods(label,start_date,end_date,status) VALUES(%s,%s,%s,'open') RETURNING id",
-        (f"ECL A5 {suffix}", today, today + timedelta(days=120)),
-    ).fetchone()[0]
+    if period_id is None:
+        period_id = connection.execute(
+            "INSERT INTO accounting.fiscal_periods(label,start_date,end_date,status) VALUES(%s,%s,%s,'open') RETURNING id",
+            (f"ECL A5 {suffix}", today, today + timedelta(days=120)),
+        ).fetchone()[0]
     _, loan_id = a3._loan(connection, suffix=suffix, actor_id=actor_id, release_date=today)
     event_id = connection.execute(
         "SELECT accounting.record_loan_disbursement_evidence(%s,%s,'new_loan_release',current_date,clock_timestamp(),5000.00,0.00,0.00,'cash_office',%s,%s)",
@@ -112,7 +113,7 @@ def test_a5_remeasurement_increase_decrease_full_reversal_retry_and_atomic_rollb
             assert connection.execute("SELECT adjustment_direction FROM accounting.ecl_allowance_remeasurements WHERE id=%s",(reversal_id,)).fetchone()[0] == "full_reversal"
             assert connection.execute("SELECT accounting.ecl_loan_allowance_balance(%s)",(case[1],)).fetchone()[0] == 0
 
-            rollback_case = _case(connection, "R" + uuid4().hex[:9])
+            rollback_case = _case(connection, "R" + uuid4().hex[:9], period_id=case[2])
             rollback_measurement = _new_measurement(connection, rollback_case, "30.00")
             before_balance = connection.execute("SELECT accounting.ecl_loan_allowance_balance(%s)",(rollback_case[1],)).fetchone()[0]
             before_counts = connection.execute("SELECT (SELECT count(*) FROM accounting.journal_entries),(SELECT count(*) FROM accounting.ecl_allowance_remeasurements)").fetchone()
