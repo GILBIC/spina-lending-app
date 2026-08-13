@@ -325,14 +325,6 @@ def test_read_only_ecl_is_stage_aware_deterministic_evidence_backed_and_non_post
             pytest.skip("0069 ECL methodology/source policy is not installed")
 
         try:
-            before_history = connection.execute(
-                """
-                SELECT
-                    (SELECT count(*) FROM accounting.journal_entries),
-                    (SELECT count(*) FROM accounting.journal_lines),
-                    (SELECT count(*) FROM core.audit_logs)
-                """
-            ).fetchone()
             for migration in MIGRATIONS:
                 connection.execute(_transaction_body(migration))
 
@@ -408,6 +400,15 @@ def test_read_only_ecl_is_stage_aware_deterministic_evidence_backed_and_non_post
                 (loan_id,),
             ).fetchone()
             assert gate == (True, [], True, False, False)
+
+            measurement_history_before = connection.execute(
+                """
+                SELECT
+                    (SELECT count(*) FROM accounting.journal_entries),
+                    (SELECT count(*) FROM accounting.journal_lines),
+                    (SELECT count(*) FROM core.audit_logs)
+                """
+            ).fetchone()
 
             scenarios = _scenario_payload(
                 evidence_ids=[evidence_b, evidence_a],
@@ -595,8 +596,9 @@ def test_read_only_ecl_is_stage_aware_deterministic_evidence_backed_and_non_post
                     (SELECT count(*) FROM core.audit_logs)
                 """
             ).fetchone()
-            # A3 may add immutable audit rows but it creates no accounting journal.
-            assert after_history[0:2] == before_history[0:2]
-            assert after_history[2] > before_history[2]
+            # Compare against the baseline after the protected test loan release
+            # was posted. A3 itself may add immutable audit rows but no journal.
+            assert after_history[0:2] == measurement_history_before[0:2]
+            assert after_history[2] > measurement_history_before[2]
         finally:
             connection.rollback()
