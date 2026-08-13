@@ -46,9 +46,9 @@ def _posted_case(connection, suffix: str):
         connection, suffix
     )
     posting_id = posting_helpers._post(connection, actor_id, before)
-    journal_entry_id = before[4]
+    original_journal_id = before[4]
     connection.execute(_transaction_body(SQL_0067))
-    return actor_id, loan_id, period_id, transaction_id, posting_id, journal_entry_id
+    return actor_id, loan_id, period_id, transaction_id, posting_id, original_journal_id
 
 
 def _insert_void_evidence(connection, transaction_id, actor_id, reason: str, voided_at):
@@ -64,7 +64,7 @@ def _insert_void_evidence(connection, transaction_id, actor_id, reason: str, voi
     ).fetchone()[0]
 
 
-def _void_source(connection, transaction_id, actor_id, reason: str, voided_at):
+def _void_source(connection, transaction_id, actor_id, reason: str, voided_at) -> None:
     connection.execute(
         """
         update lending.collection_transactions
@@ -72,8 +72,7 @@ def _void_source(connection, transaction_id, actor_id, reason: str, voided_at):
             voided_at = %s,
             voided_by_user_id = %s,
             void_reason = %s
-        where id = %s
-          and is_voided = false
+        where id = %s and is_voided = false
         """,
         (voided_at, actor_id, reason, transaction_id),
     )
@@ -87,13 +86,13 @@ def test_posted_7x7_void_posts_exact_swap_and_is_immutably_audited() -> None:
 
     with psycopg.connect(DATABASE_URL) as connection:
         try:
-            actor_id, loan_id, _, transaction_id, posting_id, original_journal_id = _posted_case(
+            actor_id, loan_id, period_id, transaction_id, posting_id, original_journal_id = _posted_case(
                 connection, suffix
             )
 
             posting_status = posting_helpers._posting_status(connection, transaction_id)
             assert posting_status is not None
-            assert posting_status[26:] == (True, True, False)
+            assert posting_status[26:] == (True, True, True, False)
 
             original_lines = connection.execute(
                 """
@@ -123,8 +122,8 @@ def test_posted_7x7_void_posts_exact_swap_and_is_immutably_audited() -> None:
                        original_journal_entry_id, reversal_journal_entry_id,
                        original_entry_number, reversal_entry_number,
                        original_source_event_key, reversal_source_event_key,
-                       reversal_posting_date, reason, expected_line_count,
-                       total_debit, total_credit, reversed_by_user_id
+                       reversal_posting_date, fiscal_period_id, reason,
+                       expected_line_count, total_debit, total_credit, reversed_by_user_id
                 from accounting.seven_by_seven_journal_reversals
                 where transaction_id = %s
                 """,
@@ -143,10 +142,11 @@ def test_posted_7x7_void_posts_exact_swap_and_is_immutably_audited() -> None:
             assert reversal[9] == f"collection:{transaction_id}"
             assert reversal[10] == f"seven-by-seven-collection-void-reversal:{posting_id}"
             assert reversal[11].isoformat() == "2099-01-02"
-            assert reversal[12] == reason
-            assert reversal[13] == len(original_lines)
-            assert reversal[14] == reversal[15]
-            assert reversal[16] == actor_id
+            assert reversal[12] == period_id
+            assert reversal[13] == reason
+            assert reversal[14] == len(original_lines)
+            assert reversal[15] == reversal[16]
+            assert reversal[17] == actor_id
 
             original_journal = connection.execute(
                 "select status, entry_number from accounting.journal_entries where id = %s",
@@ -158,8 +158,7 @@ def test_posted_7x7_void_posts_exact_swap_and_is_immutably_audited() -> None:
                 """
                 select status, entry_number, source_type, source_reference,
                        source_event_key, reversal_of_entry_id
-                from accounting.journal_entries
-                where id = %s
+                from accounting.journal_entries where id = %s
                 """,
                 (reversal_journal_id,),
             ).fetchone()
@@ -177,16 +176,12 @@ def test_posted_7x7_void_posts_exact_swap_and_is_immutably_audited() -> None:
                 select line_number, journal_component, account_id, account_system_key,
                        debit, credit, client_id, loan_id
                 from accounting.seven_by_seven_journal_reversal_lines
-                where reversal_id = %s
-                order by line_number
+                where reversal_id = %s order by line_number
                 """,
                 (reversal_id,),
             ).fetchall()
             expected_lines = [
-                (
-                    line[0], line[1], line[2], line[3],
-                    line[5], line[4], line[6], line[7]
-                )
+                (line[0], line[1], line[2], line[3], line[5], line[4], line[6], line[7])
                 for line in original_lines
             ]
             assert reversal_lines == expected_lines
@@ -201,8 +196,7 @@ def test_posted_7x7_void_posts_exact_swap_and_is_immutably_audited() -> None:
                 join accounting.seven_by_seven_journal_reversal_lines snapshot
                   on snapshot.reversal_id = %s
                  and snapshot.line_number = line.line_number
-                where line.journal_entry_id = %s
-                order by line.line_number
+                where line.journal_entry_id = %s order by line.line_number
                 """,
                 (reversal_id, reversal_journal_id),
             ).fetchall()
@@ -253,7 +247,7 @@ def test_posted_7x7_void_posts_exact_swap_and_is_immutably_audited() -> None:
                         )
                         """,
                         (
-                            reversal[1],
+                            period_id,
                             voided_at.date(),
                             str(void_id),
                             "manual-seven-by-seven-reversal:" + uuid4().hex,
@@ -297,9 +291,7 @@ def test_7x7_void_and_reversal_roll_back_atomically_when_audit_insert_fails() ->
 
             with pytest.raises(psycopg.Error, match="forced 7x7 reversal audit failure"):
                 with connection.transaction():
-                    _insert_void_evidence(
-                        connection, transaction_id, actor_id, reason, voided_at
-                    )
+                    _insert_void_evidence(connection, transaction_id, actor_id, reason, voided_at)
                     _void_source(connection, transaction_id, actor_id, reason, voided_at)
 
             assert connection.execute(
