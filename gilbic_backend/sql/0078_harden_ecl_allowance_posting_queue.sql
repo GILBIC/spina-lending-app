@@ -8,7 +8,7 @@ BEGIN;
 CREATE OR REPLACE VIEW accounting.ecl_allowance_posting_queue AS
 WITH account_coordinates AS (
     SELECT
-        max(account.id) FILTER (
+        min(account.id::text)::uuid FILTER (
             WHERE account.system_key = 'credit_loss_expense'
               AND account.code = '5000'
               AND account.account_type = 'expense'
@@ -24,7 +24,7 @@ WITH account_coordinates AS (
               AND account.is_active
               AND account.is_posting
         )::integer AS credit_loss_expense_account_count,
-        max(account.id) FILTER (
+        min(account.id::text)::uuid FILTER (
             WHERE account.system_key = 'allowance_expected_credit_loss'
               AND account.code = '1190'
               AND account.account_type = 'asset'
@@ -66,7 +66,7 @@ SELECT
     ) AS source_event_key,
     coalesce(prepared.posting_date, measurement_queue.measurement_date)
         AS posting_date,
-    coalesce(prepared.fiscal_period_id, open_period.id) AS fiscal_period_id,
+    coalesce(prepared.fiscal_period_id, period_coordinates.id) AS fiscal_period_id,
     coalesce(
         prepared.credit_loss_expense_account_id,
         account_coordinates.credit_loss_expense_account_id
@@ -110,7 +110,7 @@ SELECT
             THEN 'posting_ready'
         WHEN prepared.id IS NOT NULL AND journal.status = 'posted' AND posting.id IS NULL
             THEN 'posting_audit_incomplete'
-        WHEN open_period.id IS NULL
+        WHEN period_coordinates.open_period_count <> 1
           OR account_coordinates.credit_loss_expense_account_count <> 1
           OR account_coordinates.allowance_account_count <> 1
             THEN 'preparation_blocked'
@@ -121,7 +121,7 @@ SELECT
         AND measurement_queue.authoritative_ecl_amount > 0
         AND accounting.ecl_loan_allowance_balance(measurement_queue.loan_id) = 0
         AND posting.id IS NULL
-        AND open_period.id IS NOT NULL
+        AND period_coordinates.open_period_count = 1
         AND account_coordinates.credit_loss_expense_account_count = 1
         AND account_coordinates.allowance_account_count = 1
     ) AS protected_allowance_action_ready,
@@ -130,13 +130,13 @@ SELECT
 FROM accounting.ecl_quantitative_measurement_queue measurement_queue
 CROSS JOIN account_coordinates
 LEFT JOIN LATERAL (
-    SELECT period.id
+    SELECT
+        min(period.id::text)::uuid AS id,
+        count(*)::integer AS open_period_count
     FROM accounting.fiscal_periods period
     WHERE period.status = 'open'
       AND measurement_queue.measurement_date BETWEEN period.start_date AND period.end_date
-    ORDER BY period.start_date DESC
-    LIMIT 1
-) open_period ON true
+) period_coordinates ON true
 LEFT JOIN accounting.ecl_allowance_draft_preparations prepared
   ON prepared.measurement_id = measurement_queue.measurement_id
 LEFT JOIN accounting.journal_entries journal
@@ -170,6 +170,6 @@ SELECT
 FROM accounting.ecl_allowance_posting_queue;
 
 COMMENT ON VIEW accounting.ecl_allowance_posting_queue IS
-'A4 Management queue exposes exact candidate measurement/date/open-period/5000/1190/amount/prior-balance coordinates before preparation. Missing exact coordinates fail closed; no journal is auto-created and automatic source posting remains disabled.';
+'A4 Management queue exposes exact candidate measurement/date/open-period/5000/1190/amount/prior-balance coordinates before preparation. Missing or ambiguous exact coordinates fail closed; no journal is auto-created and automatic source posting remains disabled.';
 
 COMMIT;
