@@ -109,8 +109,10 @@ def test_0076_canonicalizes_unordered_forward_evidence_before_digest() -> None:
     assert HARDENING_SQL.strip().startswith("BEGIN;")
     assert HARDENING_SQL.strip().endswith("COMMIT;")
     assert "record_read_only_quantitative_ecl_measurement_v1_impl" in lower
-    assert "select distinct raw_id::uuid as evidence_id" in lower
-    assert "jsonb_agg(to_jsonb(evidence_id) order by evidence_id)" in lower
+    assert "select distinct raw_id::uuid as evidence_uuid" in lower
+    assert "jsonb_agg(to_jsonb(canonical.evidence_uuid) order by canonical.evidence_uuid)" in lower
+    assert "array_agg(distinct used.evidence_uuid order by used.evidence_uuid)" in lower
+    assert "from unnest(all_forward_evidence_ids) as used(evidence_uuid)" in lower
     assert "order by coalesce(scenario.value ->> 'scenario_key', '')" in lower
     assert "no probability or cash-flow input is invented" in lower
 
