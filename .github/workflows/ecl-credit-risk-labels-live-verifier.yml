@@ -23,6 +23,7 @@ on:
       - 'docs/accounting/ecl-read-only-measurement-policy.md'
       - 'docs/accounting/ecl-allowance-posting-policy.md'
       - 'tools/apply_ecl_credit_risk_labels_migration.py'
+      - 'tools/apply_ecl_live_migrations_version_aware.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_repository.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_api.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_quantitative_measurement_repository.py'
@@ -52,6 +53,7 @@ on:
       - 'docs/accounting/ecl-read-only-measurement-policy.md'
       - 'docs/accounting/ecl-allowance-posting-policy.md'
       - 'tools/apply_ecl_credit_risk_labels_migration.py'
+      - 'tools/apply_ecl_live_migrations_version_aware.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_repository.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_api.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_quantitative_measurement_repository.py'
@@ -101,6 +103,7 @@ jobs:
         run: |
           set "VENV=%RUNNER_TEMP%\spina-ecl-label-live-venv"
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_ecl_credit_risk_labels_migration.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_ecl_live_migrations_version_aware.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\ecl_credit_risk_label_repository.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\ecl_credit_risk_label_api.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\ecl_quantitative_measurement_repository.py || exit /b 1
@@ -119,6 +122,7 @@ jobs:
           python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0076_harden_read_only_quantitative_ecl_measurement.sql').read_text(encoding='utf-8'); u=s.upper(); assert 'SELECT DISTINCT RAW_ID::UUID AS EVIDENCE_UUID' in u; assert 'ARRAY_AGG(DISTINCT USED.EVIDENCE_UUID ORDER BY USED.EVIDENCE_UUID)' in u; assert 'MEASUREMENT_FORWARD_EVIDENCE_CURRENT' in u; assert 'NEW_MEASUREMENT_REQUIRED' in u; assert 'FALSE AS ACCOUNT_1190_POSTING_ENABLED' in u; assert 'INSERT INTO ACCOUNTING.JOURNAL_ENTRIES' not in u" || exit /b 1
           python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0077_add_protected_ecl_allowance_posting.sql').read_text(encoding='utf-8'); u=s.upper(); q=chr(39); needle='automatic_source_posting'+q+', true'; assert s.strip().startswith('BEGIN;') and s.strip().endswith('COMMIT;'); assert 'PREPARE_INITIAL_ECL_ALLOWANCE_JOURNAL' in u and 'POST_INITIAL_ECL_ALLOWANCE_JOURNAL' in u; assert 'CREDIT_LOSS_EXPENSE' in u and q+'5000'+q in s; assert 'ALLOWANCE_EXPECTED_CREDIT_LOSS' in u and q+'1190'+q in s; assert 'PRIOR ALLOWANCE BALANCE 0.00' in u; assert 'ACCOUNT 1190 ALLOWANCE FOR EXPECTED CREDIT LOSS CAN ONLY BE CHANGED' in u; assert 'TRUE AS ACCOUNT_1190_POSTING_ENABLED' in u; assert 'FALSE AS AUTOMATIC_SOURCE_POSTING' in u; assert needle not in s.lower()" || exit /b 1
           python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0078_harden_ecl_allowance_posting_queue.sql').read_text(encoding='utf-8'); u=s.upper(); assert 'PREPARATION_BLOCKED' in u; assert 'MEASUREMENT_NOT_AUTHORITATIVE' in u; assert 'A5_REMEASUREMENT_REQUIRED' in u; assert 'TRUE AS ACCOUNT_1190_POSTING_ENABLED' in u; assert 'FALSE AS AUTOMATIC_SOURCE_POSTING' in u; assert 'INSERT INTO ACCOUNTING.JOURNAL_ENTRIES' not in u" || exit /b 1
+          python -c "from pathlib import Path; s=Path('tools/apply_ecl_live_migrations_version_aware.py').read_text(encoding='utf-8'); assert '_select_missing_forward_migrations' in s; assert 'non-contiguous' in s; assert 'ecl.MIGRATIONS = selected' in s" || exit /b 1
 
       - name: Require the live database runner for non-PR execution
         if: github.event_name != 'pull_request'
@@ -134,7 +138,7 @@ jobs:
         shell: cmd
         run: |
           set "VENV=%RUNNER_TEMP%\spina-ecl-label-live-venv"
-          "%VENV%\Scripts\python.exe" tools\apply_ecl_credit_risk_labels_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+          "%VENV%\Scripts\python.exe" tools\apply_ecl_live_migrations_version_aware.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
 
       - name: Require a clean committed tree when Git metadata is available
         shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
