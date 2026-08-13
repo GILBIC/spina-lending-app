@@ -30,6 +30,9 @@ SQL_0066 = (SQL_ROOT / "0066_add_protected_7x7_source_event_journal_posting.sql"
 SQL_0067 = (SQL_ROOT / "0067_add_controlled_7x7_collection_reversals.sql").read_text(
     encoding="utf-8"
 )
+SQL_0068 = (SQL_ROOT / "0068_harden_controlled_7x7_collection_reversal_guard.sql").read_text(
+    encoding="utf-8"
+)
 
 
 def _transaction_body(source: str) -> str:
@@ -48,6 +51,7 @@ def _posted_case(connection, suffix: str):
     posting_id = posting_helpers._post(connection, actor_id, before)
     original_journal_id = before[4]
     connection.execute(_transaction_body(SQL_0067))
+    connection.execute(_transaction_body(SQL_0068))
     return actor_id, loan_id, period_id, transaction_id, posting_id, original_journal_id
 
 
