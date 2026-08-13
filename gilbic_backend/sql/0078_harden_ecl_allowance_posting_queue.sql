@@ -163,12 +163,12 @@ SELECT
         AS a5_remeasurement_required_count,
     count(*) FILTER (WHERE allowance_posting_status = 'posting_audit_incomplete')::bigint
         AS posting_audit_incomplete_count,
-    count(*) FILTER (WHERE allowance_posting_status = 'preparation_blocked')::bigint
-        AS preparation_blocked_count,
     coalesce(sum(current_allowance_balance), 0)::numeric(18,2)
         AS protected_allowance_balance_total,
     true AS account_1190_posting_enabled,
-    false AS automatic_source_posting
+    false AS automatic_source_posting,
+    count(*) FILTER (WHERE allowance_posting_status = 'preparation_blocked')::bigint
+        AS preparation_blocked_count
 FROM accounting.ecl_allowance_posting_queue;
 
 COMMENT ON VIEW accounting.ecl_allowance_posting_queue IS
