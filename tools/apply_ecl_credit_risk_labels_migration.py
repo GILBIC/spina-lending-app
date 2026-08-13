@@ -14,6 +14,8 @@ MIGRATIONS = (
     SQL_ROOT / "0072_add_ecl_quantitative_input_readiness.sql",
     SQL_ROOT / "0073_add_ecl_forward_looking_evidence_governance.sql",
     SQL_ROOT / "0074_integrate_ecl_forward_looking_readiness.sql",
+    SQL_ROOT / "0075_add_read_only_quantitative_ecl_measurement.sql",
+    SQL_ROOT / "0076_harden_read_only_quantitative_ecl_measurement.sql",
 )
 
 
@@ -42,13 +44,14 @@ def _relation_count(connection: psycopg.Connection, relation: str) -> int:
         "accounting.ecl_credit_risk_label_reviews",
         "accounting.ecl_forward_looking_evidence",
         "accounting.ecl_forward_looking_evidence_revocations",
+        "accounting.ecl_quantitative_measurements",
     }
     if relation in supported:
         return int(connection.execute(f"SELECT count(*) FROM {relation}").fetchone()[0])
     raise ValueError(f"Unsupported relation count: {relation}")
 
 
-def _history_counts(connection: psycopg.Connection) -> tuple[int, int, int, int, int, int]:
+def _history_counts(connection: psycopg.Connection) -> tuple[int, ...]:
     fixed = connection.execute(
         """
         SELECT
@@ -64,10 +67,11 @@ def _history_counts(connection: psycopg.Connection) -> tuple[int, int, int, int,
         _relation_count(connection, "accounting.ecl_credit_risk_label_reviews"),
         _relation_count(connection, "accounting.ecl_forward_looking_evidence"),
         _relation_count(connection, "accounting.ecl_forward_looking_evidence_revocations"),
+        _relation_count(connection, "accounting.ecl_quantitative_measurements"),
     )
 
 
-def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple]:
+def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple]:
     objects = connection.execute(
         """
         SELECT
@@ -82,6 +86,9 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple]:
             to_regclass('accounting.ecl_forward_looking_evidence_revocations'),
             to_regclass('accounting.ecl_forward_looking_evidence_status'),
             to_regclass('accounting.ecl_forward_looking_evidence_readiness'),
+            to_regclass('accounting.ecl_quantitative_measurements'),
+            to_regclass('accounting.ecl_quantitative_measurement_queue'),
+            to_regclass('accounting.ecl_quantitative_measurement_summary'),
             to_regprocedure(
                 'accounting.review_ecl_credit_risk_labels(uuid,text,boolean,text,text,text,text,text,boolean,boolean,text,text,text,text,uuid,uuid)'
             ),
@@ -89,14 +96,15 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple]:
             to_regprocedure(
                 'accounting.record_ecl_forward_looking_evidence(text,text,text,date,date,date,date,timestamp with time zone,date,text,uuid,uuid)'
             ),
+            to_regprocedure('accounting.revoke_ecl_forward_looking_evidence(uuid,text,uuid)'),
             to_regprocedure(
-                'accounting.revoke_ecl_forward_looking_evidence(uuid,text,uuid)'
+                'accounting.record_read_only_quantitative_ecl_measurement(uuid,date,jsonb,text,uuid)'
             )
         """
     ).fetchone()
     if any(item is None for item in objects):
         raise SystemExit(
-            "ECL verification failed: required protected label/readiness/forward-looking objects are missing"
+            "ECL verification failed: required protected label/readiness/forward-looking/read-only measurement objects are missing"
         )
 
     chronology_trigger_count = connection.execute(
@@ -113,7 +121,7 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple]:
     ).fetchone()[0]
     if int(chronology_trigger_count) != 1:
         raise SystemExit(
-            "ECL credit-risk label verification failed: strict cash-recovery chronology trigger is missing"
+            "ECL verification failed: strict cash-recovery chronology trigger is missing"
         )
 
     invalid_recovery_chronology = connection.execute(
@@ -141,7 +149,7 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple]:
     ).fetchone()[0]
     if int(invalid_recovery_chronology) != 0:
         raise SystemExit(
-            "ECL credit-risk label verification failed: existing cash-recovery evidence does not match strict accepted_at chronology"
+            "ECL verification failed: existing cash-recovery evidence violates strict accepted_at chronology"
         )
 
     permissions = connection.execute(
@@ -152,7 +160,8 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple]:
         WHERE role.code = 'management'
           AND permission_code IN (
               'accounting.ecl.credit_risk_label.review',
-              'accounting.ecl.forward_looking_evidence.manage'
+              'accounting.ecl.forward_looking_evidence.manage',
+              'accounting.ecl.measurement.review'
           )
         ORDER BY permission_code
         """
@@ -160,6 +169,7 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple]:
     if {row[0] for row in permissions} != {
         "accounting.ecl.credit_risk_label.review",
         "accounting.ecl.forward_looking_evidence.manage",
+        "accounting.ecl.measurement.review",
     }:
         raise SystemExit("ECL verification failed: required Management permissions are missing")
 
@@ -187,13 +197,7 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple]:
     ).fetchone()
     expected_prefix = (
         "ecl_credit_risk_labels_v1",
-        True,
-        True,
-        True,
-        True,
-        True,
-        True,
-        True,
+        True, True, True, True, True, True, True,
     )
     if policy[:8] != expected_prefix or any(bool(value) for value in policy[8:]):
         raise SystemExit(f"ECL credit-risk label verification failed: policy mismatch {policy!r}")
@@ -211,12 +215,10 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple]:
         FROM accounting.ecl_credit_risk_label_summary
         """
     ).fetchone()
-    if label_summary is None:
-        raise SystemExit("ECL credit-risk label verification failed: label summary is missing")
-    if bool(label_summary[13]) or label_summary[14] is not None or any(
+    if label_summary is None or bool(label_summary[13]) or label_summary[14] is not None or any(
         bool(value) for value in label_summary[15:]
     ):
-        raise SystemExit("ECL verification failed: quantitative ECL or posting was unexpectedly enabled")
+        raise SystemExit("ECL label verification unexpectedly enabled quantitative ECL/posting")
 
     forward_summary = connection.execute(
         """
@@ -230,11 +232,9 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple]:
         FROM accounting.ecl_forward_looking_evidence_readiness
         """
     ).fetchone()
-    if forward_summary is None:
-        raise SystemExit("ECL forward-looking evidence verification failed: readiness summary missing")
-    if any(bool(value) for value in forward_summary[7:]):
+    if forward_summary is None or any(bool(value) for value in forward_summary[7:]):
         raise SystemExit(
-            "ECL forward-looking evidence verification failed: numeric defaults/calculation/posting unexpectedly enabled"
+            "ECL forward-looking verification unexpectedly defaulted numeric assumptions or enabled posting"
         )
 
     readiness_summary = connection.execute(
@@ -258,27 +258,48 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple]:
     if bool(readiness_summary[9]) or readiness_summary[10] is not None or any(
         bool(value) for value in readiness_summary[11:]
     ):
-        raise SystemExit("ECL input-readiness unexpectedly enabled calculation or posting")
+        raise SystemExit("A1/A2 readiness unexpectedly enabled allowance posting")
 
-    # Installation is evidence-free: it must not fabricate a forecast just to
-    # make readiness pass. Existing approved evidence, if any, is preserved.
+    measurement_summary = connection.execute(
+        """
+        SELECT
+            loan_count, input_ready_count, input_blocked_count,
+            measurement_required_count, new_measurement_required_count,
+            measured_count, authoritative_ecl_total,
+            read_only_ecl_calculation_enabled,
+            account_1190_posting_enabled, automatic_source_posting
+        FROM accounting.ecl_quantitative_measurement_summary
+        """
+    ).fetchone()
+    if measurement_summary is None:
+        raise SystemExit("A3 read-only ECL measurement summary is missing")
+    if int(measurement_summary[0]) != int(readiness_summary[0]):
+        raise SystemExit("A3 measurement queue population does not match A1/A2 readiness")
+    if not bool(measurement_summary[7]) or bool(measurement_summary[8]) or bool(measurement_summary[9]):
+        raise SystemExit("A3 measurement safety flags are invalid")
+
+    measurement_count = _relation_count(connection, "accounting.ecl_quantitative_measurements")
+    if measurement_count == 0:
+        if int(measurement_summary[5]) != 0 or measurement_summary[6] != 0:
+            raise SystemExit("A3 installation fabricated an authoritative ECL amount")
+        if int(measurement_summary[2]) + int(measurement_summary[3]) != int(measurement_summary[0]):
+            raise SystemExit("Every unmeasured loan must remain input-blocked or measurement-required")
+
     evidence_count = _relation_count(connection, "accounting.ecl_forward_looking_evidence")
     if evidence_count == 0:
         if bool(forward_summary[6]) or int(forward_summary[0]) != 0:
-            raise SystemExit("ECL forward-looking readiness became true without approved evidence")
+            raise SystemExit("Forward-looking readiness became true without approved evidence")
         if int(readiness_summary[8]) != int(readiness_summary[0]):
-            raise SystemExit(
-                "Every current loan must retain the forward-looking blocker while no evidence exists"
-            )
+            raise SystemExit("Every current loan must retain the forward-looking blocker without evidence")
 
-    return label_summary, readiness_summary, forward_summary
+    return label_summary, readiness_summary, forward_summary, measurement_summary
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Install and verify protected SPINA V1 ECL labels, strict recovery chronology, "
-            "per-loan quantitative-input readiness, and forward-looking evidence governance."
+            "A1/A2 readiness and A3 read-only quantitative measurement controls."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -310,21 +331,21 @@ def main() -> int:
         ).fetchone()
         if any(item is None for item in prerequisites):
             raise SystemExit(
-                "ECL readiness migration refused: protected methodology, DPD, EIR/carrying, posting and reversal foundations must be installed"
+                "ECL migration refused: protected methodology, DPD, EIR/carrying, posting and reversal foundations must be installed"
             )
 
         before = _history_counts(connection)
         for migration in MIGRATIONS:
             connection.execute(migration.read_text(encoding="utf-8"))
-        label_summary, readiness_summary, forward_summary = _verify(connection)
+        label_summary, readiness_summary, forward_summary, measurement_summary = _verify(connection)
         after = _history_counts(connection)
         if after != before:
             raise SystemExit(
-                f"ECL verification failed: protected/evidence history changed from {before} to {after}"
+                f"ECL installation verification failed: protected/evidence/measurement history changed from {before} to {after}"
             )
 
     print(
-        "ECL credit-risk label/readiness live summary: "
+        "ECL label/readiness/read-only-measurement live summary: "
         f"loans={label_summary[0]}, dpd_ready={label_summary[1]}, dpd_blocked={label_summary[2]}, "
         f"review_required={label_summary[3]}, refresh_required={label_summary[4]}, "
         f"current_labels={label_summary[5]}, stage1={label_summary[6]}, stage2={label_summary[7]}, "
@@ -336,10 +357,13 @@ def main() -> int:
         f"outcome_blocked={readiness_summary[7]}, forward_looking_blocked={readiness_summary[8]}, "
         f"forward_current={forward_summary[0]}, forward_stale={forward_summary[1]}, "
         f"forward_superseded={forward_summary[2]}, forward_revoked={forward_summary[3]}, "
+        f"measurement_input_blocked={measurement_summary[2]}, measurement_required={measurement_summary[3]}, "
+        f"measurement_refresh_required={measurement_summary[4]}, measured={measurement_summary[5]}, "
+        f"authoritative_ecl_total={measurement_summary[6]}, "
         "history_unchanged=True, strict_cash_recovery_chronology=True, "
         "deterministic_input_blockers=True, forward_looking_governance_installed=True, "
-        "quantitative_ecl_ready=False, ecl_calculation_enabled=False, "
-        "account_1190_posting_enabled=False, automatic_source_posting=False."
+        "read_only_ecl_calculation_enabled=True, account_1190_posting_enabled=False, "
+        "automatic_source_posting=False."
     )
     return 0
 

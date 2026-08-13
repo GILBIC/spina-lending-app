@@ -25,6 +25,7 @@ from .database import database_ready
 from .ecl_credit_risk_label_api import create_ecl_credit_risk_label_router
 from .ecl_forward_looking_evidence_api import create_ecl_forward_looking_evidence_router
 from .ecl_outcome_review_api import create_ecl_outcome_review_router
+from .ecl_quantitative_measurement_api import create_ecl_quantitative_measurement_router
 from .eir_cash_allocation_api import create_eir_cash_allocation_router
 from .eir_period_journal_api import create_eir_period_journal_router
 from .financial_accounting_api import create_financial_accounting_router
@@ -143,6 +144,7 @@ def create_app() -> FastAPI:
     app.include_router(create_ecl_outcome_review_router())
     app.include_router(create_ecl_credit_risk_label_router())
     app.include_router(create_ecl_forward_looking_evidence_router())
+    app.include_router(create_ecl_quantitative_measurement_router())
     app.include_router(create_opening_balance_workbook_router())
     app.include_router(create_opening_balance_journal_router())
     app.include_router(create_general_journal_router())
