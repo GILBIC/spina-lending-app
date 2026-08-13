@@ -64,6 +64,15 @@ jobs:
         run: |
           python -c "from pathlib import Path; s=Path('gilbic_backend/sql/0066_add_protected_7x7_source_event_journal_posting.sql').read_text(encoding='utf-8'); u=s.upper(); assert s.strip().startswith('BEGIN;') and s.strip().endswith('COMMIT;'); assert 'ACCOUNTING.SEVEN_BY_SEVEN.JOURNAL.POST' in u; assert 'POST_SEVEN_BY_SEVEN_JOURNAL' in u; assert 'SEVEN_BY_SEVEN_JOURNAL_POSTING_LINES' in u; assert 'TRUE AS PROTECTED_POSTING_ENABLED' in u; assert 'FALSE AS REVERSAL_ENABLED' in u; assert 'FALSE AS AUTOMATIC_SOURCE_POSTING' in u; assert 'REVERSE_POSTED_SEVEN_BY_SEVEN' not in u; assert 'CREATE_SEVEN_BY_SEVEN_REVERSAL' not in u" || exit /b 1
 
+      - name: Require the live database runner for non-PR execution
+        if: github.event_name != 'pull_request'
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SPINA-WINDOWS') {
+            throw "Live 7x7 migration requires SPINA-WINDOWS because the approved database env files are local to that runner; current runner is $env:RUNNER_NAME."
+          }
+
       - name: Install and verify protected 7x7 posting controls on live database
         if: github.event_name != 'pull_request'
         shell: cmd
@@ -71,9 +80,19 @@ jobs:
           set "VENV=%RUNNER_TEMP%\spina-7x7-journal-posting-live-venv"
           "%VENV%\Scripts\python.exe" tools\apply_7x7_protected_journal_posting_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
 
-      - name: Require a clean committed tree
-        shell: cmd
+      - name: Require a clean committed tree when Git metadata is available
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
         run: |
-          git diff --check || exit /b 1
-          git diff --exit-code || exit /b 1
-          git diff --cached --exit-code || exit /b 1
+          $ErrorActionPreference = 'Stop'
+          $git = Get-Command git.exe -ErrorAction SilentlyContinue
+          if ($git -and (Test-Path '.git')) {
+            & $git.Source diff --check
+            if ($LASTEXITCODE -ne 0) { throw 'git diff --check failed.' }
+            & $git.Source diff --exit-code
+            if ($LASTEXITCODE -ne 0) { throw 'Working tree changed during verification.' }
+            & $git.Source diff --cached --exit-code
+            if ($LASTEXITCODE -ne 0) { throw 'Index changed during verification.' }
+          }
+          else {
+            Write-Host 'Git metadata is unavailable on this secondary self-hosted runner; actions/checkout exact-revision archive was used and verifier steps are read-only.'
+          }
