@@ -17,12 +17,13 @@ TEST_DATABASE_PREFIX = "spina_ecl_labels_"
 BOOTSTRAP_THROUGH = 69
 TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
 # Reuse one dedicated ECL disposable PostgreSQL workflow for the whole protected
-# label/readiness/evidence chain; do not duplicate identical CI.
+# label/readiness/evidence/measurement chain; do not duplicate identical CI.
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_ecl_credit_risk_labels_postgres.py",
     TEST_ROOT / "test_ecl_cash_recovery_chronology_postgres.py",
     TEST_ROOT / "test_ecl_quantitative_input_readiness_postgres.py",
     TEST_ROOT / "test_ecl_forward_looking_evidence_postgres.py",
+    TEST_ROOT / "test_ecl_read_only_measurement_postgres.py",
 )
 
 
@@ -55,8 +56,8 @@ def main() -> int:
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
             "through 0069, then prove protected 0070 labels, 0071 recovery chronology, "
-            "0072 quantitative-input blockers, 0073 forward-looking evidence governance, "
-            "and 0074 forward-looking readiness integration."
+            "0072 quantitative-input blockers, 0073/0074 forward-looking evidence governance, "
+            "and 0075/0076 read-only quantitative ECL measurement/hardening."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -112,12 +113,14 @@ def main() -> int:
             )
         print(
             "ECL disposable PostgreSQL validation passed: 0070 enforced explicit Management "
-            "credit-risk labels; 0071 required authoritative strict recovery chronology; 0072 "
-            "exposed deterministic per-loan quantitative-input blockers; 0073/0074 proved "
-            "immutable versioned Management-approved forward-looking evidence, explicit "
-            "supersession/revocation/stale-safe readiness, and removal/restoration of only the "
-            "forward-looking blocker. No scenario probability, multiplier, overlay, ECL amount, "
-            "account 1190 posting, write-off execution or automatic source posting was invented/enabled."
+            "credit-risk labels; 0071 required strict authoritative recovery chronology; 0072 "
+            "exposed deterministic per-loan input blockers; 0073/0074 proved immutable "
+            "versioned forward-looking evidence and stale/superseded/revoked readiness; "
+            "0075/0076 proved Stage 1 12-month and lifetime probability-weighted discounted "
+            "expected-cash-shortfall measurements, applicable original-EIR discounting, exact "
+            "input/version snapshots, deterministic semantic retries/digests, fail-closed stale "
+            "evidence, blocked-loan NULL authoritative amounts, and immutable read-only audit. "
+            "No PD/LGD/scenario assumption was invented and account 1190/automatic posting stayed disabled."
         )
         return 0
     except psycopg.Error as error:
