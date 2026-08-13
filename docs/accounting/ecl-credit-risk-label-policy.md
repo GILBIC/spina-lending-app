@@ -46,6 +46,7 @@ The write-off criterion is consistent with IFRS 9 paragraph 5.4.4 as reproduced 
 Recovery and cure are intentionally separate:
 
 - `cash_recovery_observed` requires the exact same-loan, non-voided, positive protected payment/advance transaction occurring after a prior reviewed default / Stage 3 / write-off-support state.
+- Recovery chronology uses the protected collection transaction's authoritative server `accepted_at` timestamp. It must be **strictly later** than the prior deteriorated review's `created_at`; sharing the same calendar date is not enough and intraday order is never inferred from `collection_date` alone.
 - `cured` requires a prior reviewed deteriorated state plus a new explicit non-default review that is no longer Stage 3 and is supported by evidence other than DPD alone.
 - Neither label is generated automatically from a balance, loan status, renewal, archive event or elapsed time.
 

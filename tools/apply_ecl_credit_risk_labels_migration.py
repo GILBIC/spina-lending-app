@@ -7,11 +7,10 @@ from pathlib import Path
 import psycopg
 
 
-MIGRATION = (
-    Path(__file__).resolve().parents[1]
-    / "gilbic_backend"
-    / "sql"
-    / "0070_add_ecl_credit_risk_labels.sql"
+SQL_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "sql"
+MIGRATIONS = (
+    SQL_ROOT / "0070_add_ecl_credit_risk_labels.sql",
+    SQL_ROOT / "0071_harden_ecl_cash_recovery_chronology.sql",
 )
 
 
@@ -72,12 +71,58 @@ def _verify(connection: psycopg.Connection) -> tuple:
             to_regclass('accounting.ecl_credit_risk_label_summary'),
             to_regprocedure(
                 'accounting.review_ecl_credit_risk_labels(uuid,text,boolean,text,text,text,text,text,boolean,boolean,text,text,text,text,uuid,uuid)'
-            )
+            ),
+            to_regprocedure('accounting.guard_ecl_cash_recovery_chronology()')
         """
     ).fetchone()
     if any(item is None for item in objects):
         raise SystemExit(
             "ECL credit-risk label verification failed: required protected objects are missing"
+        )
+
+    chronology_trigger_count = connection.execute(
+        """
+        SELECT count(*)
+        FROM pg_trigger trigger
+        JOIN pg_class relation ON relation.oid = trigger.tgrelid
+        JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+        WHERE namespace.nspname = 'accounting'
+          AND relation.relname = 'ecl_credit_risk_label_reviews'
+          AND trigger.tgname = 'ecl_cash_recovery_chronology_guard'
+          AND NOT trigger.tgisinternal
+        """
+    ).fetchone()[0]
+    if int(chronology_trigger_count) != 1:
+        raise SystemExit(
+            "ECL credit-risk label verification failed: strict cash-recovery chronology trigger is missing"
+        )
+
+    invalid_recovery_chronology = connection.execute(
+        """
+        SELECT count(*)
+        FROM accounting.ecl_credit_risk_label_reviews current_review
+        LEFT JOIN accounting.ecl_credit_risk_label_reviews prior_review
+          ON prior_review.id = current_review.supersedes_review_id
+        LEFT JOIN lending.collection_transactions recovery_tx
+          ON recovery_tx.id = current_review.recovery_transaction_id
+        WHERE current_review.recovery_label = 'cash_recovery_observed'
+          AND (
+                prior_review.id IS NULL
+             OR prior_review.loan_id <> current_review.loan_id
+             OR prior_review.review_version + 1 <> current_review.review_version
+             OR recovery_tx.id IS NULL
+             OR recovery_tx.loan_id <> current_review.loan_id
+             OR recovery_tx.is_voided
+             OR recovery_tx.amount <= 0
+             OR recovery_tx.entry_type NOT IN ('payment', 'advance')
+             OR recovery_tx.accepted_at IS NULL
+             OR recovery_tx.accepted_at <= prior_review.created_at
+          )
+        """
+    ).fetchone()[0]
+    if int(invalid_recovery_chronology) != 0:
+        raise SystemExit(
+            "ECL credit-risk label verification failed: existing cash-recovery evidence does not match the exact prior deteriorated review and strict accepted_at chronology"
         )
 
     permission = connection.execute(
@@ -167,7 +212,7 @@ def _verify(connection: psycopg.Connection) -> tuple:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Install and verify protected SPINA V1 ECL credit-risk label controls on the approved live database."
+            "Install and verify protected SPINA V1 ECL credit-risk label controls plus strict cash-recovery chronology on the approved live database."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -179,8 +224,11 @@ def main() -> int:
     database_url = os.getenv(args.database_url_env)
     if not database_url:
         raise SystemExit(f"{args.database_url_env} is not configured")
-    if not MIGRATION.is_file():
-        raise SystemExit(f"ECL credit-risk label migration file was not found: {MIGRATION}")
+    missing = [str(path) for path in MIGRATIONS if not path.is_file()]
+    if missing:
+        raise SystemExit(
+            "ECL credit-risk label migration file was not found: " + ", ".join(missing)
+        )
 
     with psycopg.connect(database_url, autocommit=True) as connection:
         prerequisites = connection.execute(
@@ -196,7 +244,8 @@ def main() -> int:
             )
 
         before = _history_counts(connection)
-        connection.execute(MIGRATION.read_text(encoding="utf-8"))
+        for migration in MIGRATIONS:
+            connection.execute(migration.read_text(encoding="utf-8"))
         summary = _verify(connection)
         after = _history_counts(connection)
         if after != before:
@@ -211,11 +260,11 @@ def main() -> int:
         f"current_labels={summary[5]}, stage1={summary[6]}, stage2={summary[7]}, "
         f"stage3={summary[8]}, defaults={summary[9]}, writeoff_supported={summary[10]}, "
         f"cash_recovery={summary[11]}, cured={summary[12]}, history_unchanged=True, "
-        "explicit_management_review=True, automatic_staging_enabled=False, "
-        "automatic_default_enabled=False, automatic_write_off_enabled=False, "
-        "automatic_recovery_enabled=False, quantitative_ecl_ready=False, "
-        "ecl_calculation_enabled=False, account_1190_posting_enabled=False, "
-        "automatic_source_posting=False."
+        "strict_cash_recovery_chronology=True, explicit_management_review=True, "
+        "automatic_staging_enabled=False, automatic_default_enabled=False, "
+        "automatic_write_off_enabled=False, automatic_recovery_enabled=False, "
+        "quantitative_ecl_ready=False, ecl_calculation_enabled=False, "
+        "account_1190_posting_enabled=False, automatic_source_posting=False."
     )
     return 0
 

@@ -15,11 +15,12 @@ import run_stage5d17_disposable_postgres_validation as disposable
 
 TEST_DATABASE_PREFIX = "spina_ecl_labels_"
 BOOTSTRAP_THROUGH = 69
-INTEGRATION_TEST = (
-    Path(__file__).resolve().parents[1]
-    / "gilbic_backend"
-    / "tests"
-    / "test_ecl_credit_risk_labels_postgres.py"
+TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
+# Run the original label proof and the focused final table-boundary chronology
+# regression together against one freshly bootstrapped local PostgreSQL database.
+INTEGRATION_TESTS = (
+    TEST_ROOT / "test_ecl_credit_risk_labels_postgres.py",
+    TEST_ROOT / "test_ecl_cash_recovery_chronology_postgres.py",
 )
 
 
@@ -29,16 +30,18 @@ def _configure_shared_safety_helpers() -> None:
 
 
 def _run_test(test_database_url: str) -> int:
-    if not INTEGRATION_TEST.is_file():
+    missing = [str(path) for path in INTEGRATION_TESTS if not path.is_file()]
+    if missing:
         raise SystemExit(
-            "ECL credit-risk label validation refused: integration test file is missing."
+            "ECL credit-risk label validation refused: integration test file is missing: "
+            + ", ".join(missing)
         )
     env = os.environ.copy()
     for key in disposable.ENDPOINT_ENV_KEYS:
         env.pop(key, None)
     env["GILBIC_TEST_DATABASE_URL"] = test_database_url
     completed = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", str(INTEGRATION_TEST)],
+        [sys.executable, "-m", "pytest", "-q", *(str(path) for path in INTEGRATION_TESTS)],
         env=env,
         check=False,
     )
@@ -49,7 +52,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
-            "through 0069, then apply and prove the protected 0070 ECL credit-risk labels."
+            "through 0069, then apply and prove protected 0070 ECL credit-risk labels plus "
+            "0071 strict cash-recovery chronology hardening."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -103,13 +107,14 @@ def main() -> int:
         if result != 0:
             raise SystemExit(
                 "ECL credit-risk label disposable PostgreSQL validation failed: "
-                f"integration test exited with code {result}."
+                f"integration tests exited with code {result}."
             )
         print(
             "ECL credit-risk label disposable PostgreSQL validation passed: "
             "0070 enforced explicit Management stage/default/write-off-support/recovery/cure "
-            "labels, rebuttable 30/90-DPD backstops, immutable review history and stale-review "
-            "protection while quantitative ECL, account 1190 posting, write-off execution and "
+            "labels and 0071 proved that cash recovery requires an authoritative server "
+            "accepted_at strictly after the prior deteriorated review, including same-day "
+            "ordering. Quantitative ECL, account 1190 posting, write-off execution and "
             "automatic source posting remained disabled."
         )
         return 0
