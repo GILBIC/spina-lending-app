@@ -30,6 +30,13 @@ BEGIN
 
     IF prior_review.id IS NULL
        OR prior_review.loan_id <> NEW.loan_id
+       OR prior_review.review_version + 1 <> NEW.review_version
+       OR EXISTS (
+            SELECT 1
+            FROM accounting.ecl_credit_risk_label_reviews newer
+            WHERE newer.loan_id = NEW.loan_id
+              AND newer.review_version > prior_review.review_version
+       )
        OR NOT (
             prior_review.default_label
             OR prior_review.stage_label = 'stage_3_credit_impaired'
@@ -64,6 +71,6 @@ BEFORE INSERT ON accounting.ecl_credit_risk_label_reviews
 FOR EACH ROW EXECUTE FUNCTION accounting.guard_ecl_cash_recovery_chronology();
 
 COMMENT ON FUNCTION accounting.guard_ecl_cash_recovery_chronology() IS
-    'Fail-closed ECL cash-recovery evidence guard. The exact same-loan protected positive collection must have an authoritative accepted_at timestamp strictly later than the prior deteriorated Management review; same-calendar-day ordering is never inferred.';
+    'Fail-closed ECL cash-recovery evidence guard. Recovery must supersede the exact immediately prior deteriorated same-loan review, and the exact protected positive collection must have authoritative accepted_at strictly later than that review created_at; same-calendar-day ordering is never inferred.';
 
 COMMIT;
