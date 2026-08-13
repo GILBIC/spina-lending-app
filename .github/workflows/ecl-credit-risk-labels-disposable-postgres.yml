@@ -32,9 +32,11 @@ on:
       - 'gilbic_backend/tests/test_ecl_allowance_posting_migration.py'
       - 'gilbic_backend/tests/test_ecl_allowance_posting_postgres.py'
       - 'gilbic_backend/tests/test_ecl_allowance_posting_api_contract.py'
+      - 'gilbic_backend/tests/test_ecl_live_migration_plan_postgres.py'
       - 'docs/accounting/ecl-read-only-measurement-policy.md'
       - 'docs/accounting/ecl-allowance-posting-policy.md'
       - 'tools/apply_ecl_credit_risk_labels_migration.py'
+      - 'tools/apply_ecl_live_migrations_version_aware.py'
       - 'tools/run_ecl_credit_risk_labels_disposable_postgres_validation.py'
       - '.github/workflows/ecl-credit-risk-labels-disposable-postgres.yml'
   push:
@@ -68,9 +70,11 @@ on:
       - 'gilbic_backend/tests/test_ecl_allowance_posting_migration.py'
       - 'gilbic_backend/tests/test_ecl_allowance_posting_postgres.py'
       - 'gilbic_backend/tests/test_ecl_allowance_posting_api_contract.py'
+      - 'gilbic_backend/tests/test_ecl_live_migration_plan_postgres.py'
       - 'docs/accounting/ecl-read-only-measurement-policy.md'
       - 'docs/accounting/ecl-allowance-posting-policy.md'
       - 'tools/apply_ecl_credit_risk_labels_migration.py'
+      - 'tools/apply_ecl_live_migrations_version_aware.py'
       - 'tools/run_ecl_credit_risk_labels_disposable_postgres_validation.py'
       - '.github/workflows/ecl-credit-risk-labels-disposable-postgres.yml'
 
