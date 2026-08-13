@@ -6,6 +6,9 @@ SQL = (SQL_ROOT / "0070_add_ecl_credit_risk_labels.sql").read_text(encoding="utf
 HARDENING_SQL = (
     SQL_ROOT / "0071_harden_ecl_cash_recovery_chronology.sql"
 ).read_text(encoding="utf-8")
+READINESS_SQL = (
+    SQL_ROOT / "0072_add_ecl_quantitative_input_readiness.sql"
+).read_text(encoding="utf-8")
 
 DOC = (
     Path(__file__).resolve().parents[2]
@@ -63,6 +66,60 @@ def test_0071_requires_authoritative_strict_recovery_timestamp_ordering() -> Non
     assert "INSERT INTO ACCOUNTING.JOURNAL_LINES" not in normalized
 
 
+def test_0072_defines_one_deterministic_fail_closed_input_gate_per_loan() -> None:
+    normalized = READINESS_SQL.upper()
+    assert READINESS_SQL.strip().startswith("BEGIN;")
+    assert READINESS_SQL.strip().endswith("COMMIT;")
+    assert "CREATE OR REPLACE VIEW ACCOUNTING.ECL_QUANTITATIVE_INPUT_READINESS AS" in normalized
+    assert "CREATE OR REPLACE VIEW ACCOUNTING.ECL_QUANTITATIVE_INPUT_READINESS_SUMMARY AS" in normalized
+    for blocker in (
+        "verified_contractual_schedule_dpd_required",
+        "current_credit_risk_label_required",
+        "original_eir_initial_carrying_evidence_required",
+        "protected_collection_posting_reversal_history_required",
+        "authoritative_current_gross_carrying_evidence_required",
+        "required_loss_recovery_writeoff_outcome_evidence_required",
+        "approved_forward_looking_evidence_required",
+    ):
+        assert blocker in READINESS_SQL
+    for ordinal in ("10,", "20,", "30,", "40,", "45,", "50,", "60,"):
+        assert ordinal in READINESS_SQL
+    assert "array_agg(blocker.code ORDER BY blocker.ordinal)" in READINESS_SQL
+    assert "jsonb_agg(" in READINESS_SQL
+    assert "ORDER BY blocker.ordinal" in READINESS_SQL
+    assert "cardinality(diagnostic.blocker_codes) = 0 AS quantitative_input_ready" in READINESS_SQL
+
+
+def test_0072_keeps_forward_looking_evidence_explicitly_blocked_until_a2() -> None:
+    assert "false AS approved_forward_looking_evidence_ready" in READINESS_SQL
+    assert "forward_looking_governance_not_installed" in READINESS_SQL
+    assert "A2 governance is not installed yet" in READINESS_SQL
+    assert "Approved versioned forward-looking economic evidence is required" in READINESS_SQL
+
+
+def test_0072_never_substitutes_notes_or_enables_quantitative_accounting() -> None:
+    lower = READINESS_SQL.lower()
+    assert "Typed/free-text notes never substitute" in READINESS_SQL
+    assert "NULL::numeric(18,2) AS ecl_amount" in READINESS_SQL
+    assert "false AS ecl_calculation_enabled" in READINESS_SQL
+    assert "false AS account_1190_posting_enabled" in READINESS_SQL
+    assert "false AS automatic_source_posting" in READINESS_SQL
+    assert "insert into accounting.journal_entries" not in lower
+    assert "insert into accounting.journal_lines" not in lower
+    assert "update accounting.journal_entries" not in lower
+    assert "insert into accounting.ecl_credit_risk_label_reviews" not in lower
+
+
+def test_0072_rechecks_exact_protected_collection_posting_and_reversal_history() -> None:
+    assert "accounting.regular_journal_posting_entries" in READINESS_SQL
+    assert "accounting.regular_journal_reversal_sets" in READINESS_SQL
+    assert "accounting.regular_journal_reversal_entries" in READINESS_SQL
+    assert "accounting.seven_by_seven_journal_postings" in READINESS_SQL
+    assert "accounting.seven_by_seven_journal_reversals" in READINESS_SQL
+    assert "journal.status = 'posted'" in READINESS_SQL
+    assert "reversal_journal.status = 'posted'" in READINESS_SQL
+
+
 def test_ecl_label_reviews_are_immutable_and_versioned() -> None:
     assert "CREATE TABLE IF NOT EXISTS accounting.ecl_credit_risk_label_reviews" in SQL
     assert "UNIQUE (loan_id, review_version)" in SQL
@@ -85,6 +142,7 @@ def test_ecl_label_stage_remains_non_quantitative_and_non_posting() -> None:
     lower = SQL.lower()
     upper = SQL.upper()
     hardening_lower = HARDENING_SQL.lower()
+    readiness_lower = READINESS_SQL.lower()
     assert "false AS automatic_staging_enabled" in SQL
     assert "false AS automatic_default_enabled" in SQL
     assert "false AS automatic_write_off_enabled" in SQL
@@ -98,6 +156,8 @@ def test_ecl_label_stage_remains_non_quantitative_and_non_posting() -> None:
     assert "update accounting.journal_entries" not in lower
     assert "insert into accounting.journal_entries" not in hardening_lower
     assert "insert into accounting.journal_lines" not in hardening_lower
+    assert "insert into accounting.journal_entries" not in readiness_lower
+    assert "insert into accounting.journal_lines" not in readiness_lower
     assert "CREATE OR REPLACE FUNCTION ACCOUNTING.REVIEW_ECL_CREDIT_RISK_LABELS" in upper
 
 
