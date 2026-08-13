@@ -8,7 +8,9 @@ import psycopg
 
 
 SQL_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "sql"
-MIGRATION = SQL_ROOT / "0066_add_protected_7x7_source_event_journal_posting.sql"
+POSTING_MIGRATION = SQL_ROOT / "0066_add_protected_7x7_source_event_journal_posting.sql"
+REVERSAL_MIGRATION = SQL_ROOT / "0067_add_controlled_7x7_collection_reversals.sql"
+REVERSAL_HARDENING_MIGRATION = SQL_ROOT / "0068_harden_controlled_7x7_collection_reversal_guard.sql"
 
 
 def _load_env_file(path: Path) -> None:
@@ -28,11 +30,11 @@ def _load_env_file(path: Path) -> None:
         os.environ.setdefault(key, value)
 
 
-def _transaction_body(source: str) -> str:
+def _transaction_body(source: str, label: str) -> str:
     body = source.strip()
     if not body.startswith("BEGIN;") or not body.endswith("COMMIT;"):
         raise SystemExit(
-            "7x7 journal-posting live migration safety gate failed: expected BEGIN/COMMIT wrapper"
+            f"7x7 journal-lifecycle live migration safety gate failed: {label} expected BEGIN/COMMIT wrapper"
         )
     body = body[len("BEGIN;") :].lstrip()
     return body[: -len("COMMIT;")].rstrip()
@@ -48,17 +50,15 @@ def _count(connection: psycopg.Connection, relation: str) -> int:
     return int(connection.execute(f"select count(*) from {relation}").fetchone()[0])
 
 
-def _verify_installed(connection: psycopg.Connection) -> dict[str, int]:
-    required_relations = (
+def _verify_posting_stage(connection: psycopg.Connection) -> None:
+    required = (
         "accounting.seven_by_seven_journal_postings",
         "accounting.seven_by_seven_journal_posting_lines",
         "accounting.seven_by_seven_journal_posting_status",
     )
-    for relation in required_relations:
+    for relation in required:
         if not _exists(connection, relation):
-            raise SystemExit(
-                "7x7 journal-posting live verification failed: missing " + relation
-            )
+            raise SystemExit("7x7 posting live verification failed: missing " + relation)
 
     permission_count = int(
         connection.execute(
@@ -73,10 +73,10 @@ def _verify_installed(connection: psycopg.Connection) -> dict[str, int]:
     )
     if permission_count != 1:
         raise SystemExit(
-            "7x7 journal-posting live verification failed: Management posting permission is not installed exactly once"
+            "7x7 posting live verification failed: Management posting permission is not installed exactly once"
         )
 
-    unsafe_status_count = int(
+    unsafe = int(
         connection.execute(
             """
             select count(*)
@@ -87,62 +87,118 @@ def _verify_installed(connection: psycopg.Connection) -> dict[str, int]:
             """
         ).fetchone()[0]
     )
-    if unsafe_status_count:
+    if unsafe:
         raise SystemExit(
-            "7x7 journal-posting live verification failed: posting/reversal/automatic-source flags are unsafe"
+            "7x7 posting live verification failed before 0067: posting/reversal/automatic-source flags are unsafe"
         )
 
-    posting_count = _count(connection, "accounting.seven_by_seven_journal_postings")
-    posting_line_count = _count(
-        connection, "accounting.seven_by_seven_journal_posting_lines"
+
+def _verify_lifecycle(connection: psycopg.Connection) -> dict[str, int]:
+    required = (
+        "accounting.seven_by_seven_journal_reversals",
+        "accounting.seven_by_seven_journal_reversal_lines",
+        "accounting.seven_by_seven_journal_reversal_status",
+        "accounting.seven_by_seven_journal_posting_status",
     )
-    protected_journal_count = int(
-        connection.execute(
-            "select count(*) from accounting.journal_entries where source_type = 'seven_by_seven_collection'"
-        ).fetchone()[0]
-    )
-    posted_protected_journal_count = int(
-        connection.execute(
-            """
-            select count(*)
-            from accounting.journal_entries
-            where source_type = 'seven_by_seven_collection'
-              and status = 'posted'
-            """
-        ).fetchone()[0]
-    )
-    audit_exact_count = int(
+    for relation in required:
+        if not _exists(connection, relation):
+            raise SystemExit("7x7 journal-lifecycle live verification failed: missing " + relation)
+
+    unsafe_posting = int(
         connection.execute(
             """
             select count(*)
             from accounting.seven_by_seven_journal_posting_status
+            where protected_posting_enabled is distinct from true
+               or reversal_enabled is distinct from true
+               or automatic_source_posting
+            """
+        ).fetchone()[0]
+    )
+    if unsafe_posting:
+        raise SystemExit(
+            "7x7 journal-lifecycle live verification failed: posting lifecycle flags are unsafe"
+        )
+
+    unsafe_reversal = int(
+        connection.execute(
+            """
+            select count(*)
+            from accounting.seven_by_seven_journal_reversal_status
+            where protected_reversal_enabled is distinct from true
+               or automatic_source_posting
+               or (is_voided and reversal_audit_exact is distinct from true)
+            """
+        ).fetchone()[0]
+    )
+    if unsafe_reversal:
+        raise SystemExit(
+            "7x7 journal-lifecycle live verification failed: existing protected reversal history is not exact"
+        )
+
+    posting_count = _count(connection, "accounting.seven_by_seven_journal_postings")
+    posting_line_count = _count(connection, "accounting.seven_by_seven_journal_posting_lines")
+    reversal_count = _count(connection, "accounting.seven_by_seven_journal_reversals")
+    reversal_line_count = _count(connection, "accounting.seven_by_seven_journal_reversal_lines")
+    posted_protected_count = int(
+        connection.execute(
+            """
+            select count(*) from accounting.journal_entries
+            where source_type = 'seven_by_seven_collection' and status = 'posted'
+            """
+        ).fetchone()[0]
+    )
+    posting_audit_exact_count = int(
+        connection.execute(
+            """
+            select count(*) from accounting.seven_by_seven_journal_posting_status
             where posted_audit_exact
             """
         ).fetchone()[0]
     )
-    if posting_count != posted_protected_journal_count or posting_count != audit_exact_count:
+    if posting_count != posted_protected_count or posting_count != posting_audit_exact_count:
         raise SystemExit(
-            "7x7 journal-posting live verification failed: existing protected posting history is not audit-exact"
+            "7x7 journal-lifecycle live verification failed: protected posting history is not audit-exact"
+        )
+
+    voided_posting_count = int(
+        connection.execute(
+            """
+            select count(*)
+            from accounting.seven_by_seven_journal_postings posted
+            join lending.collection_transactions source on source.id = posted.transaction_id
+            where source.is_voided
+            """
+        ).fetchone()[0]
+    )
+    exact_reversal_count = int(
+        connection.execute(
+            """
+            select count(*) from accounting.seven_by_seven_journal_reversal_status
+            where reversal_audit_exact
+            """
+        ).fetchone()[0]
+    )
+    if reversal_count != exact_reversal_count or voided_posting_count != exact_reversal_count:
+        raise SystemExit(
+            "7x7 journal-lifecycle live verification failed: voided protected postings do not reconcile to exact reversals"
         )
 
     return {
-        "posting_rows": posting_count,
+        "postings": posting_count,
         "posting_lines": posting_line_count,
-        "protected_journals": protected_journal_count,
-        "posted_protected_journals": posted_protected_journal_count,
-        "posting_ready_rows": int(
-            connection.execute(
-                "select count(*) from accounting.seven_by_seven_journal_posting_status where posting_ready"
-            ).fetchone()[0]
-        ),
+        "reversals": reversal_count,
+        "reversal_lines": reversal_line_count,
+        "voided_postings": voided_posting_count,
+        "exact_reversals": exact_reversal_count,
     }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Install and verify explicit Management protected 7x7 journal posting on the live database "
-            "without creating or changing source/journal history, enabling reversal, or enabling automatic source posting."
+            "Install and verify protected 7x7 explicit posting plus controlled posted-collection "
+            "void/reversal on the live database without creating or changing operational/accounting history."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -154,72 +210,82 @@ def main() -> int:
     database_url = os.getenv(args.database_url_env)
     if not database_url:
         raise SystemExit(f"{args.database_url_env} is not configured")
-    if not MIGRATION.is_file():
-        raise SystemExit(
-            "7x7 journal-posting migration file was not found: " + str(MIGRATION)
-        )
-    body = _transaction_body(MIGRATION.read_text(encoding="utf-8"))
+    for migration in (
+        POSTING_MIGRATION,
+        REVERSAL_MIGRATION,
+        REVERSAL_HARDENING_MIGRATION,
+    ):
+        if not migration.is_file():
+            raise SystemExit("7x7 journal-lifecycle migration file was not found: " + str(migration))
+
+    posting_body = _transaction_body(
+        POSTING_MIGRATION.read_text(encoding="utf-8"), "0066"
+    )
+    reversal_body = _transaction_body(
+        REVERSAL_MIGRATION.read_text(encoding="utf-8"), "0067"
+    )
+    reversal_hardening_body = _transaction_body(
+        REVERSAL_HARDENING_MIGRATION.read_text(encoding="utf-8"), "0068"
+    )
 
     try:
         with psycopg.connect(database_url) as connection:
             prerequisites = (
                 "lending.collection_transactions",
+                "lending.collection_transaction_voids",
                 "accounting.accounts",
                 "accounting.fiscal_periods",
                 "accounting.journal_entries",
                 "accounting.journal_lines",
                 "accounting.seven_by_seven_journal_draft_preparations",
-                "accounting.seven_by_seven_journal_draft_review",
                 "accounting.seven_by_seven_journal_draft_status",
                 "accounting.seven_by_seven_source_event_journal_coordinate_preview",
             )
-            missing = [
-                relation for relation in prerequisites if not _exists(connection, relation)
-            ]
+            missing = [relation for relation in prerequisites if not _exists(connection, relation)]
             if missing:
                 raise SystemExit(
-                    "7x7 journal-posting live migration prerequisite is not installed: "
+                    "7x7 journal-lifecycle live migration prerequisite is not installed: "
                     + ", ".join(missing)
                 )
 
-            tracked_relations = (
+            tracked = (
                 "lending.collection_transactions",
                 "lending.collection_transaction_voids",
                 "accounting.seven_by_seven_journal_draft_preparations",
                 "accounting.seven_by_seven_journal_postings",
                 "accounting.seven_by_seven_journal_posting_lines",
+                "accounting.seven_by_seven_journal_reversals",
+                "accounting.seven_by_seven_journal_reversal_lines",
                 "accounting.journal_entries",
                 "accounting.journal_lines",
                 "core.audit_logs",
             )
-            before_history = tuple(
-                _count(connection, relation) for relation in tracked_relations
-            )
+            before = tuple(_count(connection, relation) for relation in tracked)
 
-            connection.execute(body)
-            summary = _verify_installed(connection)
+            connection.execute(posting_body)
+            _verify_posting_stage(connection)
+            connection.execute(reversal_body)
+            connection.execute(reversal_hardening_body)
+            summary = _verify_lifecycle(connection)
 
-            after_history = tuple(
-                _count(connection, relation) for relation in tracked_relations
-            )
-            if after_history != before_history:
+            after = tuple(_count(connection, relation) for relation in tracked)
+            if after != before:
                 raise SystemExit(
-                    "7x7 journal-posting live migration safety gate failed: installation changed live operational/accounting history"
+                    "7x7 journal-lifecycle live migration safety gate failed: installation changed live operational/accounting history"
                 )
 
             print(
-                "7x7 protected journal-posting live summary: "
-                f"postings={summary['posting_rows']}, posting_lines={summary['posting_lines']}, "
-                f"protected_journals={summary['protected_journals']}, "
-                f"posted_protected_journals={summary['posted_protected_journals']}, "
-                f"posting_ready_rows={summary['posting_ready_rows']}, history_unchanged=True, "
-                "explicit_management_posting=True, reversal_enabled=False, "
-                "automatic_source_posting=False."
+                "7x7 protected journal-lifecycle live summary: "
+                f"postings={summary['postings']}, posting_lines={summary['posting_lines']}, "
+                f"reversals={summary['reversals']}, reversal_lines={summary['reversal_lines']}, "
+                f"voided_postings={summary['voided_postings']}, exact_reversals={summary['exact_reversals']}, "
+                "history_unchanged=True, explicit_management_posting=True, "
+                "protected_reversal_enabled=True, automatic_source_posting=False."
             )
             return 0
     except psycopg.Error as error:
         raise SystemExit(
-            "7x7 protected journal-posting live migration failed: "
+            "7x7 protected journal-lifecycle live migration failed: "
             + str(error).split("CONTEXT:", 1)[0].strip()
         ) from error
 
