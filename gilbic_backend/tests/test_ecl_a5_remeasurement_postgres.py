@@ -75,9 +75,10 @@ def _new_measurement(connection, case, downside: str):
     return _measurement(connection, mid)
 
 
-def _remeasure(connection, case, measurement, token: str):
+def _remeasure(connection, case, measurement, token: str, *, prior=None):
     actor_id, loan_id, period_id, _, _, _, account_ids = case
-    prior = connection.execute("SELECT accounting.ecl_loan_allowance_balance(%s)",(loan_id,)).fetchone()[0]
+    if prior is None:
+        prior = connection.execute("SELECT accounting.ecl_loan_allowance_balance(%s)",(loan_id,)).fetchone()[0]
     return connection.execute(
         "SELECT accounting.post_ecl_allowance_remeasurement(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
         (measurement[0],actor_id,token,measurement[4],prior,measurement[5],measurement[3],period_id,account_ids[0],account_ids[1],POLICY),
@@ -94,11 +95,11 @@ def test_a5_remeasurement_increase_decrease_full_reversal_retry_and_atomic_rollb
 
             increase = _new_measurement(connection, case, "30.00")
             assert increase[5] > initial
-            increase_id = _remeasure(connection, case, increase, "1"*64)
-            assert _remeasure(connection, case, increase, "1"*64) == increase_id
+            increase_id = _remeasure(connection, case, increase, "1"*64, prior=initial)
+            assert _remeasure(connection, case, increase, "1"*64, prior=initial) == increase_id
             with pytest.raises(psycopg.Error, match="immutable retry identity"):
                 with connection.transaction():
-                    _remeasure(connection, case, increase, "2"*64)
+                    _remeasure(connection, case, increase, "2"*64, prior=initial)
 
             decrease = _new_measurement(connection, case, "45.00")
             assert Decimal("0") < decrease[5] < increase[5]
@@ -118,7 +119,7 @@ def test_a5_remeasurement_increase_decrease_full_reversal_retry_and_atomic_rollb
             with pytest.raises(psycopg.Error, match="Forced A5 audit failure"):
                 with connection.transaction():
                     connection.execute("SELECT set_config('accounting.ecl_a5_force_audit_failure','on',true)")
-                    _remeasure(connection, rollback_case, rollback_measurement, "5"*64)
+                    _remeasure(connection, rollback_case, rollback_measurement, "5"*64, prior=before_balance)
             assert connection.execute("SELECT accounting.ecl_loan_allowance_balance(%s)",(rollback_case[1],)).fetchone()[0] == before_balance
             assert connection.execute("SELECT (SELECT count(*) FROM accounting.journal_entries),(SELECT count(*) FROM accounting.ecl_allowance_remeasurements)").fetchone() == before_counts
         finally:
