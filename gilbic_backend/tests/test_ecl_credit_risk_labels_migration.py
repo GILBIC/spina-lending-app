@@ -1,10 +1,10 @@
 from pathlib import Path
 
 
-SQL = (
-    Path(__file__).resolve().parents[1]
-    / "sql"
-    / "0070_add_ecl_credit_risk_labels.sql"
+SQL_ROOT = Path(__file__).resolve().parents[1] / "sql"
+SQL = (SQL_ROOT / "0070_add_ecl_credit_risk_labels.sql").read_text(encoding="utf-8")
+HARDENING_SQL = (
+    SQL_ROOT / "0071_harden_ecl_cash_recovery_chronology.sql"
 ).read_text(encoding="utf-8")
 
 DOC = (
@@ -46,6 +46,21 @@ def test_ecl_label_migration_requires_separate_evidence_for_early_deterioration_
     assert "Recovery transaction must be a later non-voided positive protected collection" in SQL
 
 
+def test_0071_requires_authoritative_strict_recovery_timestamp_ordering() -> None:
+    normalized = HARDENING_SQL.upper()
+    assert HARDENING_SQL.strip().startswith("BEGIN;")
+    assert HARDENING_SQL.strip().endswith("COMMIT;")
+    assert "GUARD_ECL_CASH_RECOVERY_CHRONOLOGY" in normalized
+    assert "ECL_CASH_RECOVERY_CHRONOLOGY_GUARD" in normalized
+    assert "BEFORE INSERT ON ACCOUNTING.ECL_CREDIT_RISK_LABEL_REVIEWS" in normalized
+    assert "RECOVERY_TX.ACCEPTED_AT <= PRIOR_REVIEW.CREATED_AT" in normalized
+    assert "IMMEDIATELY PRIOR DETERIORATED REVIEW FOR THE SAME LOAN" in normalized
+    assert "SAME-CALENDAR-DAY ORDERING IS NEVER INFERRED" in normalized
+    assert "RECOVERY_TX.COLLECTION_DATE < PRIOR_REVIEW.CREATED_AT::DATE" not in normalized
+    assert "INSERT INTO ACCOUNTING.JOURNAL_ENTRIES" not in normalized
+    assert "INSERT INTO ACCOUNTING.JOURNAL_LINES" not in normalized
+
+
 def test_ecl_label_reviews_are_immutable_and_versioned() -> None:
     assert "CREATE TABLE IF NOT EXISTS accounting.ecl_credit_risk_label_reviews" in SQL
     assert "UNIQUE (loan_id, review_version)" in SQL
@@ -67,6 +82,7 @@ def test_ecl_label_queue_stales_only_on_schedule_or_evidence_band_boundary() -> 
 def test_ecl_label_stage_remains_non_quantitative_and_non_posting() -> None:
     lower = SQL.lower()
     upper = SQL.upper()
+    hardening_lower = HARDENING_SQL.lower()
     assert "false AS automatic_staging_enabled" in SQL
     assert "false AS automatic_default_enabled" in SQL
     assert "false AS automatic_write_off_enabled" in SQL
@@ -78,6 +94,8 @@ def test_ecl_label_stage_remains_non_quantitative_and_non_posting() -> None:
     assert "insert into accounting.journal_entries" not in lower
     assert "insert into accounting.journal_lines" not in lower
     assert "update accounting.journal_entries" not in lower
+    assert "insert into accounting.journal_entries" not in hardening_lower
+    assert "insert into accounting.journal_lines" not in hardening_lower
     assert "CREATE OR REPLACE FUNCTION ACCOUNTING.REVIEW_ECL_CREDIT_RISK_LABELS" in upper
 
 
