@@ -22,6 +22,7 @@ from .cross_period_accounting_sequence_api import (
 )
 from .cross_remittance_api import create_cross_remittance_router
 from .database import database_ready
+from .ecl_credit_risk_label_api import create_ecl_credit_risk_label_router
 from .ecl_outcome_review_api import create_ecl_outcome_review_router
 from .eir_cash_allocation_api import create_eir_cash_allocation_router
 from .eir_period_journal_api import create_eir_period_journal_router
@@ -139,6 +140,7 @@ def create_app() -> FastAPI:
     app.include_router(create_contract_schedule_registration_router())
     app.include_router(create_contract_collection_activation_router())
     app.include_router(create_ecl_outcome_review_router())
+    app.include_router(create_ecl_credit_risk_label_router())
     app.include_router(create_opening_balance_workbook_router())
     app.include_router(create_opening_balance_journal_router())
     app.include_router(create_general_journal_router())
