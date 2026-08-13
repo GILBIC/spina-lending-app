@@ -176,10 +176,13 @@ def test_quantitative_input_gate_exposes_exact_blockers_without_calculating_or_p
                 (loan_id,),
             ).fetchone()
             assert row is not None
-            assert row[:7] == (True, True, False, True, False, True, False)
+            # Current carrying is a dependent gate: it is not separately evaluated
+            # until the original-EIR/initial-carrying anchor exists. The API maps
+            # this SQL NULL to false, while the actionable blocker remains the
+            # upstream anchor requirement rather than a redundant duplicate.
+            assert row[:7] == (True, True, False, True, None, True, False)
             assert row[7] == [
                 "original_eir_initial_carrying_evidence_required",
-                "authoritative_current_gross_carrying_evidence_required",
                 "approved_forward_looking_evidence_required",
             ]
             assert [item["code"] for item in row[8]] == row[7]
@@ -206,7 +209,7 @@ def test_quantitative_input_gate_exposes_exact_blockers_without_calculating_or_p
             assert summary[0] >= 1
             assert summary[1] == 0
             assert summary[2] >= 1
-            assert summary[3] >= 1
+            assert summary[3] == 0
             assert summary[4] == summary[0]
             assert summary[5:] == (False, None, False, False, False)
 
