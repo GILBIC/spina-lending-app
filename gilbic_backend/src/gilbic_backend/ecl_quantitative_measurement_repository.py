@@ -12,6 +12,16 @@ from psycopg.rows import dict_row
 from .database import open_connection
 
 
+def _json_default(value: object) -> object:
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    if isinstance(value, UUID):
+        return str(value)
+    raise TypeError(f"Unsupported JSON value: {type(value).__name__}")
+
+
 @dataclass(frozen=True, slots=True)
 class EclQuantitativeMeasurementQueueItem:
     loan_id: UUID
@@ -190,7 +200,11 @@ class PostgresEclQuantitativeMeasurementRepository:
                         (
                             loan_id,
                             measurement_date,
-                            json.dumps(scenarios, separators=(",", ":"), default=str),
+                            json.dumps(
+                                scenarios,
+                                separators=(",", ":"),
+                                default=_json_default,
+                            ),
                             review_rationale,
                             actor_user_id,
                         ),
@@ -224,23 +238,47 @@ class PostgresEclQuantitativeMeasurementRepository:
             loan_type_name=str(row["loan_type_name"]),
             calculation_mode=str(row["calculation_mode"]),
             schedule_id=row["schedule_id"],
-            schedule_version=(int(row["schedule_version"]) if row["schedule_version"] is not None else None),
-            contract_reference=(str(row["contract_reference"]) if row["contract_reference"] else None),
+            schedule_version=(
+                int(row["schedule_version"])
+                if row["schedule_version"] is not None
+                else None
+            ),
+            contract_reference=(
+                str(row["contract_reference"])
+                if row["contract_reference"]
+                else None
+            ),
             stage_label=(str(row["stage_label"]) if row["stage_label"] else None),
             review_id=(int(row["review_id"]) if row["review_id"] is not None else None),
-            review_version=(int(row["review_version"]) if row["review_version"] is not None else None),
+            review_version=(
+                int(row["review_version"])
+                if row["review_version"] is not None
+                else None
+            ),
             blocker_codes=tuple(str(code) for code in (row["blocker_codes"] or ())),
             blockers=tuple(dict(item) for item in (row["blockers"] or ())),
             quantitative_input_ready=bool(row["quantitative_input_ready"]),
             measurement_id=row["measurement_id"],
-            measurement_version=(int(row["measurement_version"]) if row["measurement_version"] is not None else None),
+            measurement_version=(
+                int(row["measurement_version"])
+                if row["measurement_version"] is not None
+                else None
+            ),
             measurement_date=row["measurement_date"],
             loss_horizon=(str(row["loss_horizon"]) if row["loss_horizon"] else None),
-            calculation_digest=(str(row["calculation_digest"]) if row["calculation_digest"] else None),
-            measurement_forward_evidence_current=bool(row["measurement_forward_evidence_current"]),
+            calculation_digest=(
+                str(row["calculation_digest"])
+                if row["calculation_digest"]
+                else None
+            ),
+            measurement_forward_evidence_current=bool(
+                row["measurement_forward_evidence_current"]
+            ),
             measurement_status=str(row["measurement_status"]),
             authoritative_ecl_amount=row["authoritative_ecl_amount"],
-            read_only_ecl_calculation_enabled=bool(row["read_only_ecl_calculation_enabled"]),
+            read_only_ecl_calculation_enabled=bool(
+                row["read_only_ecl_calculation_enabled"]
+            ),
             account_1190_posting_enabled=bool(row["account_1190_posting_enabled"]),
             automatic_source_posting=bool(row["automatic_source_posting"]),
         )
@@ -262,10 +300,14 @@ class PostgresEclQuantitativeMeasurementRepository:
             original_eir_source_key=str(row["original_eir_source_key"]),
             original_eir_policy_version=str(row["original_eir_policy_version"]),
             original_daily_eir=row["original_daily_eir"],
-            original_initial_gross_carrying_amount=row["original_initial_gross_carrying_amount"],
+            original_initial_gross_carrying_amount=row[
+                "original_initial_gross_carrying_amount"
+            ],
             forward_evidence_ids=tuple(row["forward_evidence_ids"] or ()),
             input_snapshot=dict(row["input_snapshot"]),
-            contractual_cash_flow_snapshot=tuple(dict(item) for item in row["contractual_cash_flow_snapshot"]),
+            contractual_cash_flow_snapshot=tuple(
+                dict(item) for item in row["contractual_cash_flow_snapshot"]
+            ),
             scenario_snapshot=tuple(dict(item) for item in row["scenario_snapshot"]),
             scenario_count=int(row["scenario_count"]),
             probability_total=row["probability_total"],
