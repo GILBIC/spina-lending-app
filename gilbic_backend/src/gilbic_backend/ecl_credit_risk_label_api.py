@@ -16,6 +16,8 @@ from .ecl_credit_risk_label_repository import (
     EclCreditRiskLabelLoan,
     EclCreditRiskLabelNotFound,
     EclCreditRiskLabelSummary,
+    EclQuantitativeInputReadinessLoan,
+    EclQuantitativeInputReadinessSummary,
     PostgresEclCreditRiskLabelRepository,
 )
 from .request_auth import authenticated_device_context
@@ -175,6 +177,67 @@ def _loan_payload(loan: EclCreditRiskLabelLoan) -> dict[str, object]:
     }
 
 
+def _input_readiness_summary_payload(
+    summary: EclQuantitativeInputReadinessSummary,
+) -> dict[str, object]:
+    return {
+        "loan_count": summary.loan_count,
+        "quantitative_input_ready_count": summary.quantitative_input_ready_count,
+        "contractual_schedule_dpd_blocked_count": summary.contractual_schedule_dpd_blocked_count,
+        "credit_risk_label_blocked_count": summary.credit_risk_label_blocked_count,
+        "original_eir_initial_carrying_blocked_count": summary.original_eir_initial_carrying_blocked_count,
+        "protected_history_blocked_count": summary.protected_history_blocked_count,
+        "current_carrying_blocked_count": summary.current_carrying_blocked_count,
+        "outcome_evidence_blocked_count": summary.outcome_evidence_blocked_count,
+        "forward_looking_evidence_blocked_count": summary.forward_looking_evidence_blocked_count,
+        "quantitative_ecl_ready": summary.quantitative_ecl_ready,
+        "ecl_amount": _optional_decimal(summary.ecl_amount),
+        "ecl_calculation_enabled": summary.ecl_calculation_enabled,
+        "account_1190_posting_enabled": summary.account_1190_posting_enabled,
+        "automatic_source_posting": summary.automatic_source_posting,
+    }
+
+
+def _input_readiness_loan_payload(
+    loan: EclQuantitativeInputReadinessLoan,
+) -> dict[str, object]:
+    return {
+        "loan_id": str(loan.loan_id),
+        "loan_number": loan.loan_number,
+        "loan_status": loan.loan_status,
+        "loan_type_code": loan.loan_type_code,
+        "loan_type_name": loan.loan_type_name,
+        "calculation_mode": loan.calculation_mode,
+        "schedule_id": str(loan.schedule_id) if loan.schedule_id else None,
+        "schedule_version": loan.schedule_version,
+        "contract_reference": loan.contract_reference,
+        "dpd_data_status": loan.dpd_data_status,
+        "days_past_due": loan.days_past_due,
+        "current_dpd_risk_band": loan.current_dpd_risk_band,
+        "review_id": loan.review_id,
+        "review_version": loan.review_version,
+        "stage_label": loan.stage_label,
+        "default_label": loan.default_label,
+        "write_off_label": loan.write_off_label,
+        "recovery_label": loan.recovery_label,
+        "label_review_status": loan.label_review_status,
+        "contractual_schedule_dpd_ready": loan.contractual_schedule_dpd_ready,
+        "current_credit_risk_label_ready": loan.current_credit_risk_label_ready,
+        "original_eir_initial_carrying_ready": loan.original_eir_initial_carrying_ready,
+        "protected_collection_posting_reversal_history_ready": loan.protected_collection_posting_reversal_history_ready,
+        "authoritative_current_carrying_ready": loan.authoritative_current_carrying_ready,
+        "required_loss_recovery_writeoff_outcome_evidence_ready": loan.required_loss_recovery_writeoff_outcome_evidence_ready,
+        "approved_forward_looking_evidence_ready": loan.approved_forward_looking_evidence_ready,
+        "blocker_codes": list(loan.blocker_codes),
+        "blockers": list(loan.blockers),
+        "quantitative_input_ready": loan.quantitative_input_ready,
+        "ecl_amount": _optional_decimal(loan.ecl_amount),
+        "ecl_calculation_enabled": loan.ecl_calculation_enabled,
+        "account_1190_posting_enabled": loan.account_1190_posting_enabled,
+        "automatic_source_posting": loan.automatic_source_posting,
+    }
+
+
 def _review_exception(error: EclCreditRiskLabelError) -> HTTPException:
     if isinstance(error, EclCreditRiskLabelNotFound):
         status_code = 404
@@ -240,6 +303,61 @@ def create_ecl_credit_risk_label_router() -> APIRouter:
                     "ECL stage/default/write-off-support/recovery/cure labels require explicit "
                     "evidence-backed Management review. DPD backstops are rebuttable; no ECL "
                     "amount, account 1190 posting, or write-off execution occurs here."
+                ),
+            },
+        }
+
+    @router.get(
+        "/api/v1/management/financial-accounting/ecl-quantitative-input-readiness"
+    )
+    @router.get(
+        "/api/mobile/v1/management/financial-accounting/ecl-quantitative-input-readiness",
+        include_in_schema=False,
+    )
+    def list_ecl_quantitative_input_readiness(
+        readiness_status: Literal["blocked", "ready", "all"] = Query(default="blocked"),
+        limit: int = Query(default=100, ge=1, le=200),
+        offset: int = Query(default=0, ge=0),
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        labels: PostgresEclCreditRiskLabelRepository = Depends(
+            ecl_credit_risk_label_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
+        if "management" not in actor.roles:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "management_role_required",
+                    "message": "Management access is required for quantitative ECL input-readiness review.",
+                },
+            )
+        summary, loans = labels.load_quantitative_input_readiness(
+            readiness_status=readiness_status,
+            limit=limit,
+            offset=offset,
+        )
+        return {
+            "success": True,
+            "data": {
+                "summary": _input_readiness_summary_payload(summary),
+                "loans": [_input_readiness_loan_payload(item) for item in loans],
+                "filter": readiness_status,
+                "limit": limit,
+                "offset": offset,
+                "notice": (
+                    "This is a read-only evidence gate. Each blocker names a protected input "
+                    "that is missing or stale. Free-text notes do not satisfy blockers. "
+                    "Forward-looking evidence remains blocked until A2 governance is installed; "
+                    "no ECL amount or account 1190 posting is enabled here."
                 ),
             },
         }
