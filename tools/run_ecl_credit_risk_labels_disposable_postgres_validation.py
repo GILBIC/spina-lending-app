@@ -16,6 +16,8 @@ import run_stage5d17_disposable_postgres_validation as disposable
 TEST_DATABASE_PREFIX = "spina_ecl_labels_"
 BOOTSTRAP_THROUGH = 69
 TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
+# Run the original label proof and the focused chronology regression together
+# against one freshly bootstrapped local PostgreSQL database.
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_ecl_credit_risk_labels_postgres.py",
     TEST_ROOT / "test_ecl_cash_recovery_chronology_postgres.py",
