@@ -16,6 +16,8 @@ MIGRATIONS = (
     SQL_ROOT / "0074_integrate_ecl_forward_looking_readiness.sql",
     SQL_ROOT / "0075_add_read_only_quantitative_ecl_measurement.sql",
     SQL_ROOT / "0076_harden_read_only_quantitative_ecl_measurement.sql",
+    SQL_ROOT / "0077_add_protected_ecl_allowance_posting.sql",
+    SQL_ROOT / "0078_harden_ecl_allowance_posting_queue.sql",
 )
 
 
@@ -45,6 +47,9 @@ def _relation_count(connection: psycopg.Connection, relation: str) -> int:
         "accounting.ecl_forward_looking_evidence",
         "accounting.ecl_forward_looking_evidence_revocations",
         "accounting.ecl_quantitative_measurements",
+        "accounting.ecl_allowance_draft_preparations",
+        "accounting.ecl_allowance_postings",
+        "accounting.ecl_allowance_posting_lines",
     }
     if relation in supported:
         return int(connection.execute(f"SELECT count(*) FROM {relation}").fetchone()[0])
@@ -68,10 +73,13 @@ def _history_counts(connection: psycopg.Connection) -> tuple[int, ...]:
         _relation_count(connection, "accounting.ecl_forward_looking_evidence"),
         _relation_count(connection, "accounting.ecl_forward_looking_evidence_revocations"),
         _relation_count(connection, "accounting.ecl_quantitative_measurements"),
+        _relation_count(connection, "accounting.ecl_allowance_draft_preparations"),
+        _relation_count(connection, "accounting.ecl_allowance_postings"),
+        _relation_count(connection, "accounting.ecl_allowance_posting_lines"),
     )
 
 
-def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple]:
+def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple, tuple]:
     objects = connection.execute(
         """
         SELECT
@@ -89,6 +97,11 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple]
             to_regclass('accounting.ecl_quantitative_measurements'),
             to_regclass('accounting.ecl_quantitative_measurement_queue'),
             to_regclass('accounting.ecl_quantitative_measurement_summary'),
+            to_regclass('accounting.ecl_allowance_draft_preparations'),
+            to_regclass('accounting.ecl_allowance_postings'),
+            to_regclass('accounting.ecl_allowance_posting_lines'),
+            to_regclass('accounting.ecl_allowance_posting_queue'),
+            to_regclass('accounting.ecl_allowance_posting_summary'),
             to_regprocedure(
                 'accounting.review_ecl_credit_risk_labels(uuid,text,boolean,text,text,text,text,text,boolean,boolean,text,text,text,text,uuid,uuid)'
             ),
@@ -99,12 +112,19 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple]
             to_regprocedure('accounting.revoke_ecl_forward_looking_evidence(uuid,text,uuid)'),
             to_regprocedure(
                 'accounting.record_read_only_quantitative_ecl_measurement(uuid,date,jsonb,text,uuid)'
-            )
+            ),
+            to_regprocedure(
+                'accounting.prepare_initial_ecl_allowance_journal(uuid,uuid,text,text,numeric,date,uuid,uuid,uuid,numeric,text)'
+            ),
+            to_regprocedure(
+                'accounting.post_initial_ecl_allowance_journal(uuid,uuid,text,uuid,text,uuid,text,text,date,uuid,uuid,uuid,numeric,numeric,text)'
+            ),
+            to_regprocedure('accounting.ecl_loan_allowance_balance(uuid)')
         """
     ).fetchone()
     if any(item is None for item in objects):
         raise SystemExit(
-            "ECL verification failed: required protected label/readiness/forward-looking/read-only measurement objects are missing"
+            "ECL verification failed: required protected label/readiness/forward-looking/measurement/allowance objects are missing"
         )
 
     chronology_trigger_count = connection.execute(
@@ -161,7 +181,9 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple]
           AND permission_code IN (
               'accounting.ecl.credit_risk_label.review',
               'accounting.ecl.forward_looking_evidence.manage',
-              'accounting.ecl.measurement.review'
+              'accounting.ecl.measurement.review',
+              'accounting.ecl.allowance.prepare',
+              'accounting.ecl.allowance.post'
           )
         ORDER BY permission_code
         """
@@ -170,8 +192,26 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple]
         "accounting.ecl.credit_risk_label.review",
         "accounting.ecl.forward_looking_evidence.manage",
         "accounting.ecl.measurement.review",
+        "accounting.ecl.allowance.prepare",
+        "accounting.ecl.allowance.post",
     }:
         raise SystemExit("ECL verification failed: required Management permissions are missing")
+
+    account_coordinates = connection.execute(
+        """
+        SELECT code, system_key, account_type, normal_balance, is_posting, is_active
+        FROM accounting.accounts
+        WHERE system_key IN ('credit_loss_expense', 'allowance_expected_credit_loss')
+        ORDER BY system_key
+        """
+    ).fetchall()
+    if account_coordinates != [
+        ("1190", "allowance_expected_credit_loss", "asset", "credit", True, True),
+        ("5000", "credit_loss_expense", "expense", "debit", True, True),
+    ]:
+        raise SystemExit(
+            f"A4 allowance posting refused: protected 5000/1190 account identities are invalid {account_coordinates!r}"
+        )
 
     policy = connection.execute(
         """
@@ -278,12 +318,38 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple]
     if not bool(measurement_summary[7]) or bool(measurement_summary[8]) or bool(measurement_summary[9]):
         raise SystemExit("A3 measurement safety flags are invalid")
 
+    allowance_summary = connection.execute(
+        """
+        SELECT
+            loan_count, measurement_not_authoritative_count,
+            no_allowance_required_count, preparation_required_count,
+            posting_ready_count, posted_current_count,
+            a5_remeasurement_required_count, posting_audit_incomplete_count,
+            preparation_blocked_count, protected_allowance_balance_total,
+            account_1190_posting_enabled, automatic_source_posting
+        FROM accounting.ecl_allowance_posting_summary
+        """
+    ).fetchone()
+    if allowance_summary is None:
+        raise SystemExit("A4 protected ECL allowance posting summary is missing")
+    if int(allowance_summary[0]) != int(measurement_summary[0]):
+        raise SystemExit("A4 allowance queue population does not match A3 measurement queue")
+    if not bool(allowance_summary[10]) or bool(allowance_summary[11]):
+        raise SystemExit("A4 allowance posting safety flags are invalid")
+
     measurement_count = _relation_count(connection, "accounting.ecl_quantitative_measurements")
     if measurement_count == 0:
         if int(measurement_summary[5]) != 0 or measurement_summary[6] != 0:
             raise SystemExit("A3 installation fabricated an authoritative ECL amount")
         if int(measurement_summary[2]) + int(measurement_summary[3]) != int(measurement_summary[0]):
             raise SystemExit("Every unmeasured loan must remain input-blocked or measurement-required")
+
+    if _relation_count(connection, "accounting.ecl_allowance_draft_preparations") != 0:
+        raise SystemExit("A4 schema installation unexpectedly created an allowance preparation")
+    if _relation_count(connection, "accounting.ecl_allowance_postings") != 0:
+        raise SystemExit("A4 schema installation unexpectedly posted account 1190")
+    if _relation_count(connection, "accounting.ecl_allowance_posting_lines") != 0:
+        raise SystemExit("A4 schema installation unexpectedly created posting audit lines")
 
     evidence_count = _relation_count(connection, "accounting.ecl_forward_looking_evidence")
     if evidence_count == 0:
@@ -292,14 +358,20 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple]
         if int(readiness_summary[8]) != int(readiness_summary[0]):
             raise SystemExit("Every current loan must retain the forward-looking blocker without evidence")
 
-    return label_summary, readiness_summary, forward_summary, measurement_summary
+    return (
+        label_summary,
+        readiness_summary,
+        forward_summary,
+        measurement_summary,
+        allowance_summary,
+    )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Install and verify protected SPINA V1 ECL labels, strict recovery chronology, "
-            "A1/A2 readiness and A3 read-only quantitative measurement controls."
+            "A1/A2 readiness, A3 read-only measurement and A4 protected initial allowance posting controls."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -337,15 +409,21 @@ def main() -> int:
         before = _history_counts(connection)
         for migration in MIGRATIONS:
             connection.execute(migration.read_text(encoding="utf-8"))
-        label_summary, readiness_summary, forward_summary, measurement_summary = _verify(connection)
+        (
+            label_summary,
+            readiness_summary,
+            forward_summary,
+            measurement_summary,
+            allowance_summary,
+        ) = _verify(connection)
         after = _history_counts(connection)
         if after != before:
             raise SystemExit(
-                f"ECL installation verification failed: protected/evidence/measurement history changed from {before} to {after}"
+                f"ECL installation verification failed: protected/evidence/measurement/allowance history changed from {before} to {after}"
             )
 
     print(
-        "ECL label/readiness/read-only-measurement live summary: "
+        "ECL label/readiness/measurement/allowance live summary: "
         f"loans={label_summary[0]}, dpd_ready={label_summary[1]}, dpd_blocked={label_summary[2]}, "
         f"review_required={label_summary[3]}, refresh_required={label_summary[4]}, "
         f"current_labels={label_summary[5]}, stage1={label_summary[6]}, stage2={label_summary[7]}, "
@@ -360,9 +438,12 @@ def main() -> int:
         f"measurement_input_blocked={measurement_summary[2]}, measurement_required={measurement_summary[3]}, "
         f"measurement_refresh_required={measurement_summary[4]}, measured={measurement_summary[5]}, "
         f"authoritative_ecl_total={measurement_summary[6]}, "
+        f"allowance_preparation_required={allowance_summary[3]}, allowance_posting_ready={allowance_summary[4]}, "
+        f"allowance_posted_current={allowance_summary[5]}, allowance_a5_required={allowance_summary[6]}, "
+        f"allowance_preparation_blocked={allowance_summary[8]}, allowance_total={allowance_summary[9]}, "
         "history_unchanged=True, strict_cash_recovery_chronology=True, "
         "deterministic_input_blockers=True, forward_looking_governance_installed=True, "
-        "read_only_ecl_calculation_enabled=True, account_1190_posting_enabled=False, "
+        "read_only_ecl_calculation_enabled=True, protected_account_1190_posting_enabled=True, "
         "automatic_source_posting=False."
     )
     return 0
