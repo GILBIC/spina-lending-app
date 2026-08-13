@@ -3,6 +3,52 @@ BEGIN;
 -- Master #296 A2: wire protected current forward-looking evidence into the
 -- existing A1 quantitative-input gate without calculating ECL or enabling
 -- allowance/source posting. Migration 0072 remains preserved as the A1 base.
+--
+-- A later version permanently supersedes its predecessor for future readiness.
+-- Revoking the later version must NOT reactivate the older forecast.
+
+CREATE OR REPLACE VIEW accounting.ecl_forward_looking_evidence_status AS
+SELECT
+    evidence.*,
+    revocation.id AS revocation_id,
+    revocation.reason AS revocation_reason,
+    revocation.revoked_by_user_id,
+    revocation.revoked_at,
+    EXISTS (
+        SELECT 1
+        FROM accounting.ecl_forward_looking_evidence later
+        WHERE later.supersedes_evidence_id = evidence.id
+    ) AS is_superseded,
+    CASE
+        WHEN revocation.id IS NOT NULL THEN 'revoked'
+        WHEN EXISTS (
+            SELECT 1
+            FROM accounting.ecl_forward_looking_evidence later
+            WHERE later.supersedes_evidence_id = evidence.id
+        ) THEN 'superseded'
+        WHEN current_date < evidence.effective_date THEN 'not_yet_effective'
+        WHEN current_date > evidence.forecast_period_end THEN 'stale'
+        ELSE 'current'
+    END AS evidence_status,
+    (
+        revocation.id IS NULL
+        AND NOT EXISTS (
+            SELECT 1
+            FROM accounting.ecl_forward_looking_evidence later
+            WHERE later.supersedes_evidence_id = evidence.id
+        )
+        AND current_date >= evidence.effective_date
+        AND current_date <= evidence.forecast_period_end
+    ) AS ready_for_new_measurement,
+    false AS scenario_probability_defaulted,
+    false AS multiplier_defaulted,
+    false AS management_overlay_defaulted,
+    false AS ecl_calculation_enabled,
+    false AS account_1190_posting_enabled,
+    false AS automatic_source_posting
+FROM accounting.ecl_forward_looking_evidence evidence
+LEFT JOIN accounting.ecl_forward_looking_evidence_revocations revocation
+  ON revocation.evidence_id = evidence.id;
 
 CREATE OR REPLACE VIEW accounting.ecl_forward_looking_evidence_readiness AS
 SELECT
@@ -172,6 +218,9 @@ SELECT
     false AS account_1190_posting_enabled,
     false AS automatic_source_posting
 FROM accounting.ecl_quantitative_input_readiness;
+
+COMMENT ON VIEW accounting.ecl_forward_looking_evidence_status IS
+'Revocation never reactivates an older superseded forecast. Only a latest, unrevoked, effective and non-stale version can be ready for a new measurement.';
 
 COMMENT ON VIEW accounting.ecl_forward_looking_evidence_readiness IS
 'Master #296 A2 read-only readiness for current Management-approved forward-looking economic evidence. Exact evidence IDs/versions are exposed for later measurement snapshotting; no scenario probability, multiplier or overlay is defaulted.';
