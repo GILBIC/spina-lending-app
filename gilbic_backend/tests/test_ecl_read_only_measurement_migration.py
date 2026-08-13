@@ -5,6 +5,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SQL = (
     ROOT / "sql" / "0075_add_read_only_quantitative_ecl_measurement.sql"
 ).read_text(encoding="utf-8")
+HARDENING_SQL = (
+    ROOT / "sql" / "0076_harden_read_only_quantitative_ecl_measurement.sql"
+).read_text(encoding="utf-8")
 DOC = (
     Path(__file__).resolve().parents[2]
     / "docs"
@@ -45,7 +48,8 @@ def test_0075_stage_1_is_event_horizon_not_cash_flow_truncation() -> None:
     assert "WHEN 'stage_2_lifetime' THEN 'lifetime'" in SQL
     assert "WHEN 'stage_3_credit_impaired' THEN 'lifetime'" in SQL
     assert "cash flows are not" in SQL
-    assert "mechanically truncated at 12 months" in DOC
+    assert "not a mechanical truncation" in DOC
+    assert "credit-loss/default-event horizon" in DOC
 
 
 def test_0075_pins_exact_protected_inputs_and_digest() -> None:
@@ -98,3 +102,25 @@ def test_0075_hardens_forward_evidence_forecast_start() -> None:
     assert "current_date >= evidence.forecast_period_start" in SQL
     assert "current_date < evidence.forecast_period_start" in SQL
     assert "cannot satisfy readiness before both" in DOC
+
+
+def test_0076_canonicalizes_unordered_forward_evidence_before_digest() -> None:
+    lower = HARDENING_SQL.lower()
+    assert HARDENING_SQL.strip().startswith("BEGIN;")
+    assert HARDENING_SQL.strip().endswith("COMMIT;")
+    assert "record_read_only_quantitative_ecl_measurement_v1_impl" in lower
+    assert "select distinct raw_id::uuid as evidence_id" in lower
+    assert "jsonb_agg(to_jsonb(evidence_id) order by evidence_id)" in lower
+    assert "order by coalesce(scenario.value ->> 'scenario_key', '')" in lower
+    assert "no probability or cash-flow input is invented" in lower
+
+
+def test_0076_invalidates_current_amount_when_used_forward_evidence_is_no_longer_current() -> None:
+    lower = HARDENING_SQL.lower()
+    assert "measurement_forward_evidence_current" in lower
+    assert "not evidence.ready_for_new_measurement" in lower
+    assert "then 'new_measurement_required'" in lower
+    assert "and assembled.measurement_forward_evidence_current" in lower
+    assert "else null::numeric(18,2)" in lower
+    assert "false as account_1190_posting_enabled" in lower
+    assert "false as automatic_source_posting" in lower
