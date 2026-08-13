@@ -8,14 +8,14 @@ BEGIN;
 CREATE OR REPLACE VIEW accounting.ecl_allowance_posting_queue AS
 WITH account_coordinates AS (
     SELECT
-        min(account.id::text)::uuid FILTER (
+        (min(account.id::text) FILTER (
             WHERE account.system_key = 'credit_loss_expense'
               AND account.code = '5000'
               AND account.account_type = 'expense'
               AND account.normal_balance = 'debit'
               AND account.is_active
               AND account.is_posting
-        ) AS credit_loss_expense_account_id,
+        ))::uuid AS credit_loss_expense_account_id,
         count(*) FILTER (
             WHERE account.system_key = 'credit_loss_expense'
               AND account.code = '5000'
@@ -24,14 +24,14 @@ WITH account_coordinates AS (
               AND account.is_active
               AND account.is_posting
         )::integer AS credit_loss_expense_account_count,
-        min(account.id::text)::uuid FILTER (
+        (min(account.id::text) FILTER (
             WHERE account.system_key = 'allowance_expected_credit_loss'
               AND account.code = '1190'
               AND account.account_type = 'asset'
               AND account.normal_balance = 'credit'
               AND account.is_active
               AND account.is_posting
-        ) AS allowance_account_id,
+        ))::uuid AS allowance_account_id,
         count(*) FILTER (
             WHERE account.system_key = 'allowance_expected_credit_loss'
               AND account.code = '1190'
