@@ -13,6 +13,7 @@ on:
       - 'gilbic_backend/sql/0076_harden_read_only_quantitative_ecl_measurement.sql'
       - 'gilbic_backend/sql/0077_add_protected_ecl_allowance_posting.sql'
       - 'gilbic_backend/sql/0078_harden_ecl_allowance_posting_queue.sql'
+      - 'gilbic_backend/sql/0079_add_ecl_remeasurement_writeoff_recovery.sql'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_repository.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_api.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_forward_looking_evidence_repository.py'
@@ -21,6 +22,7 @@ on:
       - 'gilbic_backend/src/gilbic_backend/ecl_quantitative_measurement_api.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_allowance_posting_repository.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_allowance_posting_api.py'
+      - 'gilbic_backend/src/gilbic_backend/ecl_a5_accounting_repository.py'
       - 'gilbic_backend/tests/test_ecl_credit_risk_labels_migration.py'
       - 'gilbic_backend/tests/test_ecl_credit_risk_labels_postgres.py'
       - 'gilbic_backend/tests/test_ecl_cash_recovery_chronology_postgres.py'
@@ -32,9 +34,12 @@ on:
       - 'gilbic_backend/tests/test_ecl_allowance_posting_migration.py'
       - 'gilbic_backend/tests/test_ecl_allowance_posting_postgres.py'
       - 'gilbic_backend/tests/test_ecl_allowance_posting_api_contract.py'
+      - 'gilbic_backend/tests/test_ecl_a5_migration.py'
+      - 'gilbic_backend/tests/test_ecl_a5_remeasurement_postgres.py'
       - 'gilbic_backend/tests/test_ecl_live_migration_plan_postgres.py'
       - 'docs/accounting/ecl-read-only-measurement-policy.md'
       - 'docs/accounting/ecl-allowance-posting-policy.md'
+      - 'docs/accounting/ecl-remeasurement-writeoff-recovery-policy.md'
       - 'tools/apply_ecl_credit_risk_labels_migration.py'
       - 'tools/apply_ecl_live_migrations_version_aware.py'
       - 'tools/run_ecl_credit_risk_labels_disposable_postgres_validation.py'
@@ -51,6 +56,7 @@ on:
       - 'gilbic_backend/sql/0076_harden_read_only_quantitative_ecl_measurement.sql'
       - 'gilbic_backend/sql/0077_add_protected_ecl_allowance_posting.sql'
       - 'gilbic_backend/sql/0078_harden_ecl_allowance_posting_queue.sql'
+      - 'gilbic_backend/sql/0079_add_ecl_remeasurement_writeoff_recovery.sql'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_repository.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_api.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_forward_looking_evidence_repository.py'
@@ -59,6 +65,7 @@ on:
       - 'gilbic_backend/src/gilbic_backend/ecl_quantitative_measurement_api.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_allowance_posting_repository.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_allowance_posting_api.py'
+      - 'gilbic_backend/src/gilbic_backend/ecl_a5_accounting_repository.py'
       - 'gilbic_backend/tests/test_ecl_credit_risk_labels_migration.py'
       - 'gilbic_backend/tests/test_ecl_credit_risk_labels_postgres.py'
       - 'gilbic_backend/tests/test_ecl_cash_recovery_chronology_postgres.py'
@@ -70,9 +77,12 @@ on:
       - 'gilbic_backend/tests/test_ecl_allowance_posting_migration.py'
       - 'gilbic_backend/tests/test_ecl_allowance_posting_postgres.py'
       - 'gilbic_backend/tests/test_ecl_allowance_posting_api_contract.py'
+      - 'gilbic_backend/tests/test_ecl_a5_migration.py'
+      - 'gilbic_backend/tests/test_ecl_a5_remeasurement_postgres.py'
       - 'gilbic_backend/tests/test_ecl_live_migration_plan_postgres.py'
       - 'docs/accounting/ecl-read-only-measurement-policy.md'
       - 'docs/accounting/ecl-allowance-posting-policy.md'
+      - 'docs/accounting/ecl-remeasurement-writeoff-recovery-policy.md'
       - 'tools/apply_ecl_credit_risk_labels_migration.py'
       - 'tools/apply_ecl_live_migrations_version_aware.py'
       - 'tools/run_ecl_credit_risk_labels_disposable_postgres_validation.py'
@@ -241,12 +251,15 @@ jobs:
         shell: cmd
         run: |
           "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile tools\run_ecl_credit_risk_labels_disposable_postgres_validation.py || exit /b 1
+          "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\ecl_a5_accounting_repository.py || exit /b 1
           "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_ecl_credit_risk_labels_postgres.py || exit /b 1
           "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_ecl_cash_recovery_chronology_postgres.py || exit /b 1
           "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_ecl_quantitative_input_readiness_postgres.py || exit /b 1
           "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_ecl_forward_looking_evidence_postgres.py || exit /b 1
           "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_ecl_read_only_measurement_postgres.py || exit /b 1
           "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_ecl_allowance_posting_postgres.py || exit /b 1
+          "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_ecl_a5_migration.py || exit /b 1
+          "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_ecl_a5_remeasurement_postgres.py || exit /b 1
 
       - name: Execute ECL credit-risk label proof
         shell: cmd
