@@ -136,7 +136,6 @@ SELECT
     assembled.measurement_date,
     assembled.loss_horizon,
     assembled.calculation_digest,
-    assembled.measurement_forward_evidence_current,
     CASE
         WHEN assembled.quantitative_input_ready = false THEN 'input_blocked'
         WHEN assembled.measurement_id IS NULL THEN 'measurement_required'
@@ -161,7 +160,8 @@ SELECT
     END AS authoritative_ecl_amount,
     true AS read_only_ecl_calculation_enabled,
     false AS account_1190_posting_enabled,
-    false AS automatic_source_posting
+    false AS automatic_source_posting,
+    assembled.measurement_forward_evidence_current
 FROM assembled;
 
 CREATE OR REPLACE VIEW accounting.ecl_quantitative_measurement_summary AS
