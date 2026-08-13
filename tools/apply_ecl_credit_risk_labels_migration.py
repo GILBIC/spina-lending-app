@@ -101,17 +101,28 @@ def _verify(connection: psycopg.Connection) -> tuple:
         """
         SELECT count(*)
         FROM accounting.ecl_credit_risk_label_reviews current_review
-        JOIN accounting.ecl_credit_risk_label_reviews prior_review
+        LEFT JOIN accounting.ecl_credit_risk_label_reviews prior_review
           ON prior_review.id = current_review.supersedes_review_id
-        JOIN lending.collection_transactions recovery_tx
+        LEFT JOIN lending.collection_transactions recovery_tx
           ON recovery_tx.id = current_review.recovery_transaction_id
         WHERE current_review.recovery_label = 'cash_recovery_observed'
-          AND recovery_tx.accepted_at <= prior_review.created_at
+          AND (
+                prior_review.id IS NULL
+             OR prior_review.loan_id <> current_review.loan_id
+             OR prior_review.review_version + 1 <> current_review.review_version
+             OR recovery_tx.id IS NULL
+             OR recovery_tx.loan_id <> current_review.loan_id
+             OR recovery_tx.is_voided
+             OR recovery_tx.amount <= 0
+             OR recovery_tx.entry_type NOT IN ('payment', 'advance')
+             OR recovery_tx.accepted_at IS NULL
+             OR recovery_tx.accepted_at <= prior_review.created_at
+          )
         """
     ).fetchone()[0]
     if int(invalid_recovery_chronology) != 0:
         raise SystemExit(
-            "ECL credit-risk label verification failed: existing cash-recovery evidence is not strictly later than its prior deteriorated review"
+            "ECL credit-risk label verification failed: existing cash-recovery evidence does not match the exact prior deteriorated review and strict accepted_at chronology"
         )
 
     permission = connection.execute(
