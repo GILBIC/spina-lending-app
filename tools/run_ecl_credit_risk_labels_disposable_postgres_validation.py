@@ -12,7 +12,6 @@ from psycopg import sql
 
 import run_stage5d17_disposable_postgres_validation as disposable
 
-
 TEST_DATABASE_PREFIX = "spina_ecl_labels_"
 BOOTSTRAP_THROUGH = 69
 TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
@@ -26,6 +25,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_ecl_forward_looking_evidence_postgres.py",
     TEST_ROOT / "test_ecl_read_only_measurement_postgres.py",
     TEST_ROOT / "test_ecl_allowance_posting_postgres.py",
+    TEST_ROOT / "test_ecl_a5_migration.py",
     TEST_ROOT / "test_ecl_a5_remeasurement_postgres.py",
     TEST_ROOT / "test_ecl_live_migration_plan_postgres.py",
 )
@@ -118,12 +118,12 @@ def main() -> int:
                 f"integration tests exited with code {result}."
             )
         print(
-            "ECL disposable PostgreSQL validation passed through A5: 0070–0076 preserved "
-            "protected labels/readiness/evidence/read-only measurement; 0077/0078 preserved "
-            "explicit Management-confirmed initial allowance posting with account 1190 and "
-            "automatic posting disabled; 0079 proved controlled allowance increase/decrease/" 
-            "full reversal from exact new measurements, immutable exact retry identity and "
-            "atomic rollback on forced audit failure. Automatic source posting remained disabled."
+            "ECL disposable PostgreSQL validation passed through A5 remeasurement: "
+            "0070–0076 preserved protected labels/readiness/evidence/read-only measurement; "
+            "0077/0078 preserved explicit Management-confirmed initial allowance posting; "
+            "0079 static controls plus real PostgreSQL remeasurement proof covered increase, "
+            "decrease, full reversal, exact retry identity and forced-audit atomic rollback. "
+            "Automatic source posting remained disabled."
         )
         return 0
     except psycopg.Error as error:
