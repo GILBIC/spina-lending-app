@@ -115,6 +115,84 @@ def _collection(
     return transaction_id
 
 
+def _insert_recovery_review(
+    connection: psycopg.Connection,
+    *,
+    prior_review_id: int,
+    recovery_transaction_id,
+    actor_user_id,
+    evidence_reference: str,
+    review_note: str,
+):
+    return connection.execute(
+        """
+        INSERT INTO accounting.ecl_credit_risk_label_reviews (
+            loan_id,
+            review_version,
+            stage_label,
+            default_label,
+            write_off_label,
+            recovery_label,
+            primary_evidence_basis,
+            evidence_reference,
+            review_note,
+            snapshot_schedule_id,
+            snapshot_schedule_version,
+            snapshot_days_past_due,
+            snapshot_due_unpaid_amount,
+            snapshot_thirty_day_backstop,
+            snapshot_ninety_day_backstop,
+            snapshot_dpd_risk_band,
+            sicr_backstop_rebutted,
+            default_backstop_rebutted,
+            rebuttal_evidence_reference,
+            rebuttal_note,
+            write_off_evidence_reference,
+            write_off_note,
+            recovery_transaction_id,
+            reviewer_user_id,
+            supersedes_review_id
+        )
+        SELECT
+            prior.loan_id,
+            prior.review_version + 1,
+            prior.stage_label,
+            prior.default_label,
+            'none',
+            'cash_recovery_observed',
+            'protected_collection_history',
+            %s,
+            %s,
+            prior.snapshot_schedule_id,
+            prior.snapshot_schedule_version,
+            prior.snapshot_days_past_due,
+            prior.snapshot_due_unpaid_amount,
+            prior.snapshot_thirty_day_backstop,
+            prior.snapshot_ninety_day_backstop,
+            prior.snapshot_dpd_risk_band,
+            prior.sicr_backstop_rebutted,
+            prior.default_backstop_rebutted,
+            prior.rebuttal_evidence_reference,
+            prior.rebuttal_note,
+            NULL,
+            NULL,
+            %s,
+            %s,
+            prior.id
+        FROM accounting.ecl_credit_risk_label_reviews prior
+        WHERE prior.id = %s
+        RETURNING id
+        """,
+        (
+            evidence_reference,
+            review_note,
+            recovery_transaction_id,
+            actor_user_id,
+            prior_review_id,
+        ),
+    ).fetchone()[0]
+
+
 def test_cash_recovery_requires_server_acceptance_after_prior_review_even_same_day() -> None:
     assert DATABASE_URL is not None
     suffix = uuid4().hex[:10]
@@ -140,10 +218,9 @@ def test_cash_recovery_requires_server_acceptance_after_prior_review_even_same_d
             )
             device_id = _device(connection, actor_user_id, suffix)
 
-            # Establish the reviewed deteriorated state while the untouched
-            # contractual DPD fixture is known-ready. The chronology proof then
-            # inserts protected collection evidence with controlled accepted_at
-            # timestamps around that immutable review time.
+            # Establish the reviewed deteriorated state through the ordinary
+            # protected review function while the contractual DPD fixture is
+            # untouched and known-ready.
             deteriorated_review_id = helpers._review(
                 connection,
                 loan_id=loan_id,
@@ -163,10 +240,11 @@ def test_cash_recovery_requires_server_acceptance_after_prior_review_even_same_d
                 (deteriorated_review_id,),
             ).fetchone()[0]
 
-            # Reproduce the exact 0070 weakness without contaminating the DPD
-            # prerequisite for the initial review: the protected transaction is
-            # inserted afterward, but its authoritative accepted_at is earlier
-            # on the same calendar day. A date-only check would accept it.
+            # Reproduce the exact 0070 weakness without changing the DPD
+            # prerequisite: the transaction is inserted after the review, but
+            # its immutable accepted_at says it was accepted earlier on the
+            # same calendar day. The 0071 table trigger is the final fail-closed
+            # boundary even if any caller reaches INSERT with stale chronology.
             before_review_accepted_at = deteriorated_created_at.replace(
                 hour=0,
                 minute=0,
@@ -187,21 +265,17 @@ def test_cash_recovery_requires_server_acceptance_after_prior_review_even_same_d
 
             with pytest.raises(psycopg.Error, match="accepted after the prior deteriorated review"):
                 with connection.transaction():
-                    helpers._review(
+                    _insert_recovery_review(
                         connection,
-                        loan_id=loan_id,
+                        prior_review_id=deteriorated_review_id,
+                        recovery_transaction_id=before_review_tx,
                         actor_user_id=actor_user_id,
-                        stage="stage_3_credit_impaired",
-                        default_label=True,
-                        recovery="cash_recovery_observed",
-                        basis="protected_collection_history",
                         evidence_reference="RECOVERY-BEFORE-REVIEW",
                         review_note="This same-day payment predates the reviewed deterioration and must fail.",
-                        recovery_transaction_id=before_review_tx,
                     )
 
             # A same-day protected payment with accepted_at strictly after the
-            # deteriorated review is valid recovery evidence.
+            # deteriorated review must pass the same database boundary.
             after_review_accepted_at = deteriorated_created_at + timedelta(seconds=1)
             after_review_tx = _collection(
                 connection,
@@ -212,17 +286,13 @@ def test_cash_recovery_requires_server_acceptance_after_prior_review_even_same_d
                 device_sequence=2,
                 accepted_at=after_review_accepted_at,
             )
-            recovery_review_id = helpers._review(
+            recovery_review_id = _insert_recovery_review(
                 connection,
-                loan_id=loan_id,
+                prior_review_id=deteriorated_review_id,
+                recovery_transaction_id=after_review_tx,
                 actor_user_id=actor_user_id,
-                stage="stage_3_credit_impaired",
-                default_label=True,
-                recovery="cash_recovery_observed",
-                basis="protected_collection_history",
                 evidence_reference="RECOVERY-AFTER-REVIEW",
                 review_note="Exact protected payment was accepted after the reviewed deterioration.",
-                recovery_transaction_id=after_review_tx,
             )
             assert recovery_review_id > deteriorated_review_id
 
