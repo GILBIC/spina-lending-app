@@ -58,9 +58,8 @@ WITH base AS (
       ON recovery_tx.id = base.recovery_transaction_id
     LEFT JOIN LATERAL (
         SELECT
-            count(*) FILTER (
-                WHERE transaction.is_voided = false
-            )::integer AS active_source_count,
+            count(*) FILTER (WHERE transaction.is_voided = false)::integer
+                AS active_source_count,
             count(*) FILTER (
                 WHERE transaction.is_voided = false
                   AND EXISTS (
@@ -122,9 +121,8 @@ WITH base AS (
     ) regular_history ON true
     LEFT JOIN LATERAL (
         SELECT
-            count(*) FILTER (
-                WHERE transaction.is_voided = false
-            )::integer AS active_source_count,
+            count(*) FILTER (WHERE transaction.is_voided = false)::integer
+                AS active_source_count,
             count(*) FILTER (
                 WHERE transaction.is_voided = false
                   AND EXISTS (
@@ -241,16 +239,61 @@ WITH base AS (
         END AS required_loss_recovery_writeoff_outcome_evidence_ready,
         false AS approved_forward_looking_evidence_ready
     FROM evidence
-), blocker_rows AS (
+)
+SELECT
+    evaluated.loan_id,
+    evaluated.loan_number,
+    evaluated.loan_status,
+    evaluated.loan_type_code,
+    evaluated.loan_type_name,
+    evaluated.calculation_mode,
+    evaluated.schedule_id,
+    evaluated.schedule_version,
+    evaluated.contract_reference,
+    evaluated.dpd_data_status,
+    evaluated.days_past_due,
+    evaluated.current_dpd_risk_band,
+    evaluated.review_id,
+    evaluated.review_version,
+    evaluated.stage_label,
+    evaluated.default_label,
+    evaluated.write_off_label,
+    evaluated.recovery_label,
+    evaluated.label_review_status,
+    evaluated.contractual_schedule_dpd_ready,
+    evaluated.current_credit_risk_label_ready,
+    evaluated.original_eir_initial_carrying_ready,
+    evaluated.protected_collection_posting_reversal_history_ready,
+    evaluated.authoritative_current_carrying_ready,
+    evaluated.required_loss_recovery_writeoff_outcome_evidence_ready,
+    evaluated.approved_forward_looking_evidence_ready,
+    diagnostic.blocker_codes,
+    diagnostic.blockers,
+    cardinality(diagnostic.blocker_codes) = 0 AS quantitative_input_ready,
+    NULL::numeric(18,2) AS ecl_amount,
+    false AS ecl_calculation_enabled,
+    false AS account_1190_posting_enabled,
+    false AS automatic_source_posting
+FROM evaluated
+CROSS JOIN LATERAL (
     SELECT
-        evaluated.loan_id,
-        blocker.ordinal,
-        blocker.code,
-        blocker.evidence_class,
-        blocker.message,
-        blocker.source_status
-    FROM evaluated
-    CROSS JOIN LATERAL (
+        coalesce(
+            array_agg(blocker.code ORDER BY blocker.ordinal)
+                FILTER (WHERE NOT blocker.is_ready),
+            ARRAY[]::text[]
+        ) AS blocker_codes,
+        coalesce(
+            jsonb_agg(
+                jsonb_build_object(
+                    'code', blocker.code,
+                    'evidence_class', blocker.evidence_class,
+                    'message', blocker.message,
+                    'source_status', blocker.source_status
+                ) ORDER BY blocker.ordinal
+            ) FILTER (WHERE NOT blocker.is_ready),
+            '[]'::jsonb
+        ) AS blockers
+    FROM (
         VALUES
             (
                 10,
@@ -349,136 +392,7 @@ WITH base AS (
                 'forward_looking_governance_not_installed'::text
             )
     ) AS blocker(ordinal, code, evidence_class, is_ready, message, source_status)
-    WHERE NOT blocker.is_ready
-), aggregated AS (
-    SELECT
-        evaluated.*,
-        coalesce(
-            array_agg(blocker.code ORDER BY blocker.ordinal)
-                FILTER (WHERE blocker.code IS NOT NULL),
-            ARRAY[]::text[]
-        ) AS blocker_codes,
-        coalesce(
-            jsonb_agg(
-                jsonb_build_object(
-                    'code', blocker.code,
-                    'evidence_class', blocker.evidence_class,
-                    'message', blocker.message,
-                    'source_status', blocker.source_status
-                ) ORDER BY blocker.ordinal
-            ) FILTER (WHERE blocker.code IS NOT NULL),
-            '[]'::jsonb
-        ) AS blockers
-    FROM evaluated
-    LEFT JOIN blocker_rows blocker ON blocker.loan_id = evaluated.loan_id
-    GROUP BY
-        evaluated.loan_id,
-        evaluated.loan_number,
-        evaluated.loan_status,
-        evaluated.schedule_id,
-        evaluated.schedule_version,
-        evaluated.contract_reference,
-        evaluated.dpd_data_status,
-        evaluated.days_past_due,
-        evaluated.due_unpaid_amount,
-        evaluated.thirty_day_sicr_backstop_reached,
-        evaluated.ninety_day_default_backstop_reached,
-        evaluated.current_dpd_risk_band,
-        evaluated.review_id,
-        evaluated.review_version,
-        evaluated.stage_label,
-        evaluated.default_label,
-        evaluated.write_off_label,
-        evaluated.recovery_label,
-        evaluated.primary_evidence_basis,
-        evaluated.evidence_reference,
-        evaluated.review_note,
-        evaluated.sicr_backstop_rebutted,
-        evaluated.default_backstop_rebutted,
-        evaluated.rebuttal_evidence_reference,
-        evaluated.rebuttal_note,
-        evaluated.write_off_evidence_reference,
-        evaluated.write_off_note,
-        evaluated.recovery_transaction_id,
-        evaluated.reviewer_name,
-        evaluated.reviewed_at,
-        evaluated.current_label_ready,
-        evaluated.label_review_status,
-        evaluated.quantitative_ecl_ready,
-        evaluated.ecl_calculation_enabled,
-        evaluated.account_1190_posting_enabled,
-        evaluated.automatic_source_posting,
-        evaluated.client_id,
-        evaluated.loan_type_id,
-        evaluated.principal,
-        evaluated.date_released,
-        evaluated.due_date,
-        evaluated.loan_type_code,
-        evaluated.loan_type_name,
-        evaluated.calculation_mode,
-        evaluated.regular_eir_anchor_status,
-        evaluated.regular_original_daily_eir,
-        evaluated.regular_initial_gross_carrying_amount,
-        evaluated.seven_by_seven_eir_anchor_status,
-        evaluated.seven_by_seven_original_daily_eir,
-        evaluated.seven_by_seven_initial_gross_carrying_amount,
-        evaluated.regular_active_source_count,
-        evaluated.regular_exact_posted_active_source_count,
-        evaluated.regular_voided_posted_source_count,
-        evaluated.regular_exact_reversed_voided_source_count,
-        evaluated.seven_by_seven_active_source_count,
-        evaluated.seven_by_seven_exact_posted_active_source_count,
-        evaluated.seven_by_seven_voided_posted_source_count,
-        evaluated.seven_by_seven_exact_reversed_voided_source_count,
-        evaluated.prior_reviewed_at,
-        evaluated.recovery_accepted_at,
-        evaluated.recovery_loan_id,
-        evaluated.recovery_is_voided,
-        evaluated.recovery_amount,
-        evaluated.recovery_entry_type,
-        evaluated.contractual_schedule_dpd_ready,
-        evaluated.current_credit_risk_label_ready,
-        evaluated.original_eir_initial_carrying_ready,
-        evaluated.protected_collection_posting_reversal_history_ready,
-        evaluated.authoritative_current_carrying_ready,
-        evaluated.required_loss_recovery_writeoff_outcome_evidence_ready,
-        evaluated.approved_forward_looking_evidence_ready
-)
-SELECT
-    loan_id,
-    loan_number,
-    loan_status,
-    loan_type_code,
-    loan_type_name,
-    calculation_mode,
-    schedule_id,
-    schedule_version,
-    contract_reference,
-    dpd_data_status,
-    days_past_due,
-    current_dpd_risk_band,
-    review_id,
-    review_version,
-    stage_label,
-    default_label,
-    write_off_label,
-    recovery_label,
-    label_review_status,
-    contractual_schedule_dpd_ready,
-    current_credit_risk_label_ready,
-    original_eir_initial_carrying_ready,
-    protected_collection_posting_reversal_history_ready,
-    authoritative_current_carrying_ready,
-    required_loss_recovery_writeoff_outcome_evidence_ready,
-    approved_forward_looking_evidence_ready,
-    blocker_codes,
-    blockers,
-    cardinality(blocker_codes) = 0 AS quantitative_input_ready,
-    NULL::numeric(18,2) AS ecl_amount,
-    false AS ecl_calculation_enabled,
-    false AS account_1190_posting_enabled,
-    false AS automatic_source_posting
-FROM aggregated;
+) diagnostic;
 
 CREATE OR REPLACE VIEW accounting.ecl_quantitative_input_readiness_summary AS
 SELECT
