@@ -53,6 +53,8 @@ def test_0071_requires_authoritative_strict_recovery_timestamp_ordering() -> Non
     assert "GUARD_ECL_CASH_RECOVERY_CHRONOLOGY" in normalized
     assert "ECL_CASH_RECOVERY_CHRONOLOGY_GUARD" in normalized
     assert "BEFORE INSERT ON ACCOUNTING.ECL_CREDIT_RISK_LABEL_REVIEWS" in normalized
+    assert "PRIOR_REVIEW.REVIEW_VERSION + 1 <> NEW.REVIEW_VERSION" in normalized
+    assert "NEWER.REVIEW_VERSION > PRIOR_REVIEW.REVIEW_VERSION" in normalized
     assert "RECOVERY_TX.ACCEPTED_AT <= PRIOR_REVIEW.CREATED_AT" in normalized
     assert "IMMEDIATELY PRIOR DETERIORATED REVIEW FOR THE SAME LOAN" in normalized
     assert "SAME-CALENDAR-DAY ORDERING IS NEVER INFERRED" in normalized
