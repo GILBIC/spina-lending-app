@@ -17,7 +17,8 @@ TEST_DATABASE_PREFIX = "spina_ecl_labels_"
 BOOTSTRAP_THROUGH = 69
 TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
 # Reuse one dedicated ECL disposable PostgreSQL workflow for the whole protected
-# label/readiness/evidence/measurement/allowance chain; do not duplicate CI.
+# label/readiness/evidence/measurement/allowance chain and live upgrade planner;
+# do not duplicate CI.
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_ecl_credit_risk_labels_postgres.py",
     TEST_ROOT / "test_ecl_cash_recovery_chronology_postgres.py",
@@ -25,6 +26,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_ecl_forward_looking_evidence_postgres.py",
     TEST_ROOT / "test_ecl_read_only_measurement_postgres.py",
     TEST_ROOT / "test_ecl_allowance_posting_postgres.py",
+    TEST_ROOT / "test_ecl_live_migration_plan_postgres.py",
 )
 
 
@@ -58,8 +60,9 @@ def main() -> int:
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
             "through 0069, then prove protected 0070 labels, 0071 recovery chronology, "
             "0072 quantitative-input blockers, 0073/0074 forward-looking evidence governance, "
-            "0075/0076 read-only quantitative ECL measurement/hardening, and 0077/0078 "
-            "explicit protected initial account-1190 allowance preparation/posting."
+            "0075/0076 read-only quantitative ECL measurement/hardening, 0077/0078 "
+            "explicit protected initial account-1190 allowance preparation/posting, and the "
+            "version-aware live upgrade plan from an installed A3 database to A4."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -125,8 +128,10 @@ def main() -> int:
             "0077/0078 proved explicit Management-confirmed initial allowance preparation/posting "
             "from the exact current measurement, Dr 5000 / Cr 1190, exact retry idempotency, "
             "immutable posting audit, generic/manual account-1190 and reversal bypass rejection, "
-            "open-period/prior-balance revalidation and atomic rollback on forced audit failure. "
-            "Automatic source posting remained disabled throughout."
+            "open-period/prior-balance revalidation and atomic rollback on forced audit failure; "
+            "the live planner proved an installed A3 database selects only 0077/0078 and a fully "
+            "installed A4 database selects no historical replay. Automatic source posting remained "
+            "disabled throughout."
         )
         return 0
     except psycopg.Error as error:
