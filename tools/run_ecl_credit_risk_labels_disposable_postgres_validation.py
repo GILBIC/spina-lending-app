@@ -16,11 +16,12 @@ import run_stage5d17_disposable_postgres_validation as disposable
 TEST_DATABASE_PREFIX = "spina_ecl_labels_"
 BOOTSTRAP_THROUGH = 69
 TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
-# Run the original label proof and the focused final table-boundary chronology
-# regression together against one freshly bootstrapped local PostgreSQL database.
+# Run the original label proof, focused chronology hardening, and quantitative
+# input-readiness proof together against one freshly bootstrapped local database.
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_ecl_credit_risk_labels_postgres.py",
     TEST_ROOT / "test_ecl_cash_recovery_chronology_postgres.py",
+    TEST_ROOT / "test_ecl_quantitative_input_readiness_postgres.py",
 )
 
 
@@ -52,8 +53,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
-            "through 0069, then apply and prove protected 0070 ECL credit-risk labels plus "
-            "0071 strict cash-recovery chronology hardening."
+            "through 0069, then apply and prove protected 0070 ECL credit-risk labels, "
+            "0071 strict cash-recovery chronology, and 0072 fail-closed quantitative-input "
+            "readiness blockers."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -112,10 +114,10 @@ def main() -> int:
         print(
             "ECL credit-risk label disposable PostgreSQL validation passed: "
             "0070 enforced explicit Management stage/default/write-off-support/recovery/cure "
-            "labels and 0071 proved that cash recovery requires an authoritative server "
-            "accepted_at strictly after the prior deteriorated review, including same-day "
-            "ordering. Quantitative ECL, account 1190 posting, write-off execution and "
-            "automatic source posting remained disabled."
+            "labels; 0071 required authoritative strict recovery chronology; and 0072 exposed "
+            "deterministic per-loan quantitative-ECL input blockers without substituting notes. "
+            "Forward-looking evidence remains explicitly blocked until A2. Quantitative ECL, "
+            "account 1190 posting, write-off execution and automatic source posting remained disabled."
         )
         return 0
     except psycopg.Error as error:
