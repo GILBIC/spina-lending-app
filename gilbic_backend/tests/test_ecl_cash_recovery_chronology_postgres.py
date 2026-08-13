@@ -140,23 +140,10 @@ def test_cash_recovery_requires_server_acceptance_after_prior_review_even_same_d
             )
             device_id = _device(connection, actor_user_id, suffix)
 
-            # Deliberately create a protected payment with a same-calendar-day
-            # accepted_at that is earlier than the forthcoming deteriorated
-            # review. Migration 0070's date-only condition would accept this;
-            # 0071 must reject it by authoritative server timestamp.
-            before_review_accepted_at = connection.execute(
-                "SELECT date_trunc('day', now())"
-            ).fetchone()[0]
-            before_review_tx = _collection(
-                connection,
-                loan_id=loan_id,
-                actor_user_id=actor_user_id,
-                device_id=device_id,
-                suffix=suffix,
-                device_sequence=1,
-                accepted_at=before_review_accepted_at,
-            )
-
+            # Establish the reviewed deteriorated state while the untouched
+            # contractual DPD fixture is known-ready. The chronology proof then
+            # inserts protected collection evidence with controlled accepted_at
+            # timestamps around that immutable review time.
             deteriorated_review_id = helpers._review(
                 connection,
                 loan_id=loan_id,
@@ -175,6 +162,26 @@ def test_cash_recovery_requires_server_acceptance_after_prior_review_even_same_d
                 """,
                 (deteriorated_review_id,),
             ).fetchone()[0]
+
+            # Reproduce the exact 0070 weakness without contaminating the DPD
+            # prerequisite for the initial review: the protected transaction is
+            # inserted afterward, but its authoritative accepted_at is earlier
+            # on the same calendar day. A date-only check would accept it.
+            before_review_accepted_at = deteriorated_created_at.replace(
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+            before_review_tx = _collection(
+                connection,
+                loan_id=loan_id,
+                actor_user_id=actor_user_id,
+                device_id=device_id,
+                suffix=suffix,
+                device_sequence=1,
+                accepted_at=before_review_accepted_at,
+            )
             assert before_review_accepted_at.date() == deteriorated_created_at.date()
             assert before_review_accepted_at <= deteriorated_created_at
 
