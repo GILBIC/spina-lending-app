@@ -257,7 +257,15 @@ def test_7x7_posting_revalidates_open_period_and_audit_failure_rolls_back_atomic
                 "select accounting.set_fiscal_period_status(%s, 'review', %s)",
                 (period_id, actor_id),
             )
-            with pytest.raises(psycopg.Error, match="stale|open containing fiscal period"):
+            current = _posting_status(connection, transaction_id)
+            assert current is not None and current[25] is False
+            # Period status participates in the protected 0064/0065 review boundary,
+            # so moving the period out of open may invalidate the reviewed source
+            # identity before the later explicit open-period guard is reached.
+            with pytest.raises(
+                psycopg.Error,
+                match="source evidence or coordinates changed|stale|open containing fiscal period",
+            ):
                 with connection.transaction():
                     _post(connection, actor_id, status)
             assert connection.execute(
