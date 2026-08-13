@@ -10,6 +10,7 @@ import psycopg
 SQL_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "sql"
 POSTING_MIGRATION = SQL_ROOT / "0066_add_protected_7x7_source_event_journal_posting.sql"
 REVERSAL_MIGRATION = SQL_ROOT / "0067_add_controlled_7x7_collection_reversals.sql"
+REVERSAL_HARDENING_MIGRATION = SQL_ROOT / "0068_harden_controlled_7x7_collection_reversal_guard.sql"
 
 
 def _load_env_file(path: Path) -> None:
@@ -209,7 +210,11 @@ def main() -> int:
     database_url = os.getenv(args.database_url_env)
     if not database_url:
         raise SystemExit(f"{args.database_url_env} is not configured")
-    for migration in (POSTING_MIGRATION, REVERSAL_MIGRATION):
+    for migration in (
+        POSTING_MIGRATION,
+        REVERSAL_MIGRATION,
+        REVERSAL_HARDENING_MIGRATION,
+    ):
         if not migration.is_file():
             raise SystemExit("7x7 journal-lifecycle migration file was not found: " + str(migration))
 
@@ -218,6 +223,9 @@ def main() -> int:
     )
     reversal_body = _transaction_body(
         REVERSAL_MIGRATION.read_text(encoding="utf-8"), "0067"
+    )
+    reversal_hardening_body = _transaction_body(
+        REVERSAL_HARDENING_MIGRATION.read_text(encoding="utf-8"), "0068"
     )
 
     try:
@@ -257,6 +265,7 @@ def main() -> int:
             connection.execute(posting_body)
             _verify_posting_stage(connection)
             connection.execute(reversal_body)
+            connection.execute(reversal_hardening_body)
             summary = _verify_lifecycle(connection)
 
             after = tuple(_count(connection, relation) for relation in tracked)
