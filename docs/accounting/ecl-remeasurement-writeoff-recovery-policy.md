@@ -36,17 +36,27 @@ The write-off journal debits `1190` and directly credits the exact gross carryin
 
 This directly reduces gross carrying amount only after protected evidence establishes no reasonable expectation of recovery. The write-off-support label by itself never derecognizes the loan.
 
+## Derecognized-loan fail-closed boundary
+
+Once the protected write-off is complete, the loan is not allowed to re-enter the ordinary ECL/allowance or collection-accounting lifecycle merely because later activity exists. Database guards reject any new A3 measurement, A4 preparation/posting, A5 allowance remeasurement, or normal Regular/7x7 source-event accounting for that written-off loan. This prevents a later collection from recreating the derecognized receivable or account 1190.
+
+A derecognized loan also correctly ceases to have the ordinary positive gross-carrying/contractual-DPD readiness used by the standard credit-risk queue. Post-write-off cash therefore has a dedicated protected recovery-evidence review rather than forcing the loan back through a DPD-ready state.
+
 ## Post-write-off cash recovery
 
-A later recovery remains evidence-driven. The recovery function requires:
+A later recovery remains evidence-driven. Management must first create a dedicated immutable post-write-off recovery review that requires:
 
 - an immutable completed A5 write-off for the same loan;
-- a current protected `cash_recovery_observed` review referencing the exact same-loan non-voided positive PAYMENT/ADV transaction;
-- the transaction's authoritative server `accepted_at` strictly later than the write-off-support review and later than the accounting write-off;
-- no existing normal Regular/7x7 source-event posting for that recovery transaction;
-- exact amount, posting date, open period and account identities confirmed by Management.
+- the retained protected Stage 3/default/write-off-support chronology from that write-off;
+- the exact same-loan non-voided positive PAYMENT/ADV transaction;
+- the transaction's authoritative server `accepted_at` strictly later than the accounting write-off;
+- zero protected gross carrying amount and zero protected allowance;
+- no existing normal Regular/7x7 source-event posting for that transaction;
+- an exact recovery amount, retained evidence reference, substantive Management rationale and immutable review token.
 
-The recovery journal debits `1020 Cash - Collector Custody` for the exact protected collection amount and credits `5000 Credit Loss Expense` for the same amount. This records the recovery in profit or loss without recreating a loan receivable or a new allowance. A subsequent cash-custody/remittance transfer remains governed by the existing protected remittance lifecycle.
+The dedicated review records `cash_recovery_observed` plus separate provenance tied to the exact write-off and transaction. It does **not** represent cure, does not re-establish contractual-DPD readiness, and does not itself create an accounting entry. Exact retry is idempotent only when all immutable evidence coordinates match; a changed retry is rejected.
+
+The recovery posting then consumes only that exact dedicated provenance and revalidates the write-off, transaction, amount, collection/posting date, open period, zero gross/allowance state and protected account identities. The journal debits `1020 Cash - Collector Custody` for the exact protected collection amount and credits `5000 Credit Loss Expense` for the same amount. This records the recovery in profit or loss without recreating a loan receivable or a new allowance. A subsequent cash-custody/remittance transfer remains governed by the existing protected remittance lifecycle.
 
 A recovery does not automatically mark the borrower cured. `cash_recovery_observed` and `cured` remain separate protected credit-risk evidence conclusions.
 
@@ -58,4 +68,4 @@ Forced audit failure after journal posting is tested inside the same PostgreSQL 
 
 ## Safety boundary
 
-A5 does not mutate prior ECL measurements, prior allowance postings, credit-risk reviews or lending collection evidence. It does not fabricate write-off amounts, recovery amounts or ECL inputs, and it does not enable automatic source posting.
+A5 does not mutate prior ECL measurements, prior allowance postings, credit-risk reviews or lending collection evidence. It does not fabricate write-off amounts, recovery amounts or ECL inputs, and it does not enable automatic source posting. Schema/control installation itself is also required to leave all protected measurement, posting, write-off, recovery, provenance and journal history unchanged.
