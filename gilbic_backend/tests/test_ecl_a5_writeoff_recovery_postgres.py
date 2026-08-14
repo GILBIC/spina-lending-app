@@ -201,6 +201,10 @@ def _post_recovery(
         "SELECT id FROM accounting.accounts WHERE system_key='cash_collector_custody'"
     ).fetchone()[0]
     expense_account_id = case[6][0]
+    posting_date = connection.execute(
+        "SELECT collection_date FROM lending.collection_transactions WHERE id=%s",
+        (transaction_id,),
+    ).fetchone()[0]
     return connection.execute(
         """
         SELECT accounting.post_ecl_post_writeoff_recovery(
@@ -212,7 +216,7 @@ def _post_recovery(
             case[0],
             token,
             transaction_id,
-            case[3],
+            posting_date,
             case[2],
             cash_account_id,
             expense_account_id,
@@ -224,13 +228,26 @@ def _post_recovery(
 def _assert_postwriteoff_insert_guards(connection: psycopg.Connection, case, transaction_id) -> None:
     loan_id = case[1]
 
-    with pytest.raises(psycopg.Error, match="fully written off"):
+    # The protected A3 function already fails closed earlier because derecognition
+    # makes its quantitative input gate non-authoritative. Separately hit the 0080
+    # table boundary directly so bypassing that gate cannot recreate a measurement.
+    with pytest.raises(psycopg.Error, match="Quantitative ECL input gate is blocked"):
         with connection.transaction():
             a3._measure(
                 connection,
                 loan_id=loan_id,
                 actor_id=case[0],
                 scenarios=_full_loss_scenarios(case, base_probability="0.600000000000"),
+            )
+
+    with pytest.raises(psycopg.Error, match="fully written off"):
+        with connection.transaction():
+            connection.execute(
+                "SELECT set_config('accounting.ecl_quantitative_measurement_insert_allowed','on',true)"
+            )
+            connection.execute(
+                "INSERT INTO accounting.ecl_quantitative_measurements(loan_id) VALUES (%s)",
+                (loan_id,),
             )
 
     guarded_audit_tables = (
@@ -447,15 +464,14 @@ def test_a5_full_writeoff_and_postwriteoff_recovery_are_exact_idempotent_atomic_
 
             recovery_row = connection.execute(
                 """
-                SELECT journal_entry_id, recovery_amount, automatic_source_posting
-                FROM accounting.ecl_post_writeoff_recoveries recovery
-                CROSS JOIN LATERAL (SELECT false AS automatic_source_posting) policy
-                WHERE recovery.id=%s
+                SELECT journal_entry_id, recovery_amount
+                FROM accounting.ecl_post_writeoff_recoveries
+                WHERE id=%s
                 """,
                 (recovery_id,),
             ).fetchone()
             assert recovery_row is not None
-            assert recovery_row[1:] == (Decimal("10.00"), False)
+            assert recovery_row[1] == Decimal("10.00")
 
             recovery_lines = connection.execute(
                 """
