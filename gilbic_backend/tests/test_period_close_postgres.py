@@ -17,11 +17,9 @@ pytestmark = pytest.mark.skipif(
     reason="GILBIC_TEST_DATABASE_URL is not configured",
 )
 
-SQL_0091 = (
-    Path(__file__).resolve().parents[1]
-    / "sql"
-    / "0091_add_protected_period_close.sql"
-).read_text(encoding="utf-8")
+SQL_ROOT = Path(__file__).resolve().parents[1] / "sql"
+SQL_0091 = (SQL_ROOT / "0091_add_protected_period_close.sql").read_text(encoding="utf-8")
+SQL_0092 = (SQL_ROOT / "0092_harden_period_close_balance_scope.sql").read_text(encoding="utf-8")
 POLICY = "period_close_retained_earnings_v1"
 
 
@@ -33,6 +31,7 @@ def _body(source: str) -> str:
 
 def _install(connection: psycopg.Connection) -> None:
     connection.execute(_body(SQL_0091))
+    connection.execute(_body(SQL_0092))
 
 
 def _management_actor(connection: psycopg.Connection, suffix: str):
@@ -247,13 +246,13 @@ def test_formal_period_close_moves_profit_to_retained_earnings_and_locks_period(
             ).fetchone() == ("closed", True, True)
             assert connection.execute(
                 """
-                SELECT account.code, coalesce(sum(line.debit-line.credit),0)::numeric(18,2)
+                SELECT account.code,
+                       coalesce(sum(line.debit-line.credit) FILTER (
+                           WHERE journal.status='posted' AND journal.fiscal_period_id=%s
+                       ),0)::numeric(18,2)
                 FROM accounting.accounts account
                 LEFT JOIN accounting.journal_lines line ON line.account_id=account.id
-                LEFT JOIN accounting.journal_entries journal
-                  ON journal.id=line.journal_entry_id
-                 AND journal.status='posted'
-                 AND journal.fiscal_period_id=%s
+                LEFT JOIN accounting.journal_entries journal ON journal.id=line.journal_entry_id
                 WHERE account.code IN ('4000','5200')
                 GROUP BY account.code ORDER BY account.code
                 """,
