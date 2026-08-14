@@ -93,7 +93,7 @@ class PostgresV1TaxSettlementRepository:
                 cursor.execute(
                     f"""
                     SELECT {self._COLUMNS}
-                    FROM accounting.v1_tax_settlement_queue
+                    FROM accounting.v1_tax_settlement_effective_queue
                     WHERE {where}
                     ORDER BY return_period_end DESC, filing_date DESC, tax_return_id
                     LIMIT %s OFFSET %s
@@ -110,7 +110,7 @@ class PostgresV1TaxSettlementRepository:
                 cursor.execute(
                     f"""
                     SELECT {self._COLUMNS}
-                    FROM accounting.v1_tax_settlement_queue
+                    FROM accounting.v1_tax_settlement_effective_queue
                     WHERE tax_return_id=%s
                     """,
                     (tax_return_id,),
@@ -126,7 +126,7 @@ class PostgresV1TaxSettlementRepository:
                 cursor.execute(
                     f"""
                     SELECT {self._COLUMNS}
-                    FROM accounting.v1_tax_settlement_queue
+                    FROM accounting.v1_tax_settlement_effective_queue
                     WHERE payment_evidence_id=%s
                     """,
                     (payment_evidence_id,),
@@ -139,7 +139,9 @@ class PostgresV1TaxSettlementRepository:
     def summary(self) -> dict[str, object]:
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
-                cursor.execute("SELECT * FROM accounting.v1_tax_settlement_summary")
+                cursor.execute(
+                    "SELECT * FROM accounting.v1_tax_settlement_effective_summary"
+                )
                 row = cursor.fetchone()
                 if row is None:
                     raise V1TaxSettlementError("V1 tax settlement summary is unavailable.")
@@ -270,6 +272,8 @@ class PostgresV1TaxSettlementRepository:
             "prepared": "settlement_status = 'settlement_prepared'",
             "settled": "settlement_status = 'settled'",
             "adjustment_review": "settlement_status = 'settled_adjustment_review_required'",
+            "adjustment_in_progress": "settlement_status = 'settled_adjustment_in_progress'",
+            "adjusted": "settlement_status = 'settled_adjustment_recorded'",
             "blocked": "settlement_status LIKE 'blocked_%' OR settlement_status LIKE 'prepared_blocked_%'",
         }
         clause = clauses.get(status)
