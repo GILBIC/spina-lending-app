@@ -120,3 +120,27 @@ def test_a5_post_writeoff_hardening_is_transactional_and_fail_closed() -> None:
         assert trigger in HARDENING_LOWER
     assert "later protected cash must use the a5 post-write-off recovery path" in HARDENING_LOWER
     assert "automatic_source_posting=true" not in HARDENING_LOWER
+
+
+def test_a5_post_writeoff_recovery_review_is_dpd_independent_but_exact_and_immutable() -> None:
+    assert "accounting.ecl.recovery.review" in HARDENING_LOWER
+    assert "ecl_post_writeoff_recovery_review_provenance" in HARDENING_LOWER
+    assert "review_ecl_post_writeoff_recovery" in HARDENING_LOWER
+    assert "ecl_post_writeoff_recovery_evidence_review_v1" in HARDENING_LOWER
+    assert "recovery evidence must be the exact later same-loan" in HARDENING_LOWER
+    assert "tx.accepted_at <= writeoff.posted_at" in HARDENING_LOWER
+    assert "zero protected gross carrying and zero protected allowance" in HARDENING_LOWER
+    assert "guard_ecl_a5_audit_write" in HARDENING_LOWER
+    assert "does not represent cure" in HARDENING_LOWER
+
+    posting_body = HARDENING_LOWER.split(
+        "create or replace function accounting.post_ecl_post_writeoff_recovery", 1
+    )[1].split("create or replace view accounting.ecl_a5_action_queue", 1)[0]
+    assert "ecl_post_writeoff_recovery_review_provenance" in posting_body
+    assert "ecl_credit_risk_label_queue" not in posting_body
+    assert "cash_collector_custody" in posting_body
+    assert "credit_loss_expense" in posting_body
+    assert "loans_receivable_regular" not in posting_body
+    assert "loans_receivable_7x7" not in posting_body
+    assert "accrued_interest_receivable" not in posting_body
+    assert "automatic_source_posting', false" in posting_body
