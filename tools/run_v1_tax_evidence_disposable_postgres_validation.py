@@ -17,6 +17,9 @@ TEST_DATABASE_PREFIX = "spina_v1_tax_"
 BOOTSTRAP_THROUGH = 81
 TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
+    TEST_ROOT / "test_v1_tax_adjustment_migration.py",
+    TEST_ROOT / "test_v1_tax_adjustment_api_contract.py",
+    TEST_ROOT / "test_v1_tax_adjustment_postgres.py",
     TEST_ROOT / "test_v1_tax_evidence_migration.py",
     TEST_ROOT / "test_v1_tax_evidence_api_contract.py",
     TEST_ROOT / "test_v1_tax_evidence_postgres.py",
@@ -26,9 +29,6 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_v1_tax_settlement_migration.py",
     TEST_ROOT / "test_v1_tax_settlement_api_contract.py",
     TEST_ROOT / "test_v1_tax_settlement_postgres.py",
-    TEST_ROOT / "test_v1_tax_adjustment_migration.py",
-    TEST_ROOT / "test_v1_tax_adjustment_api_contract.py",
-    TEST_ROOT / "test_v1_tax_adjustment_postgres.py",
 )
 
 
