@@ -23,6 +23,7 @@ a3 = a4.a3
 
 SQL_ROOT = Path(__file__).resolve().parents[1] / "sql"
 SQL_0079 = (SQL_ROOT / "0079_add_ecl_remeasurement_writeoff_recovery.sql").read_text(encoding="utf-8")
+SQL_0080 = (SQL_ROOT / "0080_harden_ecl_post_writeoff_boundaries.sql").read_text(encoding="utf-8")
 POLICY = "ecl_allowance_remeasurement_posting_v1"
 
 
@@ -35,6 +36,7 @@ def _body(source: str) -> str:
 def _install(connection) -> None:
     a4._install(connection)
     connection.execute(_body(SQL_0079))
+    connection.execute(_body(SQL_0080))
 
 
 def _measurement(connection, measurement_id):
