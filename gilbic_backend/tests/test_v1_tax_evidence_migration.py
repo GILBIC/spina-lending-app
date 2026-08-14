@@ -89,4 +89,4 @@ def test_tax_policy_explicitly_separates_eir_from_tax_basis_and_keeps_live_posti
     assert "must **not** calculate percentage/gross-receipts tax" in POLICY_LOWER
     assert "automatic_source_posting=false" in POLICY_LOWER
     assert "evidence/readiness only" in POLICY_LOWER
-    assert "actual tax accounting may post only" in POLICY_LOWER
+    assert "actual taxes may be posted only" in POLICY_LOWER
