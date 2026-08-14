@@ -87,6 +87,7 @@ from .seven_by_seven_journal_posting_api import (
 )
 from .source_event_accounting_api import create_source_event_accounting_router
 from .support_api import create_support_router
+from .v1_tax_additional_amendment_api import create_v1_tax_additional_amendment_router
 from .v1_tax_adjustment_api import create_v1_tax_adjustment_router
 from .v1_tax_evidence_api import create_v1_tax_evidence_router
 from .v1_tax_liability_api import create_v1_tax_liability_router
@@ -159,6 +160,7 @@ def create_app() -> FastAPI:
     app.include_router(create_v1_tax_liability_router())
     app.include_router(create_v1_tax_settlement_router())
     app.include_router(create_v1_tax_adjustment_router())
+    app.include_router(create_v1_tax_additional_amendment_router())
     app.include_router(create_opening_balance_workbook_router())
     app.include_router(create_opening_balance_journal_router())
     app.include_router(create_general_journal_router())
