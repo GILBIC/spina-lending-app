@@ -1,0 +1,106 @@
+name: Initial capital funding live migration verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'gilbic_backend/sql/0081_add_protected_initial_capital_funding.sql'
+      - 'gilbic_backend/src/gilbic_backend/initial_capital_funding_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/initial_capital_funding_api.py'
+      - 'gilbic_backend/tests/test_initial_capital_funding_migration.py'
+      - 'gilbic_backend/tests/test_initial_capital_funding_api_contract.py'
+      - 'tools/apply_initial_capital_funding_migration.py'
+      - '.github/workflows/initial-capital-funding-live-verifier.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'gilbic_backend/sql/0081_add_protected_initial_capital_funding.sql'
+      - 'gilbic_backend/src/gilbic_backend/initial_capital_funding_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/initial_capital_funding_api.py'
+      - 'gilbic_backend/tests/test_initial_capital_funding_migration.py'
+      - 'gilbic_backend/tests/test_initial_capital_funding_api_contract.py'
+      - 'tools/apply_initial_capital_funding_migration.py'
+      - '.github/workflows/initial-capital-funding-live-verifier.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: initial-capital-funding-live-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-initial-capital-live-controls:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify Python runtime
+        shell: cmd
+        run: |
+          python --version || exit /b 1
+          python -c "import sys; assert sys.version_info >= (3, 11), sys.version" || exit /b 1
+
+      - name: Create isolated verifier environment
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-initial-capital-live-venv"
+          if exist "%VENV%" rmdir /s /q "%VENV%"
+          python -m venv "%VENV%" || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9" || exit /b 1
+
+      - name: Compile protected live verifier
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-initial-capital-live-venv"
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_initial_capital_funding_migration.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\initial_capital_funding_repository.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\initial_capital_funding_api.py || exit /b 1
+
+      - name: Verify PR protected initial-capital controls are explicit
+        if: github.event_name == 'pull_request'
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-initial-capital-live-venv"
+          "%VENV%\Scripts\python.exe" -m pytest -q gilbic_backend\tests\test_initial_capital_funding_migration.py gilbic_backend\tests\test_initial_capital_funding_api_contract.py || exit /b 1
+
+      - name: Require the approved live database runner
+        if: github.event_name == 'push'
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SPINA-WINDOWS') {
+            throw "Live initial-capital migration requires SPINA-WINDOWS because approved database env files are local to that runner; current runner is $env:RUNNER_NAME."
+          }
+
+      - name: Install and verify initial-capital controls on live database
+        if: github.event_name == 'push'
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-initial-capital-live-venv"
+          "%VENV%\Scripts\python.exe" tools\apply_initial_capital_funding_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+
+      - name: Require a clean committed tree when Git metadata is available
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $git = Get-Command git.exe -ErrorAction SilentlyContinue
+          if ($git -and (Test-Path '.git')) {
+            & $git.Source diff --check
+            if ($LASTEXITCODE -ne 0) { throw 'git diff --check failed.' }
+            & $git.Source diff --exit-code
+            if ($LASTEXITCODE -ne 0) { throw 'Working tree changed during verification.' }
+            & $git.Source diff --cached --exit-code
+            if ($LASTEXITCODE -ne 0) { throw 'Index changed during verification.' }
+          }
+          else {
+            Write-Host 'Git metadata unavailable; exact actions/checkout revision was used.'
+          }
