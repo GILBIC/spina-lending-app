@@ -234,7 +234,8 @@ def create_v1_tax_settlement_router() -> APIRouter:
     @router.get("/api/v1/management/financial-accounting/tax/settlements")
     def list_v1_tax_settlements(
         settlement_status: Literal[
-            "all", "awaiting_payment", "ready", "prepared", "settled", "adjustment_review", "blocked"
+            "all", "awaiting_payment", "ready", "prepared", "settled",
+            "adjustment_review", "adjustment_in_progress", "adjusted", "blocked"
         ] = Query(default="all"),
         limit: int = Query(default=100, ge=1, le=200),
         offset: int = Query(default=0, ge=0),
@@ -259,8 +260,8 @@ def create_v1_tax_settlement_router() -> APIRouter:
                 "notice": (
                     "Tax settlement is return/payment-evidence backed and separate from tax expense recognition. "
                     "The protected journal is Dr 2100 Tax Payables / Cr the exact approved Cash - Office or Cash - Bank / GCash account. "
-                    "V1 requires full settlement of the retained return; automatic source posting remains disabled. "
-                    "Protected tax adjustment/reversal execution is still a separate later A6.2 control."
+                    "A later stale settled liability is never rewritten: the protected pre-close adjustment core can surface and post an exact supported Tax Recoverable correction while preserving the original settlement. "
+                    "Additional-tax amendments and later refund/credit realization require separate retained evidence; automatic source posting remains disabled."
                 ),
             },
         }
