@@ -5,7 +5,11 @@ on:
     branches: [main]
     paths:
       - 'gilbic_backend/sql/0082_add_v1_tax_evidence_readiness.sql'
+      - 'gilbic_backend/src/gilbic_backend/v1_tax_evidence_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/v1_tax_evidence_api.py'
+      - 'gilbic_backend/src/gilbic_backend/main.py'
       - 'gilbic_backend/tests/test_v1_tax_evidence_migration.py'
+      - 'gilbic_backend/tests/test_v1_tax_evidence_api_contract.py'
       - 'gilbic_backend/tests/test_v1_tax_evidence_postgres.py'
       - 'docs/accounting/v1-tax-accounting-policy.md'
       - 'tools/run_v1_tax_evidence_disposable_postgres_validation.py'
@@ -14,7 +18,11 @@ on:
     branches: [main]
     paths:
       - 'gilbic_backend/sql/0082_add_v1_tax_evidence_readiness.sql'
+      - 'gilbic_backend/src/gilbic_backend/v1_tax_evidence_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/v1_tax_evidence_api.py'
+      - 'gilbic_backend/src/gilbic_backend/main.py'
       - 'gilbic_backend/tests/test_v1_tax_evidence_migration.py'
+      - 'gilbic_backend/tests/test_v1_tax_evidence_api_contract.py'
       - 'gilbic_backend/tests/test_v1_tax_evidence_postgres.py'
       - 'docs/accounting/v1-tax-accounting-policy.md'
       - 'tools/run_v1_tax_evidence_disposable_postgres_validation.py'
@@ -153,7 +161,11 @@ jobs:
         shell: cmd
         run: |
           "%TAX_VENV%\Scripts\python.exe" -m py_compile tools\run_v1_tax_evidence_disposable_postgres_validation.py || exit /b 1
+          "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\v1_tax_evidence_repository.py || exit /b 1
+          "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\v1_tax_evidence_api.py || exit /b 1
+          "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\main.py || exit /b 1
           "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_evidence_migration.py || exit /b 1
+          "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_evidence_api_contract.py || exit /b 1
           "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_evidence_postgres.py || exit /b 1
 
       - name: Execute protected V1 tax evidence proof
