@@ -88,6 +88,6 @@ def test_new_path_preserves_old_history_and_keeps_refund_auto_posting_disabled()
     assert "false as automatic_source_posting" in LOWER_88
     assert "false as tax_refund_credit_realization_enabled" in LOWER_88
     assert "original return/liability/settlement history" in LOWER_87
-    assert "never clears tax recoverable" in LOWER_88
+    assert "tax recoverable realization remains disabled" in LOWER_88
     assert "posted v1 additional-tax liabilities cannot be reversed through the manual general journal" in LOWER_87
     assert "posted v1 additional-tax settlements cannot be reversed through the manual general journal" in LOWER_88
