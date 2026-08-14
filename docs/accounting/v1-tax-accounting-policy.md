@@ -1,6 +1,6 @@
 # SPINA V1 evidence-backed tax accounting policy — A6.2
 
-Status: **draft accounting/tax control policy for Master #296 A6.2**. Evidence/readiness, protected liability recognition, evidence-backed tax settlement, the protected pre-close tax decrease/reversal core, and the protected pre-close additional-tax amendment/payment lifecycle are represented in the A6.2 branch. Tax Recoverable refund/credit realization and the live-schema/control proof remain incomplete. This document does not itself create a tax return, tax liability, tax payment, tax adjustment, refund, credit, or live legal-book posting. Actual Philippine tax treatment must remain tied to retained current legal/BIR/registration evidence and Management/CPA review at the time of the transaction.
+Status: **draft accounting/tax control policy for Master #296 A6.2**. Evidence/readiness, protected liability recognition, evidence-backed tax settlement, the protected pre-close tax decrease/reversal core, the protected pre-close additional-tax amendment/payment lifecycle, and exact cash-refund realization of a posted `1130 Tax Recoverable` are represented in the A6.2 branch. Tax-credit application and the live-schema/control proof remain incomplete. This document does not itself create a tax return, tax liability, tax payment, tax adjustment, refund, credit, or live legal-book posting. Actual Philippine tax treatment must remain tied to retained current legal/BIR/registration evidence and Management/CPA review at the time of the transaction.
 
 ## Scope
 
@@ -15,7 +15,7 @@ SPINA V1 does not invent a generic fee/processing/service/other-income source cl
 
 The software must retain the exact rule evidence actually approved for the legal books. Current design references include Republic Act No. 12214/CMEPA section 21 amending NIRC section 179 on DST on debt instruments, BIR percentage-tax guidance for other non-bank financial intermediaries not performing quasi-banking functions, and BIR Form 2000 guidance for DST declarations/returns and proof of payment/constructive affixture when applicable.
 
-Those references are design inputs, not permission for SPINA to assume that a particular live taxpayer classification, exemption, rate, tax base, filing period, or payment amount applies. The protected live path must consume retained current rule evidence approved for the exact legal period.
+Those references are design inputs, not permission for SPINA to assume that a particular live taxpayer classification, exemption, rate, tax base, filing period, payment amount, refund entitlement, or usable tax credit applies. The protected live path must consume retained current rule and authority evidence approved for the exact legal period.
 
 ## Permanent V1 boundaries
 
@@ -27,6 +27,7 @@ Those references are design inputs, not permission for SPINA to assume that a pa
 - Posted tax accounting is immutable. Corrections are new protected evidence and new journal events; historical evidence and journals are never rewritten.
 - Closed-period controls apply to tax accounting. The current pre-close correction paths deliberately refuse to reopen or silently alter a closed original liability period.
 - Partial tax payments remain fail-closed until a separate exact policy/evidence model is approved.
+- Partial Tax Recoverable realization remains fail-closed; an exact protected refund or future tax-credit application must consume an explicitly supported amount under its own retained evidence path.
 
 ## Critical separation: PFRS EIR is not automatically the tax gross-receipts base
 
@@ -177,20 +178,37 @@ The protected additional-tax settlement journal is exactly:
 
 Preparation and posting revalidate amendment evidence, the posted additional liability, exact original/replacement source coordinates, payment evidence, payable/cash accounts, open payment fiscal period, journal identity and exact two-line balance. Posting requires separate Management permission and exact confirmation digests/amount/accounts/date/period. Generic/manual posting or reversal is rejected, retries are immutable, and forced post-audit failure must roll back atomically.
 
-`tax_additional_amendment_enabled=true` and `tax_additional_settlement_enabled=true` therefore mean this narrow protected upward correction/payment lifecycle is enabled. `tax_refund_credit_realization_enabled=false` remains mandatory until the next protected evidence path exists.
+`tax_additional_amendment_enabled=true` and `tax_additional_settlement_enabled=true` therefore mean this narrow protected upward correction/payment lifecycle is enabled.
 
-## Remaining correction boundaries after 0088
+## Protected Tax Recoverable cash-refund realization
+
+Migration `0089` adds a separate evidence-backed realization path for an exact `1130 Tax Recoverable` already recognized by the settled-tax-decrease branch of `0086`. The existence of account `1130`, an adjustment journal, or a Management expectation of a refund is not refund evidence.
+
+Cash-refund evidence must identify one exact posted `recognize_settled_tax_recoverable` adjustment, an actual refund date, an approved receiving account (`1010 Cash - Office` or `1030 Cash - Bank / GCash`), a retained refund reference, a retained authority/reference basis, a SHA-256 evidence digest, a substantive note and the Management actor. The protected database derives the realizable amount from the immutable adjustment posting; the evidence API does not accept an arbitrary refund amount.
+
+V1 `0089` supports **full cash-refund realization only**. It does not infer a partial refund and it does not treat a tax-credit certificate, carryover, offset or application as cash. The refund cannot predate recognition of the exact Tax Recoverable, and its posting date must fall inside an open fiscal period. The original tax liability, return, payment, settlement and `0086` adjustment remain posted and unchanged.
+
+The protected refund journal is exactly:
+
+- **Dr the exact approved `1010` or `1030` cash/bank account** for the full retained refund amount; and
+- **Cr `1130 Tax Recoverable`** for the same amount.
+
+Preparation and posting revalidate the exact posted recoverable source, immutable refund evidence, derived amount, approved cash account, active `1130`, refund date, open fiscal period, General Journal identity and exact two-line balance. Posting requires separate Management permission and exact confirmation of the evidence digest, amount, account codes, date, period and policy version. Generic/manual posting and manual reversal are rejected, retry identity is immutable, a second realization of the same exact recoverable is rejected, and a forced post-audit failure must roll back the complete database statement.
+
+`tax_recoverable_refund_realization_enabled=true` therefore means only this narrow retained-evidence cash-refund path is enabled. `tax_recoverable_credit_application_enabled=false`, `partial_tax_recoverable_realization_enabled=false`, and `automatic_source_posting=false` remain mandatory until their own protected evidence policies exist.
+
+## Remaining correction boundaries after 0089
 
 The following remain deliberately fail-closed before A6.2 can be declared complete:
 
-1. **Refund or tax-credit realization/application** — `1130 Tax Recoverable` is not cleared merely because it exists. A later refund receipt or legally usable tax-credit/application requires retained authority/reference evidence and an exact protected realization/application journal.
-2. **Closed-period corrections** — current correction paths refuse to alter a closed original period. Any later-period correction treatment requires an explicit accounting/tax policy rather than silently reopening history.
-3. **Partial tax payments** — remain outside V1 settlement until an explicit policy and exact evidence model are approved.
+1. **Tax-credit realization/application** — `1130 Tax Recoverable` must not be cleared against a tax liability merely because a credit is expected or a recoverable exists. A future path requires retained legally usable tax-credit/application authority, exact target liability/return coordinates, duplicate-cash-settlement prevention, and an exact protected journal policy.
+2. **Closed-period corrections** — current correction paths refuse to alter a closed original liability period. Any later-period correction treatment requires an explicit accounting/tax policy rather than silently reopening history.
+3. **Partial tax payments or partial Tax Recoverable realization** — remain outside V1 until an explicit policy and exact evidence model are approved.
 
 These boundaries are deliberate controls, not missing automatic behavior.
 
 ## Gate A versus Gate C
 
-A6.2 software acceptance uses synthetic/disposable tax rule, loan, cash-allocation, liability, return, payment, settlement, adjustment and amendment evidence. Installing the capability on the approved live database must create **no** legal tax evidence, liability, return, payment, settlement, adjustment, amendment, refund or credit and must preserve existing protected history.
+A6.2 software acceptance uses synthetic/disposable tax rule, loan, cash-allocation, liability, return, payment, settlement, adjustment, amendment and refund evidence. Installing the capability on the approved live database must create **no** legal tax evidence, liability, return, payment, settlement, adjustment, amendment, refund, tax-credit application or related legal-book posting and must preserve existing protected history.
 
-At Gate C, actual taxes may be posted only from the company's actual registration/classification, actual transactions, retained tax calculations/returns/payment/correction/amendment evidence, and then-current approved rule evidence.
+At Gate C, actual tax accounting may post only from the company's actual registration/classification, actual transactions, retained tax calculations/returns/payment/correction/amendment evidence, retained refund or tax-credit authority/application evidence when applicable, and then-current approved rule evidence. A software capability flag never substitutes for legal entitlement or retained evidence.
