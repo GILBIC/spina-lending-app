@@ -721,7 +721,12 @@ BEGIN
     IF expense_account.id IS NULL OR expense_account.account_type <> 'expense'
        OR expense_account.normal_balance <> 'debit' OR NOT expense_account.is_active
        OR NOT expense_account.is_posting
-       OR expense_account.code <> CASE WHEN evidence.tax_type = 'documentary_stamp_tax' THEN '5310' ELSE '5300' END THEN
+       OR expense_account.code <> (
+            CASE
+                WHEN evidence.tax_type = 'documentary_stamp_tax' THEN '5310'
+                ELSE '5300'
+            END
+       ) THEN
         RAISE EXCEPTION 'Exact original dedicated tax expense account is no longer posting-ready.';
     END IF;
     IF payable_account.id IS NULL OR payable_account.system_key <> 'tax_payables'
@@ -1103,11 +1108,13 @@ BEGIN
        OR journal.source_event_key <> preparation.source_event_key
        OR journal.posting_date <> p_expected_posting_date
        OR journal.fiscal_period_id <> period_row.id
-       OR journal.reversal_of_entry_id IS DISTINCT FROM CASE
-            WHEN evidence.adjustment_kind = 'reverse_unsettled_liability'
-                THEN evidence.original_liability_journal_entry_id
-            ELSE NULL
-          END THEN
+       OR journal.reversal_of_entry_id IS DISTINCT FROM (
+            CASE
+                WHEN evidence.adjustment_kind = 'reverse_unsettled_liability'
+                    THEN evidence.original_liability_journal_entry_id
+                ELSE NULL
+            END
+       ) THEN
         RAISE EXCEPTION 'Prepared V1 tax adjustment General Journal draft no longer matches the protected adjustment coordinates.';
     END IF;
 
