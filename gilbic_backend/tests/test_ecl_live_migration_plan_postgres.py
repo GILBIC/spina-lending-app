@@ -36,13 +36,11 @@ def _transaction_body(source: str) -> str:
 
 def _apply(connection: psycopg.Connection, migration_name: str) -> None:
     connection.execute(
-        _transaction_body(
-            (SQL_ROOT / migration_name).read_text(encoding="utf-8")
-        )
+        _transaction_body((SQL_ROOT / migration_name).read_text(encoding="utf-8"))
     )
 
 
-def test_live_plan_upgrades_existing_a3_with_only_0077_0078_and_then_is_noop() -> None:
+def test_live_plan_upgrades_existing_a3_then_exact_a4_with_only_forward_suffixes() -> None:
     assert DATABASE_URL is not None
     names = [path.name for path in planner.ecl.MIGRATIONS]
     assert names == [
@@ -55,6 +53,8 @@ def test_live_plan_upgrades_existing_a3_with_only_0077_0078_and_then_is_noop() -
         "0076_harden_read_only_quantitative_ecl_measurement.sql",
         "0077_add_protected_ecl_allowance_posting.sql",
         "0078_harden_ecl_allowance_posting_queue.sql",
+        "0079_add_ecl_remeasurement_writeoff_recovery.sql",
+        "0080_harden_ecl_post_writeoff_boundaries.sql",
     ]
 
     with psycopg.connect(DATABASE_URL) as connection:
@@ -64,18 +64,27 @@ def test_live_plan_upgrades_existing_a3_with_only_0077_0078_and_then_is_noop() -
             pytest.skip("0069 ECL methodology/source policy is not installed")
 
         try:
+            # Existing hardened A3: only A4+A5 forward suffix may be selected.
             for migration_name in names[:7]:
                 _apply(connection, migration_name)
+            selected_from_a3 = planner._select_missing_forward_migrations(connection)
+            assert [path.name for path in selected_from_a3] == names[7:]
 
-            selected = planner._select_missing_forward_migrations(connection)
-            assert [path.name for path in selected] == names[7:]
+            # Reproduce the exact currently-live A4 milestone: 0070-0078 installed.
+            for migration_name in names[7:9]:
+                _apply(connection, migration_name)
+            selected_from_a4 = planner._select_missing_forward_migrations(connection)
+            assert [path.name for path in selected_from_a4] == names[9:]
 
-            # This is the exact live upgrade shape that failed when the installer
-            # replayed 0074/0075/0076 over an already-hardened A3 database.
-            for migration in selected:
-                _apply(connection, migration.name)
+            history_before_a5 = planner.ecl._history_counts(connection)
+            for migration_name in names[9:]:
+                _apply(connection, migration_name)
+            history_after_a5 = planner.ecl._history_counts(connection)
+            assert history_after_a5 == history_before_a5
 
-            selected_after_a4 = planner._select_missing_forward_migrations(connection)
-            assert selected_after_a4 == ()
+            # Fully installed A5 must be a no-op and all protected controls verify.
+            assert planner._select_missing_forward_migrations(connection) == ()
+            a5_summary = planner.ecl._verify(connection)[5]
+            assert a5_summary[10:] == (True, False)
         finally:
             connection.rollback()
