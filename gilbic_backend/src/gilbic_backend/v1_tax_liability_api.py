@@ -173,7 +173,8 @@ def create_v1_tax_liability_router() -> APIRouter:
     @router.get("/api/v1/management/financial-accounting/tax/liabilities")
     def list_v1_tax_liabilities(
         accounting_status: Literal[
-            "all", "ready", "prepared", "posted", "adjustment_review", "blocked"
+            "all", "ready", "prepared", "posted", "adjustment_review",
+            "adjusted", "covered", "blocked"
         ] = Query(default="all"),
         limit: int = Query(default=100, ge=1, le=200),
         offset: int = Query(default=0, ge=0),
@@ -209,7 +210,8 @@ def create_v1_tax_liability_router() -> APIRouter:
                 },
                 "notice": (
                     "V1 tax liabilities reuse the protected General Journal and require exact current evidence plus explicit Management confirmation. "
-                    "Automatic source posting is disabled. Tax settlement and protected tax adjustment/reversal remain separate later A6.2 controls."
+                    "Tax settlement and the protected pre-close correction/reversal core are separate evidence-backed workflows. "
+                    "Adjusted stale liabilities and replacement evidence already covered by a settled-tax correction are surfaced explicitly; automatic source posting remains disabled."
                 ),
             },
         }
