@@ -1,0 +1,186 @@
+name: V1 tax evidence disposable PostgreSQL validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'gilbic_backend/sql/0082_add_v1_tax_evidence_readiness.sql'
+      - 'gilbic_backend/tests/test_v1_tax_evidence_migration.py'
+      - 'gilbic_backend/tests/test_v1_tax_evidence_postgres.py'
+      - 'docs/accounting/v1-tax-accounting-policy.md'
+      - 'tools/run_v1_tax_evidence_disposable_postgres_validation.py'
+      - '.github/workflows/v1-tax-evidence-disposable-postgres.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'gilbic_backend/sql/0082_add_v1_tax_evidence_readiness.sql'
+      - 'gilbic_backend/tests/test_v1_tax_evidence_migration.py'
+      - 'gilbic_backend/tests/test_v1_tax_evidence_postgres.py'
+      - 'docs/accounting/v1-tax-accounting-policy.md'
+      - 'tools/run_v1_tax_evidence_disposable_postgres_validation.py'
+      - '.github/workflows/v1-tax-evidence-disposable-postgres.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v1-tax-evidence-disposable-postgres-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-v1-tax-evidence:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 60
+    env:
+      TAX_PG_PORT: '55482'
+      TAX_PG_USER: v1tax
+      TAX_DATABASE_URL: postgresql://v1tax@127.0.0.1:55482/postgres?sslmode=disable
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Define isolated runner paths
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $clusterBase = [System.IO.Path]::GetFullPath(
+            (Join-Path $env:RUNNER_TEMP '..\spina-v1-tax-clusters')
+          ).TrimEnd('\')
+          $runRoot = Join-Path $clusterBase (
+            'run-{0}-attempt-{1}' -f $env:GITHUB_RUN_ID, $env:GITHUB_RUN_ATTEMPT
+          )
+          @(
+            "TAX_CLUSTER_BASE=$clusterBase",
+            "TAX_RUN_ROOT=$runRoot",
+            "TAX_PG_DATA=$(Join-Path $runRoot 'pgdata')",
+            "TAX_PG_LOG=$(Join-Path $runRoot 'postgres.log')",
+            "TAX_OWNERSHIP_MARKER=$(Join-Path $runRoot 'cluster-owned.marker')",
+            "TAX_READY_MARKER=$(Join-Path $runRoot 'cluster-ready.marker')",
+            "TAX_VENV=$(Join-Path $runRoot 'venv')"
+          ) | ForEach-Object {
+            $_ | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+
+      - name: Discover local PostgreSQL binaries
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pgBin = $null
+          $initdb = Get-Command initdb.exe -ErrorAction SilentlyContinue
+          if ($initdb) { $pgBin = Split-Path -Parent $initdb.Source }
+          if (-not $pgBin) {
+            foreach ($root in @('C:\Program Files\PostgreSQL', 'C:\Program Files (x86)\PostgreSQL')) {
+              if (-not (Test-Path $root)) { continue }
+              $candidate = Get-ChildItem $root -Directory |
+                ForEach-Object { Join-Path $_.FullName 'bin' } |
+                Where-Object {
+                  (Test-Path (Join-Path $_ 'initdb.exe')) -and
+                  (Test-Path (Join-Path $_ 'pg_ctl.exe')) -and
+                  (Test-Path (Join-Path $_ 'pg_isready.exe'))
+                } | Select-Object -First 1
+              if ($candidate) { $pgBin = $candidate; break }
+            }
+          }
+          if (-not $pgBin) {
+            throw 'No local PostgreSQL binaries were found. Refusing to use any remote database.'
+          }
+          "TAX_PG_BIN=$pgBin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Reap orphaned owned V1 tax clusters
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pgCtl = Join-Path $env:TAX_PG_BIN 'pg_ctl.exe'
+          New-Item -ItemType Directory -Force -Path $env:TAX_CLUSTER_BASE | Out-Null
+          Get-ChildItem $env:TAX_CLUSTER_BASE -Directory -Filter 'run-*-attempt-*' -ErrorAction SilentlyContinue |
+            ForEach-Object {
+              if ($_.FullName -eq $env:TAX_RUN_ROOT) { return }
+              $marker = Join-Path $_.FullName 'cluster-owned.marker'
+              $pgData = Join-Path $_.FullName 'pgdata'
+              if (-not (Test-Path $marker) -or -not (Test-Path $pgData)) { return }
+              & $pgCtl -D $pgData status 2>$null
+              if ($LASTEXITCODE -eq 0) {
+                & $pgCtl -D $pgData -m immediate -w stop
+                if ($LASTEXITCODE -ne 0) { throw "Failed to stop owned orphan $($_.FullName)." }
+              }
+              elseif ($LASTEXITCODE -ne 3) {
+                throw "Could not verify owned orphan state at $($_.FullName)."
+              }
+              Remove-Item -Recurse -Force $_.FullName
+            }
+
+      - name: Initialize isolated temporary PostgreSQL cluster
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (Test-Path $env:TAX_RUN_ROOT) { Remove-Item -Recurse -Force $env:TAX_RUN_ROOT }
+          New-Item -ItemType Directory -Force -Path $env:TAX_RUN_ROOT | Out-Null
+          $probe = New-Object System.Net.Sockets.TcpClient
+          try {
+            $probe.Connect('127.0.0.1', [int]$env:TAX_PG_PORT)
+            throw "Reserved test port $env:TAX_PG_PORT is already in use."
+          }
+          catch [System.Net.Sockets.SocketException] { }
+          finally { $probe.Dispose() }
+
+          $initdb = Join-Path $env:TAX_PG_BIN 'initdb.exe'
+          $pgCtl = Join-Path $env:TAX_PG_BIN 'pg_ctl.exe'
+          $pgReady = Join-Path $env:TAX_PG_BIN 'pg_isready.exe'
+          & $initdb -D $env:TAX_PG_DATA -U $env:TAX_PG_USER --auth=trust --encoding=UTF8 --no-locale
+          if ($LASTEXITCODE -ne 0) { throw 'initdb failed.' }
+          "run_id=$env:GITHUB_RUN_ID`npgdata=$env:TAX_PG_DATA" |
+            Set-Content -Path $env:TAX_OWNERSHIP_MARKER -Encoding ascii
+          & $pgCtl -D $env:TAX_PG_DATA -l $env:TAX_PG_LOG -o "-p $env:TAX_PG_PORT -h 127.0.0.1" -w start
+          if ($LASTEXITCODE -ne 0) { throw 'Temporary PostgreSQL cluster failed to start.' }
+          & $pgReady -h 127.0.0.1 -p $env:TAX_PG_PORT -U $env:TAX_PG_USER -d postgres
+          if ($LASTEXITCODE -ne 0) { throw 'Temporary PostgreSQL cluster is not ready.' }
+          'ready=true' | Set-Content -Path $env:TAX_READY_MARKER -Encoding ascii
+
+      - name: Create isolated verifier environment
+        shell: cmd
+        run: |
+          if not exist "%TAX_READY_MARKER%" exit /b 1
+          python -m venv "%TAX_VENV%" || exit /b 1
+          "%TAX_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%TAX_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9" || exit /b 1
+
+      - name: Compile protected verifier
+        shell: cmd
+        run: |
+          "%TAX_VENV%\Scripts\python.exe" -m py_compile tools\run_v1_tax_evidence_disposable_postgres_validation.py || exit /b 1
+          "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_evidence_migration.py || exit /b 1
+          "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_evidence_postgres.py || exit /b 1
+
+      - name: Execute protected V1 tax evidence proof
+        shell: cmd
+        run: |
+          "%TAX_VENV%\Scripts\python.exe" tools\run_v1_tax_evidence_disposable_postgres_validation.py --database-url-env TAX_DATABASE_URL || exit /b 1
+
+      - name: Stop and delete temporary PostgreSQL cluster
+        if: always()
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Continue'
+          if ($env:TAX_PG_BIN -and (Test-Path $env:TAX_PG_DATA)) {
+            $pgCtl = Join-Path $env:TAX_PG_BIN 'pg_ctl.exe'
+            & $pgCtl -D $env:TAX_PG_DATA status 2>$null
+            if ($LASTEXITCODE -eq 0) {
+              & $pgCtl -D $env:TAX_PG_DATA -m fast -w stop
+              if ($LASTEXITCODE -ne 0) { & $pgCtl -D $env:TAX_PG_DATA -m immediate -w stop }
+            }
+          }
+          if (Test-Path $env:TAX_RUN_ROOT) { Remove-Item -Recurse -Force $env:TAX_RUN_ROOT }
+          if (Test-Path $env:TAX_RUN_ROOT) { throw 'Temporary V1 tax run directory was not removed.' }
+
+      - name: Require a clean committed tree
+        if: always()
+        shell: cmd
+        run: |
+          git diff --check || exit /b 1
+          git diff --exit-code || exit /b 1
+          git diff --cached --exit-code || exit /b 1
