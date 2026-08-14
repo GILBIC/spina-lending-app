@@ -18,6 +18,7 @@ BOOTSTRAP_THROUGH = 81
 TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_v1_tax_evidence_migration.py",
+    TEST_ROOT / "test_v1_tax_evidence_api_contract.py",
     TEST_ROOT / "test_v1_tax_evidence_postgres.py",
 )
 
@@ -51,7 +52,8 @@ def main() -> int:
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay the exact "
             "SPINA schema through A6.1/0081, then apply 0082 only inside rollback-isolated "
-            "tests and prove immutable evidence-backed V1 tax readiness without tax posting."
+            "tests and prove immutable evidence-backed V1 tax readiness plus protected "
+            "Management API/repository exposure without tax posting."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -112,8 +114,9 @@ def main() -> int:
             "through 0081 upgraded with 0082 inside rollback-isolated tests; immutable "
             "Management-approved rule evidence, exact DST loan/disbursement/term/rate "
             "coordinates, independent percentage-tax cash allocation distinct from PFRS/EIR, "
-            "exact retry/supersession, mutation rejection and deterministic readiness blockers "
-            "were proven. Tax posting and automatic source posting remained disabled."
+            "exact retry/supersession, mutation rejection, deterministic readiness blockers "
+            "and strict Management API/repository exposure were proven. Tax posting and "
+            "automatic source posting remained disabled."
         )
         return 0
     except psycopg.Error as error:
