@@ -6,7 +6,11 @@ on:
     paths:
       - 'gilbic_backend/sql/0091_add_protected_period_close.sql'
       - 'gilbic_backend/sql/0092_harden_period_close_balance_scope.sql'
+      - 'gilbic_backend/src/gilbic_backend/period_close_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/period_close_api.py'
+      - 'gilbic_backend/src/gilbic_backend/main.py'
       - 'gilbic_backend/tests/test_period_close_migration.py'
+      - 'gilbic_backend/tests/test_period_close_api_contract.py'
       - 'gilbic_backend/tests/test_period_close_postgres.py'
       - 'tools/run_period_close_disposable_postgres_validation.py'
       - '.github/workflows/period-close-disposable-postgres.yml'
@@ -15,7 +19,11 @@ on:
     paths:
       - 'gilbic_backend/sql/0091_add_protected_period_close.sql'
       - 'gilbic_backend/sql/0092_harden_period_close_balance_scope.sql'
+      - 'gilbic_backend/src/gilbic_backend/period_close_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/period_close_api.py'
+      - 'gilbic_backend/src/gilbic_backend/main.py'
       - 'gilbic_backend/tests/test_period_close_migration.py'
+      - 'gilbic_backend/tests/test_period_close_api_contract.py'
       - 'gilbic_backend/tests/test_period_close_postgres.py'
       - 'tools/run_period_close_disposable_postgres_validation.py'
       - '.github/workflows/period-close-disposable-postgres.yml'
@@ -149,11 +157,15 @@ jobs:
           "%CLOSE_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
           "%CLOSE_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9" || exit /b 1
 
-      - name: Compile protected verifier
+      - name: Compile protected verifier and Management API
         shell: cmd
         run: |
           "%CLOSE_VENV%\Scripts\python.exe" -m py_compile tools\run_period_close_disposable_postgres_validation.py || exit /b 1
+          "%CLOSE_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\period_close_repository.py || exit /b 1
+          "%CLOSE_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\period_close_api.py || exit /b 1
+          "%CLOSE_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\main.py || exit /b 1
           "%CLOSE_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_period_close_migration.py || exit /b 1
+          "%CLOSE_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_period_close_api_contract.py || exit /b 1
           "%CLOSE_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_period_close_postgres.py || exit /b 1
 
       - name: Execute protected period-close proof
