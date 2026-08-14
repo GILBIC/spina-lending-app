@@ -14,11 +14,10 @@ if str(TOOLS_ROOT) not in sys.path:
 import apply_ecl_credit_risk_labels_migration as ecl
 
 
-# The historical ECL SQL files are forward migrations. Some intentionally
-# CREATE OR REPLACE views that later migrations extend, so replaying an older
-# migration after a newer one is installed can try to remove newer view columns.
-# Infer only the already-proven migration milestones and apply the missing
-# forward suffix instead of replaying the historical chain on a live database.
+# Historical ECL SQL files are forward migrations. Some intentionally CREATE OR
+# REPLACE views that later migrations extend, so replaying an older migration
+# after a newer one can try to remove newer view columns. Infer only proven
+# milestones and apply the missing contiguous forward suffix.
 
 
 def _column_exists(
@@ -66,6 +65,23 @@ def _trigger_exists(
             )
             """,
             (schema, relation, trigger_name),
+        ).fetchone()[0]
+    )
+
+
+def _management_permission_exists(connection: psycopg.Connection, permission: str) -> bool:
+    return bool(
+        connection.execute(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM core.role_permissions role_permission
+                JOIN core.roles role ON role.id = role_permission.role_id
+                WHERE role.code = 'management'
+                  AND role_permission.permission_code = %s
+            )
+            """,
+            (permission,),
         ).fetchone()[0]
     )
 
@@ -184,18 +200,75 @@ def _migration_installed(connection: psycopg.Connection, migration_name: str) ->
         return all(bool(value) for value in row)
 
     if migration_name == "0078_harden_ecl_allowance_posting_queue.sql":
-        return (
-            bool(
-                connection.execute(
-                    "SELECT to_regclass('accounting.ecl_allowance_posting_summary') IS NOT NULL"
-                ).fetchone()[0]
-            )
-            and _column_exists(
+        return bool(
+            connection.execute(
+                "SELECT to_regclass('accounting.ecl_allowance_posting_summary') IS NOT NULL"
+            ).fetchone()[0]
+        ) and _column_exists(
+            connection,
+            schema="accounting",
+            relation="ecl_allowance_posting_summary",
+            column="preparation_blocked_count",
+        )
+
+    if migration_name == "0079_add_ecl_remeasurement_writeoff_recovery.sql":
+        row = connection.execute(
+            """
+            SELECT
+                to_regclass('accounting.ecl_allowance_remeasurements') IS NOT NULL,
+                to_regclass('accounting.ecl_accounting_writeoffs') IS NOT NULL,
+                to_regclass('accounting.ecl_post_writeoff_recoveries') IS NOT NULL,
+                to_regclass('accounting.ecl_a5_action_queue') IS NOT NULL,
+                to_regclass('accounting.ecl_a5_summary') IS NOT NULL,
+                to_regprocedure(
+                    'accounting.post_ecl_allowance_remeasurement(uuid,uuid,text,text,numeric,numeric,date,uuid,uuid,uuid,text)'
+                ) IS NOT NULL,
+                to_regprocedure(
+                    'accounting.post_ecl_full_writeoff(uuid,uuid,text,bigint,uuid,text,numeric,numeric,numeric,numeric,uuid,uuid,uuid,date,uuid,text)'
+                ) IS NOT NULL,
+                to_regprocedure(
+                    'accounting.post_ecl_post_writeoff_recovery(bigint,uuid,text,uuid,numeric,date,uuid,uuid,uuid,text)'
+                ) IS NOT NULL
+            """
+        ).fetchone()
+        return all(bool(value) for value in row)
+
+    if migration_name == "0080_harden_ecl_post_writeoff_boundaries.sql":
+        row = connection.execute(
+            """
+            SELECT
+                to_regclass('accounting.ecl_post_writeoff_recovery_review_provenance') IS NOT NULL,
+                to_regprocedure(
+                    'accounting.review_ecl_post_writeoff_recovery(uuid,uuid,text,uuid,numeric,text,text,text)'
+                ) IS NOT NULL,
+                to_regprocedure('accounting.guard_ecl_post_writeoff_loan_insert()') IS NOT NULL,
+                to_regprocedure('accounting.guard_ecl_post_writeoff_collection_accounting()') IS NOT NULL
+            """
+        ).fetchone()
+        if not all(bool(value) for value in row):
+            return False
+        if not _management_permission_exists(connection, "accounting.ecl.recovery.review"):
+            return False
+        required_triggers = (
+            ("ecl_quantitative_measurements", "accounting_ecl_post_writeoff_measurement_guard"),
+            ("ecl_allowance_draft_preparations", "accounting_ecl_post_writeoff_allowance_preparation_guard"),
+            ("ecl_allowance_postings", "accounting_ecl_post_writeoff_allowance_posting_guard"),
+            ("ecl_allowance_remeasurements", "accounting_ecl_post_writeoff_remeasurement_guard"),
+            ("regular_journal_posting_entries", "accounting_ecl_post_writeoff_regular_collection_guard"),
+            ("seven_by_seven_journal_postings", "accounting_ecl_post_writeoff_7x7_collection_guard"),
+            (
+                "ecl_post_writeoff_recovery_review_provenance",
+                "accounting_ecl_post_writeoff_recovery_review_audit_guard",
+            ),
+        )
+        return all(
+            _trigger_exists(
                 connection,
                 schema="accounting",
-                relation="ecl_allowance_posting_summary",
-                column="preparation_blocked_count",
+                relation=relation,
+                trigger_name=trigger,
             )
+            for relation, trigger in required_triggers
         )
 
     raise SystemExit(f"No live ECL migration-state probe is defined for {migration_name}.")
@@ -209,8 +282,6 @@ def _select_missing_forward_migrations(
         for migration in ecl.MIGRATIONS
     ]
 
-    # A later milestone without every earlier milestone would indicate an
-    # inconsistent live schema. Do not guess or replay around that condition.
     first_missing = next(
         (index for index, value in enumerate(installed) if not value),
         len(installed),

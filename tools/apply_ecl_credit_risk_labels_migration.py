@@ -18,6 +18,22 @@ MIGRATIONS = (
     SQL_ROOT / "0076_harden_read_only_quantitative_ecl_measurement.sql",
     SQL_ROOT / "0077_add_protected_ecl_allowance_posting.sql",
     SQL_ROOT / "0078_harden_ecl_allowance_posting_queue.sql",
+    SQL_ROOT / "0079_add_ecl_remeasurement_writeoff_recovery.sql",
+    SQL_ROOT / "0080_harden_ecl_post_writeoff_boundaries.sql",
+)
+
+_HISTORY_RELATIONS = (
+    "accounting.ecl_credit_risk_label_reviews",
+    "accounting.ecl_forward_looking_evidence",
+    "accounting.ecl_forward_looking_evidence_revocations",
+    "accounting.ecl_quantitative_measurements",
+    "accounting.ecl_allowance_draft_preparations",
+    "accounting.ecl_allowance_postings",
+    "accounting.ecl_allowance_posting_lines",
+    "accounting.ecl_allowance_remeasurements",
+    "accounting.ecl_accounting_writeoffs",
+    "accounting.ecl_post_writeoff_recoveries",
+    "accounting.ecl_post_writeoff_recovery_review_provenance",
 )
 
 
@@ -39,21 +55,12 @@ def _load_env_file(path: Path) -> None:
 
 
 def _relation_count(connection: psycopg.Connection, relation: str) -> int:
+    if relation not in _HISTORY_RELATIONS:
+        raise ValueError(f"Unsupported relation count: {relation}")
     exists = connection.execute("SELECT to_regclass(%s)", (relation,)).fetchone()[0]
     if exists is None:
         return 0
-    supported = {
-        "accounting.ecl_credit_risk_label_reviews",
-        "accounting.ecl_forward_looking_evidence",
-        "accounting.ecl_forward_looking_evidence_revocations",
-        "accounting.ecl_quantitative_measurements",
-        "accounting.ecl_allowance_draft_preparations",
-        "accounting.ecl_allowance_postings",
-        "accounting.ecl_allowance_posting_lines",
-    }
-    if relation in supported:
-        return int(connection.execute(f"SELECT count(*) FROM {relation}").fetchone()[0])
-    raise ValueError(f"Unsupported relation count: {relation}")
+    return int(connection.execute(f"SELECT count(*) FROM {relation}").fetchone()[0])
 
 
 def _history_counts(connection: psycopg.Connection) -> tuple[int, ...]:
@@ -69,17 +76,11 @@ def _history_counts(connection: psycopg.Connection) -> tuple[int, ...]:
         int(fixed[0]),
         int(fixed[1]),
         int(fixed[2]),
-        _relation_count(connection, "accounting.ecl_credit_risk_label_reviews"),
-        _relation_count(connection, "accounting.ecl_forward_looking_evidence"),
-        _relation_count(connection, "accounting.ecl_forward_looking_evidence_revocations"),
-        _relation_count(connection, "accounting.ecl_quantitative_measurements"),
-        _relation_count(connection, "accounting.ecl_allowance_draft_preparations"),
-        _relation_count(connection, "accounting.ecl_allowance_postings"),
-        _relation_count(connection, "accounting.ecl_allowance_posting_lines"),
+        *(_relation_count(connection, relation) for relation in _HISTORY_RELATIONS),
     )
 
 
-def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple, tuple]:
+def _verify_required_objects(connection: psycopg.Connection) -> None:
     objects = connection.execute(
         """
         SELECT
@@ -102,6 +103,12 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple,
             to_regclass('accounting.ecl_allowance_posting_lines'),
             to_regclass('accounting.ecl_allowance_posting_queue'),
             to_regclass('accounting.ecl_allowance_posting_summary'),
+            to_regclass('accounting.ecl_allowance_remeasurements'),
+            to_regclass('accounting.ecl_accounting_writeoffs'),
+            to_regclass('accounting.ecl_post_writeoff_recoveries'),
+            to_regclass('accounting.ecl_post_writeoff_recovery_review_provenance'),
+            to_regclass('accounting.ecl_a5_action_queue'),
+            to_regclass('accounting.ecl_a5_summary'),
             to_regprocedure(
                 'accounting.review_ecl_credit_risk_labels(uuid,text,boolean,text,text,text,text,text,boolean,boolean,text,text,text,text,uuid,uuid)'
             ),
@@ -119,32 +126,113 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple,
             to_regprocedure(
                 'accounting.post_initial_ecl_allowance_journal(uuid,uuid,text,uuid,text,uuid,text,text,date,uuid,uuid,uuid,numeric,numeric,text)'
             ),
-            to_regprocedure('accounting.ecl_loan_allowance_balance(uuid)')
+            to_regprocedure('accounting.ecl_loan_allowance_balance(uuid)'),
+            to_regprocedure(
+                'accounting.post_ecl_allowance_remeasurement(uuid,uuid,text,text,numeric,numeric,date,uuid,uuid,uuid,text)'
+            ),
+            to_regprocedure(
+                'accounting.post_ecl_full_writeoff(uuid,uuid,text,bigint,uuid,text,numeric,numeric,numeric,numeric,uuid,uuid,uuid,date,uuid,text)'
+            ),
+            to_regprocedure(
+                'accounting.review_ecl_post_writeoff_recovery(uuid,uuid,text,uuid,numeric,text,text,text)'
+            ),
+            to_regprocedure(
+                'accounting.post_ecl_post_writeoff_recovery(bigint,uuid,text,uuid,numeric,date,uuid,uuid,uuid,text)'
+            ),
+            to_regprocedure('accounting.guard_ecl_post_writeoff_loan_insert()'),
+            to_regprocedure('accounting.guard_ecl_post_writeoff_collection_accounting()')
         """
     ).fetchone()
     if any(item is None for item in objects):
         raise SystemExit(
-            "ECL verification failed: required protected label/readiness/forward-looking/measurement/allowance objects are missing"
+            "ECL verification failed: required A1-A5 protected label/readiness/measurement/allowance/write-off/recovery objects are missing"
         )
 
-    chronology_trigger_count = connection.execute(
+
+def _verify_triggers(connection: psycopg.Connection) -> None:
+    required = {
+        ("ecl_credit_risk_label_reviews", "ecl_cash_recovery_chronology_guard"),
+        ("ecl_quantitative_measurements", "accounting_ecl_post_writeoff_measurement_guard"),
+        ("ecl_allowance_draft_preparations", "accounting_ecl_post_writeoff_allowance_preparation_guard"),
+        ("ecl_allowance_postings", "accounting_ecl_post_writeoff_allowance_posting_guard"),
+        ("ecl_allowance_remeasurements", "accounting_ecl_post_writeoff_remeasurement_guard"),
+        ("regular_journal_posting_entries", "accounting_ecl_post_writeoff_regular_collection_guard"),
+        ("seven_by_seven_journal_postings", "accounting_ecl_post_writeoff_7x7_collection_guard"),
+        (
+            "ecl_post_writeoff_recovery_review_provenance",
+            "accounting_ecl_post_writeoff_recovery_review_audit_guard",
+        ),
+    }
+    found = set(
+        connection.execute(
+            """
+            SELECT relation.relname, trigger.tgname
+            FROM pg_trigger trigger
+            JOIN pg_class relation ON relation.oid = trigger.tgrelid
+            JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+            WHERE namespace.nspname = 'accounting'
+              AND NOT trigger.tgisinternal
+            """
+        ).fetchall()
+    )
+    missing = sorted(required - found)
+    if missing:
+        raise SystemExit(f"ECL verification failed: required protected triggers are missing {missing!r}")
+
+
+def _verify_permissions(connection: psycopg.Connection) -> None:
+    expected = {
+        "accounting.ecl.credit_risk_label.review",
+        "accounting.ecl.forward_looking_evidence.manage",
+        "accounting.ecl.measurement.review",
+        "accounting.ecl.allowance.prepare",
+        "accounting.ecl.allowance.post",
+        "accounting.ecl.remeasurement.post",
+        "accounting.ecl.writeoff.post",
+        "accounting.ecl.recovery.review",
+        "accounting.ecl.recovery.post",
+    }
+    rows = connection.execute(
         """
-        SELECT count(*)
-        FROM pg_trigger trigger
-        JOIN pg_class relation ON relation.oid = trigger.tgrelid
-        JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
-        WHERE namespace.nspname = 'accounting'
-          AND relation.relname = 'ecl_credit_risk_label_reviews'
-          AND trigger.tgname = 'ecl_cash_recovery_chronology_guard'
-          AND NOT trigger.tgisinternal
-        """
-    ).fetchone()[0]
-    if int(chronology_trigger_count) != 1:
+        SELECT permission_code
+        FROM core.role_permissions role_permission
+        JOIN core.roles role ON role.id = role_permission.role_id
+        WHERE role.code = 'management'
+          AND permission_code = ANY(%s)
+        """,
+        (list(expected),),
+    ).fetchall()
+    actual = {row[0] for row in rows}
+    if actual != expected:
         raise SystemExit(
-            "ECL verification failed: strict cash-recovery chronology trigger is missing"
+            f"ECL verification failed: required Management permissions are missing {sorted(expected - actual)!r}"
         )
 
-    invalid_recovery_chronology = connection.execute(
+
+def _verify_accounts(connection: psycopg.Connection) -> None:
+    rows = connection.execute(
+        """
+        SELECT code, system_key, account_type, normal_balance, is_posting, is_active
+        FROM accounting.accounts
+        WHERE system_key IN (
+            'cash_collector_custody',
+            'credit_loss_expense',
+            'allowance_expected_credit_loss'
+        )
+        ORDER BY system_key
+        """
+    ).fetchall()
+    expected = [
+        ("1190", "allowance_expected_credit_loss", "asset", "credit", True, True),
+        ("1020", "cash_collector_custody", "asset", "debit", True, True),
+        ("5000", "credit_loss_expense", "expense", "debit", True, True),
+    ]
+    if rows != expected:
+        raise SystemExit(f"A5 accounting refused: protected 1020/1190/5000 identities are invalid {rows!r}")
+
+
+def _verify_existing_recovery_chronology(connection: psycopg.Connection) -> None:
+    invalid = connection.execute(
         """
         SELECT count(*)
         FROM accounting.ecl_credit_risk_label_reviews current_review
@@ -167,51 +255,18 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple,
           )
         """
     ).fetchone()[0]
-    if int(invalid_recovery_chronology) != 0:
+    if int(invalid) != 0:
         raise SystemExit(
             "ECL verification failed: existing cash-recovery evidence violates strict accepted_at chronology"
         )
 
-    permissions = connection.execute(
-        """
-        SELECT permission_code
-        FROM core.role_permissions role_permission
-        JOIN core.roles role ON role.id = role_permission.role_id
-        WHERE role.code = 'management'
-          AND permission_code IN (
-              'accounting.ecl.credit_risk_label.review',
-              'accounting.ecl.forward_looking_evidence.manage',
-              'accounting.ecl.measurement.review',
-              'accounting.ecl.allowance.prepare',
-              'accounting.ecl.allowance.post'
-          )
-        ORDER BY permission_code
-        """
-    ).fetchall()
-    if {row[0] for row in permissions} != {
-        "accounting.ecl.credit_risk_label.review",
-        "accounting.ecl.forward_looking_evidence.manage",
-        "accounting.ecl.measurement.review",
-        "accounting.ecl.allowance.prepare",
-        "accounting.ecl.allowance.post",
-    }:
-        raise SystemExit("ECL verification failed: required Management permissions are missing")
 
-    account_coordinates = connection.execute(
-        """
-        SELECT code, system_key, account_type, normal_balance, is_posting, is_active
-        FROM accounting.accounts
-        WHERE system_key IN ('credit_loss_expense', 'allowance_expected_credit_loss')
-        ORDER BY system_key
-        """
-    ).fetchall()
-    if account_coordinates != [
-        ("1190", "allowance_expected_credit_loss", "asset", "credit", True, True),
-        ("5000", "credit_loss_expense", "expense", "debit", True, True),
-    ]:
-        raise SystemExit(
-            f"A4 allowance posting refused: protected 5000/1190 account identities are invalid {account_coordinates!r}"
-        )
+def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple, tuple, tuple]:
+    _verify_required_objects(connection)
+    _verify_triggers(connection)
+    _verify_permissions(connection)
+    _verify_accounts(connection)
+    _verify_existing_recovery_chronology(connection)
 
     policy = connection.execute(
         """
@@ -237,9 +292,15 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple,
     ).fetchone()
     expected_prefix = (
         "ecl_credit_risk_labels_v1",
-        True, True, True, True, True, True, True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
     )
-    if policy[:8] != expected_prefix or any(bool(value) for value in policy[8:]):
+    if policy is None or policy[:8] != expected_prefix or any(bool(value) for value in policy[8:]):
         raise SystemExit(f"ECL credit-risk label verification failed: policy mismatch {policy!r}")
 
     label_summary = connection.execute(
@@ -258,7 +319,7 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple,
     if label_summary is None or bool(label_summary[13]) or label_summary[14] is not None or any(
         bool(value) for value in label_summary[15:]
     ):
-        raise SystemExit("ECL label verification unexpectedly enabled quantitative ECL/posting")
+        raise SystemExit("ECL label verification unexpectedly enabled automatic quantitative ECL/posting")
 
     forward_summary = connection.execute(
         """
@@ -291,10 +352,8 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple,
         FROM accounting.ecl_quantitative_input_readiness_summary
         """
     ).fetchone()
-    if readiness_summary is None:
-        raise SystemExit("ECL quantitative input-readiness summary is missing")
-    if int(readiness_summary[0]) != int(label_summary[0]):
-        raise SystemExit("ECL input-readiness loan population does not match label queue")
+    if readiness_summary is None or int(readiness_summary[0]) != int(label_summary[0]):
+        raise SystemExit("ECL quantitative input-readiness summary is missing or population mismatched")
     if bool(readiness_summary[9]) or readiness_summary[10] is not None or any(
         bool(value) for value in readiness_summary[11:]
     ):
@@ -311,9 +370,7 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple,
         FROM accounting.ecl_quantitative_measurement_summary
         """
     ).fetchone()
-    if measurement_summary is None:
-        raise SystemExit("A3 read-only ECL measurement summary is missing")
-    if int(measurement_summary[0]) != int(readiness_summary[0]):
+    if measurement_summary is None or int(measurement_summary[0]) != int(readiness_summary[0]):
         raise SystemExit("A3 measurement queue population does not match A1/A2 readiness")
     if not bool(measurement_summary[7]) or bool(measurement_summary[8]) or bool(measurement_summary[9]):
         raise SystemExit("A3 measurement safety flags are invalid")
@@ -330,12 +387,26 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple,
         FROM accounting.ecl_allowance_posting_summary
         """
     ).fetchone()
-    if allowance_summary is None:
-        raise SystemExit("A4 protected ECL allowance posting summary is missing")
-    if int(allowance_summary[0]) != int(measurement_summary[0]):
+    if allowance_summary is None or int(allowance_summary[0]) != int(measurement_summary[0]):
         raise SystemExit("A4 allowance queue population does not match A3 measurement queue")
     if not bool(allowance_summary[10]) or bool(allowance_summary[11]):
         raise SystemExit("A4 allowance posting safety flags are invalid")
+
+    a5_summary = connection.execute(
+        """
+        SELECT
+            loan_count, remeasurement_required_count, allowance_current_count,
+            writeoff_ready_count, written_off_count, recovery_ready_count,
+            blocked_count, remeasurement_posting_count, writeoff_posting_count,
+            post_writeoff_recovery_count, protected_a5_accounting_enabled,
+            automatic_source_posting
+        FROM accounting.ecl_a5_summary
+        """
+    ).fetchone()
+    if a5_summary is None or not bool(a5_summary[10]) or bool(a5_summary[11]):
+        raise SystemExit("A5 protected accounting safety flags are invalid")
+    if int(a5_summary[0]) != int(label_summary[0]):
+        raise SystemExit("A5 action queue population does not match the protected loan population")
 
     measurement_count = _relation_count(connection, "accounting.ecl_quantitative_measurements")
     if measurement_count == 0:
@@ -343,13 +414,6 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple,
             raise SystemExit("A3 installation fabricated an authoritative ECL amount")
         if int(measurement_summary[2]) + int(measurement_summary[3]) != int(measurement_summary[0]):
             raise SystemExit("Every unmeasured loan must remain input-blocked or measurement-required")
-
-    if _relation_count(connection, "accounting.ecl_allowance_draft_preparations") != 0:
-        raise SystemExit("A4 schema installation unexpectedly created an allowance preparation")
-    if _relation_count(connection, "accounting.ecl_allowance_postings") != 0:
-        raise SystemExit("A4 schema installation unexpectedly posted account 1190")
-    if _relation_count(connection, "accounting.ecl_allowance_posting_lines") != 0:
-        raise SystemExit("A4 schema installation unexpectedly created posting audit lines")
 
     evidence_count = _relation_count(connection, "accounting.ecl_forward_looking_evidence")
     if evidence_count == 0:
@@ -364,14 +428,15 @@ def _verify(connection: psycopg.Connection) -> tuple[tuple, tuple, tuple, tuple,
         forward_summary,
         measurement_summary,
         allowance_summary,
+        a5_summary,
     )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Install and verify protected SPINA V1 ECL labels, strict recovery chronology, "
-            "A1/A2 readiness, A3 read-only measurement and A4 protected initial allowance posting controls."
+            "Install and verify protected SPINA V1 ECL controls through A5 controlled "
+            "remeasurement, full write-off and exact post-write-off recovery."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -415,15 +480,17 @@ def main() -> int:
             forward_summary,
             measurement_summary,
             allowance_summary,
+            a5_summary,
         ) = _verify(connection)
         after = _history_counts(connection)
         if after != before:
             raise SystemExit(
-                f"ECL installation verification failed: protected/evidence/measurement/allowance history changed from {before} to {after}"
+                "ECL installation verification failed: schema/control installation changed protected financial/evidence history "
+                f"from {before} to {after}"
             )
 
     print(
-        "ECL label/readiness/measurement/allowance live summary: "
+        "ECL label/readiness/measurement/allowance/A5 live summary: "
         f"loans={label_summary[0]}, dpd_ready={label_summary[1]}, dpd_blocked={label_summary[2]}, "
         f"review_required={label_summary[3]}, refresh_required={label_summary[4]}, "
         f"current_labels={label_summary[5]}, stage1={label_summary[6]}, stage2={label_summary[7]}, "
@@ -440,10 +507,14 @@ def main() -> int:
         f"authoritative_ecl_total={measurement_summary[6]}, "
         f"allowance_preparation_required={allowance_summary[3]}, allowance_posting_ready={allowance_summary[4]}, "
         f"allowance_posted_current={allowance_summary[5]}, allowance_a5_required={allowance_summary[6]}, "
-        f"allowance_preparation_blocked={allowance_summary[8]}, allowance_total={allowance_summary[9]}, "
-        "history_unchanged=True, strict_cash_recovery_chronology=True, "
-        "deterministic_input_blockers=True, forward_looking_governance_installed=True, "
-        "read_only_ecl_calculation_enabled=True, protected_account_1190_posting_enabled=True, "
+        f"allowance_total={allowance_summary[9]}, a5_remeasurement_required={a5_summary[1]}, "
+        f"a5_allowance_current={a5_summary[2]}, a5_writeoff_ready={a5_summary[3]}, "
+        f"a5_written_off={a5_summary[4]}, a5_recovery_ready={a5_summary[5]}, "
+        f"a5_remeasurement_postings={a5_summary[7]}, a5_writeoffs={a5_summary[8]}, "
+        f"a5_recoveries={a5_summary[9]}, history_unchanged=True, "
+        "strict_cash_recovery_chronology=True, deterministic_input_blockers=True, "
+        "forward_looking_governance_installed=True, read_only_ecl_calculation_enabled=True, "
+        "protected_account_1190_posting_enabled=True, protected_a5_accounting_enabled=True, "
         "automatic_source_posting=False."
     )
     return 0
