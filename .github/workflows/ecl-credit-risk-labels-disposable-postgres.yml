@@ -14,6 +14,7 @@ on:
       - 'gilbic_backend/sql/0077_add_protected_ecl_allowance_posting.sql'
       - 'gilbic_backend/sql/0078_harden_ecl_allowance_posting_queue.sql'
       - 'gilbic_backend/sql/0079_add_ecl_remeasurement_writeoff_recovery.sql'
+      - 'gilbic_backend/sql/0080_harden_ecl_post_writeoff_boundaries.sql'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_repository.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_api.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_forward_looking_evidence_repository.py'
@@ -36,6 +37,7 @@ on:
       - 'gilbic_backend/tests/test_ecl_allowance_posting_api_contract.py'
       - 'gilbic_backend/tests/test_ecl_a5_migration.py'
       - 'gilbic_backend/tests/test_ecl_a5_remeasurement_postgres.py'
+      - 'gilbic_backend/tests/test_ecl_a5_writeoff_recovery_postgres.py'
       - 'gilbic_backend/tests/test_ecl_live_migration_plan_postgres.py'
       - 'docs/accounting/ecl-read-only-measurement-policy.md'
       - 'docs/accounting/ecl-allowance-posting-policy.md'
@@ -57,6 +59,7 @@ on:
       - 'gilbic_backend/sql/0077_add_protected_ecl_allowance_posting.sql'
       - 'gilbic_backend/sql/0078_harden_ecl_allowance_posting_queue.sql'
       - 'gilbic_backend/sql/0079_add_ecl_remeasurement_writeoff_recovery.sql'
+      - 'gilbic_backend/sql/0080_harden_ecl_post_writeoff_boundaries.sql'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_repository.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_credit_risk_label_api.py'
       - 'gilbic_backend/src/gilbic_backend/ecl_forward_looking_evidence_repository.py'
@@ -79,6 +82,7 @@ on:
       - 'gilbic_backend/tests/test_ecl_allowance_posting_api_contract.py'
       - 'gilbic_backend/tests/test_ecl_a5_migration.py'
       - 'gilbic_backend/tests/test_ecl_a5_remeasurement_postgres.py'
+      - 'gilbic_backend/tests/test_ecl_a5_writeoff_recovery_postgres.py'
       - 'gilbic_backend/tests/test_ecl_live_migration_plan_postgres.py'
       - 'docs/accounting/ecl-read-only-measurement-policy.md'
       - 'docs/accounting/ecl-allowance-posting-policy.md'
@@ -260,6 +264,7 @@ jobs:
           "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_ecl_allowance_posting_postgres.py || exit /b 1
           "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_ecl_a5_migration.py || exit /b 1
           "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_ecl_a5_remeasurement_postgres.py || exit /b 1
+          "%ECLLBL_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_ecl_a5_writeoff_recovery_postgres.py || exit /b 1
 
       - name: Execute ECL credit-risk label proof
         shell: cmd
