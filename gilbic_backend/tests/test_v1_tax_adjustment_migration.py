@@ -50,7 +50,7 @@ def test_settled_tax_decrease_recognizes_recoverable_without_rewriting_cash() ->
 
 def test_adjustment_revalidates_exact_replacement_and_blocks_duplicate_full_liability() -> None:
     assert "replacement tax evidence must be the exact newer current unposted evidence" in LOWER
-    assert "replacement evidence is already covered by a posted settled-tax-recoverable adjustment" in LOWER
+    assert "replacement tax evidence is already covered by a posted settled-tax-recoverable adjustment" in LOWER
     assert "covered_by_settled_adjustment" in LOWER
     assert "posted_adjusted_reversed" in LOWER
     assert "posted_adjusted_recoverable" in LOWER
