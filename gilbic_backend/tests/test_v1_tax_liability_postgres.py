@@ -33,6 +33,9 @@ SQL_0082 = (SQL_ROOT / "0082_add_v1_tax_evidence_readiness.sql").read_text(
 SQL_0083 = (SQL_ROOT / "0083_add_protected_v1_tax_liability_posting.sql").read_text(
     encoding="utf-8"
 )
+SQL_0084 = (SQL_ROOT / "0084_harden_v1_tax_liability_preparation.sql").read_text(
+    encoding="utf-8"
+)
 
 POSTING_POLICY = "v1_tax_liability_posting_v1"
 CONFIRMATION_TOKEN = "a" * 64
@@ -49,6 +52,7 @@ def _transaction_body(source: str) -> str:
 def _install(connection: psycopg.Connection) -> None:
     connection.execute(_transaction_body(SQL_0082))
     connection.execute(_transaction_body(SQL_0083))
+    connection.execute(_transaction_body(SQL_0084))
 
 
 def _open_period(connection: psycopg.Connection, suffix: str, start: date, end: date):
@@ -272,10 +276,9 @@ def test_percentage_tax_liability_forced_audit_failure_rolls_back_and_supersessi
     with psycopg.connect(DATABASE_URL) as connection:
         try:
             _install(connection)
-            actor_id, _, period_id, transaction_id, source_status = (
-                tax_helpers.x7_posting._prepared_case(connection, suffix)
+            actor_id, _, period_id, transaction_id, _ = (
+                tax_helpers._current_schema_posted_7x7_case(connection, suffix)
             )
-            tax_helpers.x7_posting._post(connection, actor_id, source_status)
             collection_date = connection.execute(
                 "SELECT collection_date FROM lending.collection_transactions WHERE id=%s",
                 (transaction_id,),
@@ -377,10 +380,9 @@ def test_zero_percentage_tax_evidence_creates_no_fake_liability_journal() -> Non
     with psycopg.connect(DATABASE_URL) as connection:
         try:
             _install(connection)
-            actor_id, _, _, transaction_id, source_status = (
-                tax_helpers.x7_posting._prepared_case(connection, suffix)
+            actor_id, _, _, transaction_id, _ = (
+                tax_helpers._current_schema_posted_7x7_case(connection, suffix)
             )
-            tax_helpers.x7_posting._post(connection, actor_id, source_status)
             collection_date = connection.execute(
                 "SELECT collection_date FROM lending.collection_transactions WHERE id=%s",
                 (transaction_id,),
