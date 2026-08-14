@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import os
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
 
@@ -191,8 +192,8 @@ def test_dst_tax_liability_posts_exact_expense_payable_and_blocks_generic_bypass
                 (journal_id,),
             ).fetchall()
             assert [(row[0], row[1], row[2], row[3]) for row in lines] == [
-                (1, "5310", 7.40, 0),
-                (2, "2100", 0, 7.40),
+                (1, "5310", Decimal("7.40"), Decimal("0.00")),
+                (2, "2100", Decimal("0.00"), Decimal("7.40")),
             ]
             assert all(row[4] == client_id and row[5] == loan_id for row in lines)
 
@@ -271,7 +272,7 @@ def test_percentage_tax_liability_forced_audit_failure_rolls_back_and_supersessi
     with psycopg.connect(DATABASE_URL) as connection:
         try:
             _install(connection)
-            actor_id, loan_id, period_id, transaction_id, source_status = (
+            actor_id, _, period_id, transaction_id, source_status = (
                 tax_helpers.x7_posting._prepared_case(connection, suffix)
             )
             tax_helpers.x7_posting._post(connection, actor_id, source_status)
