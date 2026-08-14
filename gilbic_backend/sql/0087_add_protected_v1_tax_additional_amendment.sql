@@ -1,12 +1,12 @@
 BEGIN;
 
 -- Master #296 A6.2 additional-tax amendment sub-slice.
--- This migration handles one narrow, evidence-backed upward correction for an exact
--- already-filed V1 tax return when one retained posted liability becomes stale and
--- one exact newer current evidence item proves a higher tax amount. It preserves the
--- original return/liability/settlement history, recognizes only the supported delta,
--- and leaves payment/refund/credit realization to separate protected evidence paths.
--- Closed-period corrections remain fail-closed and automatic source posting stays off.
+-- One exact filed V1 return may reserve one stale posted liability when one exact
+-- newer current evidence item proves a strictly higher tax amount for the same
+-- protected source, loan, client and tax type. Original return/liability/settlement
+-- history remains immutable. The database derives only the supported additional-tax
+-- delta; payment is separate evidence in 0088. Closed-period corrections fail closed
+-- and automatic source posting stays disabled.
 
 INSERT INTO core.permissions (code, description)
 VALUES
@@ -175,8 +175,8 @@ CREATE TRIGGER accounting_v1_tax_additional_liability_posting_guard
 BEFORE INSERT OR UPDATE OR DELETE ON accounting.v1_tax_additional_liability_postings
 FOR EACH ROW EXECUTE FUNCTION accounting.guard_v1_tax_additional_amendment_immutable_write();
 
--- Once a return is explicitly reserved by immutable additional-amendment evidence, the
--- base full-payment path cannot race in and settle the obsolete declared amount.
+-- Reserve an amended return before the obsolete base payment path can insert payment
+-- evidence. Existing 0085 insert gates remain intact for all other settlement rows.
 CREATE OR REPLACE FUNCTION accounting.guard_v1_tax_settlement_immutable_write()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -216,8 +216,8 @@ BEGIN
 END;
 $$;
 
--- Keep the older decrease/reversal path and this upward-amendment path mutually
--- exclusive for the same original liability. Both workflows take the same advisory lock.
+-- Upward amendment and the 0086 decrease/reversal path are mutually exclusive for the
+-- same original liability. The shared advisory lock makes the reservation race-safe.
 CREATE OR REPLACE FUNCTION accounting.guard_v1_tax_adjustment_immutable_write()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -248,22 +248,20 @@ BEGIN
         END IF;
         RETURN NEW;
     END IF;
+
     RAISE EXCEPTION 'V1 tax adjustment evidence and audit rows are immutable and must use the protected Management workflow.';
 END;
 $$;
 
--- A replacement evidence item reserved by an upward amendment must not also create a
--- second full liability. Preserve the settled-decrease duplicate guard from 0086.
+-- A replacement evidence item reserved by either a settled-tax-recoverable adjustment
+-- or this upward amendment cannot create a duplicate full liability.
 CREATE OR REPLACE FUNCTION accounting.guard_v1_tax_liability_preparation_write()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
     IF TG_OP = 'INSERT'
-       AND coalesce(
-            current_setting('accounting.v1_tax_liability_preparation_insert_allowed', true),
-            ''
-       ) = 'on' THEN
+       AND coalesce(current_setting('accounting.v1_tax_liability_preparation_insert_allowed', true), '') = 'on' THEN
         PERFORM pg_advisory_xact_lock(
             hashtextextended('v1-tax-amendment-replacement:' || NEW.evidence_id::text, 0)
         );
@@ -288,6 +286,7 @@ BEGIN
         END IF;
         RETURN NEW;
     END IF;
+
     RAISE EXCEPTION 'V1 tax-liability preparation audit is immutable and must use the protected Management preparation function.';
 END;
 $$;
@@ -445,6 +444,27 @@ BEGIN
         hashtextextended('v1-tax-amendment-replacement:' || p_replacement_evidence_id::text, 0)
     );
 
+    SELECT * INTO existing
+    FROM accounting.v1_tax_additional_amendment_evidence item
+    WHERE item.idempotency_key = p_idempotency_key
+    FOR SHARE;
+    IF existing.id IS NOT NULL THEN
+        IF existing.tax_return_id = p_tax_return_id
+           AND existing.tax_liability_posting_id = p_tax_liability_posting_id
+           AND existing.replacement_evidence_id = p_replacement_evidence_id
+           AND existing.amendment_basis = normalized_basis
+           AND existing.amendment_date = p_amendment_date
+           AND existing.recognition_date = p_recognition_date
+           AND existing.amendment_reference = normalized_amendment_reference
+           AND existing.evidence_reference = normalized_evidence_reference
+           AND existing.evidence_digest = normalized_digest
+           AND existing.evidence_note = normalized_note
+           AND existing.recorded_by_user_id = p_actor_user_id THEN
+            RETURN existing.id;
+        END IF;
+        RAISE EXCEPTION 'Additional-tax amendment idempotency key already belongs to different immutable evidence.';
+    END IF;
+
     SELECT * INTO tax_return
     FROM accounting.v1_tax_return_evidence item
     WHERE item.id = p_tax_return_id
@@ -463,6 +483,7 @@ BEGIN
     IF original_posting.id IS NULL THEN
         RAISE EXCEPTION 'Original posted V1 tax liability was not found for the additional-tax amendment.';
     END IF;
+
     SELECT * INTO original_preparation
     FROM accounting.v1_tax_liability_preparations item
     WHERE item.id = original_posting.preparation_id
@@ -473,7 +494,9 @@ BEGIN
     FOR SHARE;
     SELECT * INTO original_queue
     FROM accounting.v1_tax_liability_queue queue
-    WHERE queue.posting_id = original_posting.id;
+    WHERE queue.posting_id = original_posting.id
+      AND queue.tax_type = original_preparation.tax_type
+      AND queue.evidence_id = original_preparation.evidence_id;
 
     IF original_preparation.id IS NULL OR original_journal.id IS NULL
        OR original_journal.status <> 'posted'
@@ -547,6 +570,17 @@ BEGIN
         RAISE EXCEPTION 'Original liability already has immutable protected correction evidence; competing additional-tax amendment evidence is not allowed.';
     END IF;
 
+    IF EXISTS (
+        SELECT 1
+        FROM accounting.v1_tax_additional_amendment_evidence item
+        WHERE item.tax_return_id = tax_return.id
+           OR item.tax_liability_posting_id = original_posting.id
+           OR (item.tax_type = original_preparation.tax_type
+               AND item.replacement_evidence_id = replacement_queue.evidence_id)
+    ) THEN
+        RAISE EXCEPTION 'This return, stale liability, or replacement evidence is already reserved by immutable additional-tax amendment evidence.';
+    END IF;
+
     SELECT * INTO original_period
     FROM accounting.fiscal_periods period
     WHERE period.id = original_posting.confirmed_fiscal_period_id
@@ -589,48 +623,6 @@ BEGIN
         payment_required_value := additional_due;
     END IF;
 
-    SELECT * INTO existing
-    FROM accounting.v1_tax_additional_amendment_evidence item
-    WHERE item.idempotency_key = p_idempotency_key
-    FOR SHARE;
-    IF existing.id IS NOT NULL THEN
-        IF existing.tax_return_id = tax_return.id
-           AND existing.tax_type = original_preparation.tax_type
-           AND existing.tax_liability_posting_id = original_posting.id
-           AND existing.original_evidence_id = original_preparation.evidence_id
-           AND existing.replacement_evidence_id = replacement_queue.evidence_id
-           AND existing.original_declared_tax_due = tax_return.declared_tax_due
-           AND existing.revised_declared_tax_due = revised_due
-           AND existing.original_item_tax_due = original_posting.confirmed_tax_due
-           AND existing.replacement_item_tax_due = replacement_queue.tax_due
-           AND existing.additional_tax_due = additional_due
-           AND existing.payment_basis = payment_basis_value
-           AND existing.payment_required_amount = payment_required_value
-           AND existing.amendment_basis = normalized_basis
-           AND existing.amendment_date = p_amendment_date
-           AND existing.recognition_date = p_recognition_date
-           AND existing.amendment_reference = normalized_amendment_reference
-           AND existing.evidence_reference = normalized_evidence_reference
-           AND existing.evidence_digest = normalized_digest
-           AND existing.evidence_note = normalized_note
-           AND existing.original_payment_evidence_id IS NOT DISTINCT FROM original_payment.id
-           AND existing.original_settlement_posting_id IS NOT DISTINCT FROM original_settlement.id
-           AND existing.original_settlement_journal_entry_id IS NOT DISTINCT FROM original_settlement_journal.id
-           AND existing.recorded_by_user_id = p_actor_user_id THEN
-            RETURN existing.id;
-        END IF;
-        RAISE EXCEPTION 'Additional-tax amendment idempotency key already belongs to different immutable evidence.';
-    END IF;
-
-    IF EXISTS (
-        SELECT 1
-        FROM accounting.v1_tax_additional_amendment_evidence item
-        WHERE item.tax_return_id = tax_return.id
-           OR item.tax_liability_posting_id = original_posting.id
-    ) THEN
-        RAISE EXCEPTION 'This filed return or stale liability already has immutable additional-tax amendment evidence.';
-    END IF;
-
     PERFORM set_config('accounting.v1_tax_additional_amendment_evidence_insert_allowed', 'on', true);
     INSERT INTO accounting.v1_tax_additional_amendment_evidence(
         idempotency_key, tax_return_id, tax_type, tax_liability_posting_id,
@@ -670,8 +662,6 @@ BEGIN
             'replacement_evidence_id', replacement_queue.evidence_id,
             'original_declared_tax_due', tax_return.declared_tax_due,
             'revised_declared_tax_due', revised_due,
-            'original_item_tax_due', original_posting.confirmed_tax_due,
-            'replacement_item_tax_due', replacement_queue.tax_due,
             'additional_tax_due', additional_due,
             'payment_basis', payment_basis_value,
             'payment_required_amount', payment_required_value,
@@ -864,7 +854,9 @@ BEGIN
     IF expense_account.id IS NULL OR expense_account.account_type <> 'expense'
        OR expense_account.normal_balance <> 'debit' OR NOT expense_account.is_active
        OR NOT expense_account.is_posting
-       OR expense_account.code <> CASE WHEN evidence.tax_type = 'documentary_stamp_tax' THEN '5310' ELSE '5300' END THEN
+       OR expense_account.code <> (
+            CASE WHEN evidence.tax_type = 'documentary_stamp_tax' THEN '5310' ELSE '5300' END
+       ) THEN
         RAISE EXCEPTION 'Exact original dedicated tax expense account is no longer posting-ready for the additional liability.';
     END IF;
     IF payable_account.id IS NULL OR payable_account.system_key <> 'tax_payables'
@@ -993,13 +985,13 @@ DECLARE
     original_posting accounting.v1_tax_liability_postings%ROWTYPE;
     original_queue accounting.v1_tax_liability_queue%ROWTYPE;
     replacement_queue accounting.v1_tax_liability_queue%ROWTYPE;
+    original_payment accounting.v1_tax_payment_evidence%ROWTYPE;
+    original_settlement accounting.v1_tax_settlement_postings%ROWTYPE;
+    original_settlement_journal accounting.journal_entries%ROWTYPE;
     period_row accounting.fiscal_periods%ROWTYPE;
     expense_account accounting.accounts%ROWTYPE;
     payable_account accounting.accounts%ROWTYPE;
     journal accounting.journal_entries%ROWTYPE;
-    original_payment accounting.v1_tax_payment_evidence%ROWTYPE;
-    original_settlement accounting.v1_tax_settlement_postings%ROWTYPE;
-    original_settlement_journal accounting.journal_entries%ROWTYPE;
     line_count INTEGER;
     total_debit NUMERIC(18,2);
     total_credit NUMERIC(18,2);
