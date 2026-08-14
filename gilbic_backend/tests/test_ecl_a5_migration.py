@@ -3,13 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 
 
-SQL = (
-    Path(__file__).resolve().parents[1]
-    / "sql"
-    / "0079_add_ecl_remeasurement_writeoff_recovery.sql"
-).read_text(encoding="utf-8")
+SQL_ROOT = Path(__file__).resolve().parents[1] / "sql"
+SQL = (SQL_ROOT / "0079_add_ecl_remeasurement_writeoff_recovery.sql").read_text(
+    encoding="utf-8"
+)
+SQL_0080 = (SQL_ROOT / "0080_harden_ecl_post_writeoff_boundaries.sql").read_text(
+    encoding="utf-8"
+)
 LOWER = SQL.lower()
 UPPER = SQL.upper()
+HARDENING_LOWER = SQL_0080.lower()
 
 
 def test_a5_migration_is_transactional_and_management_protected() -> None:
@@ -69,7 +72,6 @@ def test_a5_full_writeoff_requires_stage3_default_support_and_exact_full_cover()
     assert "accrued_interest_receivable" in LOWER
     assert "use protected ecl allowance on full write-off" in LOWER
     assert "derecognize loan receivable on full write-off" in LOWER
-    # V1 intentionally does not invent a partial write-off amount.
     assert "partial_writeoff" not in LOWER
     assert "partial write-off" not in LOWER
 
@@ -100,3 +102,21 @@ def test_a5_blocks_generic_bypass_and_keeps_automatic_posting_off() -> None:
     assert "automatic_source_posting', true" not in LOWER
     assert "automatic_source_posting = true" not in LOWER
     assert "automatic_source_posting=true" not in LOWER
+
+
+def test_a5_post_writeoff_hardening_is_transactional_and_fail_closed() -> None:
+    assert SQL_0080.strip().startswith("BEGIN;")
+    assert SQL_0080.strip().endswith("COMMIT;")
+    assert "guard_ecl_post_writeoff_loan_insert" in HARDENING_LOWER
+    assert "guard_ecl_post_writeoff_collection_accounting" in HARDENING_LOWER
+    for trigger in (
+        "accounting_ecl_post_writeoff_measurement_guard",
+        "accounting_ecl_post_writeoff_allowance_preparation_guard",
+        "accounting_ecl_post_writeoff_allowance_posting_guard",
+        "accounting_ecl_post_writeoff_remeasurement_guard",
+        "accounting_ecl_post_writeoff_regular_collection_guard",
+        "accounting_ecl_post_writeoff_7x7_collection_guard",
+    ):
+        assert trigger in HARDENING_LOWER
+    assert "later protected cash must use the a5 post-write-off recovery path" in HARDENING_LOWER
+    assert "automatic_source_posting=true" not in HARDENING_LOWER
