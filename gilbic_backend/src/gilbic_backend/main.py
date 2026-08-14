@@ -91,6 +91,7 @@ from .v1_tax_additional_amendment_api import create_v1_tax_additional_amendment_
 from .v1_tax_adjustment_api import create_v1_tax_adjustment_router
 from .v1_tax_evidence_api import create_v1_tax_evidence_router
 from .v1_tax_liability_api import create_v1_tax_liability_router
+from .v1_tax_recoverable_credit_api import create_v1_tax_recoverable_credit_router
 from .v1_tax_recoverable_refund_api import create_v1_tax_recoverable_refund_router
 from .v1_tax_settlement_api import create_v1_tax_settlement_router
 
@@ -163,6 +164,7 @@ def create_app() -> FastAPI:
     app.include_router(create_v1_tax_adjustment_router())
     app.include_router(create_v1_tax_additional_amendment_router())
     app.include_router(create_v1_tax_recoverable_refund_router())
+    app.include_router(create_v1_tax_recoverable_credit_router())
     app.include_router(create_opening_balance_workbook_router())
     app.include_router(create_opening_balance_journal_router())
     app.include_router(create_general_journal_router())
