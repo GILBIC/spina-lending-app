@@ -27,8 +27,9 @@ def test_period_close_api_requires_action_permissions_and_explicit_confirmation(
         assert permission in API
     assert API.count("confirm: bool = False") == 2
     assert "_require_confirmation" in API
-    assert "before preparing the immutable formal period-close snapshot" in API
-    assert "before posting retained earnings and closing the accounting period" in API
+    assert '"preparing the immutable formal period-close snapshot"' in API
+    assert '"posting retained earnings and closing the accounting period"' in API
+    assert "Explicit Management confirmation is required before {action}." in API
 
 
 def test_period_close_api_exposes_exact_close_coordinates_only() -> None:
