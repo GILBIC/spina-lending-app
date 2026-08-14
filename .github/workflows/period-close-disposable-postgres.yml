@@ -12,6 +12,7 @@ on:
       - 'gilbic_backend/tests/test_period_close_migration.py'
       - 'gilbic_backend/tests/test_period_close_api_contract.py'
       - 'gilbic_backend/tests/test_period_close_postgres.py'
+      - 'gilbic_backend/tests/test_period_close_loss_postgres.py'
       - 'tools/run_period_close_disposable_postgres_validation.py'
       - '.github/workflows/period-close-disposable-postgres.yml'
   push:
@@ -25,6 +26,7 @@ on:
       - 'gilbic_backend/tests/test_period_close_migration.py'
       - 'gilbic_backend/tests/test_period_close_api_contract.py'
       - 'gilbic_backend/tests/test_period_close_postgres.py'
+      - 'gilbic_backend/tests/test_period_close_loss_postgres.py'
       - 'tools/run_period_close_disposable_postgres_validation.py'
       - '.github/workflows/period-close-disposable-postgres.yml'
 
@@ -167,6 +169,7 @@ jobs:
           "%CLOSE_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_period_close_migration.py || exit /b 1
           "%CLOSE_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_period_close_api_contract.py || exit /b 1
           "%CLOSE_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_period_close_postgres.py || exit /b 1
+          "%CLOSE_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_period_close_loss_postgres.py || exit /b 1
 
       - name: Execute protected period-close proof
         shell: cmd
