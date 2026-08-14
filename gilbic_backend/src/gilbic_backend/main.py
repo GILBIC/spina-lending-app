@@ -22,6 +22,7 @@ from .cross_period_accounting_sequence_api import (
 )
 from .cross_remittance_api import create_cross_remittance_router
 from .database import database_ready
+from .ecl_a5_accounting_api import create_ecl_a5_accounting_router
 from .ecl_allowance_posting_api import create_ecl_allowance_posting_router
 from .ecl_credit_risk_label_api import create_ecl_credit_risk_label_router
 from .ecl_forward_looking_evidence_api import create_ecl_forward_looking_evidence_router
@@ -147,6 +148,7 @@ def create_app() -> FastAPI:
     app.include_router(create_ecl_forward_looking_evidence_router())
     app.include_router(create_ecl_quantitative_measurement_router())
     app.include_router(create_ecl_allowance_posting_router())
+    app.include_router(create_ecl_a5_accounting_router())
     app.include_router(create_opening_balance_workbook_router())
     app.include_router(create_opening_balance_journal_router())
     app.include_router(create_general_journal_router())
