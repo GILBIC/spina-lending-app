@@ -1,6 +1,6 @@
 # SPINA V1 evidence-backed tax accounting policy — A6.2
 
-Status: **draft accounting/tax control policy for Master #296 A6.2**. Evidence/readiness and protected liability-recognition capabilities are now represented in the A6.2 branch, but this document does not itself create a tax return, tax liability, tax payment, or live legal-book posting. Actual Philippine tax treatment must remain tied to retained current legal/BIR/registration evidence and Management/CPA review at the time of the transaction.
+Status: **draft accounting/tax control policy for Master #296 A6.2**. Evidence/readiness, protected liability recognition, and evidence-backed tax settlement capabilities are now represented in the A6.2 branch. Protected tax adjustment/reversal execution and the live-schema/control proof remain incomplete. This document does not itself create a tax return, tax liability, tax payment, or live legal-book posting. Actual Philippine tax treatment must remain tied to retained current legal/BIR/registration evidence and Management/CPA review at the time of the transaction.
 
 ## Scope
 
@@ -108,28 +108,56 @@ The protected posting audit is immutable and exact retry identity is required. A
 
 Migration `0082` is evidence/readiness only and never posts. It continues to expose `tax_posting_enabled=false` because evidence capture itself is not a posting workflow.
 
-Migration `0083` is a separate protected Management-confirmed liability-recognition capability. It may prepare/post only from positive current evidence that passes every source/rule/period/account revalidation gate. Its queue exposes `protected_tax_liability_posting_enabled=true` while keeping:
-
-- `tax_settlement_enabled=false`;
-- `tax_adjustment_reversal_enabled=false`; and
-- `automatic_source_posting=false`.
+Migration `0083`, hardened by `0084`, is a separate protected Management-confirmed liability-recognition capability. It may prepare/post only from positive current evidence that passes every source/rule/period/account revalidation gate. Its queue exposes `protected_tax_liability_posting_enabled=true`. The liability-recognition layer itself does not infer filing or payment and never enables automatic source posting.
 
 A posted liability whose source/rule/evidence is later superseded or otherwise ceases to be current is not mutated. It is surfaced as requiring protected adjustment/reversal review while the newer evidence remains a separate immutable item.
 
-## Settlement remains a later A6.2 control
+## Protected return and payment evidence
 
-Tax settlement to BIR, when supported by retained payment/return evidence, will debit `2100 Tax Payables` and credit the exact approved real cash/bank account. Tax settlement must not be treated as another expense after the liability has already been recognized.
+Migration `0085` adds a separate protected tax-settlement capability. A tax return is not inferred merely because one or more tax liabilities have been posted. Management must retain immutable return/filing evidence identifying:
 
-No settlement entry is created by the evidence/readiness or liability-recognition migrations. Settlement must have its own retained return/payment evidence, exact liability linkage, cash/bank evidence, Management confirmation, idempotent audit and period controls before it is enabled.
+- tax type;
+- exact return period;
+- filing date;
+- declared tax due;
+- return and retained evidence references;
+- SHA-256 evidence digest and substantive note; and
+- the exact immutable V1 tax-liability posting IDs included in that return.
+
+Every selected liability must remain an exact current protected posted liability of the same tax type and inside the retained return period. The declared tax due must exactly equal the sum of those immutable liability postings. A tax-liability posting may belong to only one retained V1 return evidence record. Exact idempotent retry is required.
+
+Payment evidence is also separate from filing evidence. Management must retain the exact payment date, amount, payment reference, evidence reference/digest/note, and the actual SPINA payment cash account. V1 permits only full settlement of the retained declared tax due; partial payment requires a later explicit policy instead of being inferred. The approved V1 payment accounts are:
+
+- `1010 Cash - Office`; or
+- `1030 Cash - Bank / GCash`.
+
+Collector custody is not an approved tax-payment account. Payment evidence does not itself post the General Journal and does not rewrite tax expense.
+
+## Protected tax settlement accounting coordinates
+
+A current exact return plus retained full-payment evidence may prepare one protected General Journal settlement draft. Preparation revalidates every retained return liability, the declared/payment amount, `2100 Tax Payables`, the exact approved `1010` or `1030` cash account, and the open fiscal period containing the payment date.
+
+The settlement journal is exactly:
+
+- **Dr `2100 Tax Payables`** for the retained payment amount; and
+- **Cr the exact approved `1010 Cash - Office` or `1030 Cash - Bank / GCash` account** for the same amount.
+
+Settlement does **not** debit `5300` or `5310` again, because the expense was already recognized when the liability was posted.
+
+Posting requires a separate Management permission and exact confirmation of the retained return digest, payment digest, payment amount, payable/cash account codes, posting date, fiscal period and settlement policy version. The protected function revalidates the exact return composition, payment evidence, accounts, open period, journal identity and two-line coordinates before delegating to the existing General Journal posting primitive.
+
+Generic/manual posting bypass is rejected. Manual General Journal reversal of a protected settlement is rejected. Exact immutable retry identity is enforced. A forced audit failure after the underlying journal post must roll the full database statement back so no posted settlement journal can exist without its immutable protected settlement audit.
+
+The settlement queue exposes `tax_settlement_enabled=true`, while `tax_adjustment_reversal_enabled=false` and `automatic_source_posting=false` remain explicit. If an already-settled return later contains a liability that is no longer current, the settlement is surfaced as requiring protected adjustment/reversal review; historical evidence and posted journals remain unchanged.
 
 ## Corrections and later filing evidence
 
 A corrected or voided lending source does not silently mutate a prior tax record. The current evidence becomes stale and an explicit protected tax adjustment/reversal evidence event is required before period close. If a return has already been filed or paid, SPINA must retain the amended-return/credit/payment evidence rather than assuming that reversing the lending transaction automatically reverses tax legally.
 
-The liability-recognition queue may flag a posted item as `posted_adjustment_review_required`, but that status is not itself a reversal and does not change General Journal history. The future adjustment/reversal path must preserve the original posting and create a separately audited accounting event.
+The liability-recognition queue may flag a posted item as `posted_adjustment_review_required`, and the settlement queue may flag a paid return as `settled_adjustment_review_required`. Neither status is itself a reversal and neither changes General Journal history. The protected adjustment/reversal path must preserve the original liability and settlement postings and create separately audited correcting accounting events from retained legal/filing/payment evidence.
 
 ## Gate A versus Gate C
 
-A6.2 software acceptance uses synthetic/disposable tax rule, loan, cash-allocation, liability and settlement evidence. The approved live-schema installer must create no legal tax evidence, liability or payment merely by installing the capability.
+A6.2 software acceptance uses synthetic/disposable tax rule, loan, cash-allocation, liability, return and settlement evidence. The approved live-schema installer must create no legal tax evidence, liability, return, payment or settlement merely by installing the capability.
 
 At Gate C, actual taxes may be posted only from the company's actual registration/classification, actual transactions, retained tax calculations/returns/payment evidence, and the then-current approved rule evidence.
