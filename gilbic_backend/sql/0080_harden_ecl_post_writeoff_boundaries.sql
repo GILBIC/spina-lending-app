@@ -160,6 +160,7 @@ DECLARE
     recovery_amount NUMERIC(18,2) := round(coalesce(p_expected_recovery_amount, -1), 2);
     next_version INTEGER;
     new_review_id BIGINT;
+    provenance_id UUID;
 BEGIN
     PERFORM accounting.require_ecl_a5_management_actor(
         p_actor_user_id,
@@ -296,16 +297,17 @@ BEGIN
         new_review_id, writeoff.id, p_loan_id, writeoff.client_id,
         tx.id, recovery_amount, normalized_reference, normalized_note,
         normalized_token, p_policy_version, p_actor_user_id
-    );
+    ) RETURNING id INTO provenance_id;
     PERFORM set_config('accounting.ecl_a5_audit_insert_allowed', 'off', true);
 
     INSERT INTO core.audit_logs(actor_user_id, action, target_type, target_id, details)
     VALUES(
         p_actor_user_id,
         'accounting.ecl.postwriteoff_recovery.reviewed',
-        'ecl_credit_risk_label_review',
-        new_review_id::text,
+        'ecl_post_writeoff_recovery_review_provenance',
+        provenance_id,
         jsonb_build_object(
+            'credit_risk_review_id', new_review_id,
             'loan_id', p_loan_id,
             'writeoff_id', writeoff.id,
             'recovery_transaction_id', tx.id,
