@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'gilbic_backend/sql/0091_add_protected_period_close.sql'
+      - 'gilbic_backend/sql/0092_harden_period_close_balance_scope.sql'
       - 'gilbic_backend/tests/test_period_close_migration.py'
       - 'gilbic_backend/tests/test_period_close_postgres.py'
       - 'tools/run_period_close_disposable_postgres_validation.py'
@@ -13,6 +14,7 @@ on:
     branches: [main]
     paths:
       - 'gilbic_backend/sql/0091_add_protected_period_close.sql'
+      - 'gilbic_backend/sql/0092_harden_period_close_balance_scope.sql'
       - 'gilbic_backend/tests/test_period_close_migration.py'
       - 'gilbic_backend/tests/test_period_close_postgres.py'
       - 'tools/run_period_close_disposable_postgres_validation.py'
