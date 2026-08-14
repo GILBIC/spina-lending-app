@@ -118,6 +118,62 @@ def _target_return_247(
     return return_id, release_date
 
 
+def _target_return_740(
+    connection: psycopg.Connection,
+    *,
+    actor_id,
+    period_id,
+    suffix: str,
+):
+    """Build a mismatched DST return inside the already-open disposable period."""
+    loan_id, _, event_id, release_date = tax_helpers._simple_loan(
+        connection, actor_id, f"{suffix}mismatch"
+    )
+    rule_id = tax_helpers._record_rule(
+        connection,
+        actor_id=actor_id,
+        tax_type="documentary_stamp_tax",
+        key=f"dst-credit-mismatch-{suffix}",
+        effective_from=release_date,
+        rate="0.0075000000",
+        maturity_max_days=None,
+        digest_char="c",
+    )
+    evidence_id = tax_helpers._record_dst(
+        connection,
+        actor_id=actor_id,
+        loan_id=loan_id,
+        event_id=event_id,
+        rule_id=rule_id,
+        tax_due="7.40",
+        token="d",
+    )
+    connection.execute(
+        "SELECT accounting.prepare_v1_tax_liability_journal(%s,%s,%s)",
+        ("documentary_stamp_tax", evidence_id, actor_id),
+    ).fetchone()[0]
+    posting_id = liability_helpers._post(
+        connection,
+        tax_type="documentary_stamp_tax",
+        evidence_id=evidence_id,
+        actor_id=actor_id,
+        evidence_digest="d" * 64,
+        tax_due="7.40",
+        expense_code="5310",
+        posting_date=release_date,
+        period_id=period_id,
+    )
+    return_id = settlement_helpers._record_return(
+        connection,
+        actor_id=actor_id,
+        posting_id=posting_id,
+        release_date=release_date,
+        idempotency_key=uuid4(),
+        digest_char="e",
+    )
+    return return_id, release_date
+
+
 def _record_credit(
     connection: psycopg.Connection,
     *,
@@ -338,16 +394,11 @@ def test_credit_rejects_amount_mismatch_and_existing_cash_payment() -> None:
                 refund_helpers._posted_recoverable(connection, suffix)
             )
 
-            target_actor, _, _, _, target_release, _, _, _, target_posting = (
-                settlement_helpers._posted_dst_liability(connection, f"{suffix}m")
-            )
-            mismatch_return_id = settlement_helpers._record_return(
+            mismatch_return_id, target_release = _target_return_740(
                 connection,
-                actor_id=target_actor,
-                posting_id=target_posting,
-                release_date=target_release,
-                idempotency_key=uuid4(),
-                digest_char="d",
+                actor_id=actor_id,
+                period_id=period_id,
+                suffix=suffix,
             )
             with pytest.raises(psycopg.Error, match="full-only"):
                 with connection.transaction():
