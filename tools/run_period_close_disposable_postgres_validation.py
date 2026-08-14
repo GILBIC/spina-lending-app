@@ -20,6 +20,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_period_close_migration.py",
     TEST_ROOT / "test_period_close_api_contract.py",
     TEST_ROOT / "test_period_close_postgres.py",
+    TEST_ROOT / "test_period_close_loss_postgres.py",
 )
 
 
@@ -117,7 +118,7 @@ def main() -> int:
             "A6.2/0090 was replayed into a fresh loopback-only database; A6.3 migrations "
             "0091-0092 were applied only inside rollback-isolated tests and proved Management-only "
             "open-to-review freeze, exact posted-period balance scoping, exact income/expense "
-            "temporary-account closing coordinates, direct transfer of period profit/loss to existing "
+            "temporary-account closing coordinates, exact profit and loss transfer to existing "
             "3100 Retained Earnings, deterministic preparation/retry, exact review-period close "
             "posting, atomic reviewed-to-closed transition, zero-activity close without a fake journal, "
             "closed-period draft/post/reopen/reversal rejection, forced-audit atomic rollback, and "
