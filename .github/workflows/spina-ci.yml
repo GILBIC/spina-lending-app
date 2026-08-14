@@ -81,13 +81,6 @@ jobs:
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile" || exit /b 1
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\gilbic_backend[test]" || exit /b 1
 
-      - name: Install Financial Accounting verifier dependencies
-        if: github.event_name == 'push' && steps.validated_pr.outputs.reuse_validation == 'true'
-        shell: cmd
-        run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
-          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" || exit /b 1
-
       - name: Compile desktop and backend Python
         if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
         shell: cmd
@@ -105,22 +98,12 @@ jobs:
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_regular_journal_draft_migration.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m compileall -q spina_app gilbic_backend\src spina_backend_mobile\src || exit /b 1
 
-      - name: Compile Financial Accounting live verifiers
-        if: github.event_name == 'push' && steps.validated_pr.outputs.reuse_validation == 'true'
-        shell: cmd
-        run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
-          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_opening_journal_draft_migration.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_opening_journal_posting_migration.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_cutover_eir_snapshot_migration.py || exit /b 1
-          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_accounting_regular_journal_draft_migration.py || exit /b 1
-
       - name: Report reused pull-request validation
         if: github.event_name == 'push' && steps.validated_pr.outputs.reuse_validation == 'true'
         shell: cmd
         run: |
           echo Reusing successful PR #${{ steps.validated_pr.outputs.validated_pr_number }} validation run ${{ steps.validated_pr.outputs.validated_workflow_run_id }} for exact head ${{ steps.validated_pr.outputs.validated_head_sha }}.
-          echo Main will run only the protected Financial Accounting live verifiers.
+          echo Dedicated financial slice workflows own required live database verification; unified CI does not rerun completed live financial migrations.
 
       - name: Run backend and database tests
         if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
@@ -246,32 +229,3 @@ jobs:
         run: |
           set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_stage5e46a_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
-
-      # Main pushes keep only Financial Accounting live-safety verification.
-      - name: Protected opening-balance journal draft verification
-        if: github.event_name == 'push' && hashFiles('tools/accounting-opening-journal-draft-live-migration.once') != ''
-        shell: cmd
-        run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
-          "%VENV%\Scripts\python.exe" tools\apply_accounting_opening_journal_draft_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
-
-      - name: Protected opening-balance journal posting verification
-        if: github.event_name == 'push' && hashFiles('tools/accounting-opening-journal-posting-live-migration.once') != ''
-        shell: cmd
-        run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
-          "%VENV%\Scripts\python.exe" tools\apply_accounting_opening_journal_posting_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
-
-      - name: Protected cutover EIR snapshot verification
-        if: github.event_name == 'push' && hashFiles('tools/accounting-cutover-eir-snapshot-live-migration.once') != ''
-        shell: cmd
-        run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
-          "%VENV%\Scripts\python.exe" tools\apply_accounting_cutover_eir_snapshot_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
-
-      - name: Protected Regular journal draft verification
-        if: github.event_name == 'push' && hashFiles('tools/accounting-regular-journal-draft-live-migration.once') != ''
-        shell: cmd
-        run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
-          "%VENV%\Scripts\python.exe" tools\apply_accounting_regular_journal_draft_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
