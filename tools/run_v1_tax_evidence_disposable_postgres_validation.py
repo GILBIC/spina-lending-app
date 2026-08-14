@@ -17,6 +17,9 @@ TEST_DATABASE_PREFIX = "spina_v1_tax_"
 BOOTSTRAP_THROUGH = 81
 TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
+    TEST_ROOT / "test_v1_tax_recoverable_credit_migration.py",
+    TEST_ROOT / "test_v1_tax_recoverable_credit_api_contract.py",
+    TEST_ROOT / "test_v1_tax_recoverable_credit_postgres.py",
     TEST_ROOT / "test_v1_tax_recoverable_refund_migration.py",
     TEST_ROOT / "test_v1_tax_recoverable_refund_api_contract.py",
     TEST_ROOT / "test_v1_tax_recoverable_refund_postgres.py",
@@ -66,14 +69,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay the exact "
-            "SPINA schema through A6.1/0081, then apply A6.2 migrations 0082 through 0089 "
+            "SPINA schema through A6.1/0081, then apply A6.2 migrations 0082 through 0090 "
             "inside rollback-isolated tests and prove immutable evidence-backed V1 tax "
             "readiness, protected tax-liability recognition, retained return/payment evidence, "
             "exact settlement, protected pre-close decrease/reversal correction, the protected "
-            "upward additional-tax amendment liability/payment lifecycle, and exact cash-refund "
-            "realization of posted 1130 Tax Recoverable. Tax-credit application remains a separate "
-            "retained-evidence control; closed-period corrections and partial tax payments/recoverable "
-            "realizations remain fail-closed and automatic source posting remains disabled."
+            "upward additional-tax amendment liability/payment lifecycle, exact cash-refund "
+            "realization of posted 1130 Tax Recoverable, and full legally usable same-tax-type "
+            "Tax Recoverable credit application against one exact unpaid retained return. "
+            "Closed-period corrections, partial tax payments, partial/mixed Tax Recoverable "
+            "realizations and automatic source posting remain fail-closed."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -131,7 +135,7 @@ def main() -> int:
             )
         print(
             "V1 tax disposable PostgreSQL validation passed: current schema through 0081 "
-            "upgraded with A6.2 migrations 0082-0089 inside rollback-isolated tests; immutable "
+            "upgraded with A6.2 migrations 0082-0090 inside rollback-isolated tests; immutable "
             "Management-approved rule/transaction evidence, exact DST coordinates, independent "
             "percentage-tax allocation distinct from PFRS/EIR, dedicated 5300/5310 liability "
             "recognition against 2100 Tax Payables, retained exact return composition, immutable "
@@ -141,13 +145,15 @@ def main() -> int:
             "retained amended-return/additional-assessment evidence for an exact upward correction, "
             "delta-only Dr original tax expense / Cr 2100 additional liability recognition, exact "
             "full-revised or additional-delta payment requirements, protected Dr 2100 / Cr 1010 or "
-            "1030 additional-tax settlement, and immutable full cash-refund realization of an exact "
-            "posted 1130 Tax Recoverable through Dr approved 1010/1030 cash-bank / Cr 1130 were proven "
-            "with strict Management API/repository exposure, source/account/period revalidation, "
-            "duplicate-realization protection, retry integrity, manual bypass/reversal rejection and "
-            "forced-audit atomic rollback. Tax-credit application, closed-period correction treatment, "
-            "partial tax payments and partial Tax Recoverable realization remain explicit separate "
-            "controls; automatic source posting remains disabled."
+            "1030 additional-tax settlement, immutable full cash-refund realization of an exact posted "
+            "1130 Tax Recoverable through Dr approved 1010/1030 cash-bank / Cr 1130, and immutable "
+            "full same-tax-type Tax Recoverable credit application against one exact unpaid retained "
+            "return through Dr 2100 Tax Payables / Cr 1130 were proven with strict Management "
+            "API/repository exposure, source/target/account/period revalidation, refund-versus-credit "
+            "and cash-settlement mutual exclusion, retry integrity, manual bypass/reversal rejection "
+            "and forced-audit atomic rollback. Closed-period correction treatment, partial tax payments, "
+            "partial/mixed Tax Recoverable realization and automatic source posting remain explicit "
+            "fail-closed controls."
         )
         return 0
     except psycopg.Error as error:
