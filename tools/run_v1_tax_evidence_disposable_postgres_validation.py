@@ -20,6 +20,9 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_v1_tax_evidence_migration.py",
     TEST_ROOT / "test_v1_tax_evidence_api_contract.py",
     TEST_ROOT / "test_v1_tax_evidence_postgres.py",
+    TEST_ROOT / "test_v1_tax_liability_migration.py",
+    TEST_ROOT / "test_v1_tax_liability_api_contract.py",
+    TEST_ROOT / "test_v1_tax_liability_postgres.py",
 )
 
 
@@ -32,7 +35,7 @@ def _run_tests(test_database_url: str) -> int:
     missing = [str(path) for path in INTEGRATION_TESTS if not path.is_file()]
     if missing:
         raise SystemExit(
-            "V1 tax evidence validation refused: required test file is missing: "
+            "V1 tax validation refused: required test file is missing: "
             + ", ".join(missing)
         )
     env = os.environ.copy()
@@ -51,9 +54,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay the exact "
-            "SPINA schema through A6.1/0081, then apply 0082 only inside rollback-isolated "
-            "tests and prove immutable evidence-backed V1 tax readiness plus protected "
-            "Management API/repository exposure without tax posting."
+            "SPINA schema through A6.1/0081, then apply 0082 and 0083 only inside "
+            "rollback-isolated tests and prove immutable evidence-backed V1 tax readiness, "
+            "strict Management exposure, and exact protected tax-liability General Journal "
+            "preparation/posting while settlement, adjustment/reversal, and automatic source "
+            "posting remain disabled."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -74,7 +79,7 @@ def main() -> int:
     configured_database = base_params["dbname"]
     if configured_database.startswith(TEST_DATABASE_PREFIX):
         raise SystemExit(
-            "V1 tax evidence validation refused: configured database uses the reserved disposable prefix."
+            "V1 tax validation refused: configured database uses the reserved disposable prefix."
         )
 
     admin_url = disposable._conninfo_for_database(base_params, "postgres")
@@ -92,7 +97,7 @@ def main() -> int:
         with psycopg.connect(admin_url, autocommit=True) as admin:
             if disposable._database_exists(admin, test_database):
                 raise SystemExit(
-                    "V1 tax evidence validation refused: generated database already exists."
+                    "V1 tax validation refused: generated database already exists."
                 )
             cleanup_required = True
             admin.execute(
@@ -106,23 +111,26 @@ def main() -> int:
         result = _run_tests(test_url)
         if result != 0:
             raise SystemExit(
-                "V1 tax evidence disposable PostgreSQL validation failed: "
+                "V1 tax disposable PostgreSQL validation failed: "
                 f"tests exited with code {result}."
             )
         print(
-            "V1 tax evidence disposable PostgreSQL validation passed: current schema "
-            "through 0081 upgraded with 0082 inside rollback-isolated tests; immutable "
-            "Management-approved rule evidence, exact DST loan/disbursement/term/rate "
-            "coordinates, independent percentage-tax cash allocation distinct from PFRS/EIR, "
-            "exact retry/supersession, mutation rejection, deterministic readiness blockers "
-            "and strict Management API/repository exposure were proven. Tax posting and "
-            "automatic source posting remained disabled."
+            "V1 tax disposable PostgreSQL validation passed: current schema through 0081 "
+            "upgraded with 0082/0083 inside rollback-isolated tests; immutable Management-"
+            "approved rule and transaction evidence, exact DST coordinates, independent "
+            "percentage-tax cash allocation distinct from PFRS/EIR, strict Management API/"
+            "repository exposure, dedicated 5300/5310 expense accounts, exact Dr tax expense "
+            "/ Cr 2100 Tax Payables General Journal preparation/posting, still-open period and "
+            "account/source revalidation, retry integrity, manual bypass/reversal rejection, "
+            "zero-liability suppression, superseded-posting adjustment review, and forced-audit "
+            "atomic rollback were proven. Tax settlement, tax adjustment/reversal execution, "
+            "and automatic source posting remained disabled."
         )
         return 0
     except psycopg.Error as error:
         primary_error = error
         raise SystemExit(
-            "V1 tax evidence disposable PostgreSQL validation failed: "
+            "V1 tax disposable PostgreSQL validation failed: "
             + str(error).split("CONTEXT:", 1)[0].strip()
         ) from error
     except BaseException as error:
@@ -135,7 +143,7 @@ def main() -> int:
                     disposable._drop_database(admin, test_database)
             except (psycopg.Error, SystemExit) as cleanup_error:
                 message = (
-                    "V1 tax evidence disposable PostgreSQL cleanup failed: "
+                    "V1 tax disposable PostgreSQL cleanup failed: "
                     + str(cleanup_error).split("CONTEXT:", 1)[0].strip()
                 )
                 print(message, file=sys.stderr)
