@@ -1,6 +1,6 @@
 # SPINA V1 evidence-backed tax accounting policy — A6.2
 
-Status: **draft accounting/tax control policy for Master #296 A6.2**. Evidence/readiness, protected liability recognition, evidence-backed tax settlement, and the protected pre-close tax correction/reversal core are represented in the A6.2 branch. Additional-tax amendment payment, later tax-refund/credit realization, and the live-schema/control proof remain incomplete. This document does not itself create a tax return, tax liability, tax payment, tax adjustment, refund, credit, or live legal-book posting. Actual Philippine tax treatment must remain tied to retained current legal/BIR/registration evidence and Management/CPA review at the time of the transaction.
+Status: **draft accounting/tax control policy for Master #296 A6.2**. Evidence/readiness, protected liability recognition, evidence-backed tax settlement, the protected pre-close tax decrease/reversal core, and the protected pre-close additional-tax amendment/payment lifecycle are represented in the A6.2 branch. Tax Recoverable refund/credit realization and the live-schema/control proof remain incomplete. This document does not itself create a tax return, tax liability, tax payment, tax adjustment, refund, credit, or live legal-book posting. Actual Philippine tax treatment must remain tied to retained current legal/BIR/registration evidence and Management/CPA review at the time of the transaction.
 
 ## Scope
 
@@ -25,7 +25,8 @@ Those references are design inputs, not permission for SPINA to assume that a pa
 - The existing General Journal remains the only General Journal; A6.2 creates no parallel tax journal.
 - Management must explicitly review evidence before any protected tax journal is prepared or posted.
 - Posted tax accounting is immutable. Corrections are new protected evidence and new journal events; historical evidence and journals are never rewritten.
-- Closed-period controls apply to tax accounting. The current 0086 correction core deliberately refuses to reopen or silently alter a closed original liability period.
+- Closed-period controls apply to tax accounting. The current pre-close correction paths deliberately refuse to reopen or silently alter a closed original liability period.
+- Partial tax payments remain fail-closed until a separate exact policy/evidence model is approved.
 
 ## Critical separation: PFRS EIR is not automatically the tax gross-receipts base
 
@@ -95,11 +96,11 @@ If a settled return later contains a liability whose evidence became stale, it i
 
 ## Protected pre-close tax correction/reversal core
 
-Migration `0086` introduces the first executable correction layer. It intentionally supports only correction cases whose accounting consequence can be proven from one exact stale posted liability and one exact newer current evidence record for the **same protected source, loan, client and tax type**.
+Migration `0086` introduces the decrease/reversal correction layer. It supports only correction cases whose accounting consequence can be proven from one exact stale posted liability and one exact newer current evidence record for the **same protected source, loan, client and tax type**.
 
 The correction evidence record is immutable and Management-approved. It stores the original liability posting, original and replacement evidence identities, original and replacement tax due, adjustment amount, correction date, retained reference/digest/note, actor/timestamp, and any exact original settlement history. The amount is derived by the protected database function from source evidence; the API does not accept an arbitrary accounting amount.
 
-The replacement evidence must be newer, current, unposted and exact for the same protected source. If those coordinates change before preparation or posting, the adjustment fails closed.
+The replacement evidence must be newer, current and unposted for the same protected source. If those coordinates change before preparation or posting, the adjustment fails closed.
 
 ### Unpaid stale liability — full reversal only
 
@@ -112,7 +113,7 @@ The protected correction journal is exactly:
 
 This journal carries `reversal_of_entry_id` to the exact original V1 tax-liability journal. Manual General Journal reversal remains blocked; the reference is permitted only inside the protected tax-adjustment preparation session.
 
-This core deliberately performs a **full reversal** rather than posting only a delta. After reversal, the exact newer current evidence may proceed through the normal protected liability workflow for its supported amount. That keeps the original wrong liability and its correction explicit rather than mutating history.
+This core performs a full reversal rather than posting only a delta. After reversal, the exact newer current evidence may proceed through the normal protected liability workflow for its supported amount. That keeps the original wrong liability and its correction explicit rather than mutating history.
 
 If payment evidence appears before adjustment preparation/posting, the unpaid reversal path is blocked.
 
@@ -135,21 +136,61 @@ The protected adjustment draft/post lifecycle revalidates the stale original lia
 
 Generic/manual posting is rejected. Adjustment journals and audit rows are immutable. A forced audit failure after the General Journal post must roll the entire statement back so no posted adjustment can exist without its immutable protected audit.
 
-`tax_adjustment_reversal_enabled=true` therefore means **this narrow protected pre-close correction core is enabled**. It does not mean every possible tax amendment/refund case is implemented.
+`tax_adjustment_reversal_enabled=true` means this narrow protected pre-close decrease/reversal core is enabled. It does not mean every tax correction/refund case is implemented.
 
-## Remaining correction boundaries after 0086
+## Protected pre-close additional-tax amendment/payment lifecycle
 
-The following are intentionally **not inferred by the 0086 core** and still require separate retained-evidence workflows before A6.2 is complete:
+Migrations `0087` and `0088` add the evidence-backed upward correction path. This path is intentionally narrow: one exact already-filed V1 return may reserve one stale posted liability whose one exact newer current evidence item proves a **strictly higher** tax amount for the same protected source, loan, client and tax type. Every other liability retained by that filed return must remain exact/current.
 
-1. **Additional tax after filing/payment** — where replacement evidence proves tax greater than the original settled amount. SPINA must retain amended-return/additional-assessment and payment evidence before recognizing/posting the extra payable/payment.
-2. **Refund or tax-credit realization** — `1130 Tax Recoverable` is not cleared merely because it exists. A later refund receipt or legally usable tax-credit application requires retained authority/reference evidence and an exact protected realization/application journal.
-3. **Closed-period corrections** — 0086 refuses to alter a closed original period. Any later-period correction treatment requires an explicit accounting/tax policy rather than silently reopening history.
-4. **Partial tax payments** — remain outside V1 settlement until an explicit policy and exact evidence model are approved.
+Management must retain immutable amended-return or additional-assessment evidence. The database, not the API caller, derives:
 
-These boundaries are deliberate fail-closed controls, not missing automatic behavior.
+- `additional tax due = replacement item tax due − original item tax due`; and
+- `revised declared tax due = original declared tax due + additional tax due`.
+
+The original return, liability journal and any original payment/settlement are never rewritten. The additional liability is a new protected General Journal event while the exact original liability fiscal period remains open:
+
+- **Dr the exact original dedicated `5300` or `5310` tax expense** for the supported delta; and
+- **Cr `2100 Tax Payables`** for the same delta.
+
+The upward amendment path and the `0086` decrease/reversal path are mutually exclusive for the same original liability. The exact replacement evidence is also reserved so the normal liability path cannot create a duplicate full tax liability.
+
+### Filed return not yet paid
+
+If the original filed return has no payment evidence, the amendment evidence records `full_revised_return_unpaid`. Once that amendment is retained, the obsolete base-payment path is blocked. After the additional liability posts, separate additional-payment evidence must prove **the full revised declared tax due**, not merely the delta.
+
+This is intentional: the original return was never paid, so settling only the delta would leave the original payable unpaid.
+
+### Already-settled filed return
+
+If the original return is already fully settled, its historical cash settlement remains unchanged. The amendment evidence records `additional_due_after_settlement`; after the delta liability posts, separate additional-payment evidence must prove exactly the **additional tax due** only.
+
+If original payment evidence exists but its exact protected settlement is not yet posted, the amendment path fails closed rather than guessing whether that payment should be treated as settled.
+
+### Additional-tax payment and settlement
+
+Amendment/assessment evidence is not payment evidence. Migration `0088` requires a separate immutable payment record with exact amount, date, retained payment reference/digest/note and one approved cash/bank account (`1010` or `1030`). Partial payment is not inferred.
+
+The protected additional-tax settlement journal is exactly:
+
+- **Dr `2100 Tax Payables`** for the retained payment requirement; and
+- **Cr the exact approved `1010` or `1030` account** for the same amount.
+
+Preparation and posting revalidate amendment evidence, the posted additional liability, exact original/replacement source coordinates, payment evidence, payable/cash accounts, open payment fiscal period, journal identity and exact two-line balance. Posting requires separate Management permission and exact confirmation digests/amount/accounts/date/period. Generic/manual posting or reversal is rejected, retries are immutable, and forced post-audit failure must roll back atomically.
+
+`tax_additional_amendment_enabled=true` and `tax_additional_settlement_enabled=true` therefore mean this narrow protected upward correction/payment lifecycle is enabled. `tax_refund_credit_realization_enabled=false` remains mandatory until the next protected evidence path exists.
+
+## Remaining correction boundaries after 0088
+
+The following remain deliberately fail-closed before A6.2 can be declared complete:
+
+1. **Refund or tax-credit realization/application** — `1130 Tax Recoverable` is not cleared merely because it exists. A later refund receipt or legally usable tax-credit/application requires retained authority/reference evidence and an exact protected realization/application journal.
+2. **Closed-period corrections** — current correction paths refuse to alter a closed original period. Any later-period correction treatment requires an explicit accounting/tax policy rather than silently reopening history.
+3. **Partial tax payments** — remain outside V1 settlement until an explicit policy and exact evidence model are approved.
+
+These boundaries are deliberate controls, not missing automatic behavior.
 
 ## Gate A versus Gate C
 
-A6.2 software acceptance uses synthetic/disposable tax rule, loan, cash-allocation, liability, return, payment, settlement and adjustment evidence. Installing the capability on the approved live database must create **no** legal tax evidence, liability, return, payment, settlement, adjustment, refund or credit and must preserve existing protected history.
+A6.2 software acceptance uses synthetic/disposable tax rule, loan, cash-allocation, liability, return, payment, settlement, adjustment and amendment evidence. Installing the capability on the approved live database must create **no** legal tax evidence, liability, return, payment, settlement, adjustment, amendment, refund or credit and must preserve existing protected history.
 
-At Gate C, actual tax accounting may post only from the company's actual registration/classification, actual transactions, retained tax calculations/returns/payment/correction evidence, and then-current approved rule evidence.
+At Gate C, actual taxes may be posted only from the company's actual registration/classification, actual transactions, retained tax calculations/returns/payment/correction/amendment evidence, and then-current approved rule evidence.
