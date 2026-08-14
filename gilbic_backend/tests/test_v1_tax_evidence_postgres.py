@@ -220,6 +220,32 @@ def _record_percentage(
     ).fetchone()[0]
 
 
+def _current_schema_posted_7x7_case(connection: psycopg.Connection, suffix: str):
+    """Build a posted 7x7 source without assuming the pre-0067 reversal flag state."""
+    actor_id, loan_id, period_id, transaction_id = x7_posting.draft_helpers._ready_case(
+        connection, suffix
+    )
+    review = x7_posting.draft_helpers._review(connection, transaction_id)
+    assert review is not None and review[15] is True
+    preparation_id = x7_posting.draft_helpers._prepare(connection, actor_id, review)
+    before = x7_posting._posting_status(connection, transaction_id)
+    assert before is not None
+    assert before[0] == preparation_id
+    assert before[1] == transaction_id
+    assert before[2] == loan_id
+    assert before[9] == period_id
+    assert before[17:19] == ("draft", None)
+    assert before[-1] is False
+
+    posting_id = x7_posting._post(connection, actor_id, before)
+    after = x7_posting._posting_status(connection, transaction_id)
+    assert after is not None
+    assert after[22] == posting_id
+    assert after[17] == "posted"
+    assert after[-1] is False
+    return actor_id, loan_id, period_id, transaction_id, after
+
+
 def test_v1_dst_evidence_is_exact_versioned_idempotent_and_readiness_only() -> None:
     assert DATABASE_URL is not None
     suffix = uuid4().hex[:10]
@@ -326,10 +352,9 @@ def test_v1_percentage_tax_requires_independent_cash_allocation_not_eir_and_exac
     with psycopg.connect(DATABASE_URL) as connection:
         try:
             connection.execute(_transaction_body(SQL_0082))
-            actor_id, loan_id, _, transaction_id, before = x7_posting._prepared_case(
+            actor_id, loan_id, _, transaction_id, _ = _current_schema_posted_7x7_case(
                 connection, suffix
             )
-            x7_posting._post(connection, actor_id, before)
 
             collection_date = connection.execute(
                 "SELECT collection_date FROM lending.collection_transactions WHERE id=%s",
@@ -447,5 +472,6 @@ def test_v1_percentage_tax_requires_independent_cash_allocation_not_eir_and_exac
                 """
             ).fetchone()
             assert summary == (True, False, False)
+            assert loan_id is not None
         finally:
             connection.rollback()
