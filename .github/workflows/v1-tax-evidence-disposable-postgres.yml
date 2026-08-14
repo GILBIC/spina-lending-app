@@ -6,6 +6,7 @@ on:
     paths:
       - 'gilbic_backend/sql/0082_add_v1_tax_evidence_readiness.sql'
       - 'gilbic_backend/sql/0083_add_protected_v1_tax_liability_posting.sql'
+      - 'gilbic_backend/sql/0084_harden_v1_tax_liability_preparation.sql'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_evidence_repository.py'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_evidence_api.py'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_liability_repository.py'
@@ -25,6 +26,7 @@ on:
     paths:
       - 'gilbic_backend/sql/0082_add_v1_tax_evidence_readiness.sql'
       - 'gilbic_backend/sql/0083_add_protected_v1_tax_liability_posting.sql'
+      - 'gilbic_backend/sql/0084_harden_v1_tax_liability_preparation.sql'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_evidence_repository.py'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_evidence_api.py'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_liability_repository.py'
