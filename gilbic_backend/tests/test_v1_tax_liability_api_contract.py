@@ -51,7 +51,7 @@ def test_v1_tax_liability_api_exposes_exact_protected_lifecycle_only() -> None:
         assert field in API
     assert "Tax liability amount must use exact currency-cent precision." in API
     assert "Tax settlement" in API
-    assert "adjustment/reversal" in API
+    assert "correction/reversal" in API
 
 
 def test_v1_tax_liability_repository_calls_only_protected_database_functions() -> None:
@@ -60,22 +60,27 @@ def test_v1_tax_liability_repository_calls_only_protected_database_functions() -
         "accounting.post_v1_tax_liability_journal",
     ):
         assert function in REPOSITORY
-    assert "accounting.v1_tax_liability_queue" in REPOSITORY
-    assert "accounting.v1_tax_liability_summary" in REPOSITORY
+    assert "accounting.v1_tax_liability_effective_queue" in REPOSITORY
+    assert "accounting.v1_tax_liability_effective_summary" in REPOSITORY
     assert "insert into accounting.journal_entries" not in REPOSITORY.lower()
     assert "insert into accounting.journal_lines" not in REPOSITORY.lower()
     assert "accounting.post_journal_entry" not in REPOSITORY
 
 
-def test_v1_tax_liability_status_surface_keeps_later_controls_explicitly_separate() -> None:
+def test_v1_tax_liability_status_surface_includes_adjustment_resolution() -> None:
     for status in (
         '"ready"',
         '"prepared"',
         '"posted"',
         '"adjustment_review"',
+        '"adjusted"',
+        '"covered"',
         '"blocked"',
     ):
         assert status in API
+    assert "posted_adjusted_reversed" in REPOSITORY
+    assert "posted_adjusted_recoverable" in REPOSITORY
+    assert "covered_by_settled_adjustment" in REPOSITORY
     assert "protected_tax_liability_posting_enabled" in API
     assert "tax_settlement_enabled" in API
     assert "tax_adjustment_reversal_enabled" in API
