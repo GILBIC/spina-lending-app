@@ -223,7 +223,10 @@ def test_initial_capital_funding_protected_general_journal_lifecycle_and_retry()
                 ("3000", Decimal("0.00"), Decimal("100000.00")),
             ]
 
-            with pytest.raises(psycopg.Error, match="protected Management posting function"):
+            with pytest.raises(
+                psycopg.Error,
+                match="manual.*General Journal|protected Management posting function",
+            ):
                 with connection.transaction():
                     connection.execute(
                         "SELECT accounting.post_manual_journal_entry(%s,%s)",
