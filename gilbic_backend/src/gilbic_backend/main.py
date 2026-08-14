@@ -42,6 +42,7 @@ from .greenfield_regular_renewal_final_reconciliation_api import (
 from .greenfield_regular_renewal_rollforward_api import (
     create_greenfield_regular_renewal_rollforward_router,
 )
+from .initial_capital_funding_api import create_initial_capital_funding_router
 from .loan_disbursement_cancellation_api import (
     create_loan_disbursement_cancellation_router,
 )
@@ -149,6 +150,7 @@ def create_app() -> FastAPI:
     app.include_router(create_ecl_quantitative_measurement_router())
     app.include_router(create_ecl_allowance_posting_router())
     app.include_router(create_ecl_a5_accounting_router())
+    app.include_router(create_initial_capital_funding_router())
     app.include_router(create_opening_balance_workbook_router())
     app.include_router(create_opening_balance_journal_router())
     app.include_router(create_general_journal_router())
