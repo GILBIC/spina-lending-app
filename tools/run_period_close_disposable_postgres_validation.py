@@ -18,6 +18,7 @@ BOOTSTRAP_THROUGH = 90
 TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_period_close_migration.py",
+    TEST_ROOT / "test_period_close_api_contract.py",
     TEST_ROOT / "test_period_close_postgres.py",
 )
 
@@ -50,10 +51,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay the exact "
-            "SPINA schema through A6.2/0090, then apply 0091 only inside rollback-isolated "
-            "tests and prove formal Management period close, exact direct transfer of period "
-            "profit/loss to 3100 Retained Earnings, review-period freeze, closed-period write "
-            "protection, immutable close audit/retry identity and forced-audit atomic rollback. "
+            "SPINA schema through A6.2/0090, then apply A6.3 migrations 0091-0092 only "
+            "inside rollback-isolated tests and prove formal Management period close, exact "
+            "direct transfer of period profit/loss to 3100 Retained Earnings, review-period "
+            "freeze, closed-period write protection, immutable close audit/retry identity, "
+            "forced-audit atomic rollback and strict Management API/repository exposure. "
             "Automatic source posting and period reopening remain disabled."
         )
     )
@@ -112,13 +114,15 @@ def main() -> int:
             )
         print(
             "Period-close disposable PostgreSQL validation passed: current main schema through "
-            "A6.2/0090 was replayed into a fresh loopback-only database; 0091 was applied only "
-            "inside rollback-isolated tests and proved Management-only open-to-review freeze, "
-            "exact income/expense temporary-account closing coordinates, direct transfer of period "
-            "profit/loss to existing 3100 Retained Earnings, deterministic preparation/retry, exact "
-            "review-period close posting, atomic reviewed-to-closed transition, zero-activity close "
-            "without a fake journal, closed-period draft/post/reopen/reversal rejection and forced-"
-            "audit atomic rollback. automatic_source_posting=False and period_reopen_enabled=False."
+            "A6.2/0090 was replayed into a fresh loopback-only database; A6.3 migrations "
+            "0091-0092 were applied only inside rollback-isolated tests and proved Management-only "
+            "open-to-review freeze, exact posted-period balance scoping, exact income/expense "
+            "temporary-account closing coordinates, direct transfer of period profit/loss to existing "
+            "3100 Retained Earnings, deterministic preparation/retry, exact review-period close "
+            "posting, atomic reviewed-to-closed transition, zero-activity close without a fake journal, "
+            "closed-period draft/post/reopen/reversal rejection, forced-audit atomic rollback, and "
+            "strict Management-only queue/prepare/post API exposure through protected database functions. "
+            "automatic_source_posting=False and period_reopen_enabled=False."
         )
         return 0
     except psycopg.Error as error:
