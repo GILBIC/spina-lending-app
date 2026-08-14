@@ -82,7 +82,7 @@ class PostgresV1TaxLiabilityRepository:
                 cursor.execute(
                     f"""
                     SELECT {self._COLUMNS}
-                    FROM accounting.v1_tax_liability_queue
+                    FROM accounting.v1_tax_liability_effective_queue
                     WHERE {where}
                     ORDER BY recognition_date DESC, tax_type, evidence_version DESC
                     LIMIT %s OFFSET %s
@@ -99,7 +99,7 @@ class PostgresV1TaxLiabilityRepository:
                 cursor.execute(
                     f"""
                     SELECT {self._COLUMNS}
-                    FROM accounting.v1_tax_liability_queue
+                    FROM accounting.v1_tax_liability_effective_queue
                     WHERE tax_type=%s AND evidence_id=%s
                     """,
                     (tax_type, evidence_id),
@@ -114,7 +114,9 @@ class PostgresV1TaxLiabilityRepository:
     def summary(self) -> dict[str, object]:
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
-                cursor.execute("SELECT * FROM accounting.v1_tax_liability_summary")
+                cursor.execute(
+                    "SELECT * FROM accounting.v1_tax_liability_effective_summary"
+                )
                 row = cursor.fetchone()
                 if row is None:
                     raise V1TaxLiabilityError(
@@ -180,9 +182,13 @@ class PostgresV1TaxLiabilityRepository:
             "prepared": "accounting_status = 'prepared_not_posted'",
             "posted": "accounting_status = 'posted'",
             "adjustment_review": "accounting_status = 'posted_adjustment_review_required'",
+            "adjusted": "accounting_status LIKE 'posted_adjusted_%'",
+            "covered": "accounting_status = 'covered_by_settled_adjustment'",
             "blocked": (
                 "accounting_status NOT IN "
-                "('evidence_ready','prepared_not_posted','posted','no_liability_required')"
+                "('evidence_ready','prepared_not_posted','posted',"
+                "'no_liability_required','posted_adjusted_reversed',"
+                "'posted_adjusted_recoverable','covered_by_settled_adjustment')"
             ),
         }
         clause = clauses.get(status)
