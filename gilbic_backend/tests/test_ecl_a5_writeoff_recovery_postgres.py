@@ -31,6 +31,7 @@ recovery_helpers = importlib.util.module_from_spec(_recovery_spec)
 _recovery_spec.loader.exec_module(recovery_helpers)
 
 WRITEOFF_POLICY = "ecl_full_writeoff_posting_v1"
+RECOVERY_REVIEW_POLICY = "ecl_post_writeoff_recovery_evidence_review_v1"
 RECOVERY_POLICY = "ecl_post_writeoff_recovery_posting_v1"
 
 
@@ -157,34 +158,20 @@ def _post_writeoff(
 
 
 def _recovery_review(connection: psycopg.Connection, case, transaction_id, suffix: str):
-    actor_id, loan_id = case[0], case[1]
     return connection.execute(
         """
-        SELECT accounting.review_ecl_credit_risk_labels(
-            %s,
-            'stage_3_credit_impaired',
-            true,
-            'none',
-            'cash_recovery_observed',
-            'protected_collection_history',
-            %s,
-            %s,
-            false,
-            false,
-            NULL,
-            NULL,
-            NULL,
-            NULL,
-            %s,
-            %s
+        SELECT accounting.review_ecl_post_writeoff_recovery(
+            %s,%s,%s,%s,10.00,%s,%s,%s
         )
         """,
         (
-            loan_id,
+            case[1],
+            case[0],
+            "d" * 64,
+            transaction_id,
             f"ECLA5-RECOVERY-EVIDENCE-{suffix}",
             "Exact protected same-loan cash was accepted after the completed accounting write-off.",
-            transaction_id,
-            actor_id,
+            RECOVERY_REVIEW_POLICY,
         ),
     ).fetchone()[0]
 
@@ -411,6 +398,54 @@ def test_a5_full_writeoff_and_postwriteoff_recovery_are_exact_idempotent_atomic_
             _assert_postwriteoff_insert_guards(connection, case, recovery_tx)
 
             recovery_review_id = _recovery_review(connection, case, recovery_tx, suffix)
+            assert _recovery_review(connection, case, recovery_tx, suffix) == recovery_review_id
+            with pytest.raises(psycopg.Error, match="immutable retry identity"):
+                with connection.transaction():
+                    connection.execute(
+                        """
+                        SELECT accounting.review_ecl_post_writeoff_recovery(
+                            %s,%s,%s,%s,10.00,%s,%s,%s
+                        )
+                        """,
+                        (
+                            case[1], case[0], "e" * 64, recovery_tx,
+                            f"ECLA5-RECOVERY-EVIDENCE-{suffix}",
+                            "Exact protected same-loan cash was accepted after the completed accounting write-off.",
+                            RECOVERY_REVIEW_POLICY,
+                        ),
+                    )
+
+            provenance = connection.execute(
+                """
+                SELECT writeoff_id, recovery_transaction_id, recovery_amount, policy_version
+                FROM accounting.ecl_post_writeoff_recovery_review_provenance
+                WHERE credit_risk_review_id=%s
+                """,
+                (recovery_review_id,),
+            ).fetchone()
+            assert provenance == (
+                writeoff_id,
+                recovery_tx,
+                Decimal("10.00"),
+                RECOVERY_REVIEW_POLICY,
+            )
+            queue_row = connection.execute(
+                """
+                SELECT credit_risk_review_id, recovery_transaction_id, recovery_amount,
+                       a5_status, automatic_source_posting
+                FROM accounting.ecl_a5_action_queue
+                WHERE loan_id=%s
+                """,
+                (case[1],),
+            ).fetchone()
+            assert queue_row == (
+                recovery_review_id,
+                recovery_tx,
+                Decimal("10.00"),
+                "post_writeoff_recovery_ready",
+                False,
+            )
+
             before_recovery = connection.execute(
                 """
                 SELECT
@@ -493,6 +528,11 @@ def test_a5_full_writeoff_and_postwriteoff_recovery_are_exact_idempotent_atomic_
                 (case[1],),
             ).fetchone()[0] == Decimal("0.00")
 
+            after_queue = connection.execute(
+                "SELECT a5_status, automatic_source_posting FROM accounting.ecl_a5_action_queue WHERE loan_id=%s",
+                (case[1],),
+            ).fetchone()
+            assert after_queue == ("written_off", False)
             summary = connection.execute(
                 "SELECT protected_a5_accounting_enabled, automatic_source_posting FROM accounting.ecl_a5_summary"
             ).fetchone()
