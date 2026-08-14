@@ -26,6 +26,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_ecl_read_only_measurement_postgres.py",
     TEST_ROOT / "test_ecl_allowance_posting_postgres.py",
     TEST_ROOT / "test_ecl_a5_migration.py",
+    TEST_ROOT / "test_ecl_a5_accounting_api_contract.py",
     TEST_ROOT / "test_ecl_a5_remeasurement_postgres.py",
     TEST_ROOT / "test_ecl_a5_writeoff_recovery_postgres.py",
     TEST_ROOT / "test_ecl_live_migration_plan_postgres.py",
@@ -65,7 +66,7 @@ def main() -> int:
             "0075/0076 read-only quantitative ECL measurement/hardening, 0077/0078 "
             "explicit protected initial account-1190 allowance preparation/posting, 0079 "
             "controlled A5 remeasurement/write-off/post-write-off recovery, 0080 fail-closed "
-            "post-write-off boundaries, and the version-aware live upgrade plan."
+            "post-write-off boundaries, protected A5 API contract, and the version-aware live upgrade plan."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -127,7 +128,8 @@ def main() -> int:
             "full write-off and exact same-loan post-write-off cash recovery with exact retry "
             "identity and forced-audit atomic rollback; 0080 proved fail-closed boundaries "
             "against new measurement/allowance activity and normal Regular/7x7 accounting "
-            "after derecognition. Automatic source posting remained disabled."
+            "after derecognition; protected Management API wiring remained explicit and "
+            "automatic source posting remained disabled."
         )
         return 0
     except psycopg.Error as error:
