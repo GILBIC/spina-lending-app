@@ -11,6 +11,7 @@ on:
       - 'gilbic_backend/sql/0086_add_protected_v1_tax_adjustment_reversal.sql'
       - 'gilbic_backend/sql/0087_add_protected_v1_tax_additional_amendment.sql'
       - 'gilbic_backend/sql/0088_add_protected_v1_tax_additional_settlement.sql'
+      - 'gilbic_backend/sql/0089_add_protected_v1_tax_recoverable_refund.sql'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_evidence_repository.py'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_evidence_api.py'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_liability_repository.py'
@@ -21,6 +22,8 @@ on:
       - 'gilbic_backend/src/gilbic_backend/v1_tax_adjustment_api.py'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_additional_amendment_repository.py'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_additional_amendment_api.py'
+      - 'gilbic_backend/src/gilbic_backend/v1_tax_recoverable_refund_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/v1_tax_recoverable_refund_api.py'
       - 'gilbic_backend/src/gilbic_backend/main.py'
       - 'gilbic_backend/tests/test_v1_tax_evidence_migration.py'
       - 'gilbic_backend/tests/test_v1_tax_evidence_api_contract.py'
@@ -37,6 +40,9 @@ on:
       - 'gilbic_backend/tests/test_v1_tax_additional_amendment_migration.py'
       - 'gilbic_backend/tests/test_v1_tax_additional_amendment_api_contract.py'
       - 'gilbic_backend/tests/test_v1_tax_additional_amendment_postgres.py'
+      - 'gilbic_backend/tests/test_v1_tax_recoverable_refund_migration.py'
+      - 'gilbic_backend/tests/test_v1_tax_recoverable_refund_api_contract.py'
+      - 'gilbic_backend/tests/test_v1_tax_recoverable_refund_postgres.py'
       - 'docs/accounting/v1-tax-accounting-policy.md'
       - 'tools/run_v1_tax_evidence_disposable_postgres_validation.py'
       - '.github/workflows/v1-tax-evidence-disposable-postgres.yml'
@@ -50,6 +56,7 @@ on:
       - 'gilbic_backend/sql/0086_add_protected_v1_tax_adjustment_reversal.sql'
       - 'gilbic_backend/sql/0087_add_protected_v1_tax_additional_amendment.sql'
       - 'gilbic_backend/sql/0088_add_protected_v1_tax_additional_settlement.sql'
+      - 'gilbic_backend/sql/0089_add_protected_v1_tax_recoverable_refund.sql'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_evidence_repository.py'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_evidence_api.py'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_liability_repository.py'
@@ -60,6 +67,8 @@ on:
       - 'gilbic_backend/src/gilbic_backend/v1_tax_adjustment_api.py'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_additional_amendment_repository.py'
       - 'gilbic_backend/src/gilbic_backend/v1_tax_additional_amendment_api.py'
+      - 'gilbic_backend/src/gilbic_backend/v1_tax_recoverable_refund_repository.py'
+      - 'gilbic_backend/src/gilbic_backend/v1_tax_recoverable_refund_api.py'
       - 'gilbic_backend/src/gilbic_backend/main.py'
       - 'gilbic_backend/tests/test_v1_tax_evidence_migration.py'
       - 'gilbic_backend/tests/test_v1_tax_evidence_api_contract.py'
@@ -76,6 +85,9 @@ on:
       - 'gilbic_backend/tests/test_v1_tax_additional_amendment_migration.py'
       - 'gilbic_backend/tests/test_v1_tax_additional_amendment_api_contract.py'
       - 'gilbic_backend/tests/test_v1_tax_additional_amendment_postgres.py'
+      - 'gilbic_backend/tests/test_v1_tax_recoverable_refund_migration.py'
+      - 'gilbic_backend/tests/test_v1_tax_recoverable_refund_api_contract.py'
+      - 'gilbic_backend/tests/test_v1_tax_recoverable_refund_postgres.py'
       - 'docs/accounting/v1-tax-accounting-policy.md'
       - 'tools/run_v1_tax_evidence_disposable_postgres_validation.py'
       - '.github/workflows/v1-tax-evidence-disposable-postgres.yml'
@@ -223,10 +235,15 @@ jobs:
           "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\v1_tax_adjustment_api.py || exit /b 1
           "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\v1_tax_additional_amendment_repository.py || exit /b 1
           "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\v1_tax_additional_amendment_api.py || exit /b 1
+          "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\v1_tax_recoverable_refund_repository.py || exit /b 1
+          "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\v1_tax_recoverable_refund_api.py || exit /b 1
           "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\main.py || exit /b 1
           "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_additional_amendment_migration.py || exit /b 1
           "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_additional_amendment_api_contract.py || exit /b 1
           "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_additional_amendment_postgres.py || exit /b 1
+          "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_recoverable_refund_migration.py || exit /b 1
+          "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_recoverable_refund_api_contract.py || exit /b 1
+          "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_recoverable_refund_postgres.py || exit /b 1
           "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_evidence_migration.py || exit /b 1
           "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_evidence_api_contract.py || exit /b 1
           "%TAX_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_v1_tax_evidence_postgres.py || exit /b 1
