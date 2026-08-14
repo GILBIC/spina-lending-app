@@ -1,10 +1,18 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 from pathlib import Path
 
 import psycopg
+import pytest
 
+
+DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
+pytestmark = pytest.mark.skipif(
+    not DATABASE_URL,
+    reason="GILBIC_TEST_DATABASE_URL is not configured",
+)
 
 TEST_DIR = Path(__file__).resolve().parent
 SOURCE_PATH = TEST_DIR / "test_initial_capital_funding_postgres.py"
