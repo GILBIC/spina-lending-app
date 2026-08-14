@@ -38,6 +38,7 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_v1_tax_settlement_migration.py",
     TEST_ROOT / "test_v1_tax_settlement_api_contract.py",
     TEST_ROOT / "test_v1_tax_settlement_postgres.py",
+    TEST_ROOT / "test_v1_tax_live_verifier_postgres.py",
 )
 
 
@@ -74,8 +75,9 @@ def main() -> int:
             "readiness, protected tax-liability recognition, retained return/payment evidence, "
             "exact settlement, protected pre-close decrease/reversal correction, the protected "
             "upward additional-tax amendment liability/payment lifecycle, exact cash-refund "
-            "realization of posted 1130 Tax Recoverable, and full legally usable same-tax-type "
-            "Tax Recoverable credit application against one exact unpaid retained return. "
+            "realization of posted 1130 Tax Recoverable, full legally usable same-tax-type "
+            "Tax Recoverable credit application against one exact unpaid retained return, and "
+            "the final schema/control-only live installer against an untouched A6.1 database. "
             "Closed-period corrections, partial tax payments, partial/mixed Tax Recoverable "
             "realizations and automatic source posting remain fail-closed."
         )
@@ -146,14 +148,16 @@ def main() -> int:
             "delta-only Dr original tax expense / Cr 2100 additional liability recognition, exact "
             "full-revised or additional-delta payment requirements, protected Dr 2100 / Cr 1010 or "
             "1030 additional-tax settlement, immutable full cash-refund realization of an exact posted "
-            "1130 Tax Recoverable through Dr approved 1010/1030 cash-bank / Cr 1130, and immutable "
-            "full same-tax-type Tax Recoverable credit application against one exact unpaid retained "
-            "return through Dr 2100 Tax Payables / Cr 1130 were proven with strict Management "
-            "API/repository exposure, source/target/account/period revalidation, refund-versus-credit "
-            "and cash-settlement mutual exclusion, retry integrity, manual bypass/reversal rejection "
-            "and forced-audit atomic rollback. Closed-period correction treatment, partial tax payments, "
-            "partial/mixed Tax Recoverable realization and automatic source posting remain explicit "
-            "fail-closed controls."
+            "1130 Tax Recoverable through Dr approved 1010/1030 cash-bank / Cr 1130, immutable full "
+            "same-tax-type Tax Recoverable credit application against one exact unpaid retained return "
+            "through Dr 2100 Tax Payables / Cr 1130, and the exact schema/control-only live installer "
+            "were proven. The installer applied 0082-0090 to a clean A6.1 disposable database while "
+            "preserving operational/accounting history and creating zero tax business evidence or "
+            "General Journal events. Strict Management API/repository exposure, source/target/account/period "
+            "revalidation, refund-versus-credit and cash-settlement mutual exclusion, retry integrity, "
+            "manual bypass/reversal rejection and forced-audit atomic rollback are preserved. "
+            "Closed-period correction treatment, partial tax payments, partial/mixed Tax Recoverable "
+            "realization and automatic source posting remain explicit fail-closed controls."
         )
         return 0
     except psycopg.Error as error:
