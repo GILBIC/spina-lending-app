@@ -2,19 +2,26 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SQL = (ROOT / "sql" / "0091_add_protected_period_close.sql").read_text(encoding="utf-8")
+SQL_0091 = (ROOT / "sql" / "0091_add_protected_period_close.sql").read_text(
+    encoding="utf-8"
+)
+SQL_0092 = (ROOT / "sql" / "0092_harden_period_close_balance_scope.sql").read_text(
+    encoding="utf-8"
+)
+SQL = SQL_0091 + "\n" + SQL_0092
 LOWER = SQL.lower()
 
 
-def test_period_close_migration_is_transactional_management_only_and_explicit() -> None:
-    assert SQL.strip().startswith("BEGIN;")
-    assert SQL.strip().endswith("COMMIT;")
+def test_period_close_migrations_are_transactional_management_only_and_explicit() -> None:
+    for source in (SQL_0091, SQL_0092):
+        assert source.strip().startswith("BEGIN;")
+        assert source.strip().endswith("COMMIT;")
     for permission in (
         "accounting.period.close.prepare",
         "accounting.period.close.post",
     ):
-        assert permission in SQL
-    assert "where role.code = 'management'" in LOWER
+        assert permission in SQL_0091
+    assert "where role.code = 'management'" in SQL_0091.lower()
     assert "require_period_close_management_actor" in LOWER
     assert "automatic_source_posting" in LOWER
     assert "false as period_reopen_enabled" in LOWER
@@ -69,3 +76,14 @@ def test_close_revalidates_balances_and_requires_zero_temporary_accounts() -> No
     assert "true as protected_period_close_enabled" in LOWER
     assert "true as retained_earnings_close_enabled" in LOWER
     assert "true as closed_period_posting_protection_enabled" in LOWER
+
+
+def test_balance_hardening_scopes_only_exact_posted_period_lines() -> None:
+    hardening = SQL_0092.lower()
+    assert "period_close_temporary_balances" in hardening
+    assert "journal.fiscal_period_id = p_period_id" in hardening
+    assert "journal.status = 'posted'" in hardening
+    assert "p_include_period_close or journal.source_type is distinct from 'period_close'" in hardening
+    assert "period_close_temporary_balances(p_period_id, false)" in hardening
+    assert "period_close_temporary_balances(p_period_id, true)" in hardening
+    assert "full join" in hardening
