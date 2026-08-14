@@ -17,6 +17,9 @@ TEST_DATABASE_PREFIX = "spina_v1_tax_"
 BOOTSTRAP_THROUGH = 81
 TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
+    TEST_ROOT / "test_v1_tax_additional_amendment_migration.py",
+    TEST_ROOT / "test_v1_tax_additional_amendment_api_contract.py",
+    TEST_ROOT / "test_v1_tax_additional_amendment_postgres.py",
     TEST_ROOT / "test_v1_tax_adjustment_migration.py",
     TEST_ROOT / "test_v1_tax_adjustment_api_contract.py",
     TEST_ROOT / "test_v1_tax_adjustment_postgres.py",
@@ -60,12 +63,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay the exact "
-            "SPINA schema through A6.1/0081, then apply A6.2 migrations 0082 through 0086 "
+            "SPINA schema through A6.1/0081, then apply A6.2 migrations 0082 through 0088 "
             "inside rollback-isolated tests and prove immutable evidence-backed V1 tax "
             "readiness, protected tax-liability recognition, retained return/payment evidence, "
-            "exact settlement, and the protected pre-close tax correction/reversal core. "
-            "Additional-tax amendment payment and later tax-refund/credit realization remain "
-            "separate retained-evidence controls; automatic source posting remains disabled."
+            "exact settlement, protected pre-close decrease/reversal correction, and the "
+            "protected upward additional-tax amendment liability/payment lifecycle. Tax "
+            "Recoverable refund/credit realization remains a separate retained-evidence control; "
+            "closed-period corrections and partial tax payments remain fail-closed and automatic "
+            "source posting remains disabled."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -123,18 +128,21 @@ def main() -> int:
             )
         print(
             "V1 tax disposable PostgreSQL validation passed: current schema through 0081 "
-            "upgraded with A6.2 migrations 0082-0086 inside rollback-isolated tests; immutable "
+            "upgraded with A6.2 migrations 0082-0088 inside rollback-isolated tests; immutable "
             "Management-approved rule/transaction evidence, exact DST coordinates, independent "
             "percentage-tax allocation distinct from PFRS/EIR, dedicated 5300/5310 liability "
             "recognition against 2100 Tax Payables, retained exact return composition, immutable "
-            "BIR return/payment evidence, approved 1010/1030 payment-cash coordinates, exact Dr "
-            "2100 Tax Payables / Cr approved cash-bank settlement, protected unpaid stale-liability "
+            "BIR return/payment evidence, approved 1010/1030 payment-cash coordinates, exact base "
+            "Dr 2100 Tax Payables / Cr approved cash-bank settlement, protected unpaid stale-liability "
             "full reversal, protected settled-tax decrease recognition through 1130 Tax Recoverable, "
-            "strict Management API/repository exposure, open-original-period/account/source "
-            "revalidation, replacement-evidence duplicate-liability protection, retry integrity, "
-            "manual bypass/reversal rejection and forced-audit atomic rollback were proven. "
-            "Additional-tax amendment payment and tax-refund/credit realization remain explicit "
-            "later evidence controls; automatic source posting remains disabled."
+            "retained amended-return/additional-assessment evidence for an exact upward correction, "
+            "delta-only Dr original tax expense / Cr 2100 additional liability recognition, exact "
+            "full-revised or additional-delta payment requirements, and protected Dr 2100 / Cr 1010 "
+            "or 1030 additional-tax settlement were proven with strict Management API/repository "
+            "exposure, source/account/period revalidation, duplicate-liability protection, retry "
+            "integrity, manual bypass/reversal rejection and forced-audit atomic rollback. Tax "
+            "Recoverable refund/credit realization, closed-period correction treatment and partial "
+            "tax payments remain explicit separate controls; automatic source posting remains disabled."
         )
         return 0
     except psycopg.Error as error:
