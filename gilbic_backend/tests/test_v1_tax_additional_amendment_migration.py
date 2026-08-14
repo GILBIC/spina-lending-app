@@ -84,7 +84,6 @@ def test_additional_payment_and_settlement_are_separate_exact_evidence() -> None
 
 
 def test_new_path_preserves_old_history_and_keeps_refund_auto_posting_disabled() -> None:
-    assert "automatic_source_posting", "migration must retain explicit auto-posting control"
     assert "false as automatic_source_posting" in LOWER_87
     assert "false as automatic_source_posting" in LOWER_88
     assert "false as tax_refund_credit_realization_enabled" in LOWER_88
