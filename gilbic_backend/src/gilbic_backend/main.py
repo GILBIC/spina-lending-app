@@ -63,6 +63,7 @@ from .notification_api import create_notification_router
 from .opening_balance_journal_api import create_opening_balance_journal_router
 from .opening_balance_workbook_api import create_opening_balance_workbook_router
 from .other_area_api import create_other_area_router
+from .period_close_api import create_period_close_router
 from .posting_ready_evidence_review_api import (
     create_posting_ready_evidence_review_router,
 )
@@ -165,6 +166,7 @@ def create_app() -> FastAPI:
     app.include_router(create_v1_tax_additional_amendment_router())
     app.include_router(create_v1_tax_recoverable_refund_router())
     app.include_router(create_v1_tax_recoverable_credit_router())
+    app.include_router(create_period_close_router())
     app.include_router(create_opening_balance_workbook_router())
     app.include_router(create_opening_balance_journal_router())
     app.include_router(create_general_journal_router())
