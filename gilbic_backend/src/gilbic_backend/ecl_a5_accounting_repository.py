@@ -13,6 +13,7 @@ from .database import open_connection
 
 REMEASUREMENT_POLICY = "ecl_allowance_remeasurement_posting_v1"
 WRITEOFF_POLICY = "ecl_full_writeoff_posting_v1"
+RECOVERY_REVIEW_POLICY = "ecl_post_writeoff_recovery_evidence_review_v1"
 RECOVERY_POLICY = "ecl_post_writeoff_recovery_posting_v1"
 
 
@@ -72,7 +73,13 @@ class PostgresEclA5AccountingRepository:
         a5_status, protected_a5_accounting_enabled, automatic_source_posting
     """
 
-    def list_actions(self, *, status: str = "all", limit: int = 100, offset: int = 0) -> tuple[EclA5Action, ...]:
+    def list_actions(
+        self,
+        *,
+        status: str = "all",
+        limit: int = 100,
+        offset: int = 0,
+    ) -> tuple[EclA5Action, ...]:
         where_clause = {
             "all": "true",
             "remeasurement_required": "a5_status = 'remeasurement_required'",
@@ -123,11 +130,17 @@ class PostgresEclA5AccountingRepository:
             ) AS id
             """,
             (
-                measurement_id, actor_user_id, review_token,
-                expected_calculation_digest, expected_prior_allowance,
-                expected_target_allowance, expected_posting_date,
-                expected_fiscal_period_id, expected_credit_loss_expense_account_id,
-                expected_allowance_account_id, policy_version,
+                measurement_id,
+                actor_user_id,
+                review_token,
+                expected_calculation_digest,
+                expected_prior_allowance,
+                expected_target_allowance,
+                expected_posting_date,
+                expected_fiscal_period_id,
+                expected_credit_loss_expense_account_id,
+                expected_allowance_account_id,
+                policy_version,
             ),
         )
 
@@ -158,15 +171,52 @@ class PostgresEclA5AccountingRepository:
             ) AS id
             """,
             (
-                loan_id, actor_user_id, review_token,
-                expected_credit_risk_review_id, expected_measurement_id,
-                expected_calculation_digest, expected_loan_component,
+                loan_id,
+                actor_user_id,
+                review_token,
+                expected_credit_risk_review_id,
+                expected_measurement_id,
+                expected_calculation_digest,
+                expected_loan_component,
                 expected_accrued_interest_component,
-                expected_gross_carrying_amount, expected_allowance_balance,
+                expected_gross_carrying_amount,
+                expected_allowance_balance,
                 expected_loan_receivable_account_id,
                 expected_accrued_interest_account_id,
-                expected_allowance_account_id, expected_posting_date,
-                expected_fiscal_period_id, policy_version,
+                expected_allowance_account_id,
+                expected_posting_date,
+                expected_fiscal_period_id,
+                policy_version,
+            ),
+        )
+
+    def review_post_writeoff_recovery(
+        self,
+        *,
+        loan_id: UUID,
+        actor_user_id: UUID,
+        review_token: str,
+        expected_recovery_transaction_id: UUID,
+        expected_recovery_amount: Decimal,
+        evidence_reference: str,
+        review_note: str,
+        policy_version: str = RECOVERY_REVIEW_POLICY,
+    ) -> int:
+        return self._call_int(
+            """
+            SELECT accounting.review_ecl_post_writeoff_recovery(
+                %s,%s,%s,%s,%s,%s,%s,%s
+            ) AS id
+            """,
+            (
+                loan_id,
+                actor_user_id,
+                review_token,
+                expected_recovery_transaction_id,
+                expected_recovery_amount,
+                evidence_reference,
+                review_note,
+                policy_version,
             ),
         )
 
@@ -191,11 +241,16 @@ class PostgresEclA5AccountingRepository:
             ) AS id
             """,
             (
-                credit_risk_review_id, actor_user_id, review_token,
-                expected_recovery_transaction_id, expected_recovery_amount,
-                expected_posting_date, expected_fiscal_period_id,
+                credit_risk_review_id,
+                actor_user_id,
+                review_token,
+                expected_recovery_transaction_id,
+                expected_recovery_amount,
+                expected_posting_date,
+                expected_fiscal_period_id,
                 expected_cash_account_id,
-                expected_credit_loss_expense_account_id, policy_version,
+                expected_credit_loss_expense_account_id,
+                policy_version,
             ),
         )
 
@@ -211,6 +266,26 @@ class PostgresEclA5AccountingRepository:
                             "Protected A5 accounting action returned no immutable audit id."
                         )
                     result = UUID(str(row["id"]))
+                connection.commit()
+                return result
+        except EclA5AccountingError:
+            raise
+        except psycopg.Error as exc:
+            message = str(exc).split("CONTEXT:", 1)[0].strip()
+            raise EclA5AccountingBlocked(message) from exc
+
+    @staticmethod
+    def _call_int(query: str, params: tuple[object, ...]) -> int:
+        try:
+            with open_connection() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(query, params)
+                    row = cursor.fetchone()
+                    if row is None or row["id"] is None:
+                        raise EclA5AccountingBlocked(
+                            "Protected A5 recovery evidence review returned no immutable review id."
+                        )
+                    result = int(row["id"])
                 connection.commit()
                 return result
         except EclA5AccountingError:
