@@ -81,15 +81,23 @@ def test_v1_tax_settlement_repository_calls_only_protected_database_functions() 
         "accounting.post_v1_tax_settlement_journal",
     ):
         assert function in REPOSITORY
-    assert "accounting.v1_tax_settlement_queue" in REPOSITORY
-    assert "accounting.v1_tax_settlement_summary" in REPOSITORY
+    assert "accounting.v1_tax_settlement_effective_queue" in REPOSITORY
+    assert "accounting.v1_tax_settlement_effective_summary" in REPOSITORY
     assert "insert into accounting.journal_entries" not in REPOSITORY.lower()
     assert "accounting.post_journal_entry" not in REPOSITORY
 
 
-def test_api_keeps_adjustment_reversal_separate_and_auto_posting_off() -> None:
+def test_api_surfaces_adjustment_progress_and_keeps_auto_posting_off() -> None:
+    for status in (
+        '"adjustment_review"',
+        '"adjustment_in_progress"',
+        '"adjusted"',
+    ):
+        assert status in API
     assert "tax_settlement_enabled" in API
     assert "tax_adjustment_reversal_enabled" in API
     assert "automatic_source_posting" in API
-    assert "adjustment/reversal" in API
-    assert "automatic source posting remains disabled" in API
+    assert "tax recoverable" in API.lower()
+    assert "additional-tax amendments" in API.lower()
+    assert "refund/credit realization" in API.lower()
+    assert "automatic source posting remains disabled" in API.lower()
