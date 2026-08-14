@@ -1,6 +1,6 @@
 # SPINA V1 evidence-backed tax accounting policy — A6.2
 
-Status: **draft accounting/tax control policy for Master #296 A6.2**. This document does not create a tax return, tax liability, tax payment, or live legal-book posting. Actual Philippine tax treatment must remain tied to retained current legal/BIR/registration evidence and Management/CPA review at the time of the transaction.
+Status: **draft accounting/tax control policy for Master #296 A6.2**. Evidence/readiness and protected liability-recognition capabilities are now represented in the A6.2 branch, but this document does not itself create a tax return, tax liability, tax payment, or live legal-book posting. Actual Philippine tax treatment must remain tied to retained current legal/BIR/registration evidence and Management/CPA review at the time of the transaction.
 
 ## Scope
 
@@ -90,30 +90,43 @@ For each exact non-voided protected `payment` or `advance` cash transaction incl
 
 No tax is authoritative if the source is voided, the allocation does not reconcile, the tax rule is missing/stale for the transaction date, or the evidence is superseded.
 
-## Protected accounting coordinates planned for A6.2
+## Protected liability accounting coordinates
 
-A6.2 will add dedicated posting accounts through a forward migration rather than rewriting the historical accounting-foundation migration:
+A6.2 adds the dedicated posting accounts through a forward migration rather than rewriting the historical accounting-foundation migration:
 
 - `5300 Percentage / Gross Receipts Tax Expense` — debit;
 - `5310 Documentary Stamp Tax Expense` — debit;
 - existing `2100 Tax Payables` — credit for the exact approved liability.
 
+A positive current tax-evidence item may create only one protected General Journal draft for the exact evidence identity. Preparation revalidates the authoritative source event, current approved tax rule, tax amount, dedicated expense account, `2100 Tax Payables`, and the open fiscal period containing the tax-recognition date. Zero-tax evidence creates no fake zero-value General Journal entry.
+
+Posting requires a separate Management permission and exact confirmation of the evidence digest, tax due, expense/payable account codes, posting date, and fiscal period. The posting function revalidates all source, rule, evidence, account, period, journal and line coordinates inside the same database statement before delegating to the existing protected General Journal posting primitive. The exact journal must remain two balanced lines: debit the dedicated tax expense and credit `2100 Tax Payables`. Generic/manual posting and manual reversal of that protected system journal are rejected.
+
+The protected posting audit is immutable and exact retry identity is required. A forced audit failure after the journal-post operation must roll the entire database statement back so no posted journal can exist without its immutable protected tax-posting audit.
+
+## Evidence/readiness versus liability recognition
+
+Migration `0082` is evidence/readiness only and never posts. It continues to expose `tax_posting_enabled=false` because evidence capture itself is not a posting workflow.
+
+Migration `0083` is a separate protected Management-confirmed liability-recognition capability. It may prepare/post only from positive current evidence that passes every source/rule/period/account revalidation gate. Its queue exposes `protected_tax_liability_posting_enabled=true` while keeping:
+
+- `tax_settlement_enabled=false`;
+- `tax_adjustment_reversal_enabled=false`; and
+- `automatic_source_posting=false`.
+
+A posted liability whose source/rule/evidence is later superseded or otherwise ceases to be current is not mutated. It is surfaced as requiring protected adjustment/reversal review while the newer evidence remains a separate immutable item.
+
+## Settlement remains a later A6.2 control
+
 Tax settlement to BIR, when supported by retained payment/return evidence, will debit `2100 Tax Payables` and credit the exact approved real cash/bank account. Tax settlement must not be treated as another expense after the liability has already been recognized.
 
-## Readiness before posting
-
-The first A6.2 slice is evidence/readiness only. It must expose deterministic blockers and keep tax posting disabled. A later slice in the same A6.2 work may prepare and post only when:
-
-- current source evidence is authoritative and not voided/superseded;
-- the exact approved tax rule is effective for the source date;
-- the tax base, rate, proration (if any), and tax due reconcile;
-- the required fiscal period is open;
-- protected tax expense/payable account identities remain active; and
-- explicit Management confirmation matches the immutable evidence digest.
+No settlement entry is created by the evidence/readiness or liability-recognition migrations. Settlement must have its own retained return/payment evidence, exact liability linkage, cash/bank evidence, Management confirmation, idempotent audit and period controls before it is enabled.
 
 ## Corrections and later filing evidence
 
 A corrected or voided lending source does not silently mutate a prior tax record. The current evidence becomes stale and an explicit protected tax adjustment/reversal evidence event is required before period close. If a return has already been filed or paid, SPINA must retain the amended-return/credit/payment evidence rather than assuming that reversing the lending transaction automatically reverses tax legally.
+
+The liability-recognition queue may flag a posted item as `posted_adjustment_review_required`, but that status is not itself a reversal and does not change General Journal history. The future adjustment/reversal path must preserve the original posting and create a separately audited accounting event.
 
 ## Gate A versus Gate C
 
