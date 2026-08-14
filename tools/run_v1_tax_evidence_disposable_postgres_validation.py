@@ -54,7 +54,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay the exact "
-            "SPINA schema through A6.1/0081, then apply 0082 and 0083 only inside "
+            "SPINA schema through A6.1/0081, then apply 0082, 0083 and 0084 only inside "
             "rollback-isolated tests and prove immutable evidence-backed V1 tax readiness, "
             "strict Management exposure, and exact protected tax-liability General Journal "
             "preparation/posting while settlement, adjustment/reversal, and automatic source "
@@ -116,15 +116,15 @@ def main() -> int:
             )
         print(
             "V1 tax disposable PostgreSQL validation passed: current schema through 0081 "
-            "upgraded with 0082/0083 inside rollback-isolated tests; immutable Management-"
+            "upgraded with 0082/0083/0084 inside rollback-isolated tests; immutable Management-"
             "approved rule and transaction evidence, exact DST coordinates, independent "
             "percentage-tax cash allocation distinct from PFRS/EIR, strict Management API/"
             "repository exposure, dedicated 5300/5310 expense accounts, exact Dr tax expense "
-            "/ Cr 2100 Tax Payables General Journal preparation/posting, still-open period and "
-            "account/source revalidation, retry integrity, manual bypass/reversal rejection, "
-            "zero-liability suppression, superseded-posting adjustment review, and forced-audit "
-            "atomic rollback were proven. Tax settlement, tax adjustment/reversal execution, "
-            "and automatic source posting remained disabled."
+            "/ Cr 2100 Tax Payables General Journal preparation/posting, hardened protected "
+            "source identity, still-open period and account/source revalidation, retry integrity, "
+            "manual bypass/reversal rejection, zero-liability suppression, superseded-posting "
+            "adjustment review, and forced-audit atomic rollback were proven. Tax settlement, "
+            "tax adjustment/reversal execution, and automatic source posting remained disabled."
         )
         return 0
     except psycopg.Error as error:
