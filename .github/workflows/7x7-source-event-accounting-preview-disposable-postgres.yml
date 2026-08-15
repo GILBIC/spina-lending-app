@@ -1,12 +1,16 @@
-name: 7x7 source-event accounting preview disposable PostgreSQL validation
+name: 7x7 source-event and operational parity disposable PostgreSQL validation
 
 on:
   pull_request:
     branches: [main]
     paths:
       - 'gilbic_backend/sql/0064_add_7x7_source_event_accounting_preview.sql'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_operational_allocator.py'
       - 'gilbic_backend/tests/test_7x7_source_event_accounting_preview_migration.py'
       - 'gilbic_backend/tests/test_7x7_source_event_accounting_preview_postgres.py'
+      - 'gilbic_backend/tests/test_seven_by_seven_desktop_server_parity_matrix.py'
+      - 'gilbic_backend/tests/test_seven_by_seven_desktop_server_postgres_parity.py'
+      - 'spina_app/calculation_rules.py'
       - 'tools/run_7x7_source_event_accounting_preview_disposable_postgres_validation.py'
       - 'tools/7x7-source-event-accounting-preview-live-migration.once'
       - '.github/workflows/7x7-source-event-accounting-preview-disposable-postgres.yml'
@@ -14,8 +18,12 @@ on:
     branches: [main]
     paths:
       - 'gilbic_backend/sql/0064_add_7x7_source_event_accounting_preview.sql'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_operational_allocator.py'
       - 'gilbic_backend/tests/test_7x7_source_event_accounting_preview_migration.py'
       - 'gilbic_backend/tests/test_7x7_source_event_accounting_preview_postgres.py'
+      - 'gilbic_backend/tests/test_seven_by_seven_desktop_server_parity_matrix.py'
+      - 'gilbic_backend/tests/test_seven_by_seven_desktop_server_postgres_parity.py'
+      - 'spina_app/calculation_rules.py'
       - 'tools/run_7x7_source_event_accounting_preview_disposable_postgres_validation.py'
       - 'tools/7x7-source-event-accounting-preview-live-migration.once'
       - '.github/workflows/7x7-source-event-accounting-preview-disposable-postgres.yml'
@@ -149,9 +157,13 @@ jobs:
         shell: cmd
         run: |
           "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile tools\run_7x7_source_event_accounting_preview_disposable_postgres_validation.py || exit /b 1
+          "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\seven_by_seven_operational_allocator.py || exit /b 1
+          "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile spina_app\calculation_rules.py || exit /b 1
+          "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_seven_by_seven_desktop_server_parity_matrix.py || exit /b 1
+          "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_seven_by_seven_desktop_server_postgres_parity.py || exit /b 1
           "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_7x7_source_event_accounting_preview_postgres.py || exit /b 1
 
-      - name: Execute protected 7x7 source-event preview proof
+      - name: Execute protected 7x7 source-event and operational parity proof
         shell: cmd
         run: |
           "%X7PREVIEW_VENV%\Scripts\python.exe" tools\run_7x7_source_event_accounting_preview_disposable_postgres_validation.py --database-url-env X7PREVIEW_DATABASE_URL || exit /b 1
