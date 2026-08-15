@@ -82,13 +82,16 @@ class SpinaAuthRepository
       );
     }
 
+    final deviceIdentity = await _loadDeviceIdentity();
     late final http.Response response;
     try {
       response = await _client.post(
         _registerUri,
-        headers: const <String, String>{
+        headers: <String, String>{
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'X-App-Platform': deviceIdentity.platform,
+          'X-App-Version': deviceIdentity.appVersion,
         },
         body: jsonEncode(<String, Object?>{
           'full_name': fullName,
