@@ -183,6 +183,103 @@ void main() {
     expect(refreshed.expiresAt, expiry);
   });
 
+  test('revalidates server role and permission scope on active device', () async {
+    final expiry = DateTime.utc(2030, 1, 2, 3, 4, 5);
+    final client = MockClient((request) async {
+      expect(request.method, 'GET');
+      expect(request.url.path, '/me');
+      expect(request.headers['Authorization'], 'Bearer access-current');
+      expect(
+        request.headers['X-Device-Id'],
+        'gilbic-070707070707070707070707070707070707070707070707',
+      );
+      return http.Response(
+        jsonEncode(<String, Object?>{
+          'success': true,
+          'data': <String, Object?>{
+            'user': <String, Object?>{
+              'id': 'user-1',
+              'username': 'staff.one',
+              'full_name': 'Staff One',
+              'role': 'employee',
+              'permissions': <String>['payroll.view', 'attendance.view'],
+            },
+          },
+        }),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+    final repository = SpinaAuthRepository(
+      client: client,
+      meUri: Uri.parse('https://spina.test/me'),
+      deviceIdentityProvider: testDeviceIdentityProvider(),
+    );
+    final current = UserSession(
+      userId: 'user-1',
+      username: 'staff.one',
+      displayName: 'Staff One',
+      role: AppRole.collector,
+      rawRole: 'collector',
+      accessToken: 'access-current',
+      refreshToken: 'refresh-current',
+      permissions: const <String>['route.view'],
+      expiresAt: expiry,
+    );
+
+    final validated = await repository.validate(current);
+
+    expect(validated.userId, 'user-1');
+    expect(validated.role, AppRole.employee);
+    expect(validated.rawRole, 'employee');
+    expect(
+      validated.permissions,
+      <String>['payroll.view', 'attendance.view'],
+    );
+    expect(validated.accessToken, 'access-current');
+    expect(validated.refreshToken, 'refresh-current');
+    expect(validated.expiresAt, expiry);
+  });
+
+  test('surfaces revoked-device denial during active session validation', () async {
+    final repository = SpinaAuthRepository(
+      client: MockClient((request) async {
+        expect(request.method, 'GET');
+        expect(request.url.path, '/me');
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'detail': 'This device has been revoked.',
+          }),
+          403,
+        );
+      }),
+      meUri: Uri.parse('https://spina.test/me'),
+      deviceIdentityProvider: testDeviceIdentityProvider(),
+    );
+    const current = UserSession(
+      userId: 'collector-1',
+      username: 'collector.one',
+      displayName: 'Collector One',
+      role: AppRole.collector,
+      rawRole: 'collector',
+      accessToken: 'access-current',
+      permissions: <String>['route.view'],
+    );
+
+    await expectLater(
+      repository.validate(current),
+      throwsA(
+        isA<SpinaApiException>()
+            .having((error) => error.statusCode, 'statusCode', 403)
+            .having(
+              (error) => error.message,
+              'message',
+              'This device has been revoked.',
+            ),
+      ),
+    );
+  });
+
   test('supports legacy direct session response', () async {
     final repository = SpinaAuthRepository(
       client: MockClient((request) async {
