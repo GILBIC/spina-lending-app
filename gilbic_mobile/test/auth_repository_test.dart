@@ -280,16 +280,16 @@ void main() {
     );
   });
 
-  test('supports legacy direct session response', () async {
+  test('supports direct session response with canonical role', () async {
     final repository = SpinaAuthRepository(
       client: MockClient((request) async {
         return http.Response(
           jsonEncode(<String, Object?>{
             'session_id': 'legacy-session',
             'account_id': 7,
-            'username': 'manager.one',
-            'full_name': 'Manager One',
-            'role': 'Manager',
+            'username': 'management.one',
+            'full_name': 'Management One',
+            'role': 'Management',
           }),
           200,
         );
@@ -300,7 +300,7 @@ void main() {
     );
 
     final session = await repository.signIn(
-      username: 'manager.one',
+      username: 'management.one',
       password: 'secret',
     );
 
