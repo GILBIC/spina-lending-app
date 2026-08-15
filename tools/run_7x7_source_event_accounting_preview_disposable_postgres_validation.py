@@ -13,9 +13,10 @@ from psycopg import sql
 import run_stage5d17_disposable_postgres_validation as disposable
 
 
+ROOT = Path(__file__).resolve().parents[1]
 TEST_DATABASE_PREFIX = "spina_7x7_source_preview_"
 BOOTSTRAP_THROUGH = 63
-TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
+TEST_ROOT = ROOT / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_seven_by_seven_mobile_collection_postgres.py",
     TEST_ROOT / "test_seven_by_seven_desktop_server_postgres_parity.py",
@@ -40,6 +41,15 @@ def _run_tests(test_database_url: str) -> int:
     for key in disposable.ENDPOINT_ENV_KEYS:
         env.pop(key, None)
     env["GILBIC_TEST_DATABASE_URL"] = test_database_url
+    python_paths = [
+        str(ROOT),
+        str(ROOT / "gilbic_backend" / "src"),
+        str(ROOT / "spina_backend_mobile" / "src"),
+    ]
+    existing_python_path = env.get("PYTHONPATH", "").strip()
+    if existing_python_path:
+        python_paths.append(existing_python_path)
+    env["PYTHONPATH"] = os.pathsep.join(python_paths)
     completed = subprocess.run(
         [sys.executable, "-m", "pytest", "-q", *(str(path) for path in INTEGRATION_TESTS)],
         env=env,
