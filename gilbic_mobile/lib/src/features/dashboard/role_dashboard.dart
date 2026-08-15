@@ -21,6 +21,7 @@ import 'package:gilbic_mobile/src/features/management/management_general_journal
 import 'package:gilbic_mobile/src/features/management/management_loan_operations_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_portfolio_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_opening_balance_journal_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_operational_overview_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
@@ -191,6 +192,16 @@ class RoleDashboard extends StatelessWidget {
       _push(
         context,
         ManagementCollectionVoidPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      );
+      return;
+    }
+    if (session.role == AppRole.management && action == 'management-overview') {
+      _push(
+        context,
+        ManagementOperationalOverviewPage(
           session: session,
           deviceIdentityProvider: deviceIdentityProvider,
         ),
@@ -482,6 +493,12 @@ List<_DashboardModule> _modulesFor(AppRole role) {
         ),
       ],
     AppRole.management => const [
+        _DashboardModule(
+          'Operational Overview',
+          'Clients, loans, collections, custody, renewals, and actionable alerts',
+          Icons.dashboard_outlined,
+          action: 'management-overview',
+        ),
         _DashboardModule(
           'Loan Management',
           'Portfolio, balances, due dates, and renewal processing status',
