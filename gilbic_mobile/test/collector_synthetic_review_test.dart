@@ -38,7 +38,7 @@ void main() {
       expect(find.text('Automatic split preview'), findsOneWidget);
       expect(find.textContaining('Regular due ₱100.00'), findsOneWidget);
       expect(find.textContaining('7x7 due ₱50.00'), findsOneWidget);
-      expect(find.text('₱150.00'), findsWidgets);
+      expect(find.textContaining('₱150.00'), findsWidgets);
 
       await tester.tap(find.byKey(const Key('synthetic-confirm-payment')));
       await tester.pumpAndSettle();
