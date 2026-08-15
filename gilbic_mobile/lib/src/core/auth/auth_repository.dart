@@ -27,22 +27,29 @@ abstract interface class SessionRefreshRepository {
   Future<UserSession> refresh(UserSession session);
 }
 
+abstract interface class SessionValidationRepository {
+  Future<UserSession> validate(UserSession session);
+}
+
 class SpinaAuthRepository
     implements
         AuthRepository,
         ClientRegistrationRepository,
-        SessionRefreshRepository {
+        SessionRefreshRepository,
+        SessionValidationRepository {
   SpinaAuthRepository({
     http.Client? client,
     Uri? registerUri,
     Uri? loginUri,
     Uri? refreshUri,
+    Uri? meUri,
     Uri? logoutUri,
     DeviceIdentityProvider? deviceIdentityProvider,
   })  : _client = client ?? http.Client(),
         _registerUri = registerUri ?? ApiConfig.registerEndpoint,
         _loginUri = loginUri ?? ApiConfig.loginEndpoint,
         _refreshUri = refreshUri ?? ApiConfig.refreshEndpoint,
+        _meUri = meUri ?? ApiConfig.meEndpoint,
         _logoutUri = logoutUri ?? ApiConfig.logoutEndpoint,
         _deviceIdentityProvider =
             deviceIdentityProvider ?? DeviceIdentityProvider();
@@ -51,6 +58,7 @@ class SpinaAuthRepository
   final Uri _registerUri;
   final Uri _loginUri;
   final Uri _refreshUri;
+  final Uri _meUri;
   final Uri _logoutUri;
   final DeviceIdentityProvider _deviceIdentityProvider;
 
@@ -206,6 +214,28 @@ class SpinaAuthRepository
     );
   }
 
+  @override
+  Future<UserSession> validate(UserSession session) async {
+    final deviceIdentity = await _loadDeviceIdentity();
+    late final http.Response response;
+    try {
+      response = await _client.get(
+        _meUri,
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ${session.accessToken}',
+          'X-Device-Id': deviceIdentity.installationId,
+        },
+      );
+    } on Exception {
+      throw const SpinaApiException(
+        'Gilbic could not verify the login session. Check the connection and try again.',
+      );
+    }
+
+    return _validatedSessionFromResponse(response, current: session);
+  }
+
   Future<DeviceIdentity> _loadDeviceIdentity() async {
     try {
       return await _deviceIdentityProvider.load();
@@ -336,6 +366,100 @@ class SpinaAuthRepository
       refreshToken: refreshToken,
       permissions: permissions,
       expiresAt: expiresAt,
+    );
+  }
+
+  UserSession _validatedSessionFromResponse(
+    http.Response response, {
+    required UserSession current,
+  }) {
+    Map<String, dynamic> payload;
+    try {
+      payload = decodeJsonObject(response.body);
+    } on FormatException {
+      throw SpinaApiException(
+        'The SPINA server returned unreadable account data.',
+        statusCode: response.statusCode,
+      );
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw SpinaApiException(
+        response.statusCode == 401
+            ? 'Your login session expired. Sign in again.'
+            : apiErrorMessage(payload, statusCode: response.statusCode),
+        statusCode: response.statusCode,
+      );
+    }
+
+    final data = stringMap(
+      unwrapSpinaData(payload, statusCode: response.statusCode),
+    );
+    final user = stringMap(
+      data['user'] ?? data['account'] ?? data['profile'],
+    );
+    final source = user.isEmpty ? data : user;
+
+    final rawRole = firstNonEmptyString(<Object?>[
+      source['role'],
+      source['user_role'],
+      source['account_role'],
+      data['role'],
+      data['user_role'],
+    ]);
+    final role = rawRole == null ? null : AppRole.fromValue(rawRole);
+    if (role == null) {
+      throw SpinaApiException(
+        rawRole == null
+            ? 'The server did not return an account role.'
+            : 'The role "$rawRole" is not enabled in Gilbic yet.',
+      );
+    }
+
+    final userId = firstNonEmptyString(<Object?>[
+          source['id'],
+          source['user_id'],
+          source['account_id'],
+          data['user_id'],
+          data['account_id'],
+        ]) ??
+        current.userId;
+    if (userId != current.userId) {
+      throw const SpinaApiException(
+        'Your login session is no longer valid. Sign in again.',
+        statusCode: 401,
+      );
+    }
+
+    final returnedUsername = firstNonEmptyString(<Object?>[
+          source['username'],
+          data['username'],
+        ]) ??
+        current.username;
+    final displayName = firstNonEmptyString(<Object?>[
+          source['display_name'],
+          source['full_name'],
+          source['name'],
+          source['username'],
+          data['display_name'],
+          data['full_name'],
+          data['username'],
+        ]) ??
+        current.displayName;
+    final permissions = stringList(
+      source['permissions'] ?? data['permissions'],
+    );
+
+    return UserSession(
+      userId: current.userId,
+      username: returnedUsername,
+      displayName: displayName,
+      role: role,
+      rawRole: rawRole!,
+      accessToken: current.accessToken,
+      refreshToken: current.refreshToken,
+      permissions: permissions,
+      expiresAt: current.expiresAt,
     );
   }
 
