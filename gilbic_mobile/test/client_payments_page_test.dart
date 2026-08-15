@@ -29,6 +29,14 @@ void main() {
     expect(find.text('Valid payments'), findsOneWidget);
     expect(find.text('₱50.00'), findsWidgets);
     expect(find.text('Payment timeline'), findsOneWidget);
+
+    // The direct-GCash entry now sits above the receipt timeline, so scroll the
+    // first lazy-built receipt into view before asserting timeline details.
+    await tester.scrollUntilVisible(
+      find.text('Receipt: GBC-20260806-00000010'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       find.text('Receipt: GBC-20260806-00000010'),
       findsOneWidget,
