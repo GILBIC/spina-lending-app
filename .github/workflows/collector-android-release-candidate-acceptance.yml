@@ -67,6 +67,43 @@ jobs:
     timeout-minutes: 75
 
     steps:
+      - name: Reclaim runner-owned mobile validation disk
+        shell: powershell
+        run: |
+          $ownedPaths = @(
+            "$env:RUNNER_TEMP\spina-collector-android-rc-venv",
+            "$env:RUNNER_TEMP\flutter-3.44.7",
+            "$env:RUNNER_TEMP\pub-cache-collector-rc",
+            "$env:RUNNER_TEMP\gilbic-collector-rc-android-host",
+            "$env:GITHUB_WORKSPACE\gilbic_mobile\build\collector-rc"
+          )
+          foreach ($path in $ownedPaths) {
+            if (Test-Path -LiteralPath $path) {
+              Write-Host "Removing prior acceptance workspace: $path"
+              Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction Stop
+            }
+          }
+
+          $driveName = [System.IO.Path]::GetPathRoot($env:RUNNER_TEMP).Substring(0, 1)
+          $freeBytes = (Get-PSDrive -Name $driveName).Free
+          $freeGb = [math]::Round($freeBytes / 1GB, 2)
+          Write-Host "Free disk after owned-workspace cleanup: $freeGb GB"
+
+          if ($freeBytes -lt 6GB) {
+            $gradleCache = Join-Path $env:USERPROFILE '.gradle\caches'
+            if (Test-Path -LiteralPath $gradleCache) {
+              Write-Warning "Less than 6 GB remains; pruning rebuildable Gradle caches."
+              Remove-Item -LiteralPath $gradleCache -Recurse -Force -ErrorAction Stop
+            }
+            $freeBytes = (Get-PSDrive -Name $driveName).Free
+            $freeGb = [math]::Round($freeBytes / 1GB, 2)
+            Write-Host "Free disk after conditional Gradle-cache cleanup: $freeGb GB"
+          }
+
+          if ($freeBytes -lt 6GB) {
+            throw "Collector Android acceptance requires at least 6 GB free before setup; only $freeGb GB is available. This is runner infrastructure capacity, not a product failure."
+          }
+
       - name: Check out exact release-candidate revision
         uses: actions/checkout@v4
         with:
@@ -149,6 +186,17 @@ jobs:
             test\collector_remittance_page_test.dart ^
             test\remittance_notifications_page_test.dart || exit /b 1
 
+      - name: Verify APK build disk reserve
+        shell: powershell
+        run: |
+          $driveName = [System.IO.Path]::GetPathRoot($env:RUNNER_TEMP).Substring(0, 1)
+          $freeBytes = (Get-PSDrive -Name $driveName).Free
+          $freeGb = [math]::Round($freeBytes / 1GB, 2)
+          Write-Host "Free disk before APK packaging: $freeGb GB"
+          if ($freeBytes -lt 4GB) {
+            throw "Not enough runner disk remains for mandatory APK smoke packaging: $freeGb GB free."
+          }
+
       - name: Package exact release-candidate debug APK
         shell: cmd
         run: |
@@ -175,6 +223,7 @@ jobs:
           copy /y "build\app\outputs\flutter-apk\app-debug.apk" "%APK_OUT%\collector-release-candidate-debug.apk" >nul || exit /b 1
           for %%I in ("%APK_OUT%\collector-release-candidate-debug.apk") do echo RC APK size: %%~zI bytes
           popd
+          rmdir /s /q "%HOST%" || exit /b 1
 
       # The debug APK is smoke evidence only. Its successful local package step above is
       # the acceptance gate; temporary artifact storage exhaustion must not turn a green
@@ -187,6 +236,26 @@ jobs:
           path: gilbic_mobile/build/collector-rc/collector-release-candidate-debug.apk
           if-no-files-found: error
           retention-days: 3
+
+      - name: Clean acceptance-owned runner files
+        if: always()
+        shell: powershell
+        run: |
+          $ownedPaths = @(
+            "$env:RUNNER_TEMP\spina-collector-android-rc-venv",
+            "$env:RUNNER_TEMP\flutter-3.44.7",
+            "$env:RUNNER_TEMP\pub-cache-collector-rc",
+            "$env:RUNNER_TEMP\gilbic-collector-rc-android-host",
+            "$env:GITHUB_WORKSPACE\gilbic_mobile\build\collector-rc"
+          )
+          foreach ($path in $ownedPaths) {
+            if (Test-Path -LiteralPath $path) {
+              Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction Continue
+            }
+          }
+          $driveName = [System.IO.Path]::GetPathRoot($env:RUNNER_TEMP).Substring(0, 1)
+          $freeGb = [math]::Round((Get-PSDrive -Name $driveName).Free / 1GB, 2)
+          Write-Host "Free disk after acceptance cleanup: $freeGb GB"
 
       - name: Require a clean committed source tree
         if: always()
