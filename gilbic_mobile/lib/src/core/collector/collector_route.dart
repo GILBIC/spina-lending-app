@@ -103,6 +103,7 @@ class CollectorRouteEntry {
     this.routeRevision,
     this.canCollectMobile = true,
     this.canEnterPayment = true,
+    this.sevenBySevenMobileEnabled = false,
     this.collectionMessage = '',
     this.contractAllocationEnabled = false,
     this.contractScheduleVerified = false,
@@ -149,6 +150,7 @@ class CollectorRouteEntry {
   final String? routeRevision;
   final bool canCollectMobile;
   final bool canEnterPayment;
+  final bool sevenBySevenMobileEnabled;
   final String collectionMessage;
   final bool contractAllocationEnabled;
   final bool contractScheduleVerified;
@@ -198,6 +200,7 @@ class CollectorRouteEntry {
       'route_revision': routeRevision,
       'can_collect_mobile': canCollectMobile,
       'can_enter_payment': canEnterPayment,
+      'seven_by_seven_mobile_enabled': sevenBySevenMobileEnabled,
       'collection_message': collectionMessage,
       'contract_allocation_enabled': contractAllocationEnabled,
       'contract_schedule_verified': contractScheduleVerified,
@@ -345,6 +348,10 @@ class CollectorRouteEntry {
       canEnterPayment: _boolValue(
         data['can_enter_payment'],
         fallback: true,
+      ),
+      sevenBySevenMobileEnabled: _boolValue(
+        data['seven_by_seven_mobile_enabled'],
+        fallback: false,
       ),
       collectionMessage: firstNonEmptyString(<Object?>[
             data['collection_message'],
