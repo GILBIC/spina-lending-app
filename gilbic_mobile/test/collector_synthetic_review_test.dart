@@ -55,7 +55,10 @@ void main() {
       expect(find.text('Joy Villanueva'), findsOneWidget);
       expect(find.textContaining('Missed 2 payments'), findsOneWidget);
       expect(find.text('Cora Garcia'), findsOneWidget);
-      expect(find.textContaining('Pays every collection day'), findsOneWidget);
+      expect(
+        find.text('GCash: Pays every collection day by GCash.'),
+        findsOneWidget,
+      );
     },
   );
 }
