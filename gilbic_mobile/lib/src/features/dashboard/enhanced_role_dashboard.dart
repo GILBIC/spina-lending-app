@@ -11,6 +11,7 @@ import 'package:gilbic_mobile/src/features/management/management_accounting_meas
 import 'package:gilbic_mobile/src/features/management/management_contract_collection_activation_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_ecl_outcome_review_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_opening_balance_workbook_page.dart';
+import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
 
 class EnhancedRoleDashboard extends StatelessWidget {
   const EnhancedRoleDashboard({
@@ -42,6 +43,17 @@ class EnhancedRoleDashboard extends StatelessWidget {
     );
   }
 
+  void _openNotifications(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => NotificationCenterPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      ),
+    );
+  }
+
   Widget _accountButton(BuildContext context) {
     return Positioned(
       right: 56,
@@ -52,6 +64,21 @@ class EnhancedRoleDashboard extends StatelessWidget {
           tooltip: 'Profile & security',
           onPressed: () => _openAccount(context),
           icon: const Icon(Icons.account_circle_outlined),
+        ),
+      ),
+    );
+  }
+
+  Widget _notificationButton(BuildContext context) {
+    return Positioned(
+      right: 104,
+      top: 0,
+      child: SafeArea(
+        child: IconButton(
+          key: const Key('open-notification-center'),
+          tooltip: 'Notifications',
+          onPressed: () => _openNotifications(context),
+          icon: const Icon(Icons.notifications_outlined),
         ),
       ),
     );
@@ -78,6 +105,7 @@ class EnhancedRoleDashboard extends StatelessWidget {
 
     final layers = <Widget>[
       dashboard,
+      _notificationButton(context),
       _accountButton(context),
     ];
 
@@ -226,12 +254,29 @@ class _DashboardPermissionDenied extends StatelessWidget {
     );
   }
 
+  void _openNotifications(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => NotificationCenterPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('${session.role.label} Access'),
         actions: [
+          IconButton(
+            key: const Key('open-notification-center'),
+            tooltip: 'Notifications',
+            onPressed: () => _openNotifications(context),
+            icon: const Icon(Icons.notifications_outlined),
+          ),
           IconButton(
             key: const Key('open-account-settings'),
             tooltip: 'Profile & security',
@@ -261,8 +306,8 @@ class _DashboardPermissionDenied extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Your current server permissions do not allow this '
-                '${session.role.label} dashboard. You can still review your profile, '
-                'session, and registered devices or sign out.',
+                '${session.role.label} dashboard. You can still review your notifications, '
+                'profile, session, and registered devices or sign out.',
                 textAlign: TextAlign.center,
               ),
             ],
