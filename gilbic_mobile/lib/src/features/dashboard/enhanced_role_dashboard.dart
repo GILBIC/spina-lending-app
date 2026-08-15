@@ -6,6 +6,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_field_home_page.dart';
 import 'package:gilbic_mobile/src/features/dashboard/role_dashboard.dart';
 import 'package:gilbic_mobile/src/features/management/management_accounting_measurement_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_contract_collection_activation_page.dart';
@@ -115,6 +116,20 @@ class EnhancedRoleDashboard extends StatelessWidget {
         session: session,
         onSignOut: onSignOut,
         deviceIdentityProvider: deviceIdentityProvider,
+      );
+    }
+
+    // Collector field work is ledger-first by design. Keep the familiar old
+    // route information hierarchy as the first screen after sign-in and move
+    // secondary tools to a compact field navigation bar.
+    if (session.role == AppRole.collector) {
+      return CollectorFieldHomePage(
+        session: session,
+        onSignOut: onSignOut,
+        collectorRouteLoader: collectorRouteLoader,
+        paymentSubmissionRepository: paymentSubmissionRepository,
+        deviceIdentityProvider: deviceIdentityProvider,
+        collectionDeviceSequence: collectionDeviceSequence,
       );
     }
 
