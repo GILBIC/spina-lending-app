@@ -1,14 +1,8 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
-/// Synthetic-only CA4 review screen.
-///
-/// This page intentionally contains no financial writes. It exists so
-/// Management can review the Collector information hierarchy, old-ledger feel,
-/// combined Regular + 7x7 entry concept, area ordering and master review before
-/// we bind the approved design to authoritative server fields.
+/// Synthetic-only CA4 review screen shown behind a real authenticated Collector
+/// session. No action on this page writes financial data.
 class CollectorSyntheticReviewPage extends StatefulWidget {
   const CollectorSyntheticReviewPage({super.key});
 
@@ -20,30 +14,17 @@ class CollectorSyntheticReviewPage extends StatefulWidget {
 class _CollectorSyntheticReviewPageState
     extends State<CollectorSyntheticReviewPage> {
   int _selectedIndex = 0;
-  final Set<String> _expandedClients = <String>{};
+  final Set<String> _expanded = <String>{};
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(_selectedIndex == 0 ? 'Daily Collection' : 'Master Review'),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: SpinaTheme.brandPinkSoft,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Text(
-              'SYNTHETIC',
-              style: TextStyle(
-                color: SpinaTheme.brandPinkDark,
-                fontWeight: FontWeight.w800,
-                fontSize: 11,
-                letterSpacing: .4,
-              ),
-            ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 14),
+            child: Center(child: _SyntheticBadge()),
           ),
         ],
       ),
@@ -51,18 +32,8 @@ class _CollectorSyntheticReviewPageState
         child: IndexedStack(
           index: _selectedIndex,
           children: [
-            _RouteReview(
-              expandedClients: _expandedClients,
-              onToggleClient: (id) {
-                setState(() {
-                  if (!_expandedClients.add(id)) {
-                    _expandedClients.remove(id);
-                  }
-                });
-              },
-              onCollect: _openCollectionPreview,
-            ),
-            const _MasterReview(),
+            _routeView(context),
+            _masterReview(context),
           ],
         ),
       ),
@@ -76,7 +47,7 @@ class _CollectorSyntheticReviewPageState
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Synthetic review: remittance and extra tools will be wired after the Collector route UI is approved.',
+                'Synthetic review only. Real remittance and tools stay in the authenticated Collector app.',
               ),
             ),
           );
@@ -105,398 +76,36 @@ class _CollectorSyntheticReviewPageState
     );
   }
 
-  Future<void> _openCollectionPreview(_ReviewClient client) async {
-    final controller = TextEditingController(
-      text: client.amountNeededToday.toStringAsFixed(2),
-    );
-    var entered = client.amountNeededToday;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final split = _previewSplit(client, entered);
-            final exact = (entered - client.amountNeededToday).abs() < 0.005;
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  18,
-                  6,
-                  18,
-                  18 + MediaQuery.viewInsetsOf(context).bottom,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        client.name,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${client.area} • ${client.paymentMethodLabel}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 14),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: SpinaTheme.brandPinkSoft,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.auto_awesome_rounded,
-                              color: SpinaTheme.brandPinkDark,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Today the server would recommend ${_money(client.amountNeededToday)} for this client.',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      TextField(
-                        key: const Key('synthetic-client-payment-amount'),
-                        controller: controller,
-                        autofocus: true,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: const InputDecoration(
-                          labelText: 'Amount received from client',
-                          prefixText: '₱ ',
-                        ),
-                        onChanged: (value) {
-                          final parsed = double.tryParse(
-                            value.replaceAll(',', '').trim(),
-                          );
-                          setSheetState(() => entered = parsed ?? 0);
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Automatic split preview',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      if (client.regularDue > 0)
-                        _SplitLine(
-                          label: 'Regular',
-                          due: client.regularDue,
-                          allocated: split.regular,
-                        ),
-                      if (client.sevenBySevenDue > 0) ...[
-                        const SizedBox(height: 8),
-                        _SplitLine(
-                          label: '7x7',
-                          due: client.sevenBySevenDue,
-                          allocated: split.sevenBySeven,
-                        ),
-                      ],
-                      const Divider(height: 24),
-                      Row(
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'Total entered',
-                              style: TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                          Text(
-                            _money(entered),
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: exact
-                              ? const Color(0xFFE9F6F0)
-                              : const Color(0xFFFFF1E2),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Text(
-                          exact
-                              ? 'Exact match. In the real app the server will re-check both loans atomically before saving.'
-                              : 'Amount differs from today\'s recommended total. The real app will ask the server for the exact safe split instead of guessing on the phone.',
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      FilledButton.icon(
-                        key: const Key('synthetic-confirm-payment'),
-                        onPressed: () {
-                          Navigator.pop(sheetContext);
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Synthetic review only — no payment was saved.',
-                              ),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.check_circle_outline_rounded),
-                        label: const Text('Review confirmation'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    controller.dispose();
-  }
-}
-
-class _RouteReview extends StatelessWidget {
-  const _RouteReview({
-    required this.expandedClients,
-    required this.onToggleClient,
-    required this.onCollect,
-  });
-
-  final Set<String> expandedClients;
-  final ValueChanged<String> onToggleClient;
-  final ValueChanged<_ReviewClient> onCollect;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _routeView(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
       children: [
-        const _RouteHeader(),
+        const _RouteSummary(),
         const SizedBox(height: 10),
-        const _AreaOrderStrip(),
+        const _AreaOrder(),
         const SizedBox(height: 10),
-        for (final area in _reviewAreas) ...[
-          _AreaSection(
-            area: area,
-            expandedClients: expandedClients,
-            onToggleClient: onToggleClient,
-            onCollect: onCollect,
-          ),
+        for (final area in _areas) ...[
+          _areaCard(context, area),
           const SizedBox(height: 10),
         ],
         Text(
-          'Old-route structure, modern SPINA styling. Official catch-up amount, GCash terms and combined-loan split will come from the server in the production flow.',
+          'Old ledger structure + modern SPINA styling. Production amounts, catch-up requirements, notes and GCash terms will come from the authoritative backend.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
     );
   }
-}
 
-class _RouteHeader extends StatelessWidget {
-  const _RouteHeader();
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _areaCard(BuildContext context, _Area area) {
+    final left = area.clients.where((client) => !client.completed).length;
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: SpinaTheme.line),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Collector: Myra Santos',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    SizedBox(height: 2),
-                    Text('August 15, 2026 • Online route'),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE9F6F0),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: const Text(
-                  'LIVE',
-                  style: TextStyle(
-                    color: SpinaTheme.success,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Row(
-            children: [
-              Expanded(child: _HeaderStat(value: '18', label: 'Clients')),
-              SizedBox(width: 8),
-              Expanded(child: _HeaderStat(value: '10', label: 'Done')),
-              SizedBox(width: 8),
-              Expanded(child: _HeaderStat(value: '8', label: 'Review')),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Row(
-            children: [
-              Expanded(child: _HeaderStat(value: '₱2,700', label: 'Expected')),
-              SizedBox(width: 8),
-              Expanded(child: _HeaderStat(value: '₱1,600', label: 'Received')),
-              SizedBox(width: 8),
-              Expanded(child: _HeaderStat(value: '₱1,100', label: 'Remaining')),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeaderStat extends StatelessWidget {
-  const _HeaderStat({required this.value, required this.label});
-
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-      decoration: BoxDecoration(
-        color: SpinaTheme.blush,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            maxLines: 1,
-            style: const TextStyle(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AreaOrderStrip extends StatelessWidget {
-  const _AreaOrderStrip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(
-              Icons.format_list_numbered_rounded,
-              size: 18,
-              color: SpinaTheme.brandPinkDark,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              'Area arrangement',
-              style: Theme.of(context)
-                  .textTheme
-                  .labelLarge
-                  ?.copyWith(fontWeight: FontWeight.w800),
-            ),
-          ],
-        ),
-        const SizedBox(height: 7),
-        const SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _OrderChip(number: 1, label: 'BALAYONG'),
-              SizedBox(width: 6),
-              _OrderChip(number: 2, label: 'CALAHAN'),
-              SizedBox(width: 6),
-              _OrderChip(number: 3, label: 'SAN ROQUE'),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _OrderChip extends StatelessWidget {
-  const _OrderChip({required this.number, required this.label});
-
-  final int number;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: SpinaTheme.line),
-      ),
-      child: Text(
-        '$number  $label',
-        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-      ),
-    );
-  }
-}
-
-class _AreaSection extends StatelessWidget {
-  const _AreaSection({
-    required this.area,
-    required this.expandedClients,
-    required this.onToggleClient,
-    required this.onCollect,
-  });
-
-  final _ReviewArea area;
-  final Set<String> expandedClients;
-  final ValueChanged<String> onToggleClient;
-  final ValueChanged<_ReviewClient> onCollect;
-
-  @override
-  Widget build(BuildContext context) {
-    final outstanding = area.clients.where((client) => !client.completed).length;
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: SpinaTheme.line),
-      ),
       clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: SpinaTheme.line),
+      ),
       child: Column(
         children: [
           Container(
@@ -513,84 +122,33 @@ class _AreaSection extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text(
-                  '${area.clients.length} clients • $outstanding left',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                Text('${area.clients.length} clients • $left left'),
               ],
             ),
           ),
           const _LedgerHeader(),
-          for (var index = 0; index < area.clients.length; index++) ...[
-            if (index > 0) const Divider(height: 1),
-            _ClientLedgerRow(
-              sequence: index + 1,
-              client: area.clients[index],
-              expanded: expandedClients.contains(area.clients[index].id),
-              onToggle: () => onToggleClient(area.clients[index].id),
-              onCollect: () => onCollect(area.clients[index]),
-            ),
+          for (var i = 0; i < area.clients.length; i++) ...[
+            if (i > 0) const Divider(height: 1),
+            _clientRow(context, area.clients[i], i + 1),
           ],
         ],
       ),
     );
   }
-}
 
-class _LedgerHeader extends StatelessWidget {
-  const _LedgerHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w800,
-        );
-    return Container(
-      padding: const EdgeInsets.fromLTRB(38, 6, 7, 6),
-      color: const Color(0xFFFFFAFC),
-      child: Row(
-        children: [
-          Expanded(flex: 3, child: Text('CLIENT / STATUS', style: style)),
-          SizedBox(
-            width: 58,
-            child: Text('REG', style: style, textAlign: TextAlign.center),
-          ),
-          SizedBox(
-            width: 50,
-            child: Text('7x7', style: style, textAlign: TextAlign.center),
-          ),
-          SizedBox(
-            width: 58,
-            child: Text('TODAY', style: style, textAlign: TextAlign.center),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ClientLedgerRow extends StatelessWidget {
-  const _ClientLedgerRow({
-    required this.sequence,
-    required this.client,
-    required this.expanded,
-    required this.onToggle,
-    required this.onCollect,
-  });
-
-  final int sequence;
-  final _ReviewClient client;
-  final bool expanded;
-  final VoidCallback onToggle;
-  final VoidCallback onCollect;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _clientRow(BuildContext context, _Client client, int sequence) {
+    final expanded = _expanded.contains(client.id);
     return Column(
       children: [
         InkWell(
           key: Key('synthetic-client-${client.id}'),
-          onTap: onToggle,
+          onTap: () {
+            setState(() {
+              if (!_expanded.add(client.id)) {
+                _expanded.remove(client.id);
+              }
+            });
+          },
           child: Padding(
             padding: const EdgeInsets.fromLTRB(8, 9, 7, 8),
             child: Row(
@@ -598,13 +156,9 @@ class _ClientLedgerRow extends StatelessWidget {
               children: [
                 SizedBox(
                   width: 30,
-                  child: Text(
-                    '$sequence.',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
+                  child: Text('$sequence.', style: const TextStyle(fontWeight: FontWeight.w700)),
                 ),
                 Expanded(
-                  flex: 3,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -619,49 +173,24 @@ class _ClientLedgerRow extends StatelessWidget {
                         spacing: 4,
                         runSpacing: 4,
                         children: [
-                          _StatusChip(
-                            label: client.primaryStatus,
-                            tone: client.statusTone,
-                          ),
-                          if (client.missedPayments > 0)
-                            _StatusChip(
-                              label: 'MISSED ${client.missedPayments}',
-                              tone: _ChipTone.danger,
-                            ),
+                          _StatusChip(label: client.status, tone: client.tone),
+                          if (client.missed > 0)
+                            _StatusChip(label: 'MISSED ${client.missed}', tone: _Tone.danger),
                           if (client.gcashTerm != null)
-                            const _StatusChip(
-                              label: 'GCASH',
-                              tone: _ChipTone.info,
-                            ),
+                            const _StatusChip(label: 'GCASH', tone: _Tone.info),
                         ],
                       ),
                     ],
                   ),
                 ),
+                _AmountColumn(value: client.regularDue),
+                _AmountColumn(value: client.sevenBySevenDue, width: 50),
                 SizedBox(
-                  width: 58,
-                  child: Text(
-                    client.regularDue <= 0 ? '—' : _moneyShort(client.regularDue),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                SizedBox(
-                  width: 50,
-                  child: Text(
-                    client.sevenBySevenDue <= 0
-                        ? '—'
-                        : _moneyShort(client.sevenBySevenDue),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-                SizedBox(
-                  width: 58,
+                  width: 62,
                   child: Column(
                     children: [
                       Text(
-                        _moneyShort(client.amountNeededToday),
+                        _shortMoney(client.today),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
@@ -670,10 +199,7 @@ class _ClientLedgerRow extends StatelessWidget {
                               : SpinaTheme.brandPinkDark,
                         ),
                       ),
-                      Icon(
-                        expanded ? Icons.expand_less : Icons.expand_more,
-                        size: 19,
-                      ),
+                      Icon(expanded ? Icons.expand_less : Icons.expand_more, size: 18),
                     ],
                   ),
                 ),
@@ -694,42 +220,33 @@ class _ClientLedgerRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _DetailLine(label: 'Term', value: client.termLabel),
-                _DetailLine(label: 'Due', value: client.dueLabel),
+                _Detail(label: 'Term', value: client.term),
+                _Detail(label: 'Due', value: client.due),
                 if (client.gcashTerm != null)
-                  _DetailLine(label: 'GCash term', value: client.gcashTerm!),
+                  _Detail(label: 'GCash term', value: client.gcashTerm!),
                 if (client.note.isNotEmpty)
-                  _DetailLine(label: 'Note', value: client.note),
-                if (client.catchUpLabel != null)
-                  _DetailLine(label: 'Catch-up', value: client.catchUpLabel!),
-                if (client.advanceLabel != null)
-                  _DetailLine(label: 'Advance', value: client.advanceLabel!),
+                  _Detail(label: 'Note', value: client.note),
+                if (client.catchUp != null)
+                  _Detail(label: 'Catch-up', value: client.catchUp!),
+                if (client.advance != null)
+                  _Detail(label: 'Advance', value: client.advance!),
                 const SizedBox(height: 8),
                 if (!client.completed)
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
                       key: Key('synthetic-collect-${client.id}'),
-                      onPressed: onCollect,
+                      onPressed: () => _openSplitPreview(client),
                       icon: const Icon(Icons.payments_outlined, size: 18),
-                      label: Text(
-                        'Collect ${_money(client.amountNeededToday)}',
-                      ),
+                      label: Text('Collect ${_money(client.today)}'),
                     ),
                   )
                 else
                   const Row(
                     children: [
-                      Icon(
-                        Icons.check_circle_rounded,
-                        color: SpinaTheme.success,
-                        size: 20,
-                      ),
+                      Icon(Icons.check_circle_rounded, color: SpinaTheme.success, size: 20),
                       SizedBox(width: 7),
-                      Text(
-                        'Collection complete for today',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
+                      Text('Collection complete for today', style: TextStyle(fontWeight: FontWeight.w700)),
                     ],
                   ),
               ],
@@ -738,57 +255,109 @@ class _ClientLedgerRow extends StatelessWidget {
       ],
     );
   }
-}
 
-class _DetailLine extends StatelessWidget {
-  const _DetailLine({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: RichText(
-        text: TextSpan(
-          style: Theme.of(context).textTheme.bodySmall,
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-            TextSpan(text: value),
-          ],
-        ),
-      ),
+  Future<void> _openSplitPreview(_Client client) async {
+    final controller = TextEditingController(text: client.today.toStringAsFixed(2));
+    var entered = client.today;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final regular = entered < client.regularDue ? entered : client.regularDue;
+            final remaining = entered - regular > 0 ? entered - regular : 0.0;
+            final seven = remaining < client.sevenBySevenDue
+                ? remaining
+                : client.sevenBySevenDue;
+            final exact = (entered - client.today).abs() < 0.005;
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  18,
+                  8,
+                  18,
+                  18 + MediaQuery.viewInsetsOf(context).bottom,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(client.name, style: Theme.of(context).textTheme.headlineSmall),
+                      const SizedBox(height: 4),
+                      Text('${client.area} • ${client.gcashTerm == null ? 'Cash' : 'GCash'}'),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: SpinaTheme.brandPinkSoft,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          'Today the server would recommend ${_money(client.today)} for this client.',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        key: const Key('synthetic-client-payment-amount'),
+                        controller: controller,
+                        autofocus: true,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Amount received from client',
+                          prefixText: '₱ ',
+                        ),
+                        onChanged: (value) {
+                          final parsed = double.tryParse(value.replaceAll(',', '').trim());
+                          setSheetState(() => entered = parsed ?? 0);
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      Text('Automatic split preview', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      if (client.regularDue > 0)
+                        _SplitLine(label: 'Regular', due: client.regularDue, allocated: regular),
+                      if (client.sevenBySevenDue > 0) ...[
+                        const SizedBox(height: 8),
+                        _SplitLine(label: '7x7', due: client.sevenBySevenDue, allocated: seven),
+                      ],
+                      const SizedBox(height: 10),
+                      Text(
+                        exact
+                            ? 'Exact match. Production will re-check both loans atomically on the server before saving.'
+                            : 'Different amount. Production will ask the server for the exact safe allocation instead of guessing on the phone.',
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton.icon(
+                        key: const Key('synthetic-confirm-payment'),
+                        onPressed: () {
+                          Navigator.pop(sheetContext);
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            const SnackBar(content: Text('Synthetic review only — no payment was saved.')),
+                          );
+                        },
+                        icon: const Icon(Icons.check_circle_outline_rounded),
+                        label: const Text('Review confirmation'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
+    controller.dispose();
   }
-}
 
-class _MasterReview extends StatelessWidget {
-  const _MasterReview();
-
-  @override
-  Widget build(BuildContext context) {
-    final allClients = _reviewAreas
-        .expand((area) => area.clients)
-        .toList(growable: false);
-    final notFinished = allClients
-        .where((client) => !client.completed)
-        .toList(growable: false);
-    final attention = notFinished
-        .where(
-          (client) =>
-              client.missedPayments > 0 ||
-              client.gcashTerm != null ||
-              client.statusTone == _ChipTone.danger ||
-              client.statusTone == _ChipTone.warning,
-        )
-        .toList(growable: false);
-
+  Widget _masterReview(BuildContext context) {
+    final clients = _areas.expand((area) => area.clients).toList(growable: false);
+    final open = clients.where((client) => !client.completed).toList(growable: false);
+    final attention = open.where((client) => client.missed > 0 || client.gcashTerm != null).length;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
       children: [
         Container(
           padding: const EdgeInsets.all(16),
@@ -801,67 +370,40 @@ class _MasterReview extends StatelessWidget {
             children: [
               Text(
                 'All-area collection check',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: SpinaTheme.brandPinkDark,
-                    ),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: SpinaTheme.brandPinkDark),
               ),
               const SizedBox(height: 5),
-              const Text(
-                'Before leaving the route, review everyone who is not complete across every assigned area.',
-              ),
-              const SizedBox(height: 14),
+              const Text('Before leaving the route, review everyone who is not complete across every assigned area.'),
+              const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(
-                    child: _MasterStat(
-                      value: '${notFinished.length}',
-                      label: 'Not complete',
-                    ),
-                  ),
+                  Expanded(child: _MasterStat(value: '${open.length}', label: 'Not complete')),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: _MasterStat(
-                      value: '${attention.length}',
-                      label: 'Needs attention',
-                    ),
-                  ),
+                  Expanded(child: _MasterStat(value: '$attention', label: 'Needs attention')),
                   const SizedBox(width: 8),
-                  const Expanded(
-                    child: _MasterStat(value: '2', label: 'GCash pending'),
-                  ),
+                  const Expanded(child: _MasterStat(value: '2', label: 'GCash pending')),
                 ],
               ),
             ],
           ),
         ),
         const SizedBox(height: 14),
-        Text(
-          'Area completion',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Area completion', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        for (final area in _reviewAreas) ...[
-          _AreaReviewCard(area: area),
+        for (final area in _areas) ...[
+          _AreaProgress(area: area),
           const SizedBox(height: 8),
         ],
         const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(
-              child: Text(
-                'Who still needs action',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-            Text(
-              '${notFinished.length} clients',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            Expanded(child: Text('Who still needs action', style: Theme.of(context).textTheme.titleMedium)),
+            Text('${open.length} clients'),
           ],
         ),
         const SizedBox(height: 8),
-        for (final client in notFinished) ...[
-          _OutstandingClientCard(client: client),
+        for (final client in open) ...[
+          _Outstanding(client: client),
           const SizedBox(height: 8),
         ],
       ],
@@ -869,208 +411,150 @@ class _MasterReview extends StatelessWidget {
   }
 }
 
-class _MasterStat extends StatelessWidget {
-  const _MasterStat({required this.value, required this.label});
+class _SyntheticBadge extends StatelessWidget {
+  const _SyntheticBadge();
 
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(color: SpinaTheme.brandPinkSoft, borderRadius: BorderRadius.circular(999)),
+      child: const Text('SYNTHETIC', style: TextStyle(color: SpinaTheme.brandPinkDark, fontWeight: FontWeight.w900, fontSize: 10)),
+    );
+  }
+}
+
+class _RouteSummary extends StatelessWidget {
+  const _RouteSummary();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: SpinaTheme.line)),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Collector: Myra Santos', style: TextStyle(fontWeight: FontWeight.w900)),
+          Text('August 15, 2026 • Online route'),
+          SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: _SummaryTile(value: '18', label: 'Clients')),
+              SizedBox(width: 6),
+              Expanded(child: _SummaryTile(value: '10', label: 'Done')),
+              SizedBox(width: 6),
+              Expanded(child: _SummaryTile(value: '8', label: 'Review')),
+            ],
+          ),
+          SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(child: _SummaryTile(value: '₱2,700', label: 'Expected')),
+              SizedBox(width: 6),
+              Expanded(child: _SummaryTile(value: '₱1,600', label: 'Received')),
+              SizedBox(width: 6),
+              Expanded(child: _SummaryTile(value: '₱1,100', label: 'Remaining')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryTile extends StatelessWidget {
+  const _SummaryTile({required this.value, required this.label});
   final String value;
   final String label;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: Theme.of(context)
-                .textTheme
-                .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w900),
-          ),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.labelSmall,
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 5),
+      decoration: BoxDecoration(color: SpinaTheme.blush, borderRadius: BorderRadius.circular(12)),
+      child: Column(children: [Text(value, maxLines: 1, style: const TextStyle(fontWeight: FontWeight.w900)), Text(label, style: Theme.of(context).textTheme.labelSmall)]),
     );
   }
 }
 
-class _AreaReviewCard extends StatelessWidget {
-  const _AreaReviewCard({required this.area});
-
-  final _ReviewArea area;
+class _AreaOrder extends StatelessWidget {
+  const _AreaOrder();
 
   @override
   Widget build(BuildContext context) {
-    final done = area.clients.where((client) => client.completed).length;
-    final remaining = area.clients.length - done;
-    final progress = area.clients.isEmpty ? 0.0 : done / area.clients.length;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SpinaTheme.line),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  area.name,
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                ),
-              ),
-              Text('$done/${area.clients.length} done • $remaining left'),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Area arrangement', style: TextStyle(fontWeight: FontWeight.w900)),
+        const SizedBox(height: 6),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _areas.indexed.map((entry) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Chip(label: Text('${entry.$1 + 1}  ${entry.$2.name}')),
+              );
+            }).toList(growable: false),
           ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(value: progress),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-class _OutstandingClientCard extends StatelessWidget {
-  const _OutstandingClientCard({required this.client});
-
-  final _ReviewClient client;
+class _LedgerHeader extends StatelessWidget {
+  const _LedgerHeader();
 
   @override
   Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900);
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SpinaTheme.line),
-      ),
+      color: const Color(0xFFFFFAFC),
+      padding: const EdgeInsets.fromLTRB(38, 6, 7, 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: client.missedPayments > 0
-                  ? const Color(0xFFFFE7E4)
-                  : SpinaTheme.brandPinkSoft,
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: Icon(
-              client.missedPayments > 0
-                  ? Icons.priority_high_rounded
-                  : Icons.person_outline_rounded,
-              color: client.missedPayments > 0
-                  ? Theme.of(context).colorScheme.error
-                  : SpinaTheme.brandPinkDark,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  client.name,
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${client.area} • ${client.primaryStatus}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                if (client.catchUpLabel != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    client.catchUpLabel!,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF9A4D12),
-                    ),
-                  ),
-                ],
-                if (client.gcashTerm != null) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    'GCash: ${client.gcashTerm}',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ],
-                if (client.note.isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Text('Note: ${client.note}'),
-                ],
-              ],
-            ),
-          ),
-          Text(
-            _money(client.amountNeededToday),
-            style: const TextStyle(
-              color: SpinaTheme.brandPinkDark,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          Expanded(child: Text('CLIENT / STATUS', style: style)),
+          SizedBox(width: 58, child: Text('REG', style: style, textAlign: TextAlign.center)),
+          SizedBox(width: 50, child: Text('7x7', style: style, textAlign: TextAlign.center)),
+          SizedBox(width: 62, child: Text('TODAY', style: style, textAlign: TextAlign.center)),
         ],
       ),
     );
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label, required this.tone});
-
-  final String label;
-  final _ChipTone tone;
+class _AmountColumn extends StatelessWidget {
+  const _AmountColumn({required this.value, this.width = 58});
+  final double value;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
-    final colors = switch (tone) {
-      _ChipTone.good => (const Color(0xFFE8F6EF), SpinaTheme.success),
-      _ChipTone.warning => (const Color(0xFFFFF0DE), const Color(0xFF97510D)),
-      _ChipTone.danger => (
-          const Color(0xFFFFE7E4),
-          Theme.of(context).colorScheme.error,
-        ),
-      _ChipTone.info => (const Color(0xFFE9F1FF), const Color(0xFF315C9B)),
-      _ChipTone.neutral => (const Color(0xFFF2EDF0), SpinaTheme.inkMuted),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: colors.$1,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: colors.$2,
-          fontWeight: FontWeight.w800,
-          fontSize: 10,
-        ),
-      ),
+    return SizedBox(
+      width: width,
+      child: Text(value <= 0 ? '—' : _shortMoney(value), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700)),
+    );
+  }
+}
+
+class _Detail extends StatelessWidget {
+  const _Detail({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Text('$label: $value', style: Theme.of(context).textTheme.bodySmall),
     );
   }
 }
 
 class _SplitLine extends StatelessWidget {
-  const _SplitLine({
-    required this.label,
-    required this.due,
-    required this.allocated,
-  });
-
+  const _SplitLine({required this.label, required this.due, required this.allocated});
   final String label;
   final double due;
   final double allocated;
@@ -1079,57 +563,140 @@ class _SplitLine extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFAFC),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: SpinaTheme.line),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFFFFFAFC), borderRadius: BorderRadius.circular(14), border: Border.all(color: SpinaTheme.line)),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              '$label due ${_money(due)}',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-          Text(
-            _money(allocated),
-            style: const TextStyle(
-              color: SpinaTheme.brandPinkDark,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          Expanded(child: Text('$label due ${_money(due)}', style: const TextStyle(fontWeight: FontWeight.w700))),
+          Text(_money(allocated), style: const TextStyle(color: SpinaTheme.brandPinkDark, fontWeight: FontWeight.w900)),
         ],
       ),
     );
   }
 }
 
-class _ReviewArea {
-  const _ReviewArea({required this.name, required this.clients});
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.label, required this.tone});
+  final String label;
+  final _Tone tone;
 
-  final String name;
-  final List<_ReviewClient> clients;
+  @override
+  Widget build(BuildContext context) {
+    final bg = switch (tone) {
+      _Tone.good => const Color(0xFFE8F6EF),
+      _Tone.warning => const Color(0xFFFFF0DE),
+      _Tone.danger => const Color(0xFFFFE7E4),
+      _Tone.info => const Color(0xFFE9F1FF),
+    };
+    final fg = switch (tone) {
+      _Tone.good => SpinaTheme.success,
+      _Tone.warning => const Color(0xFF97510D),
+      _Tone.danger => Theme.of(context).colorScheme.error,
+      _Tone.info => const Color(0xFF315C9B),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+      child: Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.w900, fontSize: 10)),
+    );
+  }
 }
 
-class _ReviewClient {
-  const _ReviewClient({
+class _MasterStat extends StatelessWidget {
+  const _MasterStat({required this.value, required this.label});
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+      child: Column(children: [Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20)), Text(label, textAlign: TextAlign.center, style: Theme.of(context).textTheme.labelSmall)]),
+    );
+  }
+}
+
+class _AreaProgress extends StatelessWidget {
+  const _AreaProgress({required this.area});
+  final _Area area;
+
+  @override
+  Widget build(BuildContext context) {
+    final done = area.clients.where((client) => client.completed).length;
+    final progress = area.clients.isEmpty ? 0.0 : done / area.clients.length;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(children: [Expanded(child: Text(area.name, style: const TextStyle(fontWeight: FontWeight.w900))), Text('$done/${area.clients.length} done • ${area.clients.length - done} left')]),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(value: progress),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Outstanding extends StatelessWidget {
+  const _Outstanding({required this.client});
+  final _Client client;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(client.missed > 0 ? Icons.priority_high_rounded : Icons.person_outline_rounded, color: client.missed > 0 ? Theme.of(context).colorScheme.error : SpinaTheme.brandPinkDark),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(client.name, style: const TextStyle(fontWeight: FontWeight.w900)),
+                  Text('${client.area} • ${client.status}'),
+                  if (client.catchUp != null) Text(client.catchUp!, style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF9A4D12))),
+                  if (client.gcashTerm != null) Text('GCash: ${client.gcashTerm}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                  if (client.note.isNotEmpty) Text('Note: ${client.note}'),
+                ],
+              ),
+            ),
+            Text(_money(client.today), style: const TextStyle(color: SpinaTheme.brandPinkDark, fontWeight: FontWeight.w900)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Area {
+  const _Area(this.name, this.clients);
+  final String name;
+  final List<_Client> clients;
+}
+
+class _Client {
+  const _Client({
     required this.id,
     required this.name,
     required this.area,
     required this.regularDue,
     required this.sevenBySevenDue,
-    required this.amountNeededToday,
-    required this.primaryStatus,
-    required this.statusTone,
-    required this.termLabel,
-    required this.dueLabel,
+    required this.today,
+    required this.status,
+    required this.tone,
+    required this.term,
+    required this.due,
     this.completed = false,
-    this.missedPayments = 0,
+    this.missed = 0,
     this.gcashTerm,
     this.note = '',
-    this.catchUpLabel,
-    this.advanceLabel,
+    this.catchUp,
+    this.advance,
   });
 
   final String id;
@@ -1137,191 +704,159 @@ class _ReviewClient {
   final String area;
   final double regularDue;
   final double sevenBySevenDue;
-  final double amountNeededToday;
-  final String primaryStatus;
-  final _ChipTone statusTone;
-  final String termLabel;
-  final String dueLabel;
+  final double today;
+  final String status;
+  final _Tone tone;
+  final String term;
+  final String due;
   final bool completed;
-  final int missedPayments;
+  final int missed;
   final String? gcashTerm;
   final String note;
-  final String? catchUpLabel;
-  final String? advanceLabel;
-
-  String get paymentMethodLabel => gcashTerm == null ? 'Cash' : 'GCash';
+  final String? catchUp;
+  final String? advance;
 }
 
-enum _ChipTone { good, warning, danger, info, neutral }
-
-class _PreviewSplit {
-  const _PreviewSplit({required this.regular, required this.sevenBySeven});
-
-  final double regular;
-  final double sevenBySeven;
-}
-
-_PreviewSplit _previewSplit(_ReviewClient client, double amount) {
-  if (amount <= 0) {
-    return const _PreviewSplit(regular: 0, sevenBySeven: 0);
-  }
-  final regular = math.min(amount, client.regularDue);
-  final remaining = math.max(0, amount - regular);
-  final seven = math.min(remaining, client.sevenBySevenDue);
-  return _PreviewSplit(regular: regular, sevenBySeven: seven);
-}
+enum _Tone { good, warning, danger, info }
 
 String _money(double value) => '₱${value.toStringAsFixed(2)}';
+String _shortMoney(double value) => value == value.roundToDouble()
+    ? '₱${value.toStringAsFixed(0)}'
+    : _money(value);
 
-String _moneyShort(double value) {
-  if ((value - value.roundToDouble()).abs() < 0.005) {
-    return '₱${value.toStringAsFixed(0)}';
-  }
-  return _money(value);
-}
-
-const List<_ReviewArea> _reviewAreas = [
-  _ReviewArea(
-    name: 'BALAYONG',
-    clients: [
-      _ReviewClient(
-        id: 'bal-ana',
-        name: 'Ana Dela Cruz',
-        area: 'BALAYONG',
-        regularDue: 100,
-        sevenBySevenDue: 50,
-        amountNeededToday: 150,
-        primaryStatus: 'NOT COLLECTED',
-        statusTone: _ChipTone.warning,
-        termLabel: 'Regular 120 days • 7x7 active',
-        dueLabel: 'Regular due Dec 02 • 7x7 ongoing',
-        gcashTerm: 'Pays at 5:30 PM after work',
-        note: 'Usually sends exact ₱150 by GCash.',
-      ),
-      _ReviewClient(
-        id: 'bal-maria',
-        name: 'Maria Lopez',
-        area: 'BALAYONG',
-        regularDue: 200,
-        sevenBySevenDue: 50,
-        amountNeededToday: 250,
-        primaryStatus: 'CATCH-UP',
-        statusTone: _ChipTone.danger,
-        termLabel: 'Regular 120 days • 7x7 active',
-        dueLabel: 'Regular due Nov 26 • 7x7 ongoing',
-        missedPayments: 1,
-        catchUpLabel: 'Missed 1 payment — server recommends ₱250 today.',
-        note: 'Ask about yesterday before collecting.',
-      ),
-      _ReviewClient(
-        id: 'bal-liza',
-        name: 'Liza Ramos',
-        area: 'BALAYONG',
-        regularDue: 0,
-        sevenBySevenDue: 0,
-        amountNeededToday: 0,
-        primaryStatus: 'ADV',
-        statusTone: _ChipTone.good,
-        termLabel: 'Regular 120 days',
-        dueLabel: 'Due Nov 30',
-        completed: true,
-        advanceLabel: 'Covered through Aug 18, 2026.',
-        note: 'Do not collect today unless coverage changes.',
-      ),
-    ],
-  ),
-  _ReviewArea(
-    name: 'CALAHAN',
-    clients: [
-      _ReviewClient(
-        id: 'cal-rosa',
-        name: 'Rosa Mendoza',
-        area: 'CALAHAN',
-        regularDue: 100,
-        sevenBySevenDue: 50,
-        amountNeededToday: 150,
-        primaryStatus: 'DONE',
-        statusTone: _ChipTone.good,
-        termLabel: 'Regular 120 days • 7x7 active',
-        dueLabel: 'Regular due Dec 05 • 7x7 ongoing',
-        completed: true,
-        note: 'Collected cash at 9:12 AM.',
-      ),
-      _ReviewClient(
-        id: 'cal-joy',
-        name: 'Joy Villanueva',
-        area: 'CALAHAN',
-        regularDue: 300,
-        sevenBySevenDue: 50,
-        amountNeededToday: 350,
-        primaryStatus: 'CATCH-UP',
-        statusTone: _ChipTone.danger,
-        termLabel: 'Regular 120 days • 7x7 active',
-        dueLabel: 'Regular due Nov 18 • 7x7 ongoing',
-        missedPayments: 2,
-        catchUpLabel: 'Missed 2 payments — server recommends triple Regular + today 7x7.',
-        gcashTerm: 'Pays by GCash before 8:00 PM',
-        note: 'Confirm GCash before marking complete.',
-      ),
-      _ReviewClient(
-        id: 'cal-nena',
-        name: 'Nena Flores',
-        area: 'CALAHAN',
-        regularDue: 100,
-        sevenBySevenDue: 0,
-        amountNeededToday: 100,
-        primaryStatus: 'PASS 1',
-        statusTone: _ChipTone.warning,
-        termLabel: 'Regular 120 days',
-        dueLabel: 'Due Dec 10',
-        note: 'Yesterday: hospital. Revisit today.',
-      ),
-    ],
-  ),
-  _ReviewArea(
-    name: 'SAN ROQUE',
-    clients: [
-      _ReviewClient(
-        id: 'sr-ellen',
-        name: 'Ellen Santos',
-        area: 'SAN ROQUE',
-        regularDue: 100,
-        sevenBySevenDue: 50,
-        amountNeededToday: 150,
-        primaryStatus: 'NOT COLLECTED',
-        statusTone: _ChipTone.warning,
-        termLabel: 'Regular 120 days • 7x7 active',
-        dueLabel: 'Regular due Dec 14 • 7x7 ongoing',
-        note: 'Collect after lunch.',
-      ),
-      _ReviewClient(
-        id: 'sr-cora',
-        name: 'Cora Garcia',
-        area: 'SAN ROQUE',
-        regularDue: 100,
-        sevenBySevenDue: 0,
-        amountNeededToday: 100,
-        primaryStatus: 'GCASH PENDING',
-        statusTone: _ChipTone.info,
-        termLabel: 'Regular 120 days',
-        dueLabel: 'Due Dec 01',
-        gcashTerm: 'Pays every collection day at 6:00 PM',
-        note: 'Wait for proof before end-of-day review.',
-      ),
-      _ReviewClient(
-        id: 'sr-beth',
-        name: 'Beth Navarro',
-        area: 'SAN ROQUE',
-        regularDue: 100,
-        sevenBySevenDue: 50,
-        amountNeededToday: 150,
-        primaryStatus: 'DONE',
-        statusTone: _ChipTone.good,
-        termLabel: 'Regular 120 days • 7x7 active',
-        dueLabel: 'Regular due Dec 08 • 7x7 ongoing',
-        completed: true,
-        note: 'Collected cash at 11:05 AM.',
-      ),
-    ],
-  ),
+const List<_Area> _areas = [
+  _Area('BALAYONG', [
+    _Client(
+      id: 'bal-ana',
+      name: 'Ana Dela Cruz',
+      area: 'BALAYONG',
+      regularDue: 100,
+      sevenBySevenDue: 50,
+      today: 150,
+      status: 'NOT COLLECTED',
+      tone: _Tone.warning,
+      term: 'Regular 120 days • 7x7 active',
+      due: 'Regular due Dec 02 • 7x7 ongoing',
+      gcashTerm: 'Pays at 5:30 PM after work',
+      note: 'Usually sends exact ₱150 by GCash.',
+    ),
+    _Client(
+      id: 'bal-maria',
+      name: 'Maria Lopez',
+      area: 'BALAYONG',
+      regularDue: 200,
+      sevenBySevenDue: 50,
+      today: 250,
+      status: 'CATCH-UP',
+      tone: _Tone.danger,
+      term: 'Regular 120 days • 7x7 active',
+      due: 'Regular due Nov 26 • 7x7 ongoing',
+      missed: 1,
+      catchUp: 'Missed 1 payment — server recommends ₱250 today.',
+      note: 'Ask about yesterday before collecting.',
+    ),
+    _Client(
+      id: 'bal-liza',
+      name: 'Liza Ramos',
+      area: 'BALAYONG',
+      regularDue: 0,
+      sevenBySevenDue: 0,
+      today: 0,
+      status: 'ADV',
+      tone: _Tone.good,
+      term: 'Regular 120 days',
+      due: 'Due Nov 30',
+      completed: true,
+      advance: 'Covered through Aug 18, 2026.',
+      note: 'Do not collect today unless coverage changes.',
+    ),
+  ]),
+  _Area('CALAHAN', [
+    _Client(
+      id: 'cal-rosa',
+      name: 'Rosa Mendoza',
+      area: 'CALAHAN',
+      regularDue: 100,
+      sevenBySevenDue: 50,
+      today: 150,
+      status: 'DONE',
+      tone: _Tone.good,
+      term: 'Regular 120 days • 7x7 active',
+      due: 'Regular due Dec 05 • 7x7 ongoing',
+      completed: true,
+      note: 'Collected cash at 9:12 AM.',
+    ),
+    _Client(
+      id: 'cal-joy',
+      name: 'Joy Villanueva',
+      area: 'CALAHAN',
+      regularDue: 300,
+      sevenBySevenDue: 50,
+      today: 350,
+      status: 'CATCH-UP',
+      tone: _Tone.danger,
+      term: 'Regular 120 days • 7x7 active',
+      due: 'Regular due Nov 18 • 7x7 ongoing',
+      missed: 2,
+      catchUp: 'Missed 2 payments — server recommends triple Regular + today 7x7.',
+      gcashTerm: 'Pays by GCash before 8:00 PM',
+      note: 'Confirm GCash before marking complete.',
+    ),
+    _Client(
+      id: 'cal-nena',
+      name: 'Nena Flores',
+      area: 'CALAHAN',
+      regularDue: 100,
+      sevenBySevenDue: 0,
+      today: 100,
+      status: 'PASS 1',
+      tone: _Tone.warning,
+      term: 'Regular 120 days',
+      due: 'Due Dec 10',
+      note: 'Yesterday: hospital. Revisit today.',
+    ),
+  ]),
+  _Area('SAN ROQUE', [
+    _Client(
+      id: 'sr-ellen',
+      name: 'Ellen Santos',
+      area: 'SAN ROQUE',
+      regularDue: 100,
+      sevenBySevenDue: 50,
+      today: 150,
+      status: 'NOT COLLECTED',
+      tone: _Tone.warning,
+      term: 'Regular 120 days • 7x7 active',
+      due: 'Regular due Dec 14 • 7x7 ongoing',
+      note: 'Collect after lunch.',
+    ),
+    _Client(
+      id: 'sr-cora',
+      name: 'Cora Garcia',
+      area: 'SAN ROQUE',
+      regularDue: 100,
+      sevenBySevenDue: 0,
+      today: 100,
+      status: 'GCASH PENDING',
+      tone: _Tone.info,
+      term: 'Regular 120 days',
+      due: 'Due Dec 01',
+      gcashTerm: 'Pays every collection day at 6:00 PM',
+      note: 'Wait for proof before end-of-day review.',
+    ),
+    _Client(
+      id: 'sr-beth',
+      name: 'Beth Navarro',
+      area: 'SAN ROQUE',
+      regularDue: 100,
+      sevenBySevenDue: 50,
+      today: 150,
+      status: 'DONE',
+      tone: _Tone.good,
+      term: 'Regular 120 days • 7x7 active',
+      due: 'Regular due Dec 08 • 7x7 ongoing',
+      completed: true,
+      note: 'Collected cash at 11:05 AM.',
+    ),
+  ]),
 ];
