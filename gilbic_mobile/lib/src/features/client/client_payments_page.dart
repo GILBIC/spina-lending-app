@@ -4,6 +4,8 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment_repository.dart';
+import 'package:gilbic_mobile/src/features/client/client_gcash_payment_page.dart';
+import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 class ClientPaymentsPage extends StatefulWidget {
   const ClientPaymentsPage({
@@ -62,6 +64,17 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
         setState(() => _loading = false);
       }
     }
+  }
+
+  void _openGcash() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ClientGcashPaymentPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+        ),
+      ),
+    );
   }
 
   @override
@@ -154,6 +167,58 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
                     ),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            key: const Key('client-gcash-entry-card'),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: <Color>[Color(0xFFFFFBFD), Color(0xFFFFEEF5)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFF0D6E1)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: SpinaTheme.brandPinkDark,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pay directly with GCash',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Choose your active loan, review the amount, then continue to the connected GCash business checkout.',
+                      ),
+                      const SizedBox(height: 10),
+                      FilledButton.tonalIcon(
+                        key: const Key('open-client-gcash-payment'),
+                        onPressed: _openGcash,
+                        icon: const Icon(Icons.arrow_forward_rounded),
+                        label: const Text('Open GCash payment'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
