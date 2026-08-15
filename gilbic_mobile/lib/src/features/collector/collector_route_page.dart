@@ -148,8 +148,9 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     if (entry.processedToday) {
       return "Today's collection has already been recorded.";
     }
-    if (_isSevenBySevenLoan(entry.loanType)) {
-      return '7x7 mobile collection is disabled. Use SPINA desktop until the dedicated allocator is verified.';
+    if (_isSevenBySevenLoan(entry.loanType) &&
+        !entry.sevenBySevenMobileEnabled) {
+      return '7x7 mobile collection is disabled. Use SPINA desktop until the protected server allocator explicitly enables this route entry.';
     }
     if (!entry.canCollectMobile || !entry.canEnterPayment) {
       return entry.collectionMessage.isNotEmpty
@@ -752,7 +753,8 @@ String _shortStatus(CollectorRouteEntry entry) {
       _ => 'Paid',
     };
   }
-  if (_isSevenBySevenLoan(entry.loanType)) {
+  if (_isSevenBySevenLoan(entry.loanType) &&
+      !entry.sevenBySevenMobileEnabled) {
     return 'Desktop';
   }
   return entry.status;
@@ -762,7 +764,8 @@ String _actionLabel(CollectorRouteEntry entry, String? blockedReason) {
   if (entry.processedToday) {
     return entry.todayIsLocked ? 'Locked' : 'Done';
   }
-  if (_isSevenBySevenLoan(entry.loanType)) {
+  if (_isSevenBySevenLoan(entry.loanType) &&
+      !entry.sevenBySevenMobileEnabled) {
     return 'Desk';
   }
   if (blockedReason != null) {
