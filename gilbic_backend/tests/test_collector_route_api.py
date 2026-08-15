@@ -15,6 +15,7 @@ from gilbic_backend.auth_api import account_repository_dependency, auth_client_d
 from gilbic_backend.auth_client import AuthSession
 from gilbic_backend.collector_route_api import (
     PHILIPPINES_TIMEZONE,
+    _entry_payload,
     collector_route_repository_dependency,
 )
 from gilbic_backend.collector_route_repository import (
@@ -198,6 +199,7 @@ def test_collector_receives_only_server_assigned_route() -> None:
             "route_revision": f"loan:{LOAN_ID}:v7",
             "can_collect_mobile": True,
             "can_enter_payment": True,
+            "seven_by_seven_mobile_enabled": False,
             "collection_message": "Today's collection has already been recorded.",
             "contract_allocation_enabled": False,
             "contract_schedule_verified": True,
@@ -241,6 +243,48 @@ def test_collector_receives_only_server_assigned_route() -> None:
     assert routes.request[0] == COLLECTOR_USER_ID
     assert routes.request[1] == "Collector One"
     assert routes.request[2] == datetime.now(PHILIPPINES_TIMEZONE).date()
+
+
+def test_seven_by_seven_payload_needs_explicit_ready_route_coordinates() -> None:
+    ready = CollectorRouteEntryRecord(
+        route_entry_id=LOAN_ID,
+        client_id=CLIENT_ID,
+        loan_id=LOAN_ID,
+        client_name="Seven Client",
+        area="Cardona",
+        loan_type="7x7",
+        daily_amount=Decimal("35.00"),
+        remaining_balance=Decimal("5000.00"),
+        pass_count=0,
+        last_payment_date=None,
+        advance_until=None,
+        status="Pending",
+        note="",
+        is_reconciled=True,
+        mobile_collections_enabled=True,
+        mobile_balance_mode="direct_remaining_balance",
+    )
+    assert _entry_payload(ready)["seven_by_seven_mobile_enabled"] is True
+
+    blocked = CollectorRouteEntryRecord(
+        route_entry_id=LOAN_ID,
+        client_id=CLIENT_ID,
+        loan_id=LOAN_ID,
+        client_name="Seven Client",
+        area="Cardona",
+        loan_type="7x7",
+        daily_amount=Decimal("35.00"),
+        remaining_balance=Decimal("5000.00"),
+        pass_count=0,
+        last_payment_date=None,
+        advance_until=None,
+        status="Desktop only",
+        note="",
+        is_reconciled=True,
+        mobile_collections_enabled=False,
+        mobile_balance_mode="direct_remaining_balance",
+    )
+    assert _entry_payload(blocked)["seven_by_seven_mobile_enabled"] is False
 
 
 def test_collector_route_requires_device_header() -> None:
