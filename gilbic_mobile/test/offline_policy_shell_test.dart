@@ -113,9 +113,11 @@ class _UnusedRouteLoader implements CollectorRouteLoader {
   Future<CollectorRouteLoadResult> loadToday(UserSession session) async {
     return CollectorRouteLoadResult(
       route: const CollectorRoute(
+        routeDate: null,
         collectorName: 'Unused',
         areas: <String>[],
         entries: <CollectorRouteEntry>[],
+        expectedTotal: 0,
       ),
       syncedAt: DateTime.utc(2026, 8, 15),
       isFromCache: false,
