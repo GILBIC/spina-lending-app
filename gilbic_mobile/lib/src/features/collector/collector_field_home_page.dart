@@ -6,6 +6,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_master_review_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_synthetic_review_page.dart';
@@ -18,9 +19,9 @@ import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 /// Collector-first shell for CA4.
 ///
-/// The familiar ledger stays the primary screen after sign-in. Secondary field
-/// tasks are reachable from a compact bottom bar instead of replacing the route
-/// with a dashboard full of tiles.
+/// The familiar ledger stays the primary screen after sign-in. Master Review is
+/// a first-class field action so a Collector can check every assigned area before
+/// leaving the route. Secondary tools remain behind compact navigation.
 class CollectorFieldHomePage extends StatefulWidget {
   const CollectorFieldHomePage({
     required this.session,
@@ -56,6 +57,15 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
         content: Text(
           'Your current SPINA access does not allow $feature.',
         ),
+      ),
+    );
+  }
+
+  Future<void> _openMasterReview() async {
+    await _open(
+      CollectorMasterReviewPage(
+        session: widget.session,
+        loader: widget.collectorRouteLoader,
       ),
     );
   }
@@ -106,7 +116,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Daily Route stays your main field screen.',
+                  'Daily Route and Master Review stay your main field screens.',
                   style: Theme.of(sheetContext).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 14),
@@ -116,7 +126,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                     icon: Icons.fact_check_outlined,
                     title: 'CA4 synthetic field review',
                     subtitle:
-                        'Review area ledger, catch-up indicators and Master Review',
+                        'Review sample catch-up, notes, GCash and split states',
                     onTap: () {
                       Navigator.pop(sheetContext);
                       _open(const CollectorSyntheticReviewPage());
@@ -232,10 +242,12 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
             case 0:
               break;
             case 1:
-              _openOtherArea();
+              _openMasterReview();
             case 2:
-              _openRemittance();
+              _openOtherArea();
             case 3:
+              _openRemittance();
+            case 4:
               _openMore();
           }
         },
@@ -244,6 +256,12 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
             icon: Icon(Icons.route_outlined),
             selectedIcon: Icon(Icons.route_rounded),
             label: 'Route',
+          ),
+          NavigationDestination(
+            key: Key('collector-master-review-tab'),
+            icon: Icon(Icons.fact_check_outlined),
+            selectedIcon: Icon(Icons.fact_check_rounded),
+            label: 'Review',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_search_outlined),
@@ -256,6 +274,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
             label: 'Remit',
           ),
           NavigationDestination(
+            key: Key('collector-more-tab'),
             icon: Icon(Icons.more_horiz_rounded),
             label: 'More',
           ),
