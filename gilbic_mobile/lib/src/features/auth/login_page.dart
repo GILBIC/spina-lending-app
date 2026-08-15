@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/auth_repository.dart';
-import 'package:gilbic_mobile/src/core/config/api_config.dart';
 import 'package:gilbic_mobile/src/features/auth/client_registration_page.dart';
+import 'package:gilbic_mobile/src/features/design/spina_design_preview_page.dart';
+import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({
@@ -70,156 +72,302 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  void _openDesignPreview() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const SpinaDesignPreviewPage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final noticeMessage = widget.noticeMessage?.trim();
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: AutofillGroup(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          'Gilbic',
-                          style: Theme.of(context).textTheme.headlineLarge,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Secure SPINA mobile access',
-                          style: Theme.of(context).textTheme.titleMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                        if (noticeMessage != null && noticeMessage.isNotEmpty) ...[
-                          const SizedBox(height: 20),
-                          Semantics(
-                            liveRegion: true,
-                            child: Container(
-                              key: const Key('session-notice'),
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .secondaryContainer,
-                                borderRadius: BorderRadius.circular(12),
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFFFFBFD), Color(0xFFFFF3F8)],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _SpinaBrandHeader(),
+                    const SizedBox(height: 24),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+                        child: AutofillGroup(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'Welcome back',
+                                style: Theme.of(context).textTheme.headlineSmall,
                               ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              const SizedBox(height: 5),
+                              Text(
+                                'Sign in to continue to your SPINA account.',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              if (noticeMessage != null &&
+                                  noticeMessage.isNotEmpty) ...[
+                                const SizedBox(height: 18),
+                                Semantics(
+                                  liveRegion: true,
+                                  child: Container(
+                                    key: const Key('session-notice'),
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: SpinaTheme.brandPinkSoft,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: const Color(0xFFEFC7D8),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(
+                                          Icons.info_outline_rounded,
+                                          color: SpinaTheme.brandPinkDark,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(child: Text(noticeMessage)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 22),
+                              TextField(
+                                key: const Key('username-field'),
+                                controller: _usernameController,
+                                enabled: !_submitting,
+                                autofillHints: const <String>[
+                                  AutofillHints.username,
+                                ],
+                                textInputAction: TextInputAction.next,
+                                autocorrect: false,
+                                decoration: const InputDecoration(
+                                  labelText: 'Username',
+                                  hintText: 'Enter your username',
+                                  prefixIcon:
+                                      Icon(Icons.person_outline_rounded),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              TextField(
+                                key: const Key('password-field'),
+                                controller: _passwordController,
+                                enabled: !_submitting,
+                                autofillHints: const <String>[
+                                  AutofillHints.password,
+                                ],
+                                obscureText: !_showPassword,
+                                textInputAction: TextInputAction.done,
+                                onSubmitted: (_) => _submit(),
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  hintText: 'Enter your password',
+                                  prefixIcon:
+                                      const Icon(Icons.lock_outline_rounded),
+                                  suffixIcon: IconButton(
+                                    tooltip: _showPassword
+                                        ? 'Hide password'
+                                        : 'Show password',
+                                    onPressed: _submitting
+                                        ? null
+                                        : () {
+                                            setState(
+                                              () => _showPassword =
+                                                  !_showPassword,
+                                            );
+                                          },
+                                    icon: Icon(
+                                      _showPassword
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (_errorMessage != null) ...[
+                                const SizedBox(height: 12),
+                                Container(
+                                  key: const Key('login-error'),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .errorContainer,
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(
+                                        Icons.error_outline_rounded,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onErrorContainer,
+                                      ),
+                                      const SizedBox(width: 9),
+                                      Expanded(
+                                        child: Text(
+                                          _errorMessage!,
+                                          style: TextStyle(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onErrorContainer,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 20),
+                              FilledButton.icon(
+                                key: const Key('sign-in-button'),
+                                onPressed: _submitting ? null : _submit,
+                                icon: _submitting
+                                    ? const SizedBox.square(
+                                        dimension: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(Icons.arrow_forward_rounded),
+                                label: Text(
+                                  _submitting ? 'Signing in...' : 'Sign in',
+                                ),
+                              ),
+                              if (widget.clientRegistrationRepository !=
+                                  null) ...[
+                                const SizedBox(height: 10),
+                                OutlinedButton.icon(
+                                  key: const Key(
+                                    'create-client-account-button',
+                                  ),
+                                  onPressed:
+                                      _submitting ? null : _openRegistration,
+                                  icon: const Icon(
+                                    Icons.person_add_alt_1_outlined,
+                                  ),
+                                  label: const Text('Create client account'),
+                                ),
+                              ],
+                              const SizedBox(height: 18),
+                              Row(
                                 children: [
-                                  const Icon(Icons.info_outline),
-                                  const SizedBox(width: 10),
-                                  Expanded(child: Text(noticeMessage)),
+                                  const Icon(
+                                    Icons.verified_user_outlined,
+                                    size: 18,
+                                    color: SpinaTheme.brandPinkDark,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Your role and access are protected by SPINA.',
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ),
                                 ],
                               ),
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 28),
-                        TextField(
-                          key: const Key('username-field'),
-                          controller: _usernameController,
-                          enabled: !_submitting,
-                          autofillHints: const <String>[AutofillHints.username],
-                          textInputAction: TextInputAction.next,
-                          autocorrect: false,
-                          decoration: const InputDecoration(
-                            labelText: 'Username',
-                            prefixIcon: Icon(Icons.person_outline),
-                            border: OutlineInputBorder(),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          key: const Key('password-field'),
-                          controller: _passwordController,
-                          enabled: !_submitting,
-                          autofillHints: const <String>[AutofillHints.password],
-                          obscureText: !_showPassword,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _submit(),
-                          decoration: InputDecoration(
-                            labelText: 'Password',
-                            prefixIcon: const Icon(Icons.lock_outline),
-                            border: const OutlineInputBorder(),
-                            suffixIcon: IconButton(
-                              tooltip: _showPassword
-                                  ? 'Hide password'
-                                  : 'Show password',
-                              onPressed: _submitting
-                                  ? null
-                                  : () {
-                                      setState(
-                                        () => _showPassword = !_showPassword,
-                                      );
-                                    },
-                              icon: Icon(
-                                _showPassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (_errorMessage != null) ...[
-                          const SizedBox(height: 14),
-                          Text(
-                            _errorMessage!,
-                            key: const Key('login-error'),
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                        const SizedBox(height: 22),
-                        FilledButton.icon(
-                          key: const Key('sign-in-button'),
-                          onPressed: _submitting ? null : _submit,
-                          icon: _submitting
-                              ? const SizedBox.square(
-                                  dimension: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.login),
-                          label: Text(
-                            _submitting ? 'Signing in...' : 'Sign in',
-                          ),
-                        ),
-                        if (widget.clientRegistrationRepository != null) ...[
-                          const SizedBox(height: 10),
-                          OutlinedButton.icon(
-                            key: const Key('create-client-account-button'),
-                            onPressed: _submitting ? null : _openRegistration,
-                            icon: const Icon(Icons.person_add_alt_1),
-                            label: const Text('Create client account'),
-                          ),
-                        ],
-                        const SizedBox(height: 20),
-                        Text(
-                          'API: ${ApiConfig.baseUrl}\n'
-                          'Your role and permissions are assigned by the SPINA server.',
-                          style: Theme.of(context).textTheme.bodySmall,
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    if (kDebugMode) ...[
+                      const SizedBox(height: 14),
+                      TextButton.icon(
+                        key: const Key('open-ca1-design-preview'),
+                        onPressed: _openDesignPreview,
+                        icon: const Icon(Icons.palette_outlined),
+                        label: const Text('Open CA1 UI review'),
+                      ),
+                      Text(
+                        'Review-only preview for the Android CA1 design pass.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SpinaBrandHeader extends StatelessWidget {
+  const _SpinaBrandHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 68,
+          height: 68,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0xFFF0D6E1)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            'S',
+            style: TextStyle(
+              color: SpinaTheme.brandPinkDark,
+              fontSize: 30,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1,
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          'SPINA',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: SpinaTheme.brandPinkDark,
+                letterSpacing: 1.4,
+              ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          'Clear access. Confident control.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: SpinaTheme.inkMuted,
+              ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

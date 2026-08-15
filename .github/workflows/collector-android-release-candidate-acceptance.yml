@@ -258,13 +258,61 @@ jobs:
           echo org.gradle.daemon=false>>"%HOST%\android\gradle.properties"
           pushd "%HOST%" || exit /b 1
           call "%FLUTTER_CMD%" pub get || exit /b 1
-          call "%FLUTTER_CMD%" build apk --debug --target-platform android-arm64 --no-pub || exit /b 1
+          call "%FLUTTER_CMD%" build apk --debug --target-platform android-arm64,android-x64 --no-pub || exit /b 1
           if not exist "build\app\outputs\flutter-apk\app-debug.apk" exit /b 1
           if not exist "%APK_OUT%" mkdir "%APK_OUT%" || exit /b 1
           copy /y "build\app\outputs\flutter-apk\app-debug.apk" "%APK_OUT%\collector-release-candidate-debug.apk" >nul || exit /b 1
           for %%I in ("%APK_OUT%\collector-release-candidate-debug.apk") do echo RC APK size: %%~zI bytes
           popd
           rmdir /s /q "%HOST%" || exit /b 1
+
+      - name: Verify Android review APK ABI coverage
+        shell: 'powershell -NoProfile -ExecutionPolicy Bypass -File "{0}"'
+        run: |
+          $apk = Join-Path $env:GITHUB_WORKSPACE 'gilbic_mobile\build\collector-rc\collector-release-candidate-debug.apk'
+          if (-not (Test-Path -LiteralPath $apk)) {
+            throw "Expected review APK was not produced: $apk"
+          }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($apk)
+          try {
+            $entries = @($archive.Entries | ForEach-Object { $_.FullName })
+          } finally {
+            $archive.Dispose()
+          }
+          if ($entries -notcontains 'lib/arm64-v8a/libflutter.so') {
+            throw "Review APK is missing arm64-v8a Flutter runtime."
+          }
+          if ($entries -notcontains 'lib/x86_64/libflutter.so') {
+            throw "Review APK is missing x86_64 Flutter runtime required by common Windows Android emulators."
+          }
+          Write-Host 'Verified review APK contains both arm64-v8a and x86_64 Flutter runtimes.'
+
+      # CA review builds must remain available to Management even when GitHub
+      # Actions artifact quota is exhausted. This persists only the unsigned
+      # debug review APK on the trusted self-hosted Windows runner.
+      - name: Persist Android CA review APK on self-hosted runner
+        if: github.event_name == 'pull_request'
+        shell: 'powershell -NoProfile -ExecutionPolicy Bypass -File "{0}"'
+        run: |
+          $source = Join-Path $env:GITHUB_WORKSPACE 'gilbic_mobile\build\collector-rc\collector-release-candidate-debug.apk'
+          if (-not (Test-Path -LiteralPath $source)) {
+            throw "Expected Android review APK was not produced: $source"
+          }
+          $reviewSha = '${{ github.event.pull_request.head.sha }}'
+          $commonDocuments = [Environment]::GetFolderPath('CommonDocuments')
+          if ([string]::IsNullOrWhiteSpace($commonDocuments)) {
+            $commonDocuments = 'C:\Users\Public\Documents'
+          }
+          $reviewDir = Join-Path $commonDocuments 'SPINA_REVIEW_BUILDS'
+          New-Item -ItemType Directory -Path $reviewDir -Force | Out-Null
+          $destination = Join-Path $reviewDir "SPINA-CA1-$reviewSha-arm64-x64.apk"
+          Copy-Item -LiteralPath $source -Destination $destination -Force
+          $hash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+          $bytes = (Get-Item -LiteralPath $destination).Length
+          Write-Host "SPINA Android CA review build: $destination"
+          Write-Host "SPINA Android CA review size: $bytes bytes"
+          Write-Host "SPINA Android CA review SHA256: $hash"
 
       # The debug APK is smoke evidence only. Its successful local package step above is
       # the acceptance gate; temporary artifact storage exhaustion must not turn a green
