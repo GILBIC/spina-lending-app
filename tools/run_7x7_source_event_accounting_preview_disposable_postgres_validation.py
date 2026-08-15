@@ -15,11 +15,10 @@ import run_stage5d17_disposable_postgres_validation as disposable
 
 TEST_DATABASE_PREFIX = "spina_7x7_source_preview_"
 BOOTSTRAP_THROUGH = 63
-INTEGRATION_TEST = (
-    Path(__file__).resolve().parents[1]
-    / "gilbic_backend"
-    / "tests"
-    / "test_7x7_source_event_accounting_preview_postgres.py"
+TEST_ROOT = Path(__file__).resolve().parents[1] / "gilbic_backend" / "tests"
+INTEGRATION_TESTS = (
+    TEST_ROOT / "test_seven_by_seven_desktop_server_postgres_parity.py",
+    TEST_ROOT / "test_7x7_source_event_accounting_preview_postgres.py",
 )
 
 
@@ -28,17 +27,19 @@ def _configure_shared_safety_helpers() -> None:
     disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
 
 
-def _run_test(test_database_url: str) -> int:
-    if not INTEGRATION_TEST.is_file():
+def _run_tests(test_database_url: str) -> int:
+    missing = [str(path) for path in INTEGRATION_TESTS if not path.is_file()]
+    if missing:
         raise SystemExit(
-            "7x7 source-event preview disposable validation refused: integration test file is missing."
+            "7x7 source-event / operational parity disposable validation refused: "
+            "required integration test file is missing: " + ", ".join(missing)
         )
     env = os.environ.copy()
     for key in disposable.ENDPOINT_ENV_KEYS:
         env.pop(key, None)
     env["GILBIC_TEST_DATABASE_URL"] = test_database_url
     completed = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", str(INTEGRATION_TEST)],
+        [sys.executable, "-m", "pytest", "-q", *(str(path) for path in INTEGRATION_TESTS)],
         env=env,
         check=False,
     )
@@ -49,9 +50,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
-            "through 0063, then prove the read-only 7x7 source-event identity, accounting-EIR "
-            "roll-forward, Desktop operational parity comparison, and journal coordinates "
-            "without creating journals or enabling current carrying/posting."
+            "through 0063, then prove both the protected 7x7 source-event accounting preview "
+            "and Master #296 B.3 exact Desktop/server operational parity from real protected "
+            "PostgreSQL collection rows. Canonical payment/advance UUIDs are loaded from the "
+            "protected source inventory, PASS rows remain no-cash calendar gaps, exact ADV "
+            "covered dates remain financially neutral, renewals restart an independent "
+            "original-principal cycle, same-day ambiguity fails closed, and the mobile 7x7 "
+            "feature remains disabled. No live database or mobile write path is used."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -72,14 +77,15 @@ def main() -> int:
     configured_database = base_params["dbname"]
     if configured_database.startswith(TEST_DATABASE_PREFIX):
         raise SystemExit(
-            "7x7 source-event preview validation refused: configured database uses the reserved disposable prefix."
+            "7x7 source-event / operational parity validation refused: configured database "
+            "uses the reserved disposable prefix."
         )
 
     admin_url = disposable._conninfo_for_database(base_params, "postgres")
     if args.cleanup_stale_only:
         with psycopg.connect(admin_url, autocommit=True) as admin:
             dropped = disposable._drop_stale_disposable_databases(admin)
-        print(f"7x7 source-event preview janitor passed: dropped={dropped}.")
+        print(f"7x7 source-event / operational parity janitor passed: dropped={dropped}.")
         return 0
 
     test_database = f"{TEST_DATABASE_PREFIX}{uuid4().hex}"
@@ -90,7 +96,8 @@ def main() -> int:
         with psycopg.connect(admin_url, autocommit=True) as admin:
             if disposable._database_exists(admin, test_database):
                 raise SystemExit(
-                    "7x7 source-event preview validation refused: generated database already exists."
+                    "7x7 source-event / operational parity validation refused: generated "
+                    "database already exists."
                 )
             cleanup_required = True
             admin.execute(
@@ -101,25 +108,27 @@ def main() -> int:
 
         disposable._install_supabase_auth_prerequisite(test_url)
         disposable._bootstrap_database(test_url)
-        result = _run_test(test_url)
+        result = _run_tests(test_url)
         if result != 0:
             raise SystemExit(
-                "7x7 source-event preview disposable PostgreSQL validation failed: "
-                f"integration test exited with code {result}."
+                "7x7 source-event / operational parity disposable PostgreSQL validation "
+                f"failed: integration tests exited with code {result}."
             )
         print(
-            "7x7 source-event preview disposable PostgreSQL validation passed: "
-            "exact collection UUID identity and event-date accounting-EIR roll-forward were "
-            "proved from the immutable 0063 anchor; the protected Desktop fixed-interest "
-            "allocator was reproduced only as regression comparison; same-day ambiguity "
-            "failed closed; journal coordinates balanced; authoritative current carrying, "
-            "journal drafts/lines and automatic source posting stayed disabled."
+            "7x7 source-event / operational parity disposable PostgreSQL validation passed: "
+            "protected collection UUID/date/type/amount rows produced exact Desktop/server "
+            "fixed-original-principal 7x7 parity across the synthetic matrix, including "
+            "partial/normal/overpayment, PASS gaps, ADV covered dates, payoff, started-thousand, "
+            "month/year/leap boundaries and independent renewal cycles. Same-day ambiguity "
+            "failed closed instead of inventing ordering. Existing accounting-EIR source "
+            "preview and journal-coordinate regressions also passed. 7x7 mobile collections "
+            "remained disabled and no live/mobile write path was enabled."
         )
         return 0
     except psycopg.Error as error:
         primary_error = error
         raise SystemExit(
-            "7x7 source-event preview disposable PostgreSQL validation failed: "
+            "7x7 source-event / operational parity disposable PostgreSQL validation failed: "
             + str(error).split("CONTEXT:", 1)[0].strip()
         ) from error
     except BaseException as error:
@@ -132,7 +141,7 @@ def main() -> int:
                     disposable._drop_database(admin, test_database)
             except (psycopg.Error, SystemExit) as cleanup_error:
                 message = (
-                    "7x7 source-event preview disposable PostgreSQL cleanup failed: "
+                    "7x7 source-event / operational parity disposable PostgreSQL cleanup failed: "
                     + str(cleanup_error).split("CONTEXT:", 1)[0].strip()
                 )
                 print(message, file=sys.stderr)
