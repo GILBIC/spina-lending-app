@@ -8,6 +8,7 @@ import 'package:gilbic_mobile/src/core/management/management_loan.dart';
 import 'package:gilbic_mobile/src/core/management/management_loan_repository.dart';
 import 'package:gilbic_mobile/src/core/management/management_operations.dart';
 import 'package:gilbic_mobile/src/core/management/management_operations_repository.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/management/management_operational_overview_page.dart';
 
 void main() {
@@ -26,7 +27,9 @@ void main() {
           MaterialApp(
             home: ManagementOperationalOverviewPage(
               session: _managementSession,
-              deviceIdentityProvider: _deviceIdentity(platform.name),
+              deviceIdentityProvider: _deviceIdentity(
+                platform == TargetPlatform.iOS ? 'ios' : 'android',
+              ),
               loanRepository: _LoanRepository(),
               operationsRepository: _OperationsRepository(),
             ),
