@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/app.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
