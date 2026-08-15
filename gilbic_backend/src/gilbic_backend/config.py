@@ -29,6 +29,17 @@ class Settings(BaseSettings):
     mobile_android_minimum_version: str = ""
     mobile_ios_minimum_version: str = ""
 
+    # Provider-neutral GCash boundary. Credentials stay on the backend only.
+    # V1 defaults to disabled until Management receives a business provider API.
+    gcash_mode: str = "disabled"
+    gcash_provider: str = "unconfigured"
+    gcash_api_base_url: str = ""
+    gcash_checkout_path: str = "/payment-intents"
+    gcash_api_key: str = Field(default="", repr=False)
+    gcash_webhook_secret: str = Field(default="", repr=False)
+    gcash_return_url: str = ""
+    gcash_timeout_seconds: float = 10.0
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
