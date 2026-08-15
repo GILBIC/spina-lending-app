@@ -51,6 +51,17 @@ class RoleDashboard extends StatelessWidget {
   }
 
   void _openModule(BuildContext context, _DashboardModule module) {
+    if (!module.isAvailableFor(session)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Your current server permissions do not allow ${module.title}.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final action = module.action;
     if (session.role == AppRole.collector &&
         (action == 'daily-route' || action == 'record-payment')) {
@@ -279,7 +290,9 @@ class RoleDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final modules = _modulesFor(session.role);
+    final modules = _modulesFor(session.role)
+        .where((module) => module.isAvailableFor(session))
+        .toList(growable: false);
     return Scaffold(
       appBar: AppBar(
         title: Text('${session.role.label} Dashboard'),
@@ -361,12 +374,24 @@ class RoleDashboard extends StatelessWidget {
 }
 
 class _DashboardModule {
-  const _DashboardModule(this.title, this.description, this.icon, {this.action});
+  const _DashboardModule(
+    this.title,
+    this.description,
+    this.icon, {
+    this.action,
+    this.requiredPermissions = const <String>[],
+  });
 
   final String title;
   final String description;
   final IconData icon;
   final String? action;
+  final List<String> requiredPermissions;
+
+  bool isAvailableFor(UserSession session) {
+    return requiredPermissions.isEmpty ||
+        requiredPermissions.every(session.hasPermission);
+  }
 }
 
 List<_DashboardModule> _modulesFor(AppRole role) {
@@ -392,32 +417,40 @@ List<_DashboardModule> _modulesFor(AppRole role) {
             action: 'support'),
       ],
     AppRole.collector => const [
-        _DashboardModule('Daily Route', 'Compact online collection ledger',
-            Icons.route,
-            action: 'daily-route'),
+        _DashboardModule(
+          'Daily Route',
+          'Compact online collection ledger',
+          Icons.route,
+          action: 'daily-route',
+          requiredPermissions: <String>['route.view'],
+        ),
         _DashboardModule(
           'Record Payment',
           'Open the route and record assigned collections',
           Icons.payments,
           action: 'record-payment',
+          requiredPermissions: <String>['route.view', 'collection.create'],
         ),
         _DashboardModule(
           'Other Area Payment',
           'Search a client who paid a different collector',
           Icons.person_search,
           action: 'other-area-payment',
+          requiredPermissions: <String>['collection.create'],
         ),
         _DashboardModule(
           'Management Remittance',
           'Submit regular route cash to authorized staff',
           Icons.account_balance_outlined,
           action: 'remittance',
+          requiredPermissions: <String>['remittance.create'],
         ),
         _DashboardModule(
           'Assigned Collector Remittance',
           'Send only other-area payments to their route owner',
           Icons.compare_arrows,
           action: 'assigned-collector-remittance',
+          requiredPermissions: <String>['remittance.create'],
         ),
         _DashboardModule(
           'Payment Updates',
@@ -430,6 +463,7 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Review and accept remittances sent to your assigned route',
           Icons.notifications_active,
           action: 'remittance-notifications',
+          requiredPermissions: <String>['remittance.view'],
         ),
       ],
     AppRole.employee => const [
@@ -444,6 +478,7 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Accept assigned remittances after receiving the cash',
           Icons.notifications_active,
           action: 'remittance-notifications',
+          requiredPermissions: <String>['remittance.view'],
         ),
       ],
     AppRole.management => const [
@@ -458,12 +493,14 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Review client renewal requests for office processing',
           Icons.autorenew,
           action: 'management-renewals',
+          requiredPermissions: <String>['renewal.manage'],
         ),
         _DashboardModule(
           'Client Support',
           'Answer and resolve client assistance requests',
           Icons.support_agent,
           action: 'management-support',
+          requiredPermissions: <String>['support.manage'],
         ),
         _DashboardModule(
           'Loan Operations',
@@ -476,48 +513,56 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Record a client payment made directly to Management',
           Icons.point_of_sale,
           action: 'management-direct-payment',
+          requiredPermissions: <String>['collection.create'],
         ),
         _DashboardModule(
           'Void Incorrect Payment',
           'Reverse an unlocked wrong payment with a permanent audit trail',
           Icons.block,
           action: 'management-void-payment',
+          requiredPermissions: <String>['collection.void.unremitted'],
         ),
         _DashboardModule(
           'Notifications',
           'Accept assigned remittances after receiving the cash',
           Icons.notifications_active,
           action: 'remittance-notifications',
+          requiredPermissions: <String>['remittance.view'],
         ),
         _DashboardModule(
           'Client Portal Approvals',
           'Approve registrations and link borrower records',
           Icons.how_to_reg,
           action: 'client-registration-approvals',
+          requiredPermissions: <String>['account.manage'],
         ),
         _DashboardModule(
           'Financial Accounting',
           'Accounting periods, chart of accounts, and loan policy controls',
           Icons.calculate,
           action: 'management-financial-accounting',
+          requiredPermissions: <String>['accounting.view'],
         ),
         _DashboardModule(
           'Opening Balance Journal',
           'Prepare one protected cutover journal draft; posting remains disabled',
           Icons.lock_clock_outlined,
           action: 'management-opening-balance-journal',
+          requiredPermissions: <String>['accounting.view'],
         ),
         _DashboardModule(
           'General Journal',
           'Manual journals, immutable posting, reversals, and Trial Balance',
           Icons.menu_book_outlined,
           action: 'management-general-journal',
+          requiredPermissions: <String>['accounting.view'],
         ),
         _DashboardModule(
           'Financial Statements',
           'Posted-ledger Profit or Loss and Financial Position',
           Icons.assessment_outlined,
           action: 'management-financial-statements',
+          requiredPermissions: <String>['accounting.view'],
         ),
         _DashboardModule('Billing & Taxation',
             'Billing records and tax schedules', Icons.request_quote),

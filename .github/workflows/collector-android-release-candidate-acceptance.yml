@@ -25,6 +25,7 @@ on:
       - 'gilbic_mobile/test/other_area_collection_page_test.dart'
       - 'gilbic_mobile/test/collector_remittance_page_test.dart'
       - 'gilbic_mobile/test/remittance_notifications_page_test.dart'
+      - 'gilbic_mobile/test/role_dashboard_permission_navigation_test.dart'
       - 'docs/release/collector-android-acceptance-matrix.md'
       - '.github/workflows/collector-android-release-candidate-acceptance.yml'
   push:
@@ -51,6 +52,7 @@ on:
       - 'gilbic_mobile/test/other_area_collection_page_test.dart'
       - 'gilbic_mobile/test/collector_remittance_page_test.dart'
       - 'gilbic_mobile/test/remittance_notifications_page_test.dart'
+      - 'gilbic_mobile/test/role_dashboard_permission_navigation_test.dart'
       - 'docs/release/collector-android-acceptance-matrix.md'
       - '.github/workflows/collector-android-release-candidate-acceptance.yml'
 
@@ -74,6 +76,7 @@ jobs:
             "$env:RUNNER_TEMP\spina-collector-android-rc-venv",
             "$env:RUNNER_TEMP\flutter-3.44.7",
             "$env:RUNNER_TEMP\pub-cache-collector-rc",
+            "$env:RUNNER_TEMP\gradle-collector-rc",
             "$env:RUNNER_TEMP\gilbic-collector-rc-android-host",
             "$env:GITHUB_WORKSPACE\gilbic_mobile\build\collector-rc"
           )
@@ -117,6 +120,7 @@ jobs:
           if not exist "docs\release\collector-android-acceptance-matrix.md" exit /b 1
           if not exist "gilbic_mobile\test\other_area_collection_page_test.dart" exit /b 1
           if not exist "gilbic_mobile\test\remittance_notifications_page_test.dart" exit /b 1
+          if not exist "gilbic_mobile\test\role_dashboard_permission_navigation_test.dart" exit /b 1
 
       - name: Create isolated Python acceptance environment
         shell: cmd
@@ -184,7 +188,43 @@ jobs:
             test\collection_correction_page_test.dart ^
             test\other_area_collection_page_test.dart ^
             test\collector_remittance_page_test.dart ^
-            test\remittance_notifications_page_test.dart || exit /b 1
+            test\remittance_notifications_page_test.dart ^
+            test\role_dashboard_permission_navigation_test.dart || exit /b 1
+
+      - name: Reclaim packaging disk and isolate Gradle cache
+        shell: 'powershell -NoProfile -ExecutionPolicy Bypass -File "{0}"'
+        run: |
+          $venv = "$env:RUNNER_TEMP\spina-collector-android-rc-venv"
+          if (Test-Path -LiteralPath $venv) {
+            Write-Host "Removing completed Python acceptance environment before APK packaging."
+            Remove-Item -LiteralPath $venv -Recurse -Force -ErrorAction Continue
+          }
+
+          $sharedGradlePaths = @(
+            (Join-Path $env:USERPROFILE '.gradle\caches'),
+            (Join-Path $env:USERPROFILE '.gradle\daemon')
+          )
+          foreach ($path in $sharedGradlePaths) {
+            if (Test-Path -LiteralPath $path) {
+              Write-Host "Pruning rebuildable shared Gradle state before isolated APK smoke build: $path"
+              Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction Continue
+            }
+          }
+
+          $gradleHome = "$env:RUNNER_TEMP\gradle-collector-rc"
+          if (Test-Path -LiteralPath $gradleHome) {
+            Remove-Item -LiteralPath $gradleHome -Recurse -Force -ErrorAction Continue
+          }
+          New-Item -ItemType Directory -Path $gradleHome -Force | Out-Null
+          "GRADLE_USER_HOME=$gradleHome" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          $driveName = [System.IO.Path]::GetPathRoot($env:RUNNER_TEMP).Substring(0, 1)
+          $freeBytes = (Get-PSDrive -Name $driveName).Free
+          $freeGb = [math]::Round($freeBytes / 1GB, 2)
+          Write-Host "Free disk after pre-packaging reclaim: $freeGb GB"
+          if ($freeBytes -lt 7GB) {
+            throw "Collector Android acceptance requires at least 7 GB free after pre-packaging reclaim; only $freeGb GB is available. This is runner infrastructure capacity, not a product failure."
+          }
 
       - name: Verify APK build disk reserve
         shell: 'powershell -NoProfile -ExecutionPolicy Bypass -File "{0}"'
@@ -193,7 +233,7 @@ jobs:
           $freeBytes = (Get-PSDrive -Name $driveName).Free
           $freeGb = [math]::Round($freeBytes / 1GB, 2)
           Write-Host "Free disk before APK packaging: $freeGb GB"
-          if ($freeBytes -lt 4GB) {
+          if ($freeBytes -lt 7GB) {
             throw "Not enough runner disk remains for mandatory APK smoke packaging: $freeGb GB free."
           }
 
@@ -215,9 +255,10 @@ jobs:
           copy /y "%GITHUB_WORKSPACE%\gilbic_mobile\pubspec.yaml" "%HOST%\pubspec.yaml" >nul || exit /b 1
           echo kotlin.incremental=false>>"%HOST%\android\gradle.properties"
           echo kotlin.compiler.execution.strategy=in-process>>"%HOST%\android\gradle.properties"
+          echo org.gradle.daemon=false>>"%HOST%\android\gradle.properties"
           pushd "%HOST%" || exit /b 1
           call "%FLUTTER_CMD%" pub get || exit /b 1
-          call "%FLUTTER_CMD%" build apk --debug --no-pub || exit /b 1
+          call "%FLUTTER_CMD%" build apk --debug --target-platform android-arm64 --no-pub || exit /b 1
           if not exist "build\app\outputs\flutter-apk\app-debug.apk" exit /b 1
           if not exist "%APK_OUT%" mkdir "%APK_OUT%" || exit /b 1
           copy /y "build\app\outputs\flutter-apk\app-debug.apk" "%APK_OUT%\collector-release-candidate-debug.apk" >nul || exit /b 1
@@ -245,6 +286,7 @@ jobs:
             "$env:RUNNER_TEMP\spina-collector-android-rc-venv",
             "$env:RUNNER_TEMP\flutter-3.44.7",
             "$env:RUNNER_TEMP\pub-cache-collector-rc",
+            "$env:RUNNER_TEMP\gradle-collector-rc",
             "$env:RUNNER_TEMP\gilbic-collector-rc-android-host",
             "$env:GITHUB_WORKSPACE\gilbic_mobile\build\collector-rc"
           )
