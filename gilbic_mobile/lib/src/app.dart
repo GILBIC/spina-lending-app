@@ -43,6 +43,11 @@ class GilbicApp extends StatefulWidget {
 class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   static const Duration _refreshLeadTime = Duration(minutes: 2);
   static const Duration _refreshRetryDelay = Duration(seconds: 30);
+  static const String _expiredSessionNotice =
+      'Your login session expired or is no longer valid. Sign in again.';
+  static const String _revokedSessionNotice =
+      'This account or device is no longer authorized for this session. '
+      'Sign in again or contact Management.';
 
   late final SessionStore _sessionStore;
   late final AuthRepository _authRepository;
@@ -56,6 +61,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   bool _loading = true;
   bool _refreshingSession = false;
   String? _updateRequiredMessage;
+  String? _sessionNotice;
 
   @override
   void initState() {
@@ -103,6 +109,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   Future<void> _restoreSession() async {
     UserSession? session;
     String? updateRequiredMessage;
+    String? sessionNotice;
     try {
       session = await _sessionStore.read();
       if (session != null) {
@@ -124,6 +131,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       await _sessionStore.clear();
       if (error.statusCode == 426) {
         updateRequiredMessage = error.message;
+      } else {
+        sessionNotice = _sessionNoticeForError(error);
       }
       session = null;
     } on Exception {
@@ -136,6 +145,8 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
         session.clearRefreshOverride();
       }
       await _sessionStore.clear();
+      sessionNotice =
+          'Gilbic could not restore your secure login session. Sign in again.';
       session = null;
     }
     if (!mounted) {
@@ -144,6 +155,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     setState(() {
       _session = session;
       _updateRequiredMessage = updateRequiredMessage;
+      _sessionNotice = sessionNotice;
       _loading = false;
     });
     _scheduleSessionRefresh(session);
@@ -153,7 +165,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     final refresher = _authRepository;
     if (refresher is! SessionRefreshRepository) {
       throw const SpinaApiException(
-        'Your login session expired. Sign in again.',
+        _expiredSessionNotice,
         statusCode: 401,
       );
     }
@@ -186,6 +198,9 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   }
 
   Future<String?> _signIn(String username, String password) async {
+    if (mounted && _sessionNotice != null) {
+      setState(() => _sessionNotice = null);
+    }
     try {
       final session = await _authRepository.signIn(
         username: username,
@@ -199,6 +214,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       setState(() {
         _session = session;
         _updateRequiredMessage = null;
+        _sessionNotice = null;
       });
       _scheduleSessionRefresh(session);
       return null;
@@ -231,7 +247,10 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     await _sessionStore.clear();
   }
 
-  Future<void> _invalidateLocalSession(UserSession session) async {
+  Future<void> _invalidateLocalSession(
+    UserSession session, {
+    String? notice,
+  }) async {
     _sessionRefreshTimer?.cancel();
     try {
       await _collectorRouteCache?.clearForUser(session.userId);
@@ -243,7 +262,10 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     if (!mounted) {
       return;
     }
-    setState(() => _session = null);
+    setState(() {
+      _session = null;
+      _sessionNotice = notice;
+    });
   }
 
   Future<void> _showUpdateRequired(
@@ -265,6 +287,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     }
     setState(() {
       _session = null;
+      _sessionNotice = null;
       _updateRequiredMessage = message;
       _loading = false;
     });
@@ -272,6 +295,19 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
 
   bool _isTerminalSessionError(SpinaApiException error) {
     return error.statusCode == 401 || error.statusCode == 403;
+  }
+
+  String _sessionNoticeForError(SpinaApiException error) {
+    if (error.statusCode == 401) {
+      return _expiredSessionNotice;
+    }
+    if (error.statusCode == 403) {
+      return _revokedSessionNotice;
+    }
+    final message = error.message.trim();
+    return message.isEmpty
+        ? 'Gilbic could not restore your secure login session. Sign in again.'
+        : message;
   }
 
   void _scheduleSessionRefresh(UserSession? session) {
@@ -311,7 +347,10 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       return;
     }
     if (current.isExpired) {
-      await _invalidateLocalSession(current);
+      await _invalidateLocalSession(
+        current,
+        notice: _expiredSessionNotice,
+      );
       return;
     }
     await _validateCurrentSession();
@@ -342,7 +381,10 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       if (error.statusCode == 426) {
         await _showUpdateRequired(current, error.message);
       } else if (_isTerminalSessionError(error)) {
-        await _invalidateLocalSession(current);
+        await _invalidateLocalSession(
+          current,
+          notice: _sessionNoticeForError(error),
+        );
       }
     } on Exception {
       // A temporary network failure must not destroy a still-valid local session.
@@ -386,14 +428,25 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     } on SpinaApiException catch (error) {
       if (error.statusCode == 426) {
         await _showUpdateRequired(current, error.message);
-      } else if (_isTerminalSessionError(error) || current.isExpired) {
-        await _invalidateLocalSession(current);
+      } else if (_isTerminalSessionError(error)) {
+        await _invalidateLocalSession(
+          current,
+          notice: _sessionNoticeForError(error),
+        );
+      } else if (current.isExpired) {
+        await _invalidateLocalSession(
+          current,
+          notice: _expiredSessionNotice,
+        );
       } else {
         _scheduleRefreshRetry();
       }
     } on Exception {
       if (current.isExpired) {
-        await _invalidateLocalSession(current);
+        await _invalidateLocalSession(
+          current,
+          notice: _expiredSessionNotice,
+        );
       } else {
         _scheduleRefreshRetry();
       }
@@ -436,6 +489,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
               : _session == null
                   ? LoginPage(
                       onSignIn: _signIn,
+                      noticeMessage: _sessionNotice,
                       clientRegistrationRepository:
                           _clientRegistrationRepository,
                     )
