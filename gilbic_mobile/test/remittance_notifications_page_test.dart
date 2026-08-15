@@ -58,7 +58,18 @@ void main() {
 
     expect(repository.acceptCount, 1);
     expect(find.text('Remittance Accepted'), findsOneWidget);
-    expect(find.textContaining('Money is now under Office Staff custody'), findsOneWidget);
+    final acceptedDialog = find.ancestor(
+      of: find.text('Remittance Accepted'),
+      matching: find.byType(AlertDialog),
+    );
+    expect(acceptedDialog, findsOneWidget);
+    expect(
+      find.descendant(
+        of: acceptedDialog,
+        matching: find.textContaining('Money is now under Office Staff custody'),
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Accepted — money under your custody'), findsOneWidget);
