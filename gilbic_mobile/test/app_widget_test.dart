@@ -72,9 +72,9 @@ void main() {
       username: _session.username,
       displayName: _session.displayName,
       role: AppRole.employee,
-      rawRole: 'employee',
+      rawRole: 'Employee',
       accessToken: _session.accessToken,
-      permissions: const <String>['attendance.view'],
+      permissions: const <String>['employee.portal.view'],
     );
 
     await tester.pumpWidget(
@@ -92,7 +92,38 @@ void main() {
     expect(find.text('Collector Dashboard'), findsNothing);
     final persisted = await store.read();
     expect(persisted?.role, AppRole.employee);
-    expect(persisted?.permissions, <String>['attendance.view']);
+    expect(persisted?.permissions, <String>['employee.portal.view']);
+  });
+
+  testWidgets('server permission removal fails closed before collector navigation',
+      (tester) async {
+    final store = MemorySessionStore();
+    const restricted = UserSession(
+      userId: 'collector-1',
+      username: 'collector.one',
+      displayName: 'Test Collector',
+      role: AppRole.collector,
+      rawRole: 'Collector',
+      accessToken: 'restricted-token',
+      permissions: <String>['route.view'],
+    );
+    await store.write(restricted);
+
+    await tester.pumpWidget(
+      GilbicApp(
+        sessionStore: store,
+        authRepository: _ValidatingAuthRepository(
+          onValidate: (_) async => restricted,
+        ),
+        collectorRouteCache: MemoryCollectorRouteCache(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('dashboard-permission-denied')), findsOneWidget);
+    expect(find.text('Collector Dashboard'), findsNothing);
+    expect(find.byKey(const Key('daily-route')), findsNothing);
+    expect((await store.read())?.permissions, <String>['route.view']);
   });
 
   testWidgets('revoked restored device is signed out and local session removed',
