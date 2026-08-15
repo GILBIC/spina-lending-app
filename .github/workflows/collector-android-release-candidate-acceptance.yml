@@ -158,14 +158,14 @@ jobs:
           if exist "%APK_OUT%" rmdir /s /q "%APK_OUT%"
           mkdir "%HOST%" || exit /b 1
           pushd "%HOST%"
-          call flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile . || exit /b 1
+          call "%FLUTTER_ROOT%\bin\flutter.bat" create --platforms=android --org com.spinalending --project-name gilbic_mobile . || exit /b 1
           if exist "lib" rmdir /s /q "lib"
           xcopy /e /i /y "%GITHUB_WORKSPACE%\gilbic_mobile\lib" "lib" >nul || exit /b 1
           copy /y "%GITHUB_WORKSPACE%\gilbic_mobile\pubspec.yaml" "pubspec.yaml" >nul || exit /b 1
           echo kotlin.incremental=false>>"android\gradle.properties"
           echo kotlin.compiler.execution.strategy=in-process>>"android\gradle.properties"
-          call flutter pub get || exit /b 1
-          call flutter build apk --debug --no-pub || exit /b 1
+          call "%FLUTTER_ROOT%\bin\flutter.bat" pub get || exit /b 1
+          call "%FLUTTER_ROOT%\bin\flutter.bat" build apk --debug --no-pub || exit /b 1
           if not exist "build\app\outputs\flutter-apk\app-debug.apk" exit /b 1
           if not exist "%APK_OUT%" mkdir "%APK_OUT%" || exit /b 1
           copy /y "build\app\outputs\flutter-apk\app-debug.apk" "%APK_OUT%\collector-release-candidate-debug.apk" >nul || exit /b 1
