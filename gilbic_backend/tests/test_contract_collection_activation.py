@@ -19,6 +19,9 @@ REPOSITORY_SOURCE = (
 ).read_text(encoding="utf-8")
 MAIN_SOURCE = (PACKAGE / "main.py").read_text(encoding="utf-8")
 ROUTE_API_SOURCE = (PACKAGE / "collector_route_api.py").read_text(encoding="utf-8")
+SEVEN_BY_SEVEN_ROUTE_SOURCE = (
+    PACKAGE / "seven_by_seven_collector_route.py"
+).read_text(encoding="utf-8")
 
 LOAN_ID = UUID("44444444-4444-4444-8444-444444444444")
 SCHEDULE_ID = UUID("66666666-6666-4666-8666-666666666666")
@@ -153,7 +156,9 @@ def test_stage5e46b_activation_repository_is_append_only_and_never_writes_busine
         assert text not in lowered
 
 
-def test_stage5e46b_router_and_collector_route_use_per_loan_activation() -> None:
+def test_stage5e46b_router_and_collector_route_preserve_per_loan_activation() -> None:
     assert "create_contract_collection_activation_router" in MAIN_SOURCE
-    assert "PerLoanPostgresCollectorRouteRepository" in ROUTE_API_SOURCE
-    assert "return PerLoanPostgresCollectorRouteRepository()" in ROUTE_API_SOURCE
+    assert "SevenBySevenGatedPostgresCollectorRouteRepository" in ROUTE_API_SOURCE
+    assert "return SevenBySevenGatedPostgresCollectorRouteRepository()" in ROUTE_API_SOURCE
+    assert "PerLoanPostgresCollectorRouteRepository" in SEVEN_BY_SEVEN_ROUTE_SOURCE
+    assert "class SevenBySevenGatedPostgresCollectorRouteRepository" in SEVEN_BY_SEVEN_ROUTE_SOURCE
