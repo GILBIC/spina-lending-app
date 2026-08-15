@@ -121,23 +121,23 @@ jobs:
 
       - name: Verify isolated Flutter runtime
         shell: cmd
-        run: '"%RC_FLUTTER_ROOT%\bin\flutter.bat" --version || exit /b 1'
+        run: 'call "%RC_FLUTTER_ROOT%\bin\flutter.bat" --version || exit /b 1'
 
       - name: Resolve Flutter packages
         shell: cmd
         working-directory: gilbic_mobile
-        run: '"%RC_FLUTTER_ROOT%\bin\flutter.bat" pub get || exit /b 1'
+        run: 'call "%RC_FLUTTER_ROOT%\bin\flutter.bat" pub get || exit /b 1'
 
       - name: Analyze Android collector tree
         shell: cmd
         working-directory: gilbic_mobile
-        run: '"%RC_FLUTTER_ROOT%\bin\flutter.bat" analyze --fatal-infos || exit /b 1'
+        run: 'call "%RC_FLUTTER_ROOT%\bin\flutter.bat" analyze --fatal-infos || exit /b 1'
 
       - name: Run collector Android acceptance widgets
         shell: cmd
         working-directory: gilbic_mobile
         run: |
-          "%RC_FLUTTER_ROOT%\bin\flutter.bat" test ^
+          call "%RC_FLUTTER_ROOT%\bin\flutter.bat" test ^
             test\app_widget_test.dart ^
             test\auth_repository_test.dart ^
             test\collector_route_grouping_test.dart ^
