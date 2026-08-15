@@ -38,9 +38,12 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.tap(
-      find.byKey(const Key('open-accept-remittance-notification-1')),
+    final openAccept = find.byKey(
+      const Key('open-accept-remittance-notification-1'),
     );
+    await tester.ensureVisible(openAccept);
+    await tester.pumpAndSettle();
+    await tester.tap(openAccept);
     await tester.pumpAndSettle();
     expect(find.text('Accept Remittance?'), findsOneWidget);
     expect(
