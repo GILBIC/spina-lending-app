@@ -55,6 +55,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   Timer? _sessionRefreshTimer;
   bool _loading = true;
   bool _refreshingSession = false;
+  String? _updateRequiredMessage;
 
   @override
   void initState() {
@@ -101,6 +102,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
 
   Future<void> _restoreSession() async {
     UserSession? session;
+    String? updateRequiredMessage;
     try {
       session = await _sessionStore.read();
       if (session != null) {
@@ -110,6 +112,20 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
           session = await _validateStoredSession(session);
         }
       }
+    } on SpinaApiException catch (error) {
+      if (session != null) {
+        try {
+          await _collectorRouteCache?.clearForUser(session.userId);
+        } on Object {
+          // Invalid-session cleanup must continue if local cache storage fails.
+        }
+        session.clearRefreshOverride();
+      }
+      await _sessionStore.clear();
+      if (error.statusCode == 426) {
+        updateRequiredMessage = error.message;
+      }
+      session = null;
     } on Exception {
       if (session != null) {
         try {
@@ -127,6 +143,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     }
     setState(() {
       _session = session;
+      _updateRequiredMessage = updateRequiredMessage;
       _loading = false;
     });
     _scheduleSessionRefresh(session);
@@ -159,7 +176,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       await _sessionStore.write(validated);
       return validated;
     } on SpinaApiException catch (error) {
-      if (_isTerminalSessionError(error)) {
+      if (_isTerminalSessionError(error) || error.statusCode == 426) {
         rethrow;
       }
       return current;
@@ -179,10 +196,17 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       if (!mounted) {
         return null;
       }
-      setState(() => _session = session);
+      setState(() {
+        _session = session;
+        _updateRequiredMessage = null;
+      });
       _scheduleSessionRefresh(session);
       return null;
     } on SpinaApiException catch (error) {
+      if (error.statusCode == 426) {
+        await _showUpdateRequired(null, error.message);
+        return null;
+      }
       return error.message;
     } on Exception {
       return 'Gilbic could not complete the login request.';
@@ -220,6 +244,30 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       return;
     }
     setState(() => _session = null);
+  }
+
+  Future<void> _showUpdateRequired(
+    UserSession? session,
+    String message,
+  ) async {
+    _sessionRefreshTimer?.cancel();
+    if (session != null) {
+      try {
+        await _collectorRouteCache?.clearForUser(session.userId);
+      } on Object {
+        // Update enforcement must not depend on local cache cleanup succeeding.
+      }
+      session.clearRefreshOverride();
+    }
+    await _sessionStore.clear();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _session = null;
+      _updateRequiredMessage = message;
+      _loading = false;
+    });
   }
 
   bool _isTerminalSessionError(SpinaApiException error) {
@@ -291,7 +339,9 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       setState(() => _session = validated);
       _scheduleSessionRefresh(validated);
     } on SpinaApiException catch (error) {
-      if (_isTerminalSessionError(error)) {
+      if (error.statusCode == 426) {
+        await _showUpdateRequired(current, error.message);
+      } else if (_isTerminalSessionError(error)) {
         await _invalidateLocalSession(current);
       }
     } on Exception {
@@ -334,7 +384,9 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       setState(() => _session = refreshed);
       _scheduleSessionRefresh(refreshed);
     } on SpinaApiException catch (error) {
-      if (_isTerminalSessionError(error) || current.isExpired) {
+      if (error.statusCode == 426) {
+        await _showUpdateRequired(current, error.message);
+      } else if (_isTerminalSessionError(error) || current.isExpired) {
         await _invalidateLocalSession(current);
       } else {
         _scheduleRefreshRetry();
@@ -379,19 +431,70 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       ),
       home: _loading
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-          : _session == null
-              ? LoginPage(
-                  onSignIn: _signIn,
-                  clientRegistrationRepository: _clientRegistrationRepository,
-                )
-              : EnhancedRoleDashboard(
-                  session: _session!,
-                  onSignOut: _signOut,
-                  collectorRouteLoader: _collectorRouteLoader,
-                  paymentSubmissionRepository: _paymentSubmissionRepository,
-                  deviceIdentityProvider: _deviceIdentityProvider,
-                  collectionDeviceSequence: _collectionDeviceSequence,
-                ),
+          : _updateRequiredMessage != null
+              ? _UpdateRequiredPage(message: _updateRequiredMessage!)
+              : _session == null
+                  ? LoginPage(
+                      onSignIn: _signIn,
+                      clientRegistrationRepository:
+                          _clientRegistrationRepository,
+                    )
+                  : EnhancedRoleDashboard(
+                      session: _session!,
+                      onSignOut: _signOut,
+                      collectorRouteLoader: _collectorRouteLoader,
+                      paymentSubmissionRepository:
+                          _paymentSubmissionRepository,
+                      deviceIdentityProvider: _deviceIdentityProvider,
+                      collectionDeviceSequence: _collectionDeviceSequence,
+                    ),
+    );
+  }
+}
+
+class _UpdateRequiredPage extends StatelessWidget {
+  const _UpdateRequiredPage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: const Key('app-update-required'),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Icon(
+                    Icons.system_update_alt,
+                    size: 56,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Update required',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(message, textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Install the latest Gilbic build, then reopen the app.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
