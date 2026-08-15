@@ -118,6 +118,7 @@ jobs:
           if not exist "%FLUTTER_ROOT%\bin\flutter.bat" exit /b 1
           echo FLUTTER_ROOT=%FLUTTER_ROOT%>>"%GITHUB_ENV%"
           echo PUB_CACHE=%PUB_CACHE%>>"%GITHUB_ENV%"
+          echo %FLUTTER_ROOT%\bin>>"%GITHUB_PATH%"
 
       - name: Verify Flutter runtime
         shell: cmd
