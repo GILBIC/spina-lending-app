@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .account_repository import (
@@ -14,6 +14,12 @@ from .account_repository import (
     PostgresAccountRepository,
 )
 from .auth_client import AuthSession, SupabaseAuthClient, SupabaseAuthError
+from .config import Settings, get_settings
+from .mobile_version_policy import (
+    InvalidMobileVersionPolicy,
+    UnsupportedMobileAppVersion,
+    enforce_mobile_app_version,
+)
 from .request_auth import (
     active_device_context,
     authenticated_device_context,
@@ -132,6 +138,30 @@ def _auth_exception(exc: SupabaseAuthError, *, login: bool = False) -> HTTPExcep
     return HTTPException(status_code=502, detail="Authentication service could not complete the request.")
 
 
+def _enforce_mobile_auth_version(
+    http_request: Request,
+    *,
+    platform: str | None,
+    app_version: str | None,
+    settings: Settings,
+) -> None:
+    if not http_request.url.path.startswith("/api/mobile/"):
+        return
+    try:
+        enforce_mobile_app_version(
+            platform=platform,
+            app_version=app_version,
+            settings=settings,
+        )
+    except UnsupportedMobileAppVersion as exc:
+        raise HTTPException(status_code=426, detail=str(exc)) from exc
+    except InvalidMobileVersionPolicy as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Mobile version policy is temporarily unavailable.",
+        ) from exc
+
+
 def create_auth_router() -> APIRouter:
     router = APIRouter(tags=["authentication"])
 
@@ -143,9 +173,19 @@ def create_auth_router() -> APIRouter:
     )
     def register(
         request: RegisterRequest,
+        http_request: Request,
+        x_app_platform: str | None = Header(default=None, alias="X-App-Platform"),
+        x_app_version: str | None = Header(default=None, alias="X-App-Version"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        settings: Settings = Depends(get_settings),
     ) -> dict[str, object]:
+        _enforce_mobile_auth_version(
+            http_request,
+            platform=x_app_platform,
+            app_version=x_app_version,
+            settings=settings,
+        )
         if accounts.username_exists(request.username):
             raise HTTPException(status_code=409, detail="Username is already in use.")
         try:
@@ -180,9 +220,17 @@ def create_auth_router() -> APIRouter:
     @router.post("/api/mobile/v1/auth/login", include_in_schema=False)
     def login(
         request: LoginRequest,
+        http_request: Request,
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        settings: Settings = Depends(get_settings),
     ) -> dict[str, object]:
+        _enforce_mobile_auth_version(
+            http_request,
+            platform=request.platform,
+            app_version=request.app_version,
+            settings=settings,
+        )
         try:
             email = accounts.resolve_email(request.username)
             session = auth.sign_in(email=email, password=request.password)
@@ -209,10 +257,20 @@ def create_auth_router() -> APIRouter:
     @router.post("/api/mobile/v1/auth/refresh", include_in_schema=False)
     def refresh(
         request: RefreshRequest,
+        http_request: Request,
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        x_app_platform: str | None = Header(default=None, alias="X-App-Platform"),
+        x_app_version: str | None = Header(default=None, alias="X-App-Version"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        settings: Settings = Depends(get_settings),
     ) -> dict[str, object]:
+        _enforce_mobile_auth_version(
+            http_request,
+            platform=x_app_platform,
+            app_version=x_app_version,
+            settings=settings,
+        )
         try:
             session = auth.refresh(refresh_token=request.refresh_token)
         except SupabaseAuthError as exc:
@@ -227,11 +285,21 @@ def create_auth_router() -> APIRouter:
     @router.get("/api/v1/auth/me")
     @router.get("/api/mobile/v1/auth/me", include_in_schema=False)
     def me(
+        http_request: Request,
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        x_app_platform: str | None = Header(default=None, alias="X-App-Platform"),
+        x_app_version: str | None = Header(default=None, alias="X-App-Version"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        settings: Settings = Depends(get_settings),
     ) -> dict[str, object]:
+        _enforce_mobile_auth_version(
+            http_request,
+            platform=x_app_platform,
+            app_version=x_app_version,
+            settings=settings,
+        )
         context = authenticated_device_context(
             authorization=authorization,
             device_identifier=x_device_id,
