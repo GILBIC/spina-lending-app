@@ -35,6 +35,12 @@ void main() {
     expect(find.text('DPD 1'), findsOneWidget);
     expect(find.text('GCASH NOTE'), findsOneWidget);
     expect(find.textContaining('Regular note: Pays by GCash'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Cora Garcia'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Cora Garcia'), findsOneWidget);
     expect(find.textContaining('ADV / advance coverage'), findsOneWidget);
   });
