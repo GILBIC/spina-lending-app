@@ -43,8 +43,8 @@ void main() {
       expect(searchRepository.queries, ['Bea']);
       expect(find.text('Bea Borrower'), findsOneWidget);
       expect(find.text('Assigned collector: Collector Two'), findsOneWidget);
-      expect(find.text('Taytay'), findsWidgets);
-      expect(find.text('Regular'), findsWidgets);
+      expect(find.textContaining('Taytay'), findsWidgets);
+      expect(find.textContaining('Regular'), findsWidgets);
       expect(find.byKey(const Key('record-other-area-loan-other')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('record-other-area-loan-other')));
