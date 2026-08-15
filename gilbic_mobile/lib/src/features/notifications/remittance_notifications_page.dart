@@ -98,7 +98,10 @@ class _RemittanceNotificationsPageState
 
   Future<void> _accept(RemittanceNotification notification) async {
     final deviceId = _deviceId;
-    if (deviceId == null || _acceptingId != null || !notification.isPending) {
+    if (deviceId == null ||
+        _acceptingId != null ||
+        !notification.isPending ||
+        !widget.session.hasPermission('remittance.receive')) {
       return;
     }
 
@@ -204,6 +207,8 @@ class _RemittanceNotificationsPageState
   Widget build(BuildContext context) {
     final pendingCount =
         _notifications.where((notification) => notification.isPending).length;
+    final canReceiveRemittance =
+        widget.session.hasPermission('remittance.receive');
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -251,6 +256,7 @@ class _RemittanceNotificationsPageState
                           deviceIdentityProvider: widget.deviceIdentityProvider,
                           accepting:
                               _acceptingId == notification.notificationId,
+                          canReceiveRemittance: canReceiveRemittance,
                           onOpened: () => _markRead(notification),
                           onAccept: () => _accept(notification),
                         ),
@@ -268,6 +274,7 @@ class _NotificationCard extends StatelessWidget {
     required this.session,
     required this.deviceIdentityProvider,
     required this.accepting,
+    required this.canReceiveRemittance,
     required this.onOpened,
     required this.onAccept,
   });
@@ -276,6 +283,7 @@ class _NotificationCard extends StatelessWidget {
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final bool accepting;
+  final bool canReceiveRemittance;
   final VoidCallback onOpened;
   final VoidCallback onAccept;
 
@@ -368,7 +376,7 @@ class _NotificationCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          if (notification.isPending)
+          if (notification.isPending && canReceiveRemittance)
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
@@ -386,6 +394,13 @@ class _NotificationCard extends StatelessWidget {
                 label: Text(
                   accepting ? 'Accepting...' : 'Accept Remittance',
                 ),
+              ),
+            )
+          else if (notification.isPending)
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'View only — your current server permissions do not allow remittance acceptance.',
               ),
             )
           else
