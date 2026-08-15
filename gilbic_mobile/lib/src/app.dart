@@ -13,6 +13,7 @@ import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart'
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/auth/login_page.dart';
 import 'package:gilbic_mobile/src/features/dashboard/enhanced_role_dashboard.dart';
+import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 class GilbicApp extends StatefulWidget {
   const GilbicApp({
@@ -146,7 +147,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       }
       await _sessionStore.clear();
       sessionNotice =
-          'Gilbic could not restore your secure login session. Sign in again.';
+          'SPINA could not restore your secure login session. Sign in again.';
       session = null;
     }
     if (!mounted) {
@@ -225,7 +226,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       }
       return error.message;
     } on Exception {
-      return 'Gilbic could not complete the login request.';
+      return 'SPINA could not complete the login request.';
     }
   }
 
@@ -306,7 +307,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     }
     final message = error.message.trim();
     return message.isEmpty
-        ? 'Gilbic could not restore your secure login session. Sign in again.'
+        ? 'SPINA could not restore your secure login session. Sign in again.'
         : message;
   }
 
@@ -475,13 +476,9 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return MaterialApp(
       key: ValueKey<String>(_authorizationScopeKey(_session)),
-      title: 'Gilbic',
+      title: 'SPINA',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF9C416D)),
-        useMaterial3: true,
-        inputDecorationTheme: const InputDecorationTheme(filled: true),
-      ),
+      theme: SpinaTheme.light,
       home: _loading
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : _updateRequiredMessage != null
@@ -521,29 +518,42 @@ class _UpdateRequiredPage extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 520),
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Icon(
-                    Icons.system_update_alt,
-                    size: 56,
-                    color: Theme.of(context).colorScheme.primary,
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: SpinaTheme.brandPinkSoft,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: const Icon(
+                          Icons.system_update_alt_rounded,
+                          size: 36,
+                          color: SpinaTheme.brandPinkDark,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Update required',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(message, textAlign: TextAlign.center),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Install the latest SPINA build, then reopen the app.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Update required',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(message, textAlign: TextAlign.center),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Install the latest Gilbic build, then reopen the app.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                ),
               ),
             ),
           ),
