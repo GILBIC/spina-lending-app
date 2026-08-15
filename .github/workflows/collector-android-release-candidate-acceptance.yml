@@ -266,6 +266,32 @@ jobs:
           popd
           rmdir /s /q "%HOST%" || exit /b 1
 
+      # CA review builds must remain available to Management even when GitHub
+      # Actions artifact quota is exhausted. This persists only the unsigned
+      # debug review APK on the trusted self-hosted Windows runner.
+      - name: Persist Android CA review APK on self-hosted runner
+        if: github.event_name == 'pull_request'
+        shell: 'powershell -NoProfile -ExecutionPolicy Bypass -File "{0}"'
+        run: |
+          $source = Join-Path $env:GITHUB_WORKSPACE 'gilbic_mobile\build\collector-rc\collector-release-candidate-debug.apk'
+          if (-not (Test-Path -LiteralPath $source)) {
+            throw "Expected Android review APK was not produced: $source"
+          }
+          $reviewSha = '${{ github.event.pull_request.head.sha }}'
+          $commonDocuments = [Environment]::GetFolderPath('CommonDocuments')
+          if ([string]::IsNullOrWhiteSpace($commonDocuments)) {
+            $commonDocuments = 'C:\Users\Public\Documents'
+          }
+          $reviewDir = Join-Path $commonDocuments 'SPINA_REVIEW_BUILDS'
+          New-Item -ItemType Directory -Path $reviewDir -Force | Out-Null
+          $destination = Join-Path $reviewDir "SPINA-CA1-$reviewSha.apk"
+          Copy-Item -LiteralPath $source -Destination $destination -Force
+          $hash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+          $bytes = (Get-Item -LiteralPath $destination).Length
+          Write-Host "SPINA Android CA review build: $destination"
+          Write-Host "SPINA Android CA review size: $bytes bytes"
+          Write-Host "SPINA Android CA review SHA256: $hash"
+
       # The debug APK is smoke evidence only. Its successful local package step above is
       # the acceptance gate; temporary artifact storage exhaustion must not turn a green
       # build/test result into a false product failure. Signed release artifacts remain C7.
