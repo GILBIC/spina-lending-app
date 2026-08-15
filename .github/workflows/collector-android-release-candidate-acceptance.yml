@@ -171,7 +171,11 @@ jobs:
           for %%I in ("%APK_OUT%\collector-release-candidate-debug.apk") do echo RC APK size: %%~zI bytes
           popd
 
-      - name: Upload temporary release-candidate debug APK
+      # The debug APK is smoke evidence only. Its successful local package step above is
+      # the acceptance gate; temporary artifact storage exhaustion must not turn a green
+      # build/test result into a false product failure. Signed release artifacts remain C7.
+      - name: Upload temporary release-candidate debug APK (best effort)
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: collector-android-rc-debug-${{ github.event.pull_request.head.sha || github.sha }}
