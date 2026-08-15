@@ -43,7 +43,9 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   String? _selectedReason;
   bool _submitting = false;
 
-  bool get _isSevenBySeven => _isSevenBySevenLoan(widget.entry.loanType);
+  bool get _isSevenBySeven =>
+      _isSevenBySevenLoan(widget.entry.loanType) &&
+      !widget.entry.sevenBySevenMobileEnabled;
   bool get _isUnableToPay => _entryType == CollectionEntryType.pass;
 
   List<DateTime> get _sortedCoveredDates {
@@ -444,7 +446,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
               const _SafetyNotice(
                 icon: Icons.lock_outline,
                 message:
-                    '7x7 mobile collection is disabled until its dedicated allocator is verified. Use SPINA desktop for this loan.',
+                    '7x7 mobile collection is disabled until the protected server allocator explicitly enables this route entry. Use SPINA desktop for this loan.',
               )
             else ...[
               SegmentedButton<CollectionEntryType>(

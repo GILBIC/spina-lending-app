@@ -31,6 +31,9 @@ from spina_mobile_collections.service import CollectionRejected
 
 PACKAGE = Path(__file__).resolve().parents[1] / "src" / "gilbic_backend"
 COLLECTION_API = (PACKAGE / "collection_api.py").read_text(encoding="utf-8")
+SEVEN_BY_SEVEN_COLLECTION = (
+    PACKAGE / "seven_by_seven_collection_posting.py"
+).read_text(encoding="utf-8")
 CORRECTION_API = (PACKAGE / "collection_correction_api.py").read_text(encoding="utf-8")
 SCHEDULE_SERVICE = (PACKAGE / "contract_schedule_service.py").read_text(encoding="utf-8")
 
@@ -157,12 +160,14 @@ def contract_gate() -> ContractCollectionGate:
     )
 
 
-def test_stage5e46b_live_collection_api_uses_per_loan_contract_bridge() -> None:
-    assert "PerLoanContractAwareCrossCollectorCollectionPostingBridge" in COLLECTION_API
+def test_stage5e46b_live_collection_api_preserves_per_loan_contract_bridge() -> None:
+    assert "SevenBySevenAwarePerLoanContractCollectionPostingBridge" in COLLECTION_API
     assert (
-        "posting_bridge=PerLoanContractAwareCrossCollectorCollectionPostingBridge()"
+        "posting_bridge=SevenBySevenAwarePerLoanContractCollectionPostingBridge()"
         in COLLECTION_API
     )
+    assert "PerLoanContractAwareCrossCollectorCollectionPostingBridge" in SEVEN_BY_SEVEN_COLLECTION
+    assert "class SevenBySevenAwarePerLoanContractCollectionPostingBridge" in SEVEN_BY_SEVEN_COLLECTION
 
 
 def test_stage5e44_correction_api_uses_contract_safe_repository() -> None:

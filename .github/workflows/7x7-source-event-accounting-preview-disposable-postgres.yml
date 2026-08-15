@@ -1,4 +1,4 @@
-name: 7x7 source-event and operational parity disposable PostgreSQL validation
+name: 7x7 source-event, parity and mobile acceptance disposable PostgreSQL validation
 
 on:
   pull_request:
@@ -6,10 +6,20 @@ on:
     paths:
       - 'gilbic_backend/sql/0064_add_7x7_source_event_accounting_preview.sql'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_operational_allocator.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_collection_posting.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_collector_route.py'
+      - 'gilbic_backend/src/gilbic_backend/collection_api.py'
+      - 'gilbic_backend/src/gilbic_backend/collector_route_api.py'
       - 'gilbic_backend/tests/test_7x7_source_event_accounting_preview_migration.py'
       - 'gilbic_backend/tests/test_7x7_source_event_accounting_preview_postgres.py'
       - 'gilbic_backend/tests/test_seven_by_seven_desktop_server_parity_matrix.py'
       - 'gilbic_backend/tests/test_seven_by_seven_desktop_server_postgres_parity.py'
+      - 'gilbic_backend/tests/test_seven_by_seven_mobile_collection_postgres.py'
+      - 'gilbic_mobile/lib/src/core/collector/collector_route.dart'
+      - 'gilbic_mobile/lib/src/features/collector/collector_route_page.dart'
+      - 'gilbic_mobile/lib/src/features/collector/collection_entry_page.dart'
+      - 'gilbic_mobile/test/collector_route_collection_gate_test.dart'
+      - 'gilbic_mobile/test/collection_entry_page_test.dart'
       - 'spina_app/calculation_rules.py'
       - 'tools/run_7x7_source_event_accounting_preview_disposable_postgres_validation.py'
       - 'tools/7x7-source-event-accounting-preview-live-migration.once'
@@ -19,10 +29,20 @@ on:
     paths:
       - 'gilbic_backend/sql/0064_add_7x7_source_event_accounting_preview.sql'
       - 'gilbic_backend/src/gilbic_backend/seven_by_seven_operational_allocator.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_collection_posting.py'
+      - 'gilbic_backend/src/gilbic_backend/seven_by_seven_collector_route.py'
+      - 'gilbic_backend/src/gilbic_backend/collection_api.py'
+      - 'gilbic_backend/src/gilbic_backend/collector_route_api.py'
       - 'gilbic_backend/tests/test_7x7_source_event_accounting_preview_migration.py'
       - 'gilbic_backend/tests/test_7x7_source_event_accounting_preview_postgres.py'
       - 'gilbic_backend/tests/test_seven_by_seven_desktop_server_parity_matrix.py'
       - 'gilbic_backend/tests/test_seven_by_seven_desktop_server_postgres_parity.py'
+      - 'gilbic_backend/tests/test_seven_by_seven_mobile_collection_postgres.py'
+      - 'gilbic_mobile/lib/src/core/collector/collector_route.dart'
+      - 'gilbic_mobile/lib/src/features/collector/collector_route_page.dart'
+      - 'gilbic_mobile/lib/src/features/collector/collection_entry_page.dart'
+      - 'gilbic_mobile/test/collector_route_collection_gate_test.dart'
+      - 'gilbic_mobile/test/collection_entry_page_test.dart'
       - 'spina_app/calculation_rules.py'
       - 'tools/run_7x7_source_event_accounting_preview_disposable_postgres_validation.py'
       - 'tools/7x7-source-event-accounting-preview-live-migration.once'
@@ -158,12 +178,15 @@ jobs:
         run: |
           "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile tools\run_7x7_source_event_accounting_preview_disposable_postgres_validation.py || exit /b 1
           "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\seven_by_seven_operational_allocator.py || exit /b 1
+          "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\seven_by_seven_collection_posting.py || exit /b 1
+          "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\src\gilbic_backend\seven_by_seven_collector_route.py || exit /b 1
           "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile spina_app\calculation_rules.py || exit /b 1
+          "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_seven_by_seven_mobile_collection_postgres.py || exit /b 1
           "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_seven_by_seven_desktop_server_parity_matrix.py || exit /b 1
           "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_seven_by_seven_desktop_server_postgres_parity.py || exit /b 1
           "%X7PREVIEW_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_7x7_source_event_accounting_preview_postgres.py || exit /b 1
 
-      - name: Execute protected 7x7 source-event and operational parity proof
+      - name: Execute protected 7x7 source-event, parity and mobile acceptance proof
         shell: cmd
         run: |
           "%X7PREVIEW_VENV%\Scripts\python.exe" tools\run_7x7_source_event_accounting_preview_disposable_postgres_validation.py --database-url-env X7PREVIEW_DATABASE_URL || exit /b 1
