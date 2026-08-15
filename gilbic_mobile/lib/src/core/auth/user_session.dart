@@ -42,6 +42,26 @@ class UserSession {
     return expiry != null && !expiry.isAfter(DateTime.now().toUtc());
   }
 
+  bool hasPermission(String code) {
+    final normalized = code.trim();
+    return normalized.isNotEmpty && permissions.contains(normalized);
+  }
+
+  bool hasAllPermissions(Iterable<String> codes) {
+    final required = codes
+        .map((code) => code.trim())
+        .where((code) => code.isNotEmpty)
+        .toList(growable: false);
+    return required.isNotEmpty && required.every(hasPermission);
+  }
+
+  bool hasAnyPermission(Iterable<String> codes) {
+    return codes
+        .map((code) => code.trim())
+        .where((code) => code.isNotEmpty)
+        .any(hasPermission);
+  }
+
   void applyRefresh(UserSession refreshed) {
     if (refreshed.userId != userId) {
       throw ArgumentError('The refreshed session belongs to another user.');

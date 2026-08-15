@@ -31,6 +31,13 @@ class EnhancedRoleDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!_hasDashboardAccess(session)) {
+      return _DashboardPermissionDenied(
+        session: session,
+        onSignOut: onSignOut,
+      );
+    }
+
     final dashboard = RoleDashboard(
       session: session,
       onSignOut: onSignOut,
@@ -42,6 +49,22 @@ class EnhancedRoleDashboard extends StatelessWidget {
     if (session.role != AppRole.management) {
       return dashboard;
     }
+
+    final canActivateContractCollection =
+        session.hasPermission('lending.contract_collection.activate');
+    final canReviewEcl = session.hasPermission('accounting.ecl.review');
+    final canViewLoanMeasurement = session.hasPermission('accounting.view');
+    final canManageOpeningWorkbook =
+        session.hasPermission('accounting.cutover.manage');
+    final hasEnhancedAction = canActivateContractCollection ||
+        canReviewEcl ||
+        canViewLoanMeasurement ||
+        canManageOpeningWorkbook;
+
+    if (!hasEnhancedAction) {
+      return dashboard;
+    }
+
     return Stack(
       children: [
         dashboard,
@@ -53,79 +76,149 @@ class EnhancedRoleDashboard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
-                FloatingActionButton.extended(
-                  key: const Key('management-contract-collection-activation'),
-                  heroTag: 'management-contract-collection-activation',
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (context) =>
-                            ManagementContractCollectionActivationPage(
-                          session: session,
-                          deviceIdentityProvider: deviceIdentityProvider,
+                if (canActivateContractCollection) ...[
+                  FloatingActionButton.extended(
+                    key: const Key('management-contract-collection-activation'),
+                    heroTag: 'management-contract-collection-activation',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (context) =>
+                              ManagementContractCollectionActivationPage(
+                            session: session,
+                            deviceIdentityProvider: deviceIdentityProvider,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.verified_user_outlined),
-                  label: const Text('Contract Collection'),
-                ),
-                const SizedBox(height: 10),
-                FloatingActionButton.extended(
-                  key: const Key('management-ecl-outcome-review'),
-                  heroTag: 'management-ecl-outcome-review',
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (context) => ManagementEclOutcomeReviewPage(
-                          session: session,
-                          deviceIdentityProvider: deviceIdentityProvider,
+                      );
+                    },
+                    icon: const Icon(Icons.verified_user_outlined),
+                    label: const Text('Contract Collection'),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (canReviewEcl) ...[
+                  FloatingActionButton.extended(
+                    key: const Key('management-ecl-outcome-review'),
+                    heroTag: 'management-ecl-outcome-review',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (context) => ManagementEclOutcomeReviewPage(
+                            session: session,
+                            deviceIdentityProvider: deviceIdentityProvider,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.fact_check_outlined),
-                  label: const Text('Outcome Review'),
-                ),
-                const SizedBox(height: 10),
-                FloatingActionButton.extended(
-                  key: const Key('management-accounting-measurement'),
-                  heroTag: 'management-accounting-measurement',
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (context) => ManagementAccountingMeasurementPage(
-                          session: session,
-                          deviceIdentityProvider: deviceIdentityProvider,
+                      );
+                    },
+                    icon: const Icon(Icons.fact_check_outlined),
+                    label: const Text('Outcome Review'),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (canViewLoanMeasurement) ...[
+                  FloatingActionButton.extended(
+                    key: const Key('management-accounting-measurement'),
+                    heroTag: 'management-accounting-measurement',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (context) =>
+                              ManagementAccountingMeasurementPage(
+                            session: session,
+                            deviceIdentityProvider: deviceIdentityProvider,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.calculate_outlined),
-                  label: const Text('Loan Measurement'),
-                ),
-                const SizedBox(height: 10),
-                FloatingActionButton.extended(
-                  key: const Key('management-opening-balance-workbook'),
-                  heroTag: 'management-opening-balance-workbook',
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (context) => ManagementOpeningBalanceWorkbookPage(
-                          session: session,
-                          deviceIdentityProvider: deviceIdentityProvider,
+                      );
+                    },
+                    icon: const Icon(Icons.calculate_outlined),
+                    label: const Text('Loan Measurement'),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (canManageOpeningWorkbook)
+                  FloatingActionButton.extended(
+                    key: const Key('management-opening-balance-workbook'),
+                    heroTag: 'management-opening-balance-workbook',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (context) =>
+                              ManagementOpeningBalanceWorkbookPage(
+                            session: session,
+                            deviceIdentityProvider: deviceIdentityProvider,
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.table_view_outlined),
-                  label: const Text('Opening Workbook'),
-                ),
+                      );
+                    },
+                    icon: const Icon(Icons.table_view_outlined),
+                    label: const Text('Opening Workbook'),
+                  ),
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+bool _hasDashboardAccess(UserSession session) {
+  return switch (session.role) {
+    AppRole.client => session.hasPermission('loan.self.view'),
+    AppRole.collector => session.hasAllPermissions(
+        const <String>['route.view', 'collection.create'],
+      ),
+    AppRole.employee => session.hasPermission('employee.portal.view'),
+    AppRole.management => session.hasPermission('management.dashboard.view'),
+  };
+}
+
+class _DashboardPermissionDenied extends StatelessWidget {
+  const _DashboardPermissionDenied({
+    required this.session,
+    required this.onSignOut,
+  });
+
+  final UserSession session;
+  final Future<void> Function() onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${session.role.label} Access'),
+        actions: [
+          IconButton(
+            tooltip: 'Sign out',
+            onPressed: onSignOut,
+            icon: const Icon(Icons.logout),
+          ),
+        ],
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            key: const Key('dashboard-permission-denied'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.lock_outline, size: 44),
+              const SizedBox(height: 12),
+              Text(
+                'Access unavailable',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Your current server permissions do not allow this '
+                '${session.role.label} dashboard. Sign out and contact Management '
+                'if you believe your access should be restored.',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

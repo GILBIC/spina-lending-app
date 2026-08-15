@@ -357,6 +357,17 @@ class _NotificationCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
+          if (notification.isPending &&
+              notification.custodyMessage.trim().isNotEmpty) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                notification.custodyMessage,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           if (notification.isPending)
             SizedBox(
               width: double.infinity,

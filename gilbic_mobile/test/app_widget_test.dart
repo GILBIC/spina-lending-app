@@ -9,6 +9,7 @@ import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_cache.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 
 void main() {
@@ -62,6 +63,115 @@ void main() {
     expect(footer, findsOneWidget);
   });
 
+  testWidgets('restored session adopts current server access scope',
+      (tester) async {
+    final store = MemorySessionStore();
+    await store.write(_session);
+    final validated = UserSession(
+      userId: _session.userId,
+      username: _session.username,
+      displayName: _session.displayName,
+      role: AppRole.employee,
+      rawRole: 'Employee',
+      accessToken: _session.accessToken,
+      permissions: const <String>['employee.portal.view'],
+    );
+
+    await tester.pumpWidget(
+      GilbicApp(
+        sessionStore: store,
+        authRepository: _ValidatingAuthRepository(
+          onValidate: (_) async => validated,
+        ),
+        collectorRouteCache: MemoryCollectorRouteCache(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Employee Dashboard'), findsOneWidget);
+    expect(find.text('Collector Dashboard'), findsNothing);
+    final persisted = await store.read();
+    expect(persisted?.role, AppRole.employee);
+    expect(persisted?.permissions, <String>['employee.portal.view']);
+  });
+
+  testWidgets('server permission removal fails closed before collector navigation',
+      (tester) async {
+    final store = MemorySessionStore();
+    const restricted = UserSession(
+      userId: 'collector-1',
+      username: 'collector.one',
+      displayName: 'Test Collector',
+      role: AppRole.collector,
+      rawRole: 'Collector',
+      accessToken: 'restricted-token',
+      permissions: <String>['route.view'],
+    );
+    await store.write(restricted);
+
+    await tester.pumpWidget(
+      GilbicApp(
+        sessionStore: store,
+        authRepository: _ValidatingAuthRepository(
+          onValidate: (_) async => restricted,
+        ),
+        collectorRouteCache: MemoryCollectorRouteCache(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('dashboard-permission-denied')), findsOneWidget);
+    expect(find.text('Collector Dashboard'), findsNothing);
+    expect(find.byKey(const Key('daily-route')), findsNothing);
+    expect((await store.read())?.permissions, <String>['route.view']);
+  });
+
+  testWidgets('revoked restored device is signed out and local session removed',
+      (tester) async {
+    final store = MemorySessionStore();
+    await store.write(_session);
+
+    await tester.pumpWidget(
+      GilbicApp(
+        sessionStore: store,
+        authRepository: _ValidatingAuthRepository(
+          onValidate: (_) async => throw const SpinaApiException(
+            'This device has been revoked.',
+            statusCode: 403,
+          ),
+        ),
+        collectorRouteCache: MemoryCollectorRouteCache(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('sign-in-button')), findsOneWidget);
+    expect(find.text('Collector Dashboard'), findsNothing);
+    expect(await store.read(), isNull);
+  });
+
+  testWidgets('temporary validation outage preserves valid offline session',
+      (tester) async {
+    final store = MemorySessionStore();
+    await store.write(_session);
+
+    await tester.pumpWidget(
+      GilbicApp(
+        sessionStore: store,
+        authRepository: _ValidatingAuthRepository(
+          onValidate: (_) async => throw const SpinaApiException(
+            'Gilbic could not reach the SPINA server.',
+          ),
+        ),
+        collectorRouteCache: MemoryCollectorRouteCache(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Collector Dashboard'), findsOneWidget);
+    expect(await store.read(), isNotNull);
+  });
+
   testWidgets('labels cached route data as an offline copy', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -98,6 +208,27 @@ class _FakeAuthRepository implements AuthRepository {
     expect(username, 'collector.one');
     expect(password, 'secret');
     return _session;
+  }
+
+  @override
+  Future<void> signOut(UserSession session) async {}
+}
+
+class _ValidatingAuthRepository
+    implements AuthRepository, SessionValidationRepository {
+  _ValidatingAuthRepository({required this.onValidate});
+
+  final Future<UserSession> Function(UserSession session) onValidate;
+
+  @override
+  Future<UserSession> validate(UserSession session) => onValidate(session);
+
+  @override
+  Future<UserSession> signIn({
+    required String username,
+    required String password,
+  }) {
+    throw UnimplementedError();
   }
 
   @override

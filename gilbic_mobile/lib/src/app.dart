@@ -95,7 +95,7 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      unawaited(_refreshSessionIfNeeded());
+      unawaited(_revalidateSessionOnResume());
     }
   }
 
@@ -103,11 +103,22 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     UserSession? session;
     try {
       session = await _sessionStore.read();
-      if (session != null && session.isExpired) {
-        session = await _refreshStoredSession(session);
+      if (session != null) {
+        if (session.isExpired) {
+          session = await _refreshStoredSession(session);
+        } else {
+          session = await _validateStoredSession(session);
+        }
       }
     } on Exception {
-      session?.clearRefreshOverride();
+      if (session != null) {
+        try {
+          await _collectorRouteCache?.clearForUser(session.userId);
+        } on Object {
+          // Invalid-session cleanup must continue if local cache storage fails.
+        }
+        session.clearRefreshOverride();
+      }
       await _sessionStore.clear();
       session = null;
     }
@@ -132,8 +143,29 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     final refreshed =
         await (refresher as SessionRefreshRepository).refresh(current);
     current.applyRefresh(refreshed);
-    await _sessionStore.write(current);
+    await _sessionStore.write(refreshed);
     return refreshed;
+  }
+
+  Future<UserSession> _validateStoredSession(UserSession current) async {
+    final validator = _authRepository;
+    if (validator is! SessionValidationRepository) {
+      return current;
+    }
+    try {
+      final validated =
+          await (validator as SessionValidationRepository).validate(current);
+      current.applyRefresh(validated);
+      await _sessionStore.write(validated);
+      return validated;
+    } on SpinaApiException catch (error) {
+      if (_isTerminalSessionError(error)) {
+        rethrow;
+      }
+      return current;
+    } on Exception {
+      return current;
+    }
   }
 
   Future<String?> _signIn(String username, String password) async {
@@ -169,18 +201,29 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
     final session = _session;
     if (session != null) {
       await _authRepository.signOut(session);
-      try {
-        await _collectorRouteCache?.clearForUser(session.userId);
-      } on Object {
-        // Session removal must continue even if the local cache is unavailable.
-      }
-      session.clearRefreshOverride();
+      await _invalidateLocalSession(session);
+      return;
     }
+    await _sessionStore.clear();
+  }
+
+  Future<void> _invalidateLocalSession(UserSession session) async {
+    _sessionRefreshTimer?.cancel();
+    try {
+      await _collectorRouteCache?.clearForUser(session.userId);
+    } on Object {
+      // Session removal must continue even if the local cache is unavailable.
+    }
+    session.clearRefreshOverride();
     await _sessionStore.clear();
     if (!mounted) {
       return;
     }
     setState(() => _session = null);
+  }
+
+  bool _isTerminalSessionError(SpinaApiException error) {
+    return error.statusCode == 401 || error.statusCode == 403;
   }
 
   void _scheduleSessionRefresh(UserSession? session) {
@@ -201,6 +244,61 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       delay.isNegative ? Duration.zero : delay,
       () => unawaited(_refreshSessionIfNeeded(force: true)),
     );
+  }
+
+  Future<void> _revalidateSessionOnResume() async {
+    final current = _session;
+    if (current == null) {
+      return;
+    }
+
+    final expiry = current.expiresAt;
+    final needsRefresh = expiry == null ||
+        !expiry.isAfter(DateTime.now().toUtc().add(_refreshLeadTime));
+    final refreshToken = current.refreshToken?.trim() ?? '';
+    if (needsRefresh &&
+        _authRepository is SessionRefreshRepository &&
+        refreshToken.isNotEmpty) {
+      await _refreshSessionIfNeeded(force: true);
+      return;
+    }
+    if (current.isExpired) {
+      await _invalidateLocalSession(current);
+      return;
+    }
+    await _validateCurrentSession();
+  }
+
+  Future<void> _validateCurrentSession() async {
+    if (_refreshingSession) {
+      return;
+    }
+    final current = _session;
+    final validator = _authRepository;
+    if (current == null || validator is! SessionValidationRepository) {
+      return;
+    }
+
+    _refreshingSession = true;
+    try {
+      final validated =
+          await (validator as SessionValidationRepository).validate(current);
+      current.applyRefresh(validated);
+      await _sessionStore.write(validated);
+      if (!mounted) {
+        return;
+      }
+      setState(() => _session = validated);
+      _scheduleSessionRefresh(validated);
+    } on SpinaApiException catch (error) {
+      if (_isTerminalSessionError(error)) {
+        await _invalidateLocalSession(current);
+      }
+    } on Exception {
+      // A temporary network failure must not destroy a still-valid local session.
+    } finally {
+      _refreshingSession = false;
+    }
   }
 
   Future<void> _refreshSessionIfNeeded({bool force = false}) async {
@@ -229,34 +327,49 @@ class _GilbicAppState extends State<GilbicApp> with WidgetsBindingObserver {
       final refreshed =
           await (refresher as SessionRefreshRepository).refresh(current);
       current.applyRefresh(refreshed);
-      await _sessionStore.write(current);
+      await _sessionStore.write(refreshed);
       if (!mounted) {
         return;
       }
       setState(() => _session = refreshed);
       _scheduleSessionRefresh(refreshed);
+    } on SpinaApiException catch (error) {
+      if (_isTerminalSessionError(error) || current.isExpired) {
+        await _invalidateLocalSession(current);
+      } else {
+        _scheduleRefreshRetry();
+      }
     } on Exception {
       if (current.isExpired) {
-        current.clearRefreshOverride();
-        await _sessionStore.clear();
-        if (mounted) {
-          setState(() => _session = null);
-        }
+        await _invalidateLocalSession(current);
       } else {
-        _sessionRefreshTimer?.cancel();
-        _sessionRefreshTimer = Timer(
-          _refreshRetryDelay,
-          () => unawaited(_refreshSessionIfNeeded(force: true)),
-        );
+        _scheduleRefreshRetry();
       }
     } finally {
       _refreshingSession = false;
     }
   }
 
+  void _scheduleRefreshRetry() {
+    _sessionRefreshTimer?.cancel();
+    _sessionRefreshTimer = Timer(
+      _refreshRetryDelay,
+      () => unawaited(_refreshSessionIfNeeded(force: true)),
+    );
+  }
+
+  String _authorizationScopeKey(UserSession? session) {
+    if (session == null) {
+      return 'signed-out';
+    }
+    final permissions = List<String>.of(session.permissions)..sort();
+    return '${session.userId}|${session.rawRole.toLowerCase()}|${permissions.join('|')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      key: ValueKey<String>(_authorizationScopeKey(_session)),
       title: 'Gilbic',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
