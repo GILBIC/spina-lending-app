@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from . import __version__
+from .account_api import create_account_router
 from .activity_notification_api import create_activity_notification_router
 from .auth_api import create_auth_router
 from .client_loan_api import create_client_loan_router
@@ -122,6 +123,7 @@ def create_app() -> FastAPI:
         return {"service": "gilbic-backend", "version": __version__}
 
     app.include_router(create_auth_router())
+    app.include_router(create_account_router())
     app.include_router(create_management_router())
     app.include_router(create_management_loan_router())
     app.include_router(create_management_operations_router())
