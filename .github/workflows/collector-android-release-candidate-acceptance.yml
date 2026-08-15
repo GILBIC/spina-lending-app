@@ -154,18 +154,22 @@ jobs:
         run: |
           set "HOST=%RUNNER_TEMP%\gilbic-collector-rc-android-host"
           set "APK_OUT=%GITHUB_WORKSPACE%\gilbic_mobile\build\collector-rc"
+          set "FLUTTER_CMD="
+          for /f "delims=" %%F in ('where flutter') do if not defined FLUTTER_CMD set "FLUTTER_CMD=%%F"
+          if not defined FLUTTER_CMD exit /b 1
+          if not exist "%FLUTTER_CMD%" exit /b 1
           if exist "%HOST%" rmdir /s /q "%HOST%"
           if exist "%APK_OUT%" rmdir /s /q "%APK_OUT%"
-          mkdir "%HOST%" || exit /b 1
-          pushd "%HOST%"
-          call "%FLUTTER_ROOT%\bin\flutter.bat" create --platforms=android --org com.spinalending --project-name gilbic_mobile . || exit /b 1
-          if exist "lib" rmdir /s /q "lib"
-          xcopy /e /i /y "%GITHUB_WORKSPACE%\gilbic_mobile\lib" "lib" >nul || exit /b 1
-          copy /y "%GITHUB_WORKSPACE%\gilbic_mobile\pubspec.yaml" "pubspec.yaml" >nul || exit /b 1
-          echo kotlin.incremental=false>>"android\gradle.properties"
-          echo kotlin.compiler.execution.strategy=in-process>>"android\gradle.properties"
-          call "%FLUTTER_ROOT%\bin\flutter.bat" pub get || exit /b 1
-          call "%FLUTTER_ROOT%\bin\flutter.bat" build apk --debug --no-pub || exit /b 1
+          call "%FLUTTER_CMD%" create --platforms=android --org com.spinalending --project-name gilbic_mobile "%HOST%" || exit /b 1
+          if not exist "%HOST%\pubspec.yaml" exit /b 1
+          if exist "%HOST%\lib" rmdir /s /q "%HOST%\lib"
+          xcopy /e /i /y "%GITHUB_WORKSPACE%\gilbic_mobile\lib" "%HOST%\lib" >nul || exit /b 1
+          copy /y "%GITHUB_WORKSPACE%\gilbic_mobile\pubspec.yaml" "%HOST%\pubspec.yaml" >nul || exit /b 1
+          echo kotlin.incremental=false>>"%HOST%\android\gradle.properties"
+          echo kotlin.compiler.execution.strategy=in-process>>"%HOST%\android\gradle.properties"
+          pushd "%HOST%" || exit /b 1
+          call "%FLUTTER_CMD%" pub get || exit /b 1
+          call "%FLUTTER_CMD%" build apk --debug --no-pub || exit /b 1
           if not exist "build\app\outputs\flutter-apk\app-debug.apk" exit /b 1
           if not exist "%APK_OUT%" mkdir "%APK_OUT%" || exit /b 1
           copy /y "build\app\outputs\flutter-apk\app-debug.apk" "%APK_OUT%\collector-release-candidate-debug.apk" >nul || exit /b 1
