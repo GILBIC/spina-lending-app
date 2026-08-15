@@ -194,6 +194,8 @@ class SpinaAuthRepository
           'Accept': 'application/json',
           'Content-Type': 'application/json',
           'X-Device-Id': deviceIdentity.installationId,
+          'X-App-Platform': deviceIdentity.platform,
+          'X-App-Version': deviceIdentity.appVersion,
         },
         body: jsonEncode(<String, Object?>{
           'refresh_token': refreshToken,
@@ -225,6 +227,8 @@ class SpinaAuthRepository
           'Accept': 'application/json',
           'Authorization': 'Bearer ${session.accessToken}',
           'X-Device-Id': deviceIdentity.installationId,
+          'X-App-Platform': deviceIdentity.platform,
+          'X-App-Version': deviceIdentity.appVersion,
         },
       );
     } on Exception {
