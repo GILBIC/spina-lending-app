@@ -150,7 +150,9 @@ void main() {
     expect(find.text('600.00'), findsOneWidget);
   });
 
-  testWidgets('7x7 collection stays disabled in the form', (tester) async {
+  testWidgets('7x7 collection stays disabled without explicit server gate', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: CollectionEntryPage(
@@ -167,6 +169,7 @@ void main() {
             status: 'Pending',
             passCount: 0,
             routeRevision: 'revision-7x7',
+            sevenBySevenMobileEnabled: false,
           ),
           repository: _RetryRepository(),
           deviceIdentityProvider: _deviceIdentityProvider(),
@@ -180,6 +183,61 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('submit-collection-entry')), findsNothing);
+  });
+
+  testWidgets('explicit server-enabled 7x7 can submit through the Android form', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+
+    final repository = _RetryRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CollectionEntryPage(
+          session: _session,
+          entry: const CollectorRouteEntry(
+            id: 'entry-7x7-enabled',
+            clientId: 'client-7x7-enabled',
+            loanId: 'loan-7x7-enabled',
+            clientName: 'Enabled Seven Client',
+            area: 'Cardona',
+            loanType: '7x7',
+            dailyAmount: 35,
+            balance: 5000,
+            status: 'Pending',
+            passCount: 0,
+            routeRevision: 'loan:loan-7x7-enabled:v0',
+            canCollectMobile: true,
+            canEnterPayment: true,
+            sevenBySevenMobileEnabled: true,
+          ),
+          repository: repository,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
+          collectionDate: DateTime(2026, 8, 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('7x7 mobile collection is disabled'), findsNothing);
+    expect(find.byKey(const Key('collection-amount')), findsOneWidget);
+    expect(find.byKey(const Key('submit-collection-entry')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('submit-collection-entry')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-collection-entry')));
+    await tester.pumpAndSettle();
+
+    expect(repository.drafts, hasLength(1));
+    expect(repository.drafts.single.entryType, CollectionEntryType.payment);
+    expect(repository.drafts.single.amount, 35);
+    expect(repository.drafts.single.coveredDates, hasLength(1));
+    expect(repository.drafts.single.routeRevision, 'loan:loan-7x7-enabled:v0');
+    expect(find.text('Retry same entry'), findsOneWidget);
   });
 }
 
