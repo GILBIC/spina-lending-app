@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     supabase_secret_key: str = Field(default="", repr=False)
     staff_invite_redirect_url: str = ""
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    mobile_android_minimum_version: str = ""
+    mobile_ios_minimum_version: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:
