@@ -1,0 +1,183 @@
+name: Collector Android release-candidate acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'gilbic_backend/src/gilbic_backend/**'
+      - 'gilbic_backend/tests/test_auth_api.py'
+      - 'gilbic_backend/tests/test_collector_route_api.py'
+      - 'gilbic_backend/tests/test_collection_posting.py'
+      - 'gilbic_backend/tests/test_collection_correction_api.py'
+      - 'gilbic_backend/tests/test_other_area_api.py'
+      - 'gilbic_backend/tests/test_cross_collector_posting.py'
+      - 'gilbic_backend/tests/test_remittance_api.py'
+      - 'gilbic_backend/tests/test_cross_remittance_api.py'
+      - 'gilbic_backend/tests/test_notification_api.py'
+      - 'gilbic_backend/tests/test_activity_notification_api.py'
+      - 'gilbic_mobile/lib/**'
+      - 'gilbic_mobile/test/app_widget_test.dart'
+      - 'gilbic_mobile/test/auth_repository_test.dart'
+      - 'gilbic_mobile/test/collector_route_grouping_test.dart'
+      - 'gilbic_mobile/test/collector_route_collection_gate_test.dart'
+      - 'gilbic_mobile/test/collection_entry_page_test.dart'
+      - 'gilbic_mobile/test/collection_correction_page_test.dart'
+      - 'gilbic_mobile/test/other_area_collection_page_test.dart'
+      - 'gilbic_mobile/test/collector_remittance_page_test.dart'
+      - 'gilbic_mobile/test/remittance_notifications_page_test.dart'
+      - 'docs/release/collector-android-acceptance-matrix.md'
+      - '.github/workflows/collector-android-release-candidate-acceptance.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'gilbic_backend/src/gilbic_backend/**'
+      - 'gilbic_backend/tests/test_auth_api.py'
+      - 'gilbic_backend/tests/test_collector_route_api.py'
+      - 'gilbic_backend/tests/test_collection_posting.py'
+      - 'gilbic_backend/tests/test_collection_correction_api.py'
+      - 'gilbic_backend/tests/test_other_area_api.py'
+      - 'gilbic_backend/tests/test_cross_collector_posting.py'
+      - 'gilbic_backend/tests/test_remittance_api.py'
+      - 'gilbic_backend/tests/test_cross_remittance_api.py'
+      - 'gilbic_backend/tests/test_notification_api.py'
+      - 'gilbic_backend/tests/test_activity_notification_api.py'
+      - 'gilbic_mobile/lib/**'
+      - 'gilbic_mobile/test/app_widget_test.dart'
+      - 'gilbic_mobile/test/auth_repository_test.dart'
+      - 'gilbic_mobile/test/collector_route_grouping_test.dart'
+      - 'gilbic_mobile/test/collector_route_collection_gate_test.dart'
+      - 'gilbic_mobile/test/collection_entry_page_test.dart'
+      - 'gilbic_mobile/test/collection_correction_page_test.dart'
+      - 'gilbic_mobile/test/other_area_collection_page_test.dart'
+      - 'gilbic_mobile/test/collector_remittance_page_test.dart'
+      - 'gilbic_mobile/test/remittance_notifications_page_test.dart'
+      - 'docs/release/collector-android-acceptance-matrix.md'
+      - '.github/workflows/collector-android-release-candidate-acceptance.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: collector-android-rc-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 75
+
+    steps:
+      - name: Check out exact release-candidate revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify acceptance matrix files exist
+        shell: cmd
+        run: |
+          if not exist "docs\release\collector-android-acceptance-matrix.md" exit /b 1
+          if not exist "gilbic_mobile\test\other_area_collection_page_test.dart" exit /b 1
+          if not exist "gilbic_mobile\test\remittance_notifications_page_test.dart" exit /b 1
+
+      - name: Create isolated Python acceptance environment
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-collector-android-rc-venv"
+          if exist "%VENV%" rmdir /s /q "%VENV%"
+          python -m venv "%VENV%" || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile" || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\gilbic_backend[test]" || exit /b 1
+
+      - name: Run collector server acceptance controls
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-collector-android-rc-venv"
+          "%VENV%\Scripts\python.exe" -m pytest -q ^
+            gilbic_backend\tests\test_auth_api.py ^
+            gilbic_backend\tests\test_collector_route_api.py ^
+            gilbic_backend\tests\test_collection_posting.py ^
+            gilbic_backend\tests\test_collection_correction_api.py ^
+            gilbic_backend\tests\test_other_area_api.py ^
+            gilbic_backend\tests\test_cross_collector_posting.py ^
+            gilbic_backend\tests\test_remittance_api.py ^
+            gilbic_backend\tests\test_cross_remittance_api.py ^
+            gilbic_backend\tests\test_notification_api.py ^
+            gilbic_backend\tests\test_activity_notification_api.py || exit /b 1
+
+      - name: Install Flutter 3.44.7
+        shell: cmd
+        run: |
+          set "FLUTTER_ROOT=%RUNNER_TEMP%\flutter-3.44.7-collector-rc"
+          set "PUB_CACHE=%RUNNER_TEMP%\pub-cache-collector-rc"
+          if exist "%FLUTTER_ROOT%" rmdir /s /q "%FLUTTER_ROOT%"
+          if not exist "%PUB_CACHE%" mkdir "%PUB_CACHE%" || exit /b 1
+          echo PUB_CACHE=%PUB_CACHE%>>"%GITHUB_ENV%"
+          git clone --depth 1 --branch 3.44.7 https://github.com/flutter/flutter.git "%FLUTTER_ROOT%" || exit /b 1
+          echo %FLUTTER_ROOT%\bin>>"%GITHUB_PATH%"
+
+      - name: Resolve Flutter packages
+        shell: cmd
+        working-directory: gilbic_mobile
+        run: flutter pub get || exit /b 1
+
+      - name: Analyze Android collector tree
+        shell: cmd
+        working-directory: gilbic_mobile
+        run: flutter analyze --fatal-infos || exit /b 1
+
+      - name: Run collector Android acceptance widgets
+        shell: cmd
+        working-directory: gilbic_mobile
+        run: |
+          flutter test ^
+            test\app_widget_test.dart ^
+            test\auth_repository_test.dart ^
+            test\collector_route_grouping_test.dart ^
+            test\collector_route_collection_gate_test.dart ^
+            test\collection_entry_page_test.dart ^
+            test\collection_correction_page_test.dart ^
+            test\other_area_collection_page_test.dart ^
+            test\collector_remittance_page_test.dart ^
+            test\remittance_notifications_page_test.dart || exit /b 1
+
+      - name: Package exact release-candidate debug APK
+        shell: cmd
+        run: |
+          set "HOST=%RUNNER_TEMP%\gilbic-collector-rc-android-host"
+          set "APK_OUT=%GITHUB_WORKSPACE%\gilbic_mobile\build\collector-rc"
+          if exist "%HOST%" rmdir /s /q "%HOST%"
+          if exist "%APK_OUT%" rmdir /s /q "%APK_OUT%"
+          mkdir "%HOST%" || exit /b 1
+          pushd "%HOST%"
+          call flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile . || exit /b 1
+          if exist "lib" rmdir /s /q "lib"
+          xcopy /e /i /y "%GITHUB_WORKSPACE%\gilbic_mobile\lib" "lib" >nul || exit /b 1
+          copy /y "%GITHUB_WORKSPACE%\gilbic_mobile\pubspec.yaml" "pubspec.yaml" >nul || exit /b 1
+          echo kotlin.incremental=false>>"android\gradle.properties"
+          echo kotlin.compiler.execution.strategy=in-process>>"android\gradle.properties"
+          call flutter pub get || exit /b 1
+          call flutter build apk --debug --no-pub || exit /b 1
+          if not exist "build\app\outputs\flutter-apk\app-debug.apk" exit /b 1
+          if not exist "%APK_OUT%" mkdir "%APK_OUT%" || exit /b 1
+          copy /y "build\app\outputs\flutter-apk\app-debug.apk" "%APK_OUT%\collector-release-candidate-debug.apk" >nul || exit /b 1
+          for %%I in ("%APK_OUT%\collector-release-candidate-debug.apk") do echo RC APK size: %%~zI bytes
+          popd
+
+      - name: Upload temporary release-candidate debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: collector-android-rc-debug-${{ github.event.pull_request.head.sha || github.sha }}
+          path: gilbic_mobile/build/collector-rc/collector-release-candidate-debug.apk
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Require a clean committed source tree
+        if: always()
+        shell: cmd
+        run: |
+          git diff --check || exit /b 1
+          git diff --exit-code || exit /b 1
+          git diff --cached --exit-code || exit /b 1
