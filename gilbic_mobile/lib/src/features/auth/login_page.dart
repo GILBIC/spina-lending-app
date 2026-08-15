@@ -7,11 +7,13 @@ class LoginPage extends StatefulWidget {
   const LoginPage({
     required this.onSignIn,
     this.clientRegistrationRepository,
+    this.noticeMessage,
     super.key,
   });
 
   final Future<String?> Function(String username, String password) onSignIn;
   final ClientRegistrationRepository? clientRegistrationRepository;
+  final String? noticeMessage;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -70,6 +72,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final noticeMessage = widget.noticeMessage?.trim();
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -95,6 +98,30 @@ class _LoginPageState extends State<LoginPage> {
                           style: Theme.of(context).textTheme.titleMedium,
                           textAlign: TextAlign.center,
                         ),
+                        if (noticeMessage != null && noticeMessage.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          Semantics(
+                            liveRegion: true,
+                            child: Container(
+                              key: const Key('session-notice'),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .secondaryContainer,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.info_outline),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: Text(noticeMessage)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 28),
                         TextField(
                           key: const Key('username-field'),
