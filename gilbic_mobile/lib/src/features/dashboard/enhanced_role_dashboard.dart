@@ -12,6 +12,7 @@ import 'package:gilbic_mobile/src/features/management/management_contract_collec
 import 'package:gilbic_mobile/src/features/management/management_ecl_outcome_review_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_opening_balance_workbook_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
+import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
 
 class EnhancedRoleDashboard extends StatelessWidget {
   const EnhancedRoleDashboard({
@@ -54,6 +55,14 @@ class EnhancedRoleDashboard extends StatelessWidget {
     );
   }
 
+  void _openOfflinePolicy(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => MobileOfflinePolicyPage(session: session),
+      ),
+    );
+  }
+
   Widget _accountButton(BuildContext context) {
     return Positioned(
       right: 56,
@@ -84,6 +93,21 @@ class EnhancedRoleDashboard extends StatelessWidget {
     );
   }
 
+  Widget _offlinePolicyButton(BuildContext context) {
+    return Positioned(
+      right: 152,
+      top: 0,
+      child: SafeArea(
+        child: IconButton(
+          key: const Key('open-offline-policy'),
+          tooltip: 'Offline & sync',
+          onPressed: () => _openOfflinePolicy(context),
+          icon: const Icon(Icons.cloud_off_outlined),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_hasDashboardAccess(session)) {
@@ -105,6 +129,7 @@ class EnhancedRoleDashboard extends StatelessWidget {
 
     final layers = <Widget>[
       dashboard,
+      _offlinePolicyButton(context),
       _notificationButton(context),
       _accountButton(context),
     ];
@@ -265,12 +290,26 @@ class _DashboardPermissionDenied extends StatelessWidget {
     );
   }
 
+  void _openOfflinePolicy(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => MobileOfflinePolicyPage(session: session),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('${session.role.label} Access'),
         actions: [
+          IconButton(
+            key: const Key('open-offline-policy'),
+            tooltip: 'Offline & sync',
+            onPressed: () => _openOfflinePolicy(context),
+            icon: const Icon(Icons.cloud_off_outlined),
+          ),
           IconButton(
             key: const Key('open-notification-center'),
             tooltip: 'Notifications',
@@ -307,7 +346,7 @@ class _DashboardPermissionDenied extends StatelessWidget {
               Text(
                 'Your current server permissions do not allow this '
                 '${session.role.label} dashboard. You can still review your notifications, '
-                'profile, session, and registered devices or sign out.',
+                'offline policy, profile, session, and registered devices or sign out.',
                 textAlign: TextAlign.center,
               ),
             ],
