@@ -36,10 +36,8 @@ void main() {
     await tester.tap(find.byKey(const Key('sign-in-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Collector Dashboard'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('daily-route')));
-    await tester.pumpAndSettle();
-
+    // CA4 is ledger-first: authenticated Collectors land directly on Daily Route
+    // rather than an intermediate dashboard of modules.
     expect(find.text('Daily Route'), findsOneWidget);
     expect(find.text('Online route'), findsOneWidget);
     expect(find.text('AREA: CARDONA'), findsOneWidget);
@@ -89,7 +87,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Employee Dashboard'), findsOneWidget);
-    expect(find.text('Collector Dashboard'), findsNothing);
+    expect(find.text('Daily Route'), findsNothing);
     final persisted = await store.read();
     expect(persisted?.role, AppRole.employee);
     expect(persisted?.permissions, <String>['employee.portal.view']);
@@ -121,8 +119,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('dashboard-permission-denied')), findsOneWidget);
-    expect(find.text('Collector Dashboard'), findsNothing);
-    expect(find.byKey(const Key('daily-route')), findsNothing);
+    expect(find.text('Daily Route'), findsNothing);
     expect((await store.read())?.permissions, <String>['route.view']);
   });
 
@@ -146,7 +143,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('sign-in-button')), findsOneWidget);
-    expect(find.text('Collector Dashboard'), findsNothing);
+    expect(find.text('Daily Route'), findsNothing);
     expect(await store.read(), isNull);
   });
 
@@ -163,12 +160,13 @@ void main() {
             'Gilbic could not reach the SPINA server.',
           ),
         ),
+        collectorRouteRepository: _FakeCollectorRouteRepository(),
         collectorRouteCache: MemoryCollectorRouteCache(),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Collector Dashboard'), findsOneWidget);
+    expect(find.text('Daily Route'), findsOneWidget);
     expect(await store.read(), isNotNull);
   });
 
