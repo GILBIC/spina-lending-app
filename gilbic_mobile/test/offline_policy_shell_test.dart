@@ -40,8 +40,17 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('open-offline-policy')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('open-offline-policy')));
+      if (role == AppRole.collector) {
+        // CA4 Collector shell keeps field safety under the compact More sheet.
+        expect(find.byKey(const Key('collector-more-tab')), findsOneWidget);
+        await tester.tap(find.byKey(const Key('collector-more-tab')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('collector-more-offline')), findsOneWidget);
+        await tester.tap(find.byKey(const Key('collector-more-offline')));
+      } else {
+        expect(find.byKey(const Key('open-offline-policy')), findsOneWidget);
+        await tester.tap(find.byKey(const Key('open-offline-policy')));
+      }
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('offline-policy-page')), findsOneWidget);
