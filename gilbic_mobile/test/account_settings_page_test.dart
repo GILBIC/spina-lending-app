@@ -110,14 +110,24 @@ void main() {
     expect(find.text('collector@example.com'), findsOneWidget);
     expect(find.text('Current session'), findsOneWidget);
     expect(find.text('2 server permissions'), findsOneWidget);
-    expect(find.text('This device'), findsOneWidget);
-    expect(find.textContaining('Device identifiers are never shown'), findsOneWidget);
-    expect(find.byKey(const Key('revoke-device-device-current')), findsNothing);
-    expect(find.byKey(const Key('revoke-device-device-old')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('account-sign-out')));
     await tester.pump();
     expect(signedOut, isTrue);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pumpAndSettle();
+
+    expect(find.text('This device'), findsOneWidget);
+    expect(find.byKey(const Key('revoke-device-device-current')), findsNothing);
+    expect(find.byKey(const Key('revoke-device-device-old')), findsOneWidget);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -350));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Device identifiers are never shown'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('confirms and revokes only a non-current active device',
@@ -134,6 +144,9 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView), const Offset(0, -650));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('revoke-device-device-old')));
