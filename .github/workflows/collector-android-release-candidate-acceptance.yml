@@ -107,32 +107,37 @@ jobs:
             gilbic_backend\tests\test_notification_api.py ^
             gilbic_backend\tests\test_activity_notification_api.py || exit /b 1
 
-      - name: Install Flutter 3.44.7
+      - name: Install isolated Flutter 3.44.7
         shell: cmd
         run: |
-          set "FLUTTER_ROOT=%RUNNER_TEMP%\flutter-3.44.7-collector-rc"
+          set "RC_FLUTTER_ROOT=%RUNNER_TEMP%\f347rc"
           set "PUB_CACHE=%RUNNER_TEMP%\pub-cache-collector-rc"
-          if exist "%FLUTTER_ROOT%" rmdir /s /q "%FLUTTER_ROOT%"
+          if exist "%RC_FLUTTER_ROOT%" rmdir /s /q "%RC_FLUTTER_ROOT%"
           if not exist "%PUB_CACHE%" mkdir "%PUB_CACHE%" || exit /b 1
+          git -c core.longpaths=true clone --depth 1 --branch 3.44.7 https://github.com/flutter/flutter.git "%RC_FLUTTER_ROOT%" || exit /b 1
+          if not exist "%RC_FLUTTER_ROOT%\bin\flutter.bat" exit /b 1
+          echo RC_FLUTTER_ROOT=%RC_FLUTTER_ROOT%>>"%GITHUB_ENV%"
           echo PUB_CACHE=%PUB_CACHE%>>"%GITHUB_ENV%"
-          git clone --depth 1 --branch 3.44.7 https://github.com/flutter/flutter.git "%FLUTTER_ROOT%" || exit /b 1
-          echo %FLUTTER_ROOT%\bin>>"%GITHUB_PATH%"
+
+      - name: Verify isolated Flutter runtime
+        shell: cmd
+        run: '"%RC_FLUTTER_ROOT%\bin\flutter.bat" --version || exit /b 1'
 
       - name: Resolve Flutter packages
         shell: cmd
         working-directory: gilbic_mobile
-        run: flutter pub get || exit /b 1
+        run: '"%RC_FLUTTER_ROOT%\bin\flutter.bat" pub get || exit /b 1'
 
       - name: Analyze Android collector tree
         shell: cmd
         working-directory: gilbic_mobile
-        run: flutter analyze --fatal-infos || exit /b 1
+        run: '"%RC_FLUTTER_ROOT%\bin\flutter.bat" analyze --fatal-infos || exit /b 1'
 
       - name: Run collector Android acceptance widgets
         shell: cmd
         working-directory: gilbic_mobile
         run: |
-          flutter test ^
+          "%RC_FLUTTER_ROOT%\bin\flutter.bat" test ^
             test\app_widget_test.dart ^
             test\auth_repository_test.dart ^
             test\collector_route_grouping_test.dart ^
@@ -152,14 +157,14 @@ jobs:
           if exist "%APK_OUT%" rmdir /s /q "%APK_OUT%"
           mkdir "%HOST%" || exit /b 1
           pushd "%HOST%"
-          call flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile . || exit /b 1
+          call "%RC_FLUTTER_ROOT%\bin\flutter.bat" create --platforms=android --org com.spinalending --project-name gilbic_mobile . || exit /b 1
           if exist "lib" rmdir /s /q "lib"
           xcopy /e /i /y "%GITHUB_WORKSPACE%\gilbic_mobile\lib" "lib" >nul || exit /b 1
           copy /y "%GITHUB_WORKSPACE%\gilbic_mobile\pubspec.yaml" "pubspec.yaml" >nul || exit /b 1
           echo kotlin.incremental=false>>"android\gradle.properties"
           echo kotlin.compiler.execution.strategy=in-process>>"android\gradle.properties"
-          call flutter pub get || exit /b 1
-          call flutter build apk --debug --no-pub || exit /b 1
+          call "%RC_FLUTTER_ROOT%\bin\flutter.bat" pub get || exit /b 1
+          call "%RC_FLUTTER_ROOT%\bin\flutter.bat" build apk --debug --no-pub || exit /b 1
           if not exist "build\app\outputs\flutter-apk\app-debug.apk" exit /b 1
           if not exist "%APK_OUT%" mkdir "%APK_OUT%" || exit /b 1
           copy /y "build\app\outputs\flutter-apk\app-debug.apk" "%APK_OUT%\collector-release-candidate-debug.apk" >nul || exit /b 1
