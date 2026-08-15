@@ -173,9 +173,19 @@ def create_auth_router() -> APIRouter:
     )
     def register(
         request: RegisterRequest,
+        http_request: Request,
+        x_app_platform: str | None = Header(default=None, alias="X-App-Platform"),
+        x_app_version: str | None = Header(default=None, alias="X-App-Version"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        settings: Settings = Depends(get_settings),
     ) -> dict[str, object]:
+        _enforce_mobile_auth_version(
+            http_request,
+            platform=x_app_platform,
+            app_version=x_app_version,
+            settings=settings,
+        )
         if accounts.username_exists(request.username):
             raise HTTPException(status_code=409, detail="Username is already in use.")
         try:
