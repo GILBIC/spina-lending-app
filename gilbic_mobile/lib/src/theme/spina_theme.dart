@@ -21,7 +21,6 @@ abstract final class SpinaTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: brandPink,
       brightness: Brightness.light,
-      surface: Colors.white,
     ).copyWith(
       primary: brandPink,
       onPrimary: Colors.white,
@@ -58,7 +57,7 @@ abstract final class SpinaTheme {
         ),
         headlineSmall: base.textTheme.headlineSmall?.copyWith(
           color: ink,
-          fontWeight: FontWeight.w750,
+          fontWeight: FontWeight.w700,
           letterSpacing: -0.3,
         ),
         titleLarge: base.textTheme.titleLarge?.copyWith(
@@ -67,7 +66,7 @@ abstract final class SpinaTheme {
         ),
         titleMedium: base.textTheme.titleMedium?.copyWith(
           color: ink,
-          fontWeight: FontWeight.w650,
+          fontWeight: FontWeight.w600,
         ),
         bodyLarge: base.textTheme.bodyLarge?.copyWith(
           color: ink,
@@ -95,7 +94,7 @@ abstract final class SpinaTheme {
         titleTextStyle: TextStyle(
           color: ink,
           fontSize: 20,
-          fontWeight: FontWeight.w750,
+          fontWeight: FontWeight.w700,
           letterSpacing: -0.25,
         ),
       ),
