@@ -25,7 +25,17 @@ def collector_route_repository_dependency() -> PostgresCollectorRouteRepository:
     return SevenBySevenGatedPostgresCollectorRouteRepository()
 
 
+def _is_seven_by_seven_loan_type(value: str) -> bool:
+    normalized = value.lower().replace(" ", "")
+    return "7x7" in normalized or "7×7" in normalized
+
+
 def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
+    seven_by_seven_mobile_enabled = (
+        _is_seven_by_seven_loan_type(entry.loan_type)
+        and entry.can_collect_mobile
+        and entry.can_enter_payment
+    )
     return {
         "route_entry_id": str(entry.route_entry_id),
         "client_id": str(entry.client_id),
@@ -46,6 +56,7 @@ def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
         "route_revision": entry.route_revision,
         "can_collect_mobile": entry.can_collect_mobile,
         "can_enter_payment": entry.can_enter_payment,
+        "seven_by_seven_mobile_enabled": seven_by_seven_mobile_enabled,
         "collection_message": entry.collection_message,
         "contract_allocation_enabled": entry.contract_allocation_enabled,
         "contract_schedule_verified": entry.contract_schedule_verified,
