@@ -6,7 +6,7 @@ import sys
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 from uuid import uuid4
 
 import psycopg
@@ -20,8 +20,10 @@ pytestmark = pytest.mark.skipif(
 )
 
 ROOT = Path(__file__).resolve().parents[2]
+TEST_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "gilbic_backend" / "src"))
+sys.path.insert(0, str(TEST_DIR))
 
 from gilbic_backend.seven_by_seven_operational_allocator import (  # noqa: E402
     SEVEN_BY_SEVEN_OPERATIONAL_POLICY,
@@ -31,9 +33,9 @@ from gilbic_backend.seven_by_seven_operational_allocator import (  # noqa: E402
     fixed_daily_interest_for_original_principal,
 )
 from spina_app.calculation_rules import allocate_x7_payments  # noqa: E402
+import test_seven_by_seven_desktop_server_parity_matrix as b2_matrix  # noqa: E402
 
 
-TEST_DIR = Path(__file__).resolve().parent
 PREVIEW_HELPER_PATH = TEST_DIR / "test_7x7_source_event_accounting_preview_postgres.py"
 _preview_spec = importlib.util.spec_from_file_location(
     "x7_b3_preview_helpers", PREVIEW_HELPER_PATH
@@ -41,12 +43,6 @@ _preview_spec = importlib.util.spec_from_file_location(
 assert _preview_spec is not None and _preview_spec.loader is not None
 preview_helpers = importlib.util.module_from_spec(_preview_spec)
 _preview_spec.loader.exec_module(preview_helpers)
-
-B2_MATRIX_PATH = TEST_DIR / "test_seven_by_seven_desktop_server_parity_matrix.py"
-_b2_spec = importlib.util.spec_from_file_location("x7_b2_matrix", B2_MATRIX_PATH)
-assert _b2_spec is not None and _b2_spec.loader is not None
-b2_matrix = importlib.util.module_from_spec(_b2_spec)
-_b2_spec.loader.exec_module(b2_matrix)
 
 SQL_0064 = (
     Path(__file__).resolve().parents[1]
@@ -149,9 +145,7 @@ def _insert_source_rows(
     sequence_start: int = 1,
 ) -> dict[str, str]:
     source_ids: dict[str, str] = {}
-    for sequence, source in enumerate(
-        _case_source_rows(case), start=sequence_start
-    ):
+    for sequence, source in enumerate(_case_source_rows(case), start=sequence_start):
         entry_type = str(source.get("entry_type") or "payment")
         amount = str(source.get("payment", source.get("amount", "0.00")))
         event_id = str(source.get("event_id") or f"source-{sequence}")
@@ -374,11 +368,7 @@ def test_exact_desktop_server_matrix_from_protected_postgresql_source_rows(case)
     with psycopg.connect(DATABASE_URL) as connection:
         try:
             connection.execute(_transaction_body(SQL_0064))
-            _assert_protected_source_parity(
-                connection,
-                case=case,
-                suffix=suffix,
-            )
+            _assert_protected_source_parity(connection, case=case, suffix=suffix)
         finally:
             connection.rollback()
 
