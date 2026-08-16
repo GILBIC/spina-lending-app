@@ -38,6 +38,20 @@ def test_repository_keeps_dynamic_preview_and_complete_post_cutover_source_histo
     assert MAX_SOURCE_EVENTS == 5000
 
 
+def test_repository_uses_loan_applied_cash_and_fail_closes_unallocated_receipts() -> None:
+    source = inspect.getsource(PostgresEirCashAllocationRepository)
+
+    assert "t.applied_amount as amount" in source
+    assert "t.amount as cash_received_amount" in source
+    assert "t.unallocated_amount" in source
+    assert "unallocated_receipt_cash_review" in source
+    assert "Decimal(row[\"unallocated_amount\"] or 0)" in source
+    assert "Custody/remittance must keep the full receipts" in source
+    assert source.index("unallocated_receipt_cash_review") < source.index(
+        "state = EirCutoverState"
+    )
+
+
 def test_repository_fail_closes_collection_proposals_against_accounts_and_journal_state() -> None:
     source = inspect.getsource(PostgresEirCashAllocationRepository)
 
