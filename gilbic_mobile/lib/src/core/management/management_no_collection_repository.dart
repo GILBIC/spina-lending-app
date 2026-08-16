@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/config/api_config.dart';
 import 'package:gilbic_mobile/src/core/management/management_no_collection.dart';
+import 'package:gilbic_mobile/src/core/management/management_no_collection_preview.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:http/http.dart' as http;
 
@@ -11,6 +12,14 @@ abstract interface class ManagementNoCollectionRepository {
     UserSession session, {
     required String deviceId,
     required String loanId,
+  });
+
+  Future<ManagementNoCollectionPreview> preview(
+    UserSession session, {
+    required String deviceId,
+    required String loanId,
+    required int expectedOperationalVersion,
+    required DateTime noCollectionDate,
   });
 
   Future<ManagementNoCollectionAdjustmentResult> declare(
@@ -53,6 +62,32 @@ class SpinaManagementNoCollectionRepository
       ),
     );
     return ManagementNoCollectionLoanState.fromPayload(
+      unwrapSpinaData(response.payload, statusCode: response.statusCode),
+    );
+  }
+
+  @override
+  Future<ManagementNoCollectionPreview> preview(
+    UserSession session, {
+    required String deviceId,
+    required String loanId,
+    required int expectedOperationalVersion,
+    required DateTime noCollectionDate,
+  }) async {
+    final response = await _send(
+      session,
+      deviceId: deviceId,
+      method: 'POST',
+      endpoint: ApiConfig.endpoint(
+        '/api/mobile/v1/management/no-collection/preview',
+      ),
+      body: <String, Object?>{
+        'loan_id': loanId,
+        'expected_operational_version': expectedOperationalVersion,
+        'no_collection_date': _date(noCollectionDate),
+      },
+    );
+    return ManagementNoCollectionPreview.fromPayload(
       unwrapSpinaData(response.payload, statusCode: response.statusCode),
     );
   }
