@@ -155,7 +155,8 @@ class PaymentSubmissionDraft {
       'device_sequence': deviceSequence,
       'note': note.trim(),
       'route_revision': routeRevision,
-      'payment_allocation_intent': paymentAllocationIntent.apiValue,
+      if (paymentAllocationIntent != PaymentAllocationIntent.scheduled)
+        'payment_allocation_intent': paymentAllocationIntent.apiValue,
     };
   }
 }
