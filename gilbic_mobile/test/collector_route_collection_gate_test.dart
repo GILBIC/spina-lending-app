@@ -209,7 +209,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Lacking'), findsOneWidget);
+    expect(find.text('LACKING'), findsOneWidget);
     final button = tester.widget<FilledButton>(
       find.byKey(const Key('record-collection-entry-partial')),
     );
