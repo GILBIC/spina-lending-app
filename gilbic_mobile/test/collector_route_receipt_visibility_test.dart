@@ -80,7 +80,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Lacking'), findsOneWidget);
+    expect(find.text('LACKING'), findsOneWidget);
     expect(find.textContaining('R-A100'), findsNothing);
 
     await tester.tap(find.byKey(const Key('route-client-client-1')));
