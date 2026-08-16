@@ -35,6 +35,43 @@ ALTER TABLE lending.collection_transactions
     ALTER COLUMN allocation_state SET DEFAULT 'fully_allocated',
     ALTER COLUMN allocation_state SET NOT NULL;
 
+-- Compatibility bridge while every existing writer is moved to explicit receipt
+-- application fields. PostgreSQL applies column defaults before BEFORE INSERT
+-- triggers, so an old writer that supplies only amount arrives here as 0/0 with
+-- the default fully_allocated state. Preserve its historical behaviour by treating
+-- the whole receipt as applied. A future receipt-first writer can explicitly send
+-- a partial/unallocated split and this trigger leaves that split untouched.
+CREATE OR REPLACE FUNCTION lending.normalize_collection_receipt_application_insert()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.entry_type = 'pass' THEN
+        NEW.applied_amount := 0;
+        NEW.unallocated_amount := 0;
+        NEW.allocation_state := 'not_applicable';
+        RETURN NEW;
+    END IF;
+
+    IF NEW.entry_type IN ('payment', 'advance')
+       AND NEW.amount > 0
+       AND NEW.applied_amount = 0
+       AND NEW.unallocated_amount = 0
+       AND NEW.allocation_state = 'fully_allocated' THEN
+        NEW.applied_amount := NEW.amount;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS normalize_collection_receipt_application_insert
+    ON lending.collection_transactions;
+CREATE TRIGGER normalize_collection_receipt_application_insert
+BEFORE INSERT ON lending.collection_transactions
+FOR EACH ROW
+EXECUTE FUNCTION lending.normalize_collection_receipt_application_insert();
+
 ALTER TABLE lending.collection_transactions
     DROP CONSTRAINT IF EXISTS lending_collection_applied_amount_check;
 ALTER TABLE lending.collection_transactions
