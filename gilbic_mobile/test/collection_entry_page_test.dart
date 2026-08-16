@@ -36,26 +36,25 @@ void main() {
 
     expect(find.text('200.00'), findsOneWidget);
     expect(find.text('Covered dates'), findsOneWidget);
+    expect(find.byKey(const Key('confirm-collection-entry')), findsNothing);
 
     final submitButton = find.byKey(const Key('submit-collection-entry'));
     expect(submitButton, findsOneWidget);
     await tester.tap(submitButton);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('confirm-collection-entry')));
-    await tester.pumpAndSettle();
 
     expect(find.text('Retry same entry'), findsOneWidget);
     expect(find.textContaining('could not reach'), findsOneWidget);
+    expect(repository.drafts, hasLength(1));
 
     await tester.tap(submitButton);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('confirm-collection-entry')));
     await tester.pumpAndSettle();
 
     expect(find.text('Payment saved.'), findsOneWidget);
     expect(find.text('Receipt: R-1001'), findsOneWidget);
     expect(find.text('Official balance: ₱4,600.00'), findsOneWidget);
     expect(find.text('Done and refresh route'), findsOneWidget);
+    expect(find.byKey(const Key('confirm-collection-entry')), findsNothing);
     expect(repository.drafts, hasLength(2));
     expect(
       repository.drafts.first.idempotencyKey,
@@ -226,10 +225,9 @@ void main() {
     expect(find.textContaining('7x7 mobile collection is disabled'), findsNothing);
     expect(find.byKey(const Key('collection-amount')), findsOneWidget);
     expect(find.byKey(const Key('submit-collection-entry')), findsOneWidget);
+    expect(find.byKey(const Key('confirm-collection-entry')), findsNothing);
 
     await tester.tap(find.byKey(const Key('submit-collection-entry')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('confirm-collection-entry')));
     await tester.pumpAndSettle();
 
     expect(repository.drafts, hasLength(1));
