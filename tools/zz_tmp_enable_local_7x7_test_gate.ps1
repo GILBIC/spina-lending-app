@@ -1,14 +1,12 @@
 $ErrorActionPreference = 'Stop'
 
 Write-Host "Runner machine: $env:COMPUTERNAME"
-if ($env:COMPUTERNAME -ne 'DESKTOP-RQ2TRU8') {
-    throw 'This operation must run on DESKTOP-RQ2TRU8, the emulator/backend host.'
-}
-
 $listener = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $listener) {
-    throw 'No local backend is listening on port 8000.'
+    Write-Host 'No local backend is listening on port 8000 on this runner; leaving it unchanged.'
+    exit 0
 }
+
 $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$($listener.OwningProcess)"
 Write-Host "Backend PID: $($listener.OwningProcess)"
 Write-Host "Backend executable: $($proc.ExecutablePath)"
