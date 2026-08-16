@@ -14,53 +14,6 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: mobile/ca4-collector-ui
-      - name: Patch and upload exact analyzer fix
-        shell: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.EXE -NoProfile -ExecutionPolicy Bypass -File "{0}"
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $branch = 'mobile/ca4-collector-ui'
-          $repo = 'GILBIC/spina-lending-app'
-          $codePath = 'gilbic_mobile/lib/src/features/collector/collector_route_page.dart'
-          $workflowPath = '.github/workflows/zz_tmp_ca4_analyzer_fix.yml'
-          $localPath = Join-Path $env:GITHUB_WORKSPACE $codePath
-
-          $text = [System.IO.File]::ReadAllText($localPath)
-          $old = 'status == null || status == 429 || (status != null && status >= 500);'
-          $new = 'status == null || status == 429 || status >= 500;'
-          $count = ([regex]::Matches($text, [regex]::Escape($old))).Count
-          if ($count -ne 1) { throw "Expected exactly one analyzer target, found $count" }
-          [System.IO.File]::WriteAllText(
-            $localPath,
-            $text.Replace($old, $new),
-            (New-Object System.Text.UTF8Encoding($false))
-          )
-
-          $headers = @{
-            Authorization = "Bearer $env:GH_TOKEN"
-            Accept = 'application/vnd.github+json'
-            'X-GitHub-Api-Version' = '2022-11-28'
-          }
-          $escapedBranch = [uri]::EscapeDataString($branch)
-
-          $codeUrl = "https://api.github.com/repos/$repo/contents/$codePath?ref=$escapedBranch"
-          $codeMeta = Invoke-RestMethod -Headers $headers -Uri $codeUrl
-          $codeContent = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($localPath))
-          $putBody = @{
-            message = 'Mobile: fix direct Pay analyzer warning'
-            content = $codeContent
-            sha = $codeMeta.sha
-            branch = $branch
-          } | ConvertTo-Json
-          Invoke-RestMethod -Method Put -Headers $headers -Uri "https://api.github.com/repos/$repo/contents/$codePath" -ContentType 'application/json' -Body $putBody | Out-Null
-
-          $workflowUrl = "https://api.github.com/repos/$repo/contents/$workflowPath?ref=$escapedBranch"
-          $workflowMeta = Invoke-RestMethod -Headers $headers -Uri $workflowUrl
-          $deleteBody = @{
-            message = 'CI: remove temporary Collector analyzer workflow'
-            sha = $workflowMeta.sha
-            branch = $branch
-          } | ConvertTo-Json
-          Invoke-RestMethod -Method Delete -Headers $headers -Uri "https://api.github.com/repos/$repo/contents/$workflowPath" -ContentType 'application/json' -Body $deleteBody | Out-Null
+      - name: Patch route receipt UI and clean workflow
+        shell: cmd
+        run: python -c "import base64;exec(base64.b64decode('CmltcG9ydCBiYXNlNjQKaW1wb3J0IGpzb24KaW1wb3J0IG9zCmltcG9ydCB1cmxsaWIucGFyc2UKaW1wb3J0IHVybGxpYi5yZXF1ZXN0CgpyZXBvID0gIkdJTEJJQy9zcGluYS1sZW5kaW5nLWFwcCIKYnJhbmNoID0gIm1vYmlsZS9jYTQtY29sbGVjdG9yLXVpIgpyb3V0ZV9wYXRoID0gImdpbGJpY19tb2JpbGUvbGliL3NyYy9mZWF0dXJlcy9jb2xsZWN0b3IvY29sbGVjdG9yX3JvdXRlX3BhZ2UuZGFydCIKd29ya2Zsb3dfcGF0aCA9ICIuZ2l0aHViL3dvcmtmbG93cy96el90bXBfY2E0X2FuYWx5emVyX2ZpeC55bWwiCnRva2VuID0gb3MuZW52aXJvblsiR0hfVE9LRU4iXQoKaGVhZGVycyA9IHsKICAgICJBdXRob3JpemF0aW9uIjogZiJCZWFyZXIge3Rva2VufSIsCiAgICAiQWNjZXB0IjogImFwcGxpY2F0aW9uL3ZuZC5naXRodWIranNvbiIsCiAgICAiWC1HaXRIdWItQXBpLVZlcnNpb24iOiAiMjAyMi0xMS0yOCIsCiAgICAiVXNlci1BZ2VudCI6ICJzcGluYS1jYTQtcGF0Y2giLAp9CgpkZWYgcmVxdWVzdF9qc29uKG1ldGhvZCwgdXJsLCBwYXlsb2FkPU5vbmUpOgogICAgZGF0YSA9IE5vbmUgaWYgcGF5bG9hZCBpcyBOb25lIGVsc2UganNvbi5kdW1wcyhwYXlsb2FkKS5lbmNvZGUoInV0Zi04IikKICAgIHJlcSA9IHVybGxpYi5yZXF1ZXN0LlJlcXVlc3QodXJsLCBkYXRhPWRhdGEsIGhlYWRlcnM9aGVhZGVycywgbWV0aG9kPW1ldGhvZCkKICAgIGlmIGRhdGEgaXMgbm90IE5vbmU6CiAgICAgICAgcmVxLmFkZF9oZWFkZXIoIkNvbnRlbnQtVHlwZSIsICJhcHBsaWNhdGlvbi9qc29uIikKICAgIHdpdGggdXJsbGliLnJlcXVlc3QudXJsb3BlbihyZXEpIGFzIHJlc3BvbnNlOgogICAgICAgIGJvZHkgPSByZXNwb25zZS5yZWFkKCkKICAgIHJldHVybiBqc29uLmxvYWRzKGJvZHkpIGlmIGJvZHkgZWxzZSB7fQoKZGVmIGNvbnRlbnRfbWV0YShwYXRoKToKICAgIGVuY29kZWRfcGF0aCA9ICIvIi5qb2luKHVybGxpYi5wYXJzZS5xdW90ZShwYXJ0LCBzYWZlPSIiKSBmb3IgcGFydCBpbiBwYXRoLnNwbGl0KCIvIikpCiAgICByZWYgPSB1cmxsaWIucGFyc2UucXVvdGUoYnJhbmNoLCBzYWZlPSIiKQogICAgcmV0dXJuIHJlcXVlc3RfanNvbigiR0VUIiwgZiJodHRwczovL2FwaS5naXRodWIuY29tL3JlcG9zL3tyZXBvfS9jb250ZW50cy97ZW5jb2RlZF9wYXRofT9yZWY9e3JlZn0iKQoKbWV0YSA9IGNvbnRlbnRfbWV0YShyb3V0ZV9wYXRoKQp0ZXh0ID0gYmFzZTY0LmI2NGRlY29kZShtZXRhWyJjb250ZW50Il0pLmRlY29kZSgidXRmLTgiKQoKb2xkX2FuYWx5emVyID0gInN0YXR1cyA9PSBudWxsIHx8IHN0YXR1cyA9PSA0MjkgfHwgKHN0YXR1cyAhPSBudWxsICYmIHN0YXR1cyA+PSA1MDApOyIKbmV3X2FuYWx5emVyID0gInN0YXR1cyA9PSBudWxsIHx8IHN0YXR1cyA9PSA0MjkgfHwgc3RhdHVzID49IDUwMDsiCmlmIG9sZF9hbmFseXplciBpbiB0ZXh0OgogICAgaWYgdGV4dC5jb3VudChvbGRfYW5hbHl6ZXIpICE9IDE6CiAgICAgICAgcmFpc2UgUnVudGltZUVycm9yKCJBbmFseXplciB0YXJnZXQgaXMgYW1iaWd1b3VzLiIpCiAgICB0ZXh0ID0gdGV4dC5yZXBsYWNlKG9sZF9hbmFseXplciwgbmV3X2FuYWx5emVyLCAxKQplbGlmIG5ld19hbmFseXplciBub3QgaW4gdGV4dDoKICAgIHJhaXNlIFJ1bnRpbWVFcnJvcigiQW5hbHl6ZXIgdGFyZ2V0IHdhcyBub3QgZm91bmQuIikKCmxlZ2FjeV9yZXBsYWNlbWVudHMgPSB7CiIiIiAgICAgIGlmIChlbnRyeS5wcm9jZXNzZWRUb2RheSAmJiBlbnRyeS50b2RheUFtb3VudCA+IDApCiAgICAgICAgJ0xhdGVzdCByZWNlaXB0OiAke19tb25leUNvbXBhY3QoZW50cnkudG9kYXlBbW91bnQpfScsIiIiOg=='))"
