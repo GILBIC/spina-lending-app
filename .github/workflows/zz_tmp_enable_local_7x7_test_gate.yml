@@ -10,6 +10,10 @@ permissions:
 
 jobs:
   enable:
+    strategy:
+      fail-fast: false
+      matrix:
+        slot: [1, 2, 3, 4]
     runs-on:
       - self-hosted
       - Windows
@@ -21,6 +25,6 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
-      - name: Enable guarded local 7x7 test gate
+      - name: Probe runner and enable guarded gate only where backend is live
         shell: cmd
         run: powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools\zz_tmp_enable_local_7x7_test_gate.ps1
