@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
+from .management_no_collection_preview import preview_no_collection_shift
 from .management_no_collection_query_repository import (
     NoCollectionLoanState,
     PostgresManagementNoCollectionQueryRepository,
@@ -30,6 +31,14 @@ class NoCollectionLoanBody(BaseModel):
 
     loan_id: UUID
     expected_operational_version: int = Field(ge=0)
+
+
+class NoCollectionPreviewBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    loan_id: UUID
+    expected_operational_version: int = Field(ge=0)
+    no_collection_date: date
 
 
 class NoCollectionDeclarationBody(BaseModel):
@@ -103,6 +112,7 @@ def _loan_state_payload(state: NoCollectionLoanState) -> dict[str, object]:
         "payment_frequency": state.payment_frequency,
         "contract_reference": state.contract_reference,
         "operational_version": state.operational_version,
+        "semi_monthly_days": list(state.semi_monthly_days),
         "installments": [
             {
                 "installment_id": installment.installment_id,
@@ -209,6 +219,60 @@ def create_management_no_collection_router() -> APIRouter:
         except ManagementNoCollectionError as error:
             _raise_no_collection_error(error)
         return {"success": True, "data": _loan_state_payload(state)}
+
+    @router.post("/api/v1/management/no-collection/preview")
+    @router.post(
+        "/api/mobile/v1/management/no-collection/preview",
+        include_in_schema=False,
+    )
+    def preview_no_collection(
+        body: NoCollectionPreviewBody,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        query: PostgresManagementNoCollectionQueryRepository = Depends(
+            management_no_collection_query_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        _require_management(
+            authorization=authorization,
+            x_device_id=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
+        try:
+            state = query.get_loan_state(loan_id=body.loan_id)
+            if state.operational_version != body.expected_operational_version:
+                raise ManagementNoCollectionConflict(
+                    "The operational schedule changed. Refresh before previewing No Collection."
+                )
+            preview = preview_no_collection_shift(
+                state=state,
+                no_collection_date=body.no_collection_date,
+            )
+        except ManagementNoCollectionError as error:
+            _raise_no_collection_error(error)
+        return {
+            "success": True,
+            "data": {
+                "loan_id": preview.loan_id,
+                "operational_version": preview.operational_version,
+                "no_collection_date": preview.no_collection_date.isoformat(),
+                "payment_frequency": preview.payment_frequency,
+                "shifts": [
+                    {
+                        "installment_id": shift.installment_id,
+                        "installment_number": shift.installment_number,
+                        "contractual_due_date": shift.contractual_due_date.isoformat(),
+                        "prior_effective_due_date": shift.prior_effective_due_date.isoformat(),
+                        "new_effective_due_date": shift.new_effective_due_date.isoformat(),
+                        "contractual_amount": format(shift.contractual_amount, "f"),
+                    }
+                    for shift in preview.shifts
+                ],
+            },
+        }
 
     @router.post("/api/v1/management/no-collection")
     @router.post(
