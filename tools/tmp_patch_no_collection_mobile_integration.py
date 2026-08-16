@@ -18,7 +18,7 @@ def request_json(method: str, url: str, payload: dict[str, object] | None = None
         "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "spina-no-collection-mobile",
+        "User-Agent": "spina-no-collection-cleanup",
     }
     data = None if payload is None else json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(url, data=data, headers=headers, method=method)
@@ -67,41 +67,44 @@ def delete(path: str, message: str) -> None:
     )
 
 
-def replace_once(text: str, old: str, new: str, name: str) -> str:
-    if old in text:
-        count = text.count(old)
-        if count != 1:
-            raise RuntimeError(f"{name}: expected one match, found {count}")
-        return text.replace(old, new, 1)
-    if new in text:
-        return text
-    raise RuntimeError(f"{name}: target not found")
+def collapse_duplicates(text: str, block: str) -> str:
+    while block + block in text:
+        text = text.replace(block + block, block)
+    return text
 
 
 def patch_dashboard() -> None:
     path = "gilbic_mobile/lib/src/features/dashboard/role_dashboard.dart"
     text, sha = load(path)
-    text = replace_once(
-        text,
-        "import 'package:gilbic_mobile/src/features/management/management_loan_operations_page.dart';\n",
-        "import 'package:gilbic_mobile/src/features/management/management_loan_operations_page.dart';\n"
-        "import 'package:gilbic_mobile/src/features/management/management_no_collection_page.dart';\n",
-        "dashboard import",
+    original = text
+
+    import_line = (
+        "import 'package:gilbic_mobile/src/features/management/"
+        "management_no_collection_page.dart';\n"
     )
+    text = collapse_duplicates(text, import_line)
 
-    action_marker = '''    if (session.role == AppRole.management &&\n        action == 'management-loan-operations') {\n      _push(\n        context,\n        ManagementLoanOperationsPage(\n          session: session,\n          deviceIdentityProvider: deviceIdentityProvider,\n        ),\n      );\n      return;\n    }\n'''
-    action_replacement = action_marker + '''    if (session.role == AppRole.management &&\n        action == 'management-no-collection') {\n      _push(\n        context,\n        ManagementNoCollectionPage(\n          session: session,\n          deviceIdentityProvider: deviceIdentityProvider,\n        ),\n      );\n      return;\n    }\n'''
-    text = replace_once(text, action_marker, action_replacement, "dashboard action")
+    action_block = '''    if (session.role == AppRole.management &&\n        action == 'management-no-collection') {\n      _push(\n        context,\n        ManagementNoCollectionPage(\n          session: session,\n          deviceIdentityProvider: deviceIdentityProvider,\n        ),\n      );\n      return;\n    }\n'''
+    text = collapse_duplicates(text, action_block)
 
-    module_marker = '''        _DashboardModule(\n          'Loan Operations',\n          'Monitor collections, remittances, corrections, and voids',\n          Icons.insights,\n          action: 'management-loan-operations',\n        ),\n'''
-    module_replacement = module_marker + '''        _DashboardModule(\n          'No Collection',\n          'Move one loan schedule to the next collection dates with audit',\n          Icons.event_busy_outlined,\n          action: 'management-no-collection',\n          requiredPermissions: <String>['lending.no_collection.manage'],\n        ),\n'''
-    text = replace_once(text, module_marker, module_replacement, "dashboard module")
-    save(path, text, sha, "Mobile: add Management No Collection dashboard action")
+    module_block = '''        _DashboardModule(\n          'No Collection',\n          'Move one loan schedule to the next collection dates with audit',\n          Icons.event_busy_outlined,\n          action: 'management-no-collection',\n          requiredPermissions: <String>['lending.no_collection.manage'],\n        ),\n'''
+    text = collapse_duplicates(text, module_block)
+
+    if text.count(import_line) != 1:
+        raise RuntimeError("Management No Collection dashboard import is not unique")
+    if text.count(action_block) != 1:
+        raise RuntimeError("Management No Collection dashboard action is not unique")
+    if text.count(module_block) != 1:
+        raise RuntimeError("Management No Collection dashboard module is not unique")
+
+    if text != original:
+        save(path, text, sha, "Mobile: dedupe Management No Collection dashboard wiring")
 
 
 def patch_no_collection_page() -> None:
     path = "gilbic_mobile/lib/src/features/management/management_no_collection_page.dart"
     text, sha = load(path)
+    original = text
     replacements = {
         "List<ManagementLoan> _searchResults = const <ManagementLoan>[];":
             "List<ManagementLoanItem> _searchResults = const <ManagementLoanItem>[];",
@@ -118,28 +121,36 @@ def patch_no_collection_page() -> None:
             "'${loan.loanNumber} • ${loan.loanTypeName} • ${loan.clientArea ?? ''}',",
     }
     for old, new in replacements.items():
-        if old in text:
-            text = text.replace(old, new)
-        elif new not in text:
-            raise RuntimeError(f"Management No Collection page target missing: {old}")
-    save(path, text, sha, "Mobile: align No Collection screen with Management loan model")
+        text = text.replace(old, new)
+    required = (
+        "List<ManagementLoanItem> _searchResults",
+        "ManagementLoanItem? _selectedLoan",
+        "loan.loanStatus.toLowerCase() == 'active'",
+        "Future<void> _selectLoan(ManagementLoanItem loan)",
+    )
+    if not all(item in text for item in required):
+        raise RuntimeError("Management No Collection page is not aligned with the loan model")
+    if text != original:
+        save(path, text, sha, "Mobile: align No Collection screen with Management loan model")
 
 
 def patch_contract_error_label() -> None:
     path = "gilbic_backend/src/gilbic_backend/contract_collection_posting.py"
     text, sha = load(path)
-    old = "f\"Contract date {row['due_date']} is already fully paid.\""
-    new = "f\"Contract date {row['effective_due_date']} is already fully paid.\""
-    text = replace_once(text, old, new, "effective due-date error label")
-    save(path, text, sha, "Backend: fix No Collection effective date error label")
+    original = text
+    text = text.replace("row['due_date']", "row['effective_due_date']")
+    if "row['due_date']" in text:
+        raise RuntimeError("Contract posting still reads removed due_date field")
+    if text != original:
+        save(path, text, sha, "Backend: use effective date in ADV fully-covered error")
 
 
 def main() -> None:
     patch_dashboard()
     patch_no_collection_page()
     patch_contract_error_label()
-    delete(WORKFLOW_PATH, "CI: remove temporary No Collection mobile workflow")
-    delete(HELPER_PATH, "CI: remove temporary No Collection mobile helper")
+    delete(WORKFLOW_PATH, "CI: remove temporary No Collection integration workflow")
+    delete(HELPER_PATH, "CI: remove temporary No Collection integration helper")
 
 
 if __name__ == "__main__":
