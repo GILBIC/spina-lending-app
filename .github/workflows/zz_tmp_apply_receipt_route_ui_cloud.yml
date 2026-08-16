@@ -38,15 +38,29 @@ jobs:
           $ErrorActionPreference = 'Stop'
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          if (Test-Path tools/tmp_receipt_route_ui_error.txt) {
+            $diagnostic = Get-Content tools/tmp_receipt_route_ui_error.txt -Raw
+            git reset --hard HEAD
+            Set-Content -Path tools/tmp_receipt_route_ui_error.txt -Value $diagnostic -Encoding utf8
+            git add tools/tmp_receipt_route_ui_error.txt
+            git commit -m 'Capture receipt route integration diagnostic'
+            git push origin HEAD:mobile/ca4-collector-ui
+            exit 0
+          }
+
+          # GITHUB_TOKEN should not try to rewrite workflow definitions. Keep
+          # temporary workflows at the branch version; connector cleanup follows
+          # after the product patch is safely pushed.
+          git checkout HEAD -- .github/workflows/zz_tmp_apply_receipt_route_ui_cloud.yml
+          if (Test-Path .github/workflows/zz_tmp_apply_synthetic_route_ui.yml) {
+            git checkout HEAD -- .github/workflows/zz_tmp_apply_synthetic_route_ui.yml
+          }
           git add -A
           $changes = git status --porcelain
           if ([string]::IsNullOrWhiteSpace(($changes | Out-String))) {
             Write-Host 'No changes to commit.'
             exit 0
           }
-          if (Test-Path tools/tmp_receipt_route_ui_error.txt) {
-            git commit -m 'Capture receipt route integration diagnostic'
-          } else {
-            git commit -m 'Expose receipt allocation status on Collector route'
-          }
+          git commit -m 'Expose receipt allocation status on Collector route'
           git push origin HEAD:mobile/ca4-collector-ui
