@@ -68,6 +68,15 @@ def test_repository_uses_complete_keyset_pagination_and_limit_plus_one() -> None
     assert "encode_source_event_cursor(events[-1])" in source
 
 
+def test_repository_separates_receipt_cash_from_loan_applied_amount() -> None:
+    source = REPOSITORY_SOURCE.read_text(encoding="utf-8")
+    assert "transaction.applied_amount as amount" in source
+    assert "transaction.amount as cash_received_amount" in source
+    assert "transaction.unallocated_amount" in source
+    assert "cash_received_amount=Decimal(row[\"cash_received_amount\"] or 0)" in source
+    assert "unallocated_amount=Decimal(row[\"unallocated_amount\"] or 0)" in source
+
+
 def test_repository_uses_same_current_workbook_rule_as_opening_workflow() -> None:
     source = REPOSITORY_SOURCE.read_text(encoding="utf-8")
     assert "order by workbook.created_at desc" in source
