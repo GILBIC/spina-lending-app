@@ -1,20 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-import runpy
 
 
-ROOT = Path('.')
-OLD_HELPER = Path('tools/tmp_apply_synthetic_route_ui.py')
 ROUTE_REPO = Path('gilbic_backend/src/gilbic_backend/collector_route_repository.py')
 ROUTE_API = Path('gilbic_backend/src/gilbic_backend/collector_route_api.py')
 ROUTE_PAGE = Path('gilbic_mobile/lib/src/features/collector/collector_route_page.dart')
 ROUTE_MODEL = Path('gilbic_mobile/lib/src/core/collector/collector_route.dart')
-LEDGER = Path('gilbic_mobile/lib/src/features/collector/collector_client_ledger.dart')
 BACKEND_TEST = Path('gilbic_backend/tests/test_collector_route_receipt_application.py')
 MOBILE_TEST = Path('gilbic_mobile/test/collector_route_receipt_application_test.dart')
-SELF = Path('tools/tmp_apply_receipt_route_ui.py')
-WORKFLOW = Path('.github/workflows/zz_tmp_apply_receipt_route_ui_cloud.yml')
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
@@ -25,13 +19,6 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     if new in text:
         return text
     raise RuntimeError(f'{label}: target not found')
-
-
-def integrate_compact_route_ui() -> None:
-    # Reuse the already-reviewed deterministic integration helper if it is still
-    # present. It also removes its own stale self-hosted workflow/helper files.
-    if OLD_HELPER.exists():
-        runpy.run_path(str(OLD_HELPER), run_name='__main__')
 
 
 def patch_backend_route_repository() -> None:
@@ -105,54 +92,29 @@ def patch_mobile_route_model() -> None:
 
 def patch_route_page() -> None:
     text = ROUTE_PAGE.read_text(encoding='utf-8')
-    old_direct_tail = '''    if (entry.processedToday) {\n      return "Today's collection has already been recorded.";\n    }\n    return null;\n  }\n\n  String? _detailsBlockedReason(\n'''
-    new_direct_tail = '''    if (entry.scheduledRemainingToday <= 0) {\n      return "Today's scheduled amount is already satisfied. Expand this loan only for another real receipt, Voluntary extra, ADV, notes, or correction details.";\n    }\n    return null;\n  }\n\n  String? _detailsBlockedReason(\n'''
-    text = replace_once(text, old_direct_tail, new_direct_tail, 'non-contract partial direct Pay')
+    text = replace_once(
+        text,
+        '''    if (entry.processedToday) {\n      return "Today's collection has already been recorded.";\n    }\n    return null;\n  }\n\n  String? _detailsBlockedReason(\n''',
+        '''    if (entry.scheduledRemainingToday <= 0) {\n      return "Today's scheduled amount is already satisfied. Expand this loan only for another real receipt, Voluntary extra, ADV, notes, or correction details.";\n    }\n    return null;\n  }\n\n  String? _detailsBlockedReason(\n''',
+        'non-contract partial direct Pay',
+    )
     text = replace_once(
         text,
         '''    final canAddPartialContractReceipt = entry.contractCollectionReady &&\n        entry.contractTodayUnpaidAmount > 0;\n    if (entry.processedToday && !canAddPartialContractReceipt) {\n      return "Today's scheduled payment is already recorded. Use Edit for a correction before remittance.";\n    }\n    return null;\n  }\n\n  double _normalDueAmount(CollectorRouteEntry entry) {\n    if (entry.contractCollectionReady &&\n        entry.contractTodayUnpaidAmount > 0) {\n      return entry.contractTodayUnpaidAmount;\n    }\n    return entry.dailyAmount;\n  }\n''',
-        '''    // Details remain available after a scheduled amount is satisfied so a\n    // genuinely separate physical receipt can still be recorded. The server\n    // preserves any amount that cannot be applied as Unallocated / Needs review.\n    return null;\n  }\n\n  double _normalDueAmount(CollectorRouteEntry entry) {\n    if (entry.contractCollectionReady &&\n        entry.contractTodayUnpaidAmount > 0) {\n      return entry.contractTodayUnpaidAmount;\n    }\n    return entry.scheduledRemainingToday;\n  }\n''',
+        '''    // A second genuine physical receipt is still recordable from the\n    // expanded details flow. The server preserves cash that cannot be applied as\n    // Unallocated / Needs review instead of silently creating ADV.\n    return null;\n  }\n\n  double _normalDueAmount(CollectorRouteEntry entry) {\n    if (entry.contractCollectionReady &&\n        entry.contractTodayUnpaidAmount > 0) {\n      return entry.contractTodayUnpaidAmount;\n    }\n    return entry.scheduledRemainingToday;\n  }\n''',
         'details and direct amount receipt-first semantics',
     )
+
+    receipt_start = text.index('class _TodayReceipts extends StatelessWidget {')
+    receipt_end = text.index('String _shortLoanName(String value) {', receipt_start)
+    receipt_widget = '''class _TodayReceipts extends StatelessWidget {\n  const _TodayReceipts({required this.receipts});\n\n  final List<CollectorRouteReceipt> receipts;\n\n  @override\n  Widget build(BuildContext context) {\n    final cashTotal = receipts.fold<double>(\n      0,\n      (sum, receipt) => sum + receipt.amount,\n    );\n    final appliedTotal = receipts.fold<double>(\n      0,\n      (sum, receipt) => sum + receipt.applied,\n    );\n    final unallocatedTotal = receipts.fold<double>(\n      0,\n      (sum, receipt) => sum + receipt.unallocatedAmount,\n    );\n    return Column(\n      key: const Key('today-receipts'),\n      crossAxisAlignment: CrossAxisAlignment.start,\n      children: [\n        Text(\n          unallocatedTotal > 0.005\n              ? "Today's receipts • ${receipts.length} • Cash ${_moneyCompact(cashTotal)} • Applied ${_moneyCompact(appliedTotal)} • Unallocated ${_moneyCompact(unallocatedTotal)} • NEEDS REVIEW"\n              : "Today's receipts • ${receipts.length} • ${_moneyCompact(cashTotal)}",\n          style: Theme.of(context).textTheme.labelMedium?.copyWith(\n                fontWeight: FontWeight.w800,\n              ),\n        ),\n        const SizedBox(height: 5),\n        for (final receipt in receipts) ...[\n          Container(\n            key: Key('today-receipt-${receipt.transactionId}'),\n            width: double.infinity,\n            padding: const EdgeInsets.symmetric(vertical: 4),\n            child: Column(\n              crossAxisAlignment: CrossAxisAlignment.start,\n              children: [\n                Text(\n                  'Receipt ${receipt.receiptNumber} • Cash ${_moneyCompact(receipt.amount)} • ${receipt.collectorName}'\n                  '${receipt.isLocked ? ' • Locked' : ''}',\n                  style: Theme.of(context).textTheme.bodySmall?.copyWith(\n                        fontWeight: FontWeight.w700,\n                      ),\n                ),\n                if ((receipt.applied - receipt.amount).abs() > 0.005 ||\n                    receipt.needsReview)\n                  Text(\n                    receipt.unallocatedAmount > 0.005\n                        ? 'Applied ${_moneyCompact(receipt.applied)} • Unallocated ${_moneyCompact(receipt.unallocatedAmount)} • NEEDS REVIEW'\n                        : 'Applied ${_moneyCompact(receipt.applied)}',\n                    style: Theme.of(context).textTheme.labelSmall?.copyWith(\n                          fontWeight: FontWeight.w800,\n                          color: receipt.needsReview\n                              ? Theme.of(context).colorScheme.error\n                              : null,\n                        ),\n                  ),\n                if (receipt.coveredDates.isNotEmpty)\n                  Text(\n                    'Covered: ${receipt.coveredDates.map(_date).join(', ')}',\n                    style: Theme.of(context).textTheme.bodySmall,\n                  ),\n                if (receipt.note.isNotEmpty)\n                  Text(\n                    'Note: ${receipt.note}',\n                    style: Theme.of(context).textTheme.bodySmall,\n                  ),\n              ],\n            ),\n          ),\n        ],\n      ],\n    );\n  }\n}\n\n'''
+    text = text[:receipt_start] + receipt_widget + text[receipt_end:]
+
+    short_start = text.index('String _shortStatus(CollectorRouteEntry entry) {')
+    short_end = text.index('String _actionLabel(', short_start)
+    short_status = '''String _shortStatus(CollectorRouteEntry entry) {\n  final hasMoneyToday = entry.todayCashTotal > 0.005;\n  if (hasMoneyToday && entry.scheduledRemainingToday > 0.005) {\n    return 'Lacking';\n  }\n  if (entry.todayUnallocatedTotal > 0.005) {\n    return 'Review';\n  }\n  if (entry.contractCollectionReady &&\n      entry.contractTodayScheduledAmount > 0) {\n    if (entry.contractTodayUnpaidAmount > 0) {\n      return entry.processedToday ? 'Lacking' : 'Pending';\n    }\n    return entry.processedToday ? 'Paid' : 'Covered';\n  }\n  if (entry.processedToday) {\n    if (entry.todayIsLocked) {\n      return 'Remitted';\n    }\n    return switch (entry.todayEntryType.trim().toLowerCase()) {\n      'pass' => 'Unable',\n      'advance' => 'Covered',\n      _ => 'Paid',\n    };\n  }\n  if (_isSevenBySevenLoan(entry.loanType) &&\n      !entry.sevenBySevenMobileEnabled) {\n    return 'Desktop';\n  }\n  return entry.status;\n}\n\n'''
+    text = text[:short_start] + short_status + text[short_end:]
     ROUTE_PAGE.write_text(text, encoding='utf-8')
-
-
-def patch_compact_ledger() -> None:
-    text = LEDGER.read_text(encoding='utf-8')
-    text = replace_once(
-        text,
-        '''                  detailsBuilder(client.loans[index]),\n''',
-        '''                  detailsBuilder(client.loans[index]),\n                  if (client.loans[index].todayReceipts.isNotEmpty) ...[\n                    const SizedBox(height: 9),\n                    _TodayReceiptSummary(entry: client.loans[index]),\n                  ],\n''',
-        'expanded receipt summary',
-    )
-    marker = '''class _CombinedPayNotice extends StatelessWidget {\n'''
-    receipt_widget = '''class _TodayReceiptSummary extends StatelessWidget {\n  const _TodayReceiptSummary({required this.entry});\n\n  final CollectorRouteEntry entry;\n\n  @override\n  Widget build(BuildContext context) {\n    final unallocated = entry.todayUnallocatedTotal;\n    final status = entry.scheduledRemainingToday > 0.005\n        ? 'Lacking ${_moneyShort(entry.scheduledRemainingToday)}'\n        : 'Paid';\n    return Container(\n      width: double.infinity,\n      padding: const EdgeInsets.all(9),\n      decoration: BoxDecoration(\n        color: Colors.white,\n        borderRadius: BorderRadius.circular(10),\n        border: Border.all(color: SpinaTheme.line),\n      ),\n      child: Column(\n        crossAxisAlignment: CrossAxisAlignment.start,\n        children: [\n          Text(\n            unallocated > 0.005\n                ? '$status • Unallocated ${_moneyShort(unallocated)} • Needs review'\n                : status,\n            style: Theme.of(context).textTheme.labelMedium?.copyWith(\n                  fontWeight: FontWeight.w900,\n                ),\n          ),\n          const SizedBox(height: 5),\n          for (final receipt in entry.todayReceipts) ...[\n            Text(\n              '${receipt.receiptNumber} • Cash ${_moneyShort(receipt.amount)} • ${receipt.collectorName}',\n              style: Theme.of(context).textTheme.bodySmall?.copyWith(\n                    fontWeight: FontWeight.w700,\n                  ),\n            ),\n            if ((receipt.applied - receipt.amount).abs() > 0.005 ||\n                receipt.needsReview)\n              Padding(\n                padding: const EdgeInsets.only(top: 2, bottom: 3),\n                child: Text(\n                  receipt.unallocatedAmount > 0.005\n                      ? 'Applied ${_moneyShort(receipt.applied)} • Unallocated ${_moneyShort(receipt.unallocatedAmount)} • NEEDS REVIEW'\n                      : 'Applied ${_moneyShort(receipt.applied)}',\n                  style: Theme.of(context).textTheme.labelSmall?.copyWith(\n                        color: receipt.needsReview\n                            ? SpinaTheme.brandPinkDark\n                            : null,\n                        fontWeight: FontWeight.w800,\n                      ),\n                ),\n              ),\n          ],\n        ],\n      ),\n    );\n  }\n}\n\n'''
-    if receipt_widget not in text:
-        if marker not in text:
-            raise RuntimeError('receipt widget insertion marker not found')
-        text = text.replace(marker, receipt_widget + marker, 1)
-
-    old_blocked = '''  if (entry.processedToday) {\n    if (entry.contractCollectionReady && entry.contractTodayUnpaidAmount > 0) {\n      return 'Lacking';\n    }\n    return 'Paid';\n  }\n'''
-    new_blocked = '''  if (entry.processedToday || entry.todayReceipts.isNotEmpty) {\n    if (entry.scheduledRemainingToday > 0.005) {\n      return 'Lacking';\n    }\n    if (entry.todayUnallocatedTotal > 0.005) {\n      return 'Review';\n    }\n    return 'Paid';\n  }\n'''
-    text = replace_once(text, old_blocked, new_blocked, 'blocked receipt status label')
-
-    start = text.index('List<String> _statusChips(CollectorRouteClientGroup client) {')
-    end = text.index('bool _todaySatisfied(CollectorRouteEntry entry) {', start)
-    new_status = '''List<String> _statusChips(CollectorRouteClientGroup client) {\n  final chips = <String>[];\n  final loans = client.loans;\n  final hasPass = loans.any(\n    (entry) => entry.todayEntryType.trim().toLowerCase() == 'pass',\n  );\n  final hasReceiptActivity = loans.any(\n    (entry) =>\n        entry.todayReceipts.isNotEmpty ||\n        entry.todayCashTotal > 0.005 ||\n        entry.processedToday,\n  );\n  final hasLacking = loans.any(\n    (entry) =>\n        entry.scheduledRemainingToday > 0.005 &&\n        (entry.todayCashTotal > 0.005 ||\n            (entry.processedToday &&\n                entry.todayEntryType.trim().toLowerCase() != 'pass')),\n  );\n  final unallocated = loans.fold<double>(\n    0,\n    (total, entry) => total + entry.todayUnallocatedTotal,\n  );\n  final hasAdvance = loans.any(\n    (entry) => entry.todayEntryType.trim().toLowerCase() == 'advance' ||\n        entry.advanceUntil != null,\n  );\n  final allComplete =\n      hasReceiptActivity && loans.isNotEmpty && loans.every(_todaySatisfied);\n  final anyLocked = loans.any((entry) => entry.todayIsLocked);\n  final desktop7x7 = loans.any(\n    (entry) => _isSevenBySeven(entry.loanType) && !entry.sevenBySevenMobileEnabled,\n  );\n  final missed = loans.fold<int>(\n    0,\n    (highest, entry) => entry.passCount > highest ? entry.passCount : highest,\n  );\n  final textBlob = loans\n      .expand((entry) => <String>[entry.status, entry.note, entry.todayNote])\n      .join(' ')\n      .toLowerCase();\n\n  if (hasLacking) {\n    chips.add('LACKING');\n  } else if (allComplete) {\n    chips.add(anyLocked ? 'REMITTED' : 'COLLECTED');\n  } else if (hasPass) {\n    chips.add('UNABLE');\n  } else if (hasReceiptActivity) {\n    chips.add('PARTIAL');\n  } else {\n    chips.add('NOT COLLECTED');\n  }\n\n  if (unallocated > 0.005) {\n    chips.add('UNALLOCATED ${_moneyShort(unallocated)}');\n    chips.add('NEEDS REVIEW');\n  }\n  if (missed > 0) {\n    if (!allComplete && !hasPass) {\n      chips.add('CATCH-UP');\n    }\n    chips.add('MISSED $missed');\n  }\n  if (hasAdvance) {\n    chips.add('ADV');\n  }\n  if (textBlob.contains('gcash')) {\n    chips.add('GCASH');\n  }\n  if (desktop7x7) {\n    chips.add('7x7 DESK');\n  }\n  return chips;\n}\n\n'''
-    text = text[:start] + new_status + text[end:]
-    text = replace_once(
-        text,
-        '''bool _todaySatisfied(CollectorRouteEntry entry) {\n  if (entry.contractCollectionReady && entry.contractTodayScheduledAmount > 0) {\n    return entry.contractTodayUnpaidAmount <= 0;\n  }\n  return entry.processedToday;\n}\n''',
-        '''bool _todaySatisfied(CollectorRouteEntry entry) {\n  return entry.scheduledRemainingToday <= 0.005;\n}\n''',
-        'today satisfied receipt application',
-    )
-    text = replace_once(
-        text,
-        '''double _unpaidToday(CollectorRouteEntry entry) {\n  if (entry.contractCollectionReady && entry.contractTodayScheduledAmount > 0) {\n    return entry.contractTodayUnpaidAmount > 0\n        ? entry.contractTodayUnpaidAmount\n        : 0;\n  }\n  return entry.processedToday ? 0 : entry.dailyAmount;\n}\n''',
-        '''double _unpaidToday(CollectorRouteEntry entry) {\n  return entry.scheduledRemainingToday;\n}\n''',
-        'today unpaid receipt application',
-    )
-    LEDGER.write_text(text, encoding='utf-8')
 
 
 def write_backend_test() -> None:
@@ -164,28 +126,18 @@ def write_backend_test() -> None:
 
 def write_mobile_test() -> None:
     MOBILE_TEST.write_text(
-        '''import 'package:flutter_test/flutter_test.dart';\nimport 'package:gilbic_mobile/src/core/collector/collector_route.dart';\n\nMap<String, Object?> baseEntry({\n  required double dailyAmount,\n  required List<Map<String, Object?>> receipts,\n  bool processedToday = true,\n}) {\n  return <String, Object?>{\n    'route_entry_id': 'loan-1',\n    'client_id': 'client-1',\n    'loan_id': 'loan-1',\n    'client_name': 'Ana Client',\n    'area': 'Cardona',\n    'loan_type': 'Regular',\n    'daily_amount': dailyAmount,\n    'remaining_balance': 5000,\n    'status': 'Recorded today',\n    'pass_count': 0,\n    'processed_today': processedToday,\n    'today_entry_type': 'payment',\n    'today_amount': receipts.isEmpty ? 0 : receipts.last['amount'],\n    'today_receipts': receipts,\n  };\n}\n\nMap<String, Object?> receipt({\n  required String id,\n  required double cash,\n  required double applied,\n  required double unallocated,\n}) {\n  return <String, Object?>{\n    'transaction_id': id,\n    'receipt_number': 'GBC-$id',\n    'amount': cash,\n    'applied_amount': applied,\n    'unallocated_amount': unallocated,\n    'allocation_state': unallocated <= 0\n        ? 'fully_allocated'\n        : applied <= 0\n            ? 'unallocated'\n            : 'partially_allocated',\n    'entry_type': 'payment',\n    'collector_user_id': 'collector-1',\n    'collector_name': 'Collector One',\n    'is_locked': false,\n  };\n}\n\nvoid main() {\n  test('two partial receipts aggregate cash and leave only the actual lacking amount', () {\n    final entry = CollectorRouteEntry.fromPayload(\n      baseEntry(\n        dailyAmount: 200,\n        receipts: <Map<String, Object?>>[\n          receipt(id: 'one', cash: 100, applied: 100, unallocated: 0),\n          receipt(id: 'two', cash: 50, applied: 50, unallocated: 0),\n        ],\n      ),\n    )!;\n\n    expect(entry.todayCashTotal, 150);\n    expect(entry.todayAppliedTotal, 150);\n    expect(entry.todayUnallocatedTotal, 0);\n    expect(entry.scheduledRemainingToday, 50);\n    expect(entry.hasReceiptApplicationReview, isFalse);\n  });\n\n  test('second real receipt after obligation is paid remains cash but is unallocated', () {\n    final entry = CollectorRouteEntry.fromPayload(\n      baseEntry(\n        dailyAmount: 100,\n        receipts: <Map<String, Object?>>[\n          receipt(id: 'one', cash: 100, applied: 100, unallocated: 0),\n          receipt(id: 'two', cash: 100, applied: 0, unallocated: 100),\n        ],\n      ),\n    )!;\n\n    expect(entry.todayCashTotal, 200);\n    expect(entry.todayAppliedTotal, 100);\n    expect(entry.todayUnallocatedTotal, 100);\n    expect(entry.scheduledRemainingToday, 0);\n    expect(entry.hasReceiptApplicationReview, isTrue);\n    expect(entry.todayReceipts.last.needsReview, isTrue);\n  });\n\n  test('legacy receipt without application fields falls back to fully applied cash', () {\n    final entry = CollectorRouteEntry.fromPayload(\n      baseEntry(\n        dailyAmount: 100,\n        receipts: <Map<String, Object?>>[\n          <String, Object?>{\n            'transaction_id': 'legacy',\n            'receipt_number': 'GBC-LEGACY',\n            'amount': 100,\n            'entry_type': 'payment',\n            'collector_user_id': 'collector-1',\n            'collector_name': 'Collector One',\n            'is_locked': false,\n          },\n        ],\n      ),\n    )!;\n\n    expect(entry.todayAppliedTotal, 100);\n    expect(entry.scheduledRemainingToday, 0);\n  });\n}\n''',
+        '''import 'package:flutter_test/flutter_test.dart';\nimport 'package:gilbic_mobile/src/core/collector/collector_route.dart';\n\nMap<String, Object?> baseEntry({\n  required double dailyAmount,\n  required List<Map<String, Object?>> receipts,\n}) {\n  return <String, Object?>{\n    'route_entry_id': 'loan-1',\n    'client_id': 'client-1',\n    'loan_id': 'loan-1',\n    'client_name': 'Ana Client',\n    'area': 'Cardona',\n    'loan_type': 'Regular',\n    'daily_amount': dailyAmount,\n    'remaining_balance': 5000,\n    'status': 'Recorded today',\n    'pass_count': 0,\n    'processed_today': true,\n    'today_entry_type': 'payment',\n    'today_amount': receipts.isEmpty ? 0 : receipts.last['amount'],\n    'today_receipts': receipts,\n  };\n}\n\nMap<String, Object?> receipt({\n  required String id,\n  required double cash,\n  required double applied,\n  required double unallocated,\n}) {\n  return <String, Object?>{\n    'transaction_id': id,\n    'receipt_number': 'GBC-$id',\n    'amount': cash,\n    'applied_amount': applied,\n    'unallocated_amount': unallocated,\n    'allocation_state': unallocated <= 0\n        ? 'fully_allocated'\n        : applied <= 0\n            ? 'unallocated'\n            : 'partially_allocated',\n    'entry_type': 'payment',\n    'collector_user_id': 'collector-1',\n    'collector_name': 'Collector One',\n    'is_locked': false,\n  };\n}\n\nvoid main() {\n  test('two partial receipts leave only the actual lacking amount', () {\n    final entry = CollectorRouteEntry.fromPayload(\n      baseEntry(\n        dailyAmount: 200,\n        receipts: <Map<String, Object?>>[\n          receipt(id: 'one', cash: 100, applied: 100, unallocated: 0),\n          receipt(id: 'two', cash: 50, applied: 50, unallocated: 0),\n        ],\n      ),\n    )!;\n\n    expect(entry.todayCashTotal, 150);\n    expect(entry.todayAppliedTotal, 150);\n    expect(entry.todayUnallocatedTotal, 0);\n    expect(entry.scheduledRemainingToday, 50);\n    expect(entry.hasReceiptApplicationReview, isFalse);\n  });\n\n  test('second receipt after obligation is paid remains cash and unallocated', () {\n    final entry = CollectorRouteEntry.fromPayload(\n      baseEntry(\n        dailyAmount: 100,\n        receipts: <Map<String, Object?>>[\n          receipt(id: 'one', cash: 100, applied: 100, unallocated: 0),\n          receipt(id: 'two', cash: 100, applied: 0, unallocated: 100),\n        ],\n      ),\n    )!;\n\n    expect(entry.todayCashTotal, 200);\n    expect(entry.todayAppliedTotal, 100);\n    expect(entry.todayUnallocatedTotal, 100);\n    expect(entry.scheduledRemainingToday, 0);\n    expect(entry.hasReceiptApplicationReview, isTrue);\n    expect(entry.todayReceipts.last.needsReview, isTrue);\n  });\n\n  test('legacy receipt without application fields falls back to fully applied cash', () {\n    final entry = CollectorRouteEntry.fromPayload(\n      baseEntry(\n        dailyAmount: 100,\n        receipts: <Map<String, Object?>>[\n          <String, Object?>{\n            'transaction_id': 'legacy',\n            'receipt_number': 'GBC-LEGACY',\n            'amount': 100,\n            'entry_type': 'payment',\n            'collector_user_id': 'collector-1',\n            'collector_name': 'Collector One',\n            'is_locked': false,\n          },\n        ],\n      ),\n    )!;\n\n    expect(entry.todayAppliedTotal, 100);\n    expect(entry.scheduledRemainingToday, 0);\n  });\n}\n''',
         encoding='utf-8',
     )
 
 
-def cleanup() -> None:
-    if WORKFLOW.exists():
-        WORKFLOW.unlink()
-    if SELF.exists():
-        SELF.unlink()
-
-
 def main() -> None:
-    integrate_compact_route_ui()
     patch_backend_route_repository()
     patch_backend_route_api()
     patch_mobile_route_model()
     patch_route_page()
-    patch_compact_ledger()
     write_backend_test()
     write_mobile_test()
-    cleanup()
 
 
 if __name__ == '__main__':
