@@ -10,7 +10,7 @@ MONEY = Decimal("0.01")
 ZERO = Decimal("0.00")
 COMPLETION_TOLERANCE = Decimal("0.004")
 THOUSAND = Decimal("1000")
-SEVEN_BY_SEVEN_OPERATIONAL_POLICY = "seven_by_seven_operational_allocator_v1"
+SEVEN_BY_SEVEN_OPERATIONAL_POLICY = "seven_by_seven_operational_allocator_v2"
 
 
 class SevenBySevenAllocationError(ValueError):
@@ -106,9 +106,12 @@ def allocate_seven_by_seven_payments(
     may reduce principal. This is an operational contractual allocator, not an
     accounting EIR allocator.
 
-    The caller must provide events in authoritative chronological order with at
-    most one positive cash event per loan/calendar date. The allocator fails
-    closed rather than inventing an intraday order.
+    Multiple distinct receipt events may occur on the same calendar date. The
+    first event for that date accrues the elapsed daily interest; later same-day
+    receipts accrue zero additional days and continue settling the same day's
+    remaining interest/principal. The caller must keep authoritative receipt
+    order within a date. Event ids still must be unique so an idempotent retry is
+    never mistaken for a second receipt.
     """
 
     principal = money(original_principal)
@@ -154,7 +157,8 @@ def allocate_seven_by_seven_payments(
             )
             continue
 
-        gap_days = max(1, (event.collection_date - previous_date).days)
+        elapsed_days = (event.collection_date - previous_date).days
+        gap_days = max(0, elapsed_days)
         interest_due = money(fixed_daily_interest * gap_days + interest_arrears)
         interest_paid = money(min(amount, interest_due))
         principal_paid = money(
@@ -240,8 +244,8 @@ def _validate_events(
             raise SevenBySevenAllocationError(
                 "A 7x7 cash event cannot precede the protected payment start date."
             )
-        if prior_date is not None and event.collection_date <= prior_date:
+        if prior_date is not None and event.collection_date < prior_date:
             raise SevenBySevenAllocationError(
-                "7x7 cash events must be strictly chronological with at most one positive cash event per calendar date."
+                "7x7 cash events must be chronological. Same-day distinct receipts are allowed only in authoritative receipt order."
             )
         prior_date = event.collection_date
