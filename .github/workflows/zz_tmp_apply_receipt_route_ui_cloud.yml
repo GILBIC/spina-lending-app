@@ -1,4 +1,4 @@
-name: Temporary receipt route UI integration
+name: Temporary 7x7 same-day receipt parity integration
 
 on:
   push:
@@ -14,53 +14,37 @@ permissions:
 
 jobs:
   apply:
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
         uses: actions/checkout@v4
         with:
           ref: mobile/ca4-collector-ui
           fetch-depth: 0
-      - name: Apply receipt route UI integration
-        shell: pwsh
+
+      - name: Apply same-day receipt parity fixes
+        run: python tools/tmp_apply_receipt_route_ui.py
+
+      - name: Compile touched Python sources
         run: |
-          $output = (& python tools/tmp_apply_receipt_route_ui.py 2>&1 | Out-String)
-          if ($LASTEXITCODE -ne 0) {
-            Set-Content -Path tools/tmp_receipt_route_ui_error.txt -Value $output -Encoding utf8
-            Write-Host $output
-            exit 1
-          }
-          Write-Host $output
-      - name: Commit generated integration or diagnostic
-        if: always()
-        shell: pwsh
+          python -m py_compile spina_app/calculation_rules.py
+          python -m py_compile gilbic_backend/tests/test_seven_by_seven_desktop_server_parity_matrix.py
+          python -m py_compile gilbic_backend/tests/test_seven_by_seven_desktop_server_postgres_parity.py
+          python -m py_compile gilbic_backend/tests/test_seven_by_seven_mobile_collection_postgres.py
+          python -m py_compile gilbic_backend/tests/test_contract_collection_posting.py
+
+      - name: Commit parity fix
         run: |
-          $ErrorActionPreference = 'Stop'
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-
-          if (Test-Path tools/tmp_receipt_route_ui_error.txt) {
-            $diagnostic = Get-Content tools/tmp_receipt_route_ui_error.txt -Raw
-            git reset --hard HEAD
-            Set-Content -Path tools/tmp_receipt_route_ui_error.txt -Value $diagnostic -Encoding utf8
-            git add tools/tmp_receipt_route_ui_error.txt
-            git commit -m 'Capture receipt route integration diagnostic'
-            git push origin HEAD:mobile/ca4-collector-ui
+          git add spina_app/calculation_rules.py \
+            gilbic_backend/tests/test_seven_by_seven_desktop_server_parity_matrix.py \
+            gilbic_backend/tests/test_seven_by_seven_desktop_server_postgres_parity.py \
+            gilbic_backend/tests/test_seven_by_seven_mobile_collection_postgres.py \
+            gilbic_backend/tests/test_contract_collection_posting.py
+          if git diff --cached --quiet; then
+            echo 'No parity changes to commit.'
             exit 0
-          }
-
-          # GITHUB_TOKEN should not try to rewrite workflow definitions. Keep
-          # temporary workflows at the branch version; connector cleanup follows
-          # after the product patch is safely pushed.
-          git checkout HEAD -- .github/workflows/zz_tmp_apply_receipt_route_ui_cloud.yml
-          if (Test-Path .github/workflows/zz_tmp_apply_synthetic_route_ui.yml) {
-            git checkout HEAD -- .github/workflows/zz_tmp_apply_synthetic_route_ui.yml
-          }
-          git add -A
-          $changes = git status --porcelain
-          if ([string]::IsNullOrWhiteSpace(($changes | Out-String))) {
-            Write-Host 'No changes to commit.'
-            exit 0
-          }
-          git commit -m 'Expose receipt allocation status on Collector route'
+          fi
+          git commit -m 'Align 7x7 same-day receipt parity with receipt-first posting'
           git push origin HEAD:mobile/ca4-collector-ui
