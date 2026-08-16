@@ -140,7 +140,7 @@ def store_contract_schedule(
             (
                 schedule_id,
                 installment.installment_number,
-                installment.effective_due_date,
+                installment.due_date,
                 installment.contractual_amount,
             ),
         )
