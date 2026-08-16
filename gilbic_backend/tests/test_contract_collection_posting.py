@@ -312,12 +312,12 @@ def test_stage5e44_advance_requires_exact_dates_and_full_selected_amount() -> No
     selected = (date(2026, 8, 9), date(2026, 8, 16))
     rows = (
         {
-            "due_date": selected[0],
+            "effective_due_date": selected[0],
             "contractual_amount": Decimal("90.00"),
             "allocated_amount": Decimal("0.00"),
         },
         {
-            "due_date": selected[1],
+            "effective_due_date": selected[1],
             "contractual_amount": Decimal("90.00"),
             "allocated_amount": Decimal("0.00"),
         },
