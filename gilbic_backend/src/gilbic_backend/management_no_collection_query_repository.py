@@ -57,6 +57,7 @@ class NoCollectionLoanState:
     payment_frequency: str
     contract_reference: str
     operational_version: int
+    semi_monthly_days: tuple[int, int]
     installments: tuple[NoCollectionInstallmentState, ...]
     active_no_collection: tuple[ActiveNoCollectionState, ...]
 
@@ -79,6 +80,7 @@ class PostgresManagementNoCollectionQueryRepository:
                         schedule.schedule_version,
                         schedule.payment_frequency,
                         schedule.contract_reference,
+                        schedule.settings,
                         registration.id as registration_id,
                         coalesce(state.operational_version, 0) as operational_version
                     from lending.loans loan
@@ -209,6 +211,23 @@ class PostgresManagementNoCollectionQueryRepository:
             payment_frequency=str(loan["payment_frequency"]),
             contract_reference=str(loan["contract_reference"]),
             operational_version=int(loan["operational_version"]),
+            semi_monthly_days=self._semi_monthly_days(loan["settings"]),
             installments=installments,
             active_no_collection=active_no_collection,
         )
+
+    @staticmethod
+    def _semi_monthly_days(settings: object) -> tuple[int, int]:
+        if not isinstance(settings, dict):
+            return (15, 30)
+        value = settings.get("semi_monthly_days")
+        if not isinstance(value, (list, tuple)) or len(value) != 2:
+            return (15, 30)
+        try:
+            first = int(value[0])
+            second = int(value[1])
+        except (TypeError, ValueError):
+            return (15, 30)
+        if first < 1 or first > 31 or second < 1 or second > 31 or first == second:
+            return (15, 30)
+        return tuple(sorted((first, second)))
