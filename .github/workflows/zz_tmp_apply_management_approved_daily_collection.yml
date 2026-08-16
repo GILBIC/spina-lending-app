@@ -1,0 +1,49 @@
+name: Temporary authenticated Daily Collection integration
+
+on:
+  push:
+    branches:
+      - mobile/ca4-collector-ui
+    paths:
+      - .github/workflows/zz_tmp_apply_management_approved_daily_collection.yml
+      - tools/tmp_apply_management_approved_daily_collection.py
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: [self-hosted, Windows, X64]
+    steps:
+      - name: Checkout Collector branch
+        uses: actions/checkout@v4
+        with:
+          ref: mobile/ca4-collector-ui
+          fetch-depth: 0
+
+      - name: Apply Management-approved Daily Collection layout
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: python tools/tmp_apply_management_approved_daily_collection.py
+
+      - name: Require clean patch syntax
+        shell: cmd
+        run: git diff --check || exit /b 1
+
+      - name: Commit authenticated Daily Collection integration
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add gilbic_mobile/lib/src/features/collector/collector_route_page.dart `
+            gilbic_mobile/lib/src/features/collector/collector_field_home_page.dart `
+            tools/tmp_apply_management_approved_daily_collection.py `
+            .github/workflows/zz_tmp_apply_management_approved_daily_collection.yml
+          $changes = git diff --cached --name-only
+          if ([string]::IsNullOrWhiteSpace(($changes | Out-String))) {
+            Write-Host 'No Daily Collection integration changes to commit.'
+            exit 0
+          }
+          git commit -m 'Align authenticated Collector route with approved Daily Collection layout'
+          git push origin HEAD:mobile/ca4-collector-ui
