@@ -67,7 +67,7 @@ def test_weekly_no_collection_preserves_weekly_cadence() -> None:
     ]
 
 
-def test_monthly_no_collection_clamps_last_shift_safely() -> None:
+def test_monthly_no_collection_preserves_original_anchor_after_clamping() -> None:
     rows = (
         _row(1, date(2026, 1, 31)),
         _row(2, date(2026, 2, 28)),
@@ -79,7 +79,7 @@ def test_monthly_no_collection_clamps_last_shift_safely() -> None:
         payment_frequency="monthly",
     )
 
-    assert shifts[0].new_effective_due_date == date(2026, 3, 28)
+    assert shifts[0].new_effective_due_date == date(2026, 3, 31)
 
 
 def test_no_collection_refuses_to_move_a_paid_downstream_installment() -> None:
