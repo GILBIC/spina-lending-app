@@ -299,11 +299,6 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
       return;
     }
 
-    final confirmed = await _confirmSubmission(amount);
-    if (confirmed != true || !mounted) {
-      return;
-    }
-
     setState(() {
       _submitting = true;
       _errorMessage = null;
@@ -390,37 +385,6 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
       routeRevision: widget.entry.routeRevision,
     );
   }
-
-  Future<bool?> _confirmSubmission(double? amount) {
-    final amountText = amount == null ? null : _money(amount);
-    final message = _isUnableToPay
-        ? 'Record that ${widget.entry.clientName} could not pay on '
-            '${_date(_unableDate)}?\n\nReason: ${_noteController.text.trim()}'
-        : 'Save ${amountText ?? 'this payment'} for '
-            '${widget.entry.clientName}?\n\nCovered dates:\n${_coverageLabel()}';
-
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm collection entry'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            key: const Key('confirm-collection-entry'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _coverageLabel() =>
-      _sortedCoveredDates.map(_date).map((value) => '• $value').join('\n');
 
   String _successMessage() {
     if (_isUnableToPay) {
@@ -685,7 +649,7 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
               ],
               const SizedBox(height: 10),
               Text(
-                'Official balance, receipt, exact covered dates, and acceptance time come from the SPINA server. Offline collection remains read-only.',
+                'Saving happens as soon as you tap the action above. If details were entered incorrectly, use Edit before remittance. Official balance, receipt, exact covered dates, and acceptance time come from the SPINA server. Offline collection remains read-only.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
