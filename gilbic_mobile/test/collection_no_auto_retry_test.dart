@@ -41,9 +41,8 @@ void main() {
 
     await tester.tap(find.byKey(const Key('submit-collection-entry')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('confirm-collection-entry')));
-    await tester.pumpAndSettle();
 
+    expect(find.byKey(const Key('confirm-collection-entry')), findsNothing);
     expect(repository.calls, 1);
     expect(find.text('Retry same entry'), findsOneWidget);
     final originalKey = repository.drafts.single.idempotencyKey;
@@ -59,8 +58,6 @@ void main() {
     );
 
     await tester.tap(find.byKey(const Key('submit-collection-entry')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('confirm-collection-entry')));
     await tester.pumpAndSettle();
 
     expect(repository.calls, 2);
