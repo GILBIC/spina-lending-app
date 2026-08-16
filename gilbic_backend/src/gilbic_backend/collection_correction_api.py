@@ -32,6 +32,7 @@ class CollectionCorrectionBody(BaseModel):
     covered_dates: list[date] = Field(default_factory=list, max_length=366)
     note: str = Field(default="", max_length=500)
     reason: str = Field(min_length=1, max_length=500)
+    expected_route_revision: str = Field(min_length=1, max_length=120)
 
 
 def correction_repository_dependency() -> PostgresCollectionCorrectionRepository:
@@ -110,6 +111,7 @@ def create_collection_correction_router() -> APIRouter:
                 covered_dates=tuple(body.covered_dates),
                 note=body.note,
                 reason=body.reason,
+                expected_route_revision=body.expected_route_revision,
             )
         except CollectionCorrectionError as error:
             _raise_correction_error(error)
