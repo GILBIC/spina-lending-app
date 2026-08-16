@@ -14,6 +14,7 @@ from .contracts import (
     CollectionCommand,
     CollectionEntryType,
     CollectionStatus,
+    PaymentAllocationIntent,
 )
 from .service import (
     CollectionProtocolError,
@@ -40,6 +41,7 @@ class CollectionSubmissionBody(BaseModel):
     device_sequence: int = Field(ge=1)
     note: str = Field(default="", max_length=500)
     route_revision: str | None = Field(default=None, max_length=128)
+    payment_allocation_intent: PaymentAllocationIntent = PaymentAllocationIntent.SCHEDULED
 
     def to_command(self) -> CollectionCommand:
         return CollectionCommand(
@@ -58,6 +60,7 @@ class CollectionSubmissionBody(BaseModel):
             device_sequence=self.device_sequence,
             note=self.note,
             route_revision=self.route_revision,
+            payment_allocation_intent=self.payment_allocation_intent,
         )
 
 
