@@ -9,6 +9,7 @@ from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .collector_route_repository import (
     CollectorRouteEntryRecord,
+    CollectorRouteReceiptRecord,
     CollectorRouteRecord,
     PostgresCollectorRouteRepository,
 )
@@ -30,13 +31,28 @@ def _is_seven_by_seven_loan_type(value: str) -> bool:
     return "7x7" in normalized or "7×7" in normalized
 
 
+def _receipt_payload(receipt: CollectorRouteReceiptRecord) -> dict[str, object]:
+    return {
+        "transaction_id": str(receipt.transaction_id),
+        "receipt_number": receipt.receipt_number,
+        "amount": str(receipt.amount),
+        "entry_type": receipt.entry_type,
+        "collector_user_id": str(receipt.collector_user_id),
+        "collector_name": receipt.collector_name,
+        "is_locked": receipt.is_locked,
+        "note": receipt.note,
+        "covered_dates": [value.isoformat() for value in receipt.covered_dates],
+        "accepted_at": receipt.accepted_at.isoformat() if receipt.accepted_at else None,
+    }
+
+
 def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
     seven_by_seven_mobile_enabled = (
         _is_seven_by_seven_loan_type(entry.loan_type)
         and entry.can_collect_mobile
         and entry.can_enter_payment
     )
-    return {
+    payload: dict[str, object] = {
         "route_entry_id": str(entry.route_entry_id),
         "client_id": str(entry.client_id),
         "loan_id": str(entry.loan_id),
@@ -93,6 +109,11 @@ def _entry_payload(entry: CollectorRouteEntryRecord) -> dict[str, object]:
             value.isoformat() for value in entry.today_covered_dates
         ],
     }
+    if entry.today_receipts:
+        payload["today_receipts"] = [
+            _receipt_payload(receipt) for receipt in entry.today_receipts
+        ]
+    return payload
 
 
 def _route_payload(route: CollectorRouteRecord) -> dict[str, object]:
