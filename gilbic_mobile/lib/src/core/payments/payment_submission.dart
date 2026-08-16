@@ -22,6 +22,15 @@ enum CollectionEntryType {
   }
 }
 
+enum PaymentAllocationIntent {
+  scheduled('scheduled'),
+  voluntaryExtra('voluntary_extra');
+
+  const PaymentAllocationIntent(this.apiValue);
+
+  final String apiValue;
+}
+
 class PaymentSubmissionDraft {
   const PaymentSubmissionDraft({
     required this.idempotencyKey,
@@ -39,6 +48,7 @@ class PaymentSubmissionDraft {
     this.coveredDates = const <DateTime>[],
     this.note = '',
     this.routeRevision,
+    this.paymentAllocationIntent = PaymentAllocationIntent.scheduled,
   });
 
   final String idempotencyKey;
@@ -56,6 +66,7 @@ class PaymentSubmissionDraft {
   final List<DateTime> coveredDates;
   final String note;
   final String? routeRevision;
+  final PaymentAllocationIntent paymentAllocationIntent;
 
   String? validate() {
     if (idempotencyKey.trim().isEmpty) {
@@ -90,6 +101,9 @@ class PaymentSubmissionDraft {
         }
         break;
       case CollectionEntryType.advance:
+        if (paymentAllocationIntent != PaymentAllocationIntent.scheduled) {
+          return 'ADV uses explicit covered dates and cannot also be marked as voluntary extra.';
+        }
         if (amount == null || amount! <= 0) {
           return 'A covered-date payment amount greater than zero is required.';
         }
@@ -107,6 +121,9 @@ class PaymentSubmissionDraft {
         }
         break;
       case CollectionEntryType.pass:
+        if (paymentAllocationIntent != PaymentAllocationIntent.scheduled) {
+          return 'Unable-to-pay cannot contain a payment allocation intent.';
+        }
         if (amount != null && amount != 0) {
           return 'An unable-to-pay entry cannot contain a payment amount.';
         }
@@ -138,6 +155,7 @@ class PaymentSubmissionDraft {
       'device_sequence': deviceSequence,
       'note': note.trim(),
       'route_revision': routeRevision,
+      'payment_allocation_intent': paymentAllocationIntent.apiValue,
     };
   }
 }
