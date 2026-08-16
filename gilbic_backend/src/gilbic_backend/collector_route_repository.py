@@ -449,7 +449,7 @@ class PostgresCollectorRouteRepository:
                     ) contract_today on true
                     left join lateral (
                         select
-                            balance.due_date,
+                            balance.effective_due_date,
                             sum(balance.remaining_amount)::numeric(18,2) as unpaid_amount
                         from (
                             select
@@ -474,8 +474,8 @@ class PostgresCollectorRouteRepository:
                                 installment.contractual_amount
                         ) balance
                         where balance.remaining_amount > 0
-                        group by balance.due_date
-                        order by balance.due_date
+                        group by balance.effective_due_date
+                        order by balance.effective_due_date
                         limit 1
                     ) contract_next on true
                     where a.collector_user_id = %s
