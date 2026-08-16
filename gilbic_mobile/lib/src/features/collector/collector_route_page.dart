@@ -11,6 +11,8 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_correction_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_client_ledger.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_route_header_cards.dart';
 
 class CollectorRoutePage extends StatefulWidget {
   const CollectorRoutePage({
@@ -355,7 +357,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Daily Route'),
+        title: const Text('Daily Collection'),
         actions: [
           IconButton(
             tooltip: 'Refresh route',
@@ -415,10 +417,14 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 16),
         children: [
-          _CompactRouteSummary(
+          CollectorRouteHeaderCard(
             result: loaded,
             route: route,
             clientCount: clientCount,
+          ),
+          const SizedBox(height: 8),
+          CollectorAreaArrangementCard(
+            areas: areaGroups.map((group) => group.area).toList(),
           ),
           if (loaded.warning != null) ...[
             const SizedBox(height: 8),
@@ -454,425 +460,32 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
             )
           else
             for (final group in areaGroups) ...[
-              _AreaLedgerSection(
+              CollectorClientLedgerSection(
                 group: group,
                 expandedClients: _expandedClients,
-                blockedReasonFor: (entry) =>
+                directPayBlockedReasonFor: (entry) =>
                     _directPayBlockedReason(loaded, entry),
-                detailsBlockedReasonFor: (entry) =>
-                    _detailsBlockedReason(loaded, entry),
-                correctionBlockedReasonFor: (entry) =>
-                    _correctionBlockedReason(loaded, entry),
                 payingLoanIds: _payingLoanIds,
                 pendingDirectLoanIds: _pendingDirectDrafts.keys.toSet(),
                 onToggleClient: _toggleClient,
                 onRecord: (entry) => _payNow(loaded, entry),
-                onDetails: (entry) => _openCollectionDetails(loaded, entry),
-                onEdit: (entry) => _openCorrection(loaded, entry),
+                detailsBuilder: (entry) => _LoanDetails(
+                  entry: entry,
+                  blockedReason: _directPayBlockedReason(loaded, entry),
+                  detailsBlockedReason: _detailsBlockedReason(loaded, entry),
+                  correctionBlockedReason: _correctionBlockedReason(loaded, entry),
+                  onDetails: () => _openCollectionDetails(loaded, entry),
+                  onEdit: () => _openCorrection(loaded, entry),
+                ),
               ),
               const SizedBox(height: 8),
             ],
           const SizedBox(height: 4),
           Text(
-            'Tap Pay for the normal scheduled amount. Expand a client only for another amount, notes, exact covered dates, unable-to-pay, recorder details, or Edit. Offline routes remain view-only.',
+            'One client stays on one Daily Collection row. TODAY keeps one-tap Pay when exactly one loan is safely payable. If Regular + 7x7 both need payment, Review fails closed until SPINA can allocate the combined cash atomically on the server. Expand only for notes, receipts, covered dates/ADV, voluntary extra, correction or other exceptions. Offline routes remain view-only.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall,
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CompactRouteSummary extends StatelessWidget {
-  const _CompactRouteSummary({
-    required this.result,
-    required this.route,
-    required this.clientCount,
-  });
-
-  final CollectorRouteLoadResult result;
-  final CollectorRoute route;
-  final int clientCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final dateText = route.routeDate == null ? 'Saved route' : _date(route.routeDate!);
-    final recorded = route.entries.where((entry) => entry.processedToday).length;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: result.isFromCache
-            ? scheme.tertiaryContainer
-            : scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                result.isFromCache ? Icons.cloud_off : Icons.cloud_done,
-                size: 17,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                result.isFromCache ? 'Offline copy' : 'Online route',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const Spacer(),
-              Text(dateText, style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${route.collectorName} • $clientCount clients • '
-                  '${route.entries.length} loans',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-              Text(
-                _money(route.expectedTotal),
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Text(
-            '$recorded recorded • Last sync ${_time(result.syncedAt)}',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AreaLedgerSection extends StatelessWidget {
-  const _AreaLedgerSection({
-    required this.group,
-    required this.expandedClients,
-    required this.blockedReasonFor,
-    required this.detailsBlockedReasonFor,
-    required this.correctionBlockedReasonFor,
-    required this.payingLoanIds,
-    required this.pendingDirectLoanIds,
-    required this.onToggleClient,
-    required this.onRecord,
-    required this.onDetails,
-    required this.onEdit,
-  });
-
-  final CollectorRouteAreaGroup group;
-  final Set<String> expandedClients;
-  final String? Function(CollectorRouteEntry entry) blockedReasonFor;
-  final String? Function(CollectorRouteEntry entry) detailsBlockedReasonFor;
-  final String? Function(CollectorRouteEntry entry) correctionBlockedReasonFor;
-  final Set<String> payingLoanIds;
-  final Set<String> pendingDirectLoanIds;
-  final void Function(String clientId) onToggleClient;
-  final void Function(CollectorRouteEntry entry) onRecord;
-  final void Function(CollectorRouteEntry entry) onDetails;
-  final void Function(CollectorRouteEntry entry) onEdit;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: scheme.outlineVariant),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            color: scheme.primaryContainer,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'AREA: ${group.area.toUpperCase()}',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                  ),
-                ),
-                Text(
-                  '${group.clientCount} clients • ${group.loanCount} loans • '
-                  '${_money(group.expectedTotal)}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          const _LedgerColumnHeader(),
-          for (var index = 0; index < group.clients.length; index++) ...[
-            if (index > 0) const Divider(height: 1),
-            _ClientLedgerBlock(
-              sequence: index + 1,
-              client: group.clients[index],
-              expanded: expandedClients.contains(group.clients[index].clientId),
-              blockedReasonFor: blockedReasonFor,
-              detailsBlockedReasonFor: detailsBlockedReasonFor,
-              correctionBlockedReasonFor: correctionBlockedReasonFor,
-              payingLoanIds: payingLoanIds,
-              pendingDirectLoanIds: pendingDirectLoanIds,
-              onToggle: () => onToggleClient(group.clients[index].clientId),
-              onRecord: onRecord,
-              onDetails: onDetails,
-              onEdit: onEdit,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _LedgerColumnHeader extends StatelessWidget {
-  const _LedgerColumnHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-        );
-    return Container(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      padding: const EdgeInsets.fromLTRB(38, 5, 8, 5),
-      child: Row(
-        children: [
-          SizedBox(width: 62, child: Text('LOAN', style: style)),
-          SizedBox(width: 62, child: Text('DAILY', style: style)),
-          Expanded(child: Text('BALANCE', style: style)),
-          SizedBox(
-            width: 62,
-            child: Text('ACTION', style: style, textAlign: TextAlign.center),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ClientLedgerBlock extends StatelessWidget {
-  const _ClientLedgerBlock({
-    required this.sequence,
-    required this.client,
-    required this.expanded,
-    required this.blockedReasonFor,
-    required this.detailsBlockedReasonFor,
-    required this.correctionBlockedReasonFor,
-    required this.payingLoanIds,
-    required this.pendingDirectLoanIds,
-    required this.onToggle,
-    required this.onRecord,
-    required this.onDetails,
-    required this.onEdit,
-  });
-
-  final int sequence;
-  final CollectorRouteClientGroup client;
-  final bool expanded;
-  final String? Function(CollectorRouteEntry entry) blockedReasonFor;
-  final String? Function(CollectorRouteEntry entry) detailsBlockedReasonFor;
-  final String? Function(CollectorRouteEntry entry) correctionBlockedReasonFor;
-  final Set<String> payingLoanIds;
-  final Set<String> pendingDirectLoanIds;
-  final VoidCallback onToggle;
-  final void Function(CollectorRouteEntry entry) onRecord;
-  final void Function(CollectorRouteEntry entry) onDetails;
-  final void Function(CollectorRouteEntry entry) onEdit;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        InkWell(
-          key: Key('route-client-${client.clientId}'),
-          onTap: onToggle,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(9, 8, 7, 6),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 28,
-                  child: Text(
-                    '$sequence.',
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    client.clientName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
-                  ),
-                ),
-                Text(
-                  '${client.processedLoanCount}/${client.loans.length}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                Icon(
-                  expanded ? Icons.expand_less : Icons.expand_more,
-                  size: 20,
-                ),
-              ],
-            ),
-          ),
-        ),
-        for (final loan in client.loans)
-          _CompactLoanRow(
-            entry: loan,
-            expanded: expanded,
-            blockedReason: blockedReasonFor(loan),
-            detailsBlockedReason: detailsBlockedReasonFor(loan),
-            correctionBlockedReason: correctionBlockedReasonFor(loan),
-            paying: payingLoanIds.contains(loan.loanId),
-            pendingRetry: pendingDirectLoanIds.contains(loan.loanId),
-            onRecord: () => onRecord(loan),
-            onDetails: () => onDetails(loan),
-            onEdit: () => onEdit(loan),
-          ),
-      ],
-    );
-  }
-}
-
-class _CompactLoanRow extends StatelessWidget {
-  const _CompactLoanRow({
-    required this.entry,
-    required this.expanded,
-    required this.blockedReason,
-    required this.detailsBlockedReason,
-    required this.correctionBlockedReason,
-    required this.paying,
-    required this.pendingRetry,
-    required this.onRecord,
-    required this.onDetails,
-    required this.onEdit,
-  });
-
-  final CollectorRouteEntry entry;
-  final bool expanded;
-  final String? blockedReason;
-  final String? detailsBlockedReason;
-  final String? correctionBlockedReason;
-  final bool paying;
-  final bool pendingRetry;
-  final VoidCallback onRecord;
-  final VoidCallback onDetails;
-  final VoidCallback onEdit;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: scheme.outlineVariant)),
-      ),
-      padding: const EdgeInsets.fromLTRB(38, 6, 7, 7),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              SizedBox(
-                width: 62,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _shortLoanName(entry.loanType),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    Text(
-                      _shortStatus(entry),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                width: 62,
-                child: Text(
-                  _moneyCompact(entry.dailyAmount),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  _moneyCompact(entry.balance),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ),
-              SizedBox(
-                width: 62,
-                height: 34,
-                child: FilledButton(
-                  key: Key('record-collection-${entry.id}'),
-                  onPressed: blockedReason == null && !paying ? onRecord : null,
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    minimumSize: const Size(56, 34),
-                    textStyle: Theme.of(context).textTheme.labelMedium,
-                  ),
-                  child: paying
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(
-                          _actionLabel(
-                            entry,
-                            blockedReason,
-                            pendingRetry: pendingRetry,
-                          ),
-                        ),
-                ),
-              ),
-            ],
-          ),
-          if (expanded) ...[
-            const SizedBox(height: 7),
-            Container(
-              width: double.infinity,
-              color: scheme.surfaceContainerHighest,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-              child: _LoanDetails(
-                entry: entry,
-                blockedReason: blockedReason,
-                detailsBlockedReason: detailsBlockedReason,
-                correctionBlockedReason: correctionBlockedReason,
-                onDetails: onDetails,
-                onEdit: onEdit,
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -1040,55 +653,8 @@ class _TodayReceipts extends StatelessWidget {
   }
 }
 
-String _shortLoanName(String value) {
-  return _isSevenBySevenLoan(value) ? '7x7' : value;
-}
 
-String _shortStatus(CollectorRouteEntry entry) {
-  if (entry.contractCollectionReady &&
-      entry.contractTodayScheduledAmount > 0) {
-    if (entry.contractTodayUnpaidAmount > 0) {
-      return entry.processedToday ? 'Lacking' : 'Pending';
-    }
-    return entry.processedToday ? 'Paid' : 'Covered';
-  }
-  if (entry.processedToday) {
-    if (entry.todayIsLocked) {
-      return 'Remitted';
-    }
-    return switch (entry.todayEntryType.trim().toLowerCase()) {
-      'pass' => 'Unable',
-      'advance' => 'Covered',
-      _ => 'Paid',
-    };
-  }
-  if (_isSevenBySevenLoan(entry.loanType) &&
-      !entry.sevenBySevenMobileEnabled) {
-    return 'Desktop';
-  }
-  return entry.status;
-}
 
-String _actionLabel(
-  CollectorRouteEntry entry,
-  String? blockedReason, {
-  required bool pendingRetry,
-}) {
-  if (pendingRetry && blockedReason == null) {
-    return 'Retry';
-  }
-  if (_isSevenBySevenLoan(entry.loanType) &&
-      !entry.sevenBySevenMobileEnabled) {
-    return 'Desk';
-  }
-  if (blockedReason == null) {
-    return 'Pay';
-  }
-  if (entry.processedToday) {
-    return entry.todayIsLocked ? 'Locked' : 'Done';
-  }
-  return 'Locked';
-}
 
 String _todayResultLabel(String value) {
   return switch (value.trim().toLowerCase()) {
@@ -1113,17 +679,7 @@ String _date(DateTime value) {
       '${local.day.toString().padLeft(2, '0')}';
 }
 
-String _time(DateTime value) {
-  final local = value.toLocal();
-  return '${local.hour.toString().padLeft(2, '0')}:'
-      '${local.minute.toString().padLeft(2, '0')}';
-}
 
-String _money(double value) {
-  final fixed = value.toStringAsFixed(2);
-  final parts = fixed.split('.');
-  return '${_groupDigits(parts.first)}.${parts.last}';
-}
 
 String _moneyCompact(double value) {
   final fixed = value.toStringAsFixed(2);

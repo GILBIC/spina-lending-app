@@ -19,9 +19,8 @@ import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 /// Collector-first shell for CA4.
 ///
-/// The familiar ledger stays the primary screen after sign-in. Master Review is
-/// a first-class field action so a Collector can check every assigned area before
-/// leaving the route. Secondary tools remain behind compact navigation.
+/// The Management-approved Daily Collection ledger is the primary screen after sign-in.
+/// Master Review is a first-class field action; secondary tools remain behind More.
 class CollectorFieldHomePage extends StatefulWidget {
   const CollectorFieldHomePage({
     required this.session,
@@ -116,7 +115,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Daily Route and Master Review stay your main field screens.',
+                  'Daily Collection and Master Review stay your main field screens.',
                   style: Theme.of(sheetContext).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 14),
@@ -132,6 +131,16 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                       _open(const CollectorSyntheticReviewPage());
                     },
                   ),
+                _CollectorToolTile(
+                  key: const Key('collector-more-other-area'),
+                  icon: Icons.person_search_outlined,
+                  title: 'Other area payment',
+                  subtitle: 'Record an allowed payment outside your assigned route',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _openOtherArea();
+                  },
+                ),
                 _CollectorToolTile(
                   key: const Key('collector-more-payment-updates'),
                   icon: Icons.receipt_long_outlined,
@@ -244,10 +253,8 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
             case 1:
               _openMasterReview();
             case 2:
-              _openOtherArea();
-            case 3:
               _openRemittance();
-            case 4:
+            case 3:
               _openMore();
           }
         },
@@ -261,12 +268,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
             key: Key('collector-master-review-tab'),
             icon: Icon(Icons.fact_check_outlined),
             selectedIcon: Icon(Icons.fact_check_rounded),
-            label: 'Review',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_search_outlined),
-            selectedIcon: Icon(Icons.person_search_rounded),
-            label: 'Other area',
+            label: 'Master review',
           ),
           NavigationDestination(
             icon: Icon(Icons.account_balance_outlined),
