@@ -153,19 +153,30 @@ def allocate_collection_transaction(
     transaction_id: UUID,
     explicit_covered_dates: Sequence[date] = (),
 ) -> tuple[AllocationInstruction, ...]:
-    """Apply one accepted cash transaction to its contractual installments.
+    """Apply one accepted receipt's applied cash to contractual installments.
+
+    ``collection_transactions.amount`` is custody cash. Only ``applied_amount``
+    may consume signed-contract installment capacity. This keeps a legitimate
+    second receipt auditable even when some or all of its cash remains
+    unallocated for later review.
 
     The collection transaction and its loan are locked before planning, so two
-    concurrent payments for the same loan cannot both consume the same unpaid
-    installment. Re-running a fully allocated transaction is idempotent.
-    Partial pre-existing allocations are treated as a conflict rather than
-    guessed or silently repaired. Allocations belonging to a voided collection
-    remain immutable evidence but no longer consume installment capacity.
+    concurrent receipts for the same loan cannot both consume the same unpaid
+    installment. Re-running a fully allocated transaction is idempotent. Partial
+    pre-existing installment rows are treated as a conflict rather than guessed
+    or silently repaired. Allocations belonging to a voided collection remain
+    immutable evidence but no longer consume installment capacity.
     """
 
     cursor.execute(
         """
-        select loan_id, amount, entry_type, is_voided
+        select
+            loan_id,
+            applied_amount,
+            amount,
+            unallocated_amount,
+            entry_type,
+            is_voided
         from lending.collection_transactions
         where id = %s
         for update
@@ -176,7 +187,14 @@ def allocate_collection_transaction(
     if transaction is None:
         raise ContractScheduleNotReady("The collection transaction does not exist.")
 
-    loan_id, transaction_amount, entry_type, is_voided = transaction
+    (
+        loan_id,
+        applied_amount,
+        cash_received_amount,
+        unallocated_amount,
+        entry_type,
+        is_voided,
+    ) = transaction
     if bool(is_voided):
         raise ContractPaymentAllocationConflict(
             "A voided collection transaction cannot be contract-allocated."
@@ -184,6 +202,18 @@ def allocate_collection_transaction(
     if str(entry_type) not in {"payment", "advance"}:
         raise ContractPaymentAllocationConflict(
             "Only payment and advance transactions can be allocated to installments."
+        )
+
+    applied = Decimal(applied_amount)
+    cash_received = Decimal(cash_received_amount)
+    unresolved = Decimal(unallocated_amount)
+    if applied < Decimal("0.00") or unresolved < Decimal("0.00"):
+        raise ContractPaymentAllocationConflict(
+            "Receipt application amounts are invalid. Management review is required."
+        )
+    if applied + unresolved != cash_received:
+        raise ContractPaymentAllocationConflict(
+            "Receipt cash does not reconcile to applied plus unallocated amounts."
         )
 
     # Serialize all automatic allocation planning for this loan. This prevents
@@ -215,7 +245,7 @@ def allocate_collection_transaction(
     existing_rows = cursor.fetchall()
     if existing_rows:
         existing_total = sum((Decimal(row[3]) for row in existing_rows), Decimal("0.00"))
-        if existing_total != Decimal(transaction_amount):
+        if existing_total != applied:
             raise ContractPaymentAllocationConflict(
                 "This transaction has incomplete pre-existing installment allocations."
             )
@@ -229,6 +259,9 @@ def allocate_collection_transaction(
             )
             for row in existing_rows
         )
+
+    if applied == Decimal("0.00"):
+        return ()
 
     cursor.execute(
         """
@@ -283,7 +316,7 @@ def allocate_collection_transaction(
 
     try:
         plan = plan_payment_allocation(
-            transaction_amount=Decimal(transaction_amount),
+            transaction_amount=applied,
             installments=outstanding,
             explicit_covered_dates=explicit_covered_dates,
         )
