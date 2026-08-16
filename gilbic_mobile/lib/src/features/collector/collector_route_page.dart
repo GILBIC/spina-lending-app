@@ -232,7 +232,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       }
       final status = error.statusCode;
       final uncertain =
-          status == null || status == 429 || (status != null && status >= 500);
+          status == null || status == 429 || status >= 500;
       if (!uncertain) {
         _pendingDirectDrafts.remove(entry.loanId);
       }
@@ -909,18 +909,26 @@ class _LoanDetails extends StatelessWidget {
         'Still due today: ${_moneyCompact(entry.contractTodayUnpaidAmount)}',
       if (entry.lastPaymentDate != null)
         'Last payment: ${_date(entry.lastPaymentDate!)}',
-      if (entry.processedToday && entry.todayAmount > 0)
+      if (entry.todayReceipts.isEmpty &&
+          entry.processedToday &&
+          entry.todayAmount > 0)
         'Latest receipt: ${_moneyCompact(entry.todayAmount)}',
       if (entry.todayCoveredDates.isNotEmpty)
         'Exact covered dates: ${entry.todayCoveredDates.map(_date).join(', ')}',
       if (!entry.processedToday && entry.coveredDates.isNotEmpty)
         'Upcoming covered dates: ${entry.coveredDates.map(_date).join(', ')}',
       if (entry.processedToday) _todayResultLabel(entry.todayEntryType),
-      if (entry.processedToday && entry.todayCollectorName.isNotEmpty)
+      if (entry.todayReceipts.isEmpty &&
+          entry.processedToday &&
+          entry.todayCollectorName.isNotEmpty)
         'Latest receipt recorded by: ${entry.todayCollectorName}',
-      if (entry.processedToday && entry.todayIsLocked)
+      if (entry.todayReceipts.isEmpty &&
+          entry.processedToday &&
+          entry.todayIsLocked)
         'Latest receipt remittance status: Locked',
-      if (entry.processedToday && entry.todayNote.isNotEmpty)
+      if (entry.todayReceipts.isEmpty &&
+          entry.processedToday &&
+          entry.todayNote.isNotEmpty)
         'Latest receipt note: ${entry.todayNote}',
       if (!entry.processedToday && entry.note.isNotEmpty)
         'Reason / note: ${entry.note}',
@@ -935,6 +943,10 @@ class _LoanDetails extends StatelessWidget {
         for (var index = 0; index < lines.length; index++) ...[
           if (index > 0) const SizedBox(height: 3),
           Text(lines[index], style: Theme.of(context).textTheme.bodySmall),
+        ],
+        if (entry.todayReceipts.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _TodayReceipts(receipts: entry.todayReceipts),
         ],
         const SizedBox(height: 8),
         if (detailsBlockedReason == null)
@@ -963,6 +975,64 @@ class _LoanDetails extends StatelessWidget {
               correctionBlockedReason!,
               style: Theme.of(context).textTheme.bodySmall,
             ),
+        ],
+      ],
+    );
+  }
+}
+
+class _TodayReceipts extends StatelessWidget {
+  const _TodayReceipts({required this.receipts});
+
+  final List<CollectorRouteReceipt> receipts;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = receipts.fold<double>(
+      0,
+      (sum, receipt) => sum + receipt.amount,
+    );
+    return Column(
+      key: const Key('today-receipts'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Today's receipts • ${receipts.length} • ${_moneyCompact(total)}",
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+        ),
+        const SizedBox(height: 5),
+        for (final receipt in receipts) ...[
+          Container(
+            key: Key('today-receipt-${receipt.transactionId}'),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Receipt ${receipt.receiptNumber} • '
+                  '${_moneyCompact(receipt.amount)} • '
+                  '${receipt.collectorName}'
+                  '${receipt.isLocked ? ' • Locked' : ''}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                if (receipt.coveredDates.isNotEmpty)
+                  Text(
+                    'Covered: ${receipt.coveredDates.map(_date).join(', ')}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                if (receipt.note.isNotEmpty)
+                  Text(
+                    'Note: ${receipt.note}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+              ],
+            ),
+          ),
         ],
       ],
     );
