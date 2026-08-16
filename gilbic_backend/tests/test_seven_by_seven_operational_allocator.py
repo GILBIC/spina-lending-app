@@ -74,6 +74,33 @@ def test_interest_arrears_carry_forward_and_cash_is_interest_first() -> None:
     assert second.closing_interest_arrears == Decimal("7.00")
 
 
+def test_distinct_same_day_receipts_share_one_days_interest_without_becoming_duplicates() -> None:
+    result = allocate_seven_by_seven_payments(
+        original_principal="3000.00",
+        daily_interest_per_1000="7.00",
+        payment_start=date(2026, 8, 1),
+        events=(
+            _event("collector-a-receipt", 1, "10.00"),
+            _event("collector-b-receipt", 1, "50.00"),
+        ),
+    )
+
+    first, second = result.allocations
+    assert first.gap_days == 1
+    assert first.interest_due == Decimal("21.00")
+    assert first.interest_paid == Decimal("10.00")
+    assert first.closing_interest_arrears == Decimal("11.00")
+
+    assert second.gap_days == 0
+    assert second.opening_interest_arrears == Decimal("11.00")
+    assert second.interest_due == Decimal("11.00")
+    assert second.interest_paid == Decimal("11.00")
+    assert second.principal_paid == Decimal("39.00")
+    assert second.closing_remaining_principal == Decimal("2961.00")
+    assert result.total_interest_paid == Decimal("21.00")
+    assert result.total_principal_paid == Decimal("39.00")
+
+
 def test_principal_reduction_never_changes_fixed_daily_interest() -> None:
     result = allocate_seven_by_seven_payments(
         original_principal="3000.00",
@@ -152,14 +179,14 @@ def test_allocator_fails_closed_on_invalid_or_invented_event_order() -> None:
             events=(_event("too-early", 1, "21.00"),),
         )
 
-    with pytest.raises(SevenBySevenAllocationError, match="strictly chronological"):
+    with pytest.raises(SevenBySevenAllocationError, match="chronological"):
         allocate_seven_by_seven_payments(
             original_principal="3000.00",
             daily_interest_per_1000="7.00",
             payment_start=date(2026, 8, 1),
             events=(
-                _event("cash-1", 2, "21.00"),
-                _event("same-day", 2, "21.00"),
+                _event("cash-later", 3, "21.00"),
+                _event("cash-earlier", 2, "21.00"),
             ),
         )
 
@@ -178,7 +205,7 @@ def test_allocator_fails_closed_on_invalid_or_invented_event_order() -> None:
             payment_start=date(2026, 8, 1),
             events=(
                 _event("duplicate", 1, "21.00"),
-                _event("duplicate", 2, "21.00"),
+                _event("duplicate", 1, "21.00"),
             ),
         )
 
