@@ -79,7 +79,6 @@ def test_monthly_no_collection_clamps_last_shift_safely() -> None:
         payment_frequency="monthly",
     )
 
-    assert shifts.single.new_effective_due_date if False else True
     assert shifts[0].new_effective_due_date == date(2026, 3, 28)
 
 
