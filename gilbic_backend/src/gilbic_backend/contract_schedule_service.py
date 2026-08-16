@@ -140,7 +140,7 @@ def store_contract_schedule(
             (
                 schedule_id,
                 installment.installment_number,
-                installment.due_date,
+                installment.effective_due_date,
                 installment.contractual_amount,
             ),
         )
@@ -201,14 +201,14 @@ def allocate_collection_transaction(
         select
             allocation.installment_id,
             installment.installment_number,
-            installment.due_date,
+            installment.effective_due_date,
             allocation.amount_applied,
             allocation.allocation_basis
         from lending.loan_installment_payment_allocations allocation
-        join lending.loan_contract_installments installment
+        join lending.loan_contract_installments_operational installment
           on installment.id = allocation.installment_id
         where allocation.transaction_id = %s
-        order by installment.due_date, installment.installment_number
+        order by installment.effective_due_date, installment.installment_number
         """,
         (transaction_id,),
     )
@@ -250,12 +250,12 @@ def allocate_collection_transaction(
         select
             installment.id,
             installment.installment_number,
-            installment.due_date,
+            installment.effective_due_date,
             installment.contractual_amount,
             coalesce(sum(allocation.amount_applied) filter (
                 where allocation_transaction.is_voided = false
             ), 0)::numeric(18,2) as allocated_amount
-        from lending.loan_contract_installments installment
+        from lending.loan_contract_installments_operational installment
         left join lending.loan_installment_payment_allocations allocation
           on allocation.installment_id = installment.id
         left join lending.collection_transactions allocation_transaction
@@ -264,9 +264,9 @@ def allocate_collection_transaction(
         group by
             installment.id,
             installment.installment_number,
-            installment.due_date,
+            installment.effective_due_date,
             installment.contractual_amount
-        order by installment.due_date, installment.installment_number
+        order by installment.effective_due_date, installment.installment_number
         """,
         (schedule_id,),
     )
