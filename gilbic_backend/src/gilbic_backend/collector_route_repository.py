@@ -434,7 +434,7 @@ class PostgresCollectorRouteRepository:
                                 - coalesce(applied.allocated_amount, 0),
                                 0
                             )), 0)::numeric(18,2) as unpaid_amount
-                        from lending.loan_contract_installments installment
+                        from lending.loan_contract_installments_operational installment
                         left join lateral (
                             select coalesce(sum(allocation.amount_applied) filter (
                                 where transaction.is_voided = false
@@ -445,7 +445,7 @@ class PostgresCollectorRouteRepository:
                             where allocation.installment_id = installment.id
                         ) applied on true
                         where installment.schedule_id = assessment.schedule_id
-                          and installment.due_date = %s
+                          and installment.effective_due_date = %s
                     ) contract_today on true
                     left join lateral (
                         select
@@ -454,7 +454,7 @@ class PostgresCollectorRouteRepository:
                         from (
                             select
                                 installment.id,
-                                installment.due_date,
+                                installment.effective_due_date,
                                 greatest(
                                     installment.contractual_amount
                                     - coalesce(sum(allocation.amount_applied) filter (
@@ -462,7 +462,7 @@ class PostgresCollectorRouteRepository:
                                     ), 0),
                                     0
                                 )::numeric(18,2) as remaining_amount
-                            from lending.loan_contract_installments installment
+                            from lending.loan_contract_installments_operational installment
                             left join lending.loan_installment_payment_allocations allocation
                               on allocation.installment_id = installment.id
                             left join lending.collection_transactions transaction
@@ -470,7 +470,7 @@ class PostgresCollectorRouteRepository:
                             where installment.schedule_id = assessment.schedule_id
                             group by
                                 installment.id,
-                                installment.due_date,
+                                installment.effective_due_date,
                                 installment.contractual_amount
                         ) balance
                         where balance.remaining_amount > 0
