@@ -23,11 +23,11 @@ jobs:
           fetch-depth: 0
 
       - name: Apply same-day receipt parity fixes
-        shell: pwsh
+        shell: powershell
         run: python tools/tmp_apply_receipt_route_ui.py
 
       - name: Compile touched Python sources
-        shell: pwsh
+        shell: powershell
         run: |
           python -m py_compile spina_app/calculation_rules.py
           python -m py_compile gilbic_backend/tests/test_seven_by_seven_desktop_server_parity_matrix.py
@@ -36,7 +36,7 @@ jobs:
           python -m py_compile gilbic_backend/tests/test_contract_collection_posting.py
 
       - name: Commit parity fix
-        shell: pwsh
+        shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           git config user.name 'github-actions[bot]'
