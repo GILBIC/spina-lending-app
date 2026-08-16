@@ -261,7 +261,7 @@ class ContractAwareCrossCollectorCollectionPostingBridge(
             )
             if remaining <= Decimal("0.00"):
                 raise CollectionRejected(
-                    f"{row['due_date'].isoformat()} is already fully covered.",
+                    f"{row['effective_due_date'].isoformat()} is already fully covered.",
                     code="contract_advance_date_already_covered",
                 )
             selected_remaining = self._money(selected_remaining + remaining)
