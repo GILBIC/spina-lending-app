@@ -9,6 +9,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
+from .management_no_collection_query_repository import (
+    NoCollectionLoanState,
+    PostgresManagementNoCollectionQueryRepository,
+)
 from .management_no_collection_repository import (
     ManagementNoCollectionConflict,
     ManagementNoCollectionError,
@@ -49,6 +53,12 @@ def management_no_collection_repository_dependency() -> (
     return PostgresManagementNoCollectionRepository()
 
 
+def management_no_collection_query_repository_dependency() -> (
+    PostgresManagementNoCollectionQueryRepository
+):
+    return PostgresManagementNoCollectionQueryRepository()
+
+
 def _record_payload(record: NoCollectionAdjustmentRecord) -> dict[str, object]:
     return {
         "adjustment_id": str(record.adjustment_id),
@@ -81,6 +91,54 @@ def _record_payload(record: NoCollectionAdjustmentRecord) -> dict[str, object]:
     }
 
 
+def _loan_state_payload(state: NoCollectionLoanState) -> dict[str, object]:
+    return {
+        "loan_id": str(state.loan_id),
+        "loan_number": state.loan_number,
+        "client_id": str(state.client_id),
+        "client_name": state.client_name,
+        "loan_type": state.loan_type,
+        "schedule_id": str(state.schedule_id),
+        "schedule_version": state.schedule_version,
+        "payment_frequency": state.payment_frequency,
+        "contract_reference": state.contract_reference,
+        "operational_version": state.operational_version,
+        "installments": [
+            {
+                "installment_id": installment.installment_id,
+                "installment_number": installment.installment_number,
+                "contractual_due_date": installment.contractual_due_date.isoformat(),
+                "effective_due_date": installment.effective_due_date.isoformat(),
+                "contractual_amount": format(installment.contractual_amount, "f"),
+                "allocated_amount": format(installment.allocated_amount, "f"),
+                "remaining_amount": format(installment.remaining_amount, "f"),
+                "is_paid": installment.remaining_amount == 0,
+                "is_partly_paid": (
+                    installment.allocated_amount > 0
+                    and installment.remaining_amount > 0
+                ),
+                "last_adjustment_id": (
+                    str(installment.last_adjustment_id)
+                    if installment.last_adjustment_id
+                    else None
+                ),
+            }
+            for installment in state.installments
+        ],
+        "active_no_collection": [
+            {
+                "adjustment_id": str(item.adjustment_id),
+                "no_collection_date": item.no_collection_date.isoformat(),
+                "reason": item.reason,
+                "resulting_operational_version": item.resulting_operational_version,
+                "actor_name": item.actor_name,
+                "created_at": item.created_at.isoformat(),
+            }
+            for item in state.active_no_collection
+        ],
+    }
+
+
 def _raise_no_collection_error(error: ManagementNoCollectionError) -> None:
     if isinstance(error, ManagementNoCollectionNotFound):
         status = 404
@@ -96,8 +154,61 @@ def _raise_no_collection_error(error: ManagementNoCollectionError) -> None:
     ) from error
 
 
+def _require_management(
+    *,
+    authorization: str | None,
+    x_device_id: str | None,
+    auth: SupabaseAuthClient,
+    accounts: PostgresAccountRepository,
+):
+    actor = authenticated_device_context(
+        authorization=authorization,
+        device_identifier=x_device_id,
+        auth=auth,
+        accounts=accounts,
+        permission="lending.no_collection.manage",
+        permission_error="Management No Collection permission is required.",
+    )
+    if "management" not in actor.roles:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "management_role_required",
+                "message": "Only Management may manage No Collection schedules.",
+            },
+        )
+    return actor
+
+
 def create_management_no_collection_router() -> APIRouter:
     router = APIRouter(tags=["management no collection"])
+
+    @router.get("/api/v1/management/no-collection/loans/{loan_id}")
+    @router.get(
+        "/api/mobile/v1/management/no-collection/loans/{loan_id}",
+        include_in_schema=False,
+    )
+    def get_no_collection_loan_state(
+        loan_id: UUID,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        query: PostgresManagementNoCollectionQueryRepository = Depends(
+            management_no_collection_query_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        _require_management(
+            authorization=authorization,
+            x_device_id=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
+        try:
+            state = query.get_loan_state(loan_id=loan_id)
+        except ManagementNoCollectionError as error:
+            _raise_no_collection_error(error)
+        return {"success": True, "data": _loan_state_payload(state)}
 
     @router.post("/api/v1/management/no-collection")
     @router.post(
@@ -114,22 +225,12 @@ def create_management_no_collection_router() -> APIRouter:
             management_no_collection_repository_dependency
         ),
     ) -> dict[str, object]:
-        actor = authenticated_device_context(
+        actor = _require_management(
             authorization=authorization,
-            device_identifier=x_device_id,
+            x_device_id=x_device_id,
             auth=auth,
             accounts=accounts,
-            permission="lending.no_collection.manage",
-            permission_error="Management No Collection permission is required.",
         )
-        if "management" not in actor.roles:
-            raise HTTPException(
-                status_code=403,
-                detail={
-                    "code": "management_role_required",
-                    "message": "Only Management may declare No Collection.",
-                },
-            )
         try:
             records = repository.declare_many(
                 actor_user_id=actor.user_id,
@@ -169,22 +270,12 @@ def create_management_no_collection_router() -> APIRouter:
             management_no_collection_repository_dependency
         ),
     ) -> dict[str, object]:
-        actor = authenticated_device_context(
+        actor = _require_management(
             authorization=authorization,
-            device_identifier=x_device_id,
+            x_device_id=x_device_id,
             auth=auth,
             accounts=accounts,
-            permission="lending.no_collection.manage",
-            permission_error="Management No Collection permission is required.",
         )
-        if "management" not in actor.roles:
-            raise HTTPException(
-                status_code=403,
-                detail={
-                    "code": "management_role_required",
-                    "message": "Only Management may reverse No Collection.",
-                },
-            )
         try:
             record = repository.reverse(
                 actor_user_id=actor.user_id,
