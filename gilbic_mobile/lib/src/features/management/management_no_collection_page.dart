@@ -84,7 +84,12 @@ class _ManagementNoCollectionPageState
       _searchResults = const <ManagementLoanItem>[];
     });
     try {
-      final portfolio = await _loanRepository.loadPortfolio(widget.session);
+      final portfolio = await _loanRepository.loadPortfolio(
+        widget.session,
+        deviceId: await _deviceId(),
+        query: _searchController.text.trim(),
+        status: 'active',
+      );
       final results = portfolio.loans
           .where((loan) => loan.loanStatus.toLowerCase() == 'active')
           .where((loan) {
