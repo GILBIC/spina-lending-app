@@ -13,7 +13,7 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 
 void main() {
-  testWidgets('opens compact ledger and expands collector audit details',
+  testWidgets('opens Daily Collection client ledger and expands audit details',
       (tester) async {
     await tester.pumpWidget(
       GilbicApp(
@@ -36,24 +36,27 @@ void main() {
     await tester.tap(find.byKey(const Key('sign-in-button')));
     await tester.pumpAndSettle();
 
-    // CA4 is ledger-first: authenticated Collectors land directly on Daily Route
-    // rather than an intermediate dashboard of modules.
-    expect(find.text('Daily Route'), findsOneWidget);
+    // CA4 is Daily-Collection-first: authenticated Collectors land directly on
+    // the Management-approved one-client-row field ledger.
+    expect(find.text('Daily Collection'), findsOneWidget);
     expect(find.text('Online route'), findsOneWidget);
     expect(find.text('AREA: CARDONA'), findsOneWidget);
     expect(find.text('Ana Client'), findsOneWidget);
-    expect(find.text('Regular'), findsOneWidget);
-    expect(find.text('7x7'), findsOneWidget);
+    expect(find.text('CLIENT / STATUS'), findsOneWidget);
+    expect(find.text('REG'), findsOneWidget);
+    expect(find.text('TODAY'), findsOneWidget);
     expect(find.text('Latest receipt recorded by: Collector Two'), findsNothing);
 
     await tester.tap(find.byKey(const Key('route-client-client-1')));
     await tester.pumpAndSettle();
 
+    expect(find.text('Regular'), findsOneWidget);
     expect(find.text('Latest receipt recorded by: Collector Two'), findsOneWidget);
     expect(find.text('Latest receipt note: Paid at the route'), findsOneWidget);
 
-    final footer =
-        find.textContaining('Tap Pay for the normal scheduled amount');
+    final footer = find.textContaining(
+      'One client stays on one Daily Collection row',
+    );
     await tester.dragUntilVisible(
       footer,
       find.byType(ListView),
@@ -88,7 +91,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Employee Dashboard'), findsOneWidget);
-    expect(find.text('Daily Route'), findsNothing);
+    expect(find.text('Daily Collection'), findsNothing);
     final persisted = await store.read();
     expect(persisted?.role, AppRole.employee);
     expect(persisted?.permissions, <String>['employee.portal.view']);
@@ -120,7 +123,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('dashboard-permission-denied')), findsOneWidget);
-    expect(find.text('Daily Route'), findsNothing);
+    expect(find.text('Daily Collection'), findsNothing);
     expect((await store.read())?.permissions, <String>['route.view']);
   });
 
@@ -144,7 +147,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('sign-in-button')), findsOneWidget);
-    expect(find.text('Daily Route'), findsNothing);
+    expect(find.text('Daily Collection'), findsNothing);
     expect(await store.read(), isNull);
   });
 
@@ -167,7 +170,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Daily Route'), findsOneWidget);
+    expect(find.text('Daily Collection'), findsOneWidget);
     expect(await store.read(), isNotNull);
   });
 
