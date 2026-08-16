@@ -44,13 +44,13 @@ void main() {
     expect(find.text('Ana Client'), findsOneWidget);
     expect(find.text('Regular'), findsOneWidget);
     expect(find.text('7x7'), findsOneWidget);
-    expect(find.text('Recorded by: Collector Two'), findsNothing);
+    expect(find.text('Latest receipt recorded by: Collector Two'), findsNothing);
 
     await tester.tap(find.byKey(const Key('route-client-client-1')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Recorded by: Collector Two'), findsOneWidget);
-    expect(find.text('Entry note: Paid at the route'), findsOneWidget);
+    expect(find.text('Latest receipt recorded by: Collector Two'), findsOneWidget);
+    expect(find.text('Latest receipt note: Paid at the route'), findsOneWidget);
 
     final footer = find.textContaining('Tap a client to show notes');
     await tester.dragUntilVisible(
