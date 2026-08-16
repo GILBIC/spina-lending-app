@@ -80,40 +80,41 @@ class FakeQueryRepository:
             payment_frequency="daily",
             contract_reference="CTR-1001",
             operational_version=3,
+            semi_monthly_days=(15, 30),
             installments=(
                 NoCollectionInstallmentState(
                     installment_id=10,
                     installment_number=5,
                     contractual_due_date=date(2026, 8, 16),
-                    effective_due_date=date(2026, 8, 17),
+                    effective_due_date=date(2026, 8, 16),
                     contractual_amount=Decimal("200.00"),
                     allocated_amount=Decimal("0.00"),
-                    last_adjustment_id=ADJUSTMENT_ID,
+                    last_adjustment_id=None,
                 ),
                 NoCollectionInstallmentState(
                     installment_id=11,
                     installment_number=6,
                     contractual_due_date=date(2026, 8, 17),
+                    effective_due_date=date(2026, 8, 17),
+                    contractual_amount=Decimal("200.00"),
+                    allocated_amount=Decimal("0.00"),
+                    last_adjustment_id=None,
+                ),
+                NoCollectionInstallmentState(
+                    installment_id=12,
+                    installment_number=7,
+                    contractual_due_date=date(2026, 8, 18),
                     effective_due_date=date(2026, 8, 18),
                     contractual_amount=Decimal("200.00"),
-                    allocated_amount=Decimal("50.00"),
-                    last_adjustment_id=ADJUSTMENT_ID,
+                    allocated_amount=Decimal("0.00"),
+                    last_adjustment_id=None,
                 ),
             ),
-            active_no_collection=(
-                ActiveNoCollectionState(
-                    adjustment_id=ADJUSTMENT_ID,
-                    no_collection_date=date(2026, 8, 16),
-                    reason="Office closed",
-                    resulting_operational_version=3,
-                    actor_name="Management One",
-                    created_at=datetime(2026, 8, 16, 1, 0, tzinfo=timezone.utc),
-                ),
-            ),
+            active_no_collection=(),
         )
 
 
-def test_management_preview_returns_operational_version_and_old_new_dates() -> None:
+def _client() -> tuple[TestClient, FakeQueryRepository]:
     auth = FakeAuthClient()
     accounts = FakeAccounts()
     query = FakeQueryRepository()
@@ -123,14 +124,22 @@ def test_management_preview_returns_operational_version_and_old_new_dates() -> N
     app.dependency_overrides[management_no_collection_query_repository_dependency] = (
         lambda: query
     )
-    client = TestClient(app)
+    return TestClient(app), query
+
+
+def _headers() -> dict[str, str]:
+    return {
+        "Authorization": "Bearer management-token",
+        "X-Device-Id": "management-device",
+    }
+
+
+def test_management_state_returns_operational_version_and_contract_dates() -> None:
+    client, query = _client()
 
     response = client.get(
         f"/api/mobile/v1/management/no-collection/loans/{LOAN_ID}",
-        headers={
-            "Authorization": "Bearer management-token",
-            "X-Device-Id": "management-device",
-        },
+        headers=_headers(),
     )
 
     assert response.status_code == 200
@@ -138,10 +147,63 @@ def test_management_preview_returns_operational_version_and_old_new_dates() -> N
     assert query.seen_loan_id == LOAN_ID
     assert data["operational_version"] == 3
     assert data["payment_frequency"] == "daily"
+    assert data["semi_monthly_days"] == [15, 30]
     assert data["installments"][0]["contractual_due_date"] == "2026-08-16"
-    assert data["installments"][0]["effective_due_date"] == "2026-08-17"
+    assert data["installments"][0]["effective_due_date"] == "2026-08-16"
     assert data["installments"][0]["remaining_amount"] == "200.00"
-    assert data["installments"][1]["allocated_amount"] == "50.00"
-    assert data["installments"][1]["remaining_amount"] == "150.00"
-    assert data["installments"][1]["is_partly_paid"] is True
-    assert data["active_no_collection"][0]["adjustment_id"] == str(ADJUSTMENT_ID)
+
+
+def test_management_preview_returns_exact_old_to_new_schedule_without_writing() -> None:
+    client, query = _client()
+
+    response = client.post(
+        "/api/mobile/v1/management/no-collection/preview",
+        headers=_headers(),
+        json={
+            "loan_id": str(LOAN_ID),
+            "expected_operational_version": 3,
+            "no_collection_date": "2026-08-17",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert query.seen_loan_id == LOAN_ID
+    assert data["operational_version"] == 3
+    assert data["no_collection_date"] == "2026-08-17"
+    assert data["payment_frequency"] == "daily"
+    assert data["shifts"] == [
+        {
+            "installment_id": 11,
+            "installment_number": 6,
+            "contractual_due_date": "2026-08-17",
+            "prior_effective_due_date": "2026-08-17",
+            "new_effective_due_date": "2026-08-18",
+            "contractual_amount": "200.00",
+        },
+        {
+            "installment_id": 12,
+            "installment_number": 7,
+            "contractual_due_date": "2026-08-18",
+            "prior_effective_due_date": "2026-08-18",
+            "new_effective_due_date": "2026-08-19",
+            "contractual_amount": "200.00",
+        },
+    ]
+
+
+def test_management_preview_rejects_stale_operational_version() -> None:
+    client, _ = _client()
+
+    response = client.post(
+        "/api/v1/management/no-collection/preview",
+        headers=_headers(),
+        json={
+            "loan_id": str(LOAN_ID),
+            "expected_operational_version": 2,
+            "no_collection_date": "2026-08-17",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "no_collection_conflict"
