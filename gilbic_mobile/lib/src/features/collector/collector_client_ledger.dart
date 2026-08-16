@@ -293,6 +293,9 @@ class _TodayAction extends StatelessWidget {
     }
 
     if (state.requiresAtomicCombinedPosting) {
+      final compactStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+            height: 1,
+          );
       return SizedBox(
         height: 42,
         child: OutlinedButton(
@@ -300,12 +303,17 @@ class _TodayAction extends StatelessWidget {
           onPressed: onToggle,
           style: _outlinedStyle(context),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('Review'),
+              Text(
+                'Review',
+                style: compactStyle?.copyWith(fontWeight: FontWeight.w800),
+              ),
               Text(
                 _moneyShort(state.payableAmount),
-                style: Theme.of(context).textTheme.labelSmall,
+                maxLines: 1,
+                style: compactStyle?.copyWith(fontSize: 10),
               ),
             ],
           ),
