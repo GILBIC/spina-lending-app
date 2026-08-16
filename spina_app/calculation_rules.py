@@ -117,11 +117,15 @@ def allocate_x7_payments(
     payments: Iterable[Any],
     as_of_date: Any = None,
 ) -> dict[str, float]:
-    """Allocate effective daily 7x7 payments to interest first, then principal.
+    """Allocate every distinct positive 7x7 receipt to interest first, then principal.
 
-    The latest positive payment for a date wins, matching Data Bank's one-effective-
-    payment-per-day rule. Daily interest is fixed from the recorded loan principal
-    for the whole cycle; a falling remaining balance does not lower it.
+    Daily interest is fixed from the recorded loan principal for the whole cycle;
+    a falling remaining balance does not lower it. Multiple genuine receipts may
+    occur on the same calendar date. They are preserved in authoritative input
+    order: the first receipt for a date accrues the elapsed calendar-day interest,
+    while later same-day receipts accrue zero additional days and continue settling
+    that day's interest/principal. Technical retries must be removed by the
+    transaction/idempotency layer before reaching this pure allocator.
     """
     principal_f = max(0.0, _as_float(principal))
     fixed_daily_interest = x7_daily_interest(principal_f)
@@ -130,14 +134,15 @@ def allocate_x7_payments(
     if end < start:
         end = start
 
-    effective_by_day: dict[date, float] = {}
-    for item in payments or ():
+    effective_receipts: list[tuple[date, int, float]] = []
+    for index, item in enumerate(payments or ()):
         raw_date, raw_amount = _payment_parts(item)
         pay_date = _as_date(raw_date)
         amount = _as_float(raw_amount)
         if pay_date is None or amount <= 0.0 or pay_date < start or pay_date > end:
             continue
-        effective_by_day[pay_date] = amount
+        effective_receipts.append((pay_date, index, amount))
+    effective_receipts.sort(key=lambda row: (row[0], row[1]))
 
     remaining_principal = principal_f
     interest_arrears = 0.0
@@ -146,9 +151,8 @@ def allocate_x7_payments(
     total_collected = 0.0
     previous_date = start - timedelta(days=1)
 
-    for pay_date in sorted(effective_by_day):
-        amount = effective_by_day[pay_date]
-        gap = max(1, (pay_date - previous_date).days)
+    for pay_date, _, amount in effective_receipts:
+        gap = max(0, (pay_date - previous_date).days)
         interest_due = fixed_daily_interest * float(gap) + interest_arrears
         interest_paid = min(amount, interest_due)
         principal_paid = min(remaining_principal, max(0.0, amount - interest_paid))
