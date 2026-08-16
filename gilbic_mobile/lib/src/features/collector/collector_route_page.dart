@@ -956,7 +956,8 @@ class _LoanDetails extends StatelessWidget {
             icon: const Icon(Icons.tune, size: 18),
             label: const Text('Payment details / other amount'),
           )
-        else if (!entry.processedToday)
+        else if (!entry.processedToday &&
+            detailsBlockedReason != blockedReason)
           Text(
             detailsBlockedReason!,
             style: Theme.of(context).textTheme.bodySmall,
