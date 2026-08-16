@@ -4,8 +4,10 @@ import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_grouping.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
+import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_correction_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
@@ -39,6 +41,9 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
   late final CollectionDeviceSequence _deviceSequence;
 
   final Set<String> _expandedClients = <String>{};
+  final Set<String> _payingLoanIds = <String>{};
+  final Map<String, PaymentSubmissionDraft> _pendingDirectDrafts =
+      <String, PaymentSubmissionDraft>{};
   CollectorRouteLoadResult? _result;
   Object? _error;
   bool _loading = true;
@@ -78,11 +83,191 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     }
   }
 
-  Future<void> _openCollection(
+  String? _commonWriteBlockedReason(
+    CollectorRouteLoadResult loaded,
+    CollectorRouteEntry entry,
+  ) {
+    if (loaded.isFromCache) {
+      return 'Offline route copies are read-only. Reconnect and refresh before recording a collection.';
+    }
+    if (!widget.session.permissions.contains('collection.create')) {
+      return 'This account does not have permission to record collections.';
+    }
+    if (_isSevenBySevenLoan(entry.loanType) &&
+        !entry.sevenBySevenMobileEnabled) {
+      return '7x7 mobile collection is disabled. Use SPINA desktop until the protected server allocator explicitly enables this route entry.';
+    }
+    if (!entry.canCollectMobile || !entry.canEnterPayment) {
+      return entry.collectionMessage.isNotEmpty
+          ? entry.collectionMessage
+          : 'Use SPINA desktop for this loan.';
+    }
+    if (entry.loanId.trim().isEmpty || entry.routeRevision == null) {
+      return 'Refresh the route before recording this collection.';
+    }
+    return null;
+  }
+
+  String? _directPayBlockedReason(
+    CollectorRouteLoadResult loaded,
+    CollectorRouteEntry entry,
+  ) {
+    final common = _commonWriteBlockedReason(loaded, entry);
+    if (common != null) {
+      return common;
+    }
+
+    if (entry.contractCollectionReady) {
+      if (entry.contractTodayScheduledAmount <= 0) {
+        return 'No scheduled payment is due today. Expand this loan for covered dates or other payment details.';
+      }
+      if (entry.contractTodayUnpaidAmount <= 0) {
+        return "Today's scheduled payment is already fully paid.";
+      }
+      return null;
+    }
+
+    if (entry.processedToday) {
+      return "Today's collection has already been recorded.";
+    }
+    return null;
+  }
+
+  String? _detailsBlockedReason(
+    CollectorRouteLoadResult loaded,
+    CollectorRouteEntry entry,
+  ) {
+    final common = _commonWriteBlockedReason(loaded, entry);
+    if (common != null) {
+      return common;
+    }
+    final canAddPartialContractReceipt = entry.contractCollectionReady &&
+        entry.contractTodayUnpaidAmount > 0;
+    if (entry.processedToday && !canAddPartialContractReceipt) {
+      return "Today's scheduled payment is already recorded. Use Edit for a correction before remittance.";
+    }
+    return null;
+  }
+
+  double _normalDueAmount(CollectorRouteEntry entry) {
+    if (entry.contractCollectionReady &&
+        entry.contractTodayUnpaidAmount > 0) {
+      return entry.contractTodayUnpaidAmount;
+    }
+    return entry.dailyAmount;
+  }
+
+  Future<PaymentSubmissionDraft> _buildDirectPaymentDraft(
     CollectorRouteLoadResult loaded,
     CollectorRouteEntry entry,
   ) async {
-    final blockedReason = _collectionBlockedReason(loaded, entry);
+    final identity = await _deviceIdentityProvider.load();
+    final sequence = await _deviceSequence.next();
+    final collectionDate = _dateOnly(loaded.route.routeDate ?? DateTime.now());
+    return PaymentSubmissionDraft(
+      idempotencyKey: SecureIdempotencyKeyGenerator().generate(),
+      routeEntryId: entry.id,
+      clientId: entry.clientId,
+      loanId: entry.loanId,
+      collectionDate: collectionDate,
+      entryType: CollectionEntryType.payment,
+      amount: _normalDueAmount(entry),
+      coveredDates: <DateTime>[collectionDate],
+      recordedAt: DateTime.now().toUtc(),
+      deviceId: identity.installationId,
+      deviceSequence: sequence,
+      routeRevision: entry.routeRevision,
+    );
+  }
+
+  Future<void> _payNow(
+    CollectorRouteLoadResult loaded,
+    CollectorRouteEntry entry,
+  ) async {
+    final blockedReason = _directPayBlockedReason(loaded, entry);
+    if (blockedReason != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(blockedReason)),
+      );
+      return;
+    }
+    if (_payingLoanIds.contains(entry.loanId)) {
+      return;
+    }
+
+    setState(() => _payingLoanIds.add(entry.loanId));
+    try {
+      final draft = _pendingDirectDrafts[entry.loanId] ??
+          await _buildDirectPaymentDraft(loaded, entry);
+      _pendingDirectDrafts[entry.loanId] = draft;
+      final result = await _paymentRepository.submit(widget.session, draft);
+      if (!mounted) {
+        return;
+      }
+
+      if (result.isFinalSuccess) {
+        _pendingDirectDrafts.remove(entry.loanId);
+        final receipt = result.receiptNumber?.trim();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              receipt == null || receipt.isEmpty
+                  ? 'Payment saved.'
+                  : 'Payment saved • Receipt $receipt',
+            ),
+          ),
+        );
+        await _loadRoute();
+        return;
+      }
+
+      _pendingDirectDrafts.remove(entry.loanId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message)),
+      );
+      await _loadRoute();
+    } on SpinaApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final status = error.statusCode;
+      final uncertain =
+          status == null || status == 429 || (status != null && status >= 500);
+      if (!uncertain) {
+        _pendingDirectDrafts.remove(entry.loanId);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            uncertain
+                ? 'Payment result is not confirmed. Tap Retry to check the same payment.'
+                : error.message,
+          ),
+        ),
+      );
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Payment result is not confirmed. Tap Retry to check the same payment.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _payingLoanIds.remove(entry.loanId));
+      }
+    }
+  }
+
+  Future<void> _openCollectionDetails(
+    CollectorRouteLoadResult loaded,
+    CollectorRouteEntry entry,
+  ) async {
+    final blockedReason = _detailsBlockedReason(loaded, entry);
     if (blockedReason != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(blockedReason)),
@@ -135,34 +320,6 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     }
   }
 
-  String? _collectionBlockedReason(
-    CollectorRouteLoadResult loaded,
-    CollectorRouteEntry entry,
-  ) {
-    if (loaded.isFromCache) {
-      return 'Offline route copies are read-only. Reconnect and refresh before recording a collection.';
-    }
-    if (!widget.session.permissions.contains('collection.create')) {
-      return 'This account does not have permission to record collections.';
-    }
-    if (entry.processedToday) {
-      return "Today's collection has already been recorded.";
-    }
-    if (_isSevenBySevenLoan(entry.loanType) &&
-        !entry.sevenBySevenMobileEnabled) {
-      return '7x7 mobile collection is disabled. Use SPINA desktop until the protected server allocator explicitly enables this route entry.';
-    }
-    if (!entry.canCollectMobile || !entry.canEnterPayment) {
-      return entry.collectionMessage.isNotEmpty
-          ? entry.collectionMessage
-          : 'Use SPINA desktop for this loan.';
-    }
-    if (entry.loanId.trim().isEmpty || entry.routeRevision == null) {
-      return 'Refresh the route before recording this collection.';
-    }
-    return null;
-  }
-
   String? _correctionBlockedReason(
     CollectorRouteLoadResult loaded,
     CollectorRouteEntry entry,
@@ -181,7 +338,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       return 'This collection is already remitted and permanently locked.';
     }
     if (!entry.canEditToday) {
-      return 'Only the collector who recorded this entry may edit it before remittance.';
+      return 'This unremitted receipt is not available for correction from this route yet.';
     }
     return null;
   }
@@ -301,18 +458,23 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
                 group: group,
                 expandedClients: _expandedClients,
                 blockedReasonFor: (entry) =>
-                    _collectionBlockedReason(loaded, entry),
+                    _directPayBlockedReason(loaded, entry),
+                detailsBlockedReasonFor: (entry) =>
+                    _detailsBlockedReason(loaded, entry),
                 correctionBlockedReasonFor: (entry) =>
                     _correctionBlockedReason(loaded, entry),
+                payingLoanIds: _payingLoanIds,
+                pendingDirectLoanIds: _pendingDirectDrafts.keys.toSet(),
                 onToggleClient: _toggleClient,
-                onRecord: (entry) => _openCollection(loaded, entry),
+                onRecord: (entry) => _payNow(loaded, entry),
+                onDetails: (entry) => _openCollectionDetails(loaded, entry),
                 onEdit: (entry) => _openCorrection(loaded, entry),
               ),
               const SizedBox(height: 8),
             ],
           const SizedBox(height: 4),
           Text(
-            'Tap a client to show notes, exact covered dates, recorder, and Edit access. Offline routes remain view-only.',
+            'Tap Pay for the normal scheduled amount. Expand a client only for another amount, notes, exact covered dates, unable-to-pay, recorder details, or Edit. Offline routes remain view-only.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -401,18 +563,26 @@ class _AreaLedgerSection extends StatelessWidget {
     required this.group,
     required this.expandedClients,
     required this.blockedReasonFor,
+    required this.detailsBlockedReasonFor,
     required this.correctionBlockedReasonFor,
+    required this.payingLoanIds,
+    required this.pendingDirectLoanIds,
     required this.onToggleClient,
     required this.onRecord,
+    required this.onDetails,
     required this.onEdit,
   });
 
   final CollectorRouteAreaGroup group;
   final Set<String> expandedClients;
   final String? Function(CollectorRouteEntry entry) blockedReasonFor;
+  final String? Function(CollectorRouteEntry entry) detailsBlockedReasonFor;
   final String? Function(CollectorRouteEntry entry) correctionBlockedReasonFor;
+  final Set<String> payingLoanIds;
+  final Set<String> pendingDirectLoanIds;
   final void Function(String clientId) onToggleClient;
   final void Function(CollectorRouteEntry entry) onRecord;
+  final void Function(CollectorRouteEntry entry) onDetails;
   final void Function(CollectorRouteEntry entry) onEdit;
 
   @override
@@ -456,9 +626,13 @@ class _AreaLedgerSection extends StatelessWidget {
               client: group.clients[index],
               expanded: expandedClients.contains(group.clients[index].clientId),
               blockedReasonFor: blockedReasonFor,
+              detailsBlockedReasonFor: detailsBlockedReasonFor,
               correctionBlockedReasonFor: correctionBlockedReasonFor,
+              payingLoanIds: payingLoanIds,
+              pendingDirectLoanIds: pendingDirectLoanIds,
               onToggle: () => onToggleClient(group.clients[index].clientId),
               onRecord: onRecord,
+              onDetails: onDetails,
               onEdit: onEdit,
             ),
           ],
@@ -500,9 +674,13 @@ class _ClientLedgerBlock extends StatelessWidget {
     required this.client,
     required this.expanded,
     required this.blockedReasonFor,
+    required this.detailsBlockedReasonFor,
     required this.correctionBlockedReasonFor,
+    required this.payingLoanIds,
+    required this.pendingDirectLoanIds,
     required this.onToggle,
     required this.onRecord,
+    required this.onDetails,
     required this.onEdit,
   });
 
@@ -510,9 +688,13 @@ class _ClientLedgerBlock extends StatelessWidget {
   final CollectorRouteClientGroup client;
   final bool expanded;
   final String? Function(CollectorRouteEntry entry) blockedReasonFor;
+  final String? Function(CollectorRouteEntry entry) detailsBlockedReasonFor;
   final String? Function(CollectorRouteEntry entry) correctionBlockedReasonFor;
+  final Set<String> payingLoanIds;
+  final Set<String> pendingDirectLoanIds;
   final VoidCallback onToggle;
   final void Function(CollectorRouteEntry entry) onRecord;
+  final void Function(CollectorRouteEntry entry) onDetails;
   final void Function(CollectorRouteEntry entry) onEdit;
 
   @override
@@ -560,8 +742,12 @@ class _ClientLedgerBlock extends StatelessWidget {
             entry: loan,
             expanded: expanded,
             blockedReason: blockedReasonFor(loan),
+            detailsBlockedReason: detailsBlockedReasonFor(loan),
             correctionBlockedReason: correctionBlockedReasonFor(loan),
+            paying: payingLoanIds.contains(loan.loanId),
+            pendingRetry: pendingDirectLoanIds.contains(loan.loanId),
             onRecord: () => onRecord(loan),
+            onDetails: () => onDetails(loan),
             onEdit: () => onEdit(loan),
           ),
       ],
@@ -574,16 +760,24 @@ class _CompactLoanRow extends StatelessWidget {
     required this.entry,
     required this.expanded,
     required this.blockedReason,
+    required this.detailsBlockedReason,
     required this.correctionBlockedReason,
+    required this.paying,
+    required this.pendingRetry,
     required this.onRecord,
+    required this.onDetails,
     required this.onEdit,
   });
 
   final CollectorRouteEntry entry;
   final bool expanded;
   final String? blockedReason;
+  final String? detailsBlockedReason;
   final String? correctionBlockedReason;
+  final bool paying;
+  final bool pendingRetry;
   final VoidCallback onRecord;
+  final VoidCallback onDetails;
   final VoidCallback onEdit;
 
   @override
@@ -640,13 +834,25 @@ class _CompactLoanRow extends StatelessWidget {
                 height: 34,
                 child: FilledButton(
                   key: Key('record-collection-${entry.id}'),
-                  onPressed: blockedReason == null ? onRecord : null,
+                  onPressed: blockedReason == null && !paying ? onRecord : null,
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     minimumSize: const Size(56, 34),
                     textStyle: Theme.of(context).textTheme.labelMedium,
                   ),
-                  child: Text(_actionLabel(entry, blockedReason)),
+                  child: paying
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          _actionLabel(
+                            entry,
+                            blockedReason,
+                            pendingRetry: pendingRetry,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -660,7 +866,9 @@ class _CompactLoanRow extends StatelessWidget {
               child: _LoanDetails(
                 entry: entry,
                 blockedReason: blockedReason,
+                detailsBlockedReason: detailsBlockedReason,
                 correctionBlockedReason: correctionBlockedReason,
+                onDetails: onDetails,
                 onEdit: onEdit,
               ),
             ),
@@ -675,13 +883,17 @@ class _LoanDetails extends StatelessWidget {
   const _LoanDetails({
     required this.entry,
     required this.blockedReason,
+    required this.detailsBlockedReason,
     required this.correctionBlockedReason,
+    required this.onDetails,
     required this.onEdit,
   });
 
   final CollectorRouteEntry entry;
   final String? blockedReason;
+  final String? detailsBlockedReason;
   final String? correctionBlockedReason;
+  final VoidCallback onDetails;
   final VoidCallback onEdit;
 
   @override
@@ -689,21 +901,27 @@ class _LoanDetails extends StatelessWidget {
     final lines = <String>[
       'Status: ${entry.status}',
       'Missed payments: ${entry.passCount}',
+      if (entry.contractCollectionReady &&
+          entry.contractTodayScheduledAmount > 0)
+        'Scheduled today: ${_moneyCompact(entry.contractTodayScheduledAmount)}',
+      if (entry.contractCollectionReady &&
+          entry.contractTodayScheduledAmount > 0)
+        'Still due today: ${_moneyCompact(entry.contractTodayUnpaidAmount)}',
       if (entry.lastPaymentDate != null)
         'Last payment: ${_date(entry.lastPaymentDate!)}',
       if (entry.processedToday && entry.todayAmount > 0)
-        'Recorded amount: ${_moneyCompact(entry.todayAmount)}',
+        'Latest receipt: ${_moneyCompact(entry.todayAmount)}',
       if (entry.todayCoveredDates.isNotEmpty)
         'Exact covered dates: ${entry.todayCoveredDates.map(_date).join(', ')}',
       if (!entry.processedToday && entry.coveredDates.isNotEmpty)
         'Upcoming covered dates: ${entry.coveredDates.map(_date).join(', ')}',
       if (entry.processedToday) _todayResultLabel(entry.todayEntryType),
       if (entry.processedToday && entry.todayCollectorName.isNotEmpty)
-        'Recorded by: ${entry.todayCollectorName}',
+        'Latest receipt recorded by: ${entry.todayCollectorName}',
       if (entry.processedToday && entry.todayIsLocked)
-        'Remittance status: Locked',
+        'Latest receipt remittance status: Locked',
       if (entry.processedToday && entry.todayNote.isNotEmpty)
-        'Entry note: ${entry.todayNote}',
+        'Latest receipt note: ${entry.todayNote}',
       if (!entry.processedToday && entry.note.isNotEmpty)
         'Reason / note: ${entry.note}',
       if (blockedReason != null && !entry.processedToday) blockedReason!,
@@ -718,6 +936,19 @@ class _LoanDetails extends StatelessWidget {
           if (index > 0) const SizedBox(height: 3),
           Text(lines[index], style: Theme.of(context).textTheme.bodySmall),
         ],
+        const SizedBox(height: 8),
+        if (detailsBlockedReason == null)
+          OutlinedButton.icon(
+            key: Key('collection-details-${entry.id}'),
+            onPressed: onDetails,
+            icon: const Icon(Icons.tune, size: 18),
+            label: const Text('Payment details / other amount'),
+          )
+        else if (!entry.processedToday)
+          Text(
+            detailsBlockedReason!,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         if (entry.processedToday) ...[
           const SizedBox(height: 8),
           if (correctionBlockedReason == null)
@@ -743,6 +974,13 @@ String _shortLoanName(String value) {
 }
 
 String _shortStatus(CollectorRouteEntry entry) {
+  if (entry.contractCollectionReady &&
+      entry.contractTodayScheduledAmount > 0) {
+    if (entry.contractTodayUnpaidAmount > 0) {
+      return entry.processedToday ? 'Lacking' : 'Pending';
+    }
+    return entry.processedToday ? 'Paid' : 'Covered';
+  }
   if (entry.processedToday) {
     if (entry.todayIsLocked) {
       return 'Remitted';
@@ -760,25 +998,32 @@ String _shortStatus(CollectorRouteEntry entry) {
   return entry.status;
 }
 
-String _actionLabel(CollectorRouteEntry entry, String? blockedReason) {
-  if (entry.processedToday) {
-    return entry.todayIsLocked ? 'Locked' : 'Done';
+String _actionLabel(
+  CollectorRouteEntry entry,
+  String? blockedReason, {
+  required bool pendingRetry,
+}) {
+  if (pendingRetry && blockedReason == null) {
+    return 'Retry';
   }
   if (_isSevenBySevenLoan(entry.loanType) &&
       !entry.sevenBySevenMobileEnabled) {
     return 'Desk';
   }
-  if (blockedReason != null) {
-    return 'Locked';
+  if (blockedReason == null) {
+    return 'Pay';
   }
-  return 'Pay';
+  if (entry.processedToday) {
+    return entry.todayIsLocked ? 'Locked' : 'Done';
+  }
+  return 'Locked';
 }
 
 String _todayResultLabel(String value) {
   return switch (value.trim().toLowerCase()) {
     'pass' => 'Unable-to-pay reason recorded today.',
     'advance' => 'Covered-date payment recorded today.',
-    _ => 'Payment recorded today.',
+    _ => 'Payment receipt recorded today.',
   };
 }
 
@@ -786,6 +1031,9 @@ bool _isSevenBySevenLoan(String value) {
   final normalized = value.toLowerCase().replaceAll(' ', '');
   return normalized.contains('7x7') || normalized.contains('7×7');
 }
+
+DateTime _dateOnly(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
 
 String _date(DateTime value) {
   final local = value.toLocal();
