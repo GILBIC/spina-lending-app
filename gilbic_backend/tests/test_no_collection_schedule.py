@@ -48,6 +48,52 @@ def test_daily_no_collection_moves_target_and_every_later_installment_one_slot()
     ]
 
 
+def test_consecutive_no_collection_uses_current_effective_dates_without_rewriting_contract() -> None:
+    rows = (
+        OperationalInstallment(
+            installment_id=1,
+            installment_number=1,
+            contractual_due_date=date(2026, 8, 16),
+            effective_due_date=date(2026, 8, 16),
+            contractual_amount=Decimal("200.00"),
+        ),
+        OperationalInstallment(
+            installment_id=2,
+            installment_number=2,
+            contractual_due_date=date(2026, 8, 17),
+            effective_due_date=date(2026, 8, 18),
+            contractual_amount=Decimal("200.00"),
+        ),
+        OperationalInstallment(
+            installment_id=3,
+            installment_number=3,
+            contractual_due_date=date(2026, 8, 18),
+            effective_due_date=date(2026, 8, 19),
+            contractual_amount=Decimal("200.00"),
+        ),
+    )
+
+    shifts = plan_no_collection_shift(
+        installments=rows,
+        no_collection_date=date(2026, 8, 18),
+        payment_frequency="daily",
+        blocked_dates=(date(2026, 8, 17),),
+    )
+
+    assert [item.contractual_due_date for item in shifts] == [
+        date(2026, 8, 17),
+        date(2026, 8, 18),
+    ]
+    assert [item.prior_effective_due_date for item in shifts] == [
+        date(2026, 8, 18),
+        date(2026, 8, 19),
+    ]
+    assert [item.new_effective_due_date for item in shifts] == [
+        date(2026, 8, 19),
+        date(2026, 8, 20),
+    ]
+
+
 def test_weekly_no_collection_preserves_weekly_cadence() -> None:
     rows = (
         _row(1, date(2026, 8, 7)),
