@@ -266,7 +266,7 @@ def test_mobile_payment_uses_fixed_interest_first_allocator_and_exact_receipt_ba
         Decimal("200.00"),
         Decimal("5000.00"),
         Decimal("4835.00"),
-        "seven_by_seven_operational_allocator_v1",
+        "seven_by_seven_operational_allocator_v2",
         "35.00",
         "35.00",
         "165.00",

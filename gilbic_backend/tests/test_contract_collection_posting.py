@@ -9,6 +9,9 @@ from uuid import UUID
 import pytest
 
 from gilbic_backend.collection_correction_repository import CollectionCorrectionInvalid
+from gilbic_backend.concurrent_receipt_collection_posting import (
+    ConcurrentReceiptSafeCollectionPostingBridge,
+)
 from gilbic_backend.contract_collection_correction import (
     ContractSafeCollectionCorrectionRepository,
 )
@@ -19,6 +22,9 @@ from gilbic_backend.contract_collection_posting import (
 )
 from gilbic_backend.per_loan_contract_collection import (
     PerLoanContractAwareCrossCollectorCollectionPostingBridge,
+)
+from gilbic_backend.seven_by_seven_collection_posting import (
+    SevenBySevenAwarePerLoanContractCollectionPostingBridge,
 )
 from spina_mobile_collections.contracts import (
     ActorContext,
@@ -161,10 +167,11 @@ def contract_gate() -> ContractCollectionGate:
 
 
 def test_stage5e46b_live_collection_api_preserves_per_loan_contract_bridge() -> None:
-    assert "SevenBySevenAwarePerLoanContractCollectionPostingBridge" in COLLECTION_API
-    assert (
-        "posting_bridge=SevenBySevenAwarePerLoanContractCollectionPostingBridge()"
-        in COLLECTION_API
+    assert "ConcurrentReceiptSafeCollectionPostingBridge" in COLLECTION_API
+    assert "posting_bridge=ConcurrentReceiptSafeCollectionPostingBridge()" in COLLECTION_API
+    assert issubclass(
+        ConcurrentReceiptSafeCollectionPostingBridge,
+        SevenBySevenAwarePerLoanContractCollectionPostingBridge,
     )
     assert "PerLoanContractAwareCrossCollectorCollectionPostingBridge" in SEVEN_BY_SEVEN_COLLECTION
     assert "class SevenBySevenAwarePerLoanContractCollectionPostingBridge" in SEVEN_BY_SEVEN_COLLECTION
