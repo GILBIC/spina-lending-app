@@ -84,6 +84,86 @@ class CollectorRoute {
   }
 }
 
+class CollectorRouteReceipt {
+  const CollectorRouteReceipt({
+    required this.transactionId,
+    required this.receiptNumber,
+    required this.amount,
+    required this.entryType,
+    required this.collectorUserId,
+    required this.collectorName,
+    required this.isLocked,
+    this.note = '',
+    this.coveredDates = const <DateTime>[],
+    this.acceptedAt,
+  });
+
+  final String transactionId;
+  final String receiptNumber;
+  final double amount;
+  final String entryType;
+  final String collectorUserId;
+  final String collectorName;
+  final bool isLocked;
+  final String note;
+  final List<DateTime> coveredDates;
+  final DateTime? acceptedAt;
+
+  Map<String, Object?> toJson() {
+    return <String, Object?>{
+      'transaction_id': transactionId,
+      'receipt_number': receiptNumber,
+      'amount': amount,
+      'entry_type': entryType,
+      'collector_user_id': collectorUserId,
+      'collector_name': collectorName,
+      'is_locked': isLocked,
+      'note': note,
+      'covered_dates': coveredDates
+          .map((value) => value.toIso8601String())
+          .toList(growable: false),
+      'accepted_at': acceptedAt?.toIso8601String(),
+    };
+  }
+
+  static CollectorRouteReceipt? fromPayload(Object? value) {
+    final data = stringMap(value);
+    if (data.isEmpty) {
+      return null;
+    }
+    final transactionId = firstNonEmptyString(<Object?>[
+      data['transaction_id'],
+      data['id'],
+    ]);
+    final receiptNumber = firstNonEmptyString(<Object?>[
+      data['receipt_number'],
+      data['receipt'],
+    ]);
+    if (transactionId == null || receiptNumber == null) {
+      return null;
+    }
+    return CollectorRouteReceipt(
+      transactionId: transactionId,
+      receiptNumber: receiptNumber,
+      amount: firstNumber(<Object?>[data['amount']])?.toDouble() ?? 0,
+      entryType: firstNonEmptyString(<Object?>[data['entry_type']]) ?? 'payment',
+      collectorUserId:
+          firstNonEmptyString(<Object?>[data['collector_user_id']]) ?? '',
+      collectorName: firstNonEmptyString(<Object?>[
+            data['collector_name'],
+            data['recorded_by'],
+          ]) ??
+          'Collector',
+      isLocked: _boolValue(data['is_locked'], fallback: false),
+      note: firstNonEmptyString(<Object?>[data['note']]) ?? '',
+      coveredDates: _dateList(data['covered_dates']),
+      acceptedAt: DateTime.tryParse(
+        firstNonEmptyString(<Object?>[data['accepted_at']]) ?? '',
+      ),
+    );
+  }
+}
+
 class CollectorRouteEntry {
   const CollectorRouteEntry({
     required this.id,
@@ -131,6 +211,7 @@ class CollectorRouteEntry {
     this.todayAmount = 0,
     this.todayNote = '',
     this.todayCoveredDates = const <DateTime>[],
+    this.todayReceipts = const <CollectorRouteReceipt>[],
   });
 
   final String id;
@@ -178,6 +259,7 @@ class CollectorRouteEntry {
   final double todayAmount;
   final String todayNote;
   final List<DateTime> todayCoveredDates;
+  final List<CollectorRouteReceipt> todayReceipts;
 
   Map<String, Object?> toJson() {
     return <String, Object?>{
@@ -229,6 +311,9 @@ class CollectorRouteEntry {
       'today_note': todayNote,
       'today_covered_dates': todayCoveredDates
           .map((value) => value.toIso8601String())
+          .toList(growable: false),
+      'today_receipts': todayReceipts
+          .map((receipt) => receipt.toJson())
           .toList(growable: false),
     };
   }
@@ -464,8 +549,19 @@ class CollectorRouteEntry {
           ]) ??
           '',
       todayCoveredDates: _dateList(data['today_covered_dates']),
+      todayReceipts: _receiptList(data['today_receipts']),
     );
   }
+}
+
+List<CollectorRouteReceipt> _receiptList(Object? value) {
+  if (value is! Iterable) {
+    return const <CollectorRouteReceipt>[];
+  }
+  return value
+      .map(CollectorRouteReceipt.fromPayload)
+      .whereType<CollectorRouteReceipt>()
+      .toList(growable: false);
 }
 
 List<DateTime> _dateList(Object? value) {
