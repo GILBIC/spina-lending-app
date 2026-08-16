@@ -225,23 +225,23 @@ class ContractAwareCrossCollectorCollectionPostingBridge(
             cursor.execute(
                 """
                 select
-                    installment.due_date,
+                    installment.effective_due_date,
                     installment.contractual_amount,
                     coalesce(sum(allocation.amount_applied) filter (
                         where allocation_transaction.is_voided = false
                     ), 0)::numeric(18,2) as allocated_amount
-                from lending.loan_contract_installments installment
+                from lending.loan_contract_installments_operational installment
                 left join lending.loan_installment_payment_allocations allocation
                   on allocation.installment_id = installment.id
                 left join lending.collection_transactions allocation_transaction
                   on allocation_transaction.id = allocation.transaction_id
                 where installment.schedule_id = %s
-                  and installment.due_date = any(%s)
+                  and installment.effective_due_date = any(%s)
                 group by
                     installment.id,
-                    installment.due_date,
+                    installment.effective_due_date,
                     installment.contractual_amount
-                order by installment.due_date
+                order by installment.effective_due_date
                 """,
                 (gate.schedule_id, list(selected_dates)),
             )
@@ -286,13 +286,13 @@ class ContractAwareCrossCollectorCollectionPostingBridge(
                 """
                 select exists (
                     select 1
-                    from lending.loan_contract_installments installment
+                    from lending.loan_contract_installments_operational installment
                     left join lending.loan_installment_payment_allocations allocation
                       on allocation.installment_id = installment.id
                     left join lending.collection_transactions allocation_transaction
                       on allocation_transaction.id = allocation.transaction_id
                     where installment.schedule_id = %s
-                      and installment.due_date = %s
+                      and installment.effective_due_date = %s
                     group by
                         installment.id,
                         installment.contractual_amount
@@ -413,12 +413,12 @@ class ContractAwareCrossCollectorCollectionPostingBridge(
         cursor.execute(
             """
             select
-                installment.due_date,
+                installment.effective_due_date,
                 installment.contractual_amount,
                 coalesce(sum(allocation.amount_applied) filter (
                     where allocation_transaction.is_voided = false
                 ), 0)::numeric(18,2) as allocated_amount
-            from lending.loan_contract_installments installment
+            from lending.loan_contract_installments_operational installment
             left join lending.loan_installment_payment_allocations allocation
               on allocation.installment_id = installment.id
             left join lending.collection_transactions allocation_transaction
@@ -426,9 +426,9 @@ class ContractAwareCrossCollectorCollectionPostingBridge(
             where installment.id = any(%s)
             group by
                 installment.id,
-                installment.due_date,
+                installment.effective_due_date,
                 installment.contractual_amount
-            order by installment.due_date, installment.installment_number
+            order by installment.effective_due_date, installment.installment_number
             """,
             (installment_ids,),
         )
