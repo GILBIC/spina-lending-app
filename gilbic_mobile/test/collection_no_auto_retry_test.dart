@@ -60,6 +60,7 @@ void main() {
     await tester.tap(find.byKey(const Key('submit-collection-entry')));
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const Key('confirm-collection-entry')), findsNothing);
     expect(repository.calls, 2);
     expect(repository.drafts.last.idempotencyKey, originalKey);
     expect(repository.drafts.last.deviceSequence, originalSequence);
