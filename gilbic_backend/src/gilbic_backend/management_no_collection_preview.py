@@ -49,6 +49,7 @@ def preview_no_collection_shift(
             no_collection_date=no_collection_date,
             payment_frequency=state.payment_frequency,
             blocked_dates=blocked_dates,
+            semi_monthly_days=state.semi_monthly_days,
         )
     except NoCollectionScheduleError as error:
         raise ManagementNoCollectionConflict(str(error)) from error
