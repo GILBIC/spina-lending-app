@@ -119,6 +119,13 @@ def patch_no_collection_page() -> None:
             "Future<void> _selectLoan(ManagementLoanItem loan) async {",
         "'${loan.loanNumber} • ${loan.loanType} • ${loan.area}',":
             "'${loan.loanNumber} • ${loan.loanTypeName} • ${loan.clientArea ?? ''}',",
+        "final portfolio = await _loanRepository.loadPortfolio(widget.session);":
+            "final portfolio = await _loanRepository.loadPortfolio(\n"
+            "        widget.session,\n"
+            "        deviceId: await _deviceId(),\n"
+            "        query: _searchController.text.trim(),\n"
+            "        status: 'active',\n"
+            "      );",
     }
     for old, new in replacements.items():
         text = text.replace(old, new)
@@ -127,11 +134,14 @@ def patch_no_collection_page() -> None:
         "ManagementLoanItem? _selectedLoan",
         "loan.loanStatus.toLowerCase() == 'active'",
         "Future<void> _selectLoan(ManagementLoanItem loan)",
+        "deviceId: await _deviceId()",
+        "query: _searchController.text.trim()",
+        "status: 'active'",
     )
     if not all(item in text for item in required):
-        raise RuntimeError("Management No Collection page is not aligned with the loan model")
+        raise RuntimeError("Management No Collection page is not aligned with the loan repository")
     if text != original:
-        save(path, text, sha, "Mobile: align No Collection screen with Management loan model")
+        save(path, text, sha, "Mobile: fix Management No Collection loan search request")
 
 
 def patch_contract_error_label() -> None:
@@ -155,5 +165,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-# Single-trigger cleanup marker.
