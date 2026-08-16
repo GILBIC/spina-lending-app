@@ -10,29 +10,29 @@ permissions:
 
 jobs:
   patch:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     steps:
       - uses: actions/checkout@v4
         with:
           ref: mobile/ca4-collector-ui
           fetch-depth: 0
       - name: Apply exact analyzer fix
-        shell: python
+        shell: powershell
         run: |
-          from pathlib import Path
-          path = Path('gilbic_mobile/lib/src/features/collector/collector_route_page.dart')
-          text = path.read_text(encoding='utf-8')
-          old = "status == null || status == 429 || (status != null && status >= 500);"
-          new = "status == null || status == 429 || status >= 500;"
-          if text.count(old) != 1:
-              raise SystemExit(f'Expected exactly one analyzer target, found {text.count(old)}')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          $path = 'gilbic_mobile/lib/src/features/collector/collector_route_page.dart'
+          $text = [System.IO.File]::ReadAllText($path)
+          $old = 'status == null || status == 429 || (status != null && status >= 500);'
+          $new = 'status == null || status == 429 || status >= 500;'
+          $count = ([regex]::Matches($text, [regex]::Escape($old))).Count
+          if ($count -ne 1) { throw "Expected exactly one analyzer target, found $count" }
+          $updated = $text.Replace($old, $new)
+          [System.IO.File]::WriteAllText($path, $updated, (New-Object System.Text.UTF8Encoding($false)))
       - name: Remove temporary workflow and commit
-        shell: bash
+        shell: powershell
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm .github/workflows/zz_tmp_ca4_analyzer_fix.yml
           git add gilbic_mobile/lib/src/features/collector/collector_route_page.dart
-          git commit -m "Mobile: fix direct Pay analyzer warning"
+          git commit -m 'Mobile: fix direct Pay analyzer warning'
           git push origin HEAD:mobile/ca4-collector-ui
