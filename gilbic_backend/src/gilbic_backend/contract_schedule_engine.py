@@ -17,7 +17,11 @@ PaymentFrequency = Literal[
     "balloon",
     "custom",
 ]
-AllocationBasis = Literal["oldest_due_first", "exact_covered_date"]
+AllocationBasis = Literal[
+    "oldest_due_first",
+    "exact_covered_date",
+    "voluntary_extra_tail",
+]
 InstallmentId = int | UUID | str
 
 
@@ -130,6 +134,11 @@ def plan_payment_allocation(
     installment, including the next future installment when earlier ones are
     already covered. With explicit covered dates, only those contractual due
     dates may receive the payment.
+
+    This legacy/general planner remains available for protected callers that
+    explicitly want oldest-first behavior. Collector normal-payment posting uses
+    :func:`plan_scheduled_or_voluntary_extra_allocation` so an amount above the
+    current scheduled installment can never silently become ADV.
     """
 
     amount = _money(transaction_amount)
@@ -192,6 +201,82 @@ def plan_payment_allocation(
     if amount_left != Decimal("0.00"):
         raise PaymentAllocationError(
             "Payment exceeds the unpaid contractual amount selected for allocation."
+        )
+    return tuple(instructions)
+
+
+def plan_scheduled_or_voluntary_extra_allocation(
+    *,
+    transaction_amount: Decimal,
+    installments: Iterable[OutstandingInstallment],
+    voluntary_extra: bool,
+) -> tuple[AllocationInstruction, ...]:
+    """Apply today's payment without silently covering the next scheduled date.
+
+    The oldest unpaid installment is the scheduled obligation being paid. A
+    partial receipt may satisfy only part of it. If cash exceeds that installment,
+    the caller must explicitly mark the remainder as **voluntary extra**; otherwise
+    this planner fails closed and asks for an explicit ADV/extra choice.
+
+    Voluntary extra is allocated from the *tail* of the remaining contractual
+    schedule. This keeps the next collection date due normally while reducing the
+    total contractual balance and shortening the loan from the end. It is not an
+    ADV/covered-date allocation and must not be displayed as one.
+    """
+
+    amount = _money(transaction_amount)
+    if amount <= 0:
+        raise PaymentAllocationError("Payment amount must be greater than zero.")
+
+    remaining = sorted(
+        (row for row in installments if row.remaining_amount > 0),
+        key=lambda row: (row.due_date, row.installment_number, str(row.installment_id)),
+    )
+    if not remaining:
+        raise PaymentAllocationError("The contractual schedule is already fully paid.")
+
+    scheduled = remaining[0]
+    scheduled_applied = _money(min(amount, scheduled.remaining_amount))
+    instructions: list[AllocationInstruction] = [
+        AllocationInstruction(
+            installment_id=scheduled.installment_id,
+            installment_number=scheduled.installment_number,
+            due_date=scheduled.due_date,
+            amount_applied=scheduled_applied,
+            allocation_basis="oldest_due_first",
+        )
+    ]
+    amount_left = _money(amount - scheduled_applied)
+    if amount_left <= 0:
+        return tuple(instructions)
+
+    if not voluntary_extra:
+        raise PaymentAllocationError(
+            "Payment is higher than the current scheduled installment. Choose Voluntary extra or explicit ADV / covered dates."
+        )
+
+    # Work backwards from the contractual tail. Do not consume the next due
+    # installment merely because the borrower chose to reduce the loan faster.
+    for row in reversed(remaining[1:]):
+        if amount_left <= 0:
+            break
+        applied = _money(min(row.remaining_amount, amount_left))
+        if applied <= 0:
+            continue
+        instructions.append(
+            AllocationInstruction(
+                installment_id=row.installment_id,
+                installment_number=row.installment_number,
+                due_date=row.due_date,
+                amount_applied=applied,
+                allocation_basis="voluntary_extra_tail",
+            )
+        )
+        amount_left = _money(amount_left - applied)
+
+    if amount_left != Decimal("0.00"):
+        raise PaymentAllocationError(
+            "Payment exceeds the remaining contractual balance. Use the exact payoff amount."
         )
     return tuple(instructions)
 
