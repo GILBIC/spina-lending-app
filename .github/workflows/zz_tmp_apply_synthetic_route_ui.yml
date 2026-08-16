@@ -4,25 +4,21 @@ on:
   push:
     branches:
       - mobile/ca4-collector-ui
-    paths:
-      - 'tools/tmp_apply_synthetic_route_ui.py'
 
 permissions:
   contents: write
 
 jobs:
   patch:
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: mobile/ca4-collector-ui
           fetch-depth: 0
       - name: Apply approved synthetic route layout
-        shell: cmd
-        run: python tools\tmp_apply_synthetic_route_ui.py
+        run: python tools/tmp_apply_synthetic_route_ui.py
       - name: Commit integration
-        shell: cmd
         run: |
           git config user.name "SPINA CI"
           git config user.email "actions@users.noreply.github.com"
