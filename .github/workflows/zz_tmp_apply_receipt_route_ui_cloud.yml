@@ -23,8 +23,16 @@ jobs:
           fetch-depth: 0
       - name: Apply receipt route UI integration
         shell: pwsh
-        run: python tools/tmp_apply_receipt_route_ui.py
-      - name: Commit generated integration
+        run: |
+          $output = (& python tools/tmp_apply_receipt_route_ui.py 2>&1 | Out-String)
+          if ($LASTEXITCODE -ne 0) {
+            Set-Content -Path tools/tmp_receipt_route_ui_error.txt -Value $output -Encoding utf8
+            Write-Host $output
+            exit 1
+          }
+          Write-Host $output
+      - name: Commit generated integration or diagnostic
+        if: always()
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -36,5 +44,9 @@ jobs:
             Write-Host 'No changes to commit.'
             exit 0
           }
-          git commit -m 'Expose receipt allocation status on Collector route'
+          if (Test-Path tools/tmp_receipt_route_ui_error.txt) {
+            git commit -m 'Capture receipt route integration diagnostic'
+          } else {
+            git commit -m 'Expose receipt allocation status on Collector route'
+          }
           git push origin HEAD:mobile/ca4-collector-ui
