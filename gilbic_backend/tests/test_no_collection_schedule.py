@@ -67,6 +67,26 @@ def test_weekly_no_collection_preserves_weekly_cadence() -> None:
     ]
 
 
+def test_semi_monthly_no_collection_uses_the_loan_collection_days() -> None:
+    rows = (
+        _row(1, date(2026, 8, 10)),
+        _row(2, date(2026, 8, 25)),
+        _row(3, date(2026, 9, 10)),
+    )
+
+    shifts = plan_no_collection_shift(
+        installments=rows,
+        no_collection_date=date(2026, 8, 25),
+        payment_frequency="semi_monthly",
+        semi_monthly_days=(10, 25),
+    )
+
+    assert [item.new_effective_due_date for item in shifts] == [
+        date(2026, 9, 10),
+        date(2026, 9, 25),
+    ]
+
+
 def test_monthly_no_collection_preserves_original_anchor_after_clamping() -> None:
     rows = (
         _row(1, date(2026, 1, 31)),
