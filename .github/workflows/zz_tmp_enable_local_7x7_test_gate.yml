@@ -1,172 +1,28 @@
-name: TEMP enable local test 7x7 mobile gate
+name: TEMP local 7x7 host probe
 
 on:
   push:
-    branches: [ops/local-7x7-test-gate-20260817]
+    branches:
+      - ops/local-7x7-test-gate-20260817
 
 permissions:
   contents: read
 
 jobs:
-  enable-local-test-gate:
-    strategy:
-      fail-fast: false
-      matrix:
-        slot: [1, 2]
-    runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 15
+  probe:
+    runs-on:
+      - self-hosted
+      - Windows
+      - X64
+    timeout-minutes: 5
     steps:
-      - name: Target emulator host and inspect local backend
-        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+      - name: Show runner and backend listener
+        shell: powershell
         run: |
-          $ErrorActionPreference = 'Stop'
           Write-Host "Runner machine: $env:COMPUTERNAME"
-          if ($env:COMPUTERNAME -ne 'DESKTOP-RQ2TRU8') {
-            Write-Host 'This slot is not the emulator/backend host; leaving it unchanged.'
-            'SPINA_TARGET_HOST=false' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-            exit 0
-          }
-          'SPINA_TARGET_HOST=true' | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
           $listener = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $listener) {
-            throw 'No local backend is listening on port 8000 on the emulator host.'
+          if ($listener) {
+            Write-Host "Port 8000 listener PID: $($listener.OwningProcess)"
+          } else {
+            Write-Host 'No port 8000 listener on this runner.'
           }
-          $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$($listener.OwningProcess)"
-          Write-Host "Backend PID on port 8000: $($listener.OwningProcess)"
-          if ($proc) {
-            Write-Host "Backend executable: $($proc.ExecutablePath)"
-            Write-Host "Backend command: $($proc.CommandLine)"
-          }
-
-          foreach ($repo in @('C:\GitHub\spina-lending-app-clean', 'C:\GitHub\spina-lending-app')) {
-            if (Test-Path (Join-Path $repo '.git')) {
-              Write-Host "Local repo found: $repo"
-              try { Write-Host "Local repo HEAD: $(git -C $repo rev-parse HEAD)" } catch { }
-              try { Write-Host "Local repo branch: $(git -C $repo branch --show-current)" } catch { }
-            }
-          }
-
-      - name: Enable protected 7x7 flags only in guarded local dev/test database
-        if: env.SPINA_TARGET_HOST == 'true'
-        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
-        run: |
-          $ErrorActionPreference = 'Stop'
-
-          $dbUrl = $env:GILBIC_DATABASE_URL
-          if ([string]::IsNullOrWhiteSpace($dbUrl)) {
-            $envFiles = @()
-            foreach ($root in @('C:\GitHub', 'C:\SPINA_ONLINE')) {
-              if (Test-Path $root) {
-                $envFiles += Get-ChildItem -Path $root -Filter '.env' -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 30
-              }
-            }
-            foreach ($file in $envFiles) {
-              $line = Get-Content -LiteralPath $file.FullName -ErrorAction SilentlyContinue |
-                Where-Object { $_ -match '^\s*GILBIC_DATABASE_URL\s*=' } |
-                Select-Object -First 1
-              if ($line) {
-                $dbUrl = ($line -replace '^\s*GILBIC_DATABASE_URL\s*=\s*', '').Trim().Trim('"').Trim("'")
-                if (-not [string]::IsNullOrWhiteSpace($dbUrl)) {
-                  Write-Host "Using GILBIC_DATABASE_URL from local project configuration: $($file.DirectoryName)"
-                  break
-                }
-              }
-            }
-          }
-          if ([string]::IsNullOrWhiteSpace($dbUrl)) {
-            $dbUrl = 'postgresql://127.0.0.1:5432/gilbic_dev'
-            Write-Host 'No explicit local URL was found; trying the backend default gilbic_dev connection.'
-          }
-
-          $venv = Join-Path $env:RUNNER_TEMP "spina-live-7x7-gate-$env:GITHUB_RUN_ID-$env:GITHUB_JOB-$env:SPINA_TARGET_HOST"
-          if (Test-Path $venv) { Remove-Item -Recurse -Force $venv }
-          python -m venv $venv
-          if ($LASTEXITCODE -ne 0) { throw 'Could not create temporary Python environment.' }
-          $python = Join-Path $venv 'Scripts\python.exe'
-          & $python -m pip install --disable-pip-version-check 'psycopg[binary]>=3.2,<4'
-          if ($LASTEXITCODE -ne 0) { throw 'Could not install psycopg in temporary environment.' }
-
-          $env:SPINA_LOCAL_DB_URL = $dbUrl
-          $code = @'
-import json
-import os
-import psycopg
-from psycopg.rows import dict_row
-
-url = os.environ['SPINA_LOCAL_DB_URL']
-with psycopg.connect(url) as conn:
-    with conn.cursor(row_factory=dict_row) as cur:
-        cur.execute('select current_database() as db')
-        db = cur.fetchone()['db']
-        print(f'Connected local database: {db}')
-        if db != 'gilbic_dev':
-            raise RuntimeError(f'Refusing to modify unexpected database {db!r}; expected gilbic_dev.')
-
-        cur.execute('''
-            select
-                count(*) filter (
-                    where upper(c.full_name) like 'TEST CLIENT %'
-                      and upper(c.area) = 'GILBIC TEST AREA'
-                ) as test_active_7x7,
-                count(*) filter (
-                    where not (
-                        upper(c.full_name) like 'TEST CLIENT %'
-                        and upper(c.area) = 'GILBIC TEST AREA'
-                    )
-                ) as non_test_active_7x7
-            from lending.loans l
-            join lending.clients c on c.id = l.client_id
-            join lending.loan_types lt on lt.id = l.loan_type_id
-            where l.status = 'active'
-              and c.status = 'active'
-              and lt.calculation_mode = 'seven_by_seven'
-        ''')
-        counts = cur.fetchone()
-        test_count = int(counts['test_active_7x7'] or 0)
-        non_test_count = int(counts['non_test_active_7x7'] or 0)
-        print(f'Active 7x7 guard: test={test_count}, non_test={non_test_count}')
-        if test_count < 1 or non_test_count != 0:
-            raise RuntimeError('Safety guard failed: local active 7x7 population is not test-only.')
-
-        cur.execute('''
-            select id, name, calculation_mode, daily_interest_per_1000, settings
-            from lending.loan_types
-            where calculation_mode = 'seven_by_seven' and is_active = true
-        ''')
-        rows = cur.fetchall()
-        if len(rows) != 1:
-            raise RuntimeError(f'Expected exactly one active seven_by_seven loan type; found {len(rows)}.')
-        row = rows[0]
-        if row['daily_interest_per_1000'] is None or row['daily_interest_per_1000'] <= 0:
-            raise RuntimeError('7x7 daily interest basis is missing; refusing to enable mobile writes.')
-
-        cur.execute('''
-            update lending.loan_types
-            set settings = jsonb_set(
-                jsonb_set(
-                    jsonb_set(
-                        coalesce(settings, '{}'::jsonb),
-                        '{mobile_collections_enabled}', 'true'::jsonb, true
-                    ),
-                    '{mobile_seven_by_seven_enabled}', 'true'::jsonb, true
-                ),
-                '{mobile_balance_mode}', to_jsonb('direct_remaining_balance'::text), true
-            )
-            where id = %s
-            returning settings
-        ''', (row['id'],))
-        settings = cur.fetchone()['settings']
-        conn.commit()
-
-        assert settings.get('mobile_collections_enabled') is True
-        assert settings.get('mobile_seven_by_seven_enabled') is True
-        assert settings.get('mobile_balance_mode') == 'direct_remaining_balance'
-        print('LOCAL_7X7_TEST_GATE_ENABLED=true')
-        print('mobile_collections_enabled=true')
-        print('mobile_seven_by_seven_enabled=true')
-        print('mobile_balance_mode=direct_remaining_balance')
-'@
-          & $python -c $code
-          if ($LASTEXITCODE -ne 0) { throw 'Local guarded 7x7 gate update failed.' }
-          Remove-Item -Recurse -Force $venv -ErrorAction SilentlyContinue
