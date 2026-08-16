@@ -291,6 +291,41 @@ class PostgresEirCashAllocationRepository:
                 eir_accrual_account_configuration_blocker=eir_accrual_account_configuration_blocker,
             )
 
+        unresolved_receipts = tuple(
+            row
+            for row in events
+            if not bool(row["is_voided"])
+            and str(row["entry_type"]) in {"payment", "advance"}
+            and Decimal(row["unallocated_amount"] or 0) > Decimal("0.00")
+        )
+        if unresolved_receipts:
+            unresolved_total = sum(
+                (Decimal(row["unallocated_amount"] or 0) for row in unresolved_receipts),
+                Decimal("0.00"),
+            )
+            return self._blocked_pack(
+                loan_id=loan_id,
+                loan=loan,
+                cutover_date=cutover_date,
+                opening_balance_prepared=opening_balance_prepared,
+                opening_balance_posted=opening_balance_posted,
+                opening_balance_entry_number=opening_balance_entry_number,
+                blocker_code="unallocated_receipt_cash_review",
+                blocker_message=(
+                    f"{len(unresolved_receipts)} post-cutover receipt(s) contain "
+                    f"{unresolved_total:.2f} of real cash that is not yet applied to the loan. "
+                    "Custody/remittance must keep the full receipts, while protected EIR and loan journal automation stay blocked until Management resolves the allocation."
+                ),
+                source_event_count=len(events),
+                protected_snapshot_available=protected_snapshot_available,
+                protected_snapshot_reconciled=protected_snapshot_reconciled,
+                protected_snapshot_blocker=protected_snapshot_blocker,
+                account_configuration_ready=account_configuration_ready,
+                account_configuration_blocker=account_configuration_blocker,
+                eir_accrual_account_configuration_ready=eir_accrual_account_configuration_ready,
+                eir_accrual_account_configuration_blocker=eir_accrual_account_configuration_blocker,
+            )
+
         state = EirCutoverState(
             loan_id=loan_id,
             calculation_mode=str(measurement["calculation_mode"] or ""),
@@ -598,7 +633,9 @@ class PostgresEirCashAllocationRepository:
                 t.collection_date,
                 t.accepted_at,
                 t.entry_type,
-                t.amount,
+                t.applied_amount as amount,
+                t.amount as cash_received_amount,
+                t.unallocated_amount,
                 t.is_voided,
                 journal.status as journal_status,
                 reversal.status as reversal_status,
