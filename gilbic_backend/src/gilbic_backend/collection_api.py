@@ -5,11 +5,11 @@ from spina_mobile_collections.service import CollectionSubmissionService
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
+from .concurrent_receipt_collection_posting import (
+    ConcurrentReceiptSafeCollectionPostingBridge,
+)
 from .database import connect_database
 from .request_auth import authenticated_device_context
-from .voluntary_extra_collection_posting import (
-    VoluntaryExtraAwareCollectionPostingBridge,
-)
 
 from fastapi import Depends, Header, HTTPException
 from spina_mobile_collections.contracts import ActorContext
@@ -47,7 +47,7 @@ def collection_actor_dependency(
 def collection_service_dependency() -> CollectionSubmissionService:
     executor = PostgresCollectionExecutor(
         connection_factory=connect_database,
-        posting_bridge=VoluntaryExtraAwareCollectionPostingBridge(),
+        posting_bridge=ConcurrentReceiptSafeCollectionPostingBridge(),
     )
     return CollectionSubmissionService(executor)
 
