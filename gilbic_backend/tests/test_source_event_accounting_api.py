@@ -90,6 +90,8 @@ class FakePreviewRepository:
             accepted_at=datetime(2026, 8, 9, 1, 0, tzinfo=timezone.utc),
             entry_type="payment",
             amount=Decimal("200.00"),
+            cash_received_amount=Decimal("200.00"),
+            unallocated_amount=Decimal("0.00"),
             is_voided=False,
             voided_at=None,
             disposition="eir_allocation_required",
@@ -157,8 +159,13 @@ def test_management_can_load_read_only_collection_accounting_preview() -> None:
     assert item["posting_eligible"] is False
     assert item["source_event_key"] == f"collection:{TX_ID}"
     assert item["disposition"] == "eir_allocation_required"
+    assert item["amount"] == "200.00"
+    assert item["applied_amount"] == "200.00"
+    assert item["cash_received_amount"] == "200.00"
+    assert item["unallocated_amount"] == "0.00"
     assert item["proposed_lines"] == []
     assert "EIR allocation" in item["message"]
+    assert "Receipt cash/custody" in data["notice"]
 
 
 def test_cursor_is_forwarded_for_complete_same_day_pagination() -> None:
