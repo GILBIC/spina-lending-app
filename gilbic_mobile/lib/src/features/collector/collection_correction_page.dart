@@ -136,7 +136,7 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
       setState(() {
         _errorMessage = widget.entry.todayIsLocked
             ? 'This collection is already remitted and locked.'
-            : 'Only the collector who recorded this unlocked entry may edit it.';
+            : 'Only the original collector or assigned collector may edit this unlocked entry.';
       });
       return;
     }
@@ -153,6 +153,7 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
           : List<DateTime>.from(_sortedDates),
       note: _noteController.text,
       reason: _reasonController.text,
+      expectedRouteRevision: widget.entry.routeRevision ?? '',
     );
     final validationError = draft.validate();
     if (validationError != null) {
