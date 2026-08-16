@@ -1,0 +1,24 @@
+name: Temporary No Collection integration patch
+
+on:
+  push:
+    branches:
+      - mobile/ca4-collector-ui
+    paths:
+      - 'tools/tmp_patch_no_collection_integration.py'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: [self-hosted, Windows, X64]
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mobile/ca4-collector-ui
+      - name: Apply No Collection integration patch
+        shell: cmd
+        run: python tools\tmp_patch_no_collection_integration.py
