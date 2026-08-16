@@ -52,7 +52,8 @@ void main() {
     expect(find.text('Latest receipt recorded by: Collector Two'), findsOneWidget);
     expect(find.text('Latest receipt note: Paid at the route'), findsOneWidget);
 
-    final footer = find.textContaining('Tap a client to show notes');
+    final footer =
+        find.textContaining('Tap Pay for the normal scheduled amount');
     await tester.dragUntilVisible(
       footer,
       find.byType(ListView),
