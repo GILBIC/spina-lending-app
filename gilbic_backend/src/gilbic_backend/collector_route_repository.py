@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -12,6 +12,20 @@ from .database import open_connection
 
 MONEY = Decimal("0.01")
 CONTRACT_ALLOCATION_SETTING = "mobile_contract_schedule_allocation_enabled"
+
+
+@dataclass(frozen=True, slots=True)
+class CollectorRouteReceiptRecord:
+    transaction_id: UUID
+    receipt_number: str
+    amount: Decimal
+    entry_type: str
+    collector_user_id: UUID
+    collector_name: str
+    is_locked: bool
+    note: str = ""
+    covered_dates: tuple[date, ...] = ()
+    accepted_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,6 +73,7 @@ class CollectorRouteEntryRecord:
     today_amount: Decimal = Decimal("0.00")
     today_note: str = ""
     today_covered_dates: tuple[date, ...] = ()
+    today_receipts: tuple[CollectorRouteReceiptRecord, ...] = ()
     covered_dates: tuple[date, ...] = ()
 
     @property
@@ -162,6 +177,56 @@ class CollectorRouteRecord:
         return sum((entry.daily_amount for entry in self.entries), start=Decimal("0"))
 
 
+def _date_value(value: object) -> date:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return date.fromisoformat(str(value)[:10])
+
+
+def _datetime_value(value: object | None) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+
+
+def _receipt_records(value: object) -> tuple[CollectorRouteReceiptRecord, ...]:
+    if not isinstance(value, (list, tuple)):
+        return ()
+    receipts: list[CollectorRouteReceiptRecord] = []
+    for raw in value:
+        if not isinstance(raw, dict):
+            continue
+        transaction_id = raw.get("transaction_id")
+        receipt_number = str(raw.get("receipt_number") or "").strip()
+        collector_user_id = raw.get("collector_user_id")
+        if transaction_id is None or collector_user_id is None or not receipt_number:
+            continue
+        covered_raw = raw.get("covered_dates")
+        covered_dates = tuple(
+            _date_value(item)
+            for item in covered_raw
+        ) if isinstance(covered_raw, (list, tuple)) else ()
+        receipts.append(
+            CollectorRouteReceiptRecord(
+                transaction_id=UUID(str(transaction_id)),
+                receipt_number=receipt_number,
+                amount=Decimal(str(raw.get("amount") or 0)).quantize(MONEY),
+                entry_type=str(raw.get("entry_type") or "payment"),
+                collector_user_id=UUID(str(collector_user_id)),
+                collector_name=str(raw.get("collector_name") or "Collector"),
+                is_locked=bool(raw.get("is_locked")),
+                note=str(raw.get("note") or ""),
+                covered_dates=covered_dates,
+                accepted_at=_datetime_value(raw.get("accepted_at")),
+            )
+        )
+    return tuple(receipts)
+
+
 class PostgresCollectorRouteRepository:
     """Read the live route for one authenticated collector."""
 
@@ -260,6 +325,7 @@ class PostgresCollectorRouteRepository:
                         coalesce(today.amount, 0) as today_amount,
                         coalesce(today.note, '') as today_note,
                         coalesce(today.covered_dates, ARRAY[]::date[]) as today_covered_dates,
+                        coalesce(today.receipts, '[]'::jsonb) as today_receipts,
                         coalesce(coverage.covered_dates, ARRAY[]::date[]) as covered_dates
                     from lending.collector_area_assignments a
                     join lending.clients c
@@ -309,7 +375,42 @@ class PostgresCollectorRouteRepository:
                                 nullif(btrim(u.full_name), ''),
                                 nullif(btrim(u.username), ''),
                                 'Collector'
-                            ) as collector_name
+                            ) as collector_name,
+                            coalesce((
+                                select jsonb_agg(
+                                    jsonb_build_object(
+                                        'transaction_id', receipt.id,
+                                        'receipt_number', receipt.receipt_number,
+                                        'amount', receipt.amount,
+                                        'entry_type', receipt.entry_type,
+                                        'collector_user_id', receipt.collector_user_id,
+                                        'collector_name', coalesce(
+                                            nullif(btrim(receipt_user.full_name), ''),
+                                            nullif(btrim(receipt_user.username), ''),
+                                            'Collector'
+                                        ),
+                                        'is_locked', receipt.is_locked,
+                                        'note', receipt.note,
+                                        'accepted_at', receipt.accepted_at,
+                                        'covered_dates', coalesce((
+                                            select jsonb_agg(
+                                                receipt_date.covered_date
+                                                order by receipt_date.covered_date
+                                            )
+                                            from lending.collection_covered_dates receipt_date
+                                            where receipt_date.transaction_id = receipt.id
+                                        ), '[]'::jsonb)
+                                    )
+                                    order by receipt.accepted_at, receipt.id
+                                )
+                                from lending.collection_transactions receipt
+                                left join core.users receipt_user
+                                  on receipt_user.id = receipt.collector_user_id
+                                where receipt.loan_id = l.id
+                                  and receipt.collection_date = t.collection_date
+                                  and receipt.is_voided = false
+                                  and receipt.entry_type in ('payment', 'advance')
+                            ), '[]'::jsonb) as receipts
                         from lending.collection_transactions t
                         left join core.users u
                           on u.id = t.collector_user_id
@@ -488,6 +589,7 @@ class PostgresCollectorRouteRepository:
                     today_amount=Decimal(row["today_amount"]),
                     today_note=str(row["today_note"] or ""),
                     today_covered_dates=tuple(row["today_covered_dates"] or ()),
+                    today_receipts=_receipt_records(row.get("today_receipts")),
                     covered_dates=tuple(row["covered_dates"] or ()),
                 )
             )
