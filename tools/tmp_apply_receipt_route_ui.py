@@ -3,142 +3,375 @@ from __future__ import annotations
 from pathlib import Path
 
 
-ROUTE_REPO = Path('gilbic_backend/src/gilbic_backend/collector_route_repository.py')
-ROUTE_API = Path('gilbic_backend/src/gilbic_backend/collector_route_api.py')
-ROUTE_PAGE = Path('gilbic_mobile/lib/src/features/collector/collector_route_page.dart')
-ROUTE_MODEL = Path('gilbic_mobile/lib/src/core/collector/collector_route.dart')
-BACKEND_TEST = Path('gilbic_backend/tests/test_collector_route_receipt_application.py')
-MOBILE_TEST = Path('gilbic_mobile/test/collector_route_receipt_application_test.dart')
+CALC_RULES = Path("spina_app/calculation_rules.py")
+PARITY_MATRIX = Path(
+    "gilbic_backend/tests/test_seven_by_seven_desktop_server_parity_matrix.py"
+)
+POSTGRES_PARITY = Path(
+    "gilbic_backend/tests/test_seven_by_seven_desktop_server_postgres_parity.py"
+)
+MOBILE_POSTGRES = Path(
+    "gilbic_backend/tests/test_seven_by_seven_mobile_collection_postgres.py"
+)
+CONTRACT_TEST = Path("gilbic_backend/tests/test_contract_collection_posting.py")
+
+
+def replace_between(
+    text: str,
+    *,
+    start_marker: str,
+    end_marker: str | None,
+    replacement: str,
+    label: str,
+) -> str:
+    start = text.find(start_marker)
+    if start < 0:
+        if replacement in text:
+            return text
+        raise RuntimeError(f"{label}: start marker not found")
+    if end_marker is None:
+        end = len(text)
+    else:
+        end = text.find(end_marker, start + len(start_marker))
+        if end < 0:
+            raise RuntimeError(f"{label}: end marker not found")
+    return text[:start] + replacement + text[end:]
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
-    if old in text:
-        if text.count(old) != 1:
-            raise RuntimeError(f'{label}: expected exactly one match, got {text.count(old)}')
+    count = text.count(old)
+    if count == 1:
         return text.replace(old, new, 1)
-    if new in text:
+    if count == 0 and new in text:
         return text
-    raise RuntimeError(f'{label}: target not found')
+    raise RuntimeError(f"{label}: expected one old match, got {count}")
 
 
-def patch_backend_route_repository() -> None:
-    text = ROUTE_REPO.read_text(encoding='utf-8')
+def patch_desktop_allocator() -> None:
+    text = CALC_RULES.read_text(encoding="utf-8")
+    replacement = '''def allocate_x7_payments(
+    principal: Any,
+    payment_start: Any,
+    payments: Iterable[Any],
+    as_of_date: Any = None,
+) -> dict[str, float]:
+    """Allocate every distinct positive 7x7 receipt to interest first, then principal.
+
+    Daily interest is fixed from the recorded loan principal for the whole cycle;
+    a falling remaining balance does not lower it. Multiple genuine receipts may
+    occur on the same calendar date. They are preserved in authoritative input
+    order: the first receipt for a date accrues the elapsed calendar-day interest,
+    while later same-day receipts accrue zero additional days and continue settling
+    that day's interest/principal. Technical retries must be removed by the
+    transaction/idempotency layer before reaching this pure allocator.
+    """
+    principal_f = max(0.0, _as_float(principal))
+    fixed_daily_interest = x7_daily_interest(principal_f)
+    start = _as_date(payment_start) or date.today()
+    end = _as_date(as_of_date) or date.today()
+    if end < start:
+        end = start
+
+    effective_receipts: list[tuple[date, int, float]] = []
+    for index, item in enumerate(payments or ()):
+        raw_date, raw_amount = _payment_parts(item)
+        pay_date = _as_date(raw_date)
+        amount = _as_float(raw_amount)
+        if pay_date is None or amount <= 0.0 or pay_date < start or pay_date > end:
+            continue
+        effective_receipts.append((pay_date, index, amount))
+    effective_receipts.sort(key=lambda row: (row[0], row[1]))
+
+    remaining_principal = principal_f
+    interest_arrears = 0.0
+    interest_paid_total = 0.0
+    principal_paid_total = 0.0
+    total_collected = 0.0
+    previous_date = start - timedelta(days=1)
+
+    for pay_date, _, amount in effective_receipts:
+        gap = max(0, (pay_date - previous_date).days)
+        interest_due = fixed_daily_interest * float(gap) + interest_arrears
+        interest_paid = min(amount, interest_due)
+        principal_paid = min(remaining_principal, max(0.0, amount - interest_paid))
+
+        interest_paid_total += interest_paid
+        principal_paid_total += principal_paid
+        total_collected += amount
+        remaining_principal = max(0.0, remaining_principal - principal_paid)
+        interest_arrears = max(0.0, interest_due - interest_paid)
+        previous_date = pay_date
+
+        if remaining_principal <= 0.004 and interest_arrears <= 0.004:
+            remaining_principal = 0.0
+            interest_arrears = 0.0
+            break
+
+    if remaining_principal > 0.0:
+        tail_gap = max(0, (end - previous_date).days)
+        if tail_gap:
+            interest_arrears += fixed_daily_interest * float(tail_gap)
+
+    payoff = max(0.0, remaining_principal + interest_arrears)
+    completion = (principal_paid_total / principal_f * 100.0) if principal_f > 0.0 else 0.0
+    return {
+        "principal": round(principal_f, 2),
+        "interest_basis_principal": round(principal_f, 2),
+        "daily_interest": round(fixed_daily_interest, 2),
+        "total_collected": round(total_collected, 2),
+        "interest_paid": round(interest_paid_total, 2),
+        "principal_paid": round(principal_paid_total, 2),
+        "remaining_principal": round(remaining_principal, 2),
+        "interest_arrears": round(interest_arrears, 2),
+        "payoff_with_interest": round(payoff, 2),
+        "completion_pct": float(completion),
+    }
+'''
+    text = replace_between(
+        text,
+        start_marker="def allocate_x7_payments(",
+        end_marker=None,
+        replacement=replacement,
+        label="desktop 7x7 allocator",
+    )
+    CALC_RULES.write_text(text, encoding="utf-8")
+
+
+def patch_parity_matrix() -> None:
+    text = PARITY_MATRIX.read_text(encoding="utf-8")
+    helper = '''def _effective_server_events(
+    payments: Sequence[Mapping[str, Any]],
+    *,
+    payment_start: date,
+    as_of_date: date,
+) -> tuple[SevenBySevenCashEvent, ...]:
+    """Preserve every distinct positive receipt in authoritative date/input order."""
+
+    eligible: list[tuple[date, int, Mapping[str, Any]]] = []
+    for index, payment in enumerate(payments, start=1):
+        payment_date = payment.get("date")
+        amount = _money(payment.get("payment", payment.get("amount", 0)))
+        if not isinstance(payment_date, date):
+            continue
+        if amount <= Decimal("0.00"):
+            continue
+        if payment_date < payment_start or payment_date > as_of_date:
+            continue
+        eligible.append((payment_date, index, payment))
+
+    return tuple(
+        SevenBySevenCashEvent(
+            event_id=_event_id(index, payment),
+            collection_date=payment_date,
+            amount=_money(payment.get("payment", payment.get("amount", 0))),
+        )
+        for payment_date, index, payment in sorted(
+            eligible,
+            key=lambda item: (item[0], item[1]),
+        )
+    )
+
+
+'''
+    text = replace_between(
+        text,
+        start_marker="def _effective_server_events(",
+        end_marker="def _assert_case_parity(",
+        replacement=helper,
+        label="parity event boundary",
+    )
+    same_day_test = '''def test_distinct_same_day_receipts_are_preserved_in_authoritative_order() -> None:
+    case = ParityCase(
+        name="distinct_same_day_receipts",
+        principal=Decimal("3000.00"),
+        payment_start=date(2026, 8, 1),
+        payments=(
+            {"event_id": "first", "date": date(2026, 8, 1), "payment": "10.00"},
+            {"event_id": "second", "date": date(2026, 8, 1), "payment": "50.00"},
+            {"event_id": "ignored-zero", "date": date(2026, 8, 2), "payment": "0.00"},
+            {"event_id": "next", "date": date(2026, 8, 3), "payment": "42.00"},
+        ),
+    )
+
+    _assert_case_parity(case)
+    events = _effective_server_events(
+        case.payments,
+        payment_start=case.payment_start,
+        as_of_date=date(2026, 8, 3),
+    )
+    assert [event.event_id for event in events] == ["first", "second", "next"]
+    assert [event.amount for event in events] == [
+        Decimal("10.00"),
+        Decimal("50.00"),
+        Decimal("42.00"),
+    ]
+
+
+'''
+    text = replace_between(
+        text,
+        start_marker="def test_latest_positive_payment_per_date_is_canonicalized_before_server_allocation()",
+        end_marker="def test_renewal_boundary_starts_a_new_independent_original_principal_cycle()",
+        replacement=same_day_test,
+        label="same-day synthetic parity test",
+    )
+    PARITY_MATRIX.write_text(text, encoding="utf-8")
+
+
+def patch_postgres_parity() -> None:
+    text = POSTGRES_PARITY.read_text(encoding="utf-8")
+    replacement = '''def test_same_day_protected_source_preserves_distinct_receipts_for_server() -> None:
+    assert DATABASE_URL is not None
+    suffix = uuid4().hex[:10]
+    case = b2_matrix.ParityCase(
+        name="postgres_same_day_distinct_receipts",
+        principal=Decimal("3000.00"),
+        payment_start=date(2026, 8, 1),
+        payments=(
+            {"event_id": "a", "date": date(2026, 8, 1), "payment": "40.00"},
+            {"event_id": "b", "date": date(2026, 8, 1), "payment": "50.00"},
+        ),
+    )
+
+    with psycopg.connect(DATABASE_URL) as connection:
+        try:
+            connection.execute(_transaction_body(SQL_0064))
+            actor_id, _, _, loan_id, device_id = _create_operational_loan(
+                connection,
+                suffix=suffix,
+                principal=case.principal,
+                payment_start=case.payment_start,
+            )
+            _insert_source_rows(
+                connection,
+                case=case,
+                suffix=suffix,
+                actor_id=actor_id,
+                device_id=device_id,
+                loan_id=loan_id,
+            )
+            active = [row for row in _protected_inventory(connection, loan_id) if row[5]]
+            assert len(active) == 2
+            assert {row[6] for row in active} == {2}
+
+            server = allocate_seven_by_seven_payments(
+                original_principal=case.principal,
+                daily_interest_per_1000="7.00",
+                payment_start=case.payment_start,
+                events=tuple(
+                    SevenBySevenCashEvent(
+                        event_id=str(row[0]),
+                        collection_date=row[1],
+                        amount=row[3],
+                    )
+                    for row in active
+                ),
+            )
+            desktop = allocate_x7_payments(
+                principal=case.principal,
+                payment_start=case.payment_start,
+                payments=case.payments,
+                as_of_date=case.payment_start,
+            )
+
+            assert [line.gap_days for line in server.allocations] == [1, 0]
+            assert server.total_interest_paid == Decimal("21.00")
+            assert server.total_principal_paid == Decimal("69.00")
+            assert server.closing_remaining_principal == Decimal("2931.00")
+            assert server.total_interest_paid == _money(desktop["interest_paid"])
+            assert server.total_principal_paid == _money(desktop["principal_paid"])
+            assert server.closing_remaining_principal == _money(
+                desktop["remaining_principal"]
+            )
+            assert _money(desktop["total_collected"]) == Decimal("90.00")
+
+            assert connection.execute(
+                """
+                select coalesce((loan_type.settings->>'mobile_collections_enabled')::boolean, false)
+                from lending.loans loan
+                join lending.loan_types loan_type on loan_type.id=loan.loan_type_id
+                where loan.id=%s
+                """,
+                (loan_id,),
+            ).fetchone()[0] is False
+        finally:
+            connection.rollback()
+'''
+    text = replace_between(
+        text,
+        start_marker="def test_same_day_protected_source_ambiguity_is_not_silently_normalized_for_server()",
+        end_marker=None,
+        replacement=replacement,
+        label="same-day PostgreSQL parity test",
+    )
+    POSTGRES_PARITY.write_text(text, encoding="utf-8")
+
+
+def patch_mobile_policy_expectation() -> None:
+    text = MOBILE_POSTGRES.read_text(encoding="utf-8")
     text = replace_once(
         text,
-        '''    is_locked: bool\n    note: str = ""\n''',
-        '''    is_locked: bool\n    applied_amount: Decimal | None = None\n    unallocated_amount: Decimal = Decimal("0.00")\n    allocation_state: str = "fully_allocated"\n    note: str = ""\n''',
-        'receipt dataclass application fields',
+        '"seven_by_seven_operational_allocator_v1",',
+        '"seven_by_seven_operational_allocator_v2",',
+        "mobile 7x7 policy expectation",
+    )
+    MOBILE_POSTGRES.write_text(text, encoding="utf-8")
+
+
+def patch_contract_bridge_test() -> None:
+    text = CONTRACT_TEST.read_text(encoding="utf-8")
+    text = replace_once(
+        text,
+        "from gilbic_backend.collection_correction_repository import CollectionCorrectionInvalid\n",
+        "from gilbic_backend.collection_correction_repository import CollectionCorrectionInvalid\n"
+        "from gilbic_backend.concurrent_receipt_collection_posting import (\n"
+        "    ConcurrentReceiptSafeCollectionPostingBridge,\n"
+        ")\n",
+        "concurrent bridge import",
     )
     text = replace_once(
         text,
-        '''        receipts.append(\n            CollectorRouteReceiptRecord(\n                transaction_id=UUID(str(transaction_id)),\n                receipt_number=receipt_number,\n                amount=Decimal(str(raw.get("amount") or 0)).quantize(MONEY),\n                entry_type=str(raw.get("entry_type") or "payment"),\n                collector_user_id=UUID(str(collector_user_id)),\n                collector_name=str(raw.get("collector_name") or "Collector"),\n                is_locked=bool(raw.get("is_locked")),\n                note=str(raw.get("note") or ""),\n''',
-        '''        amount = Decimal(str(raw.get("amount") or 0)).quantize(MONEY)\n        raw_applied = raw.get("applied_amount")\n        applied_amount = (\n            amount\n            if raw_applied is None\n            else Decimal(str(raw_applied)).quantize(MONEY)\n        )\n        receipts.append(\n            CollectorRouteReceiptRecord(\n                transaction_id=UUID(str(transaction_id)),\n                receipt_number=receipt_number,\n                amount=amount,\n                entry_type=str(raw.get("entry_type") or "payment"),\n                collector_user_id=UUID(str(collector_user_id)),\n                collector_name=str(raw.get("collector_name") or "Collector"),\n                is_locked=bool(raw.get("is_locked")),\n                applied_amount=applied_amount,\n                unallocated_amount=Decimal(\n                    str(raw.get("unallocated_amount") or 0)\n                ).quantize(MONEY),\n                allocation_state=str(\n                    raw.get("allocation_state") or "fully_allocated"\n                ),\n                note=str(raw.get("note") or ""),\n''',
-        'receipt parser application fields',
+        "from gilbic_backend.per_loan_contract_collection import (\n"
+        "    PerLoanContractAwareCrossCollectorCollectionPostingBridge,\n"
+        ")\n",
+        "from gilbic_backend.per_loan_contract_collection import (\n"
+        "    PerLoanContractAwareCrossCollectorCollectionPostingBridge,\n"
+        ")\n"
+        "from gilbic_backend.seven_by_seven_collection_posting import (\n"
+        "    SevenBySevenAwarePerLoanContractCollectionPostingBridge,\n"
+        ")\n",
+        "7x7 bridge import",
     )
-    text = replace_once(
+    replacement = '''def test_stage5e46b_live_collection_api_preserves_per_loan_contract_bridge() -> None:
+    assert "ConcurrentReceiptSafeCollectionPostingBridge" in COLLECTION_API
+    assert "posting_bridge=ConcurrentReceiptSafeCollectionPostingBridge()" in COLLECTION_API
+    assert issubclass(
+        ConcurrentReceiptSafeCollectionPostingBridge,
+        SevenBySevenAwarePerLoanContractCollectionPostingBridge,
+    )
+    assert "PerLoanContractAwareCrossCollectorCollectionPostingBridge" in SEVEN_BY_SEVEN_COLLECTION
+    assert "class SevenBySevenAwarePerLoanContractCollectionPostingBridge" in SEVEN_BY_SEVEN_COLLECTION
+
+
+'''
+    text = replace_between(
         text,
-        '''                                        'amount', receipt.amount,\n                                        'entry_type', receipt.entry_type,\n''',
-        '''                                        'amount', receipt.amount,\n                                        'applied_amount', receipt.applied_amount,\n                                        'unallocated_amount', receipt.unallocated_amount,\n                                        'allocation_state', receipt.allocation_state,\n                                        'entry_type', receipt.entry_type,\n''',
-        'receipt JSON application fields',
+        start_marker="def test_stage5e46b_live_collection_api_preserves_per_loan_contract_bridge()",
+        end_marker="def test_stage5e44_correction_api_uses_contract_safe_repository()",
+        replacement=replacement,
+        label="live collection bridge test",
     )
-    ROUTE_REPO.write_text(text, encoding='utf-8')
-
-
-def patch_backend_route_api() -> None:
-    text = ROUTE_API.read_text(encoding='utf-8')
-    text = replace_once(
-        text,
-        '''        "amount": str(receipt.amount),\n        "entry_type": receipt.entry_type,\n''',
-        '''        "amount": str(receipt.amount),\n        "applied_amount": str(\n            receipt.amount\n            if receipt.applied_amount is None\n            else receipt.applied_amount\n        ),\n        "unallocated_amount": str(receipt.unallocated_amount),\n        "allocation_state": receipt.allocation_state,\n        "entry_type": receipt.entry_type,\n''',
-        'receipt API application fields',
-    )
-    ROUTE_API.write_text(text, encoding='utf-8')
-
-
-def patch_mobile_route_model() -> None:
-    text = ROUTE_MODEL.read_text(encoding='utf-8')
-    text = replace_once(
-        text,
-        '''    required this.isLocked,\n    this.note = '',\n''',
-        '''    required this.isLocked,\n    this.appliedAmount,\n    this.unallocatedAmount = 0,\n    this.allocationState = 'fully_allocated',\n    this.note = '',\n''',
-        'receipt constructor application fields',
-    )
-    text = replace_once(
-        text,
-        '''  final bool isLocked;\n  final String note;\n''',
-        '''  final bool isLocked;\n  final double? appliedAmount;\n  final double unallocatedAmount;\n  final String allocationState;\n  final String note;\n\n  double get applied => appliedAmount ?? amount;\n\n  bool get needsReview =>\n      unallocatedAmount > 0.005 ||\n      allocationState == 'unallocated' ||\n      allocationState == 'partially_allocated';\n''',
-        'receipt model application fields',
-    )
-    text = replace_once(
-        text,
-        '''      'amount': amount,\n      'entry_type': entryType,\n''',
-        '''      'amount': amount,\n      'applied_amount': applied,\n      'unallocated_amount': unallocatedAmount,\n      'allocation_state': allocationState,\n      'entry_type': entryType,\n''',
-        'receipt toJson application fields',
-    )
-    text = replace_once(
-        text,
-        '''      amount: firstNumber(<Object?>[data['amount']])?.toDouble() ?? 0,\n      entryType: firstNonEmptyString(<Object?>[data['entry_type']]) ?? 'payment',\n''',
-        '''      amount: firstNumber(<Object?>[data['amount']])?.toDouble() ?? 0,\n      appliedAmount: firstNumber(<Object?>[data['applied_amount']])?.toDouble(),\n      unallocatedAmount:\n          firstNumber(<Object?>[data['unallocated_amount']])?.toDouble() ?? 0,\n      allocationState: firstNonEmptyString(<Object?>[\n            data['allocation_state'],\n          ]) ??\n          'fully_allocated',\n      entryType: firstNonEmptyString(<Object?>[data['entry_type']]) ?? 'payment',\n''',
-        'receipt payload application fields',
-    )
-    text = replace_once(
-        text,
-        '''  final List<DateTime> todayCoveredDates;\n  final List<CollectorRouteReceipt> todayReceipts;\n\n  Map<String, Object?> toJson() {\n''',
-        '''  final List<DateTime> todayCoveredDates;\n  final List<CollectorRouteReceipt> todayReceipts;\n\n  double get todayCashTotal {\n    if (todayReceipts.isNotEmpty) {\n      return todayReceipts.fold<double>(\n        0,\n        (total, receipt) => total + receipt.amount,\n      );\n    }\n    return processedToday ? todayAmount : 0;\n  }\n\n  double get todayAppliedTotal {\n    if (todayReceipts.isNotEmpty) {\n      return todayReceipts.fold<double>(\n        0,\n        (total, receipt) => total + receipt.applied,\n      );\n    }\n    final type = todayEntryType.trim().toLowerCase();\n    if (processedToday && (type == 'payment' || type == 'advance')) {\n      return todayAmount;\n    }\n    return 0;\n  }\n\n  double get todayUnallocatedTotal => todayReceipts.fold<double>(\n        0,\n        (total, receipt) => total + receipt.unallocatedAmount,\n      );\n\n  double get scheduledRemainingToday {\n    if (contractCollectionReady) {\n      if (contractTodayScheduledAmount <= 0) {\n        return 0;\n      }\n      return contractTodayUnpaidAmount > 0 ? contractTodayUnpaidAmount : 0;\n    }\n    final remaining = dailyAmount - todayAppliedTotal;\n    return remaining > 0 ? remaining : 0;\n  }\n\n  bool get hasReceiptApplicationReview => todayUnallocatedTotal > 0.005;\n\n  Map<String, Object?> toJson() {\n''',
-        'entry receipt aggregate getters',
-    )
-    ROUTE_MODEL.write_text(text, encoding='utf-8')
-
-
-def patch_route_page() -> None:
-    text = ROUTE_PAGE.read_text(encoding='utf-8')
-    text = replace_once(
-        text,
-        '''    if (entry.processedToday) {\n      return "Today's collection has already been recorded.";\n    }\n    return null;\n  }\n\n  String? _detailsBlockedReason(\n''',
-        '''    if (entry.scheduledRemainingToday <= 0) {\n      return "Today's scheduled amount is already satisfied. Expand this loan only for another real receipt, Voluntary extra, ADV, notes, or correction details.";\n    }\n    return null;\n  }\n\n  String? _detailsBlockedReason(\n''',
-        'non-contract partial direct Pay',
-    )
-    text = replace_once(
-        text,
-        '''    final canAddPartialContractReceipt = entry.contractCollectionReady &&\n        entry.contractTodayUnpaidAmount > 0;\n    if (entry.processedToday && !canAddPartialContractReceipt) {\n      return "Today's scheduled payment is already recorded. Use Edit for a correction before remittance.";\n    }\n    return null;\n  }\n\n  double _normalDueAmount(CollectorRouteEntry entry) {\n    if (entry.contractCollectionReady &&\n        entry.contractTodayUnpaidAmount > 0) {\n      return entry.contractTodayUnpaidAmount;\n    }\n    return entry.dailyAmount;\n  }\n''',
-        '''    // A second genuine physical receipt is still recordable from the\n    // expanded details flow. The server preserves cash that cannot be applied as\n    // Unallocated / Needs review instead of silently creating ADV.\n    return null;\n  }\n\n  double _normalDueAmount(CollectorRouteEntry entry) {\n    if (entry.contractCollectionReady &&\n        entry.contractTodayUnpaidAmount > 0) {\n      return entry.contractTodayUnpaidAmount;\n    }\n    return entry.scheduledRemainingToday;\n  }\n''',
-        'details and direct amount receipt-first semantics',
-    )
-
-    receipt_start = text.index('class _TodayReceipts extends StatelessWidget {')
-    receipt_end = text.index('String _shortLoanName(String value) {', receipt_start)
-    receipt_widget = '''class _TodayReceipts extends StatelessWidget {\n  const _TodayReceipts({required this.receipts});\n\n  final List<CollectorRouteReceipt> receipts;\n\n  @override\n  Widget build(BuildContext context) {\n    final cashTotal = receipts.fold<double>(\n      0,\n      (sum, receipt) => sum + receipt.amount,\n    );\n    final appliedTotal = receipts.fold<double>(\n      0,\n      (sum, receipt) => sum + receipt.applied,\n    );\n    final unallocatedTotal = receipts.fold<double>(\n      0,\n      (sum, receipt) => sum + receipt.unallocatedAmount,\n    );\n    return Column(\n      key: const Key('today-receipts'),\n      crossAxisAlignment: CrossAxisAlignment.start,\n      children: [\n        Text(\n          unallocatedTotal > 0.005\n              ? "Today's receipts • ${receipts.length} • Cash ${_moneyCompact(cashTotal)} • Applied ${_moneyCompact(appliedTotal)} • Unallocated ${_moneyCompact(unallocatedTotal)} • NEEDS REVIEW"\n              : "Today's receipts • ${receipts.length} • ${_moneyCompact(cashTotal)}",\n          style: Theme.of(context).textTheme.labelMedium?.copyWith(\n                fontWeight: FontWeight.w800,\n              ),\n        ),\n        const SizedBox(height: 5),\n        for (final receipt in receipts) ...[\n          Container(\n            key: Key('today-receipt-${receipt.transactionId}'),\n            width: double.infinity,\n            padding: const EdgeInsets.symmetric(vertical: 4),\n            child: Column(\n              crossAxisAlignment: CrossAxisAlignment.start,\n              children: [\n                Text(\n                  'Receipt ${receipt.receiptNumber} • Cash ${_moneyCompact(receipt.amount)} • ${receipt.collectorName}'\n                  '${receipt.isLocked ? ' • Locked' : ''}',\n                  style: Theme.of(context).textTheme.bodySmall?.copyWith(\n                        fontWeight: FontWeight.w700,\n                      ),\n                ),\n                if ((receipt.applied - receipt.amount).abs() > 0.005 ||\n                    receipt.needsReview)\n                  Text(\n                    receipt.unallocatedAmount > 0.005\n                        ? 'Applied ${_moneyCompact(receipt.applied)} • Unallocated ${_moneyCompact(receipt.unallocatedAmount)} • NEEDS REVIEW'\n                        : 'Applied ${_moneyCompact(receipt.applied)}',\n                    style: Theme.of(context).textTheme.labelSmall?.copyWith(\n                          fontWeight: FontWeight.w800,\n                          color: receipt.needsReview\n                              ? Theme.of(context).colorScheme.error\n                              : null,\n                        ),\n                  ),\n                if (receipt.coveredDates.isNotEmpty)\n                  Text(\n                    'Covered: ${receipt.coveredDates.map(_date).join(', ')}',\n                    style: Theme.of(context).textTheme.bodySmall,\n                  ),\n                if (receipt.note.isNotEmpty)\n                  Text(\n                    'Note: ${receipt.note}',\n                    style: Theme.of(context).textTheme.bodySmall,\n                  ),\n              ],\n            ),\n          ),\n        ],\n      ],\n    );\n  }\n}\n\n'''
-    text = text[:receipt_start] + receipt_widget + text[receipt_end:]
-
-    short_start = text.index('String _shortStatus(CollectorRouteEntry entry) {')
-    short_end = text.index('String _actionLabel(', short_start)
-    short_status = '''String _shortStatus(CollectorRouteEntry entry) {\n  final hasMoneyToday = entry.todayCashTotal > 0.005;\n  if (hasMoneyToday && entry.scheduledRemainingToday > 0.005) {\n    return 'Lacking';\n  }\n  if (entry.todayUnallocatedTotal > 0.005) {\n    return 'Review';\n  }\n  if (entry.contractCollectionReady &&\n      entry.contractTodayScheduledAmount > 0) {\n    if (entry.contractTodayUnpaidAmount > 0) {\n      return entry.processedToday ? 'Lacking' : 'Pending';\n    }\n    return entry.processedToday ? 'Paid' : 'Covered';\n  }\n  if (entry.processedToday) {\n    if (entry.todayIsLocked) {\n      return 'Remitted';\n    }\n    return switch (entry.todayEntryType.trim().toLowerCase()) {\n      'pass' => 'Unable',\n      'advance' => 'Covered',\n      _ => 'Paid',\n    };\n  }\n  if (_isSevenBySevenLoan(entry.loanType) &&\n      !entry.sevenBySevenMobileEnabled) {\n    return 'Desktop';\n  }\n  return entry.status;\n}\n\n'''
-    text = text[:short_start] + short_status + text[short_end:]
-    ROUTE_PAGE.write_text(text, encoding='utf-8')
-
-
-def write_backend_test() -> None:
-    BACKEND_TEST.write_text(
-        '''from __future__ import annotations\n\nfrom datetime import datetime, timezone\nfrom decimal import Decimal\nfrom uuid import UUID\n\nfrom gilbic_backend.collector_route_api import _receipt_payload\nfrom gilbic_backend.collector_route_repository import (\n    CollectorRouteReceiptRecord,\n    _receipt_records,\n)\n\n\ndef test_route_receipt_preserves_cash_application_and_unallocated_review_state() -> None:\n    transaction_id = UUID("11111111-1111-4111-8111-111111111111")\n    collector_id = UUID("22222222-2222-4222-8222-222222222222")\n    rows = _receipt_records(\n        [\n            {\n                "transaction_id": str(transaction_id),\n                "receipt_number": "GBC-20260816-00000001",\n                "amount": "200.00",\n                "applied_amount": "100.00",\n                "unallocated_amount": "100.00",\n                "allocation_state": "partially_allocated",\n                "entry_type": "payment",\n                "collector_user_id": str(collector_id),\n                "collector_name": "Collector One",\n                "is_locked": False,\n                "accepted_at": "2026-08-16T04:00:00+00:00",\n            }\n        ]\n    )\n\n    assert len(rows) == 1\n    receipt = rows[0]\n    assert receipt.amount == Decimal("200.00")\n    assert receipt.applied_amount == Decimal("100.00")\n    assert receipt.unallocated_amount == Decimal("100.00")\n    assert receipt.allocation_state == "partially_allocated"\n\n    payload = _receipt_payload(receipt)\n    assert payload["amount"] == "200.00"\n    assert payload["applied_amount"] == "100.00"\n    assert payload["unallocated_amount"] == "100.00"\n    assert payload["allocation_state"] == "partially_allocated"\n\n\ndef test_old_receipt_payload_falls_back_to_cash_as_applied() -> None:\n    transaction_id = UUID("33333333-3333-4333-8333-333333333333")\n    collector_id = UUID("44444444-4444-4444-8444-444444444444")\n    receipt = CollectorRouteReceiptRecord(\n        transaction_id=transaction_id,\n        receipt_number="GBC-OLD",\n        amount=Decimal("90.00"),\n        entry_type="payment",\n        collector_user_id=collector_id,\n        collector_name="Collector One",\n        is_locked=False,\n        accepted_at=datetime(2026, 8, 16, 4, 0, tzinfo=timezone.utc),\n    )\n\n    payload = _receipt_payload(receipt)\n    assert payload["applied_amount"] == "90.00"\n    assert payload["unallocated_amount"] == "0.00"\n''',
-        encoding='utf-8',
-    )
-
-
-def write_mobile_test() -> None:
-    MOBILE_TEST.write_text(
-        '''import 'package:flutter_test/flutter_test.dart';\nimport 'package:gilbic_mobile/src/core/collector/collector_route.dart';\n\nMap<String, Object?> baseEntry({\n  required double dailyAmount,\n  required List<Map<String, Object?>> receipts,\n}) {\n  return <String, Object?>{\n    'route_entry_id': 'loan-1',\n    'client_id': 'client-1',\n    'loan_id': 'loan-1',\n    'client_name': 'Ana Client',\n    'area': 'Cardona',\n    'loan_type': 'Regular',\n    'daily_amount': dailyAmount,\n    'remaining_balance': 5000,\n    'status': 'Recorded today',\n    'pass_count': 0,\n    'processed_today': true,\n    'today_entry_type': 'payment',\n    'today_amount': receipts.isEmpty ? 0 : receipts.last['amount'],\n    'today_receipts': receipts,\n  };\n}\n\nMap<String, Object?> receipt({\n  required String id,\n  required double cash,\n  required double applied,\n  required double unallocated,\n}) {\n  return <String, Object?>{\n    'transaction_id': id,\n    'receipt_number': 'GBC-$id',\n    'amount': cash,\n    'applied_amount': applied,\n    'unallocated_amount': unallocated,\n    'allocation_state': unallocated <= 0\n        ? 'fully_allocated'\n        : applied <= 0\n            ? 'unallocated'\n            : 'partially_allocated',\n    'entry_type': 'payment',\n    'collector_user_id': 'collector-1',\n    'collector_name': 'Collector One',\n    'is_locked': false,\n  };\n}\n\nvoid main() {\n  test('two partial receipts leave only the actual lacking amount', () {\n    final entry = CollectorRouteEntry.fromPayload(\n      baseEntry(\n        dailyAmount: 200,\n        receipts: <Map<String, Object?>>[\n          receipt(id: 'one', cash: 100, applied: 100, unallocated: 0),\n          receipt(id: 'two', cash: 50, applied: 50, unallocated: 0),\n        ],\n      ),\n    )!;\n\n    expect(entry.todayCashTotal, 150);\n    expect(entry.todayAppliedTotal, 150);\n    expect(entry.todayUnallocatedTotal, 0);\n    expect(entry.scheduledRemainingToday, 50);\n    expect(entry.hasReceiptApplicationReview, isFalse);\n  });\n\n  test('second receipt after obligation is paid remains cash and unallocated', () {\n    final entry = CollectorRouteEntry.fromPayload(\n      baseEntry(\n        dailyAmount: 100,\n        receipts: <Map<String, Object?>>[\n          receipt(id: 'one', cash: 100, applied: 100, unallocated: 0),\n          receipt(id: 'two', cash: 100, applied: 0, unallocated: 100),\n        ],\n      ),\n    )!;\n\n    expect(entry.todayCashTotal, 200);\n    expect(entry.todayAppliedTotal, 100);\n    expect(entry.todayUnallocatedTotal, 100);\n    expect(entry.scheduledRemainingToday, 0);\n    expect(entry.hasReceiptApplicationReview, isTrue);\n    expect(entry.todayReceipts.last.needsReview, isTrue);\n  });\n\n  test('legacy receipt without application fields falls back to fully applied cash', () {\n    final entry = CollectorRouteEntry.fromPayload(\n      baseEntry(\n        dailyAmount: 100,\n        receipts: <Map<String, Object?>>[\n          <String, Object?>{\n            'transaction_id': 'legacy',\n            'receipt_number': 'GBC-LEGACY',\n            'amount': 100,\n            'entry_type': 'payment',\n            'collector_user_id': 'collector-1',\n            'collector_name': 'Collector One',\n            'is_locked': false,\n          },\n        ],\n      ),\n    )!;\n\n    expect(entry.todayAppliedTotal, 100);\n    expect(entry.scheduledRemainingToday, 0);\n  });\n}\n''',
-        encoding='utf-8',
-    )
+    CONTRACT_TEST.write_text(text, encoding="utf-8")
 
 
 def main() -> None:
-    patch_backend_route_repository()
-    patch_backend_route_api()
-    patch_mobile_route_model()
-    patch_route_page()
-    write_backend_test()
-    write_mobile_test()
+    patch_desktop_allocator()
+    patch_parity_matrix()
+    patch_postgres_parity()
+    patch_mobile_policy_expectation()
+    patch_contract_bridge_test()
+    print("Patched Desktop/server same-day 7x7 receipt parity and current live bridge assertions.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
