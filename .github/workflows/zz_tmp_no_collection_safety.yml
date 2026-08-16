@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   patch:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -20,4 +20,5 @@ jobs:
         with:
           ref: mobile/ca4-collector-ui
       - name: Apply No Collection safety patch
-        run: python tools/tmp_patch_no_collection_safety.py
+        shell: cmd
+        run: python tools\tmp_patch_no_collection_safety.py
