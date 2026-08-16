@@ -11,21 +11,56 @@ permissions:
 jobs:
   patch:
     runs-on: [self-hosted, Windows, X64]
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: mobile/ca4-collector-ui
-          fetch-depth: 0
-      - name: Apply exact analyzer fix
-        shell: cmd
-        run: >-
-          python -c "from pathlib import Path; p=Path(r'gilbic_mobile/lib/src/features/collector/collector_route_page.dart'); s=p.read_text(encoding='utf-8'); old='status == null || status == 429 || (status != null && status >= 500);'; new='status == null || status == 429 || status >= 500;'; assert s.count(old)==1, f'Expected exactly one analyzer target, found {s.count(old)}'; p.write_text(s.replace(old,new,1),encoding='utf-8')"
-      - name: Remove temporary workflow and commit
-        shell: cmd
+      - name: Patch and upload exact analyzer fix
+        shell: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.EXE -NoProfile -ExecutionPolicy Bypass -File "{0}"
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/zz_tmp_ca4_analyzer_fix.yml
-          git add gilbic_mobile/lib/src/features/collector/collector_route_page.dart
-          git commit -m "Mobile: fix direct Pay analyzer warning"
-          git push origin HEAD:mobile/ca4-collector-ui
+          $ErrorActionPreference = 'Stop'
+          $branch = 'mobile/ca4-collector-ui'
+          $repo = 'GILBIC/spina-lending-app'
+          $codePath = 'gilbic_mobile/lib/src/features/collector/collector_route_page.dart'
+          $workflowPath = '.github/workflows/zz_tmp_ca4_analyzer_fix.yml'
+          $localPath = Join-Path $env:GITHUB_WORKSPACE $codePath
+
+          $text = [System.IO.File]::ReadAllText($localPath)
+          $old = 'status == null || status == 429 || (status != null && status >= 500);'
+          $new = 'status == null || status == 429 || status >= 500;'
+          $count = ([regex]::Matches($text, [regex]::Escape($old))).Count
+          if ($count -ne 1) { throw "Expected exactly one analyzer target, found $count" }
+          [System.IO.File]::WriteAllText(
+            $localPath,
+            $text.Replace($old, $new),
+            (New-Object System.Text.UTF8Encoding($false))
+          )
+
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $escapedBranch = [uri]::EscapeDataString($branch)
+
+          $codeUrl = "https://api.github.com/repos/$repo/contents/$codePath?ref=$escapedBranch"
+          $codeMeta = Invoke-RestMethod -Headers $headers -Uri $codeUrl
+          $codeContent = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes($localPath))
+          $putBody = @{
+            message = 'Mobile: fix direct Pay analyzer warning'
+            content = $codeContent
+            sha = $codeMeta.sha
+            branch = $branch
+          } | ConvertTo-Json
+          Invoke-RestMethod -Method Put -Headers $headers -Uri "https://api.github.com/repos/$repo/contents/$codePath" -ContentType 'application/json' -Body $putBody | Out-Null
+
+          $workflowUrl = "https://api.github.com/repos/$repo/contents/$workflowPath?ref=$escapedBranch"
+          $workflowMeta = Invoke-RestMethod -Headers $headers -Uri $workflowUrl
+          $deleteBody = @{
+            message = 'CI: remove temporary Collector analyzer workflow'
+            sha = $workflowMeta.sha
+            branch = $branch
+          } | ConvertTo-Json
+          Invoke-RestMethod -Method Delete -Headers $headers -Uri "https://api.github.com/repos/$repo/contents/$workflowPath" -ContentType 'application/json' -Body $deleteBody | Out-Null
