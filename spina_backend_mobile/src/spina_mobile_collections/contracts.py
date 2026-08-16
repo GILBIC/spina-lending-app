@@ -14,6 +14,11 @@ class CollectionEntryType(str, Enum):
     PASS = "pass"
 
 
+class PaymentAllocationIntent(str, Enum):
+    SCHEDULED = "scheduled"
+    VOLUNTARY_EXTRA = "voluntary_extra"
+
+
 class CollectionStatus(str, Enum):
     ACCEPTED = "accepted"
     DUPLICATE = "duplicate"
@@ -61,6 +66,7 @@ class CollectionCommand:
     covered_dates: tuple[date, ...] = ()
     note: str = ""
     route_revision: str | None = None
+    payment_allocation_intent: PaymentAllocationIntent = PaymentAllocationIntent.SCHEDULED
 
     def canonical_payload(self) -> dict[str, Any]:
         return {
@@ -83,6 +89,7 @@ class CollectionCommand:
             "device_sequence": self.device_sequence,
             "note": self.note.strip(),
             "route_revision": self.route_revision,
+            "payment_allocation_intent": self.payment_allocation_intent.value,
         }
 
 
