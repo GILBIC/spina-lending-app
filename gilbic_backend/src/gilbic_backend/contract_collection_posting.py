@@ -247,7 +247,7 @@ class ContractAwareCrossCollectorCollectionPostingBridge(
             )
             rows = cursor.fetchall()
 
-        found_dates = tuple(row["due_date"] for row in rows)
+        found_dates = tuple(row["effective_due_date"] for row in rows)
         if found_dates != selected_dates:
             raise CollectionRejected(
                 "Every ADV date must be an exact contractual installment date.",
@@ -437,7 +437,7 @@ class ContractAwareCrossCollectorCollectionPostingBridge(
             if self._money(row["allocated_amount"]) >= self._money(
                 row["contractual_amount"]
             ):
-                fully_paid.append(row["due_date"])
+                fully_paid.append(row["effective_due_date"])
         return tuple(sorted(set(fully_paid)))
 
     @staticmethod
