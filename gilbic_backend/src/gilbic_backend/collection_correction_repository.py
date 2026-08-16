@@ -9,6 +9,10 @@ from uuid import UUID, uuid4
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
+from .collection_correction_authority import (
+    collector_may_correct_unremitted,
+    correction_revision_is_current,
+)
 from .database import open_connection
 
 
@@ -68,6 +72,7 @@ class PostgresCollectionCorrectionRepository:
         covered_dates: tuple[date, ...],
         note: str,
         reason: str,
+        expected_route_revision: str,
     ) -> CollectionCorrectionRecord:
         normalized_type = entry_type.strip().lower()
         if normalized_type not in {"payment", "advance", "pass"}:
@@ -108,13 +113,30 @@ class PostgresCollectionCorrectionRepository:
                         raise CollectionCorrectionNotFound(
                             "The collection entry was not found."
                         )
-                    if transaction["collector_user_id"] != actor_user_id:
+                    if not collector_may_correct_unremitted(
+                        actor_user_id=actor_user_id,
+                        recorder_user_id=transaction["collector_user_id"],
+                        assigned_collector_user_id=transaction.get(
+                            "assigned_collector_user_id"
+                        ),
+                        collection_origin=str(
+                            transaction.get("collection_origin") or ""
+                        ),
+                    ):
                         raise CollectionCorrectionForbidden(
-                            "Only the collector who recorded this entry may correct it."
+                            "Only the original collector or assigned collector may correct this unlocked cross-area entry."
                         )
                     if transaction["is_locked"] or transaction["remittance_id"] is not None:
                         raise CollectionCorrectionLocked(
                             "This entry is already included in a remittance and cannot be edited."
+                        )
+                    if not correction_revision_is_current(
+                        expected_route_revision=expected_route_revision,
+                        loan_id=transaction["loan_id"],
+                        state_version=int(transaction["state_version"]),
+                    ):
+                        raise CollectionCorrectionConflict(
+                            "This collection changed after you opened it. Refresh before correcting it."
                         )
 
                     details = (
