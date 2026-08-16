@@ -121,6 +121,22 @@ class PostgresManagementNoCollectionRepository:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
                     """
+                    select loan_id
+                    from lending.loan_schedule_adjustments
+                    where id = %s
+                      and adjustment_type = 'no_collection'
+                    """,
+                    (adjustment_id,),
+                )
+                target = cursor.fetchone()
+                if target is None:
+                    raise ManagementNoCollectionNotFound(
+                        "The No Collection adjustment was not found."
+                    )
+                self._lock_loan(cursor, loan_id=target["loan_id"])
+
+                cursor.execute(
+                    """
                     select
                         adjustment.id,
                         adjustment.loan_id,
@@ -151,7 +167,10 @@ class PostgresManagementNoCollectionRepository:
                     raise ManagementNoCollectionConflict(
                         "Only the current verified active schedule can be adjusted."
                     )
-                self._lock_loan(cursor, loan_id=original["loan_id"])
+                if original["loan_id"] != target["loan_id"]:
+                    raise ManagementNoCollectionConflict(
+                        "The No Collection adjustment changed while it was being locked."
+                    )
 
                 state_version = self._lock_operational_state(
                     cursor,
@@ -337,6 +356,7 @@ class PostgresManagementNoCollectionRepository:
         reason: str,
     ) -> NoCollectionAdjustmentRecord:
         with connection.cursor(row_factory=dict_row) as cursor:
+            self._lock_loan(cursor, loan_id=selection.loan_id)
             cursor.execute(
                 """
                 select
@@ -363,7 +383,6 @@ class PostgresManagementNoCollectionRepository:
                 raise ManagementNoCollectionConflict(
                     "No Collection requires a verified registered contractual schedule."
                 )
-            self._lock_loan(cursor, loan_id=selection.loan_id)
 
             state_version = self._lock_operational_state(
                 cursor,
