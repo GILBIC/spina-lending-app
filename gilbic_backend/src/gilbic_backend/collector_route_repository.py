@@ -321,6 +321,8 @@ class PostgresCollectorRouteRepository:
                         coalesce(today.collector_name, '') as today_collector_name,
                         today.transaction_id as today_transaction_id,
                         today.collector_user_id as today_collector_user_id,
+                        today.assigned_collector_user_id as today_assigned_collector_user_id,
+                        coalesce(today.collection_origin, '') as today_collection_origin,
                         coalesce(today.is_locked, false) as today_is_locked,
                         coalesce(today.amount, 0) as today_amount,
                         coalesce(today.note, '') as today_note,
@@ -361,6 +363,8 @@ class PostgresCollectorRouteRepository:
                             t.amount,
                             t.note,
                             t.collector_user_id,
+                            t.assigned_collector_user_id,
+                            t.collection_origin,
                             t.is_locked,
                             coalesce(
                                 array(
@@ -583,8 +587,16 @@ class PostgresCollectorRouteRepository:
                     today_is_locked=bool(row["today_is_locked"]),
                     can_edit_today=(
                         row["today_transaction_id"] is not None
-                        and row["today_collector_user_id"] == collector_user_id
                         and not bool(row["today_is_locked"])
+                        and (
+                            row["today_collector_user_id"] == collector_user_id
+                            or (
+                                str(row["today_collection_origin"] or "")
+                                == "cross_collector"
+                                and row["today_assigned_collector_user_id"]
+                                == collector_user_id
+                            )
+                        )
                     ),
                     today_amount=Decimal(row["today_amount"]),
                     today_note=str(row["today_note"] or ""),
