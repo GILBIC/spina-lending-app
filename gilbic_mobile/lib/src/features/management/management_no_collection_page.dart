@@ -36,8 +36,8 @@ class _ManagementNoCollectionPageState
   final _searchController = TextEditingController();
   final _reasonController = TextEditingController();
 
-  List<ManagementLoan> _searchResults = const <ManagementLoan>[];
-  ManagementLoan? _selectedLoan;
+  List<ManagementLoanItem> _searchResults = const <ManagementLoanItem>[];
+  ManagementLoanItem? _selectedLoan;
   ManagementNoCollectionLoanState? _loanState;
   ManagementNoCollectionPreview? _preview;
   ManagementNoCollectionAdjustmentResult? _lastResult;
@@ -81,12 +81,12 @@ class _ManagementNoCollectionPageState
     setState(() {
       _searching = true;
       _error = null;
-      _searchResults = const <ManagementLoan>[];
+      _searchResults = const <ManagementLoanItem>[];
     });
     try {
       final portfolio = await _loanRepository.loadPortfolio(widget.session);
       final results = portfolio.loans
-          .where((loan) => loan.status.toLowerCase() == 'active')
+          .where((loan) => loan.loanStatus.toLowerCase() == 'active')
           .where((loan) {
             if (query.isEmpty) {
               return true;
@@ -95,8 +95,8 @@ class _ManagementNoCollectionPageState
               loan.loanNumber,
               loan.clientName,
               loan.clientCode,
-              loan.area,
-              loan.loanType,
+              loan.clientArea ?? '',
+              loan.loanTypeName,
             ].any((value) => value.toLowerCase().contains(query));
           })
           .take(30)
@@ -119,7 +119,7 @@ class _ManagementNoCollectionPageState
     }
   }
 
-  Future<void> _selectLoan(ManagementLoan loan) async {
+  Future<void> _selectLoan(ManagementLoanItem loan) async {
     if (_loadingState) {
       return;
     }
@@ -471,7 +471,7 @@ class _ManagementNoCollectionPageState
               selected: _selectedLoan?.loanId == loan.loanId,
               title: Text(loan.clientName),
               subtitle: Text(
-                '${loan.loanNumber} • ${loan.loanType} • ${loan.area}',
+                '${loan.loanNumber} • ${loan.loanTypeName} • ${loan.clientArea ?? ''}',
               ),
               trailing: Text(_money(loan.remainingBalance)),
               onTap: _loadingState ? null : () => _selectLoan(loan),
