@@ -7,8 +7,8 @@ from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .database import connect_database
 from .request_auth import authenticated_device_context
-from .seven_by_seven_multi_receipt_posting import (
-    MultiReceiptSevenBySevenCollectionPostingBridge,
+from .voluntary_extra_collection_posting import (
+    VoluntaryExtraAwareCollectionPostingBridge,
 )
 
 from fastapi import Depends, Header, HTTPException
@@ -47,7 +47,7 @@ def collection_actor_dependency(
 def collection_service_dependency() -> CollectionSubmissionService:
     executor = PostgresCollectionExecutor(
         connection_factory=connect_database,
-        posting_bridge=MultiReceiptSevenBySevenCollectionPostingBridge(),
+        posting_bridge=VoluntaryExtraAwareCollectionPostingBridge(),
     )
     return CollectionSubmissionService(executor)
 
