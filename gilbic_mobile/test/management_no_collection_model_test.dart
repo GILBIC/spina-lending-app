@@ -34,6 +34,9 @@ void main() {
       },
     );
 
+    expect(state.scheduleId, 'schedule-1');
+    expect(state.scheduleVersion, 2);
+    expect(state.paymentFrequency, 'daily');
     expect(state.operationalVersion, 3);
     expect(state.installments.single.contractualDueDate, DateTime(2026, 8, 16));
     expect(state.installments.single.effectiveDueDate, DateTime(2026, 8, 17));
@@ -61,6 +64,7 @@ void main() {
     );
 
     expect(preview.operationalVersion, 3);
+    expect(preview.paymentFrequency, 'daily');
     expect(preview.shifts.single.priorEffectiveDueDate, DateTime(2026, 8, 17));
     expect(preview.shifts.single.newEffectiveDueDate, DateTime(2026, 8, 18));
   });
