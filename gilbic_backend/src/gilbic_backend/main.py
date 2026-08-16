@@ -61,6 +61,7 @@ from .loan_renewal_execution_evidence_api import (
 from .management_api import create_management_router
 from .management_loan_api import create_management_loan_router
 from .management_operations_api import create_management_operations_router
+from .management_no_collection_api import create_management_no_collection_router
 from .notification_api import create_notification_router
 from .opening_balance_journal_api import create_opening_balance_journal_router
 from .opening_balance_workbook_api import create_opening_balance_workbook_router
@@ -128,6 +129,7 @@ def create_app() -> FastAPI:
     app.include_router(create_management_router())
     app.include_router(create_management_loan_router())
     app.include_router(create_management_operations_router())
+    app.include_router(create_management_no_collection_router())
     app.include_router(create_financial_accounting_router())
     app.include_router(create_financial_statements_router())
     app.include_router(create_source_event_accounting_router())
