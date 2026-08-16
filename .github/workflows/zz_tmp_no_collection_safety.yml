@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - mobile/ca4-collector-ui
-    paths:
-      - 'tools/tmp_patch_no_collection_safety.py'
 
 permissions:
   contents: write
