@@ -20,10 +20,6 @@ import 'package:gilbic_mobile/src/features/management/management_financial_state
 import 'package:gilbic_mobile/src/features/management/management_general_journal_launcher_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_operations_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_no_collection_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_no_collection_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_no_collection_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_no_collection_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_no_collection_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_portfolio_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_opening_balance_journal_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
@@ -217,50 +213,6 @@ class RoleDashboard extends StatelessWidget {
       _push(
         context,
         ManagementLoanOperationsPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management &&
-        action == 'management-no-collection') {
-      _push(
-        context,
-        ManagementNoCollectionPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management &&
-        action == 'management-no-collection') {
-      _push(
-        context,
-        ManagementNoCollectionPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management &&
-        action == 'management-no-collection') {
-      _push(
-        context,
-        ManagementNoCollectionPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management &&
-        action == 'management-no-collection') {
-      _push(
-        context,
-        ManagementNoCollectionPage(
           session: session,
           deviceIdentityProvider: deviceIdentityProvider,
         ),
@@ -567,34 +519,6 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           'Monitor collections, remittances, corrections, and voids',
           Icons.insights,
           action: 'management-loan-operations',
-        ),
-        _DashboardModule(
-          'No Collection',
-          'Move one loan schedule to the next collection dates with audit',
-          Icons.event_busy_outlined,
-          action: 'management-no-collection',
-          requiredPermissions: <String>['lending.no_collection.manage'],
-        ),
-        _DashboardModule(
-          'No Collection',
-          'Move one loan schedule to the next collection dates with audit',
-          Icons.event_busy_outlined,
-          action: 'management-no-collection',
-          requiredPermissions: <String>['lending.no_collection.manage'],
-        ),
-        _DashboardModule(
-          'No Collection',
-          'Move one loan schedule to the next collection dates with audit',
-          Icons.event_busy_outlined,
-          action: 'management-no-collection',
-          requiredPermissions: <String>['lending.no_collection.manage'],
-        ),
-        _DashboardModule(
-          'No Collection',
-          'Move one loan schedule to the next collection dates with audit',
-          Icons.event_busy_outlined,
-          action: 'management-no-collection',
-          requiredPermissions: <String>['lending.no_collection.manage'],
         ),
         _DashboardModule(
           'No Collection',
