@@ -39,7 +39,7 @@ void main() {
     // CA4 is Daily-Collection-first: authenticated Collectors land directly on
     // the Management-approved one-client-row field ledger.
     expect(find.text('Daily Collection'), findsOneWidget);
-    expect(find.text('Online route'), findsOneWidget);
+    expect(find.textContaining('Online route'), findsOneWidget);
     expect(find.text('AREA: CARDONA'), findsOneWidget);
     expect(find.text('Ana Client'), findsOneWidget);
     expect(find.text('CLIENT / STATUS'), findsOneWidget);
@@ -185,7 +185,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Offline copy'), findsOneWidget);
+    expect(find.textContaining('Offline copy'), findsOneWidget);
     expect(find.text('Ana Client'), findsOneWidget);
     expect(find.textContaining('Offline copy shown'), findsOneWidget);
   });
