@@ -99,6 +99,32 @@ def patch_dashboard() -> None:
     save(path, text, sha, "Mobile: add Management No Collection dashboard action")
 
 
+def patch_no_collection_page() -> None:
+    path = "gilbic_mobile/lib/src/features/management/management_no_collection_page.dart"
+    text, sha = load(path)
+    replacements = {
+        "List<ManagementLoan> _searchResults = const <ManagementLoan>[];":
+            "List<ManagementLoanItem> _searchResults = const <ManagementLoanItem>[];",
+        "ManagementLoan? _selectedLoan;": "ManagementLoanItem? _selectedLoan;",
+        "_searchResults = const <ManagementLoan>[];":
+            "_searchResults = const <ManagementLoanItem>[];",
+        ".where((loan) => loan.status.toLowerCase() == 'active')":
+            ".where((loan) => loan.loanStatus.toLowerCase() == 'active')",
+        "              loan.area,\n              loan.loanType,":
+            "              loan.clientArea ?? '',\n              loan.loanTypeName,",
+        "Future<void> _selectLoan(ManagementLoan loan) async {":
+            "Future<void> _selectLoan(ManagementLoanItem loan) async {",
+        "'${loan.loanNumber} • ${loan.loanType} • ${loan.area}',":
+            "'${loan.loanNumber} • ${loan.loanTypeName} • ${loan.clientArea ?? ''}',",
+    }
+    for old, new in replacements.items():
+        if old in text:
+            text = text.replace(old, new)
+        elif new not in text:
+            raise RuntimeError(f"Management No Collection page target missing: {old}")
+    save(path, text, sha, "Mobile: align No Collection screen with Management loan model")
+
+
 def patch_contract_error_label() -> None:
     path = "gilbic_backend/src/gilbic_backend/contract_collection_posting.py"
     text, sha = load(path)
@@ -110,6 +136,7 @@ def patch_contract_error_label() -> None:
 
 def main() -> None:
     patch_dashboard()
+    patch_no_collection_page()
     patch_contract_error_label()
     delete(WORKFLOW_PATH, "CI: remove temporary No Collection mobile workflow")
     delete(HELPER_PATH, "CI: remove temporary No Collection mobile helper")
