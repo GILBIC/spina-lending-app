@@ -14,9 +14,8 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: mobile/ca4-collector-ui
-      - name: Integrate Management No Collection UI
+      - name: Fetch and run Management No Collection integration helper
         shell: cmd
-        run: python tools\tmp_patch_no_collection_mobile_integration.py
+        run: |
+          curl.exe -L -H "Authorization: Bearer %GH_TOKEN%" -H "Accept: application/vnd.github.raw+json" "https://api.github.com/repos/GILBIC/spina-lending-app/contents/tools/tmp_patch_no_collection_mobile_integration.py?ref=mobile%2Fca4-collector-ui" -o "%RUNNER_TEMP%\spina_no_collection_patch.py"
+          python "%RUNNER_TEMP%\spina_no_collection_patch.py"
