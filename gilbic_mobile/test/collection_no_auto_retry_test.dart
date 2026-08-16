@@ -64,6 +64,7 @@ void main() {
     expect(repository.calls, 2);
     expect(repository.drafts.last.idempotencyKey, originalKey);
     expect(repository.drafts.last.deviceSequence, originalSequence);
+    expect(find.text('Retry same entry'), findsOneWidget);
   });
 }
 
