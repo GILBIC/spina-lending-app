@@ -95,6 +95,7 @@ def plan_no_collection_shift(
     blocked = set(blocked_dates)
     blocked.add(no_collection_date)
     current_dates = [row.effective_due_date for row in rows]
+    monthly_anchor_day = rows[0].contractual_due_date.day
     shifts: list[ScheduleShift] = []
     previous_new: date | None = None
 
@@ -107,6 +108,7 @@ def plan_no_collection_shift(
                 row.effective_due_date,
                 payment_frequency=frequency,
                 semi_monthly_days=semi_monthly_days,
+                monthly_anchor_day=monthly_anchor_day,
             )
 
         while candidate in blocked:
@@ -114,6 +116,7 @@ def plan_no_collection_shift(
                 candidate,
                 payment_frequency=frequency,
                 semi_monthly_days=semi_monthly_days,
+                monthly_anchor_day=monthly_anchor_day,
             )
 
         if candidate <= row.effective_due_date:
@@ -145,18 +148,29 @@ def _advance_cadence(
     *,
     payment_frequency: str,
     semi_monthly_days: tuple[int, int],
+    monthly_anchor_day: int,
 ) -> date:
     if payment_frequency == "daily":
         return anchor + timedelta(days=1)
     if payment_frequency == "weekly":
         return anchor + timedelta(days=7)
     if payment_frequency == "monthly":
-        return _add_months_clamped(anchor, 1)
+        return _next_monthly(anchor, monthly_anchor_day)
     if payment_frequency == "semi_monthly":
         return _next_semi_monthly(anchor, semi_monthly_days)
     raise NoCollectionScheduleError(
         f"Unsupported operational No Collection frequency: {payment_frequency}."
     )
+
+
+def _next_monthly(anchor: date, day: int) -> date:
+    if day < 1 or day > 31:
+        raise NoCollectionScheduleError("Monthly collection day is invalid.")
+    zero_based = anchor.year * 12 + (anchor.month - 1) + 1
+    year, month_index = divmod(zero_based, 12)
+    month = month_index + 1
+    last_day = calendar.monthrange(year, month)[1]
+    return date(year, month, min(day, last_day))
 
 
 def _next_semi_monthly(anchor: date, days: tuple[int, int]) -> date:
@@ -186,11 +200,3 @@ def _next_semi_monthly(anchor: date, days: tuple[int, int]) -> date:
     raise NoCollectionScheduleError(
         "Could not resolve the next semi-monthly collection date."
     )
-
-
-def _add_months_clamped(anchor: date, months: int) -> date:
-    zero_based = anchor.year * 12 + (anchor.month - 1) + months
-    year, month_index = divmod(zero_based, 12)
-    month = month_index + 1
-    last_day = calendar.monthrange(year, month)[1]
-    return date(year, month, min(anchor.day, last_day))
