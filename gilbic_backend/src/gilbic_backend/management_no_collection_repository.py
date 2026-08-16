@@ -78,7 +78,7 @@ class PostgresManagementNoCollectionRepository:
         normalized_reason = reason.strip()
         if not normalized_reason:
             raise ManagementNoCollectionInvalid("A Management reason is required.")
-        requested = tuple(selections)
+        requested = tuple(sorted(selections, key=lambda item: str(item.loan_id)))
         if not requested:
             raise ManagementNoCollectionInvalid("Select at least one loan.")
         if len({item.loan_id for item in requested}) != len(requested):
@@ -151,6 +151,7 @@ class PostgresManagementNoCollectionRepository:
                     raise ManagementNoCollectionConflict(
                         "Only the current verified active schedule can be adjusted."
                     )
+                self._lock_loan(cursor, loan_id=original["loan_id"])
 
                 state_version = self._lock_operational_state(
                     cursor,
@@ -305,6 +306,10 @@ class PostgresManagementNoCollectionRepository:
                     resulting_version=resulting_version,
                     actor_user_id=actor_user_id,
                 )
+                self._invalidate_mobile_route_revision(
+                    cursor,
+                    loan_id=original["loan_id"],
+                )
 
                 return NoCollectionAdjustmentRecord(
                     adjustment_id=reversal_id,
@@ -358,6 +363,7 @@ class PostgresManagementNoCollectionRepository:
                 raise ManagementNoCollectionConflict(
                     "No Collection requires a verified registered contractual schedule."
                 )
+            self._lock_loan(cursor, loan_id=selection.loan_id)
 
             state_version = self._lock_operational_state(
                 cursor,
@@ -476,6 +482,10 @@ class PostgresManagementNoCollectionRepository:
                 resulting_version=resulting_version,
                 actor_user_id=actor_user_id,
             )
+            self._invalidate_mobile_route_revision(
+                cursor,
+                loan_id=selection.loan_id,
+            )
 
             return NoCollectionAdjustmentRecord(
                 adjustment_id=adjustment_id,
@@ -492,6 +502,29 @@ class PostgresManagementNoCollectionRepository:
                 created_at=created["created_at"],
                 shifts=tuple(self._shift_record(item) for item in planned),
             )
+
+    @staticmethod
+    def _lock_loan(cursor: Any, *, loan_id: UUID) -> None:
+        cursor.execute(
+            "select id from lending.loans where id = %s for update",
+            (loan_id,),
+        )
+        if cursor.fetchone() is None:
+            raise ManagementNoCollectionNotFound(
+                "The selected loan no longer exists."
+            )
+
+    @staticmethod
+    def _invalidate_mobile_route_revision(cursor: Any, *, loan_id: UUID) -> None:
+        cursor.execute(
+            """
+            update lending.loan_collection_state
+            set state_version = state_version + 1,
+                updated_at = now()
+            where loan_id = %s
+            """,
+            (loan_id,),
+        )
 
     @staticmethod
     def _lock_operational_state(cursor: Any, *, schedule_id: UUID) -> int:
