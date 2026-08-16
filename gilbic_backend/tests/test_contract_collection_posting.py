@@ -400,5 +400,6 @@ def test_stage5e44_contract_controlled_corrections_require_void_and_repost(
             covered_dates=(date(2026, 8, 9),),
             note="",
             reason="wrong amount",
+            expected_route_revision=f"loan:{LOAN_ID}:v1",
         )
     assert "Void the unremitted receipt" in str(caught.value)
