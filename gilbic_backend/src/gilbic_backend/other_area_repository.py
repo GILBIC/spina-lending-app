@@ -75,7 +75,7 @@ class PostgresOtherAreaRepository:
                             in ('true', '1', 'yes', 'on') as mobile_collections_enabled,
                         coalesce(loan_type.settings->>'mobile_balance_mode', '')
                             as mobile_balance_mode,
-                        assigned.collector_user_id as assigned_collector_user_id,
+                        assigned.id as assigned_collector_user_id,
                         coalesce(assigned.full_name, 'Unassigned') as assigned_collector_name
                     from lending.clients client
                     join lending.loans loan
@@ -86,30 +86,14 @@ class PostgresOtherAreaRepository:
                      and loan_type.is_active = true
                     left join lending.loan_collection_state state
                       on state.loan_id = loan.id
-                    left join lateral (
-                        select
-                            assignment.collector_user_id,
-                            user_account.full_name
-                        from lending.collector_area_assignments assignment
-                        join core.users user_account
-                          on user_account.id = assignment.collector_user_id
-                         and user_account.status = 'active'
-                        where assignment.is_active = true
-                          and lower(btrim(assignment.area)) =
-                              lower(btrim(coalesce(client.area, '')))
-                        order by assignment.sort_order, assignment.id
-                        limit 1
-                    ) assigned on true
+                    left join core.users assigned
+                      on assigned.id = lending.collector_area_owner(
+                          coalesce(client.area, '')
+                      )
                     where client.status = 'active'
                       and coalesce(state.remaining_balance, loan.principal) > 0
-                      and not exists (
-                          select 1
-                          from lending.collector_area_assignments own_assignment
-                          where own_assignment.collector_user_id = %s
-                            and own_assignment.is_active = true
-                            and lower(btrim(own_assignment.area)) =
-                                lower(btrim(coalesce(client.area, '')))
-                      )
+                      and lending.collector_area_owner(coalesce(client.area, ''))
+                          is distinct from %s
                       and lending.collector_has_active_delegated_area_access(
                           %s,
                           coalesce(client.area, ''),
