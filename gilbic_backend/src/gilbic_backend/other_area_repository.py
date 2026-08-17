@@ -110,6 +110,11 @@ class PostgresOtherAreaRepository:
                             and lower(btrim(own_assignment.area)) =
                                 lower(btrim(coalesce(client.area, '')))
                       )
+                      and lending.collector_has_active_delegated_area_access(
+                          %s,
+                          coalesce(client.area, ''),
+                          now()
+                      )
                       and (
                           client.full_name ilike %s
                           or client.client_code ilike %s
@@ -123,6 +128,7 @@ class PostgresOtherAreaRepository:
                     limit %s
                     """,
                     (
+                        collector_user_id,
                         collector_user_id,
                         pattern,
                         pattern,
@@ -152,7 +158,7 @@ class PostgresOtherAreaRepository:
             message = "This loan's payment calculation still uses SPINA desktop."
         else:
             message = (
-                "Other-area payment. The assigned collector and linked client "
+                "Delegated other-area work. The assigned collector and linked client "
                 "will be notified after posting."
             )
 
