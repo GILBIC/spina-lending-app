@@ -24,6 +24,7 @@ from .cross_period_accounting_sequence_api import (
 )
 from .cross_remittance_api import create_cross_remittance_router
 from .database import database_ready
+from .delegated_area_api import create_delegated_area_router
 from .ecl_a5_accounting_api import create_ecl_a5_accounting_router
 from .ecl_allowance_posting_api import create_ecl_allowance_posting_router
 from .ecl_credit_risk_label_api import create_ecl_credit_risk_label_router
@@ -181,6 +182,7 @@ def create_app() -> FastAPI:
     app.include_router(create_renewal_router())
     app.include_router(create_support_router())
     app.include_router(create_collector_route_router())
+    app.include_router(create_delegated_area_router())
     app.include_router(create_other_area_router())
     app.include_router(create_collection_api_router())
     app.include_router(create_collection_correction_router())
