@@ -11,13 +11,14 @@ from .collection_posting import PostgresCollectionPostingBridge
 
 
 class CrossCollectorCollectionPostingBridge(PostgresCollectionPostingBridge):
-    """Use the official posting transaction for assigned and other-area payments.
+    """Use the official posting transaction for delegated other-area work.
 
     The base bridge performs every balance, date, device, receipt, idempotency,
     and loan-state validation. This override changes only the route-ownership
-    rejection: an authenticated collector may explicitly post a payment for an
-    active client outside their route. The database assignment trigger preserves
-    both the recorder and the actual assigned collector.
+    rejection, and only when the signed-in Collector has an active delegated
+    grant for the client's current area path. The database assignment trigger
+    continues to preserve both the recorder and the authoritative assigned
+    Collector.
     """
 
     @staticmethod
@@ -40,10 +41,38 @@ class CrossCollectorCollectionPostingBridge(PostgresCollectionPostingBridge):
             if error.code != "route_not_assigned":
                 raise
 
+        area_path = str(loan.get("area") or "").strip()
+        cursor.execute(
+            """
+            select lending.collector_has_active_delegated_area_access(
+                %s,
+                %s,
+                now()
+            ) as allowed
+            """,
+            (collector_user_id, area_path),
+        )
+        access_row = cursor.fetchone()
+        access_allowed = False
+        if access_row is not None:
+            try:
+                access_allowed = bool(access_row["allowed"])
+            except (KeyError, TypeError):
+                try:
+                    access_allowed = bool(access_row[0])
+                except (IndexError, KeyError, TypeError):
+                    access_allowed = False
+        if not access_allowed:
+            raise CollectionRejected(
+                "You do not have active access to this assigned area. Ask the "
+                "assigned Collector to grant access, then refresh Other-Area Work.",
+                code="delegated_area_access_required",
+            )
+
         # The base method already validated the active client, active loan,
         # reconciled state, and route revision before checking assignment.
-        # Preserve its final chronological safeguard for the explicit
-        # other-area flow.
+        # Preserve its final chronological safeguard after delegated access is
+        # revalidated inside the same official posting transaction.
         last_payment_date: date | None = loan["last_payment_date"]
         if last_payment_date is not None and command.collection_date < last_payment_date:
             raise CollectionRejected(
