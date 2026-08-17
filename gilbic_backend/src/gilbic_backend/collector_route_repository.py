@@ -313,7 +313,7 @@ class PostgresCollectorRouteRepository:
                             as contract_today_scheduled_amount,
                         coalesce(contract_today.unpaid_amount, 0)::numeric(18,2)
                             as contract_today_unpaid_amount,
-                        contract_next.due_date as contract_next_unpaid_date,
+                        contract_next.effective_due_date as contract_next_unpaid_date,
                         coalesce(contract_next.unpaid_amount, 0)::numeric(18,2)
                             as contract_next_unpaid_amount,
                         today.entry_type is not null as processed_today,

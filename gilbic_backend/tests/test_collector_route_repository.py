@@ -181,6 +181,9 @@ def test_repository_returns_assigned_areas_and_authoritative_state(monkeypatch) 
         route_date,
         COLLECTOR_USER_ID,
     )
+    entry_query = connection.entry_cursor.executions[0][0]
+    assert "contract_next.effective_due_date as contract_next_unpaid_date" in entry_query
+    assert "contract_next.due_date as contract_next_unpaid_date" not in entry_query
 
 
 def test_assigned_owner_can_edit_latest_unlocked_cross_collector_receipt(monkeypatch) -> None:
