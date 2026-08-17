@@ -207,6 +207,10 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Delegated area requests are retained as audit evidence; cancel instead of deleting.';
+    END IF;
+
     IF NEW.id IS DISTINCT FROM OLD.id
        OR NEW.requester_user_id IS DISTINCT FROM OLD.requester_user_id
        OR NEW.requested_owner_user_id IS DISTINCT FROM OLD.requested_owner_user_id
