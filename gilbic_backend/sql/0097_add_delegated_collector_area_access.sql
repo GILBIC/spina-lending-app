@@ -302,11 +302,11 @@ AS $$
         FROM lending.collector_area_access_grants grant_record
         JOIN lending.collector_area_access_grant_scopes grant_scope
           ON grant_scope.grant_id = grant_record.id
-        JOIN lending.collector_area_assignments assignment
-          ON assignment.id = grant_scope.source_assignment_id
-         AND assignment.collector_user_id = grant_record.grantor_user_id
-         AND assignment.is_active = true
-         AND lower(lending.normalize_area_path(assignment.area)) =
+        JOIN lending.collector_area_assignments source_assignment
+          ON source_assignment.id = grant_scope.source_assignment_id
+         AND source_assignment.collector_user_id = grant_record.grantor_user_id
+         AND source_assignment.is_active = true
+         AND lower(lending.normalize_area_path(source_assignment.area)) =
              lower(lending.normalize_area_path(grant_scope.area_path))
         WHERE grant_record.visiting_collector_user_id = visiting_user_id
           AND grant_record.revoked_at IS NULL
@@ -316,6 +316,21 @@ AS $$
               grant_scope.area_path,
               candidate_area_path,
               grant_scope.include_descendants
+          )
+          AND grant_record.grantor_user_id = (
+              SELECT effective_assignment.collector_user_id
+              FROM lending.collector_area_assignments effective_assignment
+              WHERE effective_assignment.is_active = true
+                AND lending.area_path_contains(
+                    effective_assignment.area,
+                    candidate_area_path,
+                    true
+                )
+              ORDER BY
+                  length(lending.normalize_area_path(effective_assignment.area)) DESC,
+                  effective_assignment.sort_order,
+                  effective_assignment.id
+              LIMIT 1
           )
     );
 $$;
