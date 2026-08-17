@@ -34,6 +34,8 @@ class FakeAuthClient:
 
 
 class FakeAccounts:
+    permissions = ("collection.create", "delegated_area.view")
+
     def get_context_for_device(
         self,
         *,
@@ -50,9 +52,13 @@ class FakeAccounts:
             full_name="Collector One",
             status="active",
             roles=("collector",),
-            permissions=("collection.create",),
+            permissions=self.permissions,
             device_registered=True,
         )
+
+
+class FakeAccountsWithoutDelegatedView(FakeAccounts):
+    permissions = ("collection.create",)
 
 
 class FakeOtherAreas:
@@ -78,8 +84,8 @@ class FakeOtherAreas:
                 can_collect_mobile=True,
                 can_enter_payment=True,
                 collection_message=(
-                    "Other-area payment. The assigned collector and linked client "
-                    "will be notified after posting."
+                    "Delegated other-area work. The assigned collector and linked "
+                    "client will be notified after posting."
                 ),
                 assigned_collector_user_id=ASSIGNED_COLLECTOR_ID,
                 assigned_collector_name="Collector Two",
@@ -87,12 +93,16 @@ class FakeOtherAreas:
         )
 
 
-def test_collector_can_search_an_explicit_other_area_client() -> None:
+def _client(accounts) -> TestClient:
     app = create_app()
     app.dependency_overrides[auth_client_dependency] = lambda: FakeAuthClient()
-    app.dependency_overrides[account_repository_dependency] = lambda: FakeAccounts()
+    app.dependency_overrides[account_repository_dependency] = lambda: accounts
     app.dependency_overrides[other_area_repository_dependency] = lambda: FakeOtherAreas()
-    client = TestClient(app)
+    return TestClient(app)
+
+
+def test_collector_can_search_a_granted_other_area_client() -> None:
+    client = _client(FakeAccounts())
 
     response = client.get(
         "/api/mobile/v1/collector/other-area-clients/search?q=Ana&limit=10",
@@ -110,3 +120,17 @@ def test_collector_can_search_an_explicit_other_area_client() -> None:
     assert data[0]["assigned_collector_name"] == "Collector Two"
     assert data[0]["can_enter_payment"] is True
     assert data[0]["route_revision"] == f"loan:{LOAN_ID}:v3"
+
+
+def test_other_area_search_requires_delegated_view_permission() -> None:
+    client = _client(FakeAccountsWithoutDelegatedView())
+
+    response = client.get(
+        "/api/mobile/v1/collector/other-area-clients/search?q=Ana&limit=10",
+        headers={
+            "Authorization": "Bearer collector-token",
+            "X-Device-Id": "device-one",
+        },
+    )
+
+    assert response.status_code == 403
