@@ -25,6 +25,7 @@ on:
       - 'gilbic_mobile/test/other_area_collection_page_test.dart'
       - 'gilbic_mobile/test/collector_remittance_page_test.dart'
       - 'gilbic_mobile/test/remittance_notifications_page_test.dart'
+      - 'gilbic_mobile/test/core/time/spina_business_time_test.dart'
       - 'gilbic_mobile/test/role_dashboard_permission_navigation_test.dart'
       - 'docs/release/collector-android-acceptance-matrix.md'
       - '.github/workflows/collector-android-release-candidate-acceptance.yml'
@@ -52,6 +53,7 @@ on:
       - 'gilbic_mobile/test/other_area_collection_page_test.dart'
       - 'gilbic_mobile/test/collector_remittance_page_test.dart'
       - 'gilbic_mobile/test/remittance_notifications_page_test.dart'
+      - 'gilbic_mobile/test/core/time/spina_business_time_test.dart'
       - 'gilbic_mobile/test/role_dashboard_permission_navigation_test.dart'
       - 'docs/release/collector-android-acceptance-matrix.md'
       - '.github/workflows/collector-android-release-candidate-acceptance.yml'
@@ -189,6 +191,7 @@ jobs:
             test\other_area_collection_page_test.dart ^
             test\collector_remittance_page_test.dart ^
             test\remittance_notifications_page_test.dart ^
+            test\core\time\spina_business_time_test.dart ^
             test\role_dashboard_permission_navigation_test.dart || exit /b 1
 
       - name: Reclaim packaging disk and isolate Gradle cache
