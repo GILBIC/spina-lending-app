@@ -11,14 +11,13 @@ from .collection_posting import PostgresCollectionPostingBridge
 
 
 class CrossCollectorCollectionPostingBridge(PostgresCollectionPostingBridge):
-    """Use the official posting transaction for delegated other-area work.
+    """Use the official posting transaction for assigned and delegated work.
 
-    The base bridge performs every balance, date, device, receipt, idempotency,
-    and loan-state validation. This override changes only the route-ownership
-    rejection, and only when the signed-in Collector has an active delegated
-    grant for the client's current area path. The database assignment trigger
-    continues to preserve both the recorder and the authoritative assigned
-    Collector.
+    The legacy base validator recognizes exact flat-area assignments. When it
+    returns ``route_not_assigned``, resolve the hierarchical authoritative owner
+    first: the owner may collect their own descendant sub-area without a grant.
+    Only a different visiting Collector must have an active delegated grant for
+    the client's current area path. Every other base validation remains intact.
     """
 
     @staticmethod
@@ -44,34 +43,45 @@ class CrossCollectorCollectionPostingBridge(PostgresCollectionPostingBridge):
         area_path = str(loan.get("area") or "").strip()
         cursor.execute(
             """
-            select lending.collector_has_active_delegated_area_access(
-                %s,
-                %s,
-                now()
-            ) as allowed
+            select
+                lending.collector_area_owner(%s) as assigned_collector_user_id,
+                lending.collector_has_active_delegated_area_access(
+                    %s,
+                    %s,
+                    now()
+                ) as delegated_allowed
             """,
-            (collector_user_id, area_path),
+            (area_path, collector_user_id, area_path),
         )
         access_row = cursor.fetchone()
-        access_allowed = False
+        assigned_collector_user_id = None
+        delegated_allowed = False
         if access_row is not None:
             try:
-                access_allowed = bool(access_row["allowed"])
+                assigned_collector_user_id = access_row["assigned_collector_user_id"]
+                delegated_allowed = bool(access_row["delegated_allowed"])
             except (KeyError, TypeError):
                 try:
-                    access_allowed = bool(access_row[0])
+                    assigned_collector_user_id = access_row[0]
+                    delegated_allowed = bool(access_row[1])
                 except (IndexError, KeyError, TypeError):
-                    access_allowed = False
-        if not access_allowed:
+                    assigned_collector_user_id = None
+                    delegated_allowed = False
+
+        is_authoritative_owner = (
+            assigned_collector_user_id is not None
+            and UUID(str(assigned_collector_user_id)) == collector_user_id
+        )
+        if not is_authoritative_owner and not delegated_allowed:
             raise CollectionRejected(
                 "You do not have active access to this assigned area. Ask the "
                 "assigned Collector to grant access, then refresh Other-Area Work.",
                 code="delegated_area_access_required",
             )
 
-        # The base method already validated the active client, active loan,
-        # reconciled state, and route revision before checking assignment.
-        # Preserve its final chronological safeguard after delegated access is
+        # The base method already validated the active client, active loan and
+        # reconciled state before checking flat assignment. Preserve its final
+        # chronological safeguard after hierarchical ownership/access is
         # revalidated inside the same official posting transaction.
         last_payment_date: date | None = loan["last_payment_date"]
         if last_payment_date is not None and command.collection_date < last_payment_date:
