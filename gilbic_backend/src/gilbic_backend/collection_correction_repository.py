@@ -262,15 +262,11 @@ class PostgresCollectionCorrectionRepository:
                             """,
                             (transaction_id, transaction["loan_id"], covered_date),
                         )
-                    cursor.execute(
-                        """
-                        select max(covered_date) as latest_covered_date
-                        from lending.collection_covered_dates
-                        where loan_id = %s
-                        """,
-                        (transaction["loan_id"],),
+                    advance_until_after = self._corrected_advance_until_after(
+                        entry_type=normalized_type,
+                        advance_until_before=before_state["advance_until_before"],
+                        selected_dates=selected_dates,
                     )
-                    advance_until_after = cursor.fetchone()["latest_covered_date"]
 
                     edited_at = datetime.now(timezone.utc)
                     edit_version = int(transaction["edit_version"]) + 1
@@ -452,6 +448,23 @@ class PostgresCollectionCorrectionRepository:
             route_revision=route_revision,
             edited_at=edited_at,
         )
+
+    @staticmethod
+    def _corrected_advance_until_after(
+        *,
+        entry_type: str,
+        advance_until_before: date | None,
+        selected_dates: tuple[date, ...],
+    ) -> date | None:
+        # advance_until represents ADV coverage only. A PASS or normal payment
+        # correction must preserve the previous ADV state even when ordinary
+        # payment covered dates exist later on the same loan.
+        if entry_type != "advance":
+            return advance_until_before
+        latest_selected = selected_dates[-1]
+        if advance_until_before is None:
+            return latest_selected
+        return max(advance_until_before, latest_selected)
 
     @staticmethod
     def _money(value: Decimal | int | str) -> Decimal:
