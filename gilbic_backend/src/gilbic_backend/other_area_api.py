@@ -71,8 +71,8 @@ def create_other_area_router() -> APIRouter:
             device_identifier=x_device_id,
             auth=auth,
             accounts=accounts,
-            permission="collection.create",
-            permission_error="Collection permission is required.",
+            permission="delegated_area.view",
+            permission_error="Delegated area access permission is required.",
         )
         records = other_areas.search(
             collector_user_id=actor.user_id,
