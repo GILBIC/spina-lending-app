@@ -175,6 +175,7 @@ def test_repository_returns_assigned_areas_and_authoritative_state(monkeypatch) 
     assert area_parameters == (COLLECTOR_USER_ID,)
     assert entry_parameters == (
         module.CONTRACT_ALLOCATION_SETTING,
+        COLLECTOR_USER_ID,
         route_date,
         route_date,
         route_date,
@@ -184,6 +185,10 @@ def test_repository_returns_assigned_areas_and_authoritative_state(monkeypatch) 
     entry_query = connection.entry_cursor.executions[0][0]
     assert "contract_next.effective_due_date as contract_next_unpaid_date" in entry_query
     assert "contract_next.due_date as contract_next_unpaid_date" not in entry_query
+    assert "lending.area_path_contains(" in entry_query
+    assert "lending.collector_area_owner(coalesce(c.area, '')) = %s" in entry_query
+    assert "char_length(lending.normalize_area_path(assignment.area)) desc" in entry_query
+    assert "lower(btrim(c.area)) = lower(btrim(a.area))" not in entry_query
 
 
 def test_assigned_owner_can_edit_latest_unlocked_cross_collector_receipt(monkeypatch) -> None:
