@@ -3,6 +3,7 @@ import 'package:gilbic_mobile/src/core/collector/other_area_client.dart';
 import 'package:gilbic_mobile/src/core/config/api_config.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:http/http.dart' as http;
 
 abstract interface class OtherAreaClientRepository {
@@ -10,20 +11,29 @@ abstract interface class OtherAreaClientRepository {
     UserSession session,
     String query,
   );
+
+  Future<List<OtherAreaClient>> listWork(
+    UserSession session,
+    DateTime workDate, {
+    String? assignedCollectorUserId,
+  });
 }
 
 class SpinaOtherAreaClientRepository implements OtherAreaClientRepository {
   SpinaOtherAreaClientRepository({
     http.Client? client,
     Uri? endpoint,
+    Uri? workEndpoint,
     DeviceIdentityProvider? deviceIdentityProvider,
   })  : _client = client ?? http.Client(),
         _endpoint = endpoint ?? ApiConfig.otherAreaSearchEndpoint,
+        _workEndpoint = workEndpoint ?? ApiConfig.delegatedAreaWorkEndpoint,
         _deviceIdentityProvider =
             deviceIdentityProvider ?? DeviceIdentityProvider();
 
   final http.Client _client;
   final Uri _endpoint;
+  final Uri _workEndpoint;
   final DeviceIdentityProvider _deviceIdentityProvider;
 
   @override
@@ -36,6 +46,49 @@ class SpinaOtherAreaClientRepository implements OtherAreaClientRepository {
       return const <OtherAreaClient>[];
     }
 
+    final uri = _endpoint.replace(
+      queryParameters: <String, String>{
+        ..._endpoint.queryParameters,
+        'q': normalized,
+        'limit': '25',
+      },
+    );
+    return _load(
+      session,
+      uri,
+      connectionMessage:
+          'Other-area clients could not be searched. Check the connection.',
+    );
+  }
+
+  @override
+  Future<List<OtherAreaClient>> listWork(
+    UserSession session,
+    DateTime workDate, {
+    String? assignedCollectorUserId,
+  }) async {
+    final ownerId = assignedCollectorUserId?.trim() ?? '';
+    final uri = _workEndpoint.replace(
+      queryParameters: <String, String>{
+        ..._workEndpoint.queryParameters,
+        'date': formatSpinaBusinessDate(workDate),
+        'limit': '500',
+        if (ownerId.isNotEmpty) 'assigned_collector_user_id': ownerId,
+      },
+    );
+    return _load(
+      session,
+      uri,
+      connectionMessage:
+          'Other-area work could not be loaded. Check the connection.',
+    );
+  }
+
+  Future<List<OtherAreaClient>> _load(
+    UserSession session,
+    Uri uri, {
+    required String connectionMessage,
+  }) async {
     late final DeviceIdentity identity;
     try {
       identity = await _deviceIdentityProvider.load();
@@ -44,14 +97,6 @@ class SpinaOtherAreaClientRepository implements OtherAreaClientRepository {
         'Gilbic could not access this installation identity. Restart the app and try again.',
       );
     }
-
-    final uri = _endpoint.replace(
-      queryParameters: <String, String>{
-        ..._endpoint.queryParameters,
-        'q': normalized,
-        'limit': '25',
-      },
-    );
 
     late final http.Response response;
     try {
@@ -65,9 +110,7 @@ class SpinaOtherAreaClientRepository implements OtherAreaClientRepository {
         },
       );
     } on Exception {
-      throw const SpinaApiException(
-        'Other-area clients could not be searched. Check the connection.',
-      );
+      throw SpinaApiException(connectionMessage);
     }
 
     Map<String, dynamic> payload;
