@@ -7,6 +7,7 @@ on:
       - 'gilbic_backend/sql/0097_add_delegated_collector_area_access.sql'
       - 'gilbic_backend/sql/0098_harden_hierarchical_collector_area_ownership.sql'
       - 'gilbic_backend/tests/test_delegated_area_access_postgres.py'
+      - 'tools/apply_0097_0098_delegated_area_migrations.py'
       - 'tools/run_delegated_area_disposable_postgres_validation.py'
       - '.github/workflows/delegated-area-disposable-postgres.yml'
   push:
@@ -15,6 +16,7 @@ on:
       - 'gilbic_backend/sql/0097_add_delegated_collector_area_access.sql'
       - 'gilbic_backend/sql/0098_harden_hierarchical_collector_area_ownership.sql'
       - 'gilbic_backend/tests/test_delegated_area_access_postgres.py'
+      - 'tools/apply_0097_0098_delegated_area_migrations.py'
       - 'tools/run_delegated_area_disposable_postgres_validation.py'
       - '.github/workflows/delegated-area-disposable-postgres.yml'
 
@@ -145,12 +147,13 @@ jobs:
           if not exist "%DELEGATE_READY_MARKER%" exit /b 1
           python -m venv "%DELEGATE_VENV%" || exit /b 1
           "%DELEGATE_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
-          "%DELEGATE_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9" || exit /b 1
+          "%DELEGATE_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9" "pydantic-settings>=2.7,<3" || exit /b 1
 
       - name: Compile delegated-area proof
         shell: cmd
         run: |
           "%DELEGATE_VENV%\Scripts\python.exe" -m py_compile tools\run_stage5d17_disposable_postgres_validation.py || exit /b 1
+          "%DELEGATE_VENV%\Scripts\python.exe" -m py_compile tools\apply_0097_0098_delegated_area_migrations.py || exit /b 1
           "%DELEGATE_VENV%\Scripts\python.exe" -m py_compile tools\run_delegated_area_disposable_postgres_validation.py || exit /b 1
           "%DELEGATE_VENV%\Scripts\python.exe" -m py_compile gilbic_backend\tests\test_delegated_area_access_postgres.py || exit /b 1
 
