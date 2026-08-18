@@ -329,10 +329,26 @@ class PostgresCollectorRouteRepository:
                         coalesce(today.covered_dates, ARRAY[]::date[]) as today_covered_dates,
                         coalesce(today.receipts, '[]'::jsonb) as today_receipts,
                         coalesce(coverage.covered_dates, ARRAY[]::date[]) as covered_dates
-                    from lending.collector_area_assignments a
-                    join lending.clients c
-                      on lower(btrim(c.area)) = lower(btrim(a.area))
-                     and c.status = 'active'
+                    from lending.clients c
+                    join lateral (
+                        select
+                            assignment.area as assignment_area,
+                            assignment.sort_order
+                        from lending.collector_area_assignments assignment
+                        where assignment.collector_user_id = %s
+                          and assignment.is_active = true
+                          and lending.area_path_contains(
+                              assignment.area,
+                              coalesce(c.area, ''),
+                              true
+                          )
+                        order by
+                            char_length(lending.normalize_area_path(assignment.area)) desc,
+                            assignment.sort_order,
+                            lower(lending.normalize_area_path(assignment.area)),
+                            assignment.id
+                        limit 1
+                    ) route_assignment on true
                     join lending.loans l
                       on l.client_id = c.id
                      and l.status = 'active'
@@ -478,17 +494,20 @@ class PostgresCollectorRouteRepository:
                         order by balance.effective_due_date
                         limit 1
                     ) contract_next on true
-                    where a.collector_user_id = %s
-                      and a.is_active = true
+                    where c.status = 'active'
+                      and lending.collector_area_owner(coalesce(c.area, '')) = %s
                       and coalesce(s.remaining_balance, l.principal) > 0
                     order by
-                        a.sort_order,
+                        route_assignment.sort_order,
+                        lower(lending.normalize_area_path(route_assignment.assignment_area)),
+                        lower(coalesce(c.area, '')),
                         lower(c.full_name),
                         l.date_released,
                         l.id
                     """,
                     (
                         CONTRACT_ALLOCATION_SETTING,
+                        collector_user_id,
                         route_date,
                         route_date,
                         route_date,
