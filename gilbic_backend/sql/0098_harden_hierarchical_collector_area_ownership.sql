@@ -45,7 +45,10 @@ RETURNS BOOLEAN
 LANGUAGE sql
 STABLE
 AS $$
-    SELECT lending.collector_area_owner(candidate_area_path) = collector_user_id;
+    SELECT coalesce(
+        lending.collector_area_owner(candidate_area_path) = collector_user_id,
+        false
+    );
 $$;
 
 -- A delegated grant is valid only while the grantor is still the authoritative
