@@ -12,6 +12,7 @@ import 'package:gilbic_mobile/src/features/client/client_support_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
+import 'package:gilbic_mobile/src/features/collector/delegated_area_access_page.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
@@ -74,6 +75,16 @@ class RoleDashboard extends StatelessWidget {
           paymentRepository: paymentSubmissionRepository,
           deviceIdentityProvider: deviceIdentityProvider,
           deviceSequence: collectionDeviceSequence,
+        ),
+      );
+      return;
+    }
+    if (session.role == AppRole.collector && action == 'delegated-area-access') {
+      _push(
+        context,
+        DelegatedAreaAccessPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
         ),
       );
       return;
@@ -444,11 +455,18 @@ List<_DashboardModule> _modulesFor(AppRole role) {
           requiredPermissions: <String>['route.view', 'collection.create'],
         ),
         _DashboardModule(
-          'Other Area Payment',
-          'Search a client who paid a different collector',
+          'Temporary Area Access',
+          'Request, approve, review, or revoke Collector area access',
+          Icons.add_location_alt_outlined,
+          action: 'delegated-area-access',
+          requiredPermissions: <String>['delegated_area.view'],
+        ),
+        _DashboardModule(
+          'Other-Area Work',
+          'Search only clients inside currently approved temporary areas',
           Icons.person_search,
           action: 'other-area-payment',
-          requiredPermissions: <String>['collection.create'],
+          requiredPermissions: <String>['delegated_area.view', 'collection.create'],
         ),
         _DashboardModule(
           'Management Remittance',
