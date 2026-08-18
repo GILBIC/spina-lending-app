@@ -463,7 +463,7 @@ List<_DashboardModule> _modulesFor(AppRole role) {
         ),
         _DashboardModule(
           'Other-Area Work',
-          'Search only clients inside currently approved temporary areas',
+          "Today's clients inside currently approved temporary areas",
           Icons.person_search,
           action: 'other-area-payment',
           requiredPermissions: <String>['delegated_area.view', 'collection.create'],
