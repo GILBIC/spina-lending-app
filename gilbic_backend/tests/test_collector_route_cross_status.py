@@ -96,6 +96,6 @@ def test_owners_own_receipt_keeps_normal_status_and_correction_flag() -> None:
         cross_status=None,
     )
 
-    assert payload["today_recorded_by_other_user"] is False
+    assert "today_recorded_by_other_user" not in payload
     assert payload["status"] == "Recorded today"
     assert payload["can_edit_today"] is True
