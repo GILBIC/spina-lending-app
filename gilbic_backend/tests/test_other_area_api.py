@@ -15,19 +15,19 @@ from gilbic_backend.other_area_repository import OtherAreaLoanRecord
 
 
 AUTH_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
-COLLECTOR_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
+ACTOR_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
 ASSIGNED_COLLECTOR_ID = UUID("33333333-3333-4333-8333-333333333333")
 CLIENT_ID = UUID("44444444-4444-4444-8444-444444444444")
 LOAN_ID = UUID("55555555-5555-4555-8555-555555555555")
-WORK_DATE = date(2026, 8, 17)
+WORK_DATE = date(2026, 8, 18)
 
 
 class FakeAuthClient:
     def get_user(self, *, access_token: str) -> AuthSession:
-        assert access_token == "collector-token"
+        assert access_token == "actor-token"
         return AuthSession(
             auth_user_id=AUTH_USER_ID,
-            email="collector@example.com",
+            email="actor@example.com",
             access_token=access_token,
             refresh_token=None,
             expires_at=None,
@@ -36,7 +36,9 @@ class FakeAuthClient:
 
 
 class FakeAccounts:
-    permissions = ("collection.create", "delegated_area.view")
+    def __init__(self, *, roles: tuple[str, ...], permissions: tuple[str, ...]) -> None:
+        self.roles = roles
+        self.permissions = permissions
 
     def get_context_for_device(
         self,
@@ -47,20 +49,16 @@ class FakeAccounts:
         assert auth_user_id == AUTH_USER_ID
         assert device_identifier == "device-one"
         return AccountContext(
-            user_id=COLLECTOR_USER_ID,
+            user_id=ACTOR_USER_ID,
             auth_user_id=AUTH_USER_ID,
-            username="collector.one",
-            email="collector@example.com",
-            full_name="Collector One",
+            username="actor.one",
+            email="actor@example.com",
+            full_name="Actor One",
             status="active",
-            roles=("collector",),
+            roles=self.roles,
             permissions=self.permissions,
             device_registered=True,
         )
-
-
-class FakeAccountsWithoutDelegatedView(FakeAccounts):
-    permissions = ("collection.create",)
 
 
 def _record(*, processed_today: bool = False) -> OtherAreaLoanRecord:
@@ -92,7 +90,7 @@ def _record(*, processed_today: bool = False) -> OtherAreaLoanRecord:
         assigned_collector_name="Collector Two",
         processed_today=processed_today,
         today_entry_type="payment" if processed_today else "",
-        today_collector_user_id=(COLLECTOR_USER_ID if processed_today else None),
+        today_collector_user_id=(ACTOR_USER_ID if processed_today else None),
         today_collector_name="Collector Three" if processed_today else "",
         today_amount=Decimal("200.00") if processed_today else Decimal("0.00"),
         today_is_locked=processed_today,
@@ -100,46 +98,58 @@ def _record(*, processed_today: bool = False) -> OtherAreaLoanRecord:
 
 
 class FakeOtherAreas:
-    def search(self, *, collector_user_id: UUID, query: str, limit: int):
-        assert collector_user_id == COLLECTOR_USER_ID
-        assert query == "Ana"
-        assert limit == 10
+    def __init__(self) -> None:
+        self.collector_search_calls: list[dict[str, object]] = []
+        self.management_search_calls: list[dict[str, object]] = []
+        self.work_calls: list[dict[str, object]] = []
+
+    def search(self, **kwargs):
+        self.collector_search_calls.append(kwargs)
         return (_record(),)
 
-    def list_work(
-        self,
-        *,
-        collector_user_id: UUID,
-        collection_date: date,
-        assigned_collector_user_id: UUID | None,
-        limit: int,
-    ):
-        assert collector_user_id == COLLECTOR_USER_ID
-        assert collection_date == WORK_DATE
-        assert assigned_collector_user_id == ASSIGNED_COLLECTOR_ID
-        assert limit == 500
+    def search_management_direct(self, **kwargs):
+        self.management_search_calls.append(kwargs)
+        return (_record(),)
+
+    def list_work(self, **kwargs):
+        self.work_calls.append(kwargs)
         return (_record(processed_today=True),)
 
 
-def _client(accounts) -> TestClient:
+def _client(
+    *,
+    roles: tuple[str, ...],
+    permissions: tuple[str, ...],
+) -> tuple[TestClient, FakeOtherAreas]:
+    repository = FakeOtherAreas()
+    accounts = FakeAccounts(roles=roles, permissions=permissions)
     app = create_app()
     app.dependency_overrides[auth_client_dependency] = lambda: FakeAuthClient()
     app.dependency_overrides[account_repository_dependency] = lambda: accounts
-    app.dependency_overrides[other_area_repository_dependency] = lambda: FakeOtherAreas()
-    return TestClient(app)
+    app.dependency_overrides[other_area_repository_dependency] = lambda: repository
+    return TestClient(app), repository
+
+
+def _headers() -> dict[str, str]:
+    return {
+        "Authorization": "Bearer actor-token",
+        "X-Device-Id": "device-one",
+    }
 
 
 def test_collector_can_list_granted_other_area_work_and_see_today_recorder() -> None:
-    client = _client(FakeAccounts())
+    client, repository = _client(
+        roles=("collector",),
+        permissions=("collection.create", "delegated_area.view"),
+    )
 
     response = client.get(
-        "/api/mobile/v1/collector/delegated-area/work"
-        f"?date={WORK_DATE.isoformat()}"
-        f"&assigned_collector_user_id={ASSIGNED_COLLECTOR_ID}",
-        headers={
-            "Authorization": "Bearer collector-token",
-            "X-Device-Id": "device-one",
+        "/api/mobile/v1/collector/delegated-area/work",
+        params={
+            "date": WORK_DATE.isoformat(),
+            "assigned_collector_user_id": str(ASSIGNED_COLLECTOR_ID),
         },
+        headers=_headers(),
     )
 
     assert response.status_code == 200
@@ -154,17 +164,44 @@ def test_collector_can_list_granted_other_area_work_and_see_today_recorder() -> 
     assert data[0]["today_amount"] == "200.00"
     assert data[0]["today_is_locked"] is True
     assert data[0]["can_enter_payment"] is False
+    assert repository.work_calls == [
+        {
+            "collector_user_id": ACTOR_USER_ID,
+            "collection_date": WORK_DATE,
+            "assigned_collector_user_id": ASSIGNED_COLLECTOR_ID,
+            "limit": 500,
+        }
+    ]
 
 
-def test_collector_can_search_a_granted_other_area_client() -> None:
-    client = _client(FakeAccounts())
+def test_collector_search_requires_delegated_view_permission() -> None:
+    client, repository = _client(
+        roles=("collector",),
+        permissions=("collection.create",),
+    )
 
     response = client.get(
-        "/api/mobile/v1/collector/other-area-clients/search?q=Ana&limit=10",
-        headers={
-            "Authorization": "Bearer collector-token",
-            "X-Device-Id": "device-one",
-        },
+        "/api/mobile/v1/collector/other-area-clients/search",
+        params={"q": "Ana", "limit": 10},
+        headers=_headers(),
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Delegated area access permission is required."
+    assert repository.collector_search_calls == []
+    assert repository.management_search_calls == []
+
+
+def test_collector_search_uses_delegated_authorized_path() -> None:
+    client, repository = _client(
+        roles=("collector",),
+        permissions=("collection.create", "delegated_area.view"),
+    )
+
+    response = client.get(
+        "/api/mobile/v1/collector/other-area-clients/search",
+        params={"q": "Ana", "limit": 10},
+        headers=_headers(),
     )
 
     assert response.status_code == 200
@@ -173,25 +210,67 @@ def test_collector_can_search_a_granted_other_area_client() -> None:
     assert data[0]["client_name"] == "Ana Client"
     assert data[0]["is_other_area"] is True
     assert data[0]["assigned_collector_name"] == "Collector Two"
-    assert data[0]["can_enter_payment"] is True
-    assert data[0]["route_revision"] == f"loan:{LOAN_ID}:v3"
+    assert repository.collector_search_calls == [
+        {
+            "collector_user_id": ACTOR_USER_ID,
+            "query": "Ana",
+            "limit": 10,
+        }
+    ]
+    assert repository.management_search_calls == []
 
 
-def test_other_area_surfaces_require_delegated_view_permission() -> None:
-    client = _client(FakeAccountsWithoutDelegatedView())
-    headers = {
-        "Authorization": "Bearer collector-token",
-        "X-Device-Id": "device-one",
-    }
-
-    search = client.get(
-        "/api/mobile/v1/collector/other-area-clients/search?q=Ana&limit=10",
-        headers=headers,
-    )
-    work = client.get(
-        f"/api/mobile/v1/collector/delegated-area/work?date={WORK_DATE.isoformat()}",
-        headers=headers,
+def test_management_direct_search_does_not_require_delegated_permission() -> None:
+    client, repository = _client(
+        roles=("management",),
+        permissions=("collection.create",),
     )
 
-    assert search.status_code == 403
-    assert work.status_code == 403
+    response = client.get(
+        "/api/mobile/v1/collector/other-area-clients/search",
+        params={"q": "Ana"},
+        headers=_headers(),
+    )
+
+    assert response.status_code == 200
+    assert repository.collector_search_calls == []
+    assert repository.management_search_calls == [
+        {
+            "management_user_id": ACTOR_USER_ID,
+            "query": "Ana",
+            "limit": 25,
+        }
+    ]
+
+
+def test_non_collector_non_management_cannot_use_payment_search() -> None:
+    client, repository = _client(
+        roles=("employee",),
+        permissions=("collection.create",),
+    )
+
+    response = client.get(
+        "/api/mobile/v1/collector/other-area-clients/search",
+        params={"q": "Ana"},
+        headers=_headers(),
+    )
+
+    assert response.status_code == 403
+    assert repository.collector_search_calls == []
+    assert repository.management_search_calls == []
+
+
+def test_delegated_work_endpoint_is_collector_only_even_with_permission() -> None:
+    client, repository = _client(
+        roles=("management",),
+        permissions=("delegated_area.view",),
+    )
+
+    response = client.get(
+        "/api/mobile/v1/collector/delegated-area/work",
+        params={"date": WORK_DATE.isoformat()},
+        headers=_headers(),
+    )
+
+    assert response.status_code == 403
+    assert repository.work_calls == []
