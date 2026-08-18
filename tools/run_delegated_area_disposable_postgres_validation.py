@@ -14,9 +14,11 @@ import run_stage5d17_disposable_postgres_validation as disposable
 
 
 TEST_DATABASE_PREFIX = "spina_delegated_area_"
-BOOTSTRAP_THROUGH = 98
+BOOTSTRAP_THROUGH = 96
+ROOT = Path(__file__).resolve().parents[1]
+APPLY_TOOL = ROOT / "tools" / "apply_0097_0098_delegated_area_migrations.py"
 INTEGRATION_TEST = (
-    Path(__file__).resolve().parents[1]
+    ROOT
     / "gilbic_backend"
     / "tests"
     / "test_delegated_area_access_postgres.py"
@@ -28,18 +30,36 @@ def _configure_shared_safety_helpers() -> None:
     disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
 
 
+def _subprocess_env(test_database_url: str) -> dict[str, str]:
+    env = os.environ.copy()
+    for key in disposable.ENDPOINT_ENV_KEYS:
+        env.pop(key, None)
+    env["GILBIC_DATABASE_URL"] = test_database_url
+    env["GILBIC_TEST_DATABASE_URL"] = test_database_url
+    return env
+
+
+def _run_live_apply_tool(test_database_url: str) -> int:
+    if not APPLY_TOOL.is_file():
+        raise SystemExit(
+            "Delegated-area validation refused: guarded live migration tool is missing."
+        )
+    completed = subprocess.run(
+        [sys.executable, str(APPLY_TOOL)],
+        env=_subprocess_env(test_database_url),
+        check=False,
+    )
+    return int(completed.returncode)
+
+
 def _run_test(test_database_url: str) -> int:
     if not INTEGRATION_TEST.is_file():
         raise SystemExit(
             "Delegated-area validation refused: integration test file is missing."
         )
-    env = os.environ.copy()
-    for key in disposable.ENDPOINT_ENV_KEYS:
-        env.pop(key, None)
-    env["GILBIC_TEST_DATABASE_URL"] = test_database_url
     completed = subprocess.run(
         [sys.executable, "-m", "pytest", "-q", str(INTEGRATION_TEST)],
-        env=env,
+        env=_subprocess_env(test_database_url),
         check=False,
     )
     return int(completed.returncode)
@@ -48,10 +68,10 @@ def _run_test(test_database_url: str) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Create a loopback-only disposable PostgreSQL database, replay the exact "
-            "SPINA schema through delegated-area migrations 0097/0098, prove "
-            "hierarchical ownership and temporary grant safety, then delete the "
-            "disposable database."
+            "Create a loopback-only disposable PostgreSQL database, replay SPINA through "
+            "0096, install 0097/0098 through the same guarded live migration runner used "
+            "for acceptance, prove hierarchy/grant safety and idempotent verification, "
+            "then delete the disposable database."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -101,6 +121,22 @@ def main() -> int:
 
         disposable._install_supabase_auth_prerequisite(test_url)
         disposable._bootstrap_database(test_url)
+
+        first_apply = _run_live_apply_tool(test_url)
+        if first_apply != 0:
+            raise SystemExit(
+                "Delegated-area disposable PostgreSQL validation failed: guarded 0097/0098 "
+                f"installation exited with code {first_apply}."
+            )
+
+        # Exact retry must be verification-only and succeed without changing evidence.
+        second_apply = _run_live_apply_tool(test_url)
+        if second_apply != 0:
+            raise SystemExit(
+                "Delegated-area disposable PostgreSQL validation failed: guarded 0097/0098 "
+                f"idempotent verification exited with code {second_apply}."
+            )
+
         result = _run_test(test_url)
         if result != 0:
             raise SystemExit(
@@ -109,13 +145,13 @@ def main() -> int:
             )
         print(
             "Delegated-area disposable PostgreSQL validation passed: the exact schema "
-            "through 0098 replayed in a fresh loopback-only database; Collector "
-            "permissions, normalized hierarchical path boundaries, most-specific "
-            "ownership, equal-specificity ambiguity fail-closed behavior, temporary "
-            "grant ownership revalidation, nested override invalidation, expiry, "
-            "revocation, and immutable request/grant/scope/event evidence were proven. "
-            "The migration contract also preserves existing collection history and "
-            "routes future assignment capture through the hierarchical owner function."
+            "through 0096 was replayed first, the guarded acceptance runner installed "
+            "0097/0098 and then verified an exact retry without changes, and the resulting "
+            "schema proved Collector permissions, normalized hierarchical path boundaries, "
+            "most-specific ownership, equal-specificity ambiguity fail-closed behavior, "
+            "temporary grant ownership revalidation, nested override invalidation, expiry, "
+            "revocation, immutable request/grant/scope/event evidence, preservation of "
+            "existing collection history, and hierarchical future assignment capture."
         )
         return 0
     except psycopg.Error as error:
