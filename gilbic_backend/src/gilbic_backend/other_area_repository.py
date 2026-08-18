@@ -46,16 +46,68 @@ class PostgresOtherAreaRepository:
         query: str,
         limit: int = 25,
     ) -> tuple[OtherAreaLoanRecord, ...]:
+        return self._search_active_loans(
+            actor_user_id=collector_user_id,
+            query=query,
+            limit=limit,
+            require_delegated_access=True,
+        )
+
+    def search_management_direct(
+        self,
+        *,
+        management_user_id: UUID,
+        query: str,
+        limit: int = 25,
+    ) -> tuple[OtherAreaLoanRecord, ...]:
+        """Search active loans for the distinct Management direct-payment path.
+
+        Management direct payment is authorized by Management role plus
+        collection.create. It must never acquire or depend on a Collector's
+        temporary delegated-area grant.
+        """
+        return self._search_active_loans(
+            actor_user_id=management_user_id,
+            query=query,
+            limit=limit,
+            require_delegated_access=False,
+        )
+
+    def _search_active_loans(
+        self,
+        *,
+        actor_user_id: UUID,
+        query: str,
+        limit: int,
+        require_delegated_access: bool,
+    ) -> tuple[OtherAreaLoanRecord, ...]:
         normalized = " ".join(query.split()).strip()
         if len(normalized) < 2:
             return ()
         pattern = f"%{normalized}%"
         safe_limit = max(1, min(limit, 50))
+        delegated_clause = (
+            """
+                      and lending.collector_area_owner(coalesce(client.area, ''))
+                          is distinct from %s
+                      and lending.collector_has_active_delegated_area_access(
+                          %s,
+                          coalesce(client.area, ''),
+                          now()
+                      )
+            """
+            if require_delegated_access
+            else ""
+        )
+        params: list[object] = []
+        if require_delegated_access:
+            params.extend((actor_user_id, actor_user_id))
+        params.extend((pattern, pattern, pattern, pattern, safe_limit))
 
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
-                    """
+                    f"""
                     select
                         loan.id as route_entry_id,
                         client.id as client_id,
@@ -105,13 +157,7 @@ class PostgresOtherAreaRepository:
                       )
                     where client.status = 'active'
                       and coalesce(state.remaining_balance, loan.principal) > 0
-                      and lending.collector_area_owner(coalesce(client.area, ''))
-                          is distinct from %s
-                      and lending.collector_has_active_delegated_area_access(
-                          %s,
-                          coalesce(client.area, ''),
-                          now()
-                      )
+                      {delegated_clause}
                       and (
                           client.full_name ilike %s
                           or client.client_code ilike %s
@@ -124,15 +170,7 @@ class PostgresOtherAreaRepository:
                         loan.id
                     limit %s
                     """,
-                    (
-                        collector_user_id,
-                        collector_user_id,
-                        pattern,
-                        pattern,
-                        pattern,
-                        pattern,
-                        safe_limit,
-                    ),
+                    tuple(params),
                 )
                 rows = cursor.fetchall()
 
