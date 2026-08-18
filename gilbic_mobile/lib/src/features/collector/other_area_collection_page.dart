@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
+import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/other_area_client.dart';
 import 'package:gilbic_mobile/src/core/collector/other_area_client_repository.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
@@ -739,17 +740,17 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
 class _TodayResult extends StatelessWidget {
   const _TodayResult({required this.entry});
 
-  final dynamic entry;
+  final CollectorRouteEntry entry;
 
   @override
   Widget build(BuildContext context) {
-    final entryType = entry.todayEntryType.toString().trim().toLowerCase();
-    final recorder = entry.todayCollectorName.toString().trim().isEmpty
+    final entryType = entry.todayEntryType.trim().toLowerCase();
+    final recorder = entry.todayCollectorName.trim().isEmpty
         ? 'Collector'
-        : entry.todayCollectorName.toString().trim();
+        : entry.todayCollectorName.trim();
     final status = entryType == 'pass'
         ? 'Unable to pay'
-        : 'Collected ${_money(entry.todayAmount as double)}';
+        : 'Collected ${_money(entry.todayAmount)}';
     return Container(
       key: Key('other-area-today-${entry.loanId}'),
       width: double.infinity,
@@ -763,7 +764,7 @@ class _TodayResult extends StatelessWidget {
         children: [
           Text(status, style: Theme.of(context).textTheme.titleSmall),
           Text('Recorded by: $recorder'),
-          if (entry.todayIsLocked as bool) const Text('Entry: Locked'),
+          if (entry.todayIsLocked) const Text('Entry: Locked'),
         ],
       ),
     );
