@@ -23,8 +23,8 @@ def test_original_recorder_keeps_unremitted_correction_authority() -> None:
     )
 
 
-def test_assigned_owner_can_correct_true_cross_collector_receipt() -> None:
-    assert collector_may_correct_unremitted(
+def test_assigned_owner_cannot_correct_visiting_collectors_receipt() -> None:
+    assert not collector_may_correct_unremitted(
         actor_user_id=ASSIGNED,
         recorder_user_id=RECORDER,
         assigned_collector_user_id=ASSIGNED,
@@ -32,7 +32,7 @@ def test_assigned_owner_can_correct_true_cross_collector_receipt() -> None:
     )
 
 
-def test_assigned_owner_does_not_gain_management_direct_or_unassigned_bypass() -> None:
+def test_assigned_owner_does_not_gain_other_origin_bypass() -> None:
     for origin in ("management_direct", "unassigned_intake", "assigned_route"):
         assert not collector_may_correct_unremitted(
             actor_user_id=ASSIGNED,
