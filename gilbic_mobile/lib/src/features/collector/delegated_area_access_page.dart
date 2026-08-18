@@ -116,7 +116,7 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
       return;
     }
 
-    final reasonController = TextEditingController();
+    var reasonText = '';
     var selectedOwnerId = orderedOwners.first.userId;
     final draft = await showDialog<_AccessRequestDraft>(
       context: context,
@@ -159,7 +159,7 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
                 const SizedBox(height: 12),
                 TextField(
                   key: const Key('delegated-request-reason'),
-                  controller: reasonController,
+                  onChanged: (value) => reasonText = value,
                   maxLength: 500,
                   decoration: const InputDecoration(
                     labelText: 'Reason',
@@ -177,7 +177,7 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
             OutlinedButton(
               key: const Key('request-all-delegated-areas'),
               onPressed: () {
-                final reason = reasonController.text.trim();
+                final reason = reasonText.trim();
                 if (reason.isEmpty) {
                   return;
                 }
@@ -194,7 +194,7 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
             FilledButton(
               key: const Key('request-owner-delegated-areas'),
               onPressed: () {
-                final reason = reasonController.text.trim();
+                final reason = reasonText.trim();
                 if (reason.isEmpty) {
                   return;
                 }
@@ -212,7 +212,6 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
         ),
       ),
     );
-    reasonController.dispose();
     if (draft == null || !mounted) {
       return;
     }
@@ -311,14 +310,14 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
   }
 
   Future<void> _revoke(DelegatedAreaGrant grant) async {
-    final controller = TextEditingController();
+    var revokeReason = '';
     final reason = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Revoke temporary access?'),
         content: TextField(
           key: const Key('delegated-revoke-reason'),
-          controller: controller,
+          onChanged: (value) => revokeReason = value,
           maxLength: 500,
           decoration: const InputDecoration(
             labelText: 'Reason',
@@ -333,7 +332,7 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
           FilledButton(
             key: const Key('confirm-delegated-revoke'),
             onPressed: () {
-              final value = controller.text.trim();
+              final value = revokeReason.trim();
               if (value.isNotEmpty) {
                 Navigator.of(context).pop(value);
               }
@@ -343,7 +342,6 @@ class _DelegatedAreaAccessPageState extends State<DelegatedAreaAccessPage> {
         ],
       ),
     );
-    controller.dispose();
     if (reason == null || !mounted) {
       return;
     }
