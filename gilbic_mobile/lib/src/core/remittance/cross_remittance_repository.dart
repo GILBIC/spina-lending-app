@@ -8,6 +8,12 @@ import 'package:gilbic_mobile/src/core/remittance/remittance.dart';
 import 'package:http/http.dart' as http;
 
 abstract interface class CrossRemittanceRepository {
+  Future<List<CrossCollectionStatus>> loadCollectionHistory(
+    UserSession session, {
+    required String deviceId,
+    DateTime? collectionDate,
+  });
+
   Future<List<CrossRemittanceTarget>> loadTargets(
     UserSession session, {
     required String deviceId,
@@ -35,6 +41,35 @@ class SpinaCrossRemittanceRepository implements CrossRemittanceRepository {
       : _client = client ?? http.Client();
 
   final http.Client _client;
+
+  @override
+  Future<List<CrossCollectionStatus>> loadCollectionHistory(
+    UserSession session, {
+    required String deviceId,
+    DateTime? collectionDate,
+  }) async {
+    final base = ApiConfig.endpoint(
+      '/api/mobile/v1/collector/cross-remittances/history',
+    );
+    final data = await _request(
+      session,
+      deviceId: deviceId,
+      method: 'GET',
+      uri: base.replace(
+        queryParameters: <String, String>{
+          'limit': '500',
+          if (collectionDate != null) 'collection_date': _date(collectionDate),
+        },
+      ),
+    );
+    if (data is! Iterable) {
+      return const <CrossCollectionStatus>[];
+    }
+    return data
+        .map(CrossCollectionStatus.fromPayload)
+        .whereType<CrossCollectionStatus>()
+        .toList(growable: false);
+  }
 
   @override
   Future<List<CrossRemittanceTarget>> loadTargets(
