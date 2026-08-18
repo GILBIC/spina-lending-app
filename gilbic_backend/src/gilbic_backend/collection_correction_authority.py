@@ -12,19 +12,14 @@ def collector_may_correct_unremitted(
 ) -> bool:
     """Return whether a Collector may correct one unlocked receipt.
 
-    The original recorder always keeps pre-remittance correction authority.
-    For a true cross-collector receipt, the assigned route owner shares that
-    authority. No other collection origin grants an assigned-area bypass.
-    Remittance/lock checks remain the caller's separate hard gate.
+    Collector correction authority stays with the original recorder. Temporary
+    delegated area access never transfers ownership of another Collector's
+    historical receipt to the assigned route owner. Remittance/lock checks
+    remain the caller's separate hard gate.
     """
 
-    if actor_user_id == recorder_user_id:
-        return True
-    return (
-        collection_origin.strip().lower() == "cross_collector"
-        and assigned_collector_user_id is not None
-        and actor_user_id == assigned_collector_user_id
-    )
+    del assigned_collector_user_id, collection_origin
+    return actor_user_id == recorder_user_id
 
 
 def correction_revision_is_current(
