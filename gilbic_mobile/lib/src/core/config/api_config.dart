@@ -41,6 +41,31 @@ class ApiConfig {
     defaultValue: '/api/mobile/v1/collector/other-area-clients/search',
   );
 
+  static const String delegatedAreaWorkPath = String.fromEnvironment(
+    'GILBIC_DELEGATED_AREA_WORK_PATH',
+    defaultValue: '/api/mobile/v1/collector/delegated-area/work',
+  );
+
+  static const String delegatedAreaAvailableScopesPath = String.fromEnvironment(
+    'GILBIC_DELEGATED_AREA_AVAILABLE_SCOPES_PATH',
+    defaultValue: '/api/mobile/v1/collector/delegated-area/available-scopes',
+  );
+
+  static const String delegatedAreaIncomingRequestsPath = String.fromEnvironment(
+    'GILBIC_DELEGATED_AREA_INCOMING_REQUESTS_PATH',
+    defaultValue: '/api/mobile/v1/collector/delegated-area/requests/incoming',
+  );
+
+  static const String delegatedAreaOutgoingRequestsPath = String.fromEnvironment(
+    'GILBIC_DELEGATED_AREA_OUTGOING_REQUESTS_PATH',
+    defaultValue: '/api/mobile/v1/collector/delegated-area/requests/outgoing',
+  );
+
+  static const String delegatedAreaActiveGrantsPath = String.fromEnvironment(
+    'GILBIC_DELEGATED_AREA_ACTIVE_GRANTS_PATH',
+    defaultValue: '/api/mobile/v1/collector/delegated-area/grants/active',
+  );
+
   static const String paymentSubmissionPath = String.fromEnvironment(
     'GILBIC_PAYMENT_SUBMISSION_PATH',
     defaultValue: '/api/mobile/v1/collector/collections',
@@ -64,6 +89,37 @@ class ApiConfig {
   static Uri get collectorRouteEndpoint => endpoint(collectorRoutePath);
 
   static Uri get otherAreaSearchEndpoint => endpoint(otherAreaSearchPath);
+
+  static Uri get delegatedAreaWorkEndpoint => endpoint(delegatedAreaWorkPath);
+
+  static Uri get delegatedAreaAvailableScopesEndpoint =>
+      endpoint(delegatedAreaAvailableScopesPath);
+
+  static Uri get delegatedAreaIncomingRequestsEndpoint =>
+      endpoint(delegatedAreaIncomingRequestsPath);
+
+  static Uri get delegatedAreaOutgoingRequestsEndpoint =>
+      endpoint(delegatedAreaOutgoingRequestsPath);
+
+  static Uri get delegatedAreaActiveGrantsEndpoint =>
+      endpoint(delegatedAreaActiveGrantsPath);
+
+  static Uri get delegatedAreaRequestsEndpoint =>
+      endpoint('/api/mobile/v1/collector/delegated-area/requests');
+
+  static Uri delegatedAreaRequestActionEndpoint(
+    String requestId,
+    String action,
+  ) =>
+      endpoint(
+        '/api/mobile/v1/collector/delegated-area/requests/'
+        '${Uri.encodeComponent(requestId)}/${Uri.encodeComponent(action)}',
+      );
+
+  static Uri delegatedAreaGrantRevokeEndpoint(String grantId) => endpoint(
+        '/api/mobile/v1/collector/delegated-area/grants/'
+        '${Uri.encodeComponent(grantId)}/revoke',
+      );
 
   static Uri get paymentSubmissionEndpoint => endpoint(paymentSubmissionPath);
 
