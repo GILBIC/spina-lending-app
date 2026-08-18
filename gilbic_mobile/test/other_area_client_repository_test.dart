@@ -41,34 +41,39 @@ void main() {
         );
         expect(request.headers['authorization'], 'Bearer collector-token');
         expect(request.headers['x-device-id'], 'delegated-work-device');
-        return http.Response(
-          jsonEncode(<String, Object?>{
-            'success': true,
-            'data': <Object?>[
-              <String, Object?>{
-                'route_entry_id': 'loan-other',
-                'client_id': 'client-other',
-                'loan_id': 'loan-other',
-                'client_name': 'Bea Borrower',
-                'client_code': 'C-OTHER',
-                'phone_number': '09170000000',
-                'area': 'Taytay › San Juan',
-                'loan_type': 'Regular',
-                'daily_amount': '200.00',
-                'remaining_balance': '4800.00',
-                'pass_count': 0,
-                'status': 'Pending',
-                'route_revision': 'loan:loan-other:v3',
-                'can_collect_mobile': true,
-                'can_enter_payment': true,
-                'collection_message': 'Delegated other-area work.',
-                'assigned_collector_user_id': 'collector-two',
-                'assigned_collector_name': 'Collector Two',
-                'processed_today': false,
-              },
-            ],
-          }),
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <Object?>[
+                <String, Object?>{
+                  'route_entry_id': 'loan-other',
+                  'client_id': 'client-other',
+                  'loan_id': 'loan-other',
+                  'client_name': 'Bea Borrower',
+                  'client_code': 'C-OTHER',
+                  'phone_number': '09170000000',
+                  'area': 'Taytay › San Juan',
+                  'loan_type': 'Regular',
+                  'daily_amount': '200.00',
+                  'remaining_balance': '4800.00',
+                  'pass_count': 0,
+                  'status': 'Pending',
+                  'route_revision': 'loan:loan-other:v3',
+                  'can_collect_mobile': true,
+                  'can_enter_payment': true,
+                  'collection_message': 'Delegated other-area work.',
+                  'assigned_collector_user_id': 'collector-two',
+                  'assigned_collector_name': 'Collector Two',
+                  'processed_today': false,
+                },
+              ],
+            }),
+          ),
           200,
+          headers: const <String, String>{
+            'content-type': 'application/json; charset=utf-8',
+          },
         );
       }),
     );
