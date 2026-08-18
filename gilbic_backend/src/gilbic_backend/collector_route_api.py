@@ -140,7 +140,7 @@ def _remittance_state_label(status: CollectorRouteCrossStatusRecord) -> str:
 def _entry_payload(
     entry: CollectorRouteEntryRecord,
     *,
-    route_owner_user_id: UUID,
+    route_owner_user_id: UUID | None = None,
     cross_status: CollectorRouteCrossStatusRecord | None = None,
 ) -> dict[str, object]:
     seven_by_seven_mobile_enabled = (
@@ -149,7 +149,8 @@ def _entry_payload(
         and entry.can_enter_payment
     )
     recorded_by_other = (
-        entry.processed_today
+        route_owner_user_id is not None
+        and entry.processed_today
         and entry.today_collector_user_id is not None
         and entry.today_collector_user_id != route_owner_user_id
     )
@@ -215,41 +216,46 @@ def _entry_payload(
         "processed_today": entry.processed_today,
         "today_entry_type": entry.today_entry_type,
         "today_collector_name": entry.today_collector_name,
-        "today_collector_user_id": (
-            str(entry.today_collector_user_id)
-            if entry.today_collector_user_id
-            else None
-        ),
-        "today_recorded_by_other_user": recorded_by_other,
         "today_transaction_id": (
             str(entry.today_transaction_id) if entry.today_transaction_id else None
         ),
         "today_is_locked": entry.today_is_locked,
         "can_edit_today": (
             entry.can_edit_today
-            and entry.today_collector_user_id == route_owner_user_id
+            if route_owner_user_id is None
+            else (
+                entry.can_edit_today
+                and entry.today_collector_user_id == route_owner_user_id
+            )
         ),
         "today_amount": str(entry.today_amount),
         "today_note": entry.today_note,
         "today_covered_dates": [
             value.isoformat() for value in entry.today_covered_dates
         ],
-        "today_collection_origin": (
-            cross_status.collection_origin if cross_status else ""
-        ),
-        "today_custody_status": (
-            cross_status.custody_status if cross_status else ""
-        ),
-        "today_cash_holder_name": (
-            cross_status.cash_holder_name if cross_status else ""
-        ),
-        "today_remittance_number": (
-            cross_status.remittance_number if cross_status else ""
-        ),
-        "today_remittance_recipient_name": (
-            cross_status.remittance_recipient_name if cross_status else ""
-        ),
     }
+    if recorded_by_other:
+        payload.update(
+            {
+                "today_collector_user_id": str(entry.today_collector_user_id),
+                "today_recorded_by_other_user": True,
+                "today_collection_origin": (
+                    cross_status.collection_origin if cross_status else ""
+                ),
+                "today_custody_status": (
+                    cross_status.custody_status if cross_status else ""
+                ),
+                "today_cash_holder_name": (
+                    cross_status.cash_holder_name if cross_status else ""
+                ),
+                "today_remittance_number": (
+                    cross_status.remittance_number if cross_status else ""
+                ),
+                "today_remittance_recipient_name": (
+                    cross_status.remittance_recipient_name if cross_status else ""
+                ),
+            }
+        )
     if entry.today_receipts:
         payload["today_receipts"] = [
             _receipt_payload(receipt) for receipt in entry.today_receipts
@@ -320,9 +326,13 @@ def create_collector_route_router() -> APIRouter:
             entry.today_transaction_id
             for entry in route.entries
             if entry.today_transaction_id is not None
+            and entry.today_collector_user_id is not None
+            and entry.today_collector_user_id != actor.user_id
         )
-        status_by_transaction = cross_statuses.get_for_transactions(
-            transaction_ids=transaction_ids
+        status_by_transaction = (
+            cross_statuses.get_for_transactions(transaction_ids=transaction_ids)
+            if transaction_ids
+            else {}
         )
         return {
             "success": True,
