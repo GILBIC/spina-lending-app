@@ -62,7 +62,41 @@ void main() {
     );
   });
 
-  testWidgets('collector tiles separate route collection and remittance scopes',
+  testWidgets('collector tiles separate route delegated work and remittance scopes',
+      (tester) async {
+    await _setLargeSurface(tester);
+    const session = UserSession(
+      userId: 'collector-1',
+      username: 'collector.one',
+      displayName: 'Collector One',
+      role: AppRole.collector,
+      rawRole: 'Collector',
+      accessToken: 'collector-token',
+      permissions: <String>[
+        'route.view',
+        'collection.create',
+        'delegated_area.view',
+      ],
+    );
+
+    await tester.pumpWidget(MaterialApp(home: _dashboard(session)));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('daily-route')), findsOneWidget);
+    expect(find.byKey(const Key('record-payment')), findsOneWidget);
+    expect(find.byKey(const Key('delegated-area-access')), findsOneWidget);
+    expect(find.byKey(const Key('other-area-payment')), findsOneWidget);
+    expect(find.byKey(const Key('payment-updates')), findsOneWidget);
+
+    expect(find.byKey(const Key('remittance')), findsNothing);
+    expect(
+      find.byKey(const Key('assigned-collector-remittance')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('remittance-notifications')), findsNothing);
+  });
+
+  testWidgets('other-area work is hidden without delegated-area view permission',
       (tester) async {
     await _setLargeSurface(tester);
     const session = UserSession(
@@ -80,15 +114,8 @@ void main() {
 
     expect(find.byKey(const Key('daily-route')), findsOneWidget);
     expect(find.byKey(const Key('record-payment')), findsOneWidget);
-    expect(find.byKey(const Key('other-area-payment')), findsOneWidget);
-    expect(find.byKey(const Key('payment-updates')), findsOneWidget);
-
-    expect(find.byKey(const Key('remittance')), findsNothing);
-    expect(
-      find.byKey(const Key('assigned-collector-remittance')),
-      findsNothing,
-    );
-    expect(find.byKey(const Key('remittance-notifications')), findsNothing);
+    expect(find.byKey(const Key('delegated-area-access')), findsNothing);
+    expect(find.byKey(const Key('other-area-payment')), findsNothing);
   });
 
   testWidgets('record payment requires both route view and collection create',
@@ -109,6 +136,7 @@ void main() {
 
     expect(find.byKey(const Key('daily-route')), findsOneWidget);
     expect(find.byKey(const Key('record-payment')), findsNothing);
+    expect(find.byKey(const Key('delegated-area-access')), findsNothing);
     expect(find.byKey(const Key('other-area-payment')), findsNothing);
     expect(find.byKey(const Key('payment-updates')), findsOneWidget);
   });
