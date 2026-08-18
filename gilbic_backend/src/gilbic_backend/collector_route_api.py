@@ -116,6 +116,19 @@ def _cross_collection_message(
     )
 
 
+def _cross_status_suffix(status: CollectorRouteCrossStatusRecord) -> str:
+    if status.custody_status == "no_cash":
+        return "No cash"
+    if status.custody_status == "accepted":
+        holder = status.cash_holder_name or status.remittance_recipient_name
+        return f"Cash with: {holder or 'recipient'} • Accepted"
+    if status.custody_status == "awaiting_acceptance":
+        holder = status.cash_holder_name or status.recorder_name or "Collector"
+        return f"Cash with: {holder} • Awaiting acceptance"
+    holder = status.cash_holder_name or status.recorder_name or "Collector"
+    return f"Cash with: {holder} • Not yet remitted"
+
+
 def _remittance_state_label(status: CollectorRouteCrossStatusRecord) -> str:
     if status.custody_status == "accepted":
         return "accepted"
@@ -148,6 +161,7 @@ def _entry_payload(
             f"{entry.today_collector_name or 'another authorized collector'}"
         )
         if cross_status is not None:
+            display_status = f"{display_status} • {_cross_status_suffix(cross_status)}"
             collection_message = _cross_collection_message(entry, cross_status)
         else:
             collection_message = (
