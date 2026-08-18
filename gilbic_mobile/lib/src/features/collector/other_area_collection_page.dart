@@ -12,6 +12,7 @@ import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart'
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
+import 'package:gilbic_mobile/src/features/collector/other_area_collection_summary_page.dart';
 
 class OtherAreaCollectionPage extends StatefulWidget {
   const OtherAreaCollectionPage({
@@ -400,12 +401,30 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
     }
   }
 
+  void _openCollectionSummary() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => OtherAreaCollectionSummaryPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(_isManagement ? 'Direct Payment Entry' : 'Other-Area Work'),
         actions: [
+          if (!_isManagement && widget.session.hasPermission('remittance.view'))
+            IconButton(
+              key: const Key('open-other-area-collection-summary'),
+              tooltip: 'My Other-Area Collections',
+              onPressed: _openCollectionSummary,
+              icon: const Icon(Icons.receipt_long_outlined),
+            ),
           if (!_isManagement)
             IconButton(
               key: const Key('refresh-other-area-work'),
