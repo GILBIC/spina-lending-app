@@ -8,6 +8,13 @@ DateTime spinaBusinessWallClock(DateTime value) {
   return value.toUtc().add(_spinaBusinessUtcOffset);
 }
 
+String formatSpinaBusinessDate(DateTime value) {
+  final businessTime = spinaBusinessWallClock(value);
+  return '${businessTime.year.toString().padLeft(4, '0')}-'
+      '${businessTime.month.toString().padLeft(2, '0')}-'
+      '${businessTime.day.toString().padLeft(2, '0')}';
+}
+
 String formatSpinaBusinessDateTime(DateTime? value) {
   if (value == null) {
     return 'Unknown time';
