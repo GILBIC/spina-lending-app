@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
@@ -87,6 +87,11 @@ def create_other_area_router() -> APIRouter:
             permission="delegated_area.view",
             permission_error="Delegated area access permission is required.",
         )
+        if "collector" not in actor.roles:
+            raise HTTPException(
+                status_code=403,
+                detail="Only an active Collector may view delegated other-area work.",
+            )
         records = other_areas.list_work(
             collector_user_id=actor.user_id,
             collection_date=work_date,
@@ -119,14 +124,31 @@ def create_other_area_router() -> APIRouter:
             device_identifier=x_device_id,
             auth=auth,
             accounts=accounts,
-            permission="delegated_area.view",
-            permission_error="Delegated area access permission is required.",
+            permission="collection.create",
+            permission_error="Collection permission is required.",
         )
-        records = other_areas.search(
-            collector_user_id=actor.user_id,
-            query=q,
-            limit=limit,
-        )
+        if "management" in actor.roles:
+            records = other_areas.search_management_direct(
+                management_user_id=actor.user_id,
+                query=q,
+                limit=limit,
+            )
+        elif "collector" in actor.roles:
+            if "delegated_area.view" not in actor.permissions:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Delegated area access permission is required.",
+                )
+            records = other_areas.search(
+                collector_user_id=actor.user_id,
+                query=q,
+                limit=limit,
+            )
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail="Only Collector or Management accounts may search this payment path.",
+            )
         return {
             "success": True,
             "data": [_payload(record) for record in records],
