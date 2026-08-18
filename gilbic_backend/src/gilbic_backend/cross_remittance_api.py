@@ -10,6 +10,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
+from .cross_collection_status_repository import (
+    CrossCollectionStatusRecord,
+    PostgresCrossCollectionStatusRepository,
+)
 from .cross_remittance_repository import (
     CrossRemittanceTargetRecord,
     PostgresCrossRemittanceRepository,
@@ -37,6 +41,10 @@ def cross_remittance_repository_dependency() -> PostgresCrossRemittanceRepositor
     return PostgresCrossRemittanceRepository()
 
 
+def cross_collection_status_repository_dependency() -> PostgresCrossCollectionStatusRepository:
+    return PostgresCrossCollectionStatusRepository()
+
+
 def _money(value: Decimal) -> str:
     return format(value.quantize(Decimal("0.01")), "f")
 
@@ -49,6 +57,48 @@ def _target_payload(record: CrossRemittanceTargetRecord) -> dict[str, object]:
         "transaction_count": record.transaction_count,
         "client_count": record.client_count,
         "total_amount": _money(record.total_amount),
+    }
+
+
+def _cross_collection_status_payload(
+    record: CrossCollectionStatusRecord,
+) -> dict[str, object]:
+    return {
+        "transaction_id": str(record.transaction_id),
+        "receipt_number": record.receipt_number,
+        "client_id": str(record.client_id),
+        "client_name": record.client_name,
+        "loan_id": str(record.loan_id),
+        "loan_type": record.loan_type,
+        "area": record.area,
+        "assigned_collector_user_id": (
+            str(record.assigned_collector_user_id)
+            if record.assigned_collector_user_id
+            else None
+        ),
+        "assigned_collector_name": record.assigned_collector_name,
+        "collection_date": record.collection_date.isoformat(),
+        "entry_type": record.entry_type,
+        "amount": _money(record.amount),
+        "accepted_at": record.accepted_at.isoformat(),
+        "is_locked": record.is_locked,
+        "remittance_id": (
+            str(record.remittance_id) if record.remittance_id else None
+        ),
+        "remittance_number": record.remittance_number,
+        "custody_status": record.custody_status,
+        "remittance_recipient_user_id": (
+            str(record.remittance_recipient_user_id)
+            if record.remittance_recipient_user_id
+            else None
+        ),
+        "remittance_recipient_name": record.remittance_recipient_name,
+        "submitted_at": (
+            record.submitted_at.isoformat() if record.submitted_at else None
+        ),
+        "received_at": (
+            record.received_at.isoformat() if record.received_at else None
+        ),
     }
 
 
@@ -125,6 +175,45 @@ def _raise_error(error: RemittanceError) -> None:
 
 def create_cross_remittance_router() -> APIRouter:
     router = APIRouter(tags=["cross collector remittances"])
+
+    @router.get("/api/v1/collector/cross-remittances/history")
+    @router.get(
+        "/api/mobile/v1/collector/cross-remittances/history",
+        include_in_schema=False,
+    )
+    def collection_history(
+        collection_date: date | None = Query(default=None),
+        limit: int = Query(default=500, ge=1, le=1000),
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        statuses: PostgresCrossCollectionStatusRepository = Depends(
+            cross_collection_status_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+            permission="remittance.view",
+            permission_error="Remittance viewing permission is required.",
+        )
+        if "collector" not in actor.roles:
+            raise HTTPException(
+                status_code=403,
+                detail="Only an active Collector may view their other-area collections.",
+            )
+        records = statuses.list_for_collector(
+            collector_user_id=actor.user_id,
+            collection_date=collection_date,
+            limit=limit,
+        )
+        return {
+            "success": True,
+            "data": [_cross_collection_status_payload(record) for record in records],
+        }
 
     @router.get("/api/v1/collector/cross-remittances/targets")
     @router.get(
