@@ -30,11 +30,12 @@ void main() {
 
     final approveButton =
         find.byKey(const Key('approve-renewal-request-1'));
-    await tester.scrollUntilVisible(
+    await tester.dragUntilVisible(
       approveButton,
-      250,
-      scrollable: find.byType(Scrollable).first,
+      find.byType(ListView),
+      const Offset(0, -200),
     );
+    await tester.pumpAndSettle();
     await tester.tap(approveButton);
     await tester.pumpAndSettle();
     expect(find.text('Approve renewal request?'), findsOneWidget);
