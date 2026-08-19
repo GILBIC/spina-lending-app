@@ -86,7 +86,7 @@ def _seed_legacy_remittance(test_database_url: str) -> tuple[object, ...]:
             """,
             (f"0099-legacy-recipient-{uuid4().hex[:10]}",),
         ).fetchone()[0]
-        row = connection.execute(
+        remittance_id = connection.execute(
             """
             INSERT INTO lending.collection_remittances(
                 remittance_number,
@@ -102,11 +102,7 @@ def _seed_legacy_remittance(test_database_url: str) -> tuple[object, ...]:
                 note
             )
             VALUES(%s, %s, %s, %s, 1, 1, 0, 0, 1, %s, %s)
-            RETURNING id, remittance_number, collector_user_id, recipient_user_id,
-                      collection_date, status, transaction_count, payment_count,
-                      unable_to_pay_count, covered_payment_count, client_count,
-                      total_amount, note, submitted_at, received_at,
-                      received_by_user_id, created_at, updated_at
+            RETURNING id
             """,
             (
                 LEGACY_MARKER,
@@ -114,9 +110,41 @@ def _seed_legacy_remittance(test_database_url: str) -> tuple[object, ...]:
                 recipient_user_id,
                 date(2099, 1, 1),
                 Decimal("50.00"),
-                "Disposable 0099 legacy evidence",
+                "Disposable 0099 accepted legacy evidence",
             ),
+        ).fetchone()[0]
+
+        # Close the seeded remittance through the real 0010 acceptance guard. This
+        # reproduces production history where any later row UPDATE must fail.
+        connection.execute(
+            """
+            UPDATE lending.collection_remittances
+            SET status='received',
+                received_at=now(),
+                received_by_user_id=%s,
+                updated_at=now()
+            WHERE id=%s
+            """,
+            (recipient_user_id, remittance_id),
+        )
+
+        row = connection.execute(
+            """
+            SELECT id, remittance_number, collector_user_id, recipient_user_id,
+                   collection_date, status, transaction_count, payment_count,
+                   unable_to_pay_count, covered_payment_count, client_count,
+                   total_amount, note, submitted_at, received_at,
+                   received_by_user_id, custody_user_id, custody_transferred_at,
+                   created_at, updated_at
+            FROM lending.collection_remittances
+            WHERE id=%s
+            """,
+            (remittance_id,),
         ).fetchone()
+        if row is None or row[5] != "received":
+            raise SystemExit(
+                "0099 disposable validation failed: accepted legacy remittance was not seeded."
+            )
     return tuple(row)
 
 
@@ -128,7 +156,8 @@ def _legacy_snapshot(test_database_url: str) -> tuple[object, ...]:
                    collection_date, status, transaction_count, payment_count,
                    unable_to_pay_count, covered_payment_count, client_count,
                    total_amount, note, submitted_at, received_at,
-                   received_by_user_id, created_at, updated_at
+                   received_by_user_id, custody_user_id, custody_transferred_at,
+                   created_at, updated_at
             FROM lending.collection_remittances
             WHERE remittance_number=%s
             """,
@@ -136,7 +165,7 @@ def _legacy_snapshot(test_database_url: str) -> tuple[object, ...]:
         ).fetchone()
         if row is None:
             raise SystemExit(
-                "0099 disposable validation failed: seeded legacy remittance disappeared."
+                "0099 disposable validation failed: seeded accepted legacy remittance disappeared."
             )
         return tuple(row)
 
@@ -145,9 +174,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA through "
-            "0098, seed historical remittance evidence, install 0099 through the same "
-            "guarded runner intended for acceptance, verify an exact retry is idempotent, "
-            "prove recipient-capacity constraints and immutability, then delete the database."
+            "0098, seed already-accepted historical remittance evidence, install 0099 through "
+            "the same guarded runner intended for acceptance, verify an exact retry is "
+            "idempotent, prove recipient-capacity constraints and immutability, then delete "
+            "the database."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -210,7 +240,7 @@ def main() -> int:
         after_first_apply = _legacy_snapshot(test_url)
         if after_first_apply != before_legacy:
             raise SystemExit(
-                "0099 disposable PostgreSQL validation failed: historical remittance evidence changed."
+                "0099 disposable PostgreSQL validation failed: accepted historical remittance evidence changed."
             )
 
         second_apply = _run_live_apply_tool(test_url)
@@ -223,7 +253,7 @@ def main() -> int:
         after_second_apply = _legacy_snapshot(test_url)
         if after_second_apply != before_legacy:
             raise SystemExit(
-                "0099 disposable PostgreSQL validation failed: exact retry changed historical evidence."
+                "0099 disposable PostgreSQL validation failed: exact retry changed accepted historical evidence."
             )
 
         result = _run_test(test_url)
@@ -235,10 +265,11 @@ def main() -> int:
 
         print(
             "0099 disposable PostgreSQL validation passed: schema through 0098 was replayed, "
-            "historical remittance evidence was preserved and marked legacy, the guarded "
-            "acceptance runner installed 0099 and verified an idempotent retry, valid "
-            "recipient capacities/defaults were accepted, invalid capacity was rejected, "
-            "and recipient capacity was immutable after insertion."
+            "an already-accepted remittance remained permanently unchanged while gaining the "
+            "legacy compatibility capacity through DDL, the guarded acceptance runner installed "
+            "0099 and verified an idempotent retry, valid recipient capacities/defaults were "
+            "accepted, invalid capacity was rejected, and recipient capacity was immutable after "
+            "insertion."
         )
         return 0
     except psycopg.Error as error:
