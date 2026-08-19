@@ -28,7 +28,14 @@ void main() {
     expect(find.text('₱6,000.00'), findsWidgets);
     expect(find.text('Pending Collector / Management review'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('approve-renewal-request-1')));
+    final approveButton =
+        find.byKey(const Key('approve-renewal-request-1'));
+    await tester.scrollUntilVisible(
+      approveButton,
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(approveButton);
     await tester.pumpAndSettle();
     expect(find.text('Approve renewal request?'), findsOneWidget);
 
