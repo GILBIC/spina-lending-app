@@ -71,6 +71,16 @@ class ApiConfig {
     defaultValue: '/api/mobile/v1/collector/collections',
   );
 
+  static const String combinedPaymentSubmissionPath = String.fromEnvironment(
+    'GILBIC_COMBINED_PAYMENT_SUBMISSION_PATH',
+    defaultValue: '/api/mobile/v1/collector/collections/combined',
+  );
+
+  static const String collectorRenewalsPath = String.fromEnvironment(
+    'GILBIC_COLLECTOR_RENEWALS_PATH',
+    defaultValue: '/api/mobile/v1/collector/renewals',
+  );
+
   static const String activityNotificationsPath = String.fromEnvironment(
     'GILBIC_ACTIVITY_NOTIFICATIONS_PATH',
     defaultValue: '/api/mobile/v1/activity-notifications',
@@ -122,6 +132,20 @@ class ApiConfig {
       );
 
   static Uri get paymentSubmissionEndpoint => endpoint(paymentSubmissionPath);
+
+  static Uri get combinedPaymentSubmissionEndpoint =>
+      endpoint(combinedPaymentSubmissionPath);
+
+  static Uri get collectorRenewalsEndpoint => endpoint(collectorRenewalsPath);
+
+  static Uri collectorRenewalActionEndpoint(
+    String requestId,
+    String action,
+  ) =>
+      endpoint(
+        '/api/mobile/v1/collector/renewals/'
+        '${Uri.encodeComponent(requestId)}/${Uri.encodeComponent(action)}',
+      );
 
   static Uri get activityNotificationsEndpoint =>
       endpoint(activityNotificationsPath);
