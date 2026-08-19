@@ -1,9 +1,33 @@
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 
+enum CrossRemittanceRecipientCapacity {
+  assignedCollector,
+  management;
+
+  String get apiValue => switch (this) {
+        CrossRemittanceRecipientCapacity.assignedCollector => 'assigned_collector',
+        CrossRemittanceRecipientCapacity.management => 'management',
+      };
+
+  String get label => switch (this) {
+        CrossRemittanceRecipientCapacity.assignedCollector => 'Assigned Collector',
+        CrossRemittanceRecipientCapacity.management => 'Management',
+      };
+
+  static CrossRemittanceRecipientCapacity fromValue(Object? value) {
+    return switch (value?.toString().trim().toLowerCase()) {
+      'management' => CrossRemittanceRecipientCapacity.management,
+      _ => CrossRemittanceRecipientCapacity.assignedCollector,
+    };
+  }
+}
+
 class CrossRemittanceTarget {
   const CrossRemittanceTarget({
     required this.recipientUserId,
     required this.recipientName,
+    required this.recipientCapacity,
+    required this.roleName,
     required this.transactionCount,
     required this.clientCount,
     required this.totalAmount,
@@ -11,9 +35,13 @@ class CrossRemittanceTarget {
 
   final String recipientUserId;
   final String recipientName;
+  final CrossRemittanceRecipientCapacity recipientCapacity;
+  final String roleName;
   final int transactionCount;
   final int clientCount;
   final double totalAmount;
+
+  String get selectionKey => '${recipientCapacity.apiValue}:$recipientUserId';
 
   static CrossRemittanceTarget? fromPayload(Object? value) {
     final data = stringMap(value);
@@ -28,9 +56,14 @@ class CrossRemittanceTarget {
     if (recipientUserId == null || recipientName == null) {
       return null;
     }
+    final capacity = CrossRemittanceRecipientCapacity.fromValue(
+      data['recipient_capacity'],
+    );
     return CrossRemittanceTarget(
       recipientUserId: recipientUserId,
       recipientName: recipientName,
+      recipientCapacity: capacity,
+      roleName: firstNonEmptyString(<Object?>[data['role_name']]) ?? capacity.label,
       transactionCount:
           firstNumber(<Object?>[data['transaction_count']])?.toInt() ?? 0,
       clientCount: firstNumber(<Object?>[data['client_count']])?.toInt() ?? 0,
