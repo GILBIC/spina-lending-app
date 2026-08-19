@@ -535,13 +535,9 @@ class _ClientActionState {
 }
 
 CollectorRouteEntry? _preferredStateEntry(List<CollectorRouteEntry> loans) {
-  if (loans.isEmpty) {
-    return null;
-  }
+  if (loans.isEmpty) return null;
   for (final entry in loans) {
-    if (entry.todayIsLocked) {
-      return entry;
-    }
+    if (entry.todayIsLocked) return entry;
   }
   for (final entry in loans) {
     if (_isSevenBySeven(entry.loanType) && !entry.sevenBySevenMobileEnabled) {
@@ -549,9 +545,7 @@ CollectorRouteEntry? _preferredStateEntry(List<CollectorRouteEntry> loans) {
     }
   }
   for (final entry in loans) {
-    if (entry.processedToday) {
-      return entry;
-    }
+    if (entry.processedToday) return entry;
   }
   return loans.first;
 }
@@ -560,9 +554,7 @@ String _blockedLabel(CollectorRouteEntry entry, String? blockedReason) {
   if (_isSevenBySeven(entry.loanType) && !entry.sevenBySevenMobileEnabled) {
     return 'Desk';
   }
-  if (entry.todayIsLocked) {
-    return 'Locked';
-  }
+  if (entry.todayIsLocked) return 'Locked';
   if (entry.processedToday) {
     if (entry.contractCollectionReady && entry.contractTodayUnpaidAmount > 0) {
       return 'Lacking';
@@ -596,6 +588,7 @@ List<String> _statusChips(CollectorRouteClientGroup client) {
   final desktop7x7 = loans.any(
     (entry) => _isSevenBySeven(entry.loanType) && !entry.sevenBySevenMobileEnabled,
   );
+  final hasRenewalRequest = loans.any((entry) => entry.renewalRequested);
   final missed = loans.fold<int>(
     0,
     (highest, entry) => entry.passCount > highest ? entry.passCount : highest,
@@ -617,21 +610,14 @@ List<String> _statusChips(CollectorRouteClientGroup client) {
     chips.add('NOT COLLECTED');
   }
 
+  if (hasRenewalRequest) chips.add('RENEWAL REQUESTED');
   if (missed > 0) {
-    if (!allComplete && !hasPass) {
-      chips.add('CATCH-UP');
-    }
+    if (!allComplete && !hasPass) chips.add('CATCH-UP');
     chips.add('MISSED $missed');
   }
-  if (hasAdvance) {
-    chips.add('ADV');
-  }
-  if (textBlob.contains('gcash')) {
-    chips.add('GCASH');
-  }
-  if (desktop7x7) {
-    chips.add('7x7 DESK');
-  }
+  if (hasAdvance) chips.add('ADV');
+  if (textBlob.contains('gcash')) chips.add('GCASH');
+  if (desktop7x7) chips.add('7x7 DESK');
   return chips;
 }
 
@@ -651,9 +637,7 @@ double _scheduledToday(CollectorRouteEntry entry) {
 
 double _unpaidToday(CollectorRouteEntry entry) {
   if (entry.contractCollectionReady && entry.contractTodayScheduledAmount > 0) {
-    return entry.contractTodayUnpaidAmount > 0
-        ? entry.contractTodayUnpaidAmount
-        : 0;
+    return entry.contractTodayUnpaidAmount > 0 ? entry.contractTodayUnpaidAmount : 0;
   }
   return entry.processedToday ? 0 : entry.dailyAmount;
 }
@@ -676,9 +660,7 @@ String _moneyShort(double value) {
 String _groupDigits(String digits) {
   final buffer = StringBuffer();
   for (var index = 0; index < digits.length; index += 1) {
-    if (index > 0 && (digits.length - index) % 3 == 0) {
-      buffer.write(',');
-    }
+    if (index > 0 && (digits.length - index) % 3 == 0) buffer.write(',');
     buffer.write(digits[index]);
   }
   return buffer.toString();
