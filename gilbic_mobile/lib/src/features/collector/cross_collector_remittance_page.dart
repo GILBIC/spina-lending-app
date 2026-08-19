@@ -34,8 +34,9 @@ class _CrossCollectorRemittancePageState
   List<CrossRemittanceTarget> _targets = const <CrossRemittanceTarget>[];
   RemittanceSummary? _summary;
   RemittanceRecord? _submitted;
+  CrossRemittanceTarget? _submittedTarget;
   String? _deviceId;
-  String? _selectedRecipientId;
+  String? _selectedTargetKey;
   String? _errorMessage;
   bool _loading = true;
   bool _submitting = false;
@@ -56,6 +57,18 @@ class _CrossCollectorRemittancePageState
     super.dispose();
   }
 
+  CrossRemittanceTarget? _targetByKey(String? key) {
+    if (key == null) {
+      return null;
+    }
+    for (final target in _targets) {
+      if (target.selectionKey == key) {
+        return target;
+      }
+    }
+    return null;
+  }
+
   Future<void> _loadTargets() async {
     setState(() {
       _loading = true;
@@ -71,17 +84,20 @@ class _CrossCollectorRemittancePageState
       if (!mounted) {
         return;
       }
-      final selected = targets.any(
-        (target) => target.recipientUserId == _selectedRecipientId,
-      )
-          ? _selectedRecipientId
-          : targets.isEmpty
-              ? null
-              : targets.first.recipientUserId;
+      CrossRemittanceTarget? selected;
+      for (final target in targets) {
+        if (target.selectionKey == _selectedTargetKey) {
+          selected = target;
+          break;
+        }
+      }
+      if (selected == null && targets.isNotEmpty) {
+        selected = targets.first;
+      }
       setState(() {
         _deviceId = identity.installationId;
         _targets = targets;
-        _selectedRecipientId = selected;
+        _selectedTargetKey = selected?.selectionKey;
         _summary = null;
       });
       if (selected != null) {
@@ -94,7 +110,7 @@ class _CrossCollectorRemittancePageState
     } on Object {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Assigned-collector remittances could not be loaded.';
+          _errorMessage = 'Other-area remittance recipients could not be loaded.';
         });
       }
     } finally {
@@ -104,7 +120,7 @@ class _CrossCollectorRemittancePageState
     }
   }
 
-  Future<void> _loadPreview(String recipientUserId) async {
+  Future<void> _loadPreview(CrossRemittanceTarget target) async {
     final deviceId = _deviceId;
     if (deviceId == null) {
       return;
@@ -112,13 +128,14 @@ class _CrossCollectorRemittancePageState
     setState(() {
       _loading = true;
       _errorMessage = null;
-      _selectedRecipientId = recipientUserId;
+      _selectedTargetKey = target.selectionKey;
     });
     try {
       final summary = await _repository.loadPreview(
         widget.session,
         deviceId: deviceId,
-        recipientUserId: recipientUserId,
+        recipientUserId: target.recipientUserId,
+        recipientCapacity: target.recipientCapacity,
         collectionDate: _collectionDate,
       );
       if (mounted) {
@@ -138,30 +155,27 @@ class _CrossCollectorRemittancePageState
   Future<void> _submit() async {
     final summary = _summary;
     final deviceId = _deviceId;
-    final recipientId = _selectedRecipientId;
+    final target = _targetByKey(_selectedTargetKey);
     if (_submitting ||
         summary == null ||
         summary.items.isEmpty ||
         deviceId == null ||
-        recipientId == null) {
+        target == null) {
       return;
     }
-    final target = _targets.firstWhere(
-      (item) => item.recipientUserId == recipientId,
-    );
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Send to assigned collector?'),
+        title: Text('Send to ${target.roleName}?'),
         content: Text(
           'Send ${_money(summary.totalAmount)} for '
           '${summary.clientCount} client${summary.clientCount == 1 ? '' : 's'} '
-          'to ${target.recipientName}?\n\n'
+          'to ${target.recipientName} (${target.roleName})?\n\n'
           'The included payment records will lock immediately. Cash remains under '
           'your custody until ${target.recipientName} reviews and accepts the '
-          'remittance. Acceptance adopts the existing records without copying a '
-          'second payment.',
+          'remittance. Acceptance transfers cash custody using the same official '
+          'payment records and creates no duplicate payment.',
         ),
         actions: [
           TextButton(
@@ -188,12 +202,16 @@ class _CrossCollectorRemittancePageState
       final record = await _repository.submit(
         widget.session,
         deviceId: deviceId,
-        recipientUserId: recipientId,
+        recipientUserId: target.recipientUserId,
+        recipientCapacity: target.recipientCapacity,
         collectionDate: _collectionDate,
         note: _noteController.text,
       );
       if (mounted) {
-        setState(() => _submitted = record);
+        setState(() {
+          _submitted = record;
+          _submittedTarget = target;
+        });
       }
     } on SpinaApiException catch (error) {
       if (mounted) {
@@ -202,7 +220,7 @@ class _CrossCollectorRemittancePageState
     } on Object {
       if (mounted) {
         setState(() {
-          _errorMessage = 'The assigned-collector remittance could not be submitted.';
+          _errorMessage = 'The other-area remittance could not be submitted.';
         });
       }
     } finally {
@@ -216,7 +234,7 @@ class _CrossCollectorRemittancePageState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Assigned Collector Remittance'),
+        title: const Text('Other-Area Remittance'),
         actions: [
           IconButton(
             tooltip: 'Refresh',
@@ -226,8 +244,11 @@ class _CrossCollectorRemittancePageState
         ],
       ),
       body: SafeArea(
-        child: _submitted != null
-            ? _SubmittedCrossRemittance(record: _submitted!)
+        child: _submitted != null && _submittedTarget != null
+            ? _SubmittedCrossRemittance(
+                record: _submitted!,
+                target: _submittedTarget!,
+              )
             : _buildReview(context),
       ),
     );
@@ -240,12 +261,13 @@ class _CrossCollectorRemittancePageState
     if (_targets.isEmpty) {
       return _EmptyCrossRemittance(
         message: _errorMessage ??
-            'No unlocked other-area payment is waiting to be remitted to an assigned collector for this date.',
+            'No unlocked other-area payment is waiting to be remitted for this date.',
         onRetry: _loadTargets,
       );
     }
 
     final summary = _summary;
+    final selectedTarget = _targetByKey(_selectedTargetKey);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -253,40 +275,41 @@ class _CrossCollectorRemittancePageState
           child: Padding(
             padding: EdgeInsets.all(14),
             child: Text(
-              'This list contains only payments you recorded for another collector’s assigned clients. It does not mix your regular route cash.',
+              'This list contains only payments you recorded for another collector’s assigned clients. It does not mix your regular route cash. You may remit this other-area cash to the assigned Collector or directly to authorized Management.',
             ),
           ),
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           key: const Key('cross-remittance-recipient'),
-          initialValue: _selectedRecipientId,
+          initialValue: _selectedTargetKey,
           decoration: const InputDecoration(
-            labelText: 'Assigned collector',
+            labelText: 'Remittance recipient',
             border: OutlineInputBorder(),
           ),
           items: [
             for (final target in _targets)
               DropdownMenuItem<String>(
-                value: target.recipientUserId,
+                value: target.selectionKey,
                 child: Text(
-                  '${target.recipientName} • ${_money(target.totalAmount)}',
+                  '${target.recipientName} • ${target.roleName} • ${_money(target.totalAmount)}',
                 ),
               ),
           ],
           onChanged: _submitting
               ? null
               : (value) {
-                  if (value != null) {
-                    _loadPreview(value);
+                  final target = _targetByKey(value);
+                  if (target != null) {
+                    _loadPreview(target);
                   }
                 },
         ),
         const SizedBox(height: 12),
         if (_loading && summary == null)
           const Center(child: CircularProgressIndicator())
-        else if (summary != null) ...[
-          _CrossSummaryCard(summary: summary),
+        else if (summary != null && selectedTarget != null) ...[
+          _CrossSummaryCard(summary: summary, target: selectedTarget),
           const SizedBox(height: 12),
           TextField(
             key: const Key('cross-remittance-note'),
@@ -350,9 +373,10 @@ class _CrossCollectorRemittancePageState
 }
 
 class _CrossSummaryCard extends StatelessWidget {
-  const _CrossSummaryCard({required this.summary});
+  const _CrossSummaryCard({required this.summary, required this.target});
 
   final RemittanceSummary summary;
+  final CrossRemittanceTarget target;
 
   @override
   Widget build(BuildContext context) {
@@ -363,10 +387,11 @@ class _CrossSummaryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Cash to assigned collector: ${_money(summary.totalAmount)}',
+              'Cash to ${target.roleName}: ${_money(summary.totalAmount)}',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 6),
+            Text('Recipient: ${target.recipientName}'),
             Text('${summary.clientCount} clients'),
             Text('${summary.transactionCount} official payment records'),
           ],
@@ -377,9 +402,10 @@ class _CrossSummaryCard extends StatelessWidget {
 }
 
 class _SubmittedCrossRemittance extends StatelessWidget {
-  const _SubmittedCrossRemittance({required this.record});
+  const _SubmittedCrossRemittance({required this.record, required this.target});
 
   final RemittanceRecord record;
+  final CrossRemittanceTarget target;
 
   @override
   Widget build(BuildContext context) {
@@ -389,7 +415,7 @@ class _SubmittedCrossRemittance extends StatelessWidget {
         const Icon(Icons.mark_email_unread_outlined, size: 60),
         const SizedBox(height: 12),
         Text(
-          'Assigned collector notified',
+          '${target.roleName} notified',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.headlineSmall,
         ),
@@ -406,7 +432,7 @@ class _SubmittedCrossRemittance extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Assigned collector: ${record.recipientName}'),
+                Text('${target.roleName}: ${record.recipientName}'),
                 Text('Total: ${_money(record.summary.totalAmount)}'),
                 Text('Clients: ${record.summary.clientCount}'),
                 const Text('Status: Awaiting review and acceptance'),
@@ -415,8 +441,8 @@ class _SubmittedCrossRemittance extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        const Text(
-          'The payments are locked. Cash stays under your custody until the assigned collector accepts the remittance. Acceptance uses the same official payment records and creates no duplicate.',
+        Text(
+          'The payments are locked. Cash stays under your custody until ${record.recipientName} accepts the remittance. Acceptance transfers custody using the same official payment records and creates no duplicate.',
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 18),
