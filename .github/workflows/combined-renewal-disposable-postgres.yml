@@ -1,0 +1,43 @@
+name: Combined Pay + renewal disposable PostgreSQL validation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "gilbic_backend/sql/0100_add_atomic_combined_collections.sql"
+      - "gilbic_backend/sql/0101_add_collector_renewal_workflow.sql"
+      - "gilbic_backend/src/gilbic_backend/combined_collection_api.py"
+      - "gilbic_backend/src/gilbic_backend/renewal_repository.py"
+      - "gilbic_backend/src/gilbic_backend/renewal_workflow_api.py"
+      - "gilbic_backend/src/gilbic_backend/renewal_workflow_query_api.py"
+      - "gilbic_backend/src/gilbic_backend/collector_route_renewal_repository.py"
+      - "gilbic_backend/src/gilbic_backend/seven_by_seven_collector_route.py"
+      - "gilbic_backend/tests/test_combined_collection_renewal_workflow_postgres.py"
+      - "tools/apply_0100_0101_collection_renewal_migrations.py"
+      - "tools/run_combined_collection_renewal_disposable_postgres_validation.py"
+      - ".github/workflows/combined-renewal-disposable-postgres.yml"
+
+jobs:
+  validate:
+    runs-on:
+      - self-hosted
+      - windows
+      - x64
+      - spina-acceptance
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          clean: false
+
+      - name: Verify PostgreSQL readiness
+        shell: cmd
+        run: |
+          pg_isready -h 127.0.0.1 -p 5432 -U postgres
+
+      - name: Run disposable combined Pay and renewal validation
+        shell: cmd
+        run: |
+          python tools\run_combined_collection_renewal_disposable_postgres_validation.py
