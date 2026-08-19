@@ -7,6 +7,8 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
+import 'package:gilbic_mobile/src/core/payments/combined_payment_submission.dart';
+import 'package:gilbic_mobile/src/core/payments/combined_payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_correction_page.dart';
@@ -19,6 +21,7 @@ class CollectorRoutePage extends StatefulWidget {
     required this.session,
     required this.loader,
     this.paymentRepository,
+    this.combinedPaymentRepository,
     this.correctionRepository,
     this.deviceIdentityProvider,
     this.deviceSequence,
@@ -28,6 +31,7 @@ class CollectorRoutePage extends StatefulWidget {
   final UserSession session;
   final CollectorRouteLoader loader;
   final PaymentSubmissionRepository? paymentRepository;
+  final CombinedPaymentSubmissionRepository? combinedPaymentRepository;
   final CollectionCorrectionRepository? correctionRepository;
   final DeviceIdentityProvider? deviceIdentityProvider;
   final CollectionDeviceSequence? deviceSequence;
@@ -38,6 +42,7 @@ class CollectorRoutePage extends StatefulWidget {
 
 class _CollectorRoutePageState extends State<CollectorRoutePage> {
   late final PaymentSubmissionRepository _paymentRepository;
+  late final CombinedPaymentSubmissionRepository _combinedPaymentRepository;
   late final CollectionCorrectionRepository _correctionRepository;
   late final DeviceIdentityProvider _deviceIdentityProvider;
   late final CollectionDeviceSequence _deviceSequence;
@@ -46,6 +51,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
   final Set<String> _payingLoanIds = <String>{};
   final Map<String, PaymentSubmissionDraft> _pendingDirectDrafts =
       <String, PaymentSubmissionDraft>{};
+  final Map<String, CombinedPaymentSubmissionDraft> _pendingCombinedDrafts =
+      <String, CombinedPaymentSubmissionDraft>{};
   CollectorRouteLoadResult? _result;
   Object? _error;
   bool _loading = true;
@@ -55,6 +62,8 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     super.initState();
     _paymentRepository =
         widget.paymentRepository ?? SpinaPaymentSubmissionRepository();
+    _combinedPaymentRepository = widget.combinedPaymentRepository ??
+        SpinaCombinedPaymentSubmissionRepository();
     _correctionRepository =
         widget.correctionRepository ?? SpinaCollectionCorrectionRepository();
     _deviceIdentityProvider =
@@ -182,6 +191,54 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
     );
   }
 
+  Future<CombinedPaymentSubmissionDraft> _buildCombinedPaymentDraft(
+    CollectorRouteLoadResult loaded,
+    CollectorRouteClientGroup client,
+  ) async {
+    final payable = client.loans
+        .where((entry) => _directPayBlockedReason(loaded, entry) == null)
+        .toList(growable: false);
+    if (payable.length != 2 ||
+        payable.where((entry) => _isSevenBySevenLoan(entry.loanType)).length != 1) {
+      throw const SpinaApiException(
+        'Combined Pay requires exactly one payable Regular loan and one payable 7x7 loan.',
+        code: 'combined_regular_7x7_required',
+      );
+    }
+    final ordered = <CollectorRouteEntry>[
+      ...payable.where((entry) => !_isSevenBySevenLoan(entry.loanType)),
+      ...payable.where((entry) => _isSevenBySevenLoan(entry.loanType)),
+    ];
+    final identity = await _deviceIdentityProvider.load();
+    final firstSequence = await _deviceSequence.next();
+    final secondSequence = await _deviceSequence.next();
+    if (secondSequence != firstSequence + 1) {
+      throw const SpinaApiException(
+        'SPINA could not reserve two consecutive device entries for combined Pay. Refresh and try again.',
+        code: 'combined_device_sequence_unavailable',
+      );
+    }
+    final collectionDate = _dateOnly(loaded.route.routeDate ?? DateTime.now());
+    return CombinedPaymentSubmissionDraft(
+      idempotencyKey: SecureIdempotencyKeyGenerator().generate(),
+      clientId: client.clientId,
+      collectionDate: collectionDate,
+      recordedAt: DateTime.now().toUtc(),
+      deviceId: identity.installationId,
+      deviceSequence: firstSequence,
+      legs: ordered
+          .map(
+            (entry) => CombinedPaymentLegDraft(
+              routeEntryId: entry.id,
+              loanId: entry.loanId,
+              routeRevision: entry.routeRevision!,
+              amount: _normalDueAmount(entry),
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
+
   Future<void> _payNow(
     CollectorRouteLoadResult loaded,
     CollectorRouteEntry entry,
@@ -233,8 +290,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         return;
       }
       final status = error.statusCode;
-      final uncertain =
-          status == null || status == 429 || status >= 500;
+      final uncertain = status == null || status == 429 || status >= 500;
       if (!uncertain) {
         _pendingDirectDrafts.remove(entry.loanId);
       }
@@ -263,6 +319,106 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
         setState(() => _payingLoanIds.remove(entry.loanId));
       }
     }
+  }
+
+  Future<void> _payCombined(
+    CollectorRouteLoadResult loaded,
+    CollectorRouteClientGroup client,
+  ) async {
+    final payable = client.loans
+        .where((entry) => _directPayBlockedReason(loaded, entry) == null)
+        .toList(growable: false);
+    if (payable.length != 2 ||
+        payable.where((entry) => _isSevenBySevenLoan(entry.loanType)).length != 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Combined Pay requires exactly one payable Regular loan and one payable 7x7 loan.',
+          ),
+        ),
+      );
+      return;
+    }
+    if (payable.any((entry) => _payingLoanIds.contains(entry.loanId))) {
+      return;
+    }
+
+    setState(() {
+      _payingLoanIds.addAll(payable.map((entry) => entry.loanId));
+    });
+    try {
+      final draft = _pendingCombinedDrafts[client.clientId] ??
+          await _buildCombinedPaymentDraft(loaded, client);
+      _pendingCombinedDrafts[client.clientId] = draft;
+      final result =
+          await _combinedPaymentRepository.submit(widget.session, draft);
+      if (!mounted) {
+        return;
+      }
+      if (result.isFinalSuccess) {
+        _pendingCombinedDrafts.remove(client.clientId);
+        final receipts = result.receiptNumbers.join(' + ');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              receipts.isEmpty
+                  ? 'Regular + 7x7 payments saved atomically.'
+                  : 'Regular + 7x7 saved • Receipts $receipts',
+            ),
+          ),
+        );
+        await _loadRoute();
+        return;
+      }
+      _pendingCombinedDrafts.remove(client.clientId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message)),
+      );
+      await _loadRoute();
+    } on SpinaApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      final status = error.statusCode;
+      final uncertain = status == null || status == 429 || status >= 500;
+      if (!uncertain) {
+        _pendingCombinedDrafts.remove(client.clientId);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            uncertain
+                ? 'Combined payment result is not confirmed. Tap Retry to check the same Regular + 7x7 payment.'
+                : error.message,
+          ),
+        ),
+      );
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Combined payment result is not confirmed. Tap Retry to check the same Regular + 7x7 payment.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _payingLoanIds.removeAll(payable.map((entry) => entry.loanId));
+        });
+      }
+    }
+  }
+
+  Set<String> _pendingPaymentLoanIds() {
+    final result = _pendingDirectDrafts.keys.toSet();
+    for (final draft in _pendingCombinedDrafts.values) {
+      result.addAll(draft.legs.map((leg) => leg.loanId));
+    }
+    return result;
   }
 
   Future<void> _openCollectionDetails(
@@ -466,14 +622,16 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
                 directPayBlockedReasonFor: (entry) =>
                     _directPayBlockedReason(loaded, entry),
                 payingLoanIds: _payingLoanIds,
-                pendingDirectLoanIds: _pendingDirectDrafts.keys.toSet(),
+                pendingDirectLoanIds: _pendingPaymentLoanIds(),
                 onToggleClient: _toggleClient,
                 onRecord: (entry) => _payNow(loaded, entry),
+                onRecordCombined: (client) => _payCombined(loaded, client),
                 detailsBuilder: (entry) => _LoanDetails(
                   entry: entry,
                   blockedReason: _directPayBlockedReason(loaded, entry),
                   detailsBlockedReason: _detailsBlockedReason(loaded, entry),
-                  correctionBlockedReason: _correctionBlockedReason(loaded, entry),
+                  correctionBlockedReason:
+                      _correctionBlockedReason(loaded, entry),
                   onDetails: () => _openCollectionDetails(loaded, entry),
                   onEdit: () => _openCorrection(loaded, entry),
                 ),
@@ -482,7 +640,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
             ],
           const SizedBox(height: 4),
           Text(
-            'One client stays on one Daily Collection row. TODAY keeps one-tap Pay when exactly one loan is safely payable. If Regular + 7x7 both need payment, Review fails closed until SPINA can allocate the combined cash atomically on the server. Expand only for notes, receipts, covered dates/ADV, voluntary extra, correction or other exceptions. Offline routes remain view-only.',
+            'One client stays on one Daily Collection row. TODAY keeps one-tap Pay. When Regular + 7x7 are both due, one tap is submitted as one atomic server operation: both official receipts save together or neither saves. Expand only for notes, receipts, covered dates/ADV, voluntary extra, correction or other exceptions. Offline routes remain view-only.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -653,9 +811,6 @@ class _TodayReceipts extends StatelessWidget {
   }
 }
 
-
-
-
 String _todayResultLabel(String value) {
   return switch (value.trim().toLowerCase()) {
     'pass' => 'Unable-to-pay reason recorded today.',
@@ -678,8 +833,6 @@ String _date(DateTime value) {
       '${local.month.toString().padLeft(2, '0')}-'
       '${local.day.toString().padLeft(2, '0')}';
 }
-
-
 
 String _moneyCompact(double value) {
   final fixed = value.toStringAsFixed(2);
