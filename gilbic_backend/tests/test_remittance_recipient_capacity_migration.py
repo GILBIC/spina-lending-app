@@ -16,13 +16,13 @@ CROSS_REPOSITORY = (
 )
 
 
-def test_0099_is_transaction_wrapped_and_backfills_without_guessing() -> None:
+def test_0099_is_transaction_wrapped_and_initializes_legacy_without_row_update() -> None:
     source = MIGRATION.read_text(encoding="utf-8")
     body = _transaction_body(source)
 
-    assert "ADD COLUMN IF NOT EXISTS recipient_capacity TEXT" in body
-    assert "SET recipient_capacity = 'legacy'" in body
-    assert "WHERE recipient_capacity IS NULL" in body
+    assert "ADD COLUMN IF NOT EXISTS recipient_capacity TEXT DEFAULT 'legacy'" in body
+    assert "UPDATE lending.collection_remittances" not in body
+    assert "ALTER COLUMN recipient_capacity SET DEFAULT 'legacy'" in body
     assert "ALTER COLUMN recipient_capacity SET NOT NULL" in body
     assert CAPACITY_CONSTRAINT in body
     assert CAPACITY_TRIGGER in body
