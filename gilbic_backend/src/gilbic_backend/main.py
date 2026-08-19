@@ -87,6 +87,7 @@ from .renewal_treatment_accounting_target_api import (
 )
 from .renewal_treatment_decision_api import create_renewal_treatment_decision_router
 from .renewal_treatment_readiness_api import create_renewal_treatment_readiness_router
+from .renewal_workflow_api import create_renewal_workflow_router
 from .seven_by_seven_journal_draft_api import create_seven_by_seven_journal_draft_router
 from .seven_by_seven_journal_posting_api import (
     create_seven_by_seven_journal_posting_router,
@@ -181,6 +182,7 @@ def create_app() -> FastAPI:
     app.include_router(create_client_payment_router())
     app.include_router(create_client_gcash_router())
     app.include_router(create_renewal_router())
+    app.include_router(create_renewal_workflow_router())
     app.include_router(create_support_router())
     app.include_router(create_collector_route_router())
     app.include_router(create_delegated_area_router())
