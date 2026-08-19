@@ -50,6 +50,7 @@ class RenewalLoanOption {
     required this.loanTypeName,
     required this.calculationMode,
     required this.principal,
+    required this.contractualTotal,
     required this.remainingBalance,
     required this.paidAmount,
     required this.paidPercent,
@@ -68,6 +69,7 @@ class RenewalLoanOption {
   final String loanTypeName;
   final String calculationMode;
   final double principal;
+  final double contractualTotal;
   final double remainingBalance;
   final double paidAmount;
   final double paidPercent;
@@ -80,19 +82,24 @@ class RenewalLoanOption {
   final String? pendingRequestId;
   final String? blockingRequestStatus;
 
+  bool get isSevenBySeven => calculationMode.toLowerCase() == 'seven_by_seven';
+
   bool get canRequest => eligible && pendingRequestId == null;
 
-  bool get isAwaitingOfficeProcessing =>
+  bool get isAwaitingProcessing =>
       blockingRequestStatus?.toLowerCase() == 'approved';
 
   String get requestButtonLabel {
-    if (isAwaitingOfficeProcessing) {
-      return 'Office processing';
+    if (isAwaitingProcessing) {
+      return 'Renewal approved';
     }
     if (pendingRequestId != null) {
       return 'Request pending';
     }
-    return eligible ? 'Request renewal' : 'Contact SPINA office';
+    if (eligible) {
+      return isSevenBySeven ? 'Request 7x7 renewal' : 'Request renewal';
+    }
+    return 'Not yet eligible';
   }
 
   factory RenewalLoanOption.fromPayload(Map<String, dynamic> payload) {
@@ -102,6 +109,7 @@ class RenewalLoanOption {
       loanTypeName: _requiredString(payload, 'loan_type_name'),
       calculationMode: _requiredString(payload, 'calculation_mode'),
       principal: _requiredDouble(payload, 'principal'),
+      contractualTotal: _requiredDouble(payload, 'contractual_total'),
       remainingBalance: _requiredDouble(payload, 'remaining_balance'),
       paidAmount: _requiredDouble(payload, 'paid_amount'),
       paidPercent: _requiredDouble(payload, 'paid_percent'),
@@ -161,10 +169,10 @@ class RenewalRequestItem {
 
   String get statusLabel {
     return switch (status.toLowerCase()) {
-      'approved' => 'Approved for office processing',
+      'approved' => 'Approved — continue renewal steps',
       'rejected' => 'Rejected',
       'cancelled' => 'Cancelled',
-      _ => 'Pending review',
+      _ => 'Pending Collector / Management review',
     };
   }
 
@@ -209,9 +217,7 @@ String? _optionalString(Object? value) {
 
 double _requiredDouble(Map<String, dynamic> payload, String key) {
   final value = payload[key];
-  if (value is num) {
-    return value.toDouble();
-  }
+  if (value is num) return value.toDouble();
   final parsed = double.tryParse(value?.toString() ?? '');
   if (parsed == null) {
     throw SpinaApiException(
