@@ -12,6 +12,7 @@ from .collection_api import create_collection_api_router
 from .collection_correction_api import create_collection_correction_router
 from .collection_void_api import create_collection_void_router
 from .collector_route_api import create_collector_route_router
+from .combined_collection_api import create_combined_collection_router
 from .config import get_settings
 from .contract_collection_activation_api import (
     create_contract_collection_activation_router,
@@ -185,6 +186,7 @@ def create_app() -> FastAPI:
     app.include_router(create_delegated_area_router())
     app.include_router(create_other_area_router())
     app.include_router(create_collection_api_router())
+    app.include_router(create_combined_collection_router())
     app.include_router(create_collection_correction_router())
     app.include_router(create_collection_void_router())
     app.include_router(create_remittance_router())
