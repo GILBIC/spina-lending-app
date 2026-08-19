@@ -5,16 +5,15 @@ import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 typedef CollectorEntryReason = String? Function(CollectorRouteEntry entry);
 typedef CollectorEntryAction = void Function(CollectorRouteEntry entry);
+typedef CollectorClientAction = void Function(CollectorRouteClientGroup client);
 typedef CollectorEntryDetailsBuilder = Widget Function(CollectorRouteEntry entry);
 
-/// Production Collector area ledger using the Management-approved synthetic
-/// visual structure: one client row with REG, 7x7 and TODAY together.
+/// Production Collector area ledger using one client row with REG, 7x7 and TODAY.
 ///
-/// Financial authority stays outside this widget. It calls [onRecord] only
-/// when exactly one loan is directly payable. If two or more loans need money
-/// at the same time, the TODAY action expands the client rather than issuing
-/// independent phone writes; the combined payment must be posted atomically by
-/// the server before that action can become one-tap production Pay.
+/// Exactly one payable loan uses [onRecord]. When one Regular and one protected
+/// 7x7 loan are both payable, TODAY uses [onRecordCombined]. The combined action
+/// is one server-authoritative atomic operation; the phone never submits two
+/// independent financial writes for the same tap.
 class CollectorClientLedgerSection extends StatelessWidget {
   const CollectorClientLedgerSection({
     required this.group,
@@ -24,6 +23,7 @@ class CollectorClientLedgerSection extends StatelessWidget {
     required this.pendingDirectLoanIds,
     required this.onToggleClient,
     required this.onRecord,
+    required this.onRecordCombined,
     required this.detailsBuilder,
     super.key,
   });
@@ -35,6 +35,7 @@ class CollectorClientLedgerSection extends StatelessWidget {
   final Set<String> pendingDirectLoanIds;
   final void Function(String clientId) onToggleClient;
   final CollectorEntryAction onRecord;
+  final CollectorClientAction onRecordCombined;
   final CollectorEntryDetailsBuilder detailsBuilder;
 
   @override
@@ -78,6 +79,7 @@ class CollectorClientLedgerSection extends StatelessWidget {
               pendingDirectLoanIds: pendingDirectLoanIds,
               onToggle: () => onToggleClient(group.clients[index].clientId),
               onRecord: onRecord,
+              onRecordCombined: onRecordCombined,
               detailsBuilder: detailsBuilder,
             ),
           ],
@@ -129,6 +131,7 @@ class _ClientRow extends StatelessWidget {
     required this.pendingDirectLoanIds,
     required this.onToggle,
     required this.onRecord,
+    required this.onRecordCombined,
     required this.detailsBuilder,
   });
 
@@ -140,6 +143,7 @@ class _ClientRow extends StatelessWidget {
   final Set<String> pendingDirectLoanIds;
   final VoidCallback onToggle;
   final CollectorEntryAction onRecord;
+  final CollectorClientAction onRecordCombined;
   final CollectorEntryDetailsBuilder detailsBuilder;
 
   @override
@@ -218,6 +222,7 @@ class _ClientRow extends StatelessWidget {
                     state: action,
                     onToggle: onToggle,
                     onRecord: onRecord,
+                    onRecordCombined: onRecordCombined,
                   ),
                 ),
               ],
@@ -261,12 +266,14 @@ class _TodayAction extends StatelessWidget {
     required this.state,
     required this.onToggle,
     required this.onRecord,
+    required this.onRecordCombined,
   });
 
   final CollectorRouteClientGroup client;
   final _ClientActionState state;
   final VoidCallback onToggle;
   final CollectorEntryAction onRecord;
+  final CollectorClientAction onRecordCombined;
 
   @override
   Widget build(BuildContext context) {
@@ -293,27 +300,20 @@ class _TodayAction extends StatelessWidget {
     }
 
     if (state.requiresAtomicCombinedPosting) {
-      final compactStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-            height: 1,
-          );
       return SizedBox(
         height: 42,
-        child: OutlinedButton(
+        child: FilledButton(
           key: key,
-          onPressed: onToggle,
-          style: _outlinedStyle(context),
+          onPressed: () => onRecordCombined(client),
+          style: _buttonStyle(context),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                'Review',
-                style: compactStyle?.copyWith(fontWeight: FontWeight.w800),
-              ),
+              Text(state.pendingRetry ? 'Retry' : 'Pay'),
               Text(
                 _moneyShort(state.payableAmount),
                 maxLines: 1,
-                style: compactStyle?.copyWith(fontSize: 10),
+                style: Theme.of(context).textTheme.labelSmall,
               ),
             ],
           ),
@@ -347,12 +347,6 @@ class _TodayAction extends StatelessWidget {
   }
 
   ButtonStyle _buttonStyle(BuildContext context) => FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-        minimumSize: const Size(68, 40),
-        textStyle: Theme.of(context).textTheme.labelMedium,
-      );
-
-  ButtonStyle _outlinedStyle(BuildContext context) => OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
         minimumSize: const Size(68, 40),
         textStyle: Theme.of(context).textTheme.labelMedium,
@@ -444,7 +438,7 @@ class _CombinedPayNotice extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
-        'Regular + 7x7 are both due. SPINA will not submit two separate phone payments. Combined one-tap Pay becomes available only through the atomic server allocator.',
+        'Regular + 7x7 are both due. One-tap Pay sends one atomic server request: both official payments save together or neither saves.',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: SpinaTheme.brandPinkDark,
               fontWeight: FontWeight.w700,
@@ -506,7 +500,7 @@ class _ClientActionState {
         payableAmount: payableAmount,
         paying: paying,
         pendingRetry: pendingRetry,
-        label: 'Review',
+        label: pendingRetry ? 'Retry' : 'Pay',
         actionAmount: payableAmount,
       );
     }
