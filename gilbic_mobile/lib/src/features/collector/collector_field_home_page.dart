@@ -8,6 +8,7 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_master_review_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_renewal_requests_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_synthetic_review_page.dart';
 import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
@@ -84,6 +85,19 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
     );
   }
 
+  Future<void> _openRenewals() async {
+    if (!widget.session.hasPermission('renewal.recommend.assigned')) {
+      _permissionMessage('assigned-client renewal recommendations');
+      return;
+    }
+    await _open(
+      CollectorRenewalRequestsPage(
+        session: widget.session,
+        deviceIdentityProvider: widget.deviceIdentityProvider,
+      ),
+    );
+  }
+
   Future<void> _openRemittance() async {
     if (!widget.session.hasPermission('remittance.create')) {
       _permissionMessage('remittance submission');
@@ -131,6 +145,17 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                       _open(const CollectorSyntheticReviewPage());
                     },
                   ),
+                _CollectorToolTile(
+                  key: const Key('collector-more-renewals'),
+                  icon: Icons.autorenew_rounded,
+                  title: 'Renewal requests',
+                  subtitle:
+                      'Recommend assigned clients and track terms, signers, cash and proof',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _openRenewals();
+                  },
+                ),
                 _CollectorToolTile(
                   key: const Key('collector-more-other-area'),
                   icon: Icons.person_search_outlined,
