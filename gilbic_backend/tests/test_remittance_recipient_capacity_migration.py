@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from tools.apply_0099_remittance_recipient_capacity_migration import (
+    BACKEND_SRC,
     CAPACITY_CONSTRAINT,
     CAPACITY_TRIGGER,
     MIGRATION,
@@ -42,10 +43,12 @@ def test_0099_capacity_domain_matches_application_contract() -> None:
 
 
 def test_0099_runner_guards_existing_financial_evidence() -> None:
-    runner = (
-        ROOT / "tools" / "apply_0099_remittance_recipient_capacity_migration.py"
-    ).read_text(encoding="utf-8")
+    runner_path = ROOT / "tools" / "apply_0099_remittance_recipient_capacity_migration.py"
+    runner = runner_path.read_text(encoding="utf-8")
 
+    assert BACKEND_SRC == ROOT / "gilbic_backend" / "src"
+    assert 'BACKEND_SRC = ROOT / "gilbic_backend" / "src"' in runner
+    assert "for import_root in (ROOT, BACKEND_SRC):" in runner
     assert "LOCK TABLE lending.collection_remittances IN ACCESS EXCLUSIVE MODE" in runner
     assert "pre-existing remittance evidence changed" in runner
     assert "remittance row count or cash total changed" in runner
