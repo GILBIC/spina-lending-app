@@ -7,8 +7,10 @@ import psycopg
 from psycopg import sql
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+BACKEND_SRC = ROOT / "gilbic_backend" / "src"
+for import_root in (ROOT, BACKEND_SRC):
+    if str(import_root) not in sys.path:
+        sys.path.insert(0, str(import_root))
 
 from gilbic_backend.config import get_settings
 
