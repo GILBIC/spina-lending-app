@@ -6,8 +6,9 @@ import 'package:gilbic_mobile/src/features/collector/collector_client_ledger.dar
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 void main() {
-  testWidgets('real ledger uses one synthetic-style client row', (tester) async {
+  testWidgets('real ledger uses one atomic Pay for Regular plus 7x7', (tester) async {
     final recorded = <CollectorRouteEntry>[];
+    final combined = <CollectorRouteClientGroup>[];
     final group = CollectorRouteAreaGroup(
       area: 'Balayong',
       clients: <CollectorRouteClientGroup>[
@@ -62,6 +63,7 @@ void main() {
             pendingDirectLoanIds: const <String>{},
             onToggleClient: (_) {},
             onRecord: recorded.add,
+            onRecordCombined: combined.add,
             detailsBuilder: (_) => const SizedBox.shrink(),
           ),
         ),
@@ -77,19 +79,23 @@ void main() {
     expect(find.text('Ana Dela Cruz'), findsOneWidget);
     expect(find.text('₱100'), findsOneWidget);
     expect(find.text('₱50'), findsOneWidget);
+    expect(find.text('₱150'), findsOneWidget);
     expect(find.text('NOT COLLECTED'), findsOneWidget);
-    expect(find.text('Review'), findsOneWidget);
+    expect(find.text('Pay'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('record-client-client-1')));
     await tester.pumpAndSettle();
     expect(recorded, isEmpty,
-        reason: 'Regular + 7x7 must never become two independent phone writes.');
+        reason: 'The combined tap must never become two independent mobile calls.');
+    expect(combined, hasLength(1));
+    expect(combined.single.clientId, 'client-1');
   });
 
   testWidgets('single payable loan keeps one-tap Pay on the client row', (
     tester,
   ) async {
     final recorded = <CollectorRouteEntry>[];
+    final combined = <CollectorRouteClientGroup>[];
     const entry = CollectorRouteEntry(
       id: 'regular-only',
       clientId: 'client-2',
@@ -127,6 +133,7 @@ void main() {
             pendingDirectLoanIds: const <String>{},
             onToggleClient: (_) {},
             onRecord: recorded.add,
+            onRecordCombined: combined.add,
             detailsBuilder: (_) => const SizedBox.shrink(),
           ),
         ),
@@ -139,5 +146,6 @@ void main() {
     await tester.tap(find.byKey(const Key('record-collection-regular-only')));
     await tester.pump();
     expect(recorded, <CollectorRouteEntry>[entry]);
+    expect(combined, isEmpty);
   });
 }
