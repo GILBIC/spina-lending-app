@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header
+from psycopg.rows import dict_row
 
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
@@ -18,6 +19,7 @@ from .collector_route_repository import (
     CollectorRouteRecord,
     PostgresCollectorRouteRepository,
 )
+from .database import open_connection
 from .request_auth import authenticated_device_context
 from .seven_by_seven_collector_route import (
     SevenBySevenGatedPostgresCollectorRouteRepository,
@@ -137,11 +139,59 @@ def _remittance_state_label(status: CollectorRouteCrossStatusRecord) -> str:
     return "not yet remitted"
 
 
+def _renewal_requests_by_client(
+    *,
+    client_ids: tuple[UUID, ...],
+    collector_user_id: UUID,
+) -> dict[UUID, tuple[dict[str, object], ...]]:
+    if not client_ids:
+        return {}
+    with open_connection() as connection:
+        with connection.cursor(row_factory=dict_row) as cursor:
+            cursor.execute(
+                """
+                select
+                    request.id as request_id,
+                    request.client_id,
+                    request.loan_id,
+                    request.status,
+                    coalesce(nullif(btrim(loan_type.name), ''), 'Loan') as loan_type,
+                    loan_type.calculation_mode,
+                    request.submitted_at
+                from lending.client_renewal_requests request
+                join lending.clients client on client.id = request.client_id
+                join lending.loans loan on loan.id = request.loan_id
+                join lending.loan_types loan_type on loan_type.id = loan.loan_type_id
+                where request.client_id = any(%s)
+                  and request.status in ('pending', 'approved')
+                  and lending.collector_area_owner(coalesce(client.area, '')) = %s
+                order by request.submitted_at desc, request.id desc
+                """,
+                (list(client_ids), collector_user_id),
+            )
+            rows = cursor.fetchall()
+    grouped: dict[UUID, list[dict[str, object]]] = {}
+    for row in rows:
+        grouped.setdefault(row["client_id"], []).append(
+            {
+                "request_id": str(row["request_id"]),
+                "loan_id": str(row["loan_id"]),
+                "status": str(row["status"]),
+                "loan_type": str(row["loan_type"]),
+                "is_7x7": str(row["calculation_mode"] or "").lower()
+                == "seven_by_seven",
+                "submitted_at": row["submitted_at"].isoformat(),
+            }
+        )
+    return {key: tuple(value) for key, value in grouped.items()}
+
+
 def _entry_payload(
     entry: CollectorRouteEntryRecord,
     *,
     route_owner_user_id: UUID | None = None,
     cross_status: CollectorRouteCrossStatusRecord | None = None,
+    renewal_requests: tuple[dict[str, object], ...] = (),
 ) -> dict[str, object]:
     seven_by_seven_mobile_enabled = (
         _is_seven_by_seven_loan_type(entry.loan_type)
@@ -233,6 +283,8 @@ def _entry_payload(
         "today_covered_dates": [
             value.isoformat() for value in entry.today_covered_dates
         ],
+        "renewal_requested": bool(renewal_requests),
+        "renewal_requests": list(renewal_requests),
     }
     if recorded_by_other:
         payload.update(
@@ -268,6 +320,7 @@ def _route_payload(
     *,
     route_owner_user_id: UUID,
     cross_statuses: dict[UUID, CollectorRouteCrossStatusRecord],
+    renewals_by_client: dict[UUID, tuple[dict[str, object], ...]],
 ) -> dict[str, object]:
     return {
         "route_date": route.route_date.isoformat(),
@@ -283,6 +336,7 @@ def _route_payload(
                     if entry.today_transaction_id
                     else None
                 ),
+                renewal_requests=renewals_by_client.get(entry.client_id, ()),
             )
             for entry in route.entries
         ],
@@ -334,12 +388,18 @@ def create_collector_route_router() -> APIRouter:
             if transaction_ids
             else {}
         )
+        client_ids = tuple(dict.fromkeys(entry.client_id for entry in route.entries))
+        renewals_by_client = _renewal_requests_by_client(
+            client_ids=client_ids,
+            collector_user_id=actor.user_id,
+        )
         return {
             "success": True,
             "data": _route_payload(
                 route,
                 route_owner_user_id=actor.user_id,
                 cross_statuses=status_by_transaction,
+                renewals_by_client=renewals_by_client,
             ),
         }
 
