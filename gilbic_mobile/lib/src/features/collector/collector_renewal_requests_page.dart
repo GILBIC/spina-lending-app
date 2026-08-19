@@ -718,7 +718,7 @@ class _RecommendationDialogState extends State<_RecommendationDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DropdownButtonFormField<String>(
-            value: _reason,
+            initialValue: _reason,
             decoration: const InputDecoration(labelText: 'Reason'),
             items: _reasons
                 .map((value) => DropdownMenuItem(value: value, child: Text(value)))
