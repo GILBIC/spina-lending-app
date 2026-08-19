@@ -26,7 +26,7 @@ void main() {
     expect(find.text('Renewal Requests'), findsOneWidget);
     expect(find.text('TEST CLIENT REGULAR'), findsOneWidget);
     expect(find.text('₱6,000.00'), findsWidgets);
-    expect(find.text('Pending review'), findsOneWidget);
+    expect(find.text('Pending Collector / Management review'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('approve-renewal-request-1')));
     await tester.pumpAndSettle();
