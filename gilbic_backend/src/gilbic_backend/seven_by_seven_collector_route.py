@@ -14,7 +14,7 @@ from .seven_by_seven_collection_posting import SEVEN_BY_SEVEN_MOBILE_SETTING
 class SevenBySevenGatedPostgresCollectorRouteRepository(
     PerLoanPostgresCollectorRouteRepository
 ):
-    """Keep 7x7 rows read-only unless the dedicated protected flag is enabled."""
+    """Apply protected 7x7 and renewal-activation gates to Daily Collection."""
 
     def get_today_route(
         self,
@@ -39,7 +39,13 @@ class SevenBySevenGatedPostgresCollectorRouteRepository(
                     select
                         loan.id as loan_id,
                         loan_type.calculation_mode,
-                        loan_type.settings
+                        loan_type.settings,
+                        exists (
+                            select 1
+                            from lending.client_renewal_requests request
+                            where request.new_loan_id = loan.id
+                              and request.activation_status <> 'active'
+                        ) as renewal_activation_blocked
                     from lending.loans loan
                     join lending.loan_types loan_type on loan_type.id = loan.loan_type_id
                     where loan.id = any(%s)
@@ -52,6 +58,12 @@ class SevenBySevenGatedPostgresCollectorRouteRepository(
         entries = []
         for entry in route.entries:
             row = coordinates.get(entry.loan_id)
+            if row is not None and bool(row["renewal_activation_blocked"]):
+                # A renewal loan can exist for accounting/disbursement evidence but is
+                # not collectible until client cash confirmation, proof approval,
+                # old-loan settlement and Management activation are all complete.
+                continue
+
             if row is None or str(row["calculation_mode"] or "") != "seven_by_seven":
                 entries.append(entry)
                 continue
