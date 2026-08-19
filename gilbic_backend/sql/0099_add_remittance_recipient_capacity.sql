@@ -1,11 +1,10 @@
 BEGIN;
 
+-- Install the compatibility default as part of the DDL itself. Do not backfill
+-- existing rows with UPDATE: accepted remittances are intentionally closed to
+-- every row mutation by the custody guard introduced in 0010.
 ALTER TABLE lending.collection_remittances
-    ADD COLUMN IF NOT EXISTS recipient_capacity TEXT;
-
-UPDATE lending.collection_remittances
-SET recipient_capacity = 'legacy'
-WHERE recipient_capacity IS NULL;
+    ADD COLUMN IF NOT EXISTS recipient_capacity TEXT DEFAULT 'legacy';
 
 ALTER TABLE lending.collection_remittances
     ALTER COLUMN recipient_capacity SET DEFAULT 'legacy';
