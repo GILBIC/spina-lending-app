@@ -143,6 +143,8 @@ class _Repository implements CrossRemittanceRepository {
     UserSession session, {
     required String deviceId,
     required String recipientUserId,
+    CrossRemittanceRecipientCapacity recipientCapacity =
+        CrossRemittanceRecipientCapacity.assignedCollector,
     required DateTime collectionDate,
   }) {
     throw UnimplementedError();
@@ -153,6 +155,8 @@ class _Repository implements CrossRemittanceRepository {
     UserSession session, {
     required String deviceId,
     required String recipientUserId,
+    CrossRemittanceRecipientCapacity recipientCapacity =
+        CrossRemittanceRecipientCapacity.assignedCollector,
     required DateTime collectionDate,
     String note = '',
   }) {
