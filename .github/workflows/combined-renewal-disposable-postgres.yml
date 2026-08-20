@@ -28,11 +28,6 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           clean: false
 
-      - name: Verify PostgreSQL readiness
-        shell: cmd
-        run: |
-          pg_isready -h 127.0.0.1 -p 5432 -U postgres
-
       - name: Run disposable combined Pay and renewal validation
         shell: cmd
         run: |
