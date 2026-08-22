@@ -9,11 +9,12 @@ from pathlib import Path
 import psycopg
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
+import run_stage5d17_disposable_postgres_validation as disposable
+
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND_SRC = ROOT / "gilbic_backend" / "src"
 MOBILE_SRC = ROOT / "spina_backend_mobile" / "src"
-BOOTSTRAP_SCRIPT = ROOT / "tools" / "run_stage5d17_disposable_postgres_validation.py"
 MIGRATION_RUNNER = ROOT / "tools" / "apply_0100_0101_collection_renewal_migrations.py"
 TARGET_TEST = (
     ROOT
@@ -51,6 +52,8 @@ def _database_url(base_params: dict[str, str], database_name: str) -> str:
 
 def _env(database_url: str) -> dict[str, str]:
     env = os.environ.copy()
+    for key in disposable.ENDPOINT_ENV_KEYS:
+        env.pop(key, None)
     env["GILBIC_DATABASE_URL"] = database_url
     env["GILBIC_TEST_DATABASE_URL"] = database_url
     roots = [str(ROOT), str(BACKEND_SRC), str(MOBILE_SRC)]
@@ -74,8 +77,17 @@ def _run(command: list[str], *, env: dict[str, str], timeout: int = 300) -> None
         )
 
 
+def _bootstrap_database(test_url: str) -> None:
+    # Reuse the proven Stage 5D.17 migration replayer directly against this
+    # workflow-owned database. Running the Stage 5D.17 CLI would create its own
+    # nested disposable database and leave this database unbootstrapped.
+    disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
+    disposable._install_supabase_auth_prerequisite(test_url)
+    disposable._bootstrap_database(test_url)
+
+
 def main() -> int:
-    for required in (BOOTSTRAP_SCRIPT, MIGRATION_RUNNER, TARGET_TEST):
+    for required in (MIGRATION_RUNNER, TARGET_TEST):
         if not required.is_file():
             raise SystemExit(f"Required validation file is missing: {required}")
 
@@ -91,10 +103,8 @@ def main() -> int:
             connection.execute(f'CREATE DATABASE "{database_name}"')
         created = True
 
-        bootstrap_env = _env(test_url)
-        bootstrap_env["SPINA_STAGE5D17_BOOTSTRAP_ONLY"] = "1"
-        bootstrap_env["SPINA_STAGE5D17_BOOTSTRAP_THROUGH"] = str(BOOTSTRAP_THROUGH)
-        _run([sys.executable, str(BOOTSTRAP_SCRIPT)], env=bootstrap_env, timeout=600)
+        print(f"Bootstrapping disposable database through migration {BOOTSTRAP_THROUGH:04d}...")
+        _bootstrap_database(test_url)
 
         migration_env = _env(test_url)
         print("Applying guarded 0100/0101 migrations...")
