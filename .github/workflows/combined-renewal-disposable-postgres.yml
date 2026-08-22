@@ -55,7 +55,8 @@ jobs:
             "COMBINED_RENEWAL_RUN_ROOT=$runRoot",
             "COMBINED_RENEWAL_PG_DATA=$(Join-Path $runRoot 'pgdata')",
             "COMBINED_RENEWAL_PG_LOG=$(Join-Path $runRoot 'postgres.log')",
-            "COMBINED_RENEWAL_OWNERSHIP_MARKER=$(Join-Path $runRoot 'cluster-owned.marker')"
+            "COMBINED_RENEWAL_OWNERSHIP_MARKER=$(Join-Path $runRoot 'cluster-owned.marker')",
+            "COMBINED_RENEWAL_VENV=$(Join-Path $runRoot 'venv')"
           ) | ForEach-Object {
             $_ | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           }
@@ -137,10 +138,17 @@ jobs:
           & $pgReady -h 127.0.0.1 -p $env:COMBINED_RENEWAL_PG_PORT -U $env:COMBINED_RENEWAL_PG_USER -d postgres
           if ($LASTEXITCODE -ne 0) { throw 'Temporary PostgreSQL cluster is not ready.' }
 
+      - name: Create isolated verifier environment
+        shell: cmd
+        run: |
+          python -m venv "%COMBINED_RENEWAL_VENV%" || exit /b 1
+          "%COMBINED_RENEWAL_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%COMBINED_RENEWAL_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "psycopg[binary]>=3.2,<4" "pytest>=8.3,<9" "fastapi>=0.115,<1" "pydantic-settings>=2.7,<3" "httpx>=0.28,<1" || exit /b 1
+
       - name: Run disposable combined Pay and renewal validation
         shell: cmd
         run: |
-          python tools\run_combined_collection_renewal_disposable_postgres_validation.py
+          "%COMBINED_RENEWAL_VENV%\Scripts\python.exe" tools\run_combined_collection_renewal_disposable_postgres_validation.py || exit /b 1
 
       - name: Stop and delete temporary PostgreSQL cluster
         if: always()
