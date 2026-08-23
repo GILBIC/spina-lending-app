@@ -15,12 +15,17 @@ class CollectorCashStatusCard extends StatefulWidget {
   const CollectorCashStatusCard({
     required this.session,
     required this.deviceIdentityProvider,
+    required this.onOpenRemittance,
     required this.onOpenRenewals,
     super.key,
   });
 
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
+
+  /// Retained for Collector-shell compatibility. Daily Collection intentionally
+  /// does not expose this action; remittance stays in the dedicated Remit tab.
+  final VoidCallback onOpenRemittance;
   final VoidCallback onOpenRenewals;
 
   @override
