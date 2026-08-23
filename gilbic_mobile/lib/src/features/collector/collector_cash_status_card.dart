@@ -17,6 +17,7 @@ class CollectorCashStatusCard extends StatefulWidget {
     required this.deviceIdentityProvider,
     required this.onOpenRemittance,
     required this.onOpenRenewals,
+    required this.onOpenCashToReceive,
     this.onCashReleaseAlert,
     super.key,
   });
@@ -28,6 +29,7 @@ class CollectorCashStatusCard extends StatefulWidget {
   /// does not expose this action; remittance stays in the dedicated Remit tab.
   final VoidCallback onOpenRemittance;
   final VoidCallback onOpenRenewals;
+  final VoidCallback onOpenCashToReceive;
 
   /// Called when the server reports a Management-released renewal amount still
   /// waiting for this Collector's physical receipt confirmation.
@@ -202,7 +204,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
                       : 'Management releases waiting',
                   emphasized: _cashToReceiveCount > 0,
                   enabled: canRenewals(widget.session),
-                  onTap: widget.onOpenRenewals,
+                  onTap: widget.onOpenCashToReceive,
                 ),
               ),
               const SizedBox(width: 6),
