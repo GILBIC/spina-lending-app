@@ -18,6 +18,7 @@ class CollectorCashStatusCard extends StatefulWidget {
     required this.onOpenRemittance,
     required this.onOpenRenewals,
     required this.onOpenCashToReceive,
+    required this.onOpenCashToClient,
     this.onCashReleaseAlert,
     super.key,
   });
@@ -30,6 +31,7 @@ class CollectorCashStatusCard extends StatefulWidget {
   final VoidCallback onOpenRemittance;
   final VoidCallback onOpenRenewals;
   final VoidCallback onOpenCashToReceive;
+  final VoidCallback onOpenCashToClient;
 
   /// Called when the server reports a Management-released renewal amount still
   /// waiting for this Collector's physical receipt confirmation.
@@ -215,10 +217,10 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
                   value: '$_cashWithCollectorCount',
                   subtitle: _cashWithCollectorCount == 0
                       ? 'No release in custody'
-                      : 'Open Renewal Requests',
+                      : 'Open handover queue',
                   emphasized: _cashWithCollectorCount > 0,
                   enabled: canRenewals(widget.session),
-                  onTap: widget.onOpenRenewals,
+                  onTap: widget.onOpenCashToClient,
                 ),
               ),
             ],
