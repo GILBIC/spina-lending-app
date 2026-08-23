@@ -191,7 +191,7 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
       }
 
       setState(() => _busy.add(request.requestId));
-      final updated = await _repository.uploadHandoverPhoto(
+      await _repository.uploadHandoverPhoto(
         widget.session,
         deviceId: deviceId,
         requestId: request.requestId,
@@ -199,15 +199,7 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
       );
       if (!mounted) return;
       _message('Handover proof submitted for Management review.');
-      setState(() {
-        _requests = [
-          for (final item in _requests)
-            if (item.requestId != request.requestId)
-              item
-            else if (_belongsInHandoverQueue(updated))
-              updated,
-        ];
-      });
+      await _load();
     } on SpinaApiException catch (error) {
       if (mounted) _message(error.message);
     } on Object {
