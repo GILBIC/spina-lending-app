@@ -6,24 +6,21 @@ import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow.dart'
 import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow_repository.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
-/// Compact Collector cash/release status shown above Daily Collection.
+/// Compact field-cash status shown above Daily Collection.
 ///
-/// Collection-cash responsibility remains with the Collector until the receiving
-/// party accepts the remittance. The server calculates the all-date cash total so
-/// older unremitted cash cannot disappear from the home screen. Renewal release
-/// cash is shown separately because it must be handed to the client, not remitted.
+/// Daily Collection shows only the Collector's total collection-cash
+/// responsibility plus immediate loan-release field actions. Remittance states,
+/// submission details and history belong exclusively to the Remit workflow.
 class CollectorCashStatusCard extends StatefulWidget {
   const CollectorCashStatusCard({
     required this.session,
     required this.deviceIdentityProvider,
-    required this.onOpenRemittance,
     required this.onOpenRenewals,
     super.key,
   });
 
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
-  final VoidCallback onOpenRemittance;
   final VoidCallback onOpenRenewals;
 
   @override
@@ -37,10 +34,6 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
       SpinaCollectorRenewalWorkflowRepository();
 
   double _totalCollectionCashHeld = 0;
-  double _readyToRemit = 0;
-  int _readyToRemitCount = 0;
-  double _awaitingAcceptance = 0;
-  int _awaitingAcceptanceCount = 0;
   int _cashToReceiveCount = 0;
   double _cashToReceiveAmount = 0;
   int _cashWithCollectorCount = 0;
@@ -58,10 +51,6 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     setState(() => _loading = true);
 
     var totalCollectionCashHeld = 0.0;
-    var readyToRemit = 0.0;
-    var readyToRemitCount = 0;
-    var awaitingAcceptance = 0.0;
-    var awaitingAcceptanceCount = 0;
     var cashToReceiveCount = 0;
     var cashToReceiveAmount = 0.0;
     var cashWithCollectorCount = 0;
@@ -77,10 +66,6 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
             deviceId: identity.installationId,
           );
           totalCollectionCashHeld = accountability.totalCashHeld;
-          readyToRemit = accountability.readyToRemitAmount;
-          readyToRemitCount = accountability.readyToRemitCount;
-          awaitingAcceptance = accountability.awaitingAcceptanceAmount;
-          awaitingAcceptanceCount = accountability.awaitingAcceptanceCount;
         } on Object {
           // Cash status must not block Daily Collection if the summary is unavailable.
         }
@@ -113,10 +98,6 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     if (!mounted) return;
     setState(() {
       _totalCollectionCashHeld = totalCollectionCashHeld;
-      _readyToRemit = readyToRemit;
-      _readyToRemitCount = readyToRemitCount;
-      _awaitingAcceptance = awaitingAcceptance;
-      _awaitingAcceptanceCount = awaitingAcceptanceCount;
       _cashToReceiveCount = cashToReceiveCount;
       _cashToReceiveAmount = cashToReceiveAmount;
       _cashWithCollectorCount = cashWithCollectorCount;
@@ -149,7 +130,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
               const SizedBox(width: 7),
               Expanded(
                 child: Text(
-                  'Cash accountability',
+                  'Field cash',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         fontWeight: FontWeight.w900,
                       ),
@@ -170,44 +151,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
               ),
             ],
           ),
-          _PrimaryCashHeldTile(
-            amount: _totalCollectionCashHeld,
-            readyAmount: _readyToRemit,
-            awaitingAmount: _awaitingAcceptance,
-            enabled: widget.session.hasPermission('remittance.create'),
-            onTap: widget.onOpenRemittance,
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: _CashStatusTile(
-                  key: const Key('collector-ready-to-remit'),
-                  title: 'Ready to remit',
-                  value: _money(_readyToRemit),
-                  subtitle: _readyToRemitCount == 0
-                      ? 'No unsubmitted cash'
-                      : '$_readyToRemitCount cash receipt${_readyToRemitCount == 1 ? '' : 's'}',
-                  enabled: widget.session.hasPermission('remittance.create'),
-                  onTap: widget.onOpenRemittance,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _CashStatusTile(
-                  key: const Key('collector-awaiting-remittance-acceptance'),
-                  title: 'Awaiting acceptance',
-                  value: _money(_awaitingAcceptance),
-                  subtitle: _awaitingAcceptanceCount == 0
-                      ? 'No submitted handoff'
-                      : '$_awaitingAcceptanceCount submitted',
-                  emphasized: _awaitingAcceptance > 0,
-                  enabled: widget.session.hasPermission('remittance.view'),
-                  onTap: widget.onOpenRemittance,
-                ),
-              ),
-            ],
-          ),
+          _PrimaryCashHeldTile(amount: _totalCollectionCashHeld),
           const SizedBox(height: 9),
           Text(
             'Loan releases',
@@ -256,64 +200,50 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
 }
 
 class _PrimaryCashHeldTile extends StatelessWidget {
-  const _PrimaryCashHeldTile({
-    required this.amount,
-    required this.readyAmount,
-    required this.awaitingAmount,
-    required this.enabled,
-    required this.onTap,
-  });
+  const _PrimaryCashHeldTile({required this.amount});
 
   final double amount;
-  final double readyAmount;
-  final double awaitingAmount;
-  final bool enabled;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    return Container(
       key: const Key('collector-total-cash-held'),
-      color: SpinaTheme.brandPinkSoft,
-      borderRadius: BorderRadius.circular(13),
-      child: InkWell(
-        onTap: enabled ? onTap : null,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+      decoration: BoxDecoration(
+        color: SpinaTheme.brandPinkSoft,
         borderRadius: BorderRadius.circular(13),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Total cash held / still to remit',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: SpinaTheme.brandPinkDark,
-                            fontWeight: FontWeight.w900,
-                          ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      '${_money(readyAmount)} ready • ${_money(awaitingAmount)} awaiting acceptance',
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Cash held',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: SpinaTheme.brandPinkDark,
+                        fontWeight: FontWeight.w900,
+                      ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _money(amount),
-                key: const Key('collector-total-cash-held-value'),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: SpinaTheme.brandPinkDark,
-                      fontWeight: FontWeight.w900,
-                    ),
-              ),
-            ],
+                const SizedBox(height: 1),
+                Text(
+                  'Collection cash still under your responsibility',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: 8),
+          Text(
+            _money(amount),
+            key: const Key('collector-total-cash-held-value'),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: SpinaTheme.brandPinkDark,
+                  fontWeight: FontWeight.w900,
+                ),
+          ),
+        ],
       ),
     );
   }
