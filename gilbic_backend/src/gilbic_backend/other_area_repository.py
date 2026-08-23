@@ -46,11 +46,17 @@ class PostgresOtherAreaRepository:
         query: str,
         limit: int = 25,
     ) -> tuple[OtherAreaLoanRecord, ...]:
+        """Search active clients outside the Collector's permanent route.
+
+        Cross-route collection is a normal protected Collector capability.
+        Delegated grants only make approved work convenient to browse in the
+        separate Other-Area Work list; they are not required for search/posting.
+        """
         return self._search_active_loans(
             actor_user_id=collector_user_id,
             query=query,
             limit=limit,
-            require_delegated_access=True,
+            exclude_actor_owned=True,
         )
 
     def search_management_direct(
@@ -60,17 +66,12 @@ class PostgresOtherAreaRepository:
         query: str,
         limit: int = 25,
     ) -> tuple[OtherAreaLoanRecord, ...]:
-        """Search active loans for the distinct Management direct-payment path.
-
-        Management direct payment is authorized by Management role plus
-        collection.create. It must never acquire or depend on a Collector's
-        temporary delegated-area grant.
-        """
+        """Search active loans for the distinct Management direct-payment path."""
         return self._search_active_loans(
             actor_user_id=management_user_id,
             query=query,
             limit=limit,
-            require_delegated_access=False,
+            exclude_actor_owned=False,
         )
 
     def _search_active_loans(
@@ -79,29 +80,24 @@ class PostgresOtherAreaRepository:
         actor_user_id: UUID,
         query: str,
         limit: int,
-        require_delegated_access: bool,
+        exclude_actor_owned: bool,
     ) -> tuple[OtherAreaLoanRecord, ...]:
         normalized = " ".join(query.split()).strip()
         if len(normalized) < 2:
             return ()
         pattern = f"%{normalized}%"
         safe_limit = max(1, min(limit, 50))
-        delegated_clause = (
+        actor_scope_clause = (
             """
                       and lending.collector_area_owner(coalesce(client.area, ''))
                           is distinct from %s
-                      and lending.collector_has_active_delegated_area_access(
-                          %s,
-                          coalesce(client.area, ''),
-                          now()
-                      )
             """
-            if require_delegated_access
+            if exclude_actor_owned
             else ""
         )
         params: list[object] = []
-        if require_delegated_access:
-            params.extend((actor_user_id, actor_user_id))
+        if exclude_actor_owned:
+            params.append(actor_user_id)
         params.extend((pattern, pattern, pattern, pattern, safe_limit))
 
         with open_connection() as connection:
@@ -157,7 +153,7 @@ class PostgresOtherAreaRepository:
                       )
                     where client.status = 'active'
                       and coalesce(state.remaining_balance, loan.principal) > 0
-                      {delegated_clause}
+                      {actor_scope_clause}
                       and (
                           client.full_name ilike %s
                           or client.client_code ilike %s
@@ -184,12 +180,12 @@ class PostgresOtherAreaRepository:
         assigned_collector_user_id: UUID | None = None,
         limit: int = 500,
     ) -> tuple[OtherAreaLoanRecord, ...]:
-        """List the visiting Collector's currently granted work for one day.
+        """List convenience work explicitly surfaced by active delegated grants.
 
-        This is deliberately separate from the Collector's permanent Daily Route.
-        Every row is re-authorized from the active delegated grant at read time,
-        and today's official transaction is shown regardless of which Collector
-        recorded it so duplicate visits can be avoided.
+        This list remains separate from the Collector's permanent Daily Route.
+        Grants control only which cross-route clients are proactively surfaced
+        here. A Collector may still search and collect another-route client
+        through the protected cross-route search even without a grant.
         """
 
         safe_limit = max(1, min(limit, 1000))
@@ -323,7 +319,7 @@ class PostgresOtherAreaRepository:
             message = "This loan's payment calculation still uses SPINA desktop."
         else:
             message = (
-                "Delegated other-area work. The assigned collector and linked client "
+                "Cross-route collection. The assigned collector and linked client "
                 "will be notified after posting."
             )
 
