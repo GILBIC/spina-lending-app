@@ -13,7 +13,7 @@ import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.
 
 void main() {
   testWidgets(
-    'collector automatically loads approved other-area work and opens payment',
+    'collector loads approved convenience work and can open cross-route payment',
     (tester) async {
       await _setLargeSurface(tester);
       final repository = _OtherAreaRepository();
@@ -32,7 +32,7 @@ void main() {
 
       expect(repository.workLoads, 1);
       expect(repository.queries, isEmpty);
-      expect(find.text('Other-Area Work'), findsOneWidget);
+      expect(find.text('Other Area Payment'), findsOneWidget);
       expect(find.text('Bea Borrower'), findsOneWidget);
       expect(find.text('Assigned collector: Collector Two'), findsOneWidget);
       expect(find.textContaining('Taytay'), findsWidgets);
@@ -41,9 +41,9 @@ void main() {
 
       await tester.tap(find.byKey(const Key('record-other-area-loan-other')));
       await tester.pumpAndSettle();
-      expect(find.text('Record delegated-area payment?'), findsOneWidget);
+      expect(find.text('Record cross-route payment?'), findsOneWidget);
       expect(
-        find.textContaining('temporary grant will be rechecked by the server'),
+        find.textContaining('even without a temporary route grant'),
         findsOneWidget,
       );
 
@@ -55,7 +55,42 @@ void main() {
     },
   );
 
-  testWidgets('already processed delegated work shows recorder and cannot post again',
+  testWidgets(
+    'collector can search cross-route clients without delegated view permission',
+    (tester) async {
+      await _setLargeSurface(tester);
+      final repository = _OtherAreaRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: OtherAreaCollectionPage(
+            session: _collectorSearchOnlySession,
+            paymentRepository: _PaymentRepository(),
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            deviceSequence: MemoryCollectionDeviceSequence(),
+            repository: repository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(repository.workLoads, 0);
+      expect(find.text('Other Area Payment'), findsOneWidget);
+      expect(
+        find.text('Search any active client outside your assigned route above.'),
+        findsOneWidget,
+      );
+
+      await tester.enterText(find.byKey(const Key('other-area-search')), 'Bea');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      expect(repository.queries, ['Bea']);
+      expect(find.text('Bea Borrower'), findsOneWidget);
+      expect(find.text('Assigned collector: Collector Two'), findsOneWidget);
+    },
+  );
+
+  testWidgets('already processed cross-route work shows recorder and cannot post again',
       (tester) async {
     await _setLargeSurface(tester);
     await tester.pumpWidget(
@@ -81,7 +116,7 @@ void main() {
     expect(find.text('Already recorded today'), findsOneWidget);
   });
 
-  testWidgets('7x7 delegated work remains fail-closed on the mobile path',
+  testWidgets('7x7 cross-route work remains fail-closed on the mobile path',
       (tester) async {
     await _setLargeSurface(tester);
     await tester.pumpWidget(
@@ -143,6 +178,16 @@ const UserSession _collectorSession = UserSession(
   rawRole: 'Collector',
   accessToken: 'collector-token',
   permissions: <String>['collection.create', 'delegated_area.view'],
+);
+
+const UserSession _collectorSearchOnlySession = UserSession(
+  userId: 'collector-search-only',
+  username: 'collector.search',
+  displayName: 'Collector Search',
+  role: AppRole.collector,
+  rawRole: 'Collector',
+  accessToken: 'collector-search-token',
+  permissions: <String>['collection.create'],
 );
 
 const UserSession _managementSession = UserSession(
@@ -219,7 +264,7 @@ class _OtherAreaRepository implements OtherAreaClientRepository {
           canEnterPayment: !processedToday,
           collectionMessage: processedToday
               ? 'Already recorded today by Collector Three.'
-              : 'Delegated other-area work.',
+              : 'Cross-route collection.',
           processedToday: processedToday,
           todayEntryType: processedToday ? 'payment' : '',
           todayCollectorName: processedToday ? 'Collector Three' : '',
