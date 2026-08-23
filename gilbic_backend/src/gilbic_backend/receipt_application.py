@@ -43,17 +43,15 @@ def plan_receipt_application(
 ) -> ReceiptApplicationPlan:
     """Split one real receipt into applied and unresolved custody cash.
 
-    ``maximum_immediately_applicable`` is supplied by the authoritative loan
-    allocator for the chosen intent:
+    The caller supplies the authoritative maximum that may reduce the loan for
+    the selected action. For normal non-ADV PAYMENT, the posting bridge now uses
+    the exact remaining payoff as this maximum so cash above today's scheduled
+    obligation can reduce principal/remaining term. For ADV, the maximum remains
+    restricted by the explicitly selected covered-date obligation.
 
-    - scheduled: current eligible scheduled obligation only;
-    - voluntary_extra: eligible loan balance allowed to be reduced now;
-    - advance: explicitly selected future covered-date obligation only.
-
-    Cash above that maximum is not rejected and is never guessed into another
-    purpose. It remains an audited unallocated amount for the assigned Collector
-    or Management to resolve while the receipt itself continues through custody
-    and remittance.
+    Cash above the supplied maximum is not discarded or guessed into another
+    purpose. It remains an audited unallocated amount for review/cash-over
+    handling while the physical receipt remains fully accountable.
     """
 
     cash = _money(cash_received_amount)
