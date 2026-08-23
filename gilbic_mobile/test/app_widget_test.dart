@@ -37,17 +37,34 @@ void main() {
     await tester.pumpAndSettle();
 
     // CA4 is Daily-Collection-first: authenticated Collectors land directly on
-    // the Management-approved one-client-row field ledger.
+    // the Management-approved one-client-row field ledger. The fixed field-cash
+    // header intentionally consumes part of the phone viewport, so scroll the
+    // route before asserting below-the-fold ledger content.
     expect(find.text('Daily Collection'), findsOneWidget);
     expect(find.textContaining('Online route'), findsOneWidget);
-    expect(find.text('AREA: CARDONA'), findsOneWidget);
+
+    final routeList = find.byType(ListView);
+    final areaHeader = find.text('AREA: CARDONA');
+    await tester.dragUntilVisible(
+      areaHeader,
+      routeList,
+      const Offset(0, -160),
+    );
+    expect(areaHeader, findsOneWidget);
+
+    final clientRow = find.byKey(const Key('route-client-client-1'));
+    await tester.dragUntilVisible(
+      clientRow,
+      routeList,
+      const Offset(0, -120),
+    );
     expect(find.text('Ana Client'), findsOneWidget);
     expect(find.text('CLIENT / STATUS'), findsOneWidget);
     expect(find.text('REG'), findsOneWidget);
     expect(find.text('TODAY'), findsOneWidget);
     expect(find.text('Latest receipt recorded by: Collector Two'), findsNothing);
 
-    await tester.tap(find.byKey(const Key('route-client-client-1')));
+    await tester.tap(clientRow);
     await tester.pumpAndSettle();
 
     expect(find.text('Regular'), findsOneWidget);
