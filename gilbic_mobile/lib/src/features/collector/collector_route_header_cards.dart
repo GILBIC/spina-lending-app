@@ -41,21 +41,6 @@ class CollectorRouteHeaderCard extends StatelessWidget {
               '$recorded recorded • Last sync ${_time(result.syncedAt)}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
-            const Divider(height: 20),
-            Row(
-              key: const Key('collector-renewal-policy'),
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.verified_user_outlined, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Remote renewal: the borrower and every required surety/guarantor must each have their own GILBIC app. If any required signer does not have the app, the renewal must be completed at the office.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),
