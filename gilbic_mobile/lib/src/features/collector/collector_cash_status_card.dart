@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
-import 'package:gilbic_mobile/src/core/remittance/remittance_repository.dart';
+import 'package:gilbic_mobile/src/core/remittance/collector_cash_accountability_repository.dart';
 import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow.dart';
 import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow_repository.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 /// Compact Collector cash/release status shown above Daily Collection.
 ///
-/// Collection-cash responsibility stays with the Collector until the receiving
-/// party accepts the remittance. The card therefore separates unlocked cash that
-/// is ready to submit from already-submitted cash that is still awaiting receipt.
-/// Renewal release cash is shown separately because it must be handed to the
-/// client, not remitted as collection cash.
+/// Collection-cash responsibility remains with the Collector until the receiving
+/// party accepts the remittance. The server calculates the all-date cash total so
+/// older unremitted cash cannot disappear from the home screen. Renewal release
+/// cash is shown separately because it must be handed to the client, not remitted.
 class CollectorCashStatusCard extends StatefulWidget {
   const CollectorCashStatusCard({
     required this.session,
@@ -32,11 +31,14 @@ class CollectorCashStatusCard extends StatefulWidget {
 }
 
 class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
-  final RemittanceRepository _remittances = SpinaRemittanceRepository();
+  final CollectorCashAccountabilityRepository _cashAccountability =
+      SpinaCollectorCashAccountabilityRepository();
   final CollectorRenewalWorkflowRepository _renewals =
       SpinaCollectorRenewalWorkflowRepository();
 
+  double _totalCollectionCashHeld = 0;
   double _readyToRemit = 0;
+  int _readyToRemitCount = 0;
   double _awaitingAcceptance = 0;
   int _awaitingAcceptanceCount = 0;
   int _cashToReceiveCount = 0;
@@ -44,9 +46,6 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
   int _cashWithCollectorCount = 0;
   double _cashWithCollectorAmount = 0;
   bool _loading = true;
-
-  double get _totalCollectionCashHeld =>
-      _readyToRemit + _awaitingAcceptance;
 
   @override
   void initState() {
@@ -58,7 +57,9 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     if (!mounted) return;
     setState(() => _loading = true);
 
+    var totalCollectionCashHeld = 0.0;
     var readyToRemit = 0.0;
+    var readyToRemitCount = 0;
     var awaitingAcceptance = 0.0;
     var awaitingAcceptanceCount = 0;
     var cashToReceiveCount = 0;
@@ -68,40 +69,20 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
 
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      final today = DateTime.now();
-      final collectionDate = DateTime(today.year, today.month, today.day);
-
-      if (widget.session.hasPermission('remittance.create')) {
-        try {
-          final preview = await _remittances.loadPreview(
-            widget.session,
-            deviceId: identity.installationId,
-            collectionDate: collectionDate,
-          );
-          readyToRemit = preview.totalAmount;
-        } on Object {
-          // Keep Daily Collection available if the preview endpoint is unavailable.
-        }
-      }
 
       if (widget.session.hasPermission('remittance.view')) {
         try {
-          final history = await _remittances.loadHistory(
+          final accountability = await _cashAccountability.load(
             widget.session,
             deviceId: identity.installationId,
           );
-          final pendingOwnRemittances = history.where(
-            (record) =>
-                record.collectorUserId == widget.session.userId &&
-                !record.isReceived,
-          );
-          awaitingAcceptanceCount = pendingOwnRemittances.length;
-          awaitingAcceptance = pendingOwnRemittances.fold<double>(
-            0,
-            (total, record) => total + record.summary.totalAmount,
-          );
+          totalCollectionCashHeld = accountability.totalCashHeld;
+          readyToRemit = accountability.readyToRemitAmount;
+          readyToRemitCount = accountability.readyToRemitCount;
+          awaitingAcceptance = accountability.awaitingAcceptanceAmount;
+          awaitingAcceptanceCount = accountability.awaitingAcceptanceCount;
         } on Object {
-          // A history failure must not block payment entry or route review.
+          // Cash status must not block Daily Collection if the summary is unavailable.
         }
       }
 
@@ -131,7 +112,9 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
 
     if (!mounted) return;
     setState(() {
+      _totalCollectionCashHeld = totalCollectionCashHeld;
       _readyToRemit = readyToRemit;
+      _readyToRemitCount = readyToRemitCount;
       _awaitingAcceptance = awaitingAcceptance;
       _awaitingAcceptanceCount = awaitingAcceptanceCount;
       _cashToReceiveCount = cashToReceiveCount;
@@ -202,7 +185,9 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
                   key: const Key('collector-ready-to-remit'),
                   title: 'Ready to remit',
                   value: _money(_readyToRemit),
-                  subtitle: 'Not submitted yet',
+                  subtitle: _readyToRemitCount == 0
+                      ? 'No unsubmitted cash'
+                      : '$_readyToRemitCount cash receipt${_readyToRemitCount == 1 ? '' : 's'}',
                   enabled: widget.session.hasPermission('remittance.create'),
                   onTap: widget.onOpenRemittance,
                 ),
