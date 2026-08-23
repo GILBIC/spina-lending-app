@@ -132,6 +132,7 @@ def create_renewal_workflow_query_router() -> APIRouter:
                            signer.government_id_verified_at,
                            signer.selfie_verified_at, signer.signed_at,
                            request.client_decision, request.status,
+                           request.office_processing_required,
                            client.full_name as borrower_name,
                            loan.loan_number
                     from lending.renewal_required_signers signer
@@ -157,6 +158,9 @@ def create_renewal_workflow_query_router() -> APIRouter:
                         "signed": row["signed_at"] is not None,
                         "client_decision": row["client_decision"],
                         "status": row["status"],
+                        "office_processing_required": bool(
+                            row["office_processing_required"]
+                        ),
                         "borrower_name": row["borrower_name"],
                         "loan_number": row["loan_number"],
                     }
