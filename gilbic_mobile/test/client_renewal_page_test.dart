@@ -3,9 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/renewals/client_renewal_workflow_repository.dart';
+import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow.dart';
 import 'package:gilbic_mobile/src/core/renewals/renewal_repository.dart';
 import 'package:gilbic_mobile/src/core/renewals/renewal_request.dart';
 import 'package:gilbic_mobile/src/features/client/client_renewal_page.dart';
+import 'package:gilbic_mobile/src/features/client/client_renewal_workflow_page.dart';
 
 void main() {
   testWidgets('client can submit and monitor a renewal request',
@@ -67,6 +70,38 @@ void main() {
     expect(find.text('Request history'), findsOneWidget);
     expect(find.text('Pending Collector / Management review'), findsOneWidget);
   });
+
+  testWidgets('approved request continues into renewal workflow',
+      (tester) async {
+    final repository = _FakeClientRenewalRepository(status: 'approved');
+    final workflowRepository = _FakeClientRenewalWorkflowRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ClientRenewalPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+          workflowRepository: workflowRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final continueButton = find.byKey(const Key('open-renewal-workflow'));
+    expect(continueButton, findsOneWidget);
+    await tester.tap(continueButton);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ClientRenewalWorkflowPage), findsOneWidget);
+    expect(find.text('Renewal Progress'), findsOneWidget);
+    expect(
+      find.text('You do not have an active renewal workflow.'),
+      findsOneWidget,
+    );
+    expect(workflowRepository.listCalls, 1);
+    expect(workflowRepository.deviceId, 'client-device');
+  });
 }
 
 const UserSession _session = UserSession(
@@ -89,6 +124,9 @@ DeviceIdentityProvider _deviceIdentityProvider() {
 }
 
 class _FakeClientRenewalRepository implements ClientRenewalRepository {
+  _FakeClientRenewalRepository({this.status = 'pending'});
+
+  final String status;
   String? deviceId;
   String? submittedLoanId;
   double? submittedAmount;
@@ -124,10 +162,12 @@ class _FakeClientRenewalRepository implements ClientRenewalRepository {
           eligible: true,
           eligibilityMessage:
               'Management will review this request before office processing.',
+          pendingRequestId: status == 'approved' ? 'request-1' : null,
+          blockingRequestStatus: status == 'approved' ? 'approved' : null,
         ),
       ],
       requests: <RenewalRequestItem>[
-        _request(status: 'pending'),
+        _request(status: status),
       ],
     );
   }
@@ -154,6 +194,51 @@ class _FakeClientRenewalRepository implements ClientRenewalRepository {
     required String requestId,
   }) async {
     return _request(status: 'cancelled');
+  }
+}
+
+class _FakeClientRenewalWorkflowRepository
+    implements ClientRenewalWorkflowRepository {
+  int listCalls = 0;
+  String? deviceId;
+
+  @override
+  Future<List<CollectorRenewalRequest>> list(
+    UserSession session, {
+    required String deviceId,
+  }) async {
+    listCalls += 1;
+    this.deviceId = deviceId;
+    return const <CollectorRenewalRequest>[];
+  }
+
+  @override
+  Future<CollectorRenewalRequest> decide(
+    UserSession session, {
+    required String deviceId,
+    required String requestId,
+    required String decision,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<CollectorRenewalRequest> sign(
+    UserSession session, {
+    required String deviceId,
+    required String requestId,
+    required String signerId,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<CollectorRenewalRequest> confirmCashReceived(
+    UserSession session, {
+    required String deviceId,
+    required String requestId,
+  }) {
+    throw UnimplementedError();
   }
 }
 
