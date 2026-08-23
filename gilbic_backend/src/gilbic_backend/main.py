@@ -11,6 +11,9 @@ from .client_payment_api import create_client_payment_router
 from .collection_api import create_collection_api_router
 from .collection_correction_api import create_collection_correction_router
 from .collection_void_api import create_collection_void_router
+from .collector_cash_accountability_api import (
+    create_collector_cash_accountability_router,
+)
 from .collector_route_api import create_collector_route_router
 from .combined_collection_api import create_combined_collection_router
 from .config import get_settings
@@ -187,6 +190,7 @@ def create_app() -> FastAPI:
     app.include_router(create_renewal_workflow_query_router())
     app.include_router(create_support_router())
     app.include_router(create_collector_route_router())
+    app.include_router(create_collector_cash_accountability_router())
     app.include_router(create_delegated_area_router())
     app.include_router(create_other_area_router())
     app.include_router(create_collection_api_router())
