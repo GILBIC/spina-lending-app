@@ -6,6 +6,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_cash_status_card.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_master_review_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_renewal_requests_page.dart';
@@ -20,8 +21,8 @@ import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 /// Collector-first shell for CA4.
 ///
-/// The Management-approved Daily Collection ledger is the primary screen after sign-in.
-/// Master Review is a first-class field action; secondary tools remain behind More.
+/// Daily Collection remains the primary screen after sign-in. Cash/release
+/// responsibility is surfaced above the route so handoffs are not hidden under More.
 class CollectorFieldHomePage extends StatefulWidget {
   const CollectorFieldHomePage({
     required this.session,
@@ -55,7 +56,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Your current SPINA access does not allow $feature.',
+          'Your current Gilbic access does not allow $feature.',
         ),
       ),
     );
@@ -201,8 +202,8 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                   _CollectorToolTile(
                     key: const Key('collector-more-assigned-remittance'),
                     icon: Icons.compare_arrows_rounded,
-                    title: 'Assigned collector remittance',
-                    subtitle: 'Send other-area payments to the route owner',
+                    title: 'Other-area remittance',
+                    subtitle: 'Send other-area cash to the route owner or Management',
                     onTap: () {
                       Navigator.pop(sheetContext);
                       _open(
@@ -244,7 +245,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                   key: const Key('collector-more-sign-out'),
                   icon: Icons.logout_rounded,
                   title: 'Sign out',
-                  subtitle: 'End this SPINA session on the device',
+                  subtitle: 'End this Gilbic session on the device',
                   destructive: true,
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -262,12 +263,27 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: CollectorRoutePage(
-        session: widget.session,
-        loader: widget.collectorRouteLoader,
-        paymentRepository: widget.paymentSubmissionRepository,
-        deviceIdentityProvider: widget.deviceIdentityProvider,
-        deviceSequence: widget.collectionDeviceSequence,
+      body: Column(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: CollectorCashStatusCard(
+              session: widget.session,
+              deviceIdentityProvider: widget.deviceIdentityProvider,
+              onOpenRemittance: _openRemittance,
+              onOpenRenewals: _openRenewals,
+            ),
+          ),
+          Expanded(
+            child: CollectorRoutePage(
+              session: widget.session,
+              loader: widget.collectorRouteLoader,
+              paymentRepository: widget.paymentSubmissionRepository,
+              deviceIdentityProvider: widget.deviceIdentityProvider,
+              deviceSequence: widget.collectionDeviceSequence,
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: 0,
