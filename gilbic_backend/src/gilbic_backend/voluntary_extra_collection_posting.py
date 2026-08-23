@@ -26,20 +26,21 @@ from .seven_by_seven_multi_receipt_posting import (
 class VoluntaryExtraAwareCollectionPostingBridge(
     MultiReceiptSevenBySevenCollectionPostingBridge
 ):
-    """Keep voluntary extra separate from ADV while preserving one cash receipt.
+    """Keep non-ADV excess separate from ADV while preserving one cash receipt.
 
-    For an activated Regular contractual schedule, a normal PAYMENT can apply only
-    to the oldest unpaid installment that is actually due on or before the receipt
-    date. Cash above that eligible obligation remains an audited unallocated
-    receipt unless the client explicitly chose ``voluntary_extra``.
+    For an activated Regular contractual schedule, a normal PAYMENT first satisfies
+    the oldest unpaid installment actually due on or before the receipt date. Any
+    remaining applied cash is principal/term reduction and is allocated from the
+    contractual tail, leaving the next normal collection date due. Explicit ADV
+    remains the only path that covers named future scheduled dates.
 
-    Explicit voluntary extra first satisfies the currently due scheduled amount,
-    when one exists, then allocates from the contractual tail. If no installment
-    is due yet, the entire applied voluntary-extra amount starts at the tail so the
-    next normal collection date remains due. It is never silently converted to ADV.
+    ``voluntary_extra_tail`` remains the installed database allocation-basis label
+    for backward compatibility, but explicit Voluntary Extra selection is no longer
+    required for ordinary non-ADV excess cash. Audit evidence records the actual
+    principal-extra amount and whether the incoming intent was scheduled or explicit.
 
     7x7 stays on its protected fixed-original-principal, interest-first allocator;
-    the explicit intent is retained in the immutable transaction/audit evidence.
+    residual cash after fixed interest already reduces principal automatically.
     """
 
     def post_collection(
@@ -274,7 +275,7 @@ class VoluntaryExtraAwareCollectionPostingBridge(
         collection_date,
         voluntary_extra: bool,
     ) -> tuple[AllocationInstruction, ...]:
-        """Allocate only the amount already authorized to reduce the loan."""
+        """Allocate applied non-ADV cash: due installment first, then tail."""
 
         amount_left = self._money(applied_amount)
         if amount_left <= Decimal("0.00"):
@@ -315,12 +316,12 @@ class VoluntaryExtraAwareCollectionPostingBridge(
 
         if amount_left <= Decimal("0.00"):
             return tuple(instructions)
-        if not voluntary_extra:
-            raise CollectionRejected(
-                "Applied scheduled cash exceeds the installment currently due. The excess receipt must stay unallocated unless the client explicitly chooses Voluntary extra or ADV.",
-                code="contract_payment_allocation_conflict",
-            )
 
+        # Management rule: every applied PAYMENT amount that is not ADV and is
+        # above the scheduled obligation is principal/term reduction. Work from
+        # the contractual tail so the next scheduled date remains due normally.
+        # ``voluntary_extra`` remains only as the legacy incoming-intent/audit flag.
+        del voluntary_extra
         tail_candidates = [row for row in remaining if row is not scheduled_row]
         for row in reversed(tail_candidates):
             if amount_left <= Decimal("0.00"):
@@ -341,7 +342,7 @@ class VoluntaryExtraAwareCollectionPostingBridge(
 
         if amount_left != Decimal("0.00"):
             raise CollectionRejected(
-                "Applied voluntary-extra cash exceeds the remaining contractual balance.",
+                "Applied non-ADV cash exceeds the remaining contractual balance.",
                 code="contract_payment_allocation_conflict",
             )
         return tuple(instructions)
@@ -363,22 +364,39 @@ class VoluntaryExtraAwareCollectionPostingBridge(
         with connection.cursor(row_factory=dict_row) as cursor:
             cursor.execute(
                 """
-                select amount, applied_amount, unallocated_amount, allocation_state
+                select
+                    amount,
+                    applied_amount,
+                    unallocated_amount,
+                    allocation_state,
+                    coalesce(details->>'principal_extra_amount', '0.00')
+                        as principal_extra_amount
                 from lending.collection_transactions
                 where id = %s
                 """,
                 (transaction_id,),
             )
             receipt = cursor.fetchone()
+            principal_extra_amount = self._money(
+                receipt["principal_extra_amount"] if receipt else Decimal("0.00")
+            )
             cursor.execute(
                 """
                 update lending.collection_transactions
                 set details = coalesce(details, '{}'::jsonb) || %s
                 where id = %s and is_locked = false
                 """,
-                (Jsonb({"payment_allocation_intent": intent}), transaction_id),
+                (
+                    Jsonb(
+                        {
+                            "payment_allocation_intent": intent,
+                            "non_advance_excess_policy": "principal_reduction",
+                        }
+                    ),
+                    transaction_id,
+                ),
             )
-            if command.payment_allocation_intent is PaymentAllocationIntent.VOLUNTARY_EXTRA:
+            if principal_extra_amount > Decimal("0.00"):
                 cursor.execute(
                     """
                     insert into core.audit_logs (
@@ -391,7 +409,7 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                     )
                     values (
                         %s,
-                        'collection.voluntary_extra.recorded',
+                        'collection.principal_extra.recorded',
                         'collection_transaction',
                         %s,
                         %s,
@@ -415,10 +433,15 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                                 "unallocated_amount": (
                                     str(receipt["unallocated_amount"]) if receipt else None
                                 ),
+                                "principal_extra_amount": str(principal_extra_amount),
                                 "allocation_state": (
                                     str(receipt["allocation_state"]) if receipt else None
                                 ),
                                 "payment_allocation_intent": intent,
+                                "automatic_non_advance_principal_reduction": (
+                                    command.payment_allocation_intent
+                                    is PaymentAllocationIntent.SCHEDULED
+                                ),
                                 "future_dates_marked_advance": False,
                             }
                         ),
