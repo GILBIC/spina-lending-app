@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
@@ -15,7 +14,6 @@ import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.d
 import 'package:gilbic_mobile/src/features/collector/collector_renewal_cash_release_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_renewal_requests_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
-import 'package:gilbic_mobile/src/features/collector/collector_synthetic_review_page.dart';
 import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
@@ -235,18 +233,6 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                   style: Theme.of(sheetContext).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 14),
-                if (kDebugMode)
-                  _CollectorToolTile(
-                    key: const Key('collector-more-ca4-review'),
-                    icon: Icons.fact_check_outlined,
-                    title: 'CA4 synthetic field review',
-                    subtitle:
-                        'Review sample catch-up, notes, GCash and split states',
-                    onTap: () {
-                      Navigator.pop(sheetContext);
-                      _open(const CollectorSyntheticReviewPage());
-                    },
-                  ),
                 _CollectorToolTile(
                   key: const Key('collector-more-renewals'),
                   icon: Icons.autorenew_rounded,
