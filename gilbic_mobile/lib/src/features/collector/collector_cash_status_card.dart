@@ -58,6 +58,26 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
 
   Future<void> _load() async {
     if (!mounted) return;
+
+    final canLoadCash = widget.session.hasPermission('remittance.view');
+    final canLoadRenewals =
+        widget.session.hasPermission('renewal.recommend.assigned');
+
+    // A route-only Collector does not need a device identity or any cash/release
+    // network request merely to render Daily Collection. Keeping this path local
+    // also prevents optional cash status from delaying the primary field screen.
+    if (!canLoadCash && !canLoadRenewals) {
+      setState(() {
+        _totalCollectionCashHeld = 0;
+        _cashToReceiveCount = 0;
+        _cashToReceiveAmount = 0;
+        _cashWithCollectorCount = 0;
+        _cashWithCollectorAmount = 0;
+        _loading = false;
+      });
+      return;
+    }
+
     setState(() => _loading = true);
 
     var totalCollectionCashHeld = 0.0;
@@ -70,7 +90,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     try {
       final identity = await widget.deviceIdentityProvider.load();
 
-      if (widget.session.hasPermission('remittance.view')) {
+      if (canLoadCash) {
         try {
           final accountability = await _cashAccountability.load(
             widget.session,
@@ -82,7 +102,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
         }
       }
 
-      if (widget.session.hasPermission('renewal.recommend.assigned')) {
+      if (canLoadRenewals) {
         try {
           final requests = await _renewals.list(
             widget.session,
@@ -186,8 +206,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
                       ? 'No Management release'
                       : _money(_cashToReceiveAmount),
                   emphasized: _cashToReceiveCount > 0,
-                  enabled:
-                      widget.session.hasPermission('renewal.recommend.assigned'),
+                  enabled: canRenewals(widget.session),
                   onTap: widget.onOpenRenewals,
                 ),
               ),
@@ -201,8 +220,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
                       ? 'No release in custody'
                       : _money(_cashWithCollectorAmount),
                   emphasized: _cashWithCollectorCount > 0,
-                  enabled:
-                      widget.session.hasPermission('renewal.recommend.assigned'),
+                  enabled: canRenewals(widget.session),
                   onTap: widget.onOpenRenewals,
                 ),
               ),
@@ -212,6 +230,10 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
       ),
     );
   }
+}
+
+bool canRenewals(UserSession session) {
+  return session.hasPermission('renewal.recommend.assigned');
 }
 
 class _PrimaryCashHeldTile extends StatelessWidget {
