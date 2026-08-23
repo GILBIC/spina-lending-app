@@ -47,6 +47,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
   String _selectedOwner = _allCollectors;
   bool _loading = false;
   bool _hasLoaded = false;
+  bool _showingSearchResults = false;
   int _loadGeneration = 0;
 
   static const String _allAreas = 'All areas';
@@ -54,6 +55,8 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
   static const String _allCollectors = 'All assigned collectors';
 
   bool get _isManagement => widget.session.role == AppRole.management;
+  bool get _canViewConvenienceWork =>
+      widget.session.hasPermission('delegated_area.view');
 
   List<String> get _areas {
     final values = _results
@@ -101,7 +104,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
           client.assignedCollectorName != _selectedOwner) {
         return false;
       }
-      if (!_isManagement && query.isNotEmpty) {
+      if (!_isManagement && !_showingSearchResults && query.isNotEmpty) {
         final haystack = <String>[
           entry.clientName,
           client.clientCode,
@@ -156,8 +159,10 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
         SpinaOtherAreaClientRepository(
           deviceIdentityProvider: widget.deviceIdentityProvider,
         );
-    if (!_isManagement) {
+    if (!_isManagement && _canViewConvenienceWork) {
       _loadWork();
+    } else if (!_isManagement) {
+      _hasLoaded = true;
     }
   }
 
@@ -169,25 +174,31 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
   }
 
   void _onSearchChanged(String value) {
-    if (!_isManagement) {
-      setState(() {});
-      return;
-    }
     _searchDebounce?.cancel();
     final query = value.trim();
     if (query.length < 2) {
-      _loadGeneration += 1;
-      setState(() {
-        _results = const <OtherAreaClient>[];
-        _hasLoaded = false;
-        _loading = false;
-        _errorMessage = null;
-        _selectedArea = _allAreas;
-        _selectedLoanType = _allLoans;
-      });
+      if (_isManagement) {
+        _loadGeneration += 1;
+        setState(() {
+          _results = const <OtherAreaClient>[];
+          _hasLoaded = false;
+          _showingSearchResults = false;
+          _loading = false;
+          _errorMessage = null;
+          _selectedArea = _allAreas;
+          _selectedLoanType = _allLoans;
+        });
+      } else if (_showingSearchResults) {
+        _restoreCollectorConvenienceWork();
+      } else {
+        setState(() {});
+      }
       return;
     }
-    _searchDebounce = Timer(const Duration(milliseconds: 350), _searchManagement);
+    _searchDebounce = Timer(
+      const Duration(milliseconds: 350),
+      () => _searchClients(showValidation: false),
+    );
   }
 
   void _clearSearch() {
@@ -198,20 +209,40 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
       setState(() {
         _results = const <OtherAreaClient>[];
         _hasLoaded = false;
+        _showingSearchResults = false;
         _loading = false;
         _errorMessage = null;
         _selectedArea = _allAreas;
         _selectedLoanType = _allLoans;
       });
     } else {
-      setState(() {});
+      _restoreCollectorConvenienceWork();
     }
+  }
+
+  void _restoreCollectorConvenienceWork() {
+    if (_canViewConvenienceWork) {
+      unawaited(_loadWork());
+      return;
+    }
+    _loadGeneration += 1;
+    setState(() {
+      _results = const <OtherAreaClient>[];
+      _hasLoaded = true;
+      _showingSearchResults = false;
+      _loading = false;
+      _errorMessage = null;
+      _selectedArea = _allAreas;
+      _selectedLoanType = _allLoans;
+      _selectedOwner = _allCollectors;
+    });
   }
 
   Future<void> _loadWork() async {
     final generation = ++_loadGeneration;
     setState(() {
       _loading = true;
+      _showingSearchResults = false;
       _errorMessage = null;
     });
     try {
@@ -242,7 +273,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
         return;
       }
       setState(() {
-        _errorMessage = 'Other-area work could not be loaded.';
+        _errorMessage = 'Approved other-area work could not be loaded.';
         _hasLoaded = true;
         _results = const <OtherAreaClient>[];
       });
@@ -253,7 +284,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
     }
   }
 
-  Future<void> _searchManagement({bool showValidation = false}) async {
+  Future<void> _searchClients({bool showValidation = false}) async {
     final query = _searchController.text.trim();
     if (query.length < 2) {
       if (showValidation) {
@@ -278,8 +309,10 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
       setState(() {
         _results = results;
         _hasLoaded = true;
+        _showingSearchResults = true;
         _selectedArea = _allAreas;
         _selectedLoanType = _allLoans;
+        _selectedOwner = _allCollectors;
       });
     } on SpinaApiException catch (error) {
       if (!mounted || generation != _loadGeneration) {
@@ -288,6 +321,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
       setState(() {
         _errorMessage = error.message;
         _hasLoaded = true;
+        _showingSearchResults = true;
         _results = const <OtherAreaClient>[];
       });
     } on Object {
@@ -295,8 +329,11 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
         return;
       }
       setState(() {
-        _errorMessage = 'Clients could not be searched for direct payment entry.';
+        _errorMessage = _isManagement
+            ? 'Clients could not be searched for direct payment entry.'
+            : 'Other-route clients could not be searched.';
         _hasLoaded = true;
+        _showingSearchResults = true;
         _results = const <OtherAreaClient>[];
       });
     } finally {
@@ -326,7 +363,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
           : 'Use SPINA desktop for this loan.';
     }
     if (entry.loanId.trim().isEmpty || entry.routeRevision == null) {
-      return _isManagement
+      return _showingSearchResults || _isManagement
           ? 'Refresh this search before recording the payment.'
           : 'Refresh Other-Area Work before recording the payment.';
     }
@@ -348,7 +385,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
         title: Text(
           _isManagement
               ? 'Record direct Management payment?'
-              : 'Record delegated-area payment?',
+              : 'Record cross-route payment?',
         ),
         content: Text(
           _isManagement
@@ -359,9 +396,9 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                   'Management-recorded payment.'
               : '${client.entry.clientName} is assigned to '
                   '${client.assignedCollectorName}.\n\n'
-                  'Your active temporary grant will be rechecked by the server when '
-                  'you save. Your name remains the recorder and the assigned '
-                  'collector will see the official result.',
+                  'You may collect this client even without a temporary route grant. '
+                  'Your name remains the original recorder and the assigned '
+                  'collector will see the official result on their Daily Route.',
         ),
         actions: [
           TextButton(
@@ -393,9 +430,9 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
       ),
     );
     if (saved == true && mounted) {
-      if (_isManagement) {
-        await _searchManagement(showValidation: true);
-      } else {
+      if (_isManagement || _showingSearchResults) {
+        await _searchClients(showValidation: true);
+      } else if (_canViewConvenienceWork) {
         await _loadWork();
       }
     }
@@ -416,7 +453,7 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isManagement ? 'Direct Payment Entry' : 'Other-Area Work'),
+        title: Text(_isManagement ? 'Direct Payment Entry' : 'Other Area Payment'),
         actions: [
           if (!_isManagement && widget.session.hasPermission('remittance.view'))
             IconButton(
@@ -425,10 +462,10 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
               onPressed: _openCollectionSummary,
               icon: const Icon(Icons.receipt_long_outlined),
             ),
-          if (!_isManagement)
+          if (!_isManagement && _canViewConvenienceWork)
             IconButton(
               key: const Key('refresh-other-area-work'),
-              tooltip: 'Refresh approved work',
+              tooltip: 'Refresh approved convenience work',
               onPressed: _loading ? null : _loadWork,
               icon: const Icon(Icons.refresh),
             ),
@@ -445,13 +482,15 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                   Text(
                     _isManagement
                         ? 'Search an active client who paid directly to Management. The assigned collector will see a read-only payment update.'
-                        : 'Only clients inside your active temporary grants are shown. Permanent assignments stay in Daily Route.',
+                        : _canViewConvenienceWork
+                            ? 'Approved convenience work is shown automatically. You may also search any active client outside your assigned route; the assigned Collector remains the route owner.'
+                            : 'Search any active client outside your assigned route. The assigned Collector remains the route owner and will see the official payment on their Daily Route.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   if (!_isManagement) ...[
                     const SizedBox(height: 6),
                     Text(
-                      'SPINA business date: ${formatSpinaBusinessDate(DateTime.now())}',
+                      'GILBIC business date: ${formatSpinaBusinessDate(DateTime.now())}',
                       key: const Key('other-area-business-date'),
                       style: Theme.of(context).textTheme.labelMedium,
                     ),
@@ -463,16 +502,16 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                     textInputAction: TextInputAction.search,
                     autocorrect: false,
                     onChanged: _onSearchChanged,
-                    onSubmitted: _isManagement
-                        ? (_) => _searchManagement(showValidation: true)
-                        : null,
+                    onSubmitted: (_) => _searchClients(showValidation: true),
                     decoration: InputDecoration(
                       labelText: _isManagement
                           ? 'Find by name, code, phone, or area'
-                          : 'Filter today’s approved work',
+                          : 'Search any other-route client',
                       helperText: _isManagement
                           ? 'Results appear automatically after 2 characters.'
-                          : 'Filter by client, code, area, loan, or assigned collector.',
+                          : _canViewConvenienceWork
+                              ? 'Type 2+ characters to search; clear to return to approved convenience work.'
+                              : 'Type at least 2 characters: name, code, phone, or area.',
                       prefixIcon: const Icon(Icons.person_search),
                       suffixIcon: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -483,20 +522,19 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                               onPressed: _clearSearch,
                               icon: const Icon(Icons.clear),
                             ),
-                          if (_isManagement)
-                            IconButton(
-                              tooltip: 'Search now',
-                              onPressed: _loading
-                                  ? null
-                                  : () => _searchManagement(showValidation: true),
-                              icon: _loading
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  : const Icon(Icons.search),
-                            ),
+                          IconButton(
+                            tooltip: 'Search now',
+                            onPressed: _loading
+                                ? null
+                                : () => _searchClients(showValidation: true),
+                            icon: _loading
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.search),
+                          ),
                         ],
                       ),
                     ),
@@ -626,15 +664,21 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
           child: Text(
             _isManagement
                 ? 'Start typing the client name, code, phone, or area.'
-                : 'Loading today’s approved other-area work…',
+                : 'Loading approved convenience work…',
             textAlign: TextAlign.center,
           ),
         ),
       );
     }
     if (_results.isEmpty) {
+      final searching = _searchController.text.trim().length >= 2 ||
+          _showingSearchResults;
       return RefreshIndicator(
-        onRefresh: _isManagement ? () async {} : _loadWork,
+        onRefresh: _isManagement || searching
+            ? () => _searchClients(showValidation: false)
+            : _canViewConvenienceWork
+                ? _loadWork
+                : () async {},
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
@@ -644,10 +688,14 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
               child: Text(
                 _isManagement
                     ? 'No active client matched the search.'
-                    : 'No active granted work for today. Request access under Temporary Area Access, or refresh after approval.',
-                key: _isManagement
-                    ? null
-                    : const Key('other-area-empty-grant-state'),
+                    : searching
+                        ? 'No active other-route client matched the search.'
+                        : _canViewConvenienceWork
+                            ? 'No approved convenience work for today. You can still search any other-route client above.'
+                            : 'Search any active client outside your assigned route above.',
+                key: !_isManagement && !searching
+                    ? const Key('other-area-empty-grant-state')
+                    : null,
                 textAlign: TextAlign.center,
               ),
             ),
@@ -670,8 +718,8 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
     }
 
     return RefreshIndicator(
-      onRefresh: _isManagement
-          ? () => _searchManagement(showValidation: false)
+      onRefresh: _isManagement || _showingSearchResults
+          ? () => _searchClients(showValidation: false)
           : _loadWork,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
