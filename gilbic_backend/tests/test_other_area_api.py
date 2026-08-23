@@ -82,8 +82,8 @@ def _record(*, processed_today: bool = False) -> OtherAreaLoanRecord:
             "Already recorded today by Collector Three."
             if processed_today
             else (
-                "Delegated other-area work. The assigned collector and linked "
-                "client will be notified after posting."
+                "Cross-route collection. The assigned collector and linked client "
+                "will be notified after posting."
             )
         ),
         assigned_collector_user_id=ASSIGNED_COLLECTOR_ID,
@@ -174,28 +174,10 @@ def test_collector_can_list_granted_other_area_work_and_see_today_recorder() -> 
     ]
 
 
-def test_collector_search_requires_delegated_view_permission() -> None:
+def test_collector_search_needs_collection_permission_not_delegated_view() -> None:
     client, repository = _client(
         roles=("collector",),
         permissions=("collection.create",),
-    )
-
-    response = client.get(
-        "/api/mobile/v1/collector/other-area-clients/search",
-        params={"q": "Ana", "limit": 10},
-        headers=_headers(),
-    )
-
-    assert response.status_code == 403
-    assert response.json()["detail"] == "Delegated area access permission is required."
-    assert repository.collector_search_calls == []
-    assert repository.management_search_calls == []
-
-
-def test_collector_search_uses_delegated_authorized_path() -> None:
-    client, repository = _client(
-        roles=("collector",),
-        permissions=("collection.create", "delegated_area.view"),
     )
 
     response = client.get(
@@ -217,6 +199,23 @@ def test_collector_search_uses_delegated_authorized_path() -> None:
             "limit": 10,
         }
     ]
+    assert repository.management_search_calls == []
+
+
+def test_collector_without_collection_permission_cannot_search_cross_route() -> None:
+    client, repository = _client(
+        roles=("collector",),
+        permissions=("delegated_area.view",),
+    )
+
+    response = client.get(
+        "/api/mobile/v1/collector/other-area-clients/search",
+        params={"q": "Ana"},
+        headers=_headers(),
+    )
+
+    assert response.status_code == 403
+    assert repository.collector_search_calls == []
     assert repository.management_search_calls == []
 
 
@@ -258,6 +257,22 @@ def test_non_collector_non_management_cannot_use_payment_search() -> None:
     assert response.status_code == 403
     assert repository.collector_search_calls == []
     assert repository.management_search_calls == []
+
+
+def test_delegated_work_endpoint_still_requires_delegated_view_permission() -> None:
+    client, repository = _client(
+        roles=("collector",),
+        permissions=("collection.create",),
+    )
+
+    response = client.get(
+        "/api/mobile/v1/collector/delegated-area/work",
+        params={"date": WORK_DATE.isoformat()},
+        headers=_headers(),
+    )
+
+    assert response.status_code == 403
+    assert repository.work_calls == []
 
 
 def test_delegated_work_endpoint_is_collector_only_even_with_permission() -> None:
