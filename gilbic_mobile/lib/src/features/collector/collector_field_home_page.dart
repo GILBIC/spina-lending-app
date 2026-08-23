@@ -8,6 +8,7 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_cash_status_card.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_cash_to_client_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_cash_to_receive_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_master_review_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
@@ -118,6 +119,20 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
     }
     await _open(
       CollectorCashToReceivePage(
+        session: widget.session,
+        deviceIdentityProvider: widget.deviceIdentityProvider,
+      ),
+    );
+    _refreshCashStatus();
+  }
+
+  Future<void> _openCashToClient() async {
+    if (!widget.session.hasPermission('renewal.recommend.assigned')) {
+      _permissionMessage('assigned-client renewal cash handovers');
+      return;
+    }
+    await _open(
+      CollectorCashToClientPage(
         session: widget.session,
         deviceIdentityProvider: widget.deviceIdentityProvider,
       ),
@@ -360,6 +375,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
               onOpenRemittance: _openRemittance,
               onOpenRenewals: _openRenewals,
               onOpenCashToReceive: _openCashToReceive,
+              onOpenCashToClient: _openCashToClient,
               onCashReleaseAlert: _showCashReleaseAlert,
             ),
           ),
