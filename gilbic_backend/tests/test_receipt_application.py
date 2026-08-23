@@ -8,7 +8,7 @@ from gilbic_backend.receipt_application import (
 )
 
 
-def test_scheduled_overpayment_preserves_real_cash_as_unallocated() -> None:
+def test_helper_respects_caller_supplied_maximum() -> None:
     plan = plan_receipt_application(
         cash_received_amount="200.00",
         maximum_immediately_applicable="100.00",
@@ -22,7 +22,20 @@ def test_scheduled_overpayment_preserves_real_cash_as_unallocated() -> None:
     assert plan.needs_review is True
 
 
-def test_voluntary_extra_can_apply_more_without_covering_future_dates() -> None:
+def test_non_adv_posting_can_apply_full_cash_when_payoff_is_the_supplied_maximum() -> None:
+    plan = plan_receipt_application(
+        cash_received_amount="200.00",
+        maximum_immediately_applicable="500.00",
+        allocation_intent="scheduled",
+    )
+
+    assert plan.applied_amount == Decimal("200.00")
+    assert plan.unallocated_amount == Decimal("0.00")
+    assert plan.allocation_state == "fully_allocated"
+    assert plan.needs_review is False
+
+
+def test_voluntary_extra_legacy_intent_can_apply_more_without_covering_future_dates() -> None:
     plan = plan_receipt_application(
         cash_received_amount="200.00",
         maximum_immediately_applicable="500.00",
@@ -47,7 +60,7 @@ def test_cash_beyond_exact_remaining_balance_is_kept_for_review() -> None:
     assert plan.allocation_state == "partially_allocated"
 
 
-def test_second_receipt_after_obligation_is_satisfied_is_not_a_duplicate() -> None:
+def test_zero_authorized_application_preserves_cash_for_review() -> None:
     plan = plan_receipt_application(
         cash_received_amount="100.00",
         maximum_immediately_applicable="0.00",
