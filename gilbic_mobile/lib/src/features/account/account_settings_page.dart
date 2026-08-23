@@ -3,6 +3,7 @@ import 'package:gilbic_mobile/src/core/account/account_repository.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/renewals/renewal_signature_tasks_page.dart';
 
 class AccountSettingsPage extends StatefulWidget {
   const AccountSettingsPage({
@@ -137,6 +138,17 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     }
   }
 
+  void _openRenewalSignatures() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => RenewalSignatureTasksPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+        ),
+      ),
+    );
+  }
+
   String _dateTime(DateTime? value) {
     if (value == null) {
       return 'Not available';
@@ -195,6 +207,22 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _renewalSignaturesCard() {
+    return Card(
+      child: ListTile(
+        key: const Key('account-renewal-signatures'),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        leading: const Icon(Icons.draw_outlined),
+        title: const Text('My renewal signatures'),
+        subtitle: const Text(
+          'Review borrower, guarantor, solidary co-maker, or surety signatures assigned to this account.',
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: _openRenewalSignatures,
       ),
     );
   }
@@ -291,6 +319,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                       children: [
                         _profileCard(_overview!.profile),
                         _sessionCard(),
+                        _renewalSignaturesCard(),
                         const SizedBox(height: 8),
                         Text(
                           'Registered devices',
