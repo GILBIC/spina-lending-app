@@ -64,7 +64,7 @@ def test_scheduled_non_adv_excess_automatically_reduces_contract_tail() -> None:
     assert all(row.installment_number != 2 for row in plan)
 
 
-def test_voluntary_extra_after_today_due_allocates_from_contract_tail() -> None:
+def test_explicit_voluntary_extra_uses_same_safe_contract_tail_rule() -> None:
     bridge = VoluntaryExtraAwareCollectionPostingBridge()
     plan = bridge._plan_applied_contract_payment(
         applied_amount=Decimal("200.00"),
@@ -103,7 +103,7 @@ def test_scheduled_payment_before_next_due_starts_at_tail_and_keeps_next_due_ope
     assert plan[0].due_date == date(2026, 8, 19)
 
 
-def test_voluntary_extra_before_next_due_starts_at_tail_and_keeps_next_due_open() -> None:
+def test_explicit_extra_before_next_due_keeps_next_due_open() -> None:
     bridge = VoluntaryExtraAwareCollectionPostingBridge()
     plan = bridge._plan_applied_contract_payment(
         applied_amount=Decimal("100.00"),
