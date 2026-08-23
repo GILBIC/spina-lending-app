@@ -38,12 +38,15 @@ class PostgresCollectionPostingBridge:
     receipt, records exact covered dates and an audit event, and returns the
     replayable result. Any exception rolls every write back together.
 
-    ``collection_transactions.amount`` is the real custody receipt. For normal
-    PAYMENT, only the currently eligible scheduled amount reduces the loan; a
-    legitimate excess receipt remains ``unallocated_amount`` instead of being
-    rejected, discarded, or silently turned into ADV. Explicit voluntary-extra
-    intent may apply beyond the current scheduled amount. Contract-aware
-    subclasses override the scheduled-amount lookup with signed-schedule truth.
+    ``collection_transactions.amount`` is the real custody receipt. For a normal
+    PAYMENT, the current scheduled amount determines when today's obligation is
+    covered, but cash above that scheduled amount is not ADV and is not left
+    unresolved merely because it is extra. It reduces the remaining loan balance
+    as principal/term reduction up to the exact remaining payoff. Only cash above
+    the exact remaining balance can remain ``unallocated_amount`` for review.
+    Explicit ADV continues to cover only the named future scheduled dates.
+    Contract-aware subclasses preserve signed-schedule truth for the scheduled
+    portion and allocate non-ADV excess from the contractual tail.
     """
 
     def post_collection(
@@ -180,6 +183,7 @@ class PostgresCollectionPostingBridge:
             cash_amount = self._money(command.amount or Decimal("0"))
             applied_amount = Decimal("0.00")
             unallocated_amount = Decimal("0.00")
+            principal_extra_amount = Decimal("0.00")
             allocation_state = "not_applicable"
             pass_count_after = int(loan["pass_count"])
             last_payment_date: date | None = loan["last_payment_date"]
@@ -209,12 +213,12 @@ class PostgresCollectionPostingBridge:
                         loan=loan,
                         command=command,
                     )
-                    maximum_immediately_applicable = (
-                        previous_balance
-                        if command.payment_allocation_intent
-                        is PaymentAllocationIntent.VOLUNTARY_EXTRA
-                        else min(previous_balance, scheduled_remaining)
-                    )
+                    # Management rule: when a receipt is not ADV, cash above the
+                    # current scheduled amount reduces principal/remaining term.
+                    # The scheduled amount still controls whether today's date is
+                    # fully covered; it no longer caps the amount that may reduce
+                    # the loan. Exact-payoff protection remains the hard maximum.
+                    maximum_immediately_applicable = previous_balance
                     plan = self._plan_receipt_application(
                         cash_amount=cash_amount,
                         maximum_immediately_applicable=maximum_immediately_applicable,
@@ -229,6 +233,9 @@ class PostgresCollectionPostingBridge:
                     unallocated_amount = plan.unallocated_amount
                     allocation_state = plan.allocation_state
                     scheduled_target = min(previous_balance, scheduled_remaining)
+                    principal_extra_amount = self._money(
+                        max(Decimal("0.00"), applied_amount - scheduled_target)
+                    )
                     if (
                         covered_dates
                         and scheduled_target > Decimal("0.00")
@@ -330,6 +337,8 @@ class PostgresCollectionPostingBridge:
                 "cash_received_amount": str(cash_amount),
                 "applied_amount": str(applied_amount),
                 "unallocated_amount": str(unallocated_amount),
+                "principal_extra_amount": str(principal_extra_amount),
+                "non_advance_excess_policy": "principal_reduction",
                 "allocation_state": allocation_state,
             }
             cursor.execute(
@@ -431,6 +440,8 @@ class PostgresCollectionPostingBridge:
                             "cash_received_amount": str(cash_amount),
                             "applied_amount": str(applied_amount),
                             "unallocated_amount": str(unallocated_amount),
+                            "principal_extra_amount": str(principal_extra_amount),
+                            "non_advance_excess_policy": "principal_reduction",
                             "allocation_state": allocation_state,
                             "payment_allocation_intent": (
                                 command.payment_allocation_intent.value
