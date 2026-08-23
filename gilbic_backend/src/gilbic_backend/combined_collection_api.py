@@ -125,11 +125,11 @@ def _validate_regular_plus_7x7(connection, body: CombinedPaymentRequest) -> None
             "Combined payment loans must belong to the same client.",
             code="combined_client_mismatch",
         )
-    modes = [str(row["calculation_mode"] or "").lower() for row in rows]
-    seven_count = sum(mode == "seven_by_seven" for mode in modes)
-    if seven_count != 1:
+
+    modes = sorted(str(row["calculation_mode"] or "").strip().lower() for row in rows)
+    if modes != ["fixed_daily", "seven_by_seven"]:
         raise CollectionRejected(
-            "One-tap combined Pay is limited to one Regular loan and one 7x7 loan.",
+            "One-tap combined Pay is limited to exactly one Regular loan and one 7x7 loan.",
             code="combined_regular_7x7_required",
         )
 
