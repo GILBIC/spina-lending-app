@@ -25,6 +25,23 @@ Server requirements:
 
 Ambiguous multiple-loan combinations that are not exactly one Regular plus one 7x7 must fail closed and must not be converted into multiple independent phone writes.
 
+## Non-ADV excess payment policy
+
+Management's current rule is that payment cash above the current scheduled amount has only two valid meanings in the normal Collector flow: explicit ADV for selected future dates, or principal/remaining-term reduction.
+
+For a normal `PAYMENT` that is not ADV:
+
+- the scheduled amount still determines when today's scheduled obligation is fully covered;
+- any applied cash above that scheduled obligation reduces principal/remaining term instead of staying unresolved;
+- the excess must not silently mark tomorrow or another future scheduled date as paid;
+- Regular contractual allocation applies the scheduled portion first, then works backward from the contractual tail so the next normal collection date stays due;
+- Regular fixed interest is not recalculated merely because principal is paid faster;
+- protected 7x7 keeps fixed daily interest based on original principal, settles that interest first, then applies residual cash to principal;
+- only cash beyond the exact remaining payoff may remain unallocated for review/cash-over handling;
+- audit evidence records cash received, applied amount, unallocated amount, and `principal_extra_amount`.
+
+The installed database allocation-basis label `voluntary_extra_tail` remains for compatibility with migration 0095. It now also represents automatic non-ADV principal-tail reduction even when the Collector did not explicitly choose a separate Voluntary Extra option.
+
 ## Renewal eligibility
 
 ### Regular
