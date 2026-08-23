@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
+import 'package:gilbic_mobile/src/core/collector/collector_route_repository.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow.dart';
@@ -20,6 +21,7 @@ class CollectorCashToClientPage extends StatefulWidget {
     required this.session,
     required this.deviceIdentityProvider,
     this.repository,
+    this.routeRepository,
     this.imagePicker,
     super.key,
   });
@@ -27,6 +29,7 @@ class CollectorCashToClientPage extends StatefulWidget {
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final CollectorRenewalWorkflowRepository? repository;
+  final CollectorRouteRepository? routeRepository;
   final ImagePicker? imagePicker;
 
   @override
@@ -36,6 +39,7 @@ class CollectorCashToClientPage extends StatefulWidget {
 
 class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
   late final CollectorRenewalWorkflowRepository _repository;
+  late final CollectorRouteRepository _routeRepository;
   late final ImagePicker _imagePicker;
   List<CollectorRenewalRequest> _requests = const <CollectorRenewalRequest>[];
   String? _deviceId;
@@ -48,6 +52,10 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
     super.initState();
     _repository =
         widget.repository ?? SpinaCollectorRenewalWorkflowRepository();
+    _routeRepository = widget.routeRepository ??
+        SpinaCollectorRouteRepository(
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+        );
     _imagePicker = widget.imagePicker ?? ImagePicker();
     _load();
   }
@@ -64,10 +72,48 @@ class _CollectorCashToClientPageState extends State<CollectorCashToClientPage> {
         widget.session,
         deviceId: identity.installationId,
       );
+      final queue = requests
+          .where(_belongsInHandoverQueue)
+          .toList(growable: true);
+
+      // Route order is the field-work priority. If the route cannot be loaded,
+      // the cash handover queue remains usable in the server's original order.
+      try {
+        final route = await _routeRepository.fetchToday(widget.session);
+        final routeIndexByClient = <String, int>{};
+        for (var index = 0; index < route.entries.length; index += 1) {
+          routeIndexByClient.putIfAbsent(
+            route.entries[index].clientId,
+            () => index,
+          );
+        }
+        final originalIndexByRequest = <String, int>{
+          for (var index = 0; index < queue.length; index += 1)
+            queue[index].requestId: index,
+        };
+        queue.sort((left, right) {
+          final leftRouteIndex = routeIndexByClient[left.clientId];
+          final rightRouteIndex = routeIndexByClient[right.clientId];
+          if (leftRouteIndex != null && rightRouteIndex != null) {
+            final byRoute = leftRouteIndex.compareTo(rightRouteIndex);
+            if (byRoute != 0) return byRoute;
+          } else if (leftRouteIndex != null) {
+            return -1;
+          } else if (rightRouteIndex != null) {
+            return 1;
+          }
+          return (originalIndexByRequest[left.requestId] ?? 0)
+              .compareTo(originalIndexByRequest[right.requestId] ?? 0);
+        });
+      } on Object {
+        // Ordering is secondary; never block a physical-cash handover because
+        // the route endpoint is unavailable.
+      }
+
       if (!mounted) return;
       setState(() {
         _deviceId = identity.installationId;
-        _requests = requests.where(_belongsInHandoverQueue).toList(growable: false);
+        _requests = List<CollectorRenewalRequest>.unmodifiable(queue);
       });
     } on SpinaApiException catch (error) {
       if (mounted) setState(() => _error = error.message);
