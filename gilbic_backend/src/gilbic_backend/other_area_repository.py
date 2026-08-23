@@ -113,6 +113,7 @@ class PostgresOtherAreaRepository:
                         coalesce(client.phone_number, '') as phone_number,
                         coalesce(client.area, '') as area,
                         loan_type.name as loan_type,
+                        loan_type.calculation_mode,
                         loan.daily_amount,
                         coalesce(state.remaining_balance, loan.principal) as remaining_balance,
                         coalesce(state.pass_count, 0) as pass_count,
@@ -122,12 +123,18 @@ class PostgresOtherAreaRepository:
                             when lower(coalesce(loan_type.settings->>'mobile_collections_enabled', ''))
                                  not in ('true', '1', 'yes', 'on')
                                 then 'Desktop only'
+                            when loan_type.calculation_mode = 'seven_by_seven'
+                             and lower(coalesce(loan_type.settings->>'mobile_seven_by_seven_enabled', ''))
+                                 not in ('true', '1', 'yes', 'on')
+                                then 'Desktop only'
                             else 'Other area'
                         end as collection_status,
                         coalesce(state.state_version, 0) as state_version,
                         coalesce(state.is_reconciled, false) as is_reconciled,
                         lower(coalesce(loan_type.settings->>'mobile_collections_enabled', ''))
                             in ('true', '1', 'yes', 'on') as mobile_collections_enabled,
+                        lower(coalesce(loan_type.settings->>'mobile_seven_by_seven_enabled', ''))
+                            in ('true', '1', 'yes', 'on') as mobile_seven_by_seven_enabled,
                         coalesce(loan_type.settings->>'mobile_balance_mode', '')
                             as mobile_balance_mode,
                         assigned.id as assigned_collector_user_id,
@@ -202,6 +209,7 @@ class PostgresOtherAreaRepository:
                         coalesce(client.phone_number, '') as phone_number,
                         coalesce(client.area, '') as area,
                         loan_type.name as loan_type,
+                        loan_type.calculation_mode,
                         loan.daily_amount,
                         coalesce(state.remaining_balance, loan.principal) as remaining_balance,
                         coalesce(state.pass_count, 0) as pass_count,
@@ -215,12 +223,18 @@ class PostgresOtherAreaRepository:
                             when lower(coalesce(loan_type.settings->>'mobile_collections_enabled', ''))
                                  not in ('true', '1', 'yes', 'on')
                                 then 'Desktop only'
+                            when loan_type.calculation_mode = 'seven_by_seven'
+                             and lower(coalesce(loan_type.settings->>'mobile_seven_by_seven_enabled', ''))
+                                 not in ('true', '1', 'yes', 'on')
+                                then 'Desktop only'
                             else 'Pending'
                         end as collection_status,
                         coalesce(state.state_version, 0) as state_version,
                         coalesce(state.is_reconciled, false) as is_reconciled,
                         lower(coalesce(loan_type.settings->>'mobile_collections_enabled', ''))
                             in ('true', '1', 'yes', 'on') as mobile_collections_enabled,
+                        lower(coalesce(loan_type.settings->>'mobile_seven_by_seven_enabled', ''))
+                            in ('true', '1', 'yes', 'on') as mobile_seven_by_seven_enabled,
                         coalesce(loan_type.settings->>'mobile_balance_mode', '')
                             as mobile_balance_mode,
                         assigned.id as assigned_collector_user_id,
@@ -302,8 +316,13 @@ class PostgresOtherAreaRepository:
     def _from_row(row) -> OtherAreaLoanRecord:
         is_reconciled = bool(row["is_reconciled"])
         mobile_enabled = bool(row["mobile_collections_enabled"])
+        is_seven_by_seven = str(row["calculation_mode"] or "") == "seven_by_seven"
+        seven_by_seven_enabled = bool(row["mobile_seven_by_seven_enabled"])
         balance_mode = str(row["mobile_balance_mode"] or "")
-        can_collect_mobile = is_reconciled and mobile_enabled
+        protected_loan_type_enabled = not is_seven_by_seven or seven_by_seven_enabled
+        can_collect_mobile = (
+            is_reconciled and mobile_enabled and protected_loan_type_enabled
+        )
         can_enter_payment = (
             can_collect_mobile and balance_mode == "direct_remaining_balance"
         )
@@ -312,11 +331,13 @@ class PostgresOtherAreaRepository:
             recorder = str(row.get("today_collector_name") or "Collector")
             message = f"Already recorded today by {recorder}."
         elif not is_reconciled:
-            message = "Checking this loan against SPINA records."
+            message = "Checking this loan against Gilbic records."
         elif not mobile_enabled:
-            message = "Use the SPINA desktop app for this loan type."
+            message = "Mobile collection is not enabled for this loan type."
+        elif is_seven_by_seven and not seven_by_seven_enabled:
+            message = "7x7 mobile collection remains disabled for this loan type."
         elif not can_enter_payment:
-            message = "This loan's payment calculation still uses SPINA desktop."
+            message = "This loan's protected mobile payment calculation is not enabled."
         else:
             message = (
                 "Cross-route collection. The assigned collector and linked client "
