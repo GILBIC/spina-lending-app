@@ -134,11 +134,6 @@ def create_other_area_router() -> APIRouter:
                 limit=limit,
             )
         elif "collector" in actor.roles:
-            if "delegated_area.view" not in actor.permissions:
-                raise HTTPException(
-                    status_code=403,
-                    detail="Delegated area access permission is required.",
-                )
             records = other_areas.search(
                 collector_user_id=actor.user_id,
                 query=q,
