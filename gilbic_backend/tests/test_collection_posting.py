@@ -232,7 +232,7 @@ def test_partial_payment_does_not_claim_day_until_scheduled_amount_is_complete()
     assert covered_inserts == []
 
 
-def test_second_distinct_receipt_applies_only_remaining_due_and_keeps_excess_cash() -> None:
+def test_second_distinct_receipt_applies_remaining_due_then_excess_to_principal() -> None:
     cursor = FakeCursor(
         loan_row(
             remaining_balance=Decimal("900.00"),
@@ -252,22 +252,24 @@ def test_second_distinct_receipt_applies_only_remaining_due_and_keeps_excess_cas
         ),
     )
 
-    assert result.official_balance == Decimal("800.00")
-    assert "50.00 is unallocated" in result.message
+    assert result.official_balance == Decimal("750.00")
+    assert result.message == "Payment saved."
     transaction = transaction_insert_parameters(cursor)
-    assert transaction[9] == Decimal("150.00")  # full physical receipt/custody cash
-    assert transaction[10] == Decimal("100.00")  # only today's remaining obligation
-    assert transaction[11] == Decimal("50.00")
-    assert transaction[12] == "partially_allocated"
+    assert transaction[9] == Decimal("150.00")
+    assert transaction[10] == Decimal("150.00")
+    assert transaction[11] == Decimal("0.00")
+    assert transaction[12] == "fully_allocated"
     covered_inserts = [
         parameters
         for statement, parameters in cursor.executions
         if "insert into lending.collection_covered_dates" in statement
     ]
-    assert covered_inserts == [(LOAN_ID if False else covered_inserts[0][0], LOAN_ID, date(2026, 8, 1))]
+    assert covered_inserts == [
+        (covered_inserts[0][0], LOAN_ID, date(2026, 8, 1))
+    ]
 
 
-def test_distinct_receipt_after_day_is_already_paid_is_preserved_fully_unallocated() -> None:
+def test_distinct_receipt_after_day_is_paid_becomes_principal_reduction() -> None:
     cursor = FakeCursor(loan_row(pass_count=0, last_payment_date=date(2026, 8, 1)))
     cursor.covered_date = date(2026, 8, 1)
 
@@ -277,14 +279,32 @@ def test_distinct_receipt_after_day_is_already_paid_is_preserved_fully_unallocat
         command(amount=Decimal("100.00")),
     )
 
-    assert result.official_balance == Decimal("1000.00")
-    assert "100.00 is unallocated" in result.message
+    assert result.official_balance == Decimal("900.00")
+    assert result.message == "Payment saved."
     transaction = transaction_insert_parameters(cursor)
     assert transaction[9] == Decimal("100.00")
-    assert transaction[10] == Decimal("0.00")
-    assert transaction[11] == Decimal("100.00")
-    assert transaction[12] == "unallocated"
+    assert transaction[10] == Decimal("100.00")
+    assert transaction[11] == Decimal("0.00")
+    assert transaction[12] == "fully_allocated"
     assert "insert into lending.collection_covered_dates" not in executed_sql(cursor)
+
+
+def test_only_cash_above_exact_remaining_payoff_stays_unallocated() -> None:
+    cursor = FakeCursor(loan_row(remaining_balance=Decimal("250.00")))
+
+    result = PostgresCollectionPostingBridge().post_collection(
+        FakeConnection(cursor),
+        actor(),
+        command(amount=Decimal("300.00")),
+    )
+
+    assert result.official_balance == Decimal("0.00")
+    assert "50.00 is unallocated" in result.message
+    transaction = transaction_insert_parameters(cursor)
+    assert transaction[9] == Decimal("300.00")
+    assert transaction[10] == Decimal("250.00")
+    assert transaction[11] == Decimal("50.00")
+    assert transaction[12] == "partially_allocated"
 
 
 def test_explicit_voluntary_extra_can_reduce_more_than_current_daily_due() -> None:
