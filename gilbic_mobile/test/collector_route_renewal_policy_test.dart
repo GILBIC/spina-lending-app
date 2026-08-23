@@ -5,7 +5,7 @@ import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_header_cards.dart';
 
 void main() {
-  testWidgets('collector route shows remote renewal signer requirement', (tester) async {
+  testWidgets('collector route keeps renewal policy out of field header', (tester) async {
     const route = CollectorRoute(
       routeDate: null,
       collectorName: 'Collector One',
@@ -32,16 +32,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('collector-renewal-policy')), findsOneWidget);
-    expect(
-      find.textContaining(
-        'the borrower and every required surety/guarantor must each have their own GILBIC app',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.textContaining('renewal must be completed at the office'),
-      findsOneWidget,
-    );
+    expect(find.text('Collector: Collector One'), findsOneWidget);
+    expect(find.textContaining('Online route'), findsOneWidget);
+    expect(find.byKey(const Key('collector-renewal-policy')), findsNothing);
+    expect(find.textContaining('Remote renewal:'), findsNothing);
+    expect(find.textContaining('renewal must be completed at the office'), findsNothing);
   });
 }
