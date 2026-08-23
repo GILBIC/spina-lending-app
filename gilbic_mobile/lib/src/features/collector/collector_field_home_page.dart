@@ -5,10 +5,12 @@ import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
+import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_cash_status_card.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_master_review_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_renewal_cash_release_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_renewal_requests_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_synthetic_review_page.dart';
@@ -46,6 +48,9 @@ class CollectorFieldHomePage extends StatefulWidget {
 }
 
 class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
+  String? _lastCashReleaseAlertRequestId;
+  int _cashStatusEpoch = 0;
+
   Future<void> _open(Widget page) async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(builder: (_) => page),
@@ -60,6 +65,11 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
         ),
       ),
     );
+  }
+
+  void _refreshCashStatus() {
+    if (!mounted) return;
+    setState(() => _cashStatusEpoch += 1);
   }
 
   Future<void> _openMasterReview() async {
@@ -97,6 +107,66 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
         deviceIdentityProvider: widget.deviceIdentityProvider,
       ),
     );
+    _refreshCashStatus();
+  }
+
+  Future<void> _openCashRelease(CollectorRenewalRequest request) async {
+    ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+    await _open(
+      CollectorRenewalCashReleasePage(
+        session: widget.session,
+        deviceIdentityProvider: widget.deviceIdentityProvider,
+        request: request,
+      ),
+    );
+    _refreshCashStatus();
+  }
+
+  void _showCashReleaseAlert(CollectorRenewalRequest request) {
+    if (!mounted ||
+        _lastCashReleaseAlertRequestId == request.requestId ||
+        !request.canConfirmCashReceived) {
+      return;
+    }
+    _lastCashReleaseAlertRequestId = request.requestId;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentMaterialBanner();
+    messenger.showMaterialBanner(
+      MaterialBanner(
+        key: Key('collector-cash-release-banner-${request.requestId}'),
+        leading: const Icon(
+          Icons.notifications_active_outlined,
+          color: SpinaTheme.brandPinkDark,
+        ),
+        backgroundColor: SpinaTheme.brandPinkSoft,
+        content: InkWell(
+          onTap: () => _openCashRelease(request),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Text(
+              'Management released ${_money(request.netReleaseAmount ?? 0)} for ${request.clientName}. Confirm receipt when you physically receive the cash.',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            key: const Key('collector-cash-release-banner-view'),
+            onPressed: () => _openCashRelease(request),
+            child: const Text('VIEW'),
+          ),
+        ],
+      ),
+    );
+
+    Future<void>.delayed(const Duration(seconds: 6), () {
+      if (!mounted ||
+          _lastCashReleaseAlertRequestId != request.requestId) {
+        return;
+      }
+      ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+    });
   }
 
   Future<void> _openRemittance() async {
@@ -110,6 +180,7 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
         deviceIdentityProvider: widget.deviceIdentityProvider,
       ),
     );
+    _refreshCashStatus();
   }
 
   Future<void> _openMore() async {
@@ -268,10 +339,12 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
           SafeArea(
             bottom: false,
             child: CollectorCashStatusCard(
+              key: ValueKey('collector-cash-status-$_cashStatusEpoch'),
               session: widget.session,
               deviceIdentityProvider: widget.deviceIdentityProvider,
               onOpenRemittance: _openRemittance,
               onOpenRenewals: _openRenewals,
+              onCashReleaseAlert: _showCashReleaseAlert,
             ),
           ),
           Expanded(
@@ -367,4 +440,20 @@ class _CollectorToolTile extends StatelessWidget {
       onTap: onTap,
     );
   }
+}
+
+String _money(double value) {
+  final fixed = value.toStringAsFixed(2).split('.');
+  return '₱${_groupDigits(fixed.first)}.${fixed.last}';
+}
+
+String _groupDigits(String digits) {
+  final buffer = StringBuffer();
+  for (var index = 0; index < digits.length; index += 1) {
+    if (index > 0 && (digits.length - index) % 3 == 0) {
+      buffer.write(',');
+    }
+    buffer.write(digits[index]);
+  }
+  return buffer.toString();
 }
