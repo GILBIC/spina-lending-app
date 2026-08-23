@@ -18,7 +18,6 @@ import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
-import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 /// Collector-first shell for CA4.
@@ -302,16 +301,6 @@ class _CollectorFieldHomePageState extends State<CollectorFieldHomePage> {
                     },
                   ),
                 const Divider(height: 20),
-                _CollectorToolTile(
-                  key: const Key('collector-more-offline'),
-                  icon: Icons.cloud_off_outlined,
-                  title: 'Offline & sync',
-                  subtitle: 'Review the read-only offline route policy',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _open(MobileOfflinePolicyPage(session: widget.session));
-                  },
-                ),
                 _CollectorToolTile(
                   key: const Key('collector-more-profile'),
                   icon: Icons.person_outline_rounded,
