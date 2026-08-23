@@ -46,8 +46,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
   double _totalCollectionCashHeld = 0;
   int _cashToReceiveCount = 0;
   double _cashToReceiveAmount = 0;
-  List<CollectorRenewalRequest> _cashWithCollector =
-      const <CollectorRenewalRequest>[];
+  int _cashWithCollectorCount = 0;
   bool _loading = true;
 
   @override
@@ -71,7 +70,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
         _totalCollectionCashHeld = 0;
         _cashToReceiveCount = 0;
         _cashToReceiveAmount = 0;
-        _cashWithCollector = const <CollectorRenewalRequest>[];
+        _cashWithCollectorCount = 0;
         _loading = false;
       });
       return;
@@ -82,7 +81,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     var totalCollectionCashHeld = 0.0;
     var cashToReceiveCount = 0;
     var cashToReceiveAmount = 0.0;
-    var cashWithCollector = const <CollectorRenewalRequest>[];
+    var cashWithCollectorCount = 0;
     CollectorRenewalRequest? cashReleaseAlert;
 
     try {
@@ -109,9 +108,9 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
           final toReceive = requests
               .where((request) => request.canConfirmCashReceived)
               .toList(growable: false);
-          cashWithCollector = requests
+          cashWithCollectorCount = requests
               .where((request) => request.canConfirmCashGiven)
-              .toList(growable: false);
+              .length;
           cashToReceiveCount = toReceive.length;
           cashToReceiveAmount = _releaseTotal(toReceive);
           if (toReceive.isNotEmpty) cashReleaseAlert = toReceive.first;
@@ -128,7 +127,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
       _totalCollectionCashHeld = totalCollectionCashHeld;
       _cashToReceiveCount = cashToReceiveCount;
       _cashToReceiveAmount = cashToReceiveAmount;
-      _cashWithCollector = cashWithCollector;
+      _cashWithCollectorCount = cashWithCollectorCount;
       _loading = false;
     });
     if (cashReleaseAlert != null) {
@@ -190,42 +189,38 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
                 ),
           ),
           const SizedBox(height: 4),
-          _CashStatusTile(
-            key: const Key('collector-cash-to-receive'),
-            title: 'Cash to receive',
-            value: '$_cashToReceiveCount • ${_money(_cashToReceiveAmount)}',
-            subtitle: _cashToReceiveCount == 0
-                ? 'No Management release'
-                : 'Management releases waiting',
-            emphasized: _cashToReceiveCount > 0,
-            enabled: canRenewals(widget.session),
-            onTap: widget.onOpenRenewals,
-          ),
-          const SizedBox(height: 9),
-          Text(
-            'Give to client',
-            key: const Key('collector-cash-to-client-heading'),
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
+          Row(
+            children: [
+              Expanded(
+                child: _CashStatusTile(
+                  key: const Key('collector-cash-to-receive'),
+                  title: 'Cash to receive',
+                  value:
+                      '$_cashToReceiveCount • ${_money(_cashToReceiveAmount)}',
+                  subtitle: _cashToReceiveCount == 0
+                      ? 'No Management release'
+                      : 'Management releases waiting',
+                  emphasized: _cashToReceiveCount > 0,
+                  enabled: canRenewals(widget.session),
+                  onTap: widget.onOpenRenewals,
                 ),
-          ),
-          const SizedBox(height: 4),
-          if (_cashWithCollector.isEmpty)
-            Text(
-              'No client release in your custody',
-              key: const Key('collector-cash-to-client-empty'),
-              style: Theme.of(context).textTheme.labelSmall,
-            )
-          else
-            for (var index = 0; index < _cashWithCollector.length; index++) ...[
-              _ClientCashHandoverTile(
-                request: _cashWithCollector[index],
-                enabled: canRenewals(widget.session),
-                onTap: widget.onOpenRenewals,
               ),
-              if (index < _cashWithCollector.length - 1)
-                const SizedBox(height: 5),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _CashStatusTile(
+                  key: const Key('collector-cash-to-client'),
+                  title: 'Give to client',
+                  value: '$_cashWithCollectorCount',
+                  subtitle: _cashWithCollectorCount == 0
+                      ? 'No release in custody'
+                      : 'Open Renewal Requests',
+                  emphasized: _cashWithCollectorCount > 0,
+                  enabled: canRenewals(widget.session),
+                  onTap: widget.onOpenRenewals,
+                ),
+              ),
             ],
+          ),
         ],
       ),
     );
@@ -313,7 +308,7 @@ class _CashStatusTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: enabled ? onTap : null,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -345,80 +340,6 @@ class _CashStatusTile extends StatelessWidget {
                       fontSize: 9,
                     ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ClientCashHandoverTile extends StatelessWidget {
-  const _ClientCashHandoverTile({
-    required this.request,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final CollectorRenewalRequest request;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final clientMeta = <String>[
-      if (request.clientCode.trim().isNotEmpty) request.clientCode.trim(),
-      if (request.area.trim().isNotEmpty) request.area.trim(),
-    ].join(' • ');
-
-    return Material(
-      key: Key('collector-cash-to-client-${request.requestId}'),
-      color: SpinaTheme.brandPinkSoft,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: enabled ? onTap : null,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.person_pin_circle_outlined,
-                size: 20,
-                color: SpinaTheme.brandPinkDark,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      request.clientName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    if (clientMeta.isNotEmpty)
-                      Text(
-                        clientMeta,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _money(request.netReleaseAmount ?? 0),
-                key: Key('collector-cash-to-client-amount-${request.requestId}'),
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: SpinaTheme.brandPinkDark,
-                      fontWeight: FontWeight.w900,
-                    ),
-              ),
-              const SizedBox(width: 2),
-              const Icon(Icons.chevron_right_rounded, size: 20),
             ],
           ),
         ),
