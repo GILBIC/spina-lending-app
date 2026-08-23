@@ -2,20 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/core/renewals/client_renewal_workflow_repository.dart';
 import 'package:gilbic_mobile/src/core/renewals/renewal_repository.dart';
 import 'package:gilbic_mobile/src/core/renewals/renewal_request.dart';
+import 'package:gilbic_mobile/src/features/client/client_renewal_workflow_page.dart';
 
 class ClientRenewalPage extends StatefulWidget {
   const ClientRenewalPage({
     required this.session,
     required this.deviceIdentityProvider,
     this.repository,
+    this.workflowRepository,
     super.key,
   });
 
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final ClientRenewalRepository? repository;
+  final ClientRenewalWorkflowRepository? workflowRepository;
 
   @override
   State<ClientRenewalPage> createState() => _ClientRenewalPageState();
@@ -66,6 +70,21 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
       if (mounted) {
         setState(() => _loading = false);
       }
+    }
+  }
+
+  Future<void> _openWorkflow() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => ClientRenewalWorkflowPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          repository: widget.workflowRepository,
+        ),
+      ),
+    );
+    if (mounted) {
+      await _load();
     }
   }
 
@@ -206,6 +225,11 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
       return const SizedBox.shrink();
     }
 
+    final hasApprovedWorkflow = portal.requests.any(
+          (request) => request.status.toLowerCase() == 'approved',
+        ) ||
+        portal.loans.any((loan) => loan.isAwaitingProcessing);
+
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -249,6 +273,37 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
               ),
             ),
           ),
+          if (hasApprovedWorkflow) ...[
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Approved renewal ready for next steps',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Continue here to review Management-approved terms, accept or decline, complete your own signer steps, and confirm cash only after you receive it.',
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        key: const Key('open-renewal-workflow'),
+                        onPressed: _submitting ? null : _openWorkflow,
+                        icon: const Icon(Icons.arrow_forward),
+                        label: const Text('Continue renewal'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 18),
           Text(
             'Loans available for request',
@@ -271,6 +326,7 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
                 loan: loan,
                 busy: _submitting,
                 onRequest: () => _requestRenewal(loan),
+                onContinue: _openWorkflow,
               ),
               const SizedBox(height: 10),
             ],
@@ -302,6 +358,7 @@ class _ClientRenewalPageState extends State<ClientRenewalPage> {
                 request: request,
                 busy: _submitting,
                 onCancel: () => _cancelRequest(request),
+                onContinue: _openWorkflow,
               ),
               const SizedBox(height: 10),
             ],
@@ -316,11 +373,13 @@ class _RenewalLoanCard extends StatelessWidget {
     required this.loan,
     required this.busy,
     required this.onRequest,
+    required this.onContinue,
   });
 
   final RenewalLoanOption loan;
   final bool busy;
   final VoidCallback onRequest;
+  final VoidCallback onContinue;
 
   @override
   Widget build(BuildContext context) {
@@ -366,9 +425,23 @@ class _RenewalLoanCard extends StatelessWidget {
               width: double.infinity,
               child: FilledButton.icon(
                 key: Key('request-renewal-${loan.loanId}'),
-                onPressed: loan.canRequest && !busy ? onRequest : null,
-                icon: const Icon(Icons.autorenew),
-                label: Text(loan.requestButtonLabel),
+                onPressed: busy
+                    ? null
+                    : loan.isAwaitingProcessing
+                        ? onContinue
+                        : loan.canRequest
+                            ? onRequest
+                            : null,
+                icon: Icon(
+                  loan.isAwaitingProcessing
+                      ? Icons.arrow_forward
+                      : Icons.autorenew,
+                ),
+                label: Text(
+                  loan.isAwaitingProcessing
+                      ? 'Continue renewal'
+                      : loan.requestButtonLabel,
+                ),
               ),
             ),
           ],
@@ -383,16 +456,19 @@ class _RenewalRequestCard extends StatelessWidget {
     required this.request,
     required this.busy,
     required this.onCancel,
+    required this.onContinue,
   });
 
   final RenewalRequestItem request;
   final bool busy;
   final VoidCallback onCancel;
+  final VoidCallback onContinue;
 
   @override
   Widget build(BuildContext context) {
+    final normalizedStatus = request.status.toLowerCase();
     final scheme = Theme.of(context).colorScheme;
-    final statusColor = switch (request.status.toLowerCase()) {
+    final statusColor = switch (normalizedStatus) {
       'approved' => scheme.primaryContainer,
       'rejected' => scheme.errorContainer,
       'cancelled' => scheme.surfaceContainerHighest,
@@ -450,7 +526,18 @@ class _RenewalRequestCard extends StatelessWidget {
               if (request.reviewNote.isNotEmpty)
                 Text('Management note: ${request.reviewNote}'),
             ],
-            if (request.isPending) ...[
+            if (normalizedStatus == 'approved') ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  key: Key('continue-renewal-${request.requestId}'),
+                  onPressed: busy ? null : onContinue,
+                  icon: const Icon(Icons.arrow_forward),
+                  label: const Text('Continue approved renewal'),
+                ),
+              ),
+            ] else if (request.isPending) ...[
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
