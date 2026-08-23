@@ -17,6 +17,7 @@ class CollectorCashStatusCard extends StatefulWidget {
     required this.deviceIdentityProvider,
     required this.onOpenRemittance,
     required this.onOpenRenewals,
+    this.onCashReleaseAlert,
     super.key,
   });
 
@@ -27,6 +28,10 @@ class CollectorCashStatusCard extends StatefulWidget {
   /// does not expose this action; remittance stays in the dedicated Remit tab.
   final VoidCallback onOpenRemittance;
   final VoidCallback onOpenRenewals;
+
+  /// Called when the server reports a Management-released renewal amount still
+  /// waiting for this Collector's physical receipt confirmation.
+  final ValueChanged<CollectorRenewalRequest>? onCashReleaseAlert;
 
   @override
   State<CollectorCashStatusCard> createState() => _CollectorCashStatusCardState();
@@ -60,6 +65,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     var cashToReceiveAmount = 0.0;
     var cashWithCollectorCount = 0;
     var cashWithCollectorAmount = 0.0;
+    CollectorRenewalRequest? cashReleaseAlert;
 
     try {
       final identity = await widget.deviceIdentityProvider.load();
@@ -82,9 +88,9 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
             widget.session,
             deviceId: identity.installationId,
           );
-          final toReceive = requests.where(
-            (request) => request.canConfirmCashReceived,
-          );
+          final toReceive = requests
+              .where((request) => request.canConfirmCashReceived)
+              .toList(growable: false);
           final withCollector = requests.where(
             (request) => request.canConfirmCashGiven,
           );
@@ -92,6 +98,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
           cashToReceiveAmount = _releaseTotal(toReceive);
           cashWithCollectorCount = withCollector.length;
           cashWithCollectorAmount = _releaseTotal(withCollector);
+          if (toReceive.isNotEmpty) cashReleaseAlert = toReceive.first;
         } on Object {
           // A renewal endpoint failure must not block Daily Collection.
         }
@@ -109,6 +116,9 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
       _cashWithCollectorAmount = cashWithCollectorAmount;
       _loading = false;
     });
+    if (cashReleaseAlert != null) {
+      widget.onCashReleaseAlert?.call(cashReleaseAlert);
+    }
   }
 
   @override
