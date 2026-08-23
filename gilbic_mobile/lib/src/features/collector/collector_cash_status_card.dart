@@ -201,10 +201,10 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
                 child: _CashStatusTile(
                   key: const Key('collector-cash-to-receive'),
                   title: 'Cash to receive',
-                  value: '$_cashToReceiveCount',
+                  value: '$_cashToReceiveCount • ${_money(_cashToReceiveAmount)}',
                   subtitle: _cashToReceiveCount == 0
                       ? 'No Management release'
-                      : _money(_cashToReceiveAmount),
+                      : 'Management releases waiting',
                   emphasized: _cashToReceiveCount > 0,
                   enabled: canRenewals(widget.session),
                   onTap: widget.onOpenRenewals,
