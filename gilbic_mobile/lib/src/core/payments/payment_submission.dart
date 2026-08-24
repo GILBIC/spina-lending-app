@@ -24,6 +24,11 @@ enum CollectionEntryType {
 
 enum PaymentAllocationIntent {
   scheduled('scheduled'),
+  extraAsAdvance('extra_as_advance'),
+  extraAsPrincipalReduction('extra_as_principal_reduction'),
+  // Kept only so an older queued draft can still be represented. New UI must
+  // never create this ambiguous intent; the server fails closed when true extra
+  // cash requires a borrower choice.
   voluntaryExtra('voluntary_extra');
 
   const PaymentAllocationIntent(this.apiValue);
@@ -97,12 +102,12 @@ class PaymentSubmissionDraft {
         if (normalizedDates.isNotEmpty &&
             (normalizedDates.length != 1 ||
                 !_sameDate(normalizedDates.single, collectionDate))) {
-          return 'A normal payment may cover only the collection date.';
+          return 'A normal payment may reference only the collection date.';
         }
         break;
       case CollectionEntryType.advance:
         if (paymentAllocationIntent != PaymentAllocationIntent.scheduled) {
-          return 'ADV uses explicit covered dates and cannot also be marked as voluntary extra.';
+          return 'Legacy covered-date ADV cannot also contain a Regular extra allocation choice.';
         }
         if (amount == null || amount! <= 0) {
           return 'A covered-date payment amount greater than zero is required.';
