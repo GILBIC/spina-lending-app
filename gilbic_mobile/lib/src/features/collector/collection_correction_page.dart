@@ -76,10 +76,8 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
     if (_unableToPay) {
       return 'pass';
     }
-    final dates = _sortedDates;
-    return dates.length == 1 && _sameDate(dates.single, _collectionDate)
-        ? 'payment'
-        : 'advance';
+    final existing = widget.entry.todayEntryType.trim().toLowerCase();
+    return existing == 'advance' ? 'advance' : 'payment';
   }
 
   void _changeMode(bool unableToPay) {
@@ -87,43 +85,11 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
       _unableToPay = unableToPay;
       _errorMessage = null;
       if (!unableToPay && _coveredDates.isEmpty) {
+        // Transitional compatibility: exact obligation dates remain protected
+        // server/audit evidence until the Allocation preview API replaces the
+        // legacy covered_dates correction field. Collectors cannot edit them.
         _coveredDates.add(_collectionDate);
       }
-    });
-  }
-
-  Future<void> _addCoveredDate() async {
-    final selected = await showDatePicker(
-      context: context,
-      initialDate: _sortedDates.isEmpty ? _collectionDate : _sortedDates.last,
-      firstDate: _collectionDate.subtract(const Duration(days: 365)),
-      lastDate: _collectionDate.add(const Duration(days: 730)),
-      helpText: 'Add one covered date',
-    );
-    if (selected == null || !mounted) {
-      return;
-    }
-    final normalized = _dateOnly(selected);
-    if (_sortedDates.any((value) => _sameDate(value, normalized))) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('That date is already selected.')),
-      );
-      return;
-    }
-    setState(() {
-      _coveredDates.add(normalized);
-      _amountController.text =
-          (widget.entry.dailyAmount * _coveredDates.length).toStringAsFixed(2);
-      _errorMessage = null;
-    });
-  }
-
-  void _removeCoveredDate(DateTime value) {
-    setState(() {
-      _coveredDates.removeWhere((date) => _sameDate(date, value));
-      _amountController.text =
-          (widget.entry.dailyAmount * _coveredDates.length).toStringAsFixed(2);
-      _errorMessage = null;
     });
   }
 
@@ -299,48 +265,66 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
                 enabled: !_submitting,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
-                  labelText: 'Corrected amount',
+                  labelText: 'Corrected cash amount',
                   prefixText: '₱ ',
                 ),
               ),
               const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Exact covered dates',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                  OutlinedButton.icon(
-                    key: const Key('correction-add-covered-date'),
-                    onPressed: _submitting ? null : _addCoveredDate,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add date'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (_sortedDates.isEmpty)
-                const Text('No date selected.')
-              else
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final date in _sortedDates)
-                      InputChip(
-                        key: Key('correction-covered-date-${_date(date)}'),
-                        label: Text(_date(date)),
-                        onDeleted:
-                            _submitting ? null : () => _removeCoveredDate(date),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Allocation',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Protected allocation is controlled by SPINA. Collectors do not manually choose covered dates here.',
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Current classification: ${_replacementTypeLabel(_replacementType)}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Card(
+                child: ExpansionTile(
+                  key: const Key('correction-covered-obligations-details'),
+                  title: const Text('Details / Covered obligations'),
+                  subtitle: Text(
+                    '${_sortedDates.length} protected obligation date${_sortedDates.length == 1 ? '' : 's'}',
+                  ),
+                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                  children: [
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Exact dates are kept as server and audit evidence. They are read-only on this screen.',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_sortedDates.isEmpty)
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('No covered obligation date is stored.'),
+                      )
+                    else
+                      for (final date in _sortedDates)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Text('• ${_date(date)}'),
+                          ),
+                        ),
                   ],
                 ),
-              const SizedBox(height: 8),
-              Text(
-                '${_sortedDates.length} selected date${_sortedDates.length == 1 ? '' : 's'}',
-                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
             const SizedBox(height: 14),
@@ -351,7 +335,7 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
               maxLines: 2,
               decoration: InputDecoration(
                 labelText: _unableToPay
-                    ? 'Unable-to-pay reason / note'
+                    ? 'Past Due reason / note'
                     : 'Payment note',
               ),
             ),
@@ -398,18 +382,13 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
 String _replacementTypeLabel(String value) {
   return switch (value) {
     'pass' => 'Unable to pay',
-    'advance' => 'Covered-date payment',
-    _ => 'Payment',
+    'advance' => 'Advance',
+    _ => 'Scheduled payment',
   };
 }
 
 DateTime _dateOnly(DateTime value) =>
     DateTime(value.year, value.month, value.day);
-
-bool _sameDate(DateTime left, DateTime right) =>
-    left.year == right.year &&
-    left.month == right.month &&
-    left.day == right.day;
 
 String _date(DateTime value) {
   return '${value.year.toString().padLeft(4, '0')}-'
