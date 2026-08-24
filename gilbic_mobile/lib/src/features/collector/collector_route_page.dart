@@ -130,7 +130,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
 
     if (entry.contractCollectionReady) {
       if (entry.contractTodayScheduledAmount <= 0) {
-        return 'No scheduled payment is due today. Expand this loan for covered dates or other payment details.';
+        return 'No scheduled payment is due today. Open payment details for voluntary payment or other actions.';
       }
       if (entry.contractTodayUnpaidAmount <= 0) {
         return "Today's scheduled payment is already fully paid.";
@@ -571,7 +571,7 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
       onRefresh: _loadRoute,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 16),
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
         children: [
           CollectorRouteHeaderCard(
             result: loaded,
@@ -638,12 +638,6 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
               ),
               const SizedBox(height: 8),
             ],
-          const SizedBox(height: 4),
-          Text(
-            'One client stays on one Daily Collection row. TODAY keeps one-tap Pay. When Regular + 7x7 are both due, one tap is submitted as one atomic server operation: both official receipts save together or neither saves. Expand only for notes, receipts, covered dates/ADV, voluntary extra, correction or other exceptions. Offline routes remain view-only.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
         ],
       ),
     );
