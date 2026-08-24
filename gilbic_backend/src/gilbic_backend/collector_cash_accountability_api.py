@@ -82,6 +82,11 @@ def create_collector_cash_accountability_router() -> APIRouter:
                         cross join actor
                         where remittance.collector_user_id = actor.user_id
                           and remittance.status = 'submitted'
+                          and not exists (
+                              select 1
+                              from lending.collection_remittance_rejections rejection
+                              where rejection.remittance_id = remittance.id
+                          )
                     ),
                     all_cash as (
                         select
