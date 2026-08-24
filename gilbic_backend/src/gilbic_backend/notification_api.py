@@ -4,6 +4,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from pydantic import BaseModel, ConfigDict
 
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
@@ -16,21 +17,32 @@ from .notification_repository import (
     RemittanceNotificationRecord,
 )
 from .remittance_repository import (
-    PostgresRemittanceRepository,
     RemittanceAlreadyReceived,
     RemittanceError,
     RemittanceNotFound,
     RemittanceRecipientInvalid,
 )
+from .remittance_review_repository import (
+    PostgresReviewedRemittanceRepository,
+    RemittanceAlreadyRejected,
+    RemittanceRejected,
+    RemittanceReviewRequired,
+)
 from .request_auth import authenticated_device_context
+
+
+class NotificationRemittanceReviewBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    review_acknowledged: bool
 
 
 def notification_repository_dependency() -> PostgresNotificationRepository:
     return PostgresNotificationRepository()
 
 
-def notification_remittance_repository_dependency() -> PostgresRemittanceRepository:
-    return PostgresRemittanceRepository()
+def notification_remittance_repository_dependency() -> PostgresReviewedRemittanceRepository:
+    return PostgresReviewedRemittanceRepository()
 
 
 def _money(value: Decimal) -> str:
@@ -45,19 +57,28 @@ def _notification_payload(
         if notification.has_handover_photo
         else None
     )
-    title = (
-        notification.title
-        if notification.is_pending
-        else "Remittance accepted"
-    )
-    message = (
-        notification.message
-        if notification.is_pending
-        else (
+    if notification.is_rejected:
+        title = "Remittance rejected"
+        message = (
+            f"{notification.remittance_number} was rejected. "
+            f"Reason: {notification.rejection_reason}. "
+            f"Cash remains with {notification.collector_name}."
+        )
+        custody_message = (
+            f"Rejected — cash remains with {notification.collector_name}."
+        )
+    elif notification.is_pending:
+        title = notification.title
+        message = notification.message
+        custody_message = "Review every payment, then confirm only after you physically receive the cash."
+    else:
+        title = "Remittance accepted"
+        message = (
             f"{notification.remittance_number} was accepted. "
             "Money is now under your custody."
         )
-    )
+        custody_message = "Money is now under your custody."
+
     return {
         "notification_id": str(notification.notification_id),
         "notification_type": "remittance_acceptance",
@@ -67,7 +88,7 @@ def _notification_payload(
         "remittance_number": notification.remittance_number,
         "title": title,
         "message": message,
-        "action_code": "accept_remittance",
+        "action_code": "review_remittance",
         "status": notification.status,
         "is_pending": notification.is_pending,
         "collector_name": notification.collector_name,
@@ -82,6 +103,12 @@ def _notification_payload(
             if notification.accepted_at
             else None
         ),
+        "rejected_at": (
+            notification.rejected_at.isoformat()
+            if notification.rejected_at
+            else None
+        ),
+        "rejection_reason": notification.rejection_reason,
         "has_handover_photo": notification.has_handover_photo,
         "handover_photo_version": notification.handover_photo_version,
         "handover_photo_content_type": notification.handover_photo_content_type,
@@ -91,11 +118,7 @@ def _notification_payload(
             else None
         ),
         "handover_photo_url": photo_url,
-        "custody_message": (
-            "Money is now under your custody."
-            if not notification.is_pending
-            else "Accept only after you physically receive the cash."
-        ),
+        "custody_message": custody_message,
     }
 
 
@@ -112,7 +135,12 @@ def _raise_remittance_error(error: RemittanceError) -> None:
         status = 404
     elif isinstance(error, RemittanceRecipientInvalid):
         status = 403
-    elif isinstance(error, RemittanceAlreadyReceived):
+    elif isinstance(error, RemittanceReviewRequired):
+        status = 422
+    elif isinstance(
+        error,
+        (RemittanceAlreadyReceived, RemittanceAlreadyRejected, RemittanceRejected),
+    ):
         status = 409
     else:
         status = 409
@@ -191,6 +219,7 @@ def create_notification_router() -> APIRouter:
     )
     def accept_remittance(
         notification_id: UUID,
+        body: NotificationRemittanceReviewBody,
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
@@ -198,7 +227,7 @@ def create_notification_router() -> APIRouter:
         notifications: PostgresNotificationRepository = Depends(
             notification_repository_dependency
         ),
-        remittances: PostgresRemittanceRepository = Depends(
+        remittances: PostgresReviewedRemittanceRepository = Depends(
             notification_remittance_repository_dependency
         ),
     ) -> dict[str, object]:
@@ -218,6 +247,7 @@ def create_notification_router() -> APIRouter:
             remittance = remittances.confirm_received(
                 remittance_id=notification.remittance_id,
                 recipient_user_id=actor.user_id,
+                review_acknowledged=body.review_acknowledged,
             )
             updated = notifications.get_for_user(
                 notification_id=notification_id,
