@@ -35,18 +35,15 @@ class PostgresCollectionPostingBridge:
     The idempotency executor opens and owns the PostgreSQL transaction. This
     bridge locks the loan and device sequence, validates route ownership, updates
     the authoritative collection state, creates an immutable transaction and
-    receipt, records exact covered dates and an audit event, and returns the
-    replayable result. Any exception rolls every write back together.
+    receipt, records covered-date evidence where legacy behavior still requires
+    it, writes an audit event, and returns the replayable result.
 
-    ``collection_transactions.amount`` is the real custody receipt. For a normal
-    PAYMENT, the current scheduled amount determines when today's obligation is
-    covered, but cash above that scheduled amount is not ADV and is not left
-    unresolved merely because it is extra. It reduces the remaining loan balance
-    as principal/term reduction up to the exact remaining payoff. Only cash above
-    the exact remaining balance can remain ``unallocated_amount`` for review.
-    Explicit ADV continues to cover only the named future scheduled dates.
-    Contract-aware subclasses preserve signed-schedule truth for the scheduled
-    portion and allocate non-ADV excess from the contractual tail.
+    ``collection_transactions.amount`` is the real custody receipt. A normal
+    PAYMENT may apply cash to required obligations without the Collector choosing
+    dates. Cash that exceeds the required amount is never silently treated as
+    Principal Reduction: the borrower must explicitly choose Advance or Principal
+    Reduction. Explicit legacy ADV continues to use its existing covered-date
+    contract until that historical path is fully retired.
     """
 
     def post_collection(
@@ -184,6 +181,7 @@ class PostgresCollectionPostingBridge:
             applied_amount = Decimal("0.00")
             unallocated_amount = Decimal("0.00")
             principal_extra_amount = Decimal("0.00")
+            advance_extra_amount = Decimal("0.00")
             allocation_state = "not_applicable"
             pass_count_after = int(loan["pass_count"])
             last_payment_date: date | None = loan["last_payment_date"]
@@ -213,29 +211,46 @@ class PostgresCollectionPostingBridge:
                         loan=loan,
                         command=command,
                     )
-                    # Management rule: when a receipt is not ADV, cash above the
-                    # current scheduled amount reduces principal/remaining term.
-                    # The scheduled amount still controls whether today's date is
-                    # fully covered; it no longer caps the amount that may reduce
-                    # the loan. Exact-payoff protection remains the hard maximum.
-                    maximum_immediately_applicable = previous_balance
+                    scheduled_target = min(previous_balance, scheduled_remaining)
+                    intent = command.payment_allocation_intent
+                    explicit_advance = intent is PaymentAllocationIntent.EXTRA_AS_ADVANCE
+                    explicit_principal_reduction = (
+                        intent is PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
+                    )
+                    explicit_extra_choice = explicit_advance or explicit_principal_reduction
+                    genuine_extra = self._money(
+                        max(Decimal("0.00"), cash_amount - scheduled_target)
+                    )
+                    if genuine_extra > Decimal("0.00") and not explicit_extra_choice:
+                        raise CollectionRejected(
+                            "Payment includes extra cash after required payment. Choose Advance or Principal Reduction.",
+                            code="extra_allocation_choice_required",
+                        )
+
+                    maximum_immediately_applicable = (
+                        previous_balance if explicit_extra_choice else scheduled_target
+                    )
+                    if explicit_advance:
+                        receipt_intent = "extra_as_advance"
+                    elif explicit_principal_reduction:
+                        receipt_intent = "extra_as_principal_reduction"
+                    else:
+                        receipt_intent = "scheduled"
                     plan = self._plan_receipt_application(
                         cash_amount=cash_amount,
                         maximum_immediately_applicable=maximum_immediately_applicable,
-                        allocation_intent=(
-                            "voluntary_extra"
-                            if command.payment_allocation_intent
-                            is PaymentAllocationIntent.VOLUNTARY_EXTRA
-                            else "scheduled"
-                        ),
+                        allocation_intent=receipt_intent,
                     )
                     applied_amount = plan.applied_amount
                     unallocated_amount = plan.unallocated_amount
                     allocation_state = plan.allocation_state
-                    scheduled_target = min(previous_balance, scheduled_remaining)
-                    principal_extra_amount = self._money(
+                    applied_extra = self._money(
                         max(Decimal("0.00"), applied_amount - scheduled_target)
                     )
+                    if explicit_principal_reduction:
+                        principal_extra_amount = applied_extra
+                    elif explicit_advance:
+                        advance_extra_amount = applied_extra
                     if (
                         covered_dates
                         and scheduled_target > Decimal("0.00")
@@ -261,9 +276,6 @@ class PostgresCollectionPostingBridge:
                     applied_amount = plan.applied_amount
                     unallocated_amount = plan.unallocated_amount
                     allocation_state = plan.allocation_state
-                    # Preserve the established legacy ADV coverage contract. The
-                    # contract-aware path separately verifies exact contractual
-                    # dates and amounts before it reaches this bridge.
                     dates_to_mark_covered = covered_dates
 
                 official_balance = self._money(previous_balance - applied_amount)
@@ -338,7 +350,8 @@ class PostgresCollectionPostingBridge:
                 "applied_amount": str(applied_amount),
                 "unallocated_amount": str(unallocated_amount),
                 "principal_extra_amount": str(principal_extra_amount),
-                "non_advance_excess_policy": "principal_reduction",
+                "advance_extra_amount": str(advance_extra_amount),
+                "non_advance_excess_policy": "explicit_borrower_choice",
                 "allocation_state": allocation_state,
             }
             cursor.execute(
@@ -441,7 +454,8 @@ class PostgresCollectionPostingBridge:
                             "applied_amount": str(applied_amount),
                             "unallocated_amount": str(unallocated_amount),
                             "principal_extra_amount": str(principal_extra_amount),
-                            "non_advance_excess_policy": "principal_reduction",
+                            "advance_extra_amount": str(advance_extra_amount),
+                            "non_advance_excess_policy": "explicit_borrower_choice",
                             "allocation_state": allocation_state,
                             "payment_allocation_intent": (
                                 command.payment_allocation_intent.value
