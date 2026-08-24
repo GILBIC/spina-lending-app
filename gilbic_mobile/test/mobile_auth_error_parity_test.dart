@@ -161,7 +161,7 @@ void main() {
         final store = MemorySessionStore();
         final repository = _ParityAuthRepository(
           onSignIn: (_, __) async => throw const SpinaApiException(
-            'Gilbic could not reach the SPINA server. Check the connection and try again.',
+            'Gilbic could not reach the Gilbic server. Check the connection and try again.',
             code: 'network_unavailable',
           ),
         );
@@ -181,7 +181,7 @@ void main() {
         expect(find.byKey(const Key('login-error')), findsOneWidget);
         expect(
           find.text(
-            'Gilbic could not reach the SPINA server. Check the connection and try again.',
+            'Gilbic could not reach the Gilbic server. Check the connection and try again.',
           ),
           findsOneWidget,
         );
