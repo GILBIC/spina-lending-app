@@ -38,7 +38,17 @@ abstract interface class RemittanceRepository {
   });
 }
 
-class SpinaRemittanceRepository implements RemittanceRepository {
+abstract interface class RemittanceRejectionRepository {
+  Future<RemittanceRecord> rejectRemittance(
+    UserSession session, {
+    required String deviceId,
+    required String remittanceId,
+    required String reason,
+  });
+}
+
+class SpinaRemittanceRepository
+    implements RemittanceRepository, RemittanceRejectionRepository {
   SpinaRemittanceRepository({http.Client? client})
       : _client = client ?? http.Client();
 
@@ -104,14 +114,7 @@ class SpinaRemittanceRepository implements RemittanceRepository {
         'note': note.trim(),
       },
     );
-    final record = RemittanceRecord.fromPayload(data);
-    if (record == null) {
-      throw const SpinaApiException(
-        'The SPINA server returned an incomplete remittance result.',
-        code: 'invalid_remittance_response',
-      );
-    }
-    return record;
+    return _recordOrThrow(data, 'remittance result');
   }
 
   @override
@@ -147,12 +150,38 @@ class SpinaRemittanceRepository implements RemittanceRepository {
       uri: ApiConfig.endpoint(
         '/api/mobile/v1/remittances/$remittanceId/receive',
       ),
-      body: const <String, Object?>{},
+      body: const <String, Object?>{'review_acknowledged': true},
     );
+    return _recordOrThrow(data, 'receipt confirmation');
+  }
+
+  @override
+  Future<RemittanceRecord> rejectRemittance(
+    UserSession session, {
+    required String deviceId,
+    required String remittanceId,
+    required String reason,
+  }) async {
+    final data = await _request(
+      session,
+      deviceId: deviceId,
+      method: 'POST',
+      uri: ApiConfig.endpoint(
+        '/api/mobile/v1/remittances/$remittanceId/reject',
+      ),
+      body: <String, Object?>{
+        'review_acknowledged': true,
+        'reason': reason.trim(),
+      },
+    );
+    return _recordOrThrow(data, 'rejection confirmation');
+  }
+
+  RemittanceRecord _recordOrThrow(Object? data, String label) {
     final record = RemittanceRecord.fromPayload(data);
     if (record == null) {
-      throw const SpinaApiException(
-        'The SPINA server returned an incomplete receipt confirmation.',
+      throw SpinaApiException(
+        'The Gilbic server returned an incomplete $label.',
         code: 'invalid_remittance_response',
       );
     }
@@ -185,7 +214,7 @@ class SpinaRemittanceRepository implements RemittanceRepository {
       };
     } on Exception {
       throw const SpinaApiException(
-        'The remittance request could not reach the SPINA server.',
+        'The remittance request could not reach the Gilbic server.',
         code: 'network_unavailable',
       );
     }
@@ -218,7 +247,7 @@ class SpinaRemittanceRepository implements RemittanceRepository {
       return decodeJsonObject(response.body);
     } on Object {
       throw SpinaApiException(
-        'The SPINA server returned unreadable remittance data.',
+        'The Gilbic server returned unreadable remittance data.',
         statusCode: response.statusCode,
         code: 'invalid_server_response',
       );
