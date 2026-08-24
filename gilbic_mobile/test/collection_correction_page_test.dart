@@ -7,12 +7,14 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_correction_page.dart';
+import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 void main() {
   testWidgets('loads exact saved values for the original collector',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        theme: SpinaTheme.light,
         home: CollectionCorrectionPage(
           session: _session,
           entry: _entry,
@@ -24,11 +26,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(tester.takeException(), isNull);
     expect(find.text('Edit Collection'), findsOneWidget);
     expect(find.text('Recorded by: Test Collector'), findsOneWidget);
     expect(find.text('2026-08-02'), findsWidgets);
     expect(find.text('2026-08-04'), findsOneWidget);
     expect(find.text('2026-08-03'), findsNothing);
+    expect(find.byKey(const Key('correction-add-covered-date')), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.byKey(const Key('correction-reason')),
