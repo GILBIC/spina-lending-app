@@ -118,15 +118,10 @@ class FakeNotifications:
 class FakeRemittances:
     def __init__(self, notifications: FakeNotifications) -> None:
         self.notifications = notifications
-        self.request: tuple[UUID, UUID] | None = None
+        self.request: dict[str, object] | None = None
 
-    def confirm_received(
-        self,
-        *,
-        remittance_id: UUID,
-        recipient_user_id: UUID,
-    ) -> RemittanceRecord:
-        self.request = (remittance_id, recipient_user_id)
+    def confirm_received(self, **kwargs) -> RemittanceRecord:
+        self.request = kwargs
         self.notifications.accepted = True
         return RemittanceRecord(
             remittance_id=REMITTANCE_ID,
@@ -172,7 +167,7 @@ def headers() -> dict[str, str]:
     }
 
 
-def test_recipient_receives_actionable_remittance_notification() -> None:
+def test_recipient_receives_reviewable_remittance_notification() -> None:
     client, _, _ = client_with_fakes()
 
     response = client.get(
@@ -184,21 +179,22 @@ def test_recipient_receives_actionable_remittance_notification() -> None:
     data = response.json()["data"]
     assert len(data) == 1
     assert data[0]["notification_id"] == str(NOTIFICATION_ID)
-    assert data[0]["action_code"] == "accept_remittance"
+    assert data[0]["action_code"] == "review_remittance"
     assert data[0]["is_pending"] is True
     assert data[0]["title"] == "Remittance awaiting acceptance"
     assert data[0]["message"] == "Collector One sent PHP 100.00."
     assert data[0]["custody_message"] == (
-        "Accept only after you physically receive the cash."
+        "Review every payment, then confirm only after you physically receive the cash."
     )
 
 
-def test_accepting_notification_transfers_money_custody_to_recipient() -> None:
+def test_accepting_notification_requires_review_acknowledgement() -> None:
     client, notifications, remittances = client_with_fakes()
 
     response = client.post(
         f"/api/mobile/v1/notifications/{NOTIFICATION_ID}/accept-remittance",
         headers=headers(),
+        json={"review_acknowledged": True},
     )
 
     assert response.status_code == 200
@@ -219,5 +215,9 @@ def test_accepting_notification_transfers_money_custody_to_recipient() -> None:
     assert notification["custody_message"] == (
         "Money is now under your custody."
     )
-    assert remittances.request == (REMITTANCE_ID, RECIPIENT_USER_ID)
+    assert remittances.request == {
+        "remittance_id": REMITTANCE_ID,
+        "recipient_user_id": RECIPIENT_USER_ID,
+        "review_acknowledged": True,
+    }
     assert notifications.accepted is True
