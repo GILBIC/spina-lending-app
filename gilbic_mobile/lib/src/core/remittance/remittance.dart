@@ -150,6 +150,11 @@ class RemittanceRecord {
     required this.note,
     required this.submittedAt,
     required this.receivedAt,
+    this.reviewedAt,
+    this.reviewedByUserId = '',
+    this.rejectedAt,
+    this.rejectedByUserId = '',
+    this.rejectionReason = '',
   });
 
   final String remittanceId;
@@ -163,8 +168,16 @@ class RemittanceRecord {
   final String note;
   final DateTime? submittedAt;
   final DateTime? receivedAt;
+  final DateTime? reviewedAt;
+  final String reviewedByUserId;
+  final DateTime? rejectedAt;
+  final String rejectedByUserId;
+  final String rejectionReason;
 
-  bool get isReceived => status.trim().toLowerCase() == 'received';
+  String get normalizedStatus => status.trim().toLowerCase();
+  bool get isReceived => normalizedStatus == 'received';
+  bool get isRejected => normalizedStatus == 'rejected';
+  bool get isPending => !isReceived && !isRejected;
 
   static RemittanceRecord? fromPayload(Object? value) {
     final data = stringMap(value);
@@ -199,6 +212,18 @@ class RemittanceRecord {
       receivedAt: DateTime.tryParse(
         firstNonEmptyString(<Object?>[data['received_at']]) ?? '',
       ),
+      reviewedAt: DateTime.tryParse(
+        firstNonEmptyString(<Object?>[data['reviewed_at']]) ?? '',
+      ),
+      reviewedByUserId:
+          firstNonEmptyString(<Object?>[data['reviewed_by_user_id']]) ?? '',
+      rejectedAt: DateTime.tryParse(
+        firstNonEmptyString(<Object?>[data['rejected_at']]) ?? '',
+      ),
+      rejectedByUserId:
+          firstNonEmptyString(<Object?>[data['rejected_by_user_id']]) ?? '',
+      rejectionReason:
+          firstNonEmptyString(<Object?>[data['rejection_reason']]) ?? '',
     );
   }
 }
