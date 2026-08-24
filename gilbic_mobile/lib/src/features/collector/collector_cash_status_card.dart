@@ -8,9 +8,9 @@ import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 /// Compact field-cash status shown above Daily Collection.
 ///
-/// Daily Collection shows only the Collector's total collection-cash
-/// responsibility plus immediate loan-release field actions. Remittance states,
-/// submission details and history belong exclusively to the Remit workflow.
+/// Daily Collection shows only the Collector's collection-cash responsibility.
+/// Renewal release actions belong in Renewal Requests, while remittance states,
+/// submission details and history belong in the dedicated Remit workflow.
 class CollectorCashStatusCard extends StatefulWidget {
   const CollectorCashStatusCard({
     required this.session,
@@ -27,7 +27,7 @@ class CollectorCashStatusCard extends StatefulWidget {
   final DeviceIdentityProvider deviceIdentityProvider;
 
   /// Retained for Collector-shell compatibility. Daily Collection intentionally
-  /// does not expose this action; remittance stays in the dedicated Remit tab.
+  /// does not expose these workflow actions directly.
   final VoidCallback onOpenRemittance;
   final VoidCallback onOpenRenewals;
   final VoidCallback onOpenCashToReceive;
@@ -52,9 +52,6 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
   double _otherAreaCashHeld = 0;
   List<CollectorCashByAssignedCollector> _otherAreaByCollector =
       const <CollectorCashByAssignedCollector>[];
-  int _cashToReceiveCount = 0;
-  double _cashToReceiveAmount = 0;
-  int _cashWithCollectorCount = 0;
   bool _loading = true;
 
   @override
@@ -79,9 +76,6 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
         _assignedAreaCashHeld = 0;
         _otherAreaCashHeld = 0;
         _otherAreaByCollector = const <CollectorCashByAssignedCollector>[];
-        _cashToReceiveCount = 0;
-        _cashToReceiveAmount = 0;
-        _cashWithCollectorCount = 0;
         _loading = false;
       });
       return;
@@ -93,9 +87,6 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     var assignedAreaCashHeld = 0.0;
     var otherAreaCashHeld = 0.0;
     var otherAreaByCollector = const <CollectorCashByAssignedCollector>[];
-    var cashToReceiveCount = 0;
-    var cashToReceiveAmount = 0.0;
-    var cashWithCollectorCount = 0;
     CollectorRenewalRequest? cashReleaseAlert;
 
     try {
@@ -122,15 +113,12 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
             widget.session,
             deviceId: identity.installationId,
           );
-          final toReceive = requests
-              .where((request) => request.canConfirmCashReceived)
-              .toList(growable: false);
-          cashWithCollectorCount = requests
-              .where((request) => request.canConfirmCashGiven)
-              .length;
-          cashToReceiveCount = toReceive.length;
-          cashToReceiveAmount = _releaseTotal(toReceive);
-          if (toReceive.isNotEmpty) cashReleaseAlert = toReceive.first;
+          for (final request in requests) {
+            if (request.canConfirmCashReceived) {
+              cashReleaseAlert = request;
+              break;
+            }
+          }
         } on Object {
           // A renewal endpoint failure must not block Daily Collection.
         }
@@ -145,9 +133,6 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
       _assignedAreaCashHeld = assignedAreaCashHeld;
       _otherAreaCashHeld = otherAreaCashHeld;
       _otherAreaByCollector = otherAreaByCollector;
-      _cashToReceiveCount = cashToReceiveCount;
-      _cashToReceiveAmount = cashToReceiveAmount;
-      _cashWithCollectorCount = cashWithCollectorCount;
       _loading = false;
     });
     if (cashReleaseAlert != null) {
@@ -206,54 +191,10 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
             otherAreaAmount: _otherAreaCashHeld,
             otherAreaByCollector: _otherAreaByCollector,
           ),
-          const SizedBox(height: 9),
-          Text(
-            'Loan releases',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Expanded(
-                child: _CashStatusTile(
-                  key: const Key('collector-cash-to-receive'),
-                  title: 'Cash to receive',
-                  value:
-                      '$_cashToReceiveCount • ${_money(_cashToReceiveAmount)}',
-                  subtitle: _cashToReceiveCount == 0
-                      ? 'No Management release'
-                      : 'Management releases waiting',
-                  emphasized: _cashToReceiveCount > 0,
-                  enabled: canRenewals(widget.session),
-                  onTap: widget.onOpenCashToReceive,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _CashStatusTile(
-                  key: const Key('collector-cash-to-client'),
-                  title: 'Give to client',
-                  value: '$_cashWithCollectorCount',
-                  subtitle: _cashWithCollectorCount == 0
-                      ? 'No release in custody'
-                      : 'Open handover queue',
-                  emphasized: _cashWithCollectorCount > 0,
-                  enabled: canRenewals(widget.session),
-                  onTap: widget.onOpenCashToClient,
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
   }
-}
-
-bool canRenewals(UserSession session) {
-  return session.hasPermission('renewal.recommend.assigned');
 }
 
 class _PrimaryCashHeldTile extends StatelessWidget {
@@ -425,80 +366,6 @@ class _CashHeldBreakdown extends StatelessWidget {
       ],
     );
   }
-}
-
-class _CashStatusTile extends StatelessWidget {
-  const _CashStatusTile({
-    required this.title,
-    required this.value,
-    required this.subtitle,
-    required this.enabled,
-    required this.onTap,
-    this.emphasized = false,
-    super.key,
-  });
-
-  final String title;
-  final String value;
-  final String subtitle;
-  final bool emphasized;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: emphasized ? SpinaTheme.brandPinkSoft : const Color(0xFFFFFAFC),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: enabled ? onTap : null,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: emphasized
-                          ? SpinaTheme.brandPinkDark
-                          : SpinaTheme.ink,
-                      fontWeight: FontWeight.w900,
-                    ),
-              ),
-              Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontSize: 9,
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-double _releaseTotal(Iterable<CollectorRenewalRequest> requests) {
-  return requests.fold<double>(
-    0,
-    (total, request) => total + (request.netReleaseAmount ?? 0),
-  );
 }
 
 String _money(double value) {
