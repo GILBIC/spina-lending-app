@@ -58,6 +58,10 @@ void main() {
       routeList,
       const Offset(0, -120),
     );
+    // dragUntilVisible only guarantees that some part of the target is visible.
+    // Keep the row clear of the persistent bottom navigation before tapping it.
+    await tester.drag(routeList, const Offset(0, -140));
+    await tester.pumpAndSettle();
     expect(find.text('Ana Client'), findsOneWidget);
     expect(find.text('CLIENT / STATUS'), findsOneWidget);
     expect(find.text('REG'), findsOneWidget);
