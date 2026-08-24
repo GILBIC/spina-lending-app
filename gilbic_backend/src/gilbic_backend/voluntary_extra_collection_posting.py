@@ -17,7 +17,12 @@ from spina_mobile_collections.contracts import (
 from spina_mobile_collections.service import CollectionRejected
 
 from .contract_collection_posting import ContractCollectionGate
-from .contract_schedule_engine import AllocationInstruction, OutstandingInstallment
+from .contract_schedule_engine import (
+    AllocationInstruction,
+    OutstandingInstallment,
+    PaymentAllocationError,
+    plan_protected_regular_allocation,
+)
 from .seven_by_seven_multi_receipt_posting import (
     MultiReceiptSevenBySevenCollectionPostingBridge,
 )
@@ -26,22 +31,28 @@ from .seven_by_seven_multi_receipt_posting import (
 class VoluntaryExtraAwareCollectionPostingBridge(
     MultiReceiptSevenBySevenCollectionPostingBridge
 ):
-    """Keep non-ADV excess separate from ADV while preserving one cash receipt.
+    """Protect Regular cash allocation while preserving one real cash receipt.
 
-    For an activated Regular contractual schedule, a normal PAYMENT first satisfies
-    the oldest unpaid installment actually due on or before the receipt date. Any
-    remaining applied cash is principal/term reduction and is allocated from the
-    contractual tail, leaving the next normal collection date due. Explicit ADV
-    remains the only path that covers named future scheduled dates.
+    For an activated Regular contractual schedule, a PAYMENT clears every unpaid
+    obligation due on or before the receipt date, oldest first. Only money left
+    after Past Due and Due Today are fully satisfied is genuine extra cash.
 
-    ``voluntary_extra_tail`` remains the installed database allocation-basis label
-    for backward compatibility, but explicit Voluntary Extra selection is no longer
-    required for ordinary non-ADV excess cash. Audit evidence records the actual
-    principal-extra amount and whether the incoming intent was scheduled or explicit.
+    Genuine extra is never guessed. The borrower must explicitly direct it to
+    Advance or Principal Reduction. Advance applies to the oldest unpaid future
+    contractual obligation first; Principal Reduction applies from the
+    contractual tail. The historical ``voluntary_extra_tail`` database label is
+    retained for Principal Reduction compatibility.
 
-    7x7 stays on its protected fixed-original-principal, interest-first allocator;
-    residual cash after fixed interest already reduces principal automatically.
+    7x7 remains on its separate protected allocator.
     """
+
+    _EXTRA_INTENTS = frozenset(
+        {
+            PaymentAllocationIntent.EXTRA_AS_ADVANCE,
+            PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION,
+            PaymentAllocationIntent.VOLUNTARY_EXTRA,
+        }
+    )
 
     def post_collection(
         self,
@@ -50,12 +61,12 @@ class VoluntaryExtraAwareCollectionPostingBridge(
         command: CollectionCommand,
     ) -> PostedCollection:
         if (
-            command.payment_allocation_intent is PaymentAllocationIntent.VOLUNTARY_EXTRA
+            command.payment_allocation_intent in self._EXTRA_INTENTS
             and command.entry_type is not CollectionEntryType.PAYMENT
         ):
             raise CollectionRejected(
-                "Voluntary extra is a payment intent. ADV must use exact covered dates, and Unable to pay cannot contain money.",
-                code="voluntary_extra_entry_type_invalid",
+                "Regular extra allocation is a Payment choice. Unable to pay cannot contain money, and legacy ADV uses its own protected path.",
+                code="regular_extra_entry_type_invalid",
             )
 
         posted = super().post_collection(connection, actor, command)
@@ -82,44 +93,37 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                 command=command,
             )
 
+        # Required cash is the complete unpaid amount already due, not merely
+        # one row. This makes Past Due -> newer Past Due -> Due Today the hard
+        # boundary before any cash can become genuine extra.
         cursor.execute(
             """
-            select
-                installment.contractual_amount,
-                coalesce(sum(allocation.amount_applied) filter (
-                    where allocation_transaction.is_voided = false
-                ), 0)::numeric(18,2) as allocated_amount
-            from accounting.loan_contract_dpd_assessment assessment
-            join lending.loan_contract_installments_operational installment
-              on installment.schedule_id = assessment.schedule_id
-            left join lending.loan_installment_payment_allocations allocation
-              on allocation.installment_id = installment.id
-            left join lending.collection_transactions allocation_transaction
-              on allocation_transaction.id = allocation.transaction_id
-            where assessment.loan_id = %s
-              and installment.effective_due_date <= %s
-            group by
-                installment.id,
-                installment.installment_number,
-                installment.effective_due_date,
-                installment.contractual_amount
-            having coalesce(sum(allocation.amount_applied) filter (
-                where allocation_transaction.is_voided = false
-            ), 0) < installment.contractual_amount
-            order by
-                installment.effective_due_date,
-                installment.installment_number,
-                installment.id
-            limit 1
+            with due_rows as (
+                select
+                    installment.id,
+                    installment.contractual_amount,
+                    coalesce(sum(allocation.amount_applied) filter (
+                        where allocation_transaction.is_voided = false
+                    ), 0)::numeric(18,2) as allocated_amount
+                from accounting.loan_contract_dpd_assessment assessment
+                join lending.loan_contract_installments_operational installment
+                  on installment.schedule_id = assessment.schedule_id
+                left join lending.loan_installment_payment_allocations allocation
+                  on allocation.installment_id = installment.id
+                left join lending.collection_transactions allocation_transaction
+                  on allocation_transaction.id = allocation.transaction_id
+                where assessment.loan_id = %s
+                  and installment.effective_due_date <= %s
+                group by installment.id, installment.contractual_amount
+            )
+            select coalesce(sum(greatest(contractual_amount - allocated_amount, 0)), 0)
+                ::numeric(18,2) as due_remaining
+            from due_rows
             """,
             (loan["loan_id"], command.collection_date),
         )
         row = cursor.fetchone()
-        if row is None:
-            return Decimal("0.00")
-        return self._money(
-            Decimal(row["contractual_amount"]) - Decimal(row["allocated_amount"])
-        )
+        return self._money(row["due_remaining"] if row else Decimal("0.00"))
 
     def _finalize_contract_effects(
         self,
@@ -214,10 +218,7 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                 applied_amount=applied_amount,
                 installments=outstanding,
                 collection_date=command.collection_date,
-                voluntary_extra=(
-                    command.payment_allocation_intent
-                    is PaymentAllocationIntent.VOLUNTARY_EXTRA
-                ),
+                allocation_intent=command.payment_allocation_intent,
             )
 
             for instruction in plan:
@@ -243,18 +244,18 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                     ),
                 )
 
-            scheduled_plan: tuple[AllocationInstruction, ...] = tuple(
+            required_plan: tuple[AllocationInstruction, ...] = tuple(
                 item for item in plan if item.allocation_basis == "oldest_due_first"
             )
-            fully_paid_scheduled_dates = self._fully_paid_touched_dates(
+            fully_paid_required_dates = self._fully_paid_touched_dates(
                 cursor,
-                plan=scheduled_plan,
+                plan=required_plan,
             )
             self._insert_fully_covered_dates(
                 cursor,
                 loan_id=gate.loan_id,
                 transaction_id=transaction_id,
-                covered_dates=fully_paid_scheduled_dates,
+                covered_dates=fully_paid_required_dates,
             )
             self._record_contract_audit(
                 cursor,
@@ -263,7 +264,7 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                 gate=gate,
                 command=command,
                 plan=plan,
-                fully_paid_dates=fully_paid_scheduled_dates,
+                fully_paid_dates=fully_paid_required_dates,
             )
             self._verify_contract_postcondition(cursor, gate=gate)
 
@@ -273,79 +274,48 @@ class VoluntaryExtraAwareCollectionPostingBridge(
         applied_amount: Decimal,
         installments: tuple[OutstandingInstallment, ...],
         collection_date,
-        voluntary_extra: bool,
+        allocation_intent: PaymentAllocationIntent = PaymentAllocationIntent.SCHEDULED,
+        voluntary_extra: bool | None = None,
     ) -> tuple[AllocationInstruction, ...]:
-        """Allocate applied non-ADV cash: due installment first, then tail."""
+        """Return the protected Regular allocation for one applied receipt.
 
-        amount_left = self._money(applied_amount)
-        if amount_left <= Decimal("0.00"):
+        ``voluntary_extra`` is accepted only as a temporary test/caller
+        compatibility argument. It never authorizes Principal Reduction; an
+        explicit modern allocation intent is required for genuine extra cash.
+        """
+
+        amount = self._money(applied_amount)
+        if amount <= Decimal("0.00"):
             return ()
 
-        remaining = sorted(
-            (row for row in installments if row.remaining_amount > Decimal("0.00")),
-            key=lambda row: (
-                row.due_date,
-                row.installment_number,
-                str(row.installment_id),
-            ),
-        )
-        if not remaining:
-            raise CollectionRejected(
-                "The contractual schedule is already fully paid. The receipt must remain unallocated for review.",
-                code="contract_payment_allocation_conflict",
-            )
-
-        due_now = [row for row in remaining if row.due_date <= collection_date]
-        instructions: list[AllocationInstruction] = []
-        scheduled_row = due_now[0] if due_now else None
-        if scheduled_row is not None:
-            scheduled_applied = self._money(
-                min(amount_left, scheduled_row.remaining_amount)
-            )
-            if scheduled_applied > Decimal("0.00"):
-                instructions.append(
-                    AllocationInstruction(
-                        installment_id=scheduled_row.installment_id,
-                        installment_number=scheduled_row.installment_number,
-                        due_date=scheduled_row.due_date,
-                        amount_applied=scheduled_applied,
-                        allocation_basis="oldest_due_first",
-                    )
-                )
-                amount_left = self._money(amount_left - scheduled_applied)
-
-        if amount_left <= Decimal("0.00"):
-            return tuple(instructions)
-
-        # Management rule: every applied PAYMENT amount that is not ADV and is
-        # above the scheduled obligation is principal/term reduction. Work from
-        # the contractual tail so the next scheduled date remains due normally.
-        # ``voluntary_extra`` remains only as the legacy incoming-intent/audit flag.
+        # Older direct unit callers may still pass the retired boolean. Preserve
+        # parse compatibility but deliberately do not infer a borrower choice.
         del voluntary_extra
-        tail_candidates = [row for row in remaining if row is not scheduled_row]
-        for row in reversed(tail_candidates):
-            if amount_left <= Decimal("0.00"):
-                break
-            applied = self._money(min(row.remaining_amount, amount_left))
-            if applied <= Decimal("0.00"):
-                continue
-            instructions.append(
-                AllocationInstruction(
-                    installment_id=row.installment_id,
-                    installment_number=row.installment_number,
-                    due_date=row.due_date,
-                    amount_applied=applied,
-                    allocation_basis="voluntary_extra_tail",
-                )
-            )
-            amount_left = self._money(amount_left - applied)
 
-        if amount_left != Decimal("0.00"):
-            raise CollectionRejected(
-                "Applied non-ADV cash exceeds the remaining contractual balance.",
-                code="contract_payment_allocation_conflict",
+        if allocation_intent is PaymentAllocationIntent.EXTRA_AS_ADVANCE:
+            extra_choice = "advance"
+        elif allocation_intent is PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION:
+            extra_choice = "principal_reduction"
+        else:
+            # SCHEDULED and legacy VOLUNTARY_EXTRA are intentionally ambiguous
+            # once genuine extra remains, so the protected planner fails closed.
+            extra_choice = None
+
+        try:
+            return plan_protected_regular_allocation(
+                transaction_amount=amount,
+                installments=installments,
+                collection_date=collection_date,
+                extra_choice=extra_choice,
             )
-        return tuple(instructions)
+        except PaymentAllocationError as error:
+            message = str(error)
+            code = (
+                "extra_allocation_choice_required"
+                if "Choose Advance or Principal Reduction" in message
+                else "contract_payment_allocation_conflict"
+            )
+            raise CollectionRejected(message, code=code) from error
 
     def _record_payment_intent(
         self,
@@ -365,20 +335,35 @@ class VoluntaryExtraAwareCollectionPostingBridge(
             cursor.execute(
                 """
                 select
-                    amount,
-                    applied_amount,
-                    unallocated_amount,
-                    allocation_state,
-                    coalesce(details->>'principal_extra_amount', '0.00')
-                        as principal_extra_amount
-                from lending.collection_transactions
-                where id = %s
+                    transaction.amount,
+                    transaction.applied_amount,
+                    transaction.unallocated_amount,
+                    transaction.allocation_state,
+                    coalesce(sum(allocation.amount_applied) filter (
+                        where allocation.allocation_basis = 'voluntary_extra_tail'
+                    ), 0)::numeric(18,2) as principal_reduction_amount,
+                    coalesce(sum(allocation.amount_applied) filter (
+                        where allocation.allocation_basis = 'future_advance_oldest_first'
+                    ), 0)::numeric(18,2) as advance_extra_amount
+                from lending.collection_transactions transaction
+                left join lending.loan_installment_payment_allocations allocation
+                  on allocation.transaction_id = transaction.id
+                where transaction.id = %s
+                group by
+                    transaction.id,
+                    transaction.amount,
+                    transaction.applied_amount,
+                    transaction.unallocated_amount,
+                    transaction.allocation_state
                 """,
                 (transaction_id,),
             )
             receipt = cursor.fetchone()
-            principal_extra_amount = self._money(
-                receipt["principal_extra_amount"] if receipt else Decimal("0.00")
+            principal_reduction_amount = self._money(
+                receipt["principal_reduction_amount"] if receipt else Decimal("0.00")
+            )
+            advance_extra_amount = self._money(
+                receipt["advance_extra_amount"] if receipt else Decimal("0.00")
             )
             cursor.execute(
                 """
@@ -390,13 +375,20 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                     Jsonb(
                         {
                             "payment_allocation_intent": intent,
-                            "non_advance_excess_policy": "principal_reduction",
+                            "non_advance_excess_policy": "explicit_borrower_choice",
+                            "extra_allocation_policy": intent,
+                            "principal_extra_amount": str(principal_reduction_amount),
+                            "advance_extra_amount": str(advance_extra_amount),
+                            "automatic_non_advance_principal_reduction": False,
                         }
                     ),
                     transaction_id,
                 ),
             )
-            if principal_extra_amount > Decimal("0.00"):
+            if (
+                principal_reduction_amount > Decimal("0.00")
+                or advance_extra_amount > Decimal("0.00")
+            ):
                 cursor.execute(
                     """
                     insert into core.audit_logs (
@@ -409,7 +401,7 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                     )
                     values (
                         %s,
-                        'collection.principal_extra.recorded',
+                        'collection.regular_extra.recorded',
                         'collection_transaction',
                         %s,
                         %s,
@@ -433,16 +425,15 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                                 "unallocated_amount": (
                                     str(receipt["unallocated_amount"]) if receipt else None
                                 ),
-                                "principal_extra_amount": str(principal_extra_amount),
+                                "principal_reduction_amount": str(
+                                    principal_reduction_amount
+                                ),
+                                "advance_extra_amount": str(advance_extra_amount),
                                 "allocation_state": (
                                     str(receipt["allocation_state"]) if receipt else None
                                 ),
                                 "payment_allocation_intent": intent,
-                                "automatic_non_advance_principal_reduction": (
-                                    command.payment_allocation_intent
-                                    is PaymentAllocationIntent.SCHEDULED
-                                ),
-                                "future_dates_marked_advance": False,
+                                "automatic_non_advance_principal_reduction": False,
                             }
                         ),
                     ),
