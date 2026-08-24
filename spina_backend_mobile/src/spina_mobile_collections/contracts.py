@@ -16,6 +16,10 @@ class CollectionEntryType(str, Enum):
 
 class PaymentAllocationIntent(str, Enum):
     SCHEDULED = "scheduled"
+    EXTRA_AS_ADVANCE = "extra_as_advance"
+    EXTRA_AS_PRINCIPAL_REDUCTION = "extra_as_principal_reduction"
+    # Legacy ambiguous value kept parseable during the migration. Protected
+    # posting must not silently interpret it as Principal Reduction.
     VOLUNTARY_EXTRA = "voluntary_extra"
 
 
