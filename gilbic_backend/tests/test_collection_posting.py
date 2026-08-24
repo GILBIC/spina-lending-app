@@ -232,7 +232,33 @@ def test_partial_payment_does_not_claim_day_until_scheduled_amount_is_complete()
     assert covered_inserts == []
 
 
-def test_second_distinct_receipt_applies_remaining_due_then_excess_to_principal() -> None:
+def test_second_distinct_receipt_requires_choice_before_using_excess() -> None:
+    cursor = FakeCursor(
+        loan_row(
+            remaining_balance=Decimal("900.00"),
+            state_version=8,
+            last_payment_date=date(2026, 8, 1),
+            pass_count=0,
+        )
+    )
+    cursor.same_day_applied_amount = Decimal("100.00")
+
+    with pytest.raises(CollectionRejected) as caught:
+        PostgresCollectionPostingBridge().post_collection(
+            FakeConnection(cursor),
+            actor(),
+            command(
+                amount=Decimal("150.00"),
+                route_revision=f"loan:{LOAN_ID}:v8",
+            ),
+        )
+
+    assert caught.value.code == "extra_allocation_choice_required"
+    assert "Advance or Principal Reduction" in caught.value.message
+    assert "insert into lending.collection_transactions" not in executed_sql(cursor)
+
+
+def test_second_distinct_receipt_can_use_principal_reduction_after_choice() -> None:
     cursor = FakeCursor(
         loan_row(
             remaining_balance=Decimal("900.00"),
@@ -249,6 +275,9 @@ def test_second_distinct_receipt_applies_remaining_due_then_excess_to_principal(
         command(
             amount=Decimal("150.00"),
             route_revision=f"loan:{LOAN_ID}:v8",
+            payment_allocation_intent=(
+                PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
+            ),
         ),
     )
 
@@ -269,33 +298,33 @@ def test_second_distinct_receipt_applies_remaining_due_then_excess_to_principal(
     ]
 
 
-def test_distinct_receipt_after_day_is_paid_becomes_principal_reduction() -> None:
+def test_distinct_receipt_after_day_is_paid_requires_explicit_choice() -> None:
     cursor = FakeCursor(loan_row(pass_count=0, last_payment_date=date(2026, 8, 1)))
     cursor.covered_date = date(2026, 8, 1)
 
-    result = PostgresCollectionPostingBridge().post_collection(
-        FakeConnection(cursor),
-        actor(),
-        command(amount=Decimal("100.00")),
-    )
+    with pytest.raises(CollectionRejected) as caught:
+        PostgresCollectionPostingBridge().post_collection(
+            FakeConnection(cursor),
+            actor(),
+            command(amount=Decimal("100.00")),
+        )
 
-    assert result.official_balance == Decimal("900.00")
-    assert result.message == "Payment saved."
-    transaction = transaction_insert_parameters(cursor)
-    assert transaction[9] == Decimal("100.00")
-    assert transaction[10] == Decimal("100.00")
-    assert transaction[11] == Decimal("0.00")
-    assert transaction[12] == "fully_allocated"
-    assert "insert into lending.collection_covered_dates" not in executed_sql(cursor)
+    assert caught.value.code == "extra_allocation_choice_required"
+    assert "Advance or Principal Reduction" in caught.value.message
 
 
-def test_only_cash_above_exact_remaining_payoff_stays_unallocated() -> None:
+def test_cash_above_exact_payoff_stays_unallocated_after_principal_choice() -> None:
     cursor = FakeCursor(loan_row(remaining_balance=Decimal("250.00")))
 
     result = PostgresCollectionPostingBridge().post_collection(
         FakeConnection(cursor),
         actor(),
-        command(amount=Decimal("300.00")),
+        command(
+            amount=Decimal("300.00"),
+            payment_allocation_intent=(
+                PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
+            ),
+        ),
     )
 
     assert result.official_balance == Decimal("0.00")
@@ -307,14 +336,16 @@ def test_only_cash_above_exact_remaining_payoff_stays_unallocated() -> None:
     assert transaction[12] == "partially_allocated"
 
 
-def test_explicit_voluntary_extra_can_reduce_more_than_current_daily_due() -> None:
+def test_explicit_principal_reduction_can_reduce_more_than_current_daily_due() -> None:
     cursor = FakeCursor(loan_row())
     result = PostgresCollectionPostingBridge().post_collection(
         FakeConnection(cursor),
         actor(),
         command(
             amount=Decimal("500.00"),
-            payment_allocation_intent=PaymentAllocationIntent.VOLUNTARY_EXTRA,
+            payment_allocation_intent=(
+                PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
+            ),
         ),
     )
 
@@ -324,6 +355,42 @@ def test_explicit_voluntary_extra_can_reduce_more_than_current_daily_due() -> No
     assert transaction[10] == Decimal("500.00")
     assert transaction[11] == Decimal("0.00")
     assert transaction[12] == "fully_allocated"
+
+
+def test_explicit_advance_can_apply_more_than_current_daily_due() -> None:
+    cursor = FakeCursor(loan_row())
+    result = PostgresCollectionPostingBridge().post_collection(
+        FakeConnection(cursor),
+        actor(),
+        command(
+            amount=Decimal("500.00"),
+            payment_allocation_intent=PaymentAllocationIntent.EXTRA_AS_ADVANCE,
+        ),
+    )
+
+    assert result.official_balance == Decimal("500.00")
+    transaction = transaction_insert_parameters(cursor)
+    assert transaction[9] == Decimal("500.00")
+    assert transaction[10] == Decimal("500.00")
+    assert transaction[11] == Decimal("0.00")
+    assert transaction[12] == "fully_allocated"
+
+
+def test_legacy_voluntary_extra_no_longer_guesses_principal_reduction() -> None:
+    cursor = FakeCursor(loan_row())
+
+    with pytest.raises(CollectionRejected) as caught:
+        PostgresCollectionPostingBridge().post_collection(
+            FakeConnection(cursor),
+            actor(),
+            command(
+                amount=Decimal("500.00"),
+                payment_allocation_intent=PaymentAllocationIntent.VOLUNTARY_EXTRA,
+            ),
+        )
+
+    assert caught.value.code == "extra_allocation_choice_required"
+    assert "Advance or Principal Reduction" in caught.value.message
 
 
 def test_full_payment_marks_loan_paid() -> None:
