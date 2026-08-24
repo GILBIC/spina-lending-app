@@ -52,6 +52,7 @@ def create_collector_cash_accountability_router() -> APIRouter:
                     ready as (
                         select
                             transaction.amount,
+                            transaction.assigned_collector_user_id,
                             transaction.collection_origin = 'cross_collector'
                                 and transaction.assigned_collector_user_id is not null
                                 and transaction.assigned_collector_user_id <> actor.user_id
@@ -66,7 +67,9 @@ def create_collector_cash_accountability_router() -> APIRouter:
                     ),
                     awaiting as (
                         select
+                            remittance.id as remittance_id,
                             item.amount,
+                            transaction.assigned_collector_user_id,
                             transaction.collection_origin = 'cross_collector'
                                 and transaction.assigned_collector_user_id is not null
                                 and transaction.assigned_collector_user_id <> actor.user_id
@@ -79,6 +82,36 @@ def create_collector_cash_accountability_router() -> APIRouter:
                         cross join actor
                         where remittance.collector_user_id = actor.user_id
                           and remittance.status = 'submitted'
+                    ),
+                    all_cash as (
+                        select
+                            amount,
+                            assigned_collector_user_id,
+                            is_other_area
+                        from ready
+                        union all
+                        select
+                            amount,
+                            assigned_collector_user_id,
+                            is_other_area
+                        from awaiting
+                    ),
+                    other_by_collector as (
+                        select
+                            cash.assigned_collector_user_id,
+                            coalesce(
+                                nullif(btrim(user_account.full_name), ''),
+                                user_account.username
+                            ) as collector_name,
+                            sum(cash.amount)::numeric(18,2) as amount
+                        from all_cash cash
+                        join core.users user_account
+                          on user_account.id = cash.assigned_collector_user_id
+                        where cash.is_other_area
+                        group by
+                            cash.assigned_collector_user_id,
+                            user_account.full_name,
+                            user_account.username
                     )
                     select
                         coalesce((select sum(amount) from ready), 0)::numeric(18,2)
@@ -87,22 +120,26 @@ def create_collector_cash_accountability_router() -> APIRouter:
                             as ready_to_remit_count,
                         coalesce((select sum(amount) from awaiting), 0)::numeric(18,2)
                             as awaiting_acceptance_amount,
-                        coalesce((select count(*) from awaiting), 0)::integer
-                            as awaiting_acceptance_count,
                         coalesce((
-                            select sum(amount) from ready where not is_other_area
-                        ), 0)::numeric(18,2)
-                        + coalesce((
-                            select sum(amount) from awaiting where not is_other_area
-                        ), 0)::numeric(18,2)
-                            as assigned_area_cash_held,
+                            select count(distinct remittance_id) from awaiting
+                        ), 0)::integer as awaiting_acceptance_count,
                         coalesce((
-                            select sum(amount) from ready where is_other_area
-                        ), 0)::numeric(18,2)
-                        + coalesce((
-                            select sum(amount) from awaiting where is_other_area
-                        ), 0)::numeric(18,2)
-                            as other_area_cash_held
+                            select sum(amount) from all_cash where not is_other_area
+                        ), 0)::numeric(18,2) as assigned_area_cash_held,
+                        coalesce((
+                            select sum(amount) from all_cash where is_other_area
+                        ), 0)::numeric(18,2) as other_area_cash_held,
+                        coalesce((
+                            select jsonb_agg(
+                                jsonb_build_object(
+                                    'collector_user_id', assigned_collector_user_id,
+                                    'collector_name', collector_name,
+                                    'amount', amount
+                                )
+                                order by lower(collector_name), assigned_collector_user_id
+                            )
+                            from other_by_collector
+                        ), '[]'::jsonb) as other_area_by_collector
                     """,
                     (actor.user_id,),
                 )
@@ -113,12 +150,23 @@ def create_collector_cash_accountability_router() -> APIRouter:
         total = ready + awaiting
         assigned_area = Decimal(row["assigned_area_cash_held"] or ZERO)
         other_area = Decimal(row["other_area_cash_held"] or ZERO)
+        other_area_by_collector = []
+        for item in row["other_area_by_collector"] or []:
+            other_area_by_collector.append(
+                {
+                    "collector_user_id": str(item["collector_user_id"]),
+                    "collector_name": str(item["collector_name"]),
+                    "amount": _money(Decimal(item["amount"])),
+                }
+            )
+
         return {
             "success": True,
             "data": {
                 "total_cash_held": _money(total),
                 "assigned_area_cash_held": _money(assigned_area),
                 "other_area_cash_held": _money(other_area),
+                "other_area_by_collector": other_area_by_collector,
                 "ready_to_remit_amount": _money(ready),
                 "ready_to_remit_count": int(row["ready_to_remit_count"] or 0),
                 "awaiting_acceptance_amount": _money(awaiting),
