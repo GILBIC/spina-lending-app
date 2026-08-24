@@ -12,9 +12,13 @@ class CollectorCashAccountability {
     required this.readyToRemitCount,
     required this.awaitingAcceptanceAmount,
     required this.awaitingAcceptanceCount,
+    this.assignedAreaCashHeld = 0,
+    this.otherAreaCashHeld = 0,
   });
 
   final double totalCashHeld;
+  final double assignedAreaCashHeld;
+  final double otherAreaCashHeld;
   final double readyToRemitAmount;
   final int readyToRemitCount;
   final double awaitingAcceptanceAmount;
@@ -25,6 +29,10 @@ class CollectorCashAccountability {
     return CollectorCashAccountability(
       totalCashHeld:
           firstNumber(<Object?>[data['total_cash_held']])?.toDouble() ?? 0,
+      assignedAreaCashHeld:
+          firstNumber(<Object?>[data['assigned_area_cash_held']])?.toDouble() ?? 0,
+      otherAreaCashHeld:
+          firstNumber(<Object?>[data['other_area_cash_held']])?.toDouble() ?? 0,
       readyToRemitAmount:
           firstNumber(<Object?>[data['ready_to_remit_amount']])?.toDouble() ?? 0,
       readyToRemitCount:
