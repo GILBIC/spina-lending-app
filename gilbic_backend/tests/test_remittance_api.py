@@ -73,6 +73,7 @@ class FakeRemittances:
     def __init__(self) -> None:
         self.submit_request: dict[str, object] | None = None
         self.received_request: dict[str, object] | None = None
+        self.rejected_request: dict[str, object] | None = None
 
     def list_recipients(self, *, actor_user_id: UUID):
         assert actor_user_id == COLLECTOR_USER_ID
@@ -103,6 +104,10 @@ class FakeRemittances:
             status="received",
             received_at=datetime(2026, 8, 2, 9, tzinfo=timezone.utc),
         )
+
+    def reject(self, **kwargs):
+        self.rejected_request = kwargs
+        return _record(status="rejected", received_at=None)
 
 
 def _item() -> RemittanceItemRecord:
@@ -220,7 +225,7 @@ def test_collector_preview_and_submit_use_server_calculated_summary() -> None:
     assert remittances.submit_request["recipient_user_id"] == RECIPIENT_USER_ID
 
 
-def test_selected_recipient_can_confirm_received() -> None:
+def test_selected_recipient_can_confirm_received_after_review() -> None:
     client, remittances = client_with_fakes(
         user_id=RECIPIENT_USER_ID,
         permissions=("remittance.view", "remittance.receive"),
@@ -229,6 +234,7 @@ def test_selected_recipient_can_confirm_received() -> None:
     response = client.post(
         f"/api/mobile/v1/remittances/{REMITTANCE_ID}/receive",
         headers=headers(),
+        json={"review_acknowledged": True},
     )
 
     assert response.status_code == 200
@@ -237,4 +243,30 @@ def test_selected_recipient_can_confirm_received() -> None:
     assert remittances.received_request == {
         "remittance_id": REMITTANCE_ID,
         "recipient_user_id": RECIPIENT_USER_ID,
+        "review_acknowledged": True,
+    }
+
+
+def test_selected_recipient_can_reject_after_review_with_reason() -> None:
+    client, remittances = client_with_fakes(
+        user_id=RECIPIENT_USER_ID,
+        permissions=("remittance.view", "remittance.receive"),
+    )
+
+    response = client.post(
+        f"/api/mobile/v1/remittances/{REMITTANCE_ID}/reject",
+        headers=headers(),
+        json={
+            "review_acknowledged": True,
+            "reason": "Cash total does not match",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["status"] == "rejected"
+    assert remittances.rejected_request == {
+        "remittance_id": REMITTANCE_ID,
+        "recipient_user_id": RECIPIENT_USER_ID,
+        "review_acknowledged": True,
+        "reason": "Cash total does not match",
     }
