@@ -1,0 +1,194 @@
+name: Acceptance guarded 0100-0102 migration
+
+on:
+  push:
+    branches:
+      - mobile/ca4-collector-ui
+    paths:
+      - '.github/workflows/acceptance-0100-0102-once.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acceptance-0100-0102-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate-acceptance:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out exact authorized revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Create isolated migration environment
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-acceptance-0100-0102-venv"
+          if exist "%VENV%" rmdir /s /q "%VENV%"
+          python -m venv "%VENV%" || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\gilbic_backend[test]" || exit /b 1
+
+      - name: Load only the established CA4 acceptance target
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $envPath = 'C:\GitHub\spina-lending-app-clean\.env'
+          if (-not (Test-Path $envPath)) {
+            throw "Acceptance migration refused: established CA4 checkout .env was not found at $envPath."
+          }
+
+          $line = Get-Content -LiteralPath $envPath | Where-Object {
+            $_ -match '^\s*GILBIC_DATABASE_URL\s*='
+          } | Select-Object -First 1
+          if (-not $line) {
+            throw 'Acceptance migration refused: GILBIC_DATABASE_URL is missing from the established CA4 checkout .env.'
+          }
+
+          $value = ($line -split '=', 2)[1].Trim()
+          if ($value.Length -ge 2 -and (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'")))) {
+            $value = $value.Substring(1, $value.Length - 2)
+          }
+          if ([string]::IsNullOrWhiteSpace($value)) {
+            throw 'Acceptance migration refused: GILBIC_DATABASE_URL is empty.'
+          }
+
+          Write-Output "::add-mask::$value"
+          "GILBIC_DATABASE_URL=$value" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Verify exact CA4 acceptance database identity and prerequisites
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $venvPython = Join-Path $env:RUNNER_TEMP 'spina-acceptance-0100-0102-venv\Scripts\python.exe'
+          $probe = Join-Path $env:RUNNER_TEMP 'verify_spina_acceptance_target.py'
+          @'
+          import os
+          from urllib.parse import urlparse
+          from uuid import UUID
+          import psycopg
+
+          url = os.environ.get('GILBIC_DATABASE_URL', '').strip()
+          if not url:
+              raise SystemExit('Acceptance migration refused: database URL is unavailable.')
+          parsed = urlparse(url)
+          host = (parsed.hostname or '').strip().lower()
+          database = (parsed.path or '').lstrip('/')
+          if parsed.scheme not in {'postgres', 'postgresql'}:
+              raise SystemExit('Acceptance migration refused: target is not PostgreSQL.')
+          if host in {'', 'localhost', '127.0.0.1', '::1'}:
+              raise SystemExit('Acceptance migration refused: target must be the established remote CA4 acceptance PostgreSQL database.')
+          if database != 'postgres':
+              raise SystemExit('Acceptance migration refused: established CA4 acceptance database name must be postgres.')
+
+          with psycopg.connect(url) as connection:
+              required_relations = (
+                  'lending.collection_transactions',
+                  'lending.collection_remittances',
+                  'lending.collector_area_access_grants',
+              )
+              for relation in required_relations:
+                  if connection.execute('select to_regclass(%s)', (relation,)).fetchone()[0] is None:
+                      raise SystemExit(f'Acceptance migration refused: prerequisite {relation} is missing.')
+              if connection.execute("select to_regprocedure('lending.collector_area_owner(text)')").fetchone()[0] is None:
+                  raise SystemExit('Acceptance migration refused: 0098 authoritative area-owner function is missing.')
+              if connection.execute(
+                  "select count(*) from lending.collection_remittances where remittance_number=%s",
+                  ('REM-20260819-00000007',),
+              ).fetchone()[0] != 1:
+                  raise SystemExit('Acceptance migration refused: known CA4 remittance evidence is missing; target identity does not match.')
+              if connection.execute(
+                  'select count(*) from lending.collector_area_access_grants where id=%s',
+                  (UUID('c95e8797-d55e-4573-94ba-b5174fa26e2a'),),
+              ).fetchone()[0] != 1:
+                  raise SystemExit('Acceptance migration refused: known CA4 delegated grant evidence is missing; target identity does not match.')
+              recipient_capacity = connection.execute(
+                  """
+                  select count(*)
+                  from information_schema.columns
+                  where table_schema='lending'
+                    and table_name='collection_remittances'
+                    and column_name='recipient_capacity'
+                  """
+              ).fetchone()[0]
+              if recipient_capacity != 1:
+                  raise SystemExit('Acceptance migration refused: migration 0099 recipient_capacity is not installed. No later migration was attempted.')
+              if connection.execute("select to_regclass('mobile.gilbic_combined_collection_idempotency')").fetchone()[0] is not None:
+                  print('0100 appears present; guarded runner will verify exact installed state.')
+              print('Acceptance target preflight passed: known CA4 evidence and 0097/0098/0099 prerequisites match.')
+          '@ | Set-Content -LiteralPath $probe -Encoding utf8
+          & $venvPython $probe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Compile guarded migration runners
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-acceptance-0100-0102-venv"
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_0100_0101_collection_renewal_migrations.py || exit /b 1
+          "%VENV%\Scripts\python.exe" -m py_compile tools\apply_0102_remittance_review_rejection_migration.py || exit /b 1
+
+      - name: Apply and verify guarded 0100 and 0101 on acceptance
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-acceptance-0100-0102-venv"
+          "%VENV%\Scripts\python.exe" tools\apply_0100_0101_collection_renewal_migrations.py || exit /b 1
+          "%VENV%\Scripts\python.exe" tools\apply_0100_0101_collection_renewal_migrations.py || exit /b 1
+
+      - name: Apply and verify guarded 0102 on acceptance
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-acceptance-0100-0102-venv"
+          "%VENV%\Scripts\python.exe" tools\apply_0102_remittance_review_rejection_migration.py || exit /b 1
+          "%VENV%\Scripts\python.exe" tools\apply_0102_remittance_review_rejection_migration.py || exit /b 1
+
+      - name: Verify acceptance schema and preserve known CA4 evidence
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $venvPython = Join-Path $env:RUNNER_TEMP 'spina-acceptance-0100-0102-venv\Scripts\python.exe'
+          $verify = Join-Path $env:RUNNER_TEMP 'verify_spina_0100_0102_installed.py'
+          @'
+          import os
+          from uuid import UUID
+          import psycopg
+
+          url = os.environ['GILBIC_DATABASE_URL']
+          with psycopg.connect(url) as connection:
+              required_relations = (
+                  'mobile.gilbic_combined_collection_idempotency',
+                  'lending.renewal_required_signers',
+                  'lending.renewal_handover_photos',
+                  'lending.collection_remittance_reviews',
+                  'lending.collection_remittance_rejections',
+              )
+              for relation in required_relations:
+                  if connection.execute('select to_regclass(%s)', (relation,)).fetchone()[0] is None:
+                      raise SystemExit(f'Acceptance post-check failed: {relation} is missing.')
+              if connection.execute(
+                  "select count(*) from lending.collection_remittances where remittance_number=%s",
+                  ('REM-20260819-00000007',),
+              ).fetchone()[0] != 1:
+                  raise SystemExit('Acceptance post-check failed: known CA4 remittance evidence changed or disappeared.')
+              if connection.execute(
+                  'select count(*) from lending.collector_area_access_grants where id=%s',
+                  (UUID('c95e8797-d55e-4573-94ba-b5174fa26e2a'),),
+              ).fetchone()[0] != 1:
+                  raise SystemExit('Acceptance post-check failed: known CA4 delegated grant evidence changed or disappeared.')
+              print('Acceptance migrations 0100, 0101, and 0102 are installed and verified; known CA4 evidence remains present.')
+          '@ | Set-Content -LiteralPath $verify -Encoding utf8
+          & $venvPython $verify
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Require a clean committed source tree
+        shell: cmd
+        run: |
+          git diff --check || exit /b 1
+          git diff --exit-code || exit /b 1
+          git diff --cached --exit-code || exit /b 1
