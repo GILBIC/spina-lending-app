@@ -13,6 +13,8 @@ ReceiptAllocationState = Literal[
 ]
 ReceiptAllocationIntent = Literal[
     "scheduled",
+    "extra_as_advance",
+    "extra_as_principal_reduction",
     "voluntary_extra",
     "advance",
 ]
@@ -44,10 +46,10 @@ def plan_receipt_application(
     """Split one real receipt into applied and unresolved custody cash.
 
     The caller supplies the authoritative maximum that may reduce the loan for
-    the selected action. For normal non-ADV PAYMENT, the posting bridge now uses
-    the exact remaining payoff as this maximum so cash above today's scheduled
-    obligation can reduce principal/remaining term. For ADV, the maximum remains
-    restricted by the explicitly selected covered-date obligation.
+    the selected action. Protected Regular flows first determine whether cash is
+    required for Past Due / Due Today or is genuine extra. Genuine extra requires
+    an explicit borrower direction (Advance or Principal Reduction) before this
+    function is called with the full remaining balance as the applicable maximum.
 
     Cash above the supplied maximum is not discarded or guessed into another
     purpose. It remains an audited unallocated amount for review/cash-over
@@ -62,7 +64,13 @@ def plan_receipt_application(
         raise ReceiptApplicationError(
             "Maximum immediately applicable amount cannot be negative."
         )
-    if allocation_intent not in {"scheduled", "voluntary_extra", "advance"}:
+    if allocation_intent not in {
+        "scheduled",
+        "extra_as_advance",
+        "extra_as_principal_reduction",
+        "voluntary_extra",
+        "advance",
+    }:
         raise ReceiptApplicationError("Unsupported receipt allocation intent.")
 
     applied = min(cash, maximum)
