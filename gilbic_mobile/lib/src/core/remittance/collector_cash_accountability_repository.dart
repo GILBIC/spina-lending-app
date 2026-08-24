@@ -5,6 +5,29 @@ import 'package:gilbic_mobile/src/core/config/api_config.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:http/http.dart' as http;
 
+class CollectorCashByAssignedCollector {
+  const CollectorCashByAssignedCollector({
+    required this.collectorUserId,
+    required this.collectorName,
+    required this.amount,
+  });
+
+  final String collectorUserId;
+  final String collectorName;
+  final double amount;
+
+  factory CollectorCashByAssignedCollector.fromPayload(Object? value) {
+    final data = stringMap(value);
+    return CollectorCashByAssignedCollector(
+      collectorUserId:
+          firstNonEmptyString(<Object?>[data['collector_user_id']]) ?? '',
+      collectorName:
+          firstNonEmptyString(<Object?>[data['collector_name']]) ?? 'Collector',
+      amount: firstNumber(<Object?>[data['amount']])?.toDouble() ?? 0,
+    );
+  }
+}
+
 class CollectorCashAccountability {
   const CollectorCashAccountability({
     required this.totalCashHeld,
@@ -14,11 +37,13 @@ class CollectorCashAccountability {
     required this.awaitingAcceptanceCount,
     this.assignedAreaCashHeld = 0,
     this.otherAreaCashHeld = 0,
+    this.otherAreaByCollector = const <CollectorCashByAssignedCollector>[],
   });
 
   final double totalCashHeld;
   final double assignedAreaCashHeld;
   final double otherAreaCashHeld;
+  final List<CollectorCashByAssignedCollector> otherAreaByCollector;
   final double readyToRemitAmount;
   final int readyToRemitCount;
   final double awaitingAcceptanceAmount;
@@ -26,6 +51,13 @@ class CollectorCashAccountability {
 
   factory CollectorCashAccountability.fromPayload(Object? value) {
     final data = stringMap(value);
+    final rawBreakdown = data['other_area_by_collector'];
+    final breakdown = rawBreakdown is List
+        ? rawBreakdown
+            .map(CollectorCashByAssignedCollector.fromPayload)
+            .where((item) => item.amount > 0)
+            .toList(growable: false)
+        : const <CollectorCashByAssignedCollector>[];
     return CollectorCashAccountability(
       totalCashHeld:
           firstNumber(<Object?>[data['total_cash_held']])?.toDouble() ?? 0,
@@ -33,6 +65,7 @@ class CollectorCashAccountability {
           firstNumber(<Object?>[data['assigned_area_cash_held']])?.toDouble() ?? 0,
       otherAreaCashHeld:
           firstNumber(<Object?>[data['other_area_cash_held']])?.toDouble() ?? 0,
+      otherAreaByCollector: breakdown,
       readyToRemitAmount:
           firstNumber(<Object?>[data['ready_to_remit_amount']])?.toDouble() ?? 0,
       readyToRemitCount:
