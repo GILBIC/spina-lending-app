@@ -15,6 +15,8 @@ import gilbic_backend.collector_cash_accountability_api as cash_api
 
 AUTH_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 COLLECTOR_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
+OTHER_COLLECTOR_A = UUID("33333333-3333-4333-8333-333333333333")
+OTHER_COLLECTOR_B = UUID("44444444-4444-4444-8444-444444444444")
 
 
 class FakeAuthClient:
@@ -64,20 +66,30 @@ class FakeCursor:
     def execute(self, query, params) -> None:
         assert "collection_transactions" in query
         assert "collection_remittances" in query
+        assert "other_by_collector" in query
         self.params = params
 
     def fetchone(self):
-        assert self.params == (
-            COLLECTOR_USER_ID,
-            COLLECTOR_USER_ID,
-            COLLECTOR_USER_ID,
-            COLLECTOR_USER_ID,
-        )
+        assert self.params == (COLLECTOR_USER_ID,)
         return {
             "ready_to_remit_amount": Decimal("1250.00"),
             "ready_to_remit_count": 6,
             "awaiting_acceptance_amount": Decimal("500.00"),
             "awaiting_acceptance_count": 2,
+            "assigned_area_cash_held": Decimal("1100.00"),
+            "other_area_cash_held": Decimal("650.00"),
+            "other_area_by_collector": [
+                {
+                    "collector_user_id": str(OTHER_COLLECTOR_A),
+                    "collector_name": "Collector Two",
+                    "amount": 400.0,
+                },
+                {
+                    "collector_user_id": str(OTHER_COLLECTOR_B),
+                    "collector_name": "Collector Three",
+                    "amount": 250.0,
+                },
+            ],
         }
 
 
@@ -115,6 +127,20 @@ def test_cash_accountability_includes_unsubmitted_and_submitted_cash(monkeypatch
     assert response.status_code == 200
     assert response.json()["data"] == {
         "total_cash_held": "1750.00",
+        "assigned_area_cash_held": "1100.00",
+        "other_area_cash_held": "650.00",
+        "other_area_by_collector": [
+            {
+                "collector_user_id": str(OTHER_COLLECTOR_A),
+                "collector_name": "Collector Two",
+                "amount": "400.00",
+            },
+            {
+                "collector_user_id": str(OTHER_COLLECTOR_B),
+                "collector_name": "Collector Three",
+                "amount": "250.00",
+            },
+        ],
         "ready_to_remit_amount": "1250.00",
         "ready_to_remit_count": 6,
         "awaiting_acceptance_amount": "500.00",
