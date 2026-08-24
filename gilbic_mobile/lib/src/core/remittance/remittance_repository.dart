@@ -47,6 +47,26 @@ abstract interface class RemittanceRejectionRepository {
   });
 }
 
+extension RemittanceRejectionCapability on RemittanceRepository {
+  Future<RemittanceRecord> rejectRemittance(
+    UserSession session, {
+    required String deviceId,
+    required String remittanceId,
+    required String reason,
+  }) {
+    final repository = this;
+    if (repository is! RemittanceRejectionRepository) {
+      throw StateError('This remittance repository cannot reject remittances.');
+    }
+    return repository.rejectRemittance(
+      session,
+      deviceId: deviceId,
+      remittanceId: remittanceId,
+      reason: reason,
+    );
+  }
+}
+
 class SpinaRemittanceRepository
     implements RemittanceRepository, RemittanceRejectionRepository {
   SpinaRemittanceRepository({http.Client? client})
