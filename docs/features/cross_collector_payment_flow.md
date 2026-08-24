@@ -64,6 +64,8 @@ The person who physically receives the cash is initially responsible for that ca
 
 Every accepted Pay immediately updates the collecting Collector's live cash accountability.
 
+The Collector home cash summary keeps one authoritative **Cash held** total and separates the source into **My assigned areas** and **Different collectors**. Cross-route cash is additionally grouped under the permanent assigned Collector so the collecting Collector can see exactly whose route cash is in hand.
+
 ## Cross-route handoff to assigned Collector
 
 A cross-route collecting Collector may send one itemized cash handoff to the assigned Collector.
@@ -73,17 +75,43 @@ Rules:
 - one handoff may bundle several cross-route client payments only when they all belong to the same assigned Collector;
 - different assigned Collectors require separate handoffs;
 - Gilbic calculates the handoff total from the included payments; the total is not manually editable;
+- the sender reviews a server-calculated summary containing total cash, client count, payment count, receipts, covered dates and individual amounts before submission;
 - while the handoff is a draft, the collecting Collector may add/remove eligible items;
-- once sent and **Awaiting Acceptance**, included items are locked from Collector edits;
-- the sender may cancel an awaiting handoff before acceptance, with audit history preserved;
-- the assigned Collector can review every included payment before deciding;
+- once sent and **Pending**, included items are locked from Collector edits;
+- the receiving Collector must open the complete itemized client/payment list before taking action;
+- the receiving Collector confirms **I reviewed all payments** once for the complete list; individual per-client checkboxes are not required;
+- the server requires that review acknowledgement before either acceptance or rejection;
 - acceptance is **full amount only**; no partial acceptance;
 - custody transfers only when the assigned Collector accepts;
 - if rejected, a reason is required and full cash responsibility stays with the original collecting Collector;
-- after rejection, the handoff may be corrected and resent without changing the underlying client-payment records;
+- the rejected handover and its original item snapshot remain permanently saved;
+- rejection unlocks the unchanged underlying payments so a corrected handover may be resent without rewriting the client-payment records;
 - original recorder identity never changes.
 
 Once the assigned Collector accepts the cross-route cash, that cash becomes part of the assigned Collector's own amount to remit to Management.
+
+## Received Remittance History
+
+The receiving Collector keeps a permanent **Received Remittance History** so cash from different field Collectors can be reconciled quickly.
+
+History retains all three states:
+
+- **Pending** — offered cash still awaiting the selected recipient's review/decision;
+- **Accepted** — cash physically received and now under the receiving Collector's custody;
+- **Rejected** — handover declined, with the required rejection reason and cash responsibility remaining with the sender.
+
+Each saved record contains:
+
+- unique remittance reference;
+- Collector who handed over the cash;
+- selected recipient;
+- submitted date/time and acceptance/rejection time where applicable;
+- total amount;
+- client and payment counts;
+- full itemized client/payment list, receipt references, payment types and covered dates;
+- handover note and rejection reason where applicable.
+
+Accepted and rejected records are read-only permanent audit evidence. Notifications do not provide a shortcut acceptance button: a pending notification opens the focused full remittance review first.
 
 ## Remittance to Management
 
@@ -112,7 +140,7 @@ When Management accepts a remittance, Gilbic creates a permanent in-app confirma
 - authorized Management receiver;
 - submission and acceptance timestamps.
 
-The confirmation is read-only after acceptance. A separate PDF is not required. Collectors retain Remittance History including accepted and rejected remittances; rejected items show the required rejection reason and resubmission linkage where applicable.
+The confirmation is read-only after acceptance. A separate PDF is not required. Remittance history includes pending, accepted and rejected records; rejected records show the required rejection reason and preserve the original item snapshot for any later resubmission linkage.
 
 ## Cash Over
 
@@ -167,6 +195,7 @@ All financial writes use server-side idempotency. Double taps, retries or uncert
 - Original-recorder-only pre-remittance correction authority.
 - Assigned-route reflection with recorder/payment/custody attribution.
 - Full-acceptance bundled cross-route handoff and Management remittance custody controls.
+- Permanent recipient review/rejection evidence and itemized received-remittance history.
 - Client and assigned-Collector notifications/views.
 - Flutter Other Area Payment search plus optional convenience-list browsing.
-- Backend/Flutter tests for posting, correction, handoff, remittance, custody and duplicate-protection branches.
+- Backend/Flutter tests for posting, correction, handoff, remittance, custody, review/rejection and duplicate-protection branches.
