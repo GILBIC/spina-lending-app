@@ -69,7 +69,7 @@ class SpinaRemittanceNotificationRepository
     final notification = RemittanceNotification.fromPayload(data);
     if (notification == null) {
       throw const SpinaApiException(
-        'The SPINA server returned an incomplete notification.',
+        'The Gilbic server returned an incomplete notification.',
         code: 'invalid_notification_response',
       );
     }
@@ -89,6 +89,7 @@ class SpinaRemittanceNotificationRepository
       uri: ApiConfig.endpoint(
         '/api/mobile/v1/notifications/$notificationId/accept-remittance',
       ),
+      body: const <String, Object?>{'review_acknowledged': true},
     );
     return RemittanceAcceptanceResult.fromPayload(data);
   }
@@ -98,6 +99,7 @@ class SpinaRemittanceNotificationRepository
     required String deviceId,
     required String method,
     required Uri uri,
+    Map<String, Object?>? body,
   }) async {
     final headers = <String, String>{
       'Accept': 'application/json',
@@ -112,12 +114,12 @@ class SpinaRemittanceNotificationRepository
           ? await _client.post(
               uri,
               headers: headers,
-              body: jsonEncode(const <String, Object?>{}),
+              body: jsonEncode(body ?? const <String, Object?>{}),
             )
           : await _client.get(uri, headers: headers);
     } on Exception {
       throw const SpinaApiException(
-        'The notification request could not reach the SPINA server.',
+        'The notification request could not reach the Gilbic server.',
         code: 'network_unavailable',
       );
     }
@@ -150,7 +152,7 @@ class SpinaRemittanceNotificationRepository
       return decodeJsonObject(response.body);
     } on Object {
       throw SpinaApiException(
-        'The SPINA server returned unreadable notification data.',
+        'The Gilbic server returned unreadable notification data.',
         statusCode: response.statusCode,
         code: 'invalid_server_response',
       );
