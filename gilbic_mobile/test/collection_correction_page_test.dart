@@ -10,7 +10,7 @@ import 'package:gilbic_mobile/src/features/collector/collection_correction_page.
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 void main() {
-  testWidgets('loads exact saved values for the original collector',
+  testWidgets('shows allocation first and keeps covered dates read-only in details',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -29,10 +29,21 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Edit Collection'), findsOneWidget);
     expect(find.text('Recorded by: Test Collector'), findsOneWidget);
-    expect(find.text('2026-08-02'), findsWidgets);
-    expect(find.text('2026-08-04'), findsOneWidget);
-    expect(find.text('2026-08-03'), findsNothing);
-    expect(find.byKey(const Key('correction-add-covered-date')), findsOneWidget);
+    expect(find.text('Allocation'), findsOneWidget);
+    expect(find.text('Exact covered dates'), findsNothing);
+    expect(find.byKey(const Key('correction-add-covered-date')), findsNothing);
+    expect(
+      find.byKey(const Key('correction-covered-obligations-details')),
+      findsOneWidget,
+    );
+    expect(find.text('2026-08-04'), findsNothing);
+
+    await tester.tap(
+      find.byKey(const Key('correction-covered-obligations-details')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('• 2026-08-04'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.byKey(const Key('correction-reason')),
