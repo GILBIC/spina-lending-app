@@ -35,8 +35,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('200.00'), findsOneWidget);
-    expect(find.text('Covered dates'), findsOneWidget);
-    expect(find.byKey(const Key('confirm-collection-entry')), findsNothing);
+    expect(find.byKey(const Key('protected-allocation-card')), findsOneWidget);
+    expect(find.text('Covered dates'), findsNothing);
+    expect(find.byKey(const Key('add-covered-date')), findsNothing);
 
     final submitButton = find.byKey(const Key('submit-collection-entry'));
     expect(submitButton, findsOneWidget);
@@ -54,7 +55,6 @@ void main() {
     expect(find.text('Receipt: R-1001'), findsOneWidget);
     expect(find.text('Official balance: ₱4,600.00'), findsOneWidget);
     expect(find.text('Done and refresh route'), findsOneWidget);
-    expect(find.byKey(const Key('confirm-collection-entry')), findsNothing);
     expect(repository.drafts, hasLength(2));
     expect(
       repository.drafts.first.idempotencyKey,
@@ -64,7 +64,58 @@ void main() {
     expect(repository.drafts.last.deviceSequence, 1);
   });
 
-  testWidgets('covered-date calendar keeps every selected date circled', (
+  testWidgets('regular payment uses simple allocation choice instead of dates', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+
+    final repository = _CaptureRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CollectionEntryPage(
+          session: _session,
+          entry: _regularEntry,
+          repository: repository,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
+          collectionDate: DateTime(2026, 8, 1),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Covered dates'), findsNothing);
+    expect(find.text('Yesterday'), findsNothing);
+    expect(find.text('Today'), findsNothing);
+    expect(find.text('Tomorrow'), findsNothing);
+    expect(find.text('Open calendar'), findsNothing);
+    expect(find.textContaining('oldest Past Due'), findsOneWidget);
+    expect(
+      find.byKey(const Key('regular-extra-allocation-choice')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('regular-extra-allocation-choice')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Advance').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('submit-collection-entry')));
+    await tester.pumpAndSettle();
+
+    expect(repository.drafts, hasLength(1));
+    expect(
+      repository.drafts.single.paymentAllocationIntent,
+      PaymentAllocationIntent.extraAsAdvance,
+    );
+    expect(repository.drafts.single.entryType, CollectionEntryType.payment);
+    expect(repository.drafts.single.coveredDates, <DateTime>[DateTime(2026, 8, 1)]);
+  });
+
+  testWidgets('unable to pay uses approved Past Due reason vocabulary', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(800, 1400));
@@ -77,7 +128,7 @@ void main() {
         home: CollectionEntryPage(
           session: _session,
           entry: _regularEntry,
-          repository: _RetryRepository(),
+          repository: _CaptureRepository(),
           deviceIdentityProvider: _deviceIdentityProvider(),
           deviceSequence: MemoryCollectionDeviceSequence(),
           collectionDate: DateTime(2026, 8, 1),
@@ -86,67 +137,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('add-covered-date')));
+    await tester.tap(find.text('Unable to pay'));
     await tester.pumpAndSettle();
 
-    final dialog = find.byType(AlertDialog);
-    expect(find.text('Choose covered dates'), findsOneWidget);
-    expect(find.byType(CalendarDatePicker), findsNothing);
-    expect(find.byKey(const Key('covered-date-calendar')), findsOneWidget);
-    expect(
-      find.byKey(const Key('selected-covered-date-2026-08-01')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: dialog,
-        matching: find.textContaining('selected day'),
-      ),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const Key('calendar-selected-2026-08-01')),
-      findsNothing,
-    );
-
-    await tester.tap(
-      find.byKey(const Key('covered-calendar-day-2026-08-02')),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const Key('selected-covered-date-2026-08-01')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('selected-covered-date-2026-08-02')),
-      findsOneWidget,
-    );
-
-    await tester.tap(
-      find.byKey(const Key('covered-calendar-day-2026-08-03')),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const Key('selected-covered-date-2026-08-01')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('selected-covered-date-2026-08-02')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('selected-covered-date-2026-08-03')),
-      findsOneWidget,
-    );
-    expect(find.text('Choose covered dates'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('confirm-covered-dates')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('2026-08-01'), findsOneWidget);
-    expect(find.text('2026-08-02'), findsOneWidget);
-    expect(find.text('2026-08-03'), findsOneWidget);
-    expect(find.text('600.00'), findsOneWidget);
+    expect(find.text('Past Due reason'), findsOneWidget);
+    expect(find.text('No cash'), findsOneWidget);
+    expect(find.text('Client absent'), findsOneWidget);
+    expect(find.text('Business slow'), findsOneWidget);
+    expect(find.text('Sick/Hospital'), findsOneWidget);
+    expect(find.text('Emergency'), findsOneWidget);
+    expect(find.text('Promised to pay later'), findsOneWidget);
+    expect(find.text('Other'), findsOneWidget);
+    expect(find.text('Not home'), findsNothing);
+    expect(find.text('Will pay double tomorrow'), findsNothing);
   });
 
   testWidgets('7x7 collection stays disabled without explicit server gate', (
@@ -225,7 +228,10 @@ void main() {
     expect(find.textContaining('7x7 mobile collection is disabled'), findsNothing);
     expect(find.byKey(const Key('collection-amount')), findsOneWidget);
     expect(find.byKey(const Key('submit-collection-entry')), findsOneWidget);
-    expect(find.byKey(const Key('confirm-collection-entry')), findsNothing);
+    expect(
+      find.byKey(const Key('regular-extra-allocation-choice')),
+      findsNothing,
+    );
 
     await tester.tap(find.byKey(const Key('submit-collection-entry')));
     await tester.pumpAndSettle();
@@ -292,6 +298,25 @@ class _RetryRepository implements PaymentSubmissionRepository {
       idempotencyKey: draft.idempotencyKey,
       message: 'Already recorded',
       receiptNumber: 'R-1001',
+      officialBalance: 4600,
+    );
+  }
+}
+
+class _CaptureRepository implements PaymentSubmissionRepository {
+  final List<PaymentSubmissionDraft> drafts = <PaymentSubmissionDraft>[];
+
+  @override
+  Future<PaymentSubmissionResult> submit(
+    UserSession session,
+    PaymentSubmissionDraft draft,
+  ) async {
+    drafts.add(draft);
+    return PaymentSubmissionResult(
+      disposition: PaymentSubmissionDisposition.accepted,
+      idempotencyKey: draft.idempotencyKey,
+      message: 'Payment saved',
+      receiptNumber: 'R-2001',
       officialBalance: 4600,
     );
   }
