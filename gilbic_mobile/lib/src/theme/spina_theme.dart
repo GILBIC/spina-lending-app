@@ -153,7 +153,7 @@ abstract final class SpinaTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size(0, 52),
           foregroundColor: brandPinkDark,
           side: const BorderSide(color: Color(0xFFE5B7CA)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
