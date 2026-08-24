@@ -49,7 +49,8 @@ def test_only_one_pending_promise_and_no_second_debt_semantics() -> None:
 
     assert "lending_payment_promises_one_pending_client_uidx" in sql
     assert "where status = 'pending'" in sql
-    assert "pending", "kept", "partially_kept", "not_kept"
+    for status in ("pending", "kept", "partially_kept", "not_kept"):
+        assert status in sql
     assert "never creates a second debt" in sql
     assert "payment promise may cover only past due obligations for the same client and loan" in sql
     assert "promise obligation targets cannot exceed the current promised amount" in sql
