@@ -48,6 +48,8 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
       SpinaCollectorRenewalWorkflowRepository();
 
   double _totalCollectionCashHeld = 0;
+  double _assignedAreaCashHeld = 0;
+  double _otherAreaCashHeld = 0;
   int _cashToReceiveCount = 0;
   double _cashToReceiveAmount = 0;
   int _cashWithCollectorCount = 0;
@@ -72,6 +74,8 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     if (!canLoadCash && !canLoadRenewals) {
       setState(() {
         _totalCollectionCashHeld = 0;
+        _assignedAreaCashHeld = 0;
+        _otherAreaCashHeld = 0;
         _cashToReceiveCount = 0;
         _cashToReceiveAmount = 0;
         _cashWithCollectorCount = 0;
@@ -83,6 +87,8 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     setState(() => _loading = true);
 
     var totalCollectionCashHeld = 0.0;
+    var assignedAreaCashHeld = 0.0;
+    var otherAreaCashHeld = 0.0;
     var cashToReceiveCount = 0;
     var cashToReceiveAmount = 0.0;
     var cashWithCollectorCount = 0;
@@ -98,6 +104,8 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
             deviceId: identity.installationId,
           );
           totalCollectionCashHeld = accountability.totalCashHeld;
+          assignedAreaCashHeld = accountability.assignedAreaCashHeld;
+          otherAreaCashHeld = accountability.otherAreaCashHeld;
         } on Object {
           // Cash status must not block Daily Collection if the summary is unavailable.
         }
@@ -129,6 +137,8 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     if (!mounted) return;
     setState(() {
       _totalCollectionCashHeld = totalCollectionCashHeld;
+      _assignedAreaCashHeld = assignedAreaCashHeld;
+      _otherAreaCashHeld = otherAreaCashHeld;
       _cashToReceiveCount = cashToReceiveCount;
       _cashToReceiveAmount = cashToReceiveAmount;
       _cashWithCollectorCount = cashWithCollectorCount;
@@ -184,7 +194,11 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
               ),
             ],
           ),
-          _PrimaryCashHeldTile(amount: _totalCollectionCashHeld),
+          _PrimaryCashHeldTile(
+            amount: _totalCollectionCashHeld,
+            assignedAreaAmount: _assignedAreaCashHeld,
+            otherAreaAmount: _otherAreaCashHeld,
+          ),
           const SizedBox(height: 9),
           Text(
             'Loan releases',
@@ -236,9 +250,15 @@ bool canRenewals(UserSession session) {
 }
 
 class _PrimaryCashHeldTile extends StatelessWidget {
-  const _PrimaryCashHeldTile({required this.amount});
+  const _PrimaryCashHeldTile({
+    required this.amount,
+    required this.assignedAreaAmount,
+    required this.otherAreaAmount,
+  });
 
   final double amount;
+  final double assignedAreaAmount;
+  final double otherAreaAmount;
 
   @override
   Widget build(BuildContext context) {
@@ -249,38 +269,111 @@ class _PrimaryCashHeldTile extends StatelessWidget {
         color: SpinaTheme.brandPinkSoft,
         borderRadius: BorderRadius.circular(13),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Cash held',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: SpinaTheme.brandPinkDark,
-                        fontWeight: FontWeight.w900,
-                      ),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Cash held',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: SpinaTheme.brandPinkDark,
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      'Collection cash still under your responsibility',
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 1),
-                Text(
-                  'Collection cash still under your responsibility',
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _money(amount),
+                key: const Key('collector-total-cash-held-value'),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: SpinaTheme.brandPinkDark,
+                      fontWeight: FontWeight.w900,
+                    ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Text(
-            _money(amount),
-            key: const Key('collector-total-cash-held-value'),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: SpinaTheme.brandPinkDark,
-                  fontWeight: FontWeight.w900,
+          const SizedBox(height: 9),
+          Container(height: 1, color: SpinaTheme.line),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _CashHeldBreakdown(
+                  key: const Key('collector-assigned-area-cash-held'),
+                  title: 'Assigned areas',
+                  amount: assignedAreaAmount,
+                  subtitle: 'Your route cash',
                 ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _CashHeldBreakdown(
+                  key: const Key('collector-other-area-cash-held'),
+                  title: 'Other areas',
+                  amount: otherAreaAmount,
+                  subtitle: 'Collected for another Collector',
+                ),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CashHeldBreakdown extends StatelessWidget {
+  const _CashHeldBreakdown({
+    required this.title,
+    required this.amount,
+    required this.subtitle,
+    super.key,
+  });
+
+  final String title;
+  final double amount;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w900,
+              ),
+        ),
+        const SizedBox(height: 1),
+        Text(
+          _money(amount),
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: SpinaTheme.brandPinkDark,
+                fontWeight: FontWeight.w900,
+              ),
+        ),
+        Text(
+          subtitle,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 9),
+        ),
+      ],
     );
   }
 }
