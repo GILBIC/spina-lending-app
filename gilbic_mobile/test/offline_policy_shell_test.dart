@@ -12,7 +12,7 @@ import 'package:gilbic_mobile/src/features/dashboard/enhanced_role_dashboard.dar
 
 void main() {
   for (final role in AppRole.values) {
-    testWidgets('${role.label} can open offline policy without a server fetch', (
+    testWidgets('${role.label} offline policy shell follows the approved visibility rule', (
       tester,
     ) async {
       await tester.binding.setSurfaceSize(const Size(900, 1400));
@@ -41,16 +41,15 @@ void main() {
       await tester.pumpAndSettle();
 
       if (role == AppRole.collector) {
-        // CA4 Collector shell keeps field safety under the compact More sheet.
         expect(find.byKey(const Key('collector-more-tab')), findsOneWidget);
         await tester.tap(find.byKey(const Key('collector-more-tab')));
         await tester.pumpAndSettle();
-        expect(find.byKey(const Key('collector-more-offline')), findsOneWidget);
-        await tester.tap(find.byKey(const Key('collector-more-offline')));
-      } else {
-        expect(find.byKey(const Key('open-offline-policy')), findsOneWidget);
-        await tester.tap(find.byKey(const Key('open-offline-policy')));
+        expect(find.byKey(const Key('collector-more-offline')), findsNothing);
+        return;
       }
+
+      expect(find.byKey(const Key('open-offline-policy')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('open-offline-policy')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('offline-policy-page')), findsOneWidget);
