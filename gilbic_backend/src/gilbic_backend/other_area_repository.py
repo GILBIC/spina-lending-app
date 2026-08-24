@@ -118,6 +118,10 @@ class PostgresOtherAreaRepository:
                         coalesce(state.remaining_balance, loan.principal) as remaining_balance,
                         coalesce(state.pass_count, 0) as pass_count,
                         case
+                            when today.entry_type = 'pass'
+                                then 'Unable to pay'
+                            when today.entry_type is not null
+                                then 'Recorded today'
                             when coalesce(state.is_reconciled, false) = false
                                 then 'Needs review'
                             when lower(coalesce(loan_type.settings->>'mobile_collections_enabled', ''))
@@ -139,12 +143,12 @@ class PostgresOtherAreaRepository:
                             as mobile_balance_mode,
                         assigned.id as assigned_collector_user_id,
                         coalesce(assigned.full_name, 'Unassigned') as assigned_collector_name,
-                        false as processed_today,
-                        ''::text as today_entry_type,
-                        null::uuid as today_collector_user_id,
-                        ''::text as today_collector_name,
-                        0::numeric(18,2) as today_amount,
-                        false as today_is_locked
+                        today.entry_type is not null as processed_today,
+                        coalesce(today.entry_type, '') as today_entry_type,
+                        today.collector_user_id as today_collector_user_id,
+                        coalesce(today.collector_name, '') as today_collector_name,
+                        coalesce(today.amount, 0)::numeric(18,2) as today_amount,
+                        coalesce(today.is_locked, false) as today_is_locked
                     from lending.clients client
                     join lending.loans loan
                       on loan.client_id = client.id
@@ -158,6 +162,27 @@ class PostgresOtherAreaRepository:
                       on assigned.id = lending.collector_area_owner(
                           coalesce(client.area, '')
                       )
+                    left join lateral (
+                        select
+                            transaction.entry_type,
+                            transaction.amount,
+                            transaction.collector_user_id,
+                            transaction.is_locked,
+                            coalesce(
+                                nullif(btrim(recorder.full_name), ''),
+                                nullif(btrim(recorder.username), ''),
+                                'Collector'
+                            ) as collector_name
+                        from lending.collection_transactions transaction
+                        left join core.users recorder
+                          on recorder.id = transaction.collector_user_id
+                        where transaction.loan_id = loan.id
+                          and transaction.collection_date =
+                              (current_timestamp at time zone 'Asia/Manila')::date
+                          and transaction.is_voided = false
+                        order by transaction.accepted_at desc, transaction.id desc
+                        limit 1
+                    ) today on true
                     where client.status = 'active'
                       and coalesce(state.remaining_balance, loan.principal) > 0
                       {actor_scope_clause}
