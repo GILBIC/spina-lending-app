@@ -50,6 +50,8 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
   double _totalCollectionCashHeld = 0;
   double _assignedAreaCashHeld = 0;
   double _otherAreaCashHeld = 0;
+  List<CollectorCashByAssignedCollector> _otherAreaByCollector =
+      const <CollectorCashByAssignedCollector>[];
   int _cashToReceiveCount = 0;
   double _cashToReceiveAmount = 0;
   int _cashWithCollectorCount = 0;
@@ -76,6 +78,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
         _totalCollectionCashHeld = 0;
         _assignedAreaCashHeld = 0;
         _otherAreaCashHeld = 0;
+        _otherAreaByCollector = const <CollectorCashByAssignedCollector>[];
         _cashToReceiveCount = 0;
         _cashToReceiveAmount = 0;
         _cashWithCollectorCount = 0;
@@ -89,6 +92,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
     var totalCollectionCashHeld = 0.0;
     var assignedAreaCashHeld = 0.0;
     var otherAreaCashHeld = 0.0;
+    var otherAreaByCollector = const <CollectorCashByAssignedCollector>[];
     var cashToReceiveCount = 0;
     var cashToReceiveAmount = 0.0;
     var cashWithCollectorCount = 0;
@@ -106,6 +110,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
           totalCollectionCashHeld = accountability.totalCashHeld;
           assignedAreaCashHeld = accountability.assignedAreaCashHeld;
           otherAreaCashHeld = accountability.otherAreaCashHeld;
+          otherAreaByCollector = accountability.otherAreaByCollector;
         } on Object {
           // Cash status must not block Daily Collection if the summary is unavailable.
         }
@@ -139,6 +144,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
       _totalCollectionCashHeld = totalCollectionCashHeld;
       _assignedAreaCashHeld = assignedAreaCashHeld;
       _otherAreaCashHeld = otherAreaCashHeld;
+      _otherAreaByCollector = otherAreaByCollector;
       _cashToReceiveCount = cashToReceiveCount;
       _cashToReceiveAmount = cashToReceiveAmount;
       _cashWithCollectorCount = cashWithCollectorCount;
@@ -198,6 +204,7 @@ class _CollectorCashStatusCardState extends State<CollectorCashStatusCard> {
             amount: _totalCollectionCashHeld,
             assignedAreaAmount: _assignedAreaCashHeld,
             otherAreaAmount: _otherAreaCashHeld,
+            otherAreaByCollector: _otherAreaByCollector,
           ),
           const SizedBox(height: 9),
           Text(
@@ -254,11 +261,13 @@ class _PrimaryCashHeldTile extends StatelessWidget {
     required this.amount,
     required this.assignedAreaAmount,
     required this.otherAreaAmount,
+    required this.otherAreaByCollector,
   });
 
   final double amount;
   final double assignedAreaAmount;
   final double otherAreaAmount;
+  final List<CollectorCashByAssignedCollector> otherAreaByCollector;
 
   @override
   Widget build(BuildContext context) {
@@ -270,6 +279,7 @@ class _PrimaryCashHeldTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(13),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -312,7 +322,7 @@ class _PrimaryCashHeldTile extends StatelessWidget {
               Expanded(
                 child: _CashHeldBreakdown(
                   key: const Key('collector-assigned-area-cash-held'),
-                  title: 'Assigned areas',
+                  title: 'My assigned areas',
                   amount: assignedAreaAmount,
                   subtitle: 'Your route cash',
                 ),
@@ -321,13 +331,52 @@ class _PrimaryCashHeldTile extends StatelessWidget {
               Expanded(
                 child: _CashHeldBreakdown(
                   key: const Key('collector-other-area-cash-held'),
-                  title: 'Other areas',
+                  title: 'Different collectors',
                   amount: otherAreaAmount,
-                  subtitle: 'Collected for another Collector',
+                  subtitle: 'Cash from their assigned areas',
                 ),
               ),
             ],
           ),
+          if (otherAreaByCollector.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(height: 1, color: SpinaTheme.line),
+            const SizedBox(height: 7),
+            Text(
+              'Different collector breakdown',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            for (final item in otherAreaByCollector)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  key: Key(
+                    'collector-other-area-owner-${item.collectorUserId}',
+                  ),
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.collectorName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _money(item.amount),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: SpinaTheme.brandPinkDark,
+                            fontWeight: FontWeight.w900,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ],
       ),
     );
