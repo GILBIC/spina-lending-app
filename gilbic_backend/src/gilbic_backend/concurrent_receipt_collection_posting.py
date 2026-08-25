@@ -15,6 +15,7 @@ from spina_mobile_collections.contracts import (
 )
 
 from .collection_past_due_capture import CollectionPastDueCapture
+from .past_due_promise_progress import PastDuePromiseProgress
 from .voluntary_extra_collection_posting import (
     VoluntaryExtraAwareCollectionPostingBridge,
 )
@@ -36,9 +37,11 @@ class ConcurrentReceiptSafeCollectionPostingBridge(
     conflict, which keeps schedule changes, No Collection changes, PASS entries,
     corrections, reversals and unknown state changes fail-closed.
 
-    Structured Past Due capture runs only after the protected product allocator
-    succeeds, but still inside the executor's same PostgreSQL transaction. Missing
-    or invalid reason evidence therefore rolls the whole collection back.
+    After the protected product allocator succeeds, existing Past Due/promise
+    progress is reconciled from the allocator's actual installment rows. Only then
+    is any *new* Past Due remainder from this receipt captured. All three steps stay
+    inside the executor's same PostgreSQL transaction, so invalid follow-up evidence
+    rolls the whole collection back.
     """
 
     def post_collection(
@@ -53,6 +56,14 @@ class ConcurrentReceiptSafeCollectionPostingBridge(
             command=command,
         )
         posted = super().post_collection(connection, actor, prepared)
+        PastDuePromiseProgress().apply(
+            connection,
+            transaction_id=self._uuid(
+                posted.server_transaction_id,
+                "collection transaction",
+            ),
+            collection_date=prepared.collection_date,
+        )
         CollectionPastDueCapture().apply(
             connection,
             actor=actor,
