@@ -36,6 +36,72 @@ enum PaymentAllocationIntent {
   final String apiValue;
 }
 
+enum PastDueReasonCode {
+  noCash('no_cash', 'No cash'),
+  clientAbsent('client_absent', 'Client absent'),
+  businessSlow('business_slow', 'Business slow'),
+  sickHospital('sick_hospital', 'Sick/Hospital'),
+  emergency('emergency', 'Emergency'),
+  promisedToPayLater('promised_to_pay_later', 'Promised to pay later'),
+  other('other', 'Other');
+
+  const PastDueReasonCode(this.apiValue, this.label);
+
+  final String apiValue;
+  final String label;
+}
+
+class PastDueFollowupDraft {
+  const PastDueFollowupDraft({
+    required this.reasonCode,
+    this.note = '',
+    this.promisedPaymentDate,
+    this.promisedAmount,
+  });
+
+  final PastDueReasonCode reasonCode;
+  final String note;
+  final DateTime? promisedPaymentDate;
+  final double? promisedAmount;
+
+  String? validate({required DateTime collectionDate}) {
+    if (reasonCode == PastDueReasonCode.other && note.trim().isEmpty) {
+      return 'Other Past Due reason requires a short explanation.';
+    }
+    if (reasonCode == PastDueReasonCode.promisedToPayLater) {
+      if (promisedPaymentDate == null) {
+        return 'Choose the promised payment date.';
+      }
+      if (DateTime(
+        promisedPaymentDate!.year,
+        promisedPaymentDate!.month,
+        promisedPaymentDate!.day,
+      ).isBefore(DateTime(
+        collectionDate.year,
+        collectionDate.month,
+        collectionDate.day,
+      ))) {
+        return 'Promised payment date cannot be before the collection date.';
+      }
+      if (promisedAmount == null || promisedAmount! <= 0) {
+        return 'Enter the promised amount.';
+      }
+    } else if (promisedPaymentDate != null || promisedAmount != null) {
+      return 'Promise date and amount are only for Promised to pay later.';
+    }
+    return null;
+  }
+
+  Map<String, Object?> toJson() => <String, Object?>{
+        'reason_code': reasonCode.apiValue,
+        'note': note.trim(),
+        'promised_payment_date': promisedPaymentDate == null
+            ? null
+            : _date(promisedPaymentDate!),
+        'promised_amount': promisedAmount,
+      };
+}
+
 class PaymentSubmissionDraft {
   const PaymentSubmissionDraft({
     required this.idempotencyKey,
@@ -54,6 +120,7 @@ class PaymentSubmissionDraft {
     this.note = '',
     this.routeRevision,
     this.paymentAllocationIntent = PaymentAllocationIntent.scheduled,
+    this.pastDueFollowup,
   });
 
   final String idempotencyKey;
@@ -72,6 +139,7 @@ class PaymentSubmissionDraft {
   final String note;
   final String? routeRevision;
   final PaymentAllocationIntent paymentAllocationIntent;
+  final PastDueFollowupDraft? pastDueFollowup;
 
   String? validate() {
     if (idempotencyKey.trim().isEmpty) {
@@ -104,8 +172,19 @@ class PaymentSubmissionDraft {
                 !_sameDate(normalizedDates.single, collectionDate))) {
           return 'A normal payment may reference only the collection date.';
         }
+        if (pastDueFollowup != null) {
+          final followupError = pastDueFollowup!.validate(
+            collectionDate: collectionDate,
+          );
+          if (followupError != null) {
+            return followupError;
+          }
+        }
         break;
       case CollectionEntryType.advance:
+        if (pastDueFollowup != null) {
+          return 'A covered-date payment cannot contain a Past Due follow-up.';
+        }
         if (paymentAllocationIntent != PaymentAllocationIntent.scheduled) {
           return 'Legacy covered-date ADV cannot also contain a Regular extra allocation choice.';
         }
@@ -137,6 +216,15 @@ class PaymentSubmissionDraft {
             normalizedDates.isNotEmpty) {
           return 'An unable-to-pay entry cannot contain covered dates.';
         }
+        if (pastDueFollowup == null) {
+          return 'Choose a Past Due reason before saving Unable to pay.';
+        }
+        final followupError = pastDueFollowup!.validate(
+          collectionDate: collectionDate,
+        );
+        if (followupError != null) {
+          return followupError;
+        }
         break;
     }
     return null;
@@ -162,6 +250,8 @@ class PaymentSubmissionDraft {
       'route_revision': routeRevision,
       if (paymentAllocationIntent != PaymentAllocationIntent.scheduled)
         'payment_allocation_intent': paymentAllocationIntent.apiValue,
+      if (pastDueFollowup != null)
+        'past_due_followup': pastDueFollowup!.toJson(),
     };
   }
 }
