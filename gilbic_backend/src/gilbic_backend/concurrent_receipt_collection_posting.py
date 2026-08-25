@@ -56,21 +56,44 @@ class ConcurrentReceiptSafeCollectionPostingBridge(
             command=command,
         )
         posted = super().post_collection(connection, actor, prepared)
-        PastDuePromiseProgress().apply(
-            connection,
-            transaction_id=self._uuid(
-                posted.server_transaction_id,
-                "collection transaction",
-            ),
-            collection_date=prepared.collection_date,
-        )
-        CollectionPastDueCapture().apply(
+        self._apply_followup_layers(
             connection,
             actor=actor,
             command=prepared,
             posted=posted,
         )
         return posted
+
+    def _apply_followup_layers(
+        self,
+        connection: Connection[Any],
+        *,
+        actor: ActorContext,
+        command: CollectionCommand,
+        posted: PostedCollection,
+    ) -> None:
+        """Reconcile existing follow-up progress before capturing new Past Due.
+
+        Keeping this transaction-local orchestration behind one method gives the
+        route-revision unit tests a clean seam: those tests can isolate rebasing
+        without constructing an official receipt or database-backed follow-up state.
+        Production always executes both layers through this method.
+        """
+
+        PastDuePromiseProgress().apply(
+            connection,
+            transaction_id=self._uuid(
+                posted.server_transaction_id,
+                "collection transaction",
+            ),
+            collection_date=command.collection_date,
+        )
+        CollectionPastDueCapture().apply(
+            connection,
+            actor=actor,
+            command=command,
+            posted=posted,
+        )
 
     def _prepare_same_day_payment_revision(
         self,
