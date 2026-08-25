@@ -71,6 +71,7 @@ from .notification_api import create_notification_router
 from .opening_balance_journal_api import create_opening_balance_journal_router
 from .opening_balance_workbook_api import create_opening_balance_workbook_router
 from .other_area_api import create_other_area_router
+from .past_due_reporting_api import create_past_due_reporting_router
 from .period_close_api import create_period_close_router
 from .posting_ready_evidence_review_api import (
     create_posting_ready_evidence_review_router,
@@ -137,6 +138,7 @@ def create_app() -> FastAPI:
     app.include_router(create_management_loan_router())
     app.include_router(create_management_operations_router())
     app.include_router(create_management_no_collection_router())
+    app.include_router(create_past_due_reporting_router())
     app.include_router(create_financial_accounting_router())
     app.include_router(create_financial_statements_router())
     app.include_router(create_source_event_accounting_router())
