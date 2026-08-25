@@ -8,6 +8,7 @@ from uuid import UUID
 from psycopg.rows import dict_row
 
 from .database import open_connection
+from .rolling_schedule import RollingScheduleInstallment, project_rolling_schedule
 
 
 MONEY = Decimal("0.01")
@@ -64,12 +65,30 @@ class CollectorScheduleRecord:
     contract_reference: str
     as_of_date: date
     rows: tuple[CollectorScheduleRowRecord, ...]
+    past_due_amount: Decimal = ZERO
+    past_due_count: int = 0
+    schedule_extension_slots: int = 0
+    base_maturity: date | None = None
+    updated_maturity: date | None = None
+    maturity_projection_status: str = "on_schedule"
 
 
 def _money(value: Decimal | int | str | None) -> Decimal:
     if value is None:
         return ZERO
     return Decimal(value).quantize(MONEY, rounding=ROUND_HALF_UP)
+
+
+def _semi_monthly_days(settings: object) -> tuple[int, int]:
+    if not isinstance(settings, dict):
+        return (15, 30)
+    value = settings.get("semi_monthly_days")
+    if not isinstance(value, (list, tuple)) or len(value) != 2:
+        return (15, 30)
+    try:
+        return (int(value[0]), int(value[1]))
+    except (TypeError, ValueError):
+        return (15, 30)
 
 
 def _schedule_status(
@@ -172,6 +191,11 @@ class PostgresCollectorScheduleRepository:
     No Collection shifts are read through the operational overlay. Regular
     Principal Reduction is presented as the updated remaining schedule, while
     Advance remains visible as prepayment against specific future rows.
+
+    Rolling missed/partial schedule extension is derived from unresolved prior
+    scheduled rows instead of rewriting them. That lets the Collector see both
+    Past Due and the normal Due Today amount while current maturity extends, and
+    it lets a full catch-up restore maturity automatically.
     """
 
     def get_schedule(
@@ -196,6 +220,7 @@ class PostgresCollectorScheduleRepository:
                         schedule.schedule_version,
                         schedule.payment_frequency,
                         schedule.contract_reference,
+                        schedule.settings,
                         registration.id as registration_id
                     from lending.loans loan
                     join lending.clients client
@@ -376,6 +401,30 @@ class PostgresCollectorScheduleRepository:
             if installment is not None:
                 rows.append(installment)
 
+        projection = project_rolling_schedule(
+            installments=tuple(
+                RollingScheduleInstallment(
+                    installment_id=int(item.installment_id),
+                    installment_number=int(item.installment_number),
+                    contractual_due_date=(
+                        item.contractual_due_date or item.schedule_date
+                    ),
+                    effective_due_date=item.schedule_date,
+                    remaining_amount=item.remaining_amount,
+                )
+                for item in rows
+                if item.kind == "installment"
+                and item.installment_id is not None
+                and item.installment_number is not None
+            ),
+            as_of_date=as_of_date,
+            payment_frequency=str(loan["payment_frequency"]),
+            blocked_dates=tuple(
+                item["no_collection_date"] for item in no_collection_rows
+            ),
+            semi_monthly_days=_semi_monthly_days(loan["settings"]),
+        )
+
         for row in no_collection_rows:
             rows.append(
                 CollectorScheduleRowRecord(
@@ -411,4 +460,10 @@ class PostgresCollectorScheduleRepository:
             contract_reference=str(loan["contract_reference"] or ""),
             as_of_date=as_of_date,
             rows=tuple(rows),
+            past_due_amount=projection.past_due_amount,
+            past_due_count=projection.past_due_count,
+            schedule_extension_slots=projection.extension_slots,
+            base_maturity=projection.base_maturity,
+            updated_maturity=projection.updated_maturity,
+            maturity_projection_status=projection.projection_status,
         )
