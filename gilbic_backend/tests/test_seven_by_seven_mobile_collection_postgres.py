@@ -18,6 +18,8 @@ from spina_mobile_collections.contracts import (
     CollectionCommand,
     CollectionEntryType,
     CollectionStatus,
+    PastDueFollowupInput,
+    PastDueReasonCode,
 )
 from spina_mobile_collections.postgres import PostgresCollectionExecutor
 from spina_mobile_collections.service import (
@@ -188,6 +190,7 @@ def _command(
     route_version: int = 0,
     covered_dates: tuple[date, ...] = (),
     note: str = "",
+    past_due_followup: PastDueFollowupInput | None = None,
 ) -> CollectionCommand:
     actual_key = key or uuid4()
     actual_date = collection_date or case.payment_start
@@ -208,6 +211,7 @@ def _command(
         device_sequence=device_sequence,
         note=note,
         route_revision=f"loan:{case.loan_id}:v{route_version}",
+        past_due_followup=past_due_followup,
     )
 
 
@@ -373,7 +377,10 @@ def test_unable_to_pay_is_no_cash_and_later_payment_accrues_calendar_gap_interes
             case,
             entry_type=CollectionEntryType.PASS,
             amount=None,
-            note="Client had no collection cash today",
+            past_due_followup=PastDueFollowupInput(
+                reason_code=PastDueReasonCode.NO_CASH,
+                note="Client had no collection cash today",
+            ),
         ),
     )
     paid = _submit(
