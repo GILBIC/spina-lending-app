@@ -16,6 +16,8 @@ from spina_mobile_collections.contracts import (
     CollectionEntryType,
     CollectionOutcome,
     CollectionStatus,
+    PastDueFollowupInput,
+    PastDueReasonCode,
     PostedCollection,
 )
 from spina_mobile_collections.service import (
@@ -209,3 +211,71 @@ def test_validates_pass_shape() -> None:
         service.submit(actor=actor(), headers=headers(), command=invalid_pass)
 
     assert caught.value.code == "invalid_pass"
+
+
+def test_unable_to_pay_requires_structured_past_due_reason() -> None:
+    service = CollectionSubmissionService(ThreadSafeExecutor())
+    missing_reason = replace(
+        command(),
+        entry_type=CollectionEntryType.PASS,
+        amount=None,
+        note="",
+    )
+
+    with pytest.raises(CollectionProtocolError) as caught:
+        service.submit(actor=actor(), headers=headers(), command=missing_reason)
+
+    assert caught.value.code == "past_due_reason_required"
+
+
+def test_unable_to_pay_accepts_reason_separate_from_optional_note() -> None:
+    executor = ThreadSafeExecutor()
+    service = CollectionSubmissionService(executor)
+    unable = replace(
+        command(),
+        entry_type=CollectionEntryType.PASS,
+        amount=None,
+        note="",
+        past_due_followup=PastDueFollowupInput(
+            reason_code=PastDueReasonCode.CLIENT_ABSENT,
+            note="Neighbor said client returns tonight.",
+        ),
+    )
+
+    result = service.submit(actor=actor(), headers=headers(), command=unable)
+
+    assert result.status is CollectionStatus.ACCEPTED
+    assert executor.post_count == 1
+
+
+def test_promise_followup_is_part_of_idempotent_payload() -> None:
+    executor = ThreadSafeExecutor()
+    service = CollectionSubmissionService(executor)
+    first = replace(
+        command(),
+        entry_type=CollectionEntryType.PASS,
+        amount=None,
+        note="",
+        past_due_followup=PastDueFollowupInput(
+            reason_code=PastDueReasonCode.PROMISED_TO_PAY_LATER,
+            note="After salary",
+            promised_payment_date=date(2026, 8, 2),
+            promised_amount=Decimal("100.00"),
+        ),
+    )
+    changed = replace(
+        first,
+        past_due_followup=PastDueFollowupInput(
+            reason_code=PastDueReasonCode.PROMISED_TO_PAY_LATER,
+            note="After salary",
+            promised_payment_date=date(2026, 8, 3),
+            promised_amount=Decimal("100.00"),
+        ),
+    )
+
+    accepted = service.submit(actor=actor(), headers=headers(), command=first)
+    conflict = service.submit(actor=actor(), headers=headers(), command=changed)
+
+    assert accepted.status is CollectionStatus.ACCEPTED
+    assert conflict.status is CollectionStatus.CONFLICT
+    assert conflict.code == "idempotency_mismatch"
