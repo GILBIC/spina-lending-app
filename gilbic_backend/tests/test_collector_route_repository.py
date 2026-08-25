@@ -119,6 +119,15 @@ def _load_route(monkeypatch, connection: FakeConnection):
         "open_connection",
         lambda: fake_open_connection(connection),
     )
+    # These tests isolate the established route query and edit-authority behavior.
+    # Active-promise lookup has its own focused tests and requires a different
+    # cursor shape, so keep it out of this older repository fake rather than
+    # weakening the production lookup.
+    monkeypatch.setattr(
+        PostgresCollectorRouteRepository,
+        "_active_promise_summaries",
+        staticmethod(lambda connection, *, client_ids: {}),
+    )
     return PostgresCollectorRouteRepository().get_today_route(
         collector_user_id=COLLECTOR_USER_ID,
         collector_name="Collector One",
