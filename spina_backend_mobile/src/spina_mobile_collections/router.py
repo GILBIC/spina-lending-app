@@ -7,13 +7,15 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .contracts import (
     ActorContext,
     CollectionCommand,
     CollectionEntryType,
     CollectionStatus,
+    PastDueFollowupInput,
+    PastDueReasonCode,
     PaymentAllocationIntent,
 )
 from .service import (
@@ -21,6 +23,48 @@ from .service import (
     CollectionSubmissionService,
     SubmissionHeaders,
 )
+
+
+class PastDueFollowupBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    reason_code: PastDueReasonCode
+    note: str = Field(default="", max_length=500)
+    promised_payment_date: date | None = None
+    promised_amount: Decimal | None = Field(
+        default=None,
+        gt=Decimal("0.00"),
+        max_digits=18,
+        decimal_places=2,
+    )
+
+    @model_validator(mode="after")
+    def validate_details(self) -> "PastDueFollowupBody":
+        note = self.note.strip()
+        if self.reason_code is PastDueReasonCode.OTHER and not note:
+            raise ValueError("Other Past Due reason requires a short explanation.")
+
+        is_promise = self.reason_code is PastDueReasonCode.PROMISED_TO_PAY_LATER
+        if is_promise:
+            if self.promised_payment_date is None:
+                raise ValueError(
+                    "Promised to pay later requires a promised payment date."
+                )
+            if self.promised_amount is None:
+                raise ValueError("Promised to pay later requires a promised amount.")
+        elif self.promised_payment_date is not None or self.promised_amount is not None:
+            raise ValueError(
+                "Promise date and amount are only valid for Promised to pay later."
+            )
+        return self
+
+    def to_input(self) -> PastDueFollowupInput:
+        return PastDueFollowupInput(
+            reason_code=self.reason_code,
+            note=self.note,
+            promised_payment_date=self.promised_payment_date,
+            promised_amount=self.promised_amount,
+        )
 
 
 class CollectionSubmissionBody(BaseModel):
@@ -42,6 +86,7 @@ class CollectionSubmissionBody(BaseModel):
     note: str = Field(default="", max_length=500)
     route_revision: str | None = Field(default=None, max_length=128)
     payment_allocation_intent: PaymentAllocationIntent = PaymentAllocationIntent.SCHEDULED
+    past_due_followup: PastDueFollowupBody | None = None
 
     def to_command(self) -> CollectionCommand:
         return CollectionCommand(
@@ -61,6 +106,11 @@ class CollectionSubmissionBody(BaseModel):
             note=self.note,
             route_revision=self.route_revision,
             payment_allocation_intent=self.payment_allocation_intent,
+            past_due_followup=(
+                self.past_due_followup.to_input()
+                if self.past_due_followup is not None
+                else None
+            ),
         )
 
 
