@@ -82,6 +82,21 @@ def _schedule_payload(schedule: CollectorScheduleRecord) -> dict[str, object]:
         "contract_reference": schedule.contract_reference,
         "as_of_date": schedule.as_of_date.isoformat(),
         "read_only": True,
+        "past_due_amount": format(schedule.past_due_amount, "f"),
+        "past_due_count": schedule.past_due_count,
+        "schedule_extension_slots": schedule.schedule_extension_slots,
+        "maturity_extended": schedule.schedule_extension_slots > 0,
+        "base_maturity": (
+            schedule.base_maturity.isoformat()
+            if schedule.base_maturity is not None
+            else None
+        ),
+        "updated_maturity": (
+            schedule.updated_maturity.isoformat()
+            if schedule.updated_maturity is not None
+            else None
+        ),
+        "maturity_projection_status": schedule.maturity_projection_status,
         "rows": [_row_payload(row) for row in schedule.rows],
     }
 
