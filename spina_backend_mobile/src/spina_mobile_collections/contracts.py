@@ -23,6 +23,36 @@ class PaymentAllocationIntent(str, Enum):
     VOLUNTARY_EXTRA = "voluntary_extra"
 
 
+class PastDueReasonCode(str, Enum):
+    NO_CASH = "no_cash"
+    CLIENT_ABSENT = "client_absent"
+    BUSINESS_SLOW = "business_slow"
+    SICK_HOSPITAL = "sick_hospital"
+    EMERGENCY = "emergency"
+    PROMISED_TO_PAY_LATER = "promised_to_pay_later"
+    OTHER = "other"
+
+
+@dataclass(frozen=True, slots=True)
+class PastDueFollowupInput:
+    reason_code: PastDueReasonCode
+    note: str = ""
+    promised_payment_date: date | None = None
+    promised_amount: Decimal | None = None
+
+    def canonical_payload(self) -> dict[str, Any]:
+        return {
+            "reason_code": self.reason_code.value,
+            "note": self.note.strip(),
+            "promised_payment_date": (
+                self.promised_payment_date.isoformat()
+                if self.promised_payment_date is not None
+                else None
+            ),
+            "promised_amount": _decimal_text(self.promised_amount),
+        }
+
+
 class CollectionStatus(str, Enum):
     ACCEPTED = "accepted"
     DUPLICATE = "duplicate"
@@ -71,6 +101,7 @@ class CollectionCommand:
     note: str = ""
     route_revision: str | None = None
     payment_allocation_intent: PaymentAllocationIntent = PaymentAllocationIntent.SCHEDULED
+    past_due_followup: PastDueFollowupInput | None = None
 
     def canonical_payload(self) -> dict[str, Any]:
         return {
@@ -94,6 +125,11 @@ class CollectionCommand:
             "note": self.note.strip(),
             "route_revision": self.route_revision,
             "payment_allocation_intent": self.payment_allocation_intent.value,
+            "past_due_followup": (
+                self.past_due_followup.canonical_payload()
+                if self.past_due_followup is not None
+                else None
+            ),
         }
 
 
