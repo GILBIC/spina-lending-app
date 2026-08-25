@@ -14,6 +14,7 @@ from spina_mobile_collections.contracts import (
     PostedCollection,
 )
 
+from .collection_past_due_followup import CollectionPastDueFollowupWriter
 from .voluntary_extra_collection_posting import (
     VoluntaryExtraAwareCollectionPostingBridge,
 )
@@ -34,6 +35,11 @@ class ConcurrentReceiptSafeCollectionPostingBridge(
     this exact loan and collection date. Any gap preserves the normal stale-route
     conflict, which keeps schedule changes, No Collection changes, PASS entries,
     corrections, reversals and unknown state changes fail-closed.
+
+    The structured Past Due follow-up writer runs only after the protected product
+    allocator succeeds, but still inside the executor's same PostgreSQL transaction.
+    Missing/invalid reason evidence therefore rolls the whole collection back rather
+    than leaving cash and Past Due history out of sync.
     """
 
     def post_collection(
@@ -47,7 +53,14 @@ class ConcurrentReceiptSafeCollectionPostingBridge(
             actor=actor,
             command=command,
         )
-        return super().post_collection(connection, actor, prepared)
+        posted = super().post_collection(connection, actor, prepared)
+        CollectionPastDueFollowupWriter().apply(
+            connection,
+            actor=actor,
+            command=prepared,
+            posted=posted,
+        )
+        return posted
 
     def _prepare_same_day_payment_revision(
         self,
