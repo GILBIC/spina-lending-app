@@ -75,15 +75,12 @@ void main() {
     expect(find.text('Latest receipt recorded by: Collector Two'), findsOneWidget);
     expect(find.text('Latest receipt note: Paid at the route'), findsOneWidget);
 
-    final footer = find.textContaining(
-      'One client stays on one Daily Collection row',
+    // The explanatory ledger footer was deliberately removed to keep the
+    // Collector screen compact; expanding a client must not bring it back.
+    expect(
+      find.textContaining('One client stays on one Daily Collection row'),
+      findsNothing,
     );
-    await tester.dragUntilVisible(
-      footer,
-      find.byType(ListView),
-      const Offset(0, -250),
-    );
-    expect(footer, findsOneWidget);
   });
 
   testWidgets('restored session adopts current server access scope',
