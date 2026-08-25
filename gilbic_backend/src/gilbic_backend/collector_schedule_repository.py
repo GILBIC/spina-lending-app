@@ -124,8 +124,9 @@ def _build_installment_row(
     operational_amount = max(_money(original - principal_reduction), ZERO)
 
     # Principal Reduction changes the current operational schedule rather than
-    # becoming a "Paid in Advance" state. Fully removed future tail rows disappear.
-    if operational_amount == ZERO and effective_due_date > as_of_date:
+    # becoming a "Paid in Advance" state. Fully removed tail rows disappear
+    # from the Collector current schedule permanently; audit history retains them.
+    if operational_amount == ZERO and principal_reduction > ZERO:
         return None
 
     applied = min(_money(paid_amount), operational_amount)
