@@ -22,7 +22,11 @@ TARGET_TEST = (
     / "tests"
     / "test_combined_collection_renewal_workflow_postgres.py"
 )
-BOOTSTRAP_THROUGH = 99
+# The combined collection path now calls the Past Due capture layer. Its disposable
+# database therefore must include the 0103 follow-up schema before exercising the
+# current posting bridge; bootstrapping only through 0099 leaves the validation
+# environment older than the code under test.
+BOOTSTRAP_THROUGH = 103
 BASE_DATABASE_URL_ENV = "COMBINED_RENEWAL_DATABASE_URL"
 DISPOSABLE_DATABASE_PREFIX = "spina_combined_renewal_"
 
@@ -107,9 +111,9 @@ def main() -> int:
         _bootstrap_database(test_url)
 
         migration_env = _env(test_url)
-        print("Applying guarded 0100/0101 migrations...")
+        print("Re-running guarded 0100/0101 migrations to prove idempotency...")
         _run([sys.executable, str(MIGRATION_RUNNER)], env=migration_env, timeout=300)
-        print("Re-running guarded migrations to prove idempotency...")
+        print("Re-running guarded migrations once more to prove idempotency...")
         _run([sys.executable, str(MIGRATION_RUNNER)], env=migration_env, timeout=300)
 
         print("Running atomic combined Pay and renewal policy PostgreSQL tests...")
