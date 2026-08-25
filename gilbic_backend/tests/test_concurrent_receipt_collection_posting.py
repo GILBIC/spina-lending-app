@@ -5,11 +5,9 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from gilbic_backend.collection_past_due_capture import CollectionPastDueCapture
 from gilbic_backend.concurrent_receipt_collection_posting import (
     ConcurrentReceiptSafeCollectionPostingBridge,
 )
-from gilbic_backend.past_due_promise_progress import PastDuePromiseProgress
 from gilbic_backend.voluntary_extra_collection_posting import (
     VoluntaryExtraAwareCollectionPostingBridge,
 )
@@ -120,18 +118,12 @@ def capture_super_command(monkeypatch, captured: list[CollectionCommand]) -> obj
         "post_collection",
         fake_super,
     )
-    # These tests isolate same-day route-revision rebasing. Past Due capture and
-    # promise-progress reconciliation have their own focused tests and require a
-    # real posted receipt/database shape, so both are deliberately stubbed here
-    # rather than weakening production behavior.
+    # These tests isolate same-day route-revision rebasing. The post-collection
+    # Past Due / promise layers have focused tests that use real receipt/database
+    # shapes, so bypass only their orchestration seam here.
     monkeypatch.setattr(
-        PastDuePromiseProgress,
-        "apply",
-        lambda self, connection, *, transaction_id, collection_date: None,
-    )
-    monkeypatch.setattr(
-        CollectionPastDueCapture,
-        "apply",
+        ConcurrentReceiptSafeCollectionPostingBridge,
+        "_apply_followup_layers",
         lambda self, connection, *, actor, command, posted: None,
     )
     return sentinel
