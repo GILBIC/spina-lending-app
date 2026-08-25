@@ -5,13 +5,16 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction.dart';
+import 'package:gilbic_mobile/src/core/payments/collection_correction_history_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction_repository.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_correction_page.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 void main() {
-  testWidgets('shows allocation first and keeps covered dates read-only in details',
+  testWidgets(
+      'shows allocation first and keeps covered dates plus audit history under details',
       (tester) async {
+    final history = _FakeHistoryRepository();
     await tester.pumpWidget(
       MaterialApp(
         theme: SpinaTheme.light,
@@ -20,6 +23,7 @@ void main() {
           entry: _entry,
           collectionDate: DateTime(2026, 8, 2),
           repository: _FakeCorrectionRepository(),
+          historyRepository: history,
           deviceIdentityProvider: _deviceIdentityProvider(),
         ),
       ),
@@ -37,6 +41,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('2026-08-04'), findsNothing);
+    expect(find.text('Reason: Wrong amount'), findsNothing);
 
     await tester.tap(
       find.byKey(const Key('correction-covered-obligations-details')),
@@ -44,6 +49,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('• 2026-08-04'), findsOneWidget);
+    expect(
+      find.byKey(const Key('correction-audit-history-title')),
+      findsOneWidget,
+    );
+    expect(find.text('Version 1 · Test Collector'), findsOneWidget);
+    expect(find.text('Reason: Wrong amount'), findsOneWidget);
+    expect(find.text('Before: Advance · ₱120.00'), findsOneWidget);
+    expect(find.text('After: Advance · ₱100.00'), findsOneWidget);
+    expect(history.requestedTransactionId, 'transaction-1');
+    expect(history.requestedDeviceId, 'device-one');
 
     await tester.scrollUntilVisible(
       find.byKey(const Key('correction-reason')),
@@ -108,5 +123,44 @@ class _FakeCorrectionRepository implements CollectionCorrectionRepository {
     required CollectionCorrectionDraft draft,
   }) {
     throw UnimplementedError();
+  }
+}
+
+class _FakeHistoryRepository implements CollectionCorrectionHistoryRepository {
+  String? requestedTransactionId;
+  String? requestedDeviceId;
+
+  @override
+  Future<List<CollectionCorrectionHistoryEntry>> list(
+    UserSession session, {
+    required String deviceId,
+    required String transactionId,
+  }) async {
+    requestedTransactionId = transactionId;
+    requestedDeviceId = deviceId;
+    return <CollectionCorrectionHistoryEntry>[
+      CollectionCorrectionHistoryEntry(
+        editVersion: 1,
+        reason: 'Wrong amount',
+        previousSnapshot: const <String, dynamic>{
+          'entry_type': 'advance',
+          'amount': '120.00',
+        },
+        replacementSnapshot: const <String, dynamic>{
+          'entry_type': 'advance',
+          'amount': '100.00',
+        },
+        previousCoveredDates: <DateTime>[
+          DateTime(2026, 8, 2),
+          DateTime(2026, 8, 3),
+        ],
+        replacementCoveredDates: <DateTime>[
+          DateTime(2026, 8, 2),
+          DateTime(2026, 8, 4),
+        ],
+        editedByName: 'Test Collector',
+        editedAt: DateTime.utc(2026, 8, 25, 1, 30),
+      ),
+    ];
   }
 }
