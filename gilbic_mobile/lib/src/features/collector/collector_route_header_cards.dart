@@ -18,6 +18,11 @@ class CollectorRouteHeaderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final recorded = route.entries.where((entry) => entry.processedToday).length;
     final dateText = route.routeDate == null ? 'Saved route' : _longDate(route.routeDate!);
+    final activePromiseReminders = route.entries
+        .map(_activePromiseReminder)
+        .whereType<String>()
+        .toSet()
+        .toList(growable: false);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(13),
@@ -41,6 +46,23 @@ class CollectorRouteHeaderCard extends StatelessWidget {
               '$recorded recorded • Last sync ${_time(result.syncedAt)}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
+            if (activePromiseReminders.length == 1)
+              Text(
+                activePromiseReminders.single,
+                key: const Key('collector-header-active-promise'),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              )
+            else if (activePromiseReminders.length > 1)
+              Text(
+                '${activePromiseReminders.length} active promises • '
+                'Open each client for date, remaining amount, and status',
+                key: const Key('collector-header-active-promises'),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
           ],
         ),
       ),
@@ -76,6 +98,16 @@ class CollectorAreaArrangementCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _activePromiseReminder(CollectorRouteEntry entry) {
+  const marker = 'Promise: ';
+  final index = entry.collectionMessage.indexOf(marker);
+  if (index < 0) {
+    return null;
+  }
+  final reminder = entry.collectionMessage.substring(index).trim();
+  return reminder.isEmpty ? null : reminder;
 }
 
 String _longDate(DateTime value) {
