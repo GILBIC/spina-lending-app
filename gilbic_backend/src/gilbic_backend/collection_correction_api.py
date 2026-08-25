@@ -10,6 +10,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
+from .collection_correction_history_repository import (
+    CollectionCorrectionHistoryRecord,
+    PostgresCollectionCorrectionHistoryRepository,
+)
 from .collection_correction_repository import (
     CollectionCorrectionConflict,
     CollectionCorrectionError,
@@ -39,6 +43,10 @@ def correction_repository_dependency() -> PostgresCollectionCorrectionRepository
     return ContractSafeCollectionCorrectionRepository()
 
 
+def correction_history_repository_dependency() -> PostgresCollectionCorrectionHistoryRepository:
+    return PostgresCollectionCorrectionHistoryRepository()
+
+
 def _record_payload(record: CollectionCorrectionRecord) -> dict[str, object]:
     return {
         "transaction_id": str(record.transaction_id),
@@ -54,6 +62,26 @@ def _record_payload(record: CollectionCorrectionRecord) -> dict[str, object]:
         "receipt_number": record.receipt_number,
         "edit_version": record.edit_version,
         "route_revision": record.route_revision,
+        "edited_at": record.edited_at.isoformat(),
+    }
+
+
+def _history_payload(record: CollectionCorrectionHistoryRecord) -> dict[str, object]:
+    return {
+        "edit_id": str(record.edit_id),
+        "transaction_id": str(record.transaction_id),
+        "edit_version": record.edit_version,
+        "reason": record.reason,
+        "previous_snapshot": record.previous_snapshot,
+        "replacement_snapshot": record.replacement_snapshot,
+        "previous_covered_dates": [
+            value.isoformat() for value in record.previous_covered_dates
+        ],
+        "replacement_covered_dates": [
+            value.isoformat() for value in record.replacement_covered_dates
+        ],
+        "edited_by_user_id": str(record.edited_by_user_id),
+        "edited_by_name": record.edited_by_name,
         "edited_at": record.edited_at.isoformat(),
     }
 
@@ -77,6 +105,44 @@ def _raise_correction_error(error: CollectionCorrectionError) -> None:
 
 def create_collection_correction_router() -> APIRouter:
     router = APIRouter(tags=["collection corrections"])
+
+    @router.get("/api/v1/collector/collections/{transaction_id}/corrections")
+    @router.get(
+        "/api/mobile/v1/collector/collections/{transaction_id}/corrections",
+        include_in_schema=False,
+    )
+    def correction_history(
+        transaction_id: UUID,
+        authorization: str | None = Header(default=None, alias="Authorization"),
+        x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        auth: SupabaseAuthClient = Depends(auth_client_dependency),
+        accounts: PostgresAccountRepository = Depends(account_repository_dependency),
+        history: PostgresCollectionCorrectionHistoryRepository = Depends(
+            correction_history_repository_dependency
+        ),
+    ) -> dict[str, object]:
+        actor = authenticated_device_context(
+            authorization=authorization,
+            device_identifier=x_device_id,
+            auth=auth,
+            accounts=accounts,
+            permission="collection.correct.own_unremitted",
+            permission_error="Collection correction history permission is required.",
+        )
+        try:
+            records = history.list_for_transaction(
+                actor_user_id=actor.user_id,
+                transaction_id=transaction_id,
+            )
+        except CollectionCorrectionError as error:
+            _raise_correction_error(error)
+        return {
+            "success": True,
+            "data": {
+                "transaction_id": str(transaction_id),
+                "corrections": [_history_payload(record) for record in records],
+            },
+        }
 
     @router.patch("/api/v1/collector/collections/{transaction_id}")
     @router.patch(
