@@ -75,6 +75,9 @@ class CollectorRouteEntryRecord:
     today_covered_dates: tuple[date, ...] = ()
     today_receipts: tuple[CollectorRouteReceiptRecord, ...] = ()
     covered_dates: tuple[date, ...] = ()
+    active_promise_date: date | None = None
+    active_promise_remaining_amount: Decimal = Decimal("0.00")
+    active_promise_status: str = ""
 
     @property
     def route_revision(self) -> str:
@@ -95,6 +98,22 @@ class CollectorRouteEntryRecord:
         if self.contract_allocation_enabled:
             return self.contract_collection_ready
         return True
+
+    @property
+    def active_promise_message(self) -> str:
+        if self.active_promise_date is None:
+            return ""
+        status = self.active_promise_status.strip().replace("_", " ").title() or "Pending"
+        return (
+            f"Promise: {self.active_promise_date.isoformat()} · "
+            f"₱{self.active_promise_remaining_amount:,.2f} remaining · {status}."
+        )
+
+    def _with_active_promise(self, message: str) -> str:
+        reminder = self.active_promise_message
+        if not reminder:
+            return message
+        return f"{message} {reminder}".strip()
 
     @property
     def contract_readiness_message(self) -> str:
@@ -152,17 +171,23 @@ class CollectorRouteEntryRecord:
     def collection_message(self) -> str:
         if self.processed_today:
             if self.today_is_locked:
-                return "Today's collection is already included in a remittance and is locked."
-            return "Today's collection has already been recorded."
+                return self._with_active_promise(
+                    "Today's collection is already included in a remittance and is locked."
+                )
+            return self._with_active_promise("Today's collection has already been recorded.")
         if not self.is_reconciled:
-            return "Checking this loan against SPINA records."
+            return self._with_active_promise("Checking this loan against SPINA records.")
         if not self.mobile_collections_enabled:
-            return "Use the SPINA desktop app for this loan type."
+            return self._with_active_promise("Use the SPINA desktop app for this loan type.")
         if self.mobile_balance_mode != "direct_remaining_balance":
-            return "Unable-to-pay is available, but payments still use SPINA desktop."
+            return self._with_active_promise(
+                "Unable-to-pay is available, but payments still use SPINA desktop."
+            )
         if self.contract_allocation_enabled and not self.contract_collection_ready:
-            return self.contract_readiness_message
-        return f"Ready for mobile collection. {self.contract_readiness_message}"
+            return self._with_active_promise(self.contract_readiness_message)
+        return self._with_active_promise(
+            f"Ready for mobile collection. {self.contract_readiness_message}"
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -229,6 +254,48 @@ def _receipt_records(value: object) -> tuple[CollectorRouteReceiptRecord, ...]:
 
 class PostgresCollectorRouteRepository:
     """Read the live route for one authenticated collector."""
+
+    @staticmethod
+    def _active_promise_summaries(
+        connection,
+        *,
+        client_ids: tuple[UUID, ...],
+    ) -> dict[tuple[UUID, UUID], tuple[date, Decimal, str]]:
+        if not client_ids:
+            return {}
+        with connection.cursor() as cursor:
+            cursor.execute("select to_regclass('lending.payment_promises')")
+            table_row = cursor.fetchone()
+            if table_row is None or table_row[0] is None:
+                return {}
+
+        with connection.cursor(row_factory=dict_row) as cursor:
+            cursor.execute(
+                """
+                select distinct on (promise.client_id)
+                    promise.client_id,
+                    promise.loan_id,
+                    promise.promised_for_date,
+                    promise.remaining_promised_amount,
+                    promise.status
+                from lending.payment_promises promise
+                where promise.client_id = any(%s::uuid[])
+                  and promise.status = 'pending'
+                  and promise.remaining_promised_amount > 0
+                order by promise.client_id, promise.created_at desc, promise.id desc
+                """,
+                (list(client_ids),),
+            )
+            rows = cursor.fetchall()
+
+        return {
+            (row["client_id"], row["loan_id"]): (
+                row["promised_for_date"],
+                Decimal(row["remaining_promised_amount"]).quantize(MONEY),
+                str(row["status"] or "pending"),
+            )
+            for row in rows
+        }
 
     def get_today_route(
         self,
@@ -517,6 +584,11 @@ class PostgresCollectorRouteRepository:
                 )
                 rows = cursor.fetchall()
 
+            active_promises = self._active_promise_summaries(
+                connection,
+                client_ids=tuple({row["client_id"] for row in rows}),
+            )
+
         entries: list[CollectorRouteEntryRecord] = []
         for row in rows:
             remaining_balance = Decimal(row["remaining_balance"]).quantize(MONEY)
@@ -548,6 +620,7 @@ class PostgresCollectorRouteRepository:
             today_scheduled = Decimal(row["contract_today_scheduled_amount"]).quantize(MONEY)
             today_unpaid = Decimal(row["contract_today_unpaid_amount"]).quantize(MONEY)
             today_has_installment = int(row["contract_today_installment_count"]) > 0
+            active_promise = active_promises.get((row["client_id"], row["loan_id"]))
 
             entries.append(
                 CollectorRouteEntryRecord(
@@ -622,6 +695,11 @@ class PostgresCollectorRouteRepository:
                     today_covered_dates=tuple(row["today_covered_dates"] or ()),
                     today_receipts=_receipt_records(row.get("today_receipts")),
                     covered_dates=tuple(row["covered_dates"] or ()),
+                    active_promise_date=(active_promise[0] if active_promise else None),
+                    active_promise_remaining_amount=(
+                        active_promise[1] if active_promise else Decimal("0.00")
+                    ),
+                    active_promise_status=(active_promise[2] if active_promise else ""),
                 )
             )
 
