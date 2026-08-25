@@ -217,12 +217,26 @@ def test_principal_reduction_updates_current_schedule_without_special_status() -
         principal_component=None,
         interest_component=None,
     )
+    removed_tail_after_original_date = _build_installment_row(
+        as_of_date=date(2026, 9, 1),
+        installment_id=4,
+        installment_number=4,
+        contractual_due_date=date(2026, 8, 31),
+        effective_due_date=date(2026, 8, 31),
+        contractual_amount=Decimal("100.00"),
+        paid_amount=Decimal("0.00"),
+        prepaid_amount=Decimal("0.00"),
+        principal_reduction_amount=Decimal("100.00"),
+        principal_component=None,
+        interest_component=None,
+    )
 
     assert partial_tail is not None
     assert partial_tail.amount == Decimal("50.00")
     assert partial_tail.status == "Scheduled"
     assert partial_tail.principal_reduction_amount == Decimal("50.00")
     assert removed_tail is None
+    assert removed_tail_after_original_date is None
 
 
 def test_partial_past_due_row_stays_past_due_for_collection_guidance() -> None:
