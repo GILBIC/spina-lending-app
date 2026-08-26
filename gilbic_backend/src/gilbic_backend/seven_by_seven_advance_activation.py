@@ -57,7 +57,14 @@ def _active_no_collection_interest_holidays(
     loan_id: UUID,
     through_date: date,
 ) -> tuple[date, ...]:
-    """Return active Management No Collection dates that carry zero 7x7 interest."""
+    """Return active Management NC dates that still carry zero 7x7 interest.
+
+    A Management declaration remains immutable history after a borrower later
+    completes that affected installment voluntarily. The separate completion
+    evidence changes only the operational/financial effect for that loan/date,
+    so that date is no longer supplied to the allocator as an interest holiday.
+    A voided completion receipt does not suppress the original holiday.
+    """
 
     cursor.execute(
         """
@@ -70,6 +77,14 @@ def _active_no_collection_interest_holidays(
                 select 1
                 from lending.loan_schedule_adjustments reversal
                 where reversal.reverses_adjustment_id = adjustment.id
+          )
+          and not exists (
+                select 1
+                from lending.loan_no_collection_voluntary_completions completion
+                join lending.collection_transactions completion_transaction
+                  on completion_transaction.id = completion.transaction_id
+                where completion.no_collection_adjustment_id = adjustment.id
+                  and completion_transaction.is_voided = false
           )
         order by adjustment.no_collection_date
         """,
@@ -85,6 +100,28 @@ def _active_no_collection_interest_holidays(
     return tuple(holidays)
 
 
+def _immediate_financial_receipt_amount(
+    *,
+    receipt_amount: Decimal | int | str,
+    deferred_amount: Decimal | int | str,
+) -> Decimal:
+    """Return cash that is financially active on the physical receipt date.
+
+    ``future_advance_oldest_first`` is also the protected evidence basis for a
+    partial voluntary payment toward a shifted No Collection installment. That
+    part of a PAYMENT remains custody cash today but must not reduce principal or
+    earn the shifted row's interest until the row becomes financially effective.
+    """
+
+    receipt = money(receipt_amount)
+    deferred = money(deferred_amount)
+    if deferred < ZERO or deferred > receipt:
+        raise SevenBySevenAdvanceActivationError(
+            "Deferred 7x7 prepayment evidence does not reconcile to its source receipt."
+        )
+    return money(receipt - deferred)
+
+
 def replay_verified_seven_by_seven_financial_state(
     cursor: Any,
     *,
@@ -94,17 +131,23 @@ def replay_verified_seven_by_seven_financial_state(
     payment_start: date,
     through_date: date,
 ) -> SevenBySevenAdvanceFinancialReplay:
-    """Replay cash plus matured verified Advance as operational cash events.
+    """Replay immediate cash plus matured verified prepayment as cash events.
 
     A verified Advance receipt is deliberately excluded on its receipt date.
-    Each signed future row becomes a synthetic operational cash event only on
-    that row's effective due date. Multiple partial Advance receipts attached to
-    the same signed row are aggregated into one due-date activation event.
+    The same deferred basis may also represent the affected portion of a partial
+    voluntary PAYMENT on a Management No Collection day. For PAYMENT, only the
+    receipt amount not attached to deferred future-row evidence is financially
+    active immediately; the deferred portion later activates with its signed row.
 
-    Active Management No Collection dates are supplied to the operational
-    allocator as zero-interest holidays. Because Advance stays attached to its
-    installment id while Management shifts the installment's effective due date,
-    prepaid financial activation follows the shifted date automatically.
+    Each signed future row becomes a synthetic operational cash event only on
+    that row's effective due date. Multiple partial prepayments attached to the
+    same signed row are aggregated into one due-date activation event.
+
+    Management No Collection dates remain zero-interest holidays unless immutable
+    voluntary-completion evidence exists for that exact declaration and its source
+    receipt is still non-voided. Because prepayment stays attached to installment
+    id while operational dates move, financial activation follows the authoritative
+    effective date automatically.
     """
 
     cursor.execute(
@@ -112,28 +155,29 @@ def replay_verified_seven_by_seven_financial_state(
         select
             transaction.id,
             transaction.collection_date,
-            transaction.amount,
+            transaction.entry_type,
+            transaction.amount as receipt_amount,
+            coalesce(sum(allocation.amount_applied) filter (
+                where allocation.allocation_basis = %s
+            ), 0)::numeric(18,2) as deferred_amount,
             transaction.accepted_at
         from lending.collection_transactions transaction
+        left join lending.loan_installment_payment_allocations allocation
+          on allocation.transaction_id = transaction.id
         where transaction.loan_id = %s
           and transaction.is_voided = false
           and transaction.amount > 0
           and transaction.collection_date <= %s
-          and (
-                transaction.entry_type = 'payment'
-                or (
-                    transaction.entry_type = 'advance'
-                    and not exists (
-                        select 1
-                        from lending.loan_installment_payment_allocations allocation
-                        where allocation.transaction_id = transaction.id
-                          and allocation.allocation_basis = %s
-                    )
-                )
-          )
+          and transaction.entry_type in ('payment', 'advance')
+        group by
+            transaction.id,
+            transaction.collection_date,
+            transaction.entry_type,
+            transaction.amount,
+            transaction.accepted_at
         order by transaction.collection_date, transaction.accepted_at, transaction.id
         """,
-        (loan_id, through_date, FUTURE_ADVANCE_BASIS),
+        (FUTURE_ADVANCE_BASIS, loan_id, through_date),
     )
     actual_rows = cursor.fetchall()
 
@@ -144,14 +188,14 @@ def replay_verified_seven_by_seven_financial_state(
             installment.installment_number,
             installment.effective_due_date,
             sum(allocation.amount_applied)::numeric(18,2) as amount_applied,
-            min(advance_transaction.accepted_at) as first_accepted_at
+            min(prepayment_transaction.accepted_at) as first_accepted_at
         from lending.loan_installment_payment_allocations allocation
-        join lending.collection_transactions advance_transaction
-          on advance_transaction.id = allocation.transaction_id
+        join lending.collection_transactions prepayment_transaction
+          on prepayment_transaction.id = allocation.transaction_id
         join lending.loan_contract_installments_operational installment
           on installment.id = allocation.installment_id
-        where advance_transaction.loan_id = %s
-          and advance_transaction.is_voided = false
+        where prepayment_transaction.loan_id = %s
+          and prepayment_transaction.is_voided = false
           and allocation.allocation_basis = %s
           and installment.effective_due_date <= %s
         group by
@@ -169,10 +213,34 @@ def replay_verified_seven_by_seven_financial_state(
         if isinstance(row, dict):
             transaction_id = row["id"]
             collection_date = row["collection_date"]
-            amount = row["amount"]
+            entry_type = str(row["entry_type"])
+            receipt_amount = money(row["receipt_amount"])
+            deferred_amount = money(row["deferred_amount"])
             accepted_at = row["accepted_at"]
         else:
-            transaction_id, collection_date, amount, accepted_at = row
+            (
+                transaction_id,
+                collection_date,
+                entry_type,
+                receipt_value,
+                deferred_value,
+                accepted_at,
+            ) = row
+            entry_type = str(entry_type)
+            receipt_amount = money(receipt_value)
+            deferred_amount = money(deferred_value)
+
+        immediate_amount = _immediate_financial_receipt_amount(
+            receipt_amount=receipt_amount,
+            deferred_amount=deferred_amount,
+        )
+        if entry_type == "advance" and deferred_amount not in {ZERO, receipt_amount}:
+            raise SevenBySevenAdvanceActivationError(
+                "A verified 7x7 Advance receipt is only partly attached to future signed rows. Management reconciliation is required."
+            )
+        if immediate_amount <= ZERO:
+            continue
+
         ordered.append(
             (
                 collection_date,
@@ -182,7 +250,7 @@ def replay_verified_seven_by_seven_financial_state(
                 SevenBySevenCashEvent(
                     event_id=str(transaction_id),
                     collection_date=collection_date,
-                    amount=money(amount),
+                    amount=immediate_amount,
                 ),
             )
         )
@@ -233,13 +301,13 @@ def replay_verified_seven_by_seven_financial_state(
         )
     except SevenBySevenAllocationError as error:
         raise SevenBySevenAdvanceActivationError(
-            "Verified 7x7 Advance cannot be activated against the protected financial history."
+            "Verified 7x7 prepayment cannot be activated against the protected financial history."
         ) from error
 
     if result.total_unallocated_cash > ZERO:
         raise SevenBySevenAdvanceActivationError(
-            "A matured 7x7 Advance would leave unapplied cash. Management must review "
-            "the unused Advance before financial activation continues."
+            "A matured 7x7 prepayment would leave unapplied cash. Management must review "
+            "the unused Advance/prepayment before financial activation continues."
         )
 
     return SevenBySevenAdvanceFinancialReplay(
@@ -256,12 +324,12 @@ def reconcile_verified_seven_by_seven_advance_before_collection(
     loan: dict[str, Any],
     through_date: date,
 ) -> SevenBySevenAdvanceFinancialReplay:
-    """Bring principal state forward through matured Advance before new cash.
+    """Bring principal state forward through matured prepayment before new cash.
 
     The last accepted financial receipt is the reconciliation watermark: every
     accepted PAYMENT/ADVANCE on this protected path leaves state equal to the
-    replay through that receipt date. New matured Advance rows between that
-    watermark and ``through_date`` may then reduce principal, while the original
+    replay through that receipt date. New matured prepayment rows between that
+    watermark and ``through_date`` may then reduce principal, while original
     receipt evidence remains immutable and no future interest is recognized
     before the effective due date.
     """
@@ -301,7 +369,7 @@ def reconcile_verified_seven_by_seven_advance_before_collection(
     activated_balance = current.result.closing_remaining_principal
     if activated_balance > stored_balance:
         raise SevenBySevenAdvanceActivationError(
-            "7x7 Advance activation would increase principal. Management review is required."
+            "7x7 prepayment activation would increase principal. Management review is required."
         )
 
     if activated_balance != stored_balance:
