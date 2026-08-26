@@ -29,112 +29,78 @@ jobs:
           persist-credentials: false
 
       - name: Verify Python runtime
-        shell: powershell
+        shell: cmd
         run: |
-          python --version
-          python -c "import sys; assert sys.version_info >= (3, 11), sys.version"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python --version || exit /b 1
+          python -c "import sys; assert sys.version_info >= (3, 11), sys.version" || exit /b 1
 
       - name: Create isolated quality environment
-        shell: powershell
+        shell: cmd
         run: |
-          $ErrorActionPreference = "Stop"
-          $venv = Join-Path $env:RUNNER_TEMP "spina-code-quality-venv"
-          if (Test-Path $venv) { Remove-Item -Recurse -Force $venv }
-          python -m venv $venv
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          "QUALITY_VENV=$venv" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          $python = Join-Path $venv "Scripts\python.exe"
-          & $python -m pip install --disable-pip-version-check --upgrade pip
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          set "VENV=%RUNNER_TEMP%\spina-code-quality-venv"
+          if exist "%VENV%" rmdir /s /q "%VENV%"
+          python -m venv "%VENV%" || exit /b 1
+          echo QUALITY_VENV=%VENV%>>"%GITHUB_ENV%"
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
 
       - name: Install quality and test dependencies
-        shell: powershell
+        shell: cmd
         run: |
-          $ErrorActionPreference = "Stop"
-          $python = Join-Path $env:QUALITY_VENV "Scripts\python.exe"
-          & $python -m pip install --disable-pip-version-check `
-            "ruff>=0.11,<1" `
-            "bandit>=1.8,<2" `
-            "pip-audit>=2.8,<3" `
-            "pyright>=1.1,<2" `
-            "pytest-cov>=6,<8"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & $python -m pip install --disable-pip-version-check `
-            -e ".\spina_backend_mobile[test]" `
-            -e ".\gilbic_backend[test]"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if (-not (Test-Path "quality-artifacts")) { New-Item -ItemType Directory "quality-artifacts" | Out-Null }
+          "%QUALITY_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "ruff>=0.11,<1" "bandit>=1.8,<2" "pip-audit>=2.8,<3" "pyright>=1.1,<2" "pytest-cov>=6,<8" || exit /b 1
+          "%QUALITY_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile[test]" -e ".\gilbic_backend[test]" || exit /b 1
+          if not exist quality-artifacts mkdir quality-artifacts
 
-      # Baseline mode intentionally reports existing findings without making them
-      # blockers yet. Exit code 1 means findings for these tools; exit codes above
-      # 1 are treated as tooling/configuration failures and still fail the job.
+      # Baseline mode reports existing findings without making them blockers yet.
+      # Scanner/runtime failures still fail the job.
       - name: Ruff lint baseline
         id: ruff_lint
-        shell: powershell
+        shell: cmd
         run: |
-          $ruff = Join-Path $env:QUALITY_VENV "Scripts\ruff.exe"
-          & $ruff check `
-            gilbic_backend/src gilbic_backend/tests `
-            spina_backend_mobile/src spina_backend_mobile/tests `
-            --output-format json `
-            --output-file quality-artifacts/ruff.json
-          $code = $LASTEXITCODE
-          "exit_code=$code" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          if ($code -gt 1) { exit $code }
-          exit 0
+          "%QUALITY_VENV%\Scripts\ruff.exe" check gilbic_backend\src gilbic_backend\tests spina_backend_mobile\src spina_backend_mobile\tests --output-format json --output-file quality-artifacts\ruff.json
+          set "CODE=%ERRORLEVEL%"
+          echo exit_code=%CODE%>>"%GITHUB_OUTPUT%"
+          if %CODE% GTR 1 exit /b %CODE%
+          exit /b 0
 
       - name: Ruff format baseline
         id: ruff_format
-        shell: powershell
+        shell: cmd
         run: |
-          $ruff = Join-Path $env:QUALITY_VENV "Scripts\ruff.exe"
-          $output = & $ruff format --check `
-            gilbic_backend/src gilbic_backend/tests `
-            spina_backend_mobile/src spina_backend_mobile/tests 2>&1
-          $code = $LASTEXITCODE
-          $output | Set-Content -Path quality-artifacts/ruff-format.txt -Encoding utf8
-          "exit_code=$code" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          if ($code -gt 1) { $output | Write-Host; exit $code }
-          exit 0
+          "%QUALITY_VENV%\Scripts\ruff.exe" format --check gilbic_backend\src gilbic_backend\tests spina_backend_mobile\src spina_backend_mobile\tests > quality-artifacts\ruff-format.txt 2>&1
+          set "CODE=%ERRORLEVEL%"
+          echo exit_code=%CODE%>>"%GITHUB_OUTPUT%"
+          if %CODE% GTR 1 type quality-artifacts\ruff-format.txt & exit /b %CODE%
+          exit /b 0
 
       - name: Bandit security baseline
         id: bandit
-        shell: powershell
+        shell: cmd
         run: |
-          $bandit = Join-Path $env:QUALITY_VENV "Scripts\bandit.exe"
-          & $bandit -r gilbic_backend/src spina_backend_mobile/src `
-            -f json -o quality-artifacts/bandit.json
-          $code = $LASTEXITCODE
-          "exit_code=$code" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          if ($code -gt 1) { exit $code }
-          exit 0
+          "%QUALITY_VENV%\Scripts\bandit.exe" -r gilbic_backend\src spina_backend_mobile\src -f json -o quality-artifacts\bandit.json
+          set "CODE=%ERRORLEVEL%"
+          echo exit_code=%CODE%>>"%GITHUB_OUTPUT%"
+          if %CODE% GTR 1 exit /b %CODE%
+          exit /b 0
 
       - name: Pyright typed-code baseline
         id: pyright
-        shell: powershell
+        shell: cmd
         run: |
-          $pyright = Join-Path $env:QUALITY_VENV "Scripts\pyright.exe"
-          $output = & $pyright --outputjson `
-            gilbic_backend/src/gilbic_backend `
-            spina_backend_mobile/src/spina_mobile_collections
-          $code = $LASTEXITCODE
-          $output | Set-Content -Path quality-artifacts/pyright.json -Encoding utf8
-          "exit_code=$code" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          if ($code -gt 1) { $output | Write-Host; exit $code }
-          exit 0
+          "%QUALITY_VENV%\Scripts\pyright.exe" --outputjson gilbic_backend\src\gilbic_backend spina_backend_mobile\src\spina_mobile_collections > quality-artifacts\pyright.json
+          set "CODE=%ERRORLEVEL%"
+          echo exit_code=%CODE%>>"%GITHUB_OUTPUT%"
+          if %CODE% GTR 1 type quality-artifacts\pyright.json & exit /b %CODE%
+          exit /b 0
 
       - name: Dependency vulnerability baseline
         id: pip_audit
-        shell: powershell
+        shell: cmd
         run: |
-          $audit = Join-Path $env:QUALITY_VENV "Scripts\pip-audit.exe"
-          & $audit --local --skip-editable `
-            -f json -o quality-artifacts/pip-audit.json
-          $code = $LASTEXITCODE
-          "exit_code=$code" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          if ($code -gt 1) { exit $code }
-          exit 0
+          "%QUALITY_VENV%\Scripts\pip-audit.exe" --local --skip-editable -f json -o quality-artifacts\pip-audit.json
+          set "CODE=%ERRORLEVEL%"
+          echo exit_code=%CODE%>>"%GITHUB_OUTPUT%"
+          if %CODE% GTR 1 exit /b %CODE%
+          exit /b 0
 
       - name: Gitleaks secret baseline
         id: gitleaks
@@ -147,22 +113,15 @@ jobs:
           GITLEAKS_ENABLE_SUMMARY: "true"
 
       - name: Run backend tests with coverage
-        shell: powershell
+        shell: cmd
         env:
           GILBIC_TEST_DATABASE_URL: ""
         run: |
-          $python = Join-Path $env:QUALITY_VENV "Scripts\python.exe"
-          & $python -m pytest -q gilbic_backend/tests spina_backend_mobile/tests `
-            --cov=gilbic_backend `
-            --cov=spina_mobile_collections `
-            --cov-report=term-missing `
-            --cov-report=xml:quality-artifacts/coverage.xml `
-            --cov-report=json:quality-artifacts/coverage.json
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "%QUALITY_VENV%\Scripts\python.exe" -m pytest -q gilbic_backend\tests spina_backend_mobile\tests --cov=gilbic_backend --cov=spina_mobile_collections --cov-report=term-missing --cov-report=xml:quality-artifacts\coverage.xml --cov-report=json:quality-artifacts\coverage.json || exit /b 1
 
       - name: Write code-quality summary
         if: always()
-        shell: powershell
+        shell: cmd
         env:
           RUFF_LINT_EXIT: ${{ steps.ruff_lint.outputs.exit_code }}
           RUFF_FORMAT_EXIT: ${{ steps.ruff_format.outputs.exit_code }}
@@ -171,80 +130,18 @@ jobs:
           PIP_AUDIT_EXIT: ${{ steps.pip_audit.outputs.exit_code }}
           GITLEAKS_OUTCOME: ${{ steps.gitleaks.outcome }}
         run: |
-          $python = Join-Path $env:QUALITY_VENV "Scripts\python.exe"
-          @'
-          import json
-          import os
-          from pathlib import Path
-
-          root = Path("quality-artifacts")
-          root.mkdir(exist_ok=True)
-
-          def load_json(name, default):
-              path = root / name
-              if not path.is_file():
-                  return default
-              try:
-                  return json.loads(path.read_text(encoding="utf-8-sig"))
-              except Exception:
-                  return default
-
-          ruff = load_json("ruff.json", [])
-          ruff_count = len(ruff) if isinstance(ruff, list) else 0
-
-          bandit = load_json("bandit.json", {})
-          bandit_count = len(bandit.get("results", [])) if isinstance(bandit, dict) else 0
-
-          pyright = load_json("pyright.json", {})
-          pyright_summary = pyright.get("summary", {}) if isinstance(pyright, dict) else {}
-          pyright_errors = pyright_summary.get("errorCount", "unknown")
-          pyright_warnings = pyright_summary.get("warningCount", "unknown")
-
-          audit = load_json("pip-audit.json", [])
-          if isinstance(audit, dict):
-              dependencies = audit.get("dependencies", [])
-          elif isinstance(audit, list):
-              dependencies = audit
-          else:
-              dependencies = []
-          audit_vulns = 0
-          for dependency in dependencies:
-              if isinstance(dependency, dict):
-                  vulns = dependency.get("vulns", dependency.get("vulnerabilities", []))
-                  if isinstance(vulns, list):
-                      audit_vulns += len(vulns)
-
-          coverage = load_json("coverage.json", {})
-          totals = coverage.get("totals", {}) if isinstance(coverage, dict) else {}
-          coverage_percent = totals.get("percent_covered_display", totals.get("percent_covered", "not generated"))
-
-          format_status = "clean" if os.getenv("RUFF_FORMAT_EXIT", "") == "0" else "format changes reported"
-          coverage_line = (
-              f"- Backend/mobile test coverage: **{coverage_percent}%**"
-              if coverage_percent != "not generated"
-              else "- Backend/mobile test coverage: **not generated**"
-          )
-
-          lines = [
-              "## SPINA code quality baseline",
-              "",
-              "> Baseline mode: existing lint/type/security findings are measured and reported, not yet used as strict blocking thresholds. Test/coverage execution and scanner runtime/configuration failures remain protected.",
-              "",
-              f"- Ruff lint findings: **{ruff_count}**",
-              f"- Ruff format: **{format_status}**",
-              f"- Bandit findings: **{bandit_count}**",
-              f"- Pyright: **{pyright_errors} errors / {pyright_warnings} warnings**",
-              f"- pip-audit known vulnerabilities: **{audit_vulns}**",
-              f"- Gitleaks step outcome: **{os.getenv('GITLEAKS_OUTCOME', 'not run')}**",
-              coverage_line,
-              "",
-              "Current scope intentionally covers the actively maintained Python backend/mobile service code and tests. Legacy desktop/tooling expansion and blocking thresholds should be tightened in later, reviewed steps.",
-          ]
-          summary = "\n".join(lines) + "\n"
-          Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text(summary, encoding="utf-8")
-          (root / "summary.md").write_text(summary, encoding="utf-8")
-          '@ | & $python -
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if not exist quality-artifacts mkdir quality-artifacts
+          echo ## SPINA code quality baseline>quality-artifacts\summary.md
+          echo.>>quality-artifacts\summary.md
+          echo Baseline mode reports existing findings without making them strict blockers yet.>>quality-artifacts\summary.md
+          echo.>>quality-artifacts\summary.md
+          echo - Ruff lint exit: %RUFF_LINT_EXIT%>>quality-artifacts\summary.md
+          echo - Ruff format exit: %RUFF_FORMAT_EXIT%>>quality-artifacts\summary.md
+          echo - Bandit exit: %BANDIT_EXIT%>>quality-artifacts\summary.md
+          echo - Pyright exit: %PYRIGHT_EXIT%>>quality-artifacts\summary.md
+          echo - pip-audit exit: %PIP_AUDIT_EXIT%>>quality-artifacts\summary.md
+          echo - Gitleaks outcome: %GITLEAKS_OUTCOME%>>quality-artifacts\summary.md
+          type quality-artifacts\summary.md>>"%GITHUB_STEP_SUMMARY%"
 
       - name: Upload code-quality baseline reports
         if: always()
