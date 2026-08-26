@@ -27,6 +27,12 @@ from .seven_by_seven_operational_allocator import (
     SevenBySevenCashEvent,
     allocate_seven_by_seven_payments,
 )
+from .seven_by_seven_schedule_allocation import (
+    SevenBySevenScheduleAllocationError,
+    SevenBySevenVerifiedScheduleNotFound,
+    plan_verified_seven_by_seven_scheduled_payment,
+    store_verified_seven_by_seven_scheduled_payment_allocations,
+)
 
 
 SEVEN_BY_SEVEN_MOBILE_SETTING = "mobile_seven_by_seven_enabled"
@@ -46,6 +52,12 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
     balance, and the pending cash event is accepted only when the canonical
     fixed-original-principal, interest-first allocator can apply it without an
     overpayment residue.
+
+    When an active verified signed schedule exists, a normal PAYMENT also writes
+    contractual installment-allocation evidence. That schedule allocation is a
+    separate dimension from the interest-first cash composition: it clears only
+    Past Due / Due Today schedule rows, oldest first, and never silently spills
+    into a future Advance.
     """
 
     def post_collection(
@@ -226,6 +238,7 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                 cursor,
                 loan_id=loan_id,
                 collection_date=command.collection_date,
+                entry_type=command.entry_type,
             )
 
             amount = self._money(command.amount or ZERO)
@@ -234,6 +247,7 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
             advance_until_after: date | None = loan["advance_until"]
             official_balance = previous_balance
             loan_fully_paid = False
+            schedule_instructions = ()
             allocation_details: dict[str, object] = {
                 "seven_by_seven_policy": SEVEN_BY_SEVEN_OPERATIONAL_POLICY,
                 "seven_by_seven_mobile_feature": SEVEN_BY_SEVEN_MOBILE_SETTING,
@@ -254,11 +268,38 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                     )
                 if command.entry_type is CollectionEntryType.ADVANCE:
                     self._validate_seven_by_seven_advance(command, covered_dates)
-                self._verify_covered_dates_available(
-                    cursor,
-                    loan_id=loan_id,
-                    covered_dates=covered_dates,
-                )
+                    self._verify_covered_dates_available(
+                        cursor,
+                        loan_id=loan_id,
+                        covered_dates=covered_dates,
+                    )
+                    allocation_details["seven_by_seven_schedule_allocation_state"] = (
+                        "advance_integration_pending"
+                    )
+                elif command.entry_type is CollectionEntryType.PAYMENT:
+                    try:
+                        schedule_instructions = (
+                            plan_verified_seven_by_seven_scheduled_payment(
+                                cursor,
+                                loan_id=loan_id,
+                                collection_date=command.collection_date,
+                                transaction_amount=amount,
+                            )
+                        )
+                    except SevenBySevenVerifiedScheduleNotFound:
+                        # Transitional compatibility for already-existing 7x7 loans
+                        # that predate verified schedule registration. Such loans are
+                        # not eligible to treat Collector View Schedule as authoritative.
+                        allocation_details["seven_by_seven_schedule_allocation_state"] = (
+                            "verified_schedule_required"
+                        )
+                    except SevenBySevenScheduleAllocationError as error:
+                        raise CollectionRejected(str(error), code=error.code) from error
+                    else:
+                        allocation_details["seven_by_seven_schedule_allocation_state"] = (
+                            "verified_due_rows_planned"
+                        )
+
                 result, line = self._allocate_seven_by_seven_pending_event(
                     cursor,
                     loan=loan,
@@ -418,15 +459,38 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                     Jsonb(details),
                 ),
             )
-            for covered_date in covered_dates:
-                cursor.execute(
-                    """
-                    insert into lending.collection_covered_dates (
-                        transaction_id, loan_id, covered_date
-                    ) values (%s, %s, %s)
-                    """,
-                    (transaction_id, loan_id, covered_date),
+
+            if schedule_instructions:
+                store_verified_seven_by_seven_scheduled_payment_allocations(
+                    cursor,
+                    transaction_id=transaction_id,
+                    actor_user_id=collector_user_id,
+                    instructions=schedule_instructions,
                 )
+                allocation_details["seven_by_seven_schedule_allocation_state"] = (
+                    "verified_due_rows_allocated"
+                )
+
+            for covered_date in covered_dates:
+                if command.entry_type is CollectionEntryType.PAYMENT:
+                    cursor.execute(
+                        """
+                        insert into lending.collection_covered_dates (
+                            transaction_id, loan_id, covered_date
+                        ) values (%s, %s, %s)
+                        on conflict (loan_id, covered_date) do nothing
+                        """,
+                        (transaction_id, loan_id, covered_date),
+                    )
+                else:
+                    cursor.execute(
+                        """
+                        insert into lending.collection_covered_dates (
+                            transaction_id, loan_id, covered_date
+                        ) values (%s, %s, %s)
+                        """,
+                        (transaction_id, loan_id, covered_date),
+                    )
 
             cursor.execute(
                 """
@@ -452,6 +516,9 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                             "amount": str(amount),
                             "official_balance": str(official_balance),
                             "seven_by_seven_policy": SEVEN_BY_SEVEN_OPERATIONAL_POLICY,
+                            "seven_by_seven_schedule_allocation_state": allocation_details.get(
+                                "seven_by_seven_schedule_allocation_state"
+                            ),
                             "covered_dates": [
                                 value.isoformat() for value in covered_dates
                             ],
@@ -507,7 +574,7 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
             if selected and selected != (command.collection_date,):
                 raise CollectionRejected(
                     "A normal 7x7 payment may cover only its collection date. "
-                    "Use exact covered-date payment for multiple dates.",
+                    "Use Details for non-normal payment instructions.",
                     code="seven_by_seven_payment_coverage_invalid",
                 )
             return (command.collection_date,)
@@ -535,7 +602,13 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
         *,
         loan_id: UUID,
         collection_date: date,
+        entry_type: CollectionEntryType,
     ) -> None:
+        # Multiple legitimate cash receipts on the same collection day are
+        # allowed. Idempotency and device sequence protect against retries.
+        # PASS remains singular and cannot be added after cash was recorded.
+        if entry_type is not CollectionEntryType.PASS:
+            return
         cursor.execute(
             """
             select id, entry_type
@@ -552,7 +625,7 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
         if existing is not None:
             raise CollectionConflict(
                 "A 7x7 collection is already recorded for this loan on this date. "
-                "Refresh the route instead of creating a second entry.",
+                "Refresh the route instead of recording Unable to Pay.",
                 code="seven_by_seven_date_already_recorded",
             )
 
@@ -573,7 +646,7 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
               and is_voided = false
               and entry_type in ('payment', 'advance')
               and amount > 0
-            order by collection_date, id
+            order by collection_date, accepted_at, id
             """,
             (loan["loan_id"],),
         )
