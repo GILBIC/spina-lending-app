@@ -112,6 +112,7 @@ def test_semi_monthly_extension_uses_configured_contract_days() -> None:
         ),
         as_of_date=date(2026, 8, 25),
         payment_frequency="semi_monthly",
+        semi_monthly_days=(10, 25),
     )
 
     assert projection.extension_slots == 1
