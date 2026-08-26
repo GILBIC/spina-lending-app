@@ -1,0 +1,247 @@
+name: SPINA code quality baseline
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: spina-code-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            gilbic_backend/pyproject.toml
+            spina_backend_mobile/pyproject.toml
+
+      - name: Install quality and test dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install --disable-pip-version-check \
+            "ruff>=0.11,<1" \
+            "bandit>=1.8,<2" \
+            "pip-audit>=2.8,<3" \
+            "pyright>=1.1,<2" \
+            "pytest-cov>=6,<8"
+          python -m pip install --disable-pip-version-check \
+            -e "./spina_backend_mobile[test]" \
+            -e "./gilbic_backend[test]"
+          mkdir -p quality-artifacts
+
+      # Baseline mode intentionally reports existing findings without making them
+      # blockers yet. Exit code 1 means findings for these tools; exit codes above
+      # 1 are treated as tooling/configuration failures and still fail the job.
+      - name: Ruff lint baseline
+        id: ruff_lint
+        shell: bash
+        run: |
+          set +e
+          ruff check \
+            gilbic_backend/src gilbic_backend/tests \
+            spina_backend_mobile/src spina_backend_mobile/tests \
+            --output-format json \
+            --output-file quality-artifacts/ruff.json
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -gt 1 ]; then
+            echo "Ruff failed to execute correctly with exit code $code."
+            exit "$code"
+          fi
+
+      - name: Ruff format baseline
+        id: ruff_format
+        shell: bash
+        run: |
+          set +e
+          ruff format --check \
+            gilbic_backend/src gilbic_backend/tests \
+            spina_backend_mobile/src spina_backend_mobile/tests \
+            > quality-artifacts/ruff-format.txt 2>&1
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -gt 1 ]; then
+            cat quality-artifacts/ruff-format.txt
+            exit "$code"
+          fi
+
+      - name: Bandit security baseline
+        id: bandit
+        shell: bash
+        run: |
+          set +e
+          bandit -r gilbic_backend/src spina_backend_mobile/src \
+            -f json -o quality-artifacts/bandit.json
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -gt 1 ]; then
+            echo "Bandit failed to execute correctly with exit code $code."
+            exit "$code"
+          fi
+
+      - name: Pyright typed-code baseline
+        id: pyright
+        shell: bash
+        run: |
+          set +e
+          pyright --outputjson \
+            gilbic_backend/src/gilbic_backend \
+            spina_backend_mobile/src/spina_mobile_collections \
+            > quality-artifacts/pyright.json
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -gt 1 ]; then
+            cat quality-artifacts/pyright.json
+            exit "$code"
+          fi
+
+      - name: Dependency vulnerability baseline
+        id: pip_audit
+        shell: bash
+        run: |
+          set +e
+          pip-audit --local --skip-editable \
+            -f json -o quality-artifacts/pip-audit.json
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -gt 1 ]; then
+            echo "pip-audit failed to execute correctly with exit code $code."
+            exit "$code"
+          fi
+
+      - name: Gitleaks secret baseline
+        id: gitleaks
+        continue-on-error: true
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run backend tests with coverage
+        shell: bash
+        env:
+          GILBIC_TEST_DATABASE_URL: ""
+        run: |
+          set -euo pipefail
+          python -m pytest -q gilbic_backend/tests spina_backend_mobile/tests \
+            --cov=gilbic_backend \
+            --cov=spina_mobile_collections \
+            --cov-report=term-missing \
+            --cov-report=xml:quality-artifacts/coverage.xml \
+            --cov-report=json:quality-artifacts/coverage.json
+
+      - name: Write code-quality summary
+        if: always()
+        shell: bash
+        env:
+          RUFF_LINT_EXIT: ${{ steps.ruff_lint.outputs.exit_code }}
+          RUFF_FORMAT_EXIT: ${{ steps.ruff_format.outputs.exit_code }}
+          BANDIT_EXIT: ${{ steps.bandit.outputs.exit_code }}
+          PYRIGHT_EXIT: ${{ steps.pyright.outputs.exit_code }}
+          PIP_AUDIT_EXIT: ${{ steps.pip_audit.outputs.exit_code }}
+          GITLEAKS_OUTCOME: ${{ steps.gitleaks.outcome }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("quality-artifacts")
+
+          def load_json(name, default):
+              path = root / name
+              if not path.is_file():
+                  return default
+              try:
+                  return json.loads(path.read_text(encoding="utf-8"))
+              except Exception:
+                  return default
+
+          ruff = load_json("ruff.json", [])
+          ruff_count = len(ruff) if isinstance(ruff, list) else 0
+
+          bandit = load_json("bandit.json", {})
+          bandit_count = len(bandit.get("results", [])) if isinstance(bandit, dict) else 0
+
+          pyright = load_json("pyright.json", {})
+          pyright_summary = pyright.get("summary", {}) if isinstance(pyright, dict) else {}
+          pyright_errors = pyright_summary.get("errorCount", "unknown")
+          pyright_warnings = pyright_summary.get("warningCount", "unknown")
+
+          audit = load_json("pip-audit.json", [])
+          if isinstance(audit, dict):
+              dependencies = audit.get("dependencies", [])
+          elif isinstance(audit, list):
+              dependencies = audit
+          else:
+              dependencies = []
+          audit_vulns = 0
+          for dependency in dependencies:
+              if isinstance(dependency, dict):
+                  vulns = dependency.get("vulns", dependency.get("vulnerabilities", []))
+                  if isinstance(vulns, list):
+                      audit_vulns += len(vulns)
+
+          coverage = load_json("coverage.json", {})
+          totals = coverage.get("totals", {}) if isinstance(coverage, dict) else {}
+          coverage_percent = totals.get("percent_covered_display", totals.get("percent_covered", "not generated"))
+
+          format_exit = os.getenv("RUFF_FORMAT_EXIT", "")
+          format_status = "clean" if format_exit == "0" else "format changes reported"
+
+          lines = [
+              "## SPINA code quality baseline",
+              "",
+              "> Baseline mode: existing lint/type/security findings are measured and reported, not yet used as strict blocking thresholds. Test/coverage execution and scanner runtime/configuration failures remain protected.",
+              "",
+              f"- Ruff lint findings: **{ruff_count}**",
+              f"- Ruff format: **{format_status}**",
+              f"- Bandit findings: **{bandit_count}**",
+              f"- Pyright: **{pyright_errors} errors / {pyright_warnings} warnings**",
+              f"- pip-audit known vulnerabilities: **{audit_vulns}**",
+              f"- Gitleaks step outcome: **{os.getenv('GITLEAKS_OUTCOME', 'not run')}**",
+              f"- Backend/mobile test coverage: **{coverage_percent}%**" if coverage_percent != "not generated" else "- Backend/mobile test coverage: **not generated**",
+              "",
+              "Current scope intentionally covers the actively maintained Python backend/mobile service code and tests. Legacy desktop/tooling expansion and blocking thresholds should be tightened in later, reviewed steps.",
+          ]
+          summary = "\n".join(lines) + "\n"
+          Path(os.environ["GITHUB_STEP_SUMMARY"]).write_text(summary, encoding="utf-8")
+          (root / "summary.md").write_text(summary, encoding="utf-8")
+          PY
+
+      - name: Upload code-quality baseline reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spina-code-quality-${{ github.sha }}
+          path: quality-artifacts
+          if-no-files-found: warn
+          retention-days: 14
