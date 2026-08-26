@@ -34,6 +34,11 @@ jobs:
           python --version || exit /b 1
           python -c "import sys; assert sys.version_info >= (3, 11), sys.version" || exit /b 1
 
+      - name: Validate local-report review tooling
+        shell: cmd
+        run: |
+          python -m py_compile tools\persist_ci_report.py tools\render_ci_deep_review.py || exit /b 1
+
       - name: Create isolated quality environment
         shell: cmd
         run: |
@@ -107,12 +112,26 @@ jobs:
           echo - Pyright exit: %PYRIGHT_EXIT%>>quality-artifacts\summary.md
           type quality-artifacts\summary.md>>"%GITHUB_STEP_SUMMARY%"
 
+      - name: Persist full code-quality reports on runner
+        if: always()
+        continue-on-error: true
+        shell: cmd
+        run: |
+          python tools\persist_ci_report.py --source quality-artifacts --root "C:\SPINA_CI_REPORTS" --lane code-quality --commit-sha "${{ github.event.pull_request.head.sha || github.sha }}" --run-id "${{ github.run_id }}" --workflow-name "SPINA Code Quality" --keep 50
+
+      - name: Print code-quality deep review
+        if: always()
+        continue-on-error: true
+        shell: cmd
+        run: |
+          python tools\render_ci_deep_review.py --root "C:\SPINA_CI_REPORTS" --commit-sha "${{ github.event.pull_request.head.sha || github.sha }}" --lane code-quality
+
       - name: Upload code-quality reports
         if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: spina-code-quality-${{ github.sha }}
+          name: spina-code-quality-${{ github.event.pull_request.head.sha || github.sha }}
           path: quality-artifacts
           if-no-files-found: warn
           retention-days: 14

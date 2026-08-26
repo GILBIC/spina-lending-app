@@ -1,0 +1,52 @@
+name: SPINA CI Deep Review (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Exact 40-character commit SHA to review; leave blank for latest saved report
+        required: false
+        default: ""
+        type: string
+      lane:
+        description: Saved report lane to render
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - code-quality
+          - security-compliance
+          - reliability-performance
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spina-ci-deep-review-${{ inputs.commit_sha || 'latest' }}-${{ inputs.lane }}
+  cancel-in-progress: false
+
+jobs:
+  deep-review:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out review tooling
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Render saved local CI report
+        shell: cmd
+        run: |
+          python tools\render_ci_deep_review.py --root "C:\SPINA_CI_REPORTS" --commit-sha "${{ inputs.commit_sha }}" --lane "${{ inputs.lane }}" || exit /b 1
+
+      - name: Explain review boundary
+        shell: cmd
+        run: |
+          echo SPINA CI Deep Review reads only reports intentionally persisted under C:\SPINA_CI_REPORTS.
+          echo Gitleaks secret values are never persisted or replayed by this workflow.
+          echo This workflow does not connect to, migrate, or modify any SPINA database.

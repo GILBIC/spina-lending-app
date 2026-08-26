@@ -101,12 +101,26 @@ jobs:
           echo - Gitleaks outcome: %GITLEAKS_OUTCOME%>>security-artifacts\summary.md
           type security-artifacts\summary.md>>"%GITHUB_STEP_SUMMARY%"
 
+      - name: Persist full security reports on runner
+        if: always()
+        continue-on-error: true
+        shell: cmd
+        run: |
+          python tools\persist_ci_report.py --source security-artifacts --root "C:\SPINA_CI_REPORTS" --lane security-compliance --commit-sha "${{ github.event.pull_request.head.sha || github.sha }}" --run-id "${{ github.run_id }}" --workflow-name "SPINA Security & Compliance" --keep 50
+
+      - name: Print security deep review
+        if: always()
+        continue-on-error: true
+        shell: cmd
+        run: |
+          python tools\render_ci_deep_review.py --root "C:\SPINA_CI_REPORTS" --commit-sha "${{ github.event.pull_request.head.sha || github.sha }}" --lane security-compliance
+
       - name: Upload security baseline reports
         if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: spina-security-${{ github.sha }}
+          name: spina-security-${{ github.event.pull_request.head.sha || github.sha }}
           path: security-artifacts
           if-no-files-found: warn
           retention-days: 14
