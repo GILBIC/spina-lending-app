@@ -175,18 +175,20 @@ jobs:
         run: |
           set "HOST=%RUNNER_TEMP%\gilbic-android-host"
           set "APK_OUT=%GITHUB_WORKSPACE%\gilbic_mobile\build\app\outputs\flutter-apk"
+          set "FLUTTER=%RUNNER_TEMP%\flutter-3.44.7\bin\flutter.bat"
+          if not exist "%FLUTTER%" exit /b 1
           if exist "%HOST%" rmdir /s /q "%HOST%"
           mkdir "%HOST%" || exit /b 1
           pushd "%HOST%"
-          call flutter create --platforms=android --org com.spinalending --project-name gilbic_mobile . || exit /b 1
+          call "%FLUTTER%" create --platforms=android --org com.spinalending --project-name gilbic_mobile . || exit /b 1
           if exist "lib" rmdir /s /q "lib"
           xcopy /e /i /y "%GITHUB_WORKSPACE%\gilbic_mobile\lib" "lib" >nul || exit /b 1
           copy /y "%GITHUB_WORKSPACE%\gilbic_mobile\pubspec.yaml" "pubspec.yaml" >nul || exit /b 1
           echo kotlin.incremental=false>>"android\gradle.properties"
           echo kotlin.compiler.execution.strategy=in-process>>"android\gradle.properties"
           echo org.gradle.daemon=false>>"android\gradle.properties"
-          call flutter pub get || exit /b 1
-          call flutter build apk --debug --target-platform android-arm64,android-x64 --no-pub || exit /b 1
+          call "%FLUTTER%" pub get || exit /b 1
+          call "%FLUTTER%" build apk --debug --target-platform android-arm64,android-x64 --no-pub || exit /b 1
           if not exist "build\app\outputs\flutter-apk\app-debug.apk" exit /b 1
           if not exist "%APK_OUT%" mkdir "%APK_OUT%" || exit /b 1
           copy /y "build\app\outputs\flutter-apk\app-debug.apk" "%APK_OUT%\app-debug.apk" >nul || exit /b 1
