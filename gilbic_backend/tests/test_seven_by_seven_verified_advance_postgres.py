@@ -363,3 +363,151 @@ def test_verified_advance_is_future_row_evidence_without_receipt_date_financial_
         (4, row4, Decimal("20.00"), "future_advance_oldest_first", Decimal("2971.00"), Decimal("2971.00"), "deferred_until_effective_due_date"),
         (4, row4, Decimal("30.00"), "future_advance_oldest_first", Decimal("2971.00"), Decimal("2971.00"), "deferred_until_effective_due_date"),
     ]
+
+
+def test_full_advance_row_activates_on_due_date_before_later_advance() -> None:
+    if not _schema_supports_verified_advance():
+        pytest.skip("Migration 0104 future Advance allocation basis is not installed")
+
+    case = _setup_case()
+    first_payment = _submit(
+        case,
+        _command(
+            case,
+            entry_type=CollectionEntryType.PAYMENT,
+            amount="50.00",
+            device_sequence=1,
+            route_version=0,
+        ),
+    )
+    assert first_payment.status is CollectionStatus.ACCEPTED
+    assert first_payment.posted is not None
+    assert first_payment.posted.official_balance == Decimal("2971.00")
+
+    row2 = case.payment_start + timedelta(days=1)
+    row3 = case.payment_start + timedelta(days=2)
+    advance_row2 = _submit(
+        case,
+        _command(
+            case,
+            entry_type=CollectionEntryType.ADVANCE,
+            amount="50.00",
+            device_sequence=2,
+            route_version=1,
+            covered_dates=(row2,),
+        ),
+    )
+    assert advance_row2.status is CollectionStatus.ACCEPTED
+    assert advance_row2.posted is not None
+    assert advance_row2.posted.official_balance == Decimal("2971.00")
+
+    advance_row3_on_row2_due_date = _submit(
+        case,
+        _command(
+            case,
+            entry_type=CollectionEntryType.ADVANCE,
+            amount="50.00",
+            device_sequence=3,
+            route_version=2,
+            collection_date=row2,
+            covered_dates=(row3,),
+        ),
+    )
+    assert advance_row3_on_row2_due_date.status is CollectionStatus.ACCEPTED
+    assert advance_row3_on_row2_due_date.posted is not None
+    assert advance_row3_on_row2_due_date.posted.official_balance == Decimal("2942.00")
+
+    with _connection_factory() as connection:
+        state = connection.execute(
+            """
+            select remaining_balance, state_version
+            from lending.loan_collection_state
+            where loan_id = %s
+            """,
+            (case.loan_id,),
+        ).fetchone()
+        receipt = connection.execute(
+            """
+            select previous_balance, official_balance
+            from lending.collection_transactions
+            where id = %s
+            """,
+            (UUID(advance_row3_on_row2_due_date.posted.server_transaction_id),),
+        ).fetchone()
+
+    assert state == (Decimal("2942.00"), 3)
+    assert receipt == (Decimal("2942.00"), Decimal("2942.00"))
+
+
+def test_partial_advance_row_activates_interest_then_due_payment_finishes_principal() -> None:
+    if not _schema_supports_verified_advance():
+        pytest.skip("Migration 0104 future Advance allocation basis is not installed")
+
+    case = _setup_case()
+    first_payment = _submit(
+        case,
+        _command(
+            case,
+            entry_type=CollectionEntryType.PAYMENT,
+            amount="50.00",
+            device_sequence=1,
+            route_version=0,
+        ),
+    )
+    assert first_payment.status is CollectionStatus.ACCEPTED
+    assert first_payment.posted is not None
+    assert first_payment.posted.official_balance == Decimal("2971.00")
+
+    row2 = case.payment_start + timedelta(days=1)
+    partial_advance = _submit(
+        case,
+        _command(
+            case,
+            entry_type=CollectionEntryType.ADVANCE,
+            amount="20.00",
+            device_sequence=2,
+            route_version=1,
+            covered_dates=(row2,),
+        ),
+    )
+    assert partial_advance.status is CollectionStatus.ACCEPTED
+    assert partial_advance.posted is not None
+    assert partial_advance.posted.official_balance == Decimal("2971.00")
+
+    due_remainder = _submit(
+        case,
+        _command(
+            case,
+            entry_type=CollectionEntryType.PAYMENT,
+            amount="30.00",
+            device_sequence=3,
+            route_version=2,
+            collection_date=row2,
+        ),
+    )
+    assert due_remainder.status is CollectionStatus.ACCEPTED
+    assert due_remainder.posted is not None
+    assert due_remainder.posted.official_balance == Decimal("2942.00")
+
+    with _connection_factory() as connection:
+        receipt = connection.execute(
+            """
+            select
+                previous_balance,
+                official_balance,
+                details->>'seven_by_seven_interest_paid',
+                details->>'seven_by_seven_principal_paid',
+                details->>'seven_by_seven_opening_interest_arrears'
+            from lending.collection_transactions
+            where id = %s
+            """,
+            (UUID(due_remainder.posted.server_transaction_id),),
+        ).fetchone()
+
+    assert receipt == (
+        Decimal("2971.00"),
+        Decimal("2942.00"),
+        "1.00",
+        "29.00",
+        "1.00",
+    )
