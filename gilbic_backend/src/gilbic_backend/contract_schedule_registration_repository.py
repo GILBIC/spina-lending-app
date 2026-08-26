@@ -8,9 +8,10 @@ from uuid import UUID
 
 from psycopg.rows import dict_row
 
-from .contract_schedule_engine import ContractInstallment, PaymentFrequency
+from .contract_schedule_engine import PaymentFrequency
 from .contract_schedule_registration_service import (
     ContractEvidenceBasis,
+    VerifiedScheduleInstallment,
     register_verified_contract_schedule,
 )
 from .contract_schedule_service import (
@@ -27,6 +28,8 @@ class ContractScheduleLoanContext:
     client_code: str
     client_name: str
     loan_type_name: str
+    calculation_mode: str
+    daily_interest_per_1000: Decimal
     principal: Decimal
     daily_amount: Decimal
     date_released: date
@@ -90,6 +93,9 @@ class PostgresContractScheduleRegistrationRepository:
                         client.client_code,
                         client.full_name as client_name,
                         loan_type.name as loan_type_name,
+                        loan_type.calculation_mode,
+                        coalesce(loan_type.daily_interest_per_1000, 0)::numeric(18,2)
+                            as daily_interest_per_1000,
                         loan.principal,
                         loan.daily_amount,
                         loan.date_released,
@@ -125,7 +131,7 @@ class PostgresContractScheduleRegistrationRepository:
         contract_signed_date: date,
         effective_from: date,
         grace_days: int,
-        installments: Sequence[ContractInstallment],
+        installments: Sequence[VerifiedScheduleInstallment],
         evidence_basis: ContractEvidenceBasis,
         evidence_reference: str,
         verification_note: str,
