@@ -65,15 +65,44 @@ jobs:
           if %CODE% GTR 1 exit /b %CODE%
           exit /b 0
 
+      - name: Install pinned Gitleaks scanner
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '8.30.1'
+          $expectedSha256 = 'd29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e'
+          $archive = Join-Path $env:RUNNER_TEMP "gitleaks-$version-windows-x64.zip"
+          $toolDir = Join-Path $env:RUNNER_TEMP "gitleaks-$version"
+          $url = "https://github.com/gitleaks/gitleaks/releases/download/v$version/gitleaks_${version}_windows_x64.zip"
+          if (Test-Path -LiteralPath $archive) { Remove-Item -LiteralPath $archive -Force }
+          if (Test-Path -LiteralPath $toolDir) { Remove-Item -LiteralPath $toolDir -Recurse -Force }
+          Invoke-WebRequest -Uri $url -OutFile $archive -UseBasicParsing
+          $actualSha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualSha256 -ne $expectedSha256) {
+            throw "Gitleaks archive checksum mismatch: expected $expectedSha256, got $actualSha256"
+          }
+          Expand-Archive -LiteralPath $archive -DestinationPath $toolDir -Force
+          $exe = Join-Path $toolDir 'gitleaks.exe'
+          if (-not (Test-Path -LiteralPath $exe)) { throw "Pinned Gitleaks executable was not found after extraction." }
+          & $exe version
+          if ($LASTEXITCODE -ne 0) { throw "Pinned Gitleaks executable failed its version check." }
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "GITLEAKS_EXE=$exe"
+
       - name: Gitleaks secret baseline
         id: gitleaks
-        continue-on-error: true
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ENABLE_COMMENTS: "false"
-          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
-          GITLEAKS_ENABLE_SUMMARY: "true"
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $log = Join-Path $env:GITHUB_WORKSPACE 'security-artifacts\gitleaks-redacted.txt'
+          & $env:GITLEAKS_EXE git --redact=100 --verbose --no-banner . *> $log
+          $code = $LASTEXITCODE
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value "exit_code=$code"
+          Get-Content -LiteralPath $log
+          if ($code -gt 1) {
+            Write-Error "Gitleaks scanner/runtime failure with exit code $code."
+            exit $code
+          }
+          exit 0
 
       - name: Run authentication and protected-control tests
         shell: cmd
@@ -89,16 +118,16 @@ jobs:
         env:
           BANDIT_EXIT: ${{ steps.bandit.outputs.exit_code }}
           PIP_AUDIT_EXIT: ${{ steps.pip_audit.outputs.exit_code }}
-          GITLEAKS_OUTCOME: ${{ steps.gitleaks.outcome }}
+          GITLEAKS_EXIT: ${{ steps.gitleaks.outputs.exit_code }}
         run: |
           if not exist security-artifacts mkdir security-artifacts
           echo ## SPINA Security ^& Compliance>security-artifacts\summary.md
           echo.>>security-artifacts\summary.md
-          echo Security findings are baselined while authentication and protected-operation control tests remain blocking.>>security-artifacts\summary.md
+          echo Security findings are baselined while scanner/runtime errors, authentication, and protected-operation control tests remain blocking.>>security-artifacts\summary.md
           echo.>>security-artifacts\summary.md
           echo - Bandit exit: %BANDIT_EXIT%>>security-artifacts\summary.md
           echo - pip-audit exit: %PIP_AUDIT_EXIT%>>security-artifacts\summary.md
-          echo - Gitleaks outcome: %GITLEAKS_OUTCOME%>>security-artifacts\summary.md
+          echo - Gitleaks exit: %GITLEAKS_EXIT%>>security-artifacts\summary.md
           type security-artifacts\summary.md>>"%GITHUB_STEP_SUMMARY%"
 
       - name: Persist full security reports on runner
