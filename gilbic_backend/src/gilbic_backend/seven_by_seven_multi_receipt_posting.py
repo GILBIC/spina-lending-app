@@ -7,13 +7,13 @@ from uuid import UUID
 from spina_mobile_collections.contracts import CollectionCommand, CollectionEntryType
 from spina_mobile_collections.service import CollectionRejected
 
-from .seven_by_seven_verified_advance_posting import (
-    VerifiedAdvanceSevenBySevenCollectionPostingBridge,
+from .seven_by_seven_advance_activation_posting import (
+    MaturingVerifiedAdvanceSevenBySevenCollectionPostingBridge,
 )
 
 
 class MultiReceiptSevenBySevenCollectionPostingBridge(
-    VerifiedAdvanceSevenBySevenCollectionPostingBridge
+    MaturingVerifiedAdvanceSevenBySevenCollectionPostingBridge
 ):
     """Permit legitimate distinct 7x7 receipts on one client/date.
 
@@ -25,7 +25,8 @@ class MultiReceiptSevenBySevenCollectionPostingBridge(
     ``collection_covered_dates`` row. Verified ADVANCE also uses signed
     installment-allocation evidence as its authority, so a later partial Advance
     may continue the same future row without turning that row into a duplicate
-    cash receipt.
+    cash receipt. Matured verified Advance is financially activated only when
+    its effective signed row date is reached.
     """
 
     def _verify_seven_by_seven_date_available(
