@@ -22,13 +22,17 @@ class _Cursor:
                 {
                     "id": UUID("11111111-1111-4111-8111-111111111111"),
                     "collection_date": date(2026, 8, 1),
-                    "amount": Decimal("21.00"),
+                    "entry_type": "payment",
+                    "receipt_amount": Decimal("21.00"),
+                    "deferred_amount": Decimal("0.00"),
                     "accepted_at": datetime(2026, 8, 1, 1, tzinfo=timezone.utc),
                 },
                 {
                     "id": UUID("22222222-2222-4222-8222-222222222222"),
                     "collection_date": date(2026, 8, 3),
-                    "amount": Decimal("21.00"),
+                    "entry_type": "payment",
+                    "receipt_amount": Decimal("21.00"),
+                    "deferred_amount": Decimal("0.00"),
                     "accepted_at": datetime(2026, 8, 3, 1, tzinfo=timezone.utc),
                 },
             ]

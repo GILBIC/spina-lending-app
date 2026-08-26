@@ -26,10 +26,11 @@ TARGET_TESTS = (
     / "tests"
     / "test_seven_by_seven_verified_advance_postgres.py",
 )
-# The current combined collection bridge now reaches both Past Due capture (0103)
-# and protected future-row Advance allocation basis (0104). The disposable schema
-# must match those current code dependencies before exercising production posting.
-BOOTSTRAP_THROUGH = 104
+# The current combined collection bridge reaches Past Due capture (0103),
+# protected future-row Advance allocation basis (0104), and immutable No
+# Collection voluntary-completion evidence (0105). The disposable schema must
+# match those current code dependencies before exercising production posting.
+BOOTSTRAP_THROUGH = 105
 BASE_DATABASE_URL_ENV = "COMBINED_RENEWAL_DATABASE_URL"
 DISPOSABLE_DATABASE_PREFIX = "spina_combined_renewal_"
 
