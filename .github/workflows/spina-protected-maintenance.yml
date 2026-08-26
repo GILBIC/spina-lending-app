@@ -1,0 +1,81 @@
+name: SPINA Protected Maintenance (manual only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Protected maintenance operation
+        required: true
+        type: choice
+        options:
+          - ecl-credit-risk-labels
+          - v1-tax-accounting
+      confirm_protected_live_database:
+        description: I explicitly authorize this protected live-database maintenance run
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spina-protected-maintenance
+  cancel-in-progress: false
+
+jobs:
+  protected-maintenance:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 60
+
+    steps:
+      - name: Require explicit main-branch authorization
+        shell: cmd
+        run: |
+          if not "${{ github.ref }}"=="refs/heads/main" exit /b 1
+          if not "${{ inputs.confirm_protected_live_database }}"=="true" exit /b 1
+
+      - name: Require approved protected runner
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SPINA-WINDOWS') {
+            throw "Protected maintenance requires SPINA-WINDOWS; current runner is $env:RUNNER_NAME."
+          }
+
+      - name: Check out exact main revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Create isolated maintenance environment
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-protected-maintenance-venv"
+          if exist "%VENV%" rmdir /s /q "%VENV%"
+          python -m venv "%VENV%" || exit /b 1
+          echo PROTECTED_MAINTENANCE_VENV=%VENV%>>"%GITHUB_ENV%"
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\gilbic_backend[test]" || exit /b 1
+
+      - name: Run protected ECL migration and verification
+        if: inputs.operation == 'ecl-credit-risk-labels'
+        shell: cmd
+        run: |
+          "%PROTECTED_MAINTENANCE_VENV%\Scripts\python.exe" tools\apply_ecl_live_migrations_version_aware.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+
+      - name: Run protected V1 tax accounting migration and verification
+        if: inputs.operation == 'v1-tax-accounting'
+        shell: cmd
+        run: |
+          "%PROTECTED_MAINTENANCE_VENV%\Scripts\python.exe" tools\apply_v1_tax_accounting_migrations.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
+
+      - name: Require a clean committed tree
+        if: always()
+        shell: cmd
+        run: |
+          git diff --check || exit /b 1
+          git diff --exit-code || exit /b 1
+          git diff --cached --exit-code || exit /b 1

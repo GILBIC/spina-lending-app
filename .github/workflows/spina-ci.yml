@@ -1,4 +1,4 @@
-name: SPINA unified validation
+name: SPINA Core Validation
 
 on:
   pull_request:
@@ -24,7 +24,7 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: spina-ci-${{ github.event.pull_request.number || github.ref }}
+  group: spina-core-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -35,7 +35,7 @@ jobs:
        github.event.pull_request.head.repo.full_name == github.repository &&
        github.event.pull_request.user.login == github.repository_owner)
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 75
+    timeout-minutes: 100
 
     steps:
       - name: Check out exact revision
@@ -68,7 +68,7 @@ jobs:
       - name: Create isolated Python environment
         shell: cmd
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
           if exist "%VENV%" rmdir /s /q "%VENV%"
           python -m venv "%VENV%" || exit /b 1
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
@@ -77,7 +77,7 @@ jobs:
         if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
         shell: cmd
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile" || exit /b 1
           "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\gilbic_backend[test]" || exit /b 1
 
@@ -85,7 +85,7 @@ jobs:
         if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
         shell: cmd
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
           "%VENV%\Scripts\python.exe" -m py_compile OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile tools\reuse_validated_pr_ci.py || exit /b 1
           "%VENV%\Scripts\python.exe" -m py_compile tools\apply_stage5e3_migration.py || exit /b 1
@@ -103,7 +103,7 @@ jobs:
         shell: cmd
         run: |
           echo Reusing successful PR #${{ steps.validated_pr.outputs.validated_pr_number }} validation run ${{ steps.validated_pr.outputs.validated_workflow_run_id }} for exact head ${{ steps.validated_pr.outputs.validated_head_sha }}.
-          echo Dedicated financial slice workflows own required live database verification; unified CI does not rerun completed live financial migrations.
+          echo Financial/database validation is owned by the separate SPINA Financial and Database workflow.
 
       - name: Run backend and database tests
         if: github.event_name != 'push' || steps.validated_pr.outputs.reuse_validation != 'true'
@@ -111,7 +111,7 @@ jobs:
         env:
           GILBIC_TEST_DATABASE_URL: ${{ secrets.GILBIC_TEST_DATABASE_URL }}
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
           "%VENV%\Scripts\python.exe" -m pytest -q gilbic_backend\tests spina_backend_mobile\tests || exit /b 1
 
       - name: Install Flutter 3.44.7
@@ -149,8 +149,28 @@ jobs:
         working-directory: gilbic_mobile
         run: flutter test || exit /b 1
 
+      # The former standalone Collector Android acceptance lane duplicated the
+      # full backend and Flutter tests above. Keep its unique protection here:
+      # every PR must still prove that an Android review APK can be packaged.
+      - name: Reclaim runner-owned space before Android smoke build
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_apk)
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $venv = Join-Path $env:RUNNER_TEMP 'spina-core-ci-venv'
+          if (Test-Path -LiteralPath $venv) {
+            Remove-Item -LiteralPath $venv -Recurse -Force -ErrorAction Continue
+          }
+          $driveName = [System.IO.Path]::GetPathRoot($env:RUNNER_TEMP).Substring(0, 1)
+          $freeBytes = (Get-PSDrive -Name $driveName).Free
+          $freeGb = [math]::Round($freeBytes / 1GB, 2)
+          Write-Host "Free disk before Android smoke build: $freeGb GB"
+          if ($freeBytes -lt 6GB) {
+            throw "SPINA Core Android smoke build requires at least 6 GB free; only $freeGb GB is available."
+          }
+
       - name: Build Android debug APK in generated host
-        if: github.event_name == 'workflow_dispatch' && inputs.upload_apk
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_apk)
         shell: cmd
         run: |
           set "HOST=%RUNNER_TEMP%\gilbic-android-host"
@@ -164,13 +184,21 @@ jobs:
           copy /y "%GITHUB_WORKSPACE%\gilbic_mobile\pubspec.yaml" "pubspec.yaml" >nul || exit /b 1
           echo kotlin.incremental=false>>"android\gradle.properties"
           echo kotlin.compiler.execution.strategy=in-process>>"android\gradle.properties"
+          echo org.gradle.daemon=false>>"android\gradle.properties"
           call flutter pub get || exit /b 1
-          call flutter build apk --debug --no-pub || exit /b 1
+          call flutter build apk --debug --target-platform android-arm64,android-x64 --no-pub || exit /b 1
           if not exist "build\app\outputs\flutter-apk\app-debug.apk" exit /b 1
           if not exist "%APK_OUT%" mkdir "%APK_OUT%" || exit /b 1
           copy /y "build\app\outputs\flutter-apk\app-debug.apk" "%APK_OUT%\app-debug.apk" >nul || exit /b 1
           for %%I in ("%APK_OUT%\app-debug.apk") do echo APK size: %%~zI bytes
           popd
+          rmdir /s /q "%HOST%" || exit /b 1
+
+      - name: Verify Android APK ABI coverage
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.upload_apk)
+        shell: cmd
+        run: |
+          python -c "import zipfile; p=r'gilbic_mobile\build\app\outputs\flutter-apk\app-debug.apk'; z=zipfile.ZipFile(p); n=set(z.namelist()); assert 'lib/arm64-v8a/libflutter.so' in n, 'missing arm64-v8a Flutter runtime'; assert 'lib/x86_64/libflutter.so' in n, 'missing x86_64 Flutter runtime'" || exit /b 1
 
       - name: Require a clean committed tree
         shell: cmd
@@ -179,10 +207,9 @@ jobs:
           git diff --exit-code || exit /b 1
           git diff --cached --exit-code || exit /b 1
 
-      # Normal validation skips the large Android build. A manual Run workflow
-      # with upload_apk enabled builds and stores the temporary APK.
       - name: Upload Android debug APK
         if: github.event_name == 'workflow_dispatch' && inputs.upload_apk
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: gilbic-mobile-debug-${{ github.sha }}
@@ -190,42 +217,41 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      # Completed Stage 5E live migrations no longer run on every accounting
-      # merge. They remain available only through an explicit manual maintenance
-      # dispatch and preserve every existing fail-closed marker and live gate.
+      # Completed Stage 5E live migrations remain explicit manual maintenance
+      # only. Normal PR/push Core validation never executes these steps.
       - name: Manual Stage 5E.2 live historical import
         if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e2-import.once') != ''
         shell: cmd
         env:
           GILBIC_TEST_DATABASE_URL: ${{ secrets.GILBIC_TEST_DATABASE_URL }}
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
           "%VENV%\Scripts\python.exe" tools\import_ecl_history.py --find-source-name "loans(20260808-080255).db" --search-root "C:\Users\pc" --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL --expected-sha256 3ef840b6221c9d94327c3e5beb10318899f7a5ee96643df87a49b02312d77260 --expected-episodes 992 || exit /b 1
 
       - name: Manual Stage 5E.3 live outcome-review migration
         if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e3-live-migration.once') != ''
         shell: cmd
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_stage5e3_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL --expected-episodes 992 --expected-usable 919 || exit /b 1
 
       - name: Manual Stage 5E.4.1 live contractual DPD migration
         if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e41-live-migration.once') != ''
         shell: cmd
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_stage5e41_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
 
       - name: Manual Stage 5E.4.3 live verified contract registration migration
         if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e43-live-migration.once') != ''
         shell: cmd
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_stage5e43_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
 
       - name: Manual Stage 5E.4.6A live per-loan activation schema migration
         if: github.event_name == 'workflow_dispatch' && inputs.run_legacy_live_migrations && hashFiles('tools/stage5e46a-live-migration.once') != ''
         shell: cmd
         run: |
-          set "VENV=%RUNNER_TEMP%\spina-unified-ci-venv"
+          set "VENV=%RUNNER_TEMP%\spina-core-ci-venv"
           "%VENV%\Scripts\python.exe" tools\apply_stage5e46a_migration.py --env-file "C:\GitHub\spina-lending-app-clean\.env" --env-file "C:\SPINA_ONLINE\spina_backend\.env" --database-url-env GILBIC_DATABASE_URL || exit /b 1
