@@ -51,8 +51,8 @@ def register_verified_contract_schedule(
     a dedicated restructure workflow.
 
     Component-bearing schedule rows (currently the signed 7x7 model) are stored
-    on the existing contractual installment evidence columns immediately after
-    the generic schedule rows are created, inside the same caller transaction.
+    with principal/interest components on the initial immutable installment-row
+    insert. They are never initialized by a follow-up UPDATE.
     """
 
     if not confirmed:
@@ -70,6 +70,14 @@ def register_verified_contract_schedule(
         raise ContractScheduleConflict("Signed-contract evidence reference is required.")
     if not normalized_note:
         raise ContractScheduleConflict("Contract verification note is required.")
+
+    for installment in installments:
+        principal_component = getattr(installment, "principal_component", None)
+        interest_component = getattr(installment, "interest_component", None)
+        if (principal_component is None) != (interest_component is None):
+            raise ContractScheduleConflict(
+                "Contractual principal and interest components must be supplied together."
+            )
 
     if supersede_active:
         cursor.execute(
@@ -114,35 +122,6 @@ def register_verified_contract_schedule(
         created_by_user_id=verified_by_user_id,
         supersede_active=supersede_active,
     )
-
-    for installment in installments:
-        principal_component = getattr(installment, "principal_component", None)
-        interest_component = getattr(installment, "interest_component", None)
-        if principal_component is None and interest_component is None:
-            continue
-        if principal_component is None or interest_component is None:
-            raise ContractScheduleConflict(
-                "Contractual principal and interest components must be supplied together."
-            )
-        cursor.execute(
-            """
-            update lending.loan_contract_installments
-            set principal_component = %s,
-                interest_component = %s
-            where schedule_id = %s
-              and installment_number = %s
-            """,
-            (
-                principal_component,
-                interest_component,
-                schedule_id,
-                installment.installment_number,
-            ),
-        )
-        if cursor.rowcount != 1:
-            raise ContractScheduleConflict(
-                "A contractual installment component row could not be persisted exactly once."
-            )
 
     cursor.execute(
         """

@@ -49,6 +49,11 @@ def store_contract_schedule(
     Existing active schedules are never silently replaced. A restructure or
     renewal must explicitly request supersession so the old schedule remains
     preserved as evidence.
+
+    Component-bearing installments are inserted with their principal/interest
+    components in the same immutable row creation. Verified schedule rows are
+    protected from UPDATE after insertion, so component initialization must not
+    depend on a follow-up mutation.
     """
 
     reference = contract_reference.strip()
@@ -127,21 +132,31 @@ def store_contract_schedule(
     schedule_id = cursor.fetchone()[0]
 
     for installment in installments:
+        principal_component = getattr(installment, "principal_component", None)
+        interest_component = getattr(installment, "interest_component", None)
+        if (principal_component is None) != (interest_component is None):
+            raise ContractScheduleConflict(
+                "Contractual principal and interest components must be supplied together."
+            )
         cursor.execute(
             """
             insert into lending.loan_contract_installments (
                 schedule_id,
                 installment_number,
                 due_date,
-                contractual_amount
+                contractual_amount,
+                principal_component,
+                interest_component
             )
-            values (%s, %s, %s, %s)
+            values (%s, %s, %s, %s, %s, %s)
             """,
             (
                 schedule_id,
                 installment.installment_number,
                 installment.due_date,
                 installment.contractual_amount,
+                principal_component,
+                interest_component,
             ),
         )
     return schedule_id
