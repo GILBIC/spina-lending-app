@@ -1,0 +1,112 @@
+name: SPINA Security & Compliance
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: spina-security-compliance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-compliance:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 40
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create isolated security environment
+        shell: cmd
+        run: |
+          set "VENV=%RUNNER_TEMP%\spina-security-ci-venv"
+          if exist "%VENV%" rmdir /s /q "%VENV%"
+          python -m venv "%VENV%" || exit /b 1
+          echo SECURITY_VENV=%VENV%>>"%GITHUB_ENV%"
+          "%VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --upgrade pip || exit /b 1
+
+      - name: Install security and control-test dependencies
+        shell: cmd
+        run: |
+          "%SECURITY_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "bandit>=1.8,<2" "pip-audit>=2.8,<3" || exit /b 1
+          "%SECURITY_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile" -e ".\gilbic_backend[test]" || exit /b 1
+          if not exist security-artifacts mkdir security-artifacts
+
+      # Findings are baselined first; scanner/runtime errors above the normal findings exit code fail closed.
+      - name: Bandit security baseline
+        id: bandit
+        shell: cmd
+        run: |
+          "%SECURITY_VENV%\Scripts\bandit.exe" -r gilbic_backend\src spina_backend_mobile\src -f json -o security-artifacts\bandit.json
+          set "CODE=%ERRORLEVEL%"
+          echo exit_code=%CODE%>>"%GITHUB_OUTPUT%"
+          if %CODE% GTR 1 exit /b %CODE%
+          exit /b 0
+
+      - name: Dependency vulnerability baseline
+        id: pip_audit
+        shell: cmd
+        run: |
+          "%SECURITY_VENV%\Scripts\pip-audit.exe" --local --skip-editable -f json -o security-artifacts\pip-audit.json
+          set "CODE=%ERRORLEVEL%"
+          echo exit_code=%CODE%>>"%GITHUB_OUTPUT%"
+          if %CODE% GTR 1 exit /b %CODE%
+          exit /b 0
+
+      - name: Gitleaks secret baseline
+        id: gitleaks
+        continue-on-error: true
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+          GITLEAKS_ENABLE_SUMMARY: "true"
+
+      - name: Run authentication and protected-control tests
+        shell: cmd
+        env:
+          GILBIC_TEST_DATABASE_URL: ""
+        run: |
+          "%SECURITY_VENV%\Scripts\python.exe" -m pytest -q gilbic_backend\tests\test_auth_client.py gilbic_backend\tests\test_v1_tax_live_verifier_contract.py gilbic_backend\tests\test_unified_ci_live_verifier_ownership.py || exit /b 1
+          "%SECURITY_VENV%\Scripts\python.exe" -m pytest -q spina_backend_mobile\tests\test_service.py -k "rejects_unregistered_device or rejects_mismatched_transaction_headers" || exit /b 1
+
+      - name: Write security and compliance summary
+        if: always()
+        shell: cmd
+        env:
+          BANDIT_EXIT: ${{ steps.bandit.outputs.exit_code }}
+          PIP_AUDIT_EXIT: ${{ steps.pip_audit.outputs.exit_code }}
+          GITLEAKS_OUTCOME: ${{ steps.gitleaks.outcome }}
+        run: |
+          if not exist security-artifacts mkdir security-artifacts
+          echo ## SPINA Security ^& Compliance>security-artifacts\summary.md
+          echo.>>security-artifacts\summary.md
+          echo Security findings are baselined while authentication and protected-operation control tests remain blocking.>>security-artifacts\summary.md
+          echo.>>security-artifacts\summary.md
+          echo - Bandit exit: %BANDIT_EXIT%>>security-artifacts\summary.md
+          echo - pip-audit exit: %PIP_AUDIT_EXIT%>>security-artifacts\summary.md
+          echo - Gitleaks outcome: %GITLEAKS_OUTCOME%>>security-artifacts\summary.md
+          type security-artifacts\summary.md>>"%GITHUB_STEP_SUMMARY%"
+
+      - name: Upload security baseline reports
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: spina-security-${{ github.sha }}
+          path: security-artifacts
+          if-no-files-found: warn
+          retention-days: 14

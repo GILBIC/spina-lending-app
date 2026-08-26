@@ -1,4 +1,4 @@
-name: SPINA code quality baseline
+name: SPINA Code Quality
 
 on:
   pull_request:
@@ -46,12 +46,12 @@ jobs:
       - name: Install quality and test dependencies
         shell: cmd
         run: |
-          "%QUALITY_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "ruff>=0.11,<1" "bandit>=1.8,<2" "pip-audit>=2.8,<3" "pyright>=1.1,<2" "pytest-cov>=6,<8" || exit /b 1
+          "%QUALITY_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check "ruff>=0.11,<1" "pyright>=1.1,<2" "pytest-cov>=6,<8" || exit /b 1
           "%QUALITY_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -e ".\spina_backend_mobile[test]" -e ".\gilbic_backend[test]" || exit /b 1
           if not exist quality-artifacts mkdir quality-artifacts
 
-      # Baseline mode reports existing findings without making them blockers yet.
-      # Scanner/runtime failures still fail the job.
+      # Baseline mode reports existing maintainability findings without making them blockers yet.
+      # Tool/runtime failures still fail the job.
       - name: Ruff lint baseline
         id: ruff_lint
         shell: cmd
@@ -72,16 +72,6 @@ jobs:
           if %CODE% GTR 1 type quality-artifacts\ruff-format.txt & exit /b %CODE%
           exit /b 0
 
-      - name: Bandit security baseline
-        id: bandit
-        shell: cmd
-        run: |
-          "%QUALITY_VENV%\Scripts\bandit.exe" -r gilbic_backend\src spina_backend_mobile\src -f json -o quality-artifacts\bandit.json
-          set "CODE=%ERRORLEVEL%"
-          echo exit_code=%CODE%>>"%GITHUB_OUTPUT%"
-          if %CODE% GTR 1 exit /b %CODE%
-          exit /b 0
-
       - name: Pyright typed-code baseline
         id: pyright
         shell: cmd
@@ -91,26 +81,6 @@ jobs:
           echo exit_code=%CODE%>>"%GITHUB_OUTPUT%"
           if %CODE% GTR 1 type quality-artifacts\pyright.json & exit /b %CODE%
           exit /b 0
-
-      - name: Dependency vulnerability baseline
-        id: pip_audit
-        shell: cmd
-        run: |
-          "%QUALITY_VENV%\Scripts\pip-audit.exe" --local --skip-editable -f json -o quality-artifacts\pip-audit.json
-          set "CODE=%ERRORLEVEL%"
-          echo exit_code=%CODE%>>"%GITHUB_OUTPUT%"
-          if %CODE% GTR 1 exit /b %CODE%
-          exit /b 0
-
-      - name: Gitleaks secret baseline
-        id: gitleaks
-        continue-on-error: true
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ENABLE_COMMENTS: "false"
-          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "true"
-          GITLEAKS_ENABLE_SUMMARY: "true"
 
       - name: Run backend tests with coverage
         shell: cmd
@@ -125,27 +95,19 @@ jobs:
         env:
           RUFF_LINT_EXIT: ${{ steps.ruff_lint.outputs.exit_code }}
           RUFF_FORMAT_EXIT: ${{ steps.ruff_format.outputs.exit_code }}
-          BANDIT_EXIT: ${{ steps.bandit.outputs.exit_code }}
           PYRIGHT_EXIT: ${{ steps.pyright.outputs.exit_code }}
-          PIP_AUDIT_EXIT: ${{ steps.pip_audit.outputs.exit_code }}
-          GITLEAKS_OUTCOME: ${{ steps.gitleaks.outcome }}
         run: |
           if not exist quality-artifacts mkdir quality-artifacts
-          echo ## SPINA code quality baseline>quality-artifacts\summary.md
+          echo ## SPINA Code Quality>quality-artifacts\summary.md
           echo.>>quality-artifacts\summary.md
-          echo Baseline mode reports existing findings without making them strict blockers yet.>>quality-artifacts\summary.md
+          echo Maintainability checks are in baseline mode while existing technical debt is measured and reduced.>>quality-artifacts\summary.md
           echo.>>quality-artifacts\summary.md
           echo - Ruff lint exit: %RUFF_LINT_EXIT%>>quality-artifacts\summary.md
           echo - Ruff format exit: %RUFF_FORMAT_EXIT%>>quality-artifacts\summary.md
-          echo - Bandit exit: %BANDIT_EXIT%>>quality-artifacts\summary.md
           echo - Pyright exit: %PYRIGHT_EXIT%>>quality-artifacts\summary.md
-          echo - pip-audit exit: %PIP_AUDIT_EXIT%>>quality-artifacts\summary.md
-          echo - Gitleaks outcome: %GITLEAKS_OUTCOME%>>quality-artifacts\summary.md
           type quality-artifacts\summary.md>>"%GITHUB_STEP_SUMMARY%"
 
-      # Report upload is useful but must not turn a healthy quality run red when
-      # the repository-level GitHub Actions artifact quota is temporarily full.
-      - name: Upload code-quality baseline reports
+      - name: Upload code-quality reports
         if: always()
         continue-on-error: true
         uses: actions/upload-artifact@v4
