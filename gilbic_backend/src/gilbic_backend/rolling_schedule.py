@@ -25,6 +25,16 @@ class RollingScheduleInstallment:
 
 
 @dataclass(frozen=True, slots=True)
+class RollingScheduleDayClose:
+    business_date: date
+    scheduled_count: int
+    incomplete_count: int
+    shortfall_amount: Decimal
+    extension_slots_added: int
+    close_status: str
+
+
+@dataclass(frozen=True, slots=True)
 class RollingScheduleProjection:
     base_maturity: date | None
     updated_maturity: date | None
@@ -32,6 +42,70 @@ class RollingScheduleProjection:
     past_due_count: int
     past_due_amount: Decimal
     projection_status: str
+    finalized_through_date: date | None = None
+
+
+def finalize_rolling_schedule_day(
+    *,
+    installments: Iterable[RollingScheduleInstallment],
+    business_date: date,
+) -> RollingScheduleDayClose:
+    """Finalize one authoritative collection day from aggregate row state.
+
+    Same-day receipts are deliberately not interpreted one-by-one here. The
+    caller supplies the current remaining amount after every accepted receipt for
+    the official business date. Only the final aggregate remainder can create a
+    borrower-caused rolling extension slot.
+
+    This function is pure decision logic. It does not rewrite signed schedule
+    evidence or receipt history; persistence/audit wiring can store the returned
+    close result separately.
+    """
+
+    due_rows = tuple(
+        sorted(
+            (
+                row
+                for row in installments
+                if row.effective_due_date == business_date
+            ),
+            key=lambda row: (row.installment_number, row.installment_id),
+        )
+    )
+    if not due_rows:
+        return RollingScheduleDayClose(
+            business_date=business_date,
+            scheduled_count=0,
+            incomplete_count=0,
+            shortfall_amount=ZERO,
+            extension_slots_added=0,
+            close_status="no_scheduled_obligation",
+        )
+
+    incomplete = tuple(
+        row for row in due_rows if _money(row.remaining_amount) > ZERO
+    )
+    shortfall = _money(
+        sum((_money(row.remaining_amount) for row in incomplete), ZERO)
+    )
+    if not incomplete:
+        return RollingScheduleDayClose(
+            business_date=business_date,
+            scheduled_count=len(due_rows),
+            incomplete_count=0,
+            shortfall_amount=ZERO,
+            extension_slots_added=0,
+            close_status="complete",
+        )
+
+    return RollingScheduleDayClose(
+        business_date=business_date,
+        scheduled_count=len(due_rows),
+        incomplete_count=len(incomplete),
+        shortfall_amount=shortfall,
+        extension_slots_added=len(incomplete),
+        close_status="shortfall",
+    )
 
 
 def project_rolling_schedule(
@@ -41,21 +115,32 @@ def project_rolling_schedule(
     payment_frequency: str,
     blocked_dates: Iterable[date] = (),
     semi_monthly_days: tuple[int, int] = (15, 30),
+    finalized_through_date: date | None = None,
 ) -> RollingScheduleProjection:
     """Project SPINA's dynamic maturity extension without rewriting evidence.
 
     The signed/Management-adjusted installment dates remain the authoritative
-    evidence for obligations already reached. A scheduled row strictly before
-    ``as_of_date`` that is still not fully satisfied contributes one rolling
-    extension slot. This preserves the approved Collector behavior where a
-    borrower can simultaneously have Past Due from yesterday and the normal
-    scheduled amount Due Today.
+    evidence for obligations already reached. Borrower-caused extension is based
+    on an explicit official day-close boundary, not phone-local midnight and not
+    the first partial receipt of a day.
 
-    When the borrower catches up and every earlier row is fully satisfied, the
+    If ``finalized_through_date`` is omitted, the legacy read-only behavior is
+    preserved by treating the day before ``as_of_date`` as finalized. A caller
+    performing official day close should pass the exact authoritative business
+    date; passing ``as_of_date`` is valid after that day has actually closed.
+
+    When the borrower catches up and every finalized row is fully satisfied, the
     extension slot disappears automatically and maturity returns to the current
     operational schedule. This projection is intentionally derived instead of
-    persisted, so catch-up never requires rewriting immutable Past Due history.
+    rewriting immutable Past Due or receipt history.
     """
+
+    if finalized_through_date is None:
+        finalized_through_date = as_of_date - timedelta(days=1)
+    if finalized_through_date > as_of_date:
+        raise RollingScheduleError(
+            "Rolling schedule cannot finalize beyond the authoritative as-of date."
+        )
 
     rows = tuple(
         sorted(
@@ -75,12 +160,13 @@ def project_rolling_schedule(
             past_due_count=0,
             past_due_amount=ZERO,
             projection_status="no_current_installments",
+            finalized_through_date=finalized_through_date,
         )
 
     past_due = tuple(
         row
         for row in rows
-        if row.effective_due_date < as_of_date
+        if row.effective_due_date <= finalized_through_date
         and _money(row.remaining_amount) > ZERO
     )
     extension_slots = len(past_due)
@@ -97,6 +183,7 @@ def project_rolling_schedule(
             past_due_count=0,
             past_due_amount=ZERO,
             projection_status="on_schedule",
+            finalized_through_date=finalized_through_date,
         )
 
     frequency = payment_frequency.strip().lower()
@@ -108,6 +195,7 @@ def project_rolling_schedule(
             past_due_count=extension_slots,
             past_due_amount=past_due_amount,
             projection_status="cadence_requires_management",
+            finalized_through_date=finalized_through_date,
         )
 
     monthly_anchor_day = rows[0].contractual_due_date.day
@@ -135,6 +223,7 @@ def project_rolling_schedule(
         past_due_count=extension_slots,
         past_due_amount=past_due_amount,
         projection_status="extended",
+        finalized_through_date=finalized_through_date,
     )
 
 
