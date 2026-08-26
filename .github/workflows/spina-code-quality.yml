@@ -143,8 +143,11 @@ jobs:
           echo - Gitleaks outcome: %GITLEAKS_OUTCOME%>>quality-artifacts\summary.md
           type quality-artifacts\summary.md>>"%GITHUB_STEP_SUMMARY%"
 
+      # Report upload is useful but must not turn a healthy quality run red when
+      # the repository-level GitHub Actions artifact quota is temporarily full.
       - name: Upload code-quality baseline reports
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: spina-code-quality-${{ github.sha }}
