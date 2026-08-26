@@ -7,13 +7,13 @@ from uuid import UUID
 from spina_mobile_collections.contracts import CollectionCommand, CollectionEntryType
 from spina_mobile_collections.service import CollectionRejected
 
-from .seven_by_seven_collection_posting import (
-    SevenBySevenAwarePerLoanContractCollectionPostingBridge,
+from .seven_by_seven_verified_advance_posting import (
+    VerifiedAdvanceSevenBySevenCollectionPostingBridge,
 )
 
 
 class MultiReceiptSevenBySevenCollectionPostingBridge(
-    SevenBySevenAwarePerLoanContractCollectionPostingBridge
+    VerifiedAdvanceSevenBySevenCollectionPostingBridge
 ):
     """Permit legitimate distinct 7x7 receipts on one client/date.
 
@@ -21,11 +21,11 @@ class MultiReceiptSevenBySevenCollectionPostingBridge(
     the same transaction. What is removed here is only the older date-level
     assumption that a second real cash receipt must be a duplicate.
 
-    Normal 7x7 PAYMENT receipts no longer claim the exclusive
-    ``collection_covered_dates`` row. That table remains reserved for explicit
-    ADV / covered-date intent, where exclusivity is still required. The 7x7
-    operational allocator replays all positive receipts and aggregates same-day
-    cash without accruing daily interest twice.
+    Normal 7x7 PAYMENT receipts do not claim an exclusive
+    ``collection_covered_dates`` row. Verified ADVANCE also uses signed
+    installment-allocation evidence as its authority, so a later partial Advance
+    may continue the same future row without turning that row into a duplicate
+    cash receipt.
     """
 
     def _verify_seven_by_seven_date_available(
@@ -61,7 +61,7 @@ class MultiReceiptSevenBySevenCollectionPostingBridge(
             if selected and selected != (command.collection_date,):
                 raise CollectionRejected(
                     "A normal 7x7 payment may reference only its collection date. "
-                    "Use ADV / exact covered dates when the client intends to pay future dates.",
+                    "Use Details for Advance or Extra Principal.",
                     code="seven_by_seven_payment_coverage_invalid",
                 )
             return ()

@@ -16,17 +16,20 @@ ROOT = Path(__file__).resolve().parents[1]
 BACKEND_SRC = ROOT / "gilbic_backend" / "src"
 MOBILE_SRC = ROOT / "spina_backend_mobile" / "src"
 MIGRATION_RUNNER = ROOT / "tools" / "apply_0100_0101_collection_renewal_migrations.py"
-TARGET_TEST = (
+TARGET_TESTS = (
     ROOT
     / "gilbic_backend"
     / "tests"
-    / "test_combined_collection_renewal_workflow_postgres.py"
+    / "test_combined_collection_renewal_workflow_postgres.py",
+    ROOT
+    / "gilbic_backend"
+    / "tests"
+    / "test_seven_by_seven_verified_advance_postgres.py",
 )
-# The combined collection path now calls the Past Due capture layer. Its disposable
-# database therefore must include the 0103 follow-up schema before exercising the
-# current posting bridge; bootstrapping only through 0099 leaves the validation
-# environment older than the code under test.
-BOOTSTRAP_THROUGH = 103
+# The current combined collection bridge now reaches both Past Due capture (0103)
+# and protected future-row Advance allocation basis (0104). The disposable schema
+# must match those current code dependencies before exercising production posting.
+BOOTSTRAP_THROUGH = 104
 BASE_DATABASE_URL_ENV = "COMBINED_RENEWAL_DATABASE_URL"
 DISPOSABLE_DATABASE_PREFIX = "spina_combined_renewal_"
 
@@ -91,7 +94,7 @@ def _bootstrap_database(test_url: str) -> None:
 
 
 def main() -> int:
-    for required in (MIGRATION_RUNNER, TARGET_TEST):
+    for required in (MIGRATION_RUNNER, *TARGET_TESTS):
         if not required.is_file():
             raise SystemExit(f"Required validation file is missing: {required}")
 
@@ -116,9 +119,15 @@ def main() -> int:
         print("Re-running guarded migrations once more to prove idempotency...")
         _run([sys.executable, str(MIGRATION_RUNNER)], env=migration_env, timeout=300)
 
-        print("Running atomic combined Pay and renewal policy PostgreSQL tests...")
+        print("Running atomic combined Pay/renewal and verified 7x7 Advance PostgreSQL tests...")
         _run(
-            [sys.executable, "-m", "pytest", "-q", str(TARGET_TEST)],
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                *(str(path) for path in TARGET_TESTS),
+            ],
             env=migration_env,
             timeout=600,
         )
