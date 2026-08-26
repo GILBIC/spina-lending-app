@@ -41,6 +41,12 @@ class MaturingVerifiedAdvanceSevenBySevenCollectionPostingBridge(
             collector_user_id=collector_user_id,
             command=command,
         )
+
+        # This hook is reached by the shared posting bridge for Regular loans too.
+        # Matured-Advance reconciliation belongs only to protected 7x7 loans; do
+        # not make an ordinary Regular leg fail the 7x7 mode revalidation gate.
+        if str(loan.get("calculation_mode") or "") != "seven_by_seven":
+            return
         if command.entry_type not in {
             CollectionEntryType.PAYMENT,
             CollectionEntryType.ADVANCE,
