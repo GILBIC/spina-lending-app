@@ -28,6 +28,7 @@ class SevenBySevenAdvanceFinancialReplay:
     historical_events: tuple[SevenBySevenCashEvent, ...]
     result: SevenBySevenAllocationResult
     matured_advance_row_count: int
+    interest_holiday_dates: tuple[date, ...]
 
 
 def _financial_transaction_watermark(cursor: Any, *, loan_id: UUID) -> date | None:
@@ -50,6 +51,40 @@ def _financial_transaction_watermark(cursor: Any, *, loan_id: UUID) -> date | No
     return row[0]
 
 
+def _active_no_collection_interest_holidays(
+    cursor: Any,
+    *,
+    loan_id: UUID,
+    through_date: date,
+) -> tuple[date, ...]:
+    """Return active Management No Collection dates that carry zero 7x7 interest."""
+
+    cursor.execute(
+        """
+        select distinct adjustment.no_collection_date
+        from lending.loan_schedule_adjustments adjustment
+        where adjustment.loan_id = %s
+          and adjustment.adjustment_type = 'no_collection'
+          and adjustment.no_collection_date <= %s
+          and not exists (
+                select 1
+                from lending.loan_schedule_adjustments reversal
+                where reversal.reverses_adjustment_id = adjustment.id
+          )
+        order by adjustment.no_collection_date
+        """,
+        (loan_id, through_date),
+    )
+    rows = cursor.fetchall()
+    holidays: list[date] = []
+    for row in rows:
+        if isinstance(row, dict):
+            holidays.append(row["no_collection_date"])
+        else:
+            holidays.append(row[0])
+    return tuple(holidays)
+
+
 def replay_verified_seven_by_seven_financial_state(
     cursor: Any,
     *,
@@ -65,6 +100,11 @@ def replay_verified_seven_by_seven_financial_state(
     Each signed future row becomes a synthetic operational cash event only on
     that row's effective due date. Multiple partial Advance receipts attached to
     the same signed row are aggregated into one due-date activation event.
+
+    Active Management No Collection dates are supplied to the operational
+    allocator as zero-interest holidays. Because Advance stays attached to its
+    installment id while Management shifts the installment's effective due date,
+    prepaid financial activation follows the shifted date automatically.
     """
 
     cursor.execute(
@@ -178,12 +218,18 @@ def replay_verified_seven_by_seven_financial_state(
 
     ordered.sort(key=lambda item: (item[0], item[1], item[2], item[3]))
     events = tuple(item[4] for item in ordered)
+    holidays = _active_no_collection_interest_holidays(
+        cursor,
+        loan_id=loan_id,
+        through_date=through_date,
+    )
     try:
         result = allocate_seven_by_seven_payments(
             original_principal=original_principal,
             daily_interest_per_1000=daily_interest_per_1000,
             payment_start=payment_start,
             events=events,
+            interest_holiday_dates=holidays,
         )
     except SevenBySevenAllocationError as error:
         raise SevenBySevenAdvanceActivationError(
@@ -200,6 +246,7 @@ def replay_verified_seven_by_seven_financial_state(
         historical_events=events,
         result=result,
         matured_advance_row_count=len(matured_rows),
+        interest_holiday_dates=holidays,
     )
 
 

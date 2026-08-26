@@ -148,14 +148,49 @@ def test_monthly_no_collection_preserves_original_anchor_after_clamping() -> Non
     assert shifts[0].new_effective_due_date == date(2026, 3, 31)
 
 
-def test_no_collection_refuses_to_move_a_paid_downstream_installment() -> None:
+def test_no_collection_moves_fully_prepaid_future_installment_with_its_evidence() -> None:
     rows = (
         _row(1, date(2026, 8, 16)),
         _row(2, date(2026, 8, 17), allocated="200.00"),
         _row(3, date(2026, 8, 18)),
     )
 
-    with pytest.raises(NoCollectionScheduleError, match="already has payment allocation"):
+    shifts = plan_no_collection_shift(
+        installments=rows,
+        no_collection_date=date(2026, 8, 16),
+        payment_frequency="daily",
+    )
+
+    assert [item.installment_id for item in shifts] == [1, 2, 3]
+    assert shifts[1].prior_effective_due_date == date(2026, 8, 17)
+    assert shifts[1].new_effective_due_date == date(2026, 8, 18)
+
+
+def test_no_collection_moves_partly_prepaid_future_installment_without_reshaping_amount() -> None:
+    rows = (
+        _row(1, date(2026, 8, 16)),
+        _row(2, date(2026, 8, 17), allocated="120.00"),
+        _row(3, date(2026, 8, 18)),
+    )
+
+    shifts = plan_no_collection_shift(
+        installments=rows,
+        no_collection_date=date(2026, 8, 16),
+        payment_frequency="daily",
+    )
+
+    assert shifts[1].installment_id == 2
+    assert shifts[1].contractual_amount == Decimal("200.00")
+    assert shifts[1].new_effective_due_date == date(2026, 8, 18)
+
+
+def test_no_collection_fails_closed_if_allocation_exceeds_contractual_row() -> None:
+    rows = (
+        _row(1, date(2026, 8, 16)),
+        _row(2, date(2026, 8, 17), allocated="200.01"),
+    )
+
+    with pytest.raises(NoCollectionScheduleError, match="beyond its contractual amount"):
         plan_no_collection_shift(
             installments=rows,
             no_collection_date=date(2026, 8, 16),

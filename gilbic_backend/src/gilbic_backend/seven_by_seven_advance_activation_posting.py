@@ -111,6 +111,7 @@ class MaturingVerifiedAdvanceSevenBySevenCollectionPostingBridge(
                 daily_interest_per_1000=money(loan["daily_interest_per_1000"]),
                 payment_start=payment_start,
                 events=(*historical.historical_events, pending_event),
+                interest_holiday_dates=historical.interest_holiday_dates,
             )
         except SevenBySevenAllocationError as error:
             raise CollectionRejected(

@@ -34,6 +34,8 @@ class SevenBySevenAllocationLine:
     source_cash_amount: Decimal
     fixed_daily_interest: Decimal
     gap_days: int
+    interest_days: int
+    interest_holiday_days: int
     opening_remaining_principal: Decimal
     opening_interest_arrears: Decimal
     interest_due: Decimal
@@ -97,17 +99,24 @@ def allocate_seven_by_seven_payments(
     daily_interest_per_1000: Decimal | int | str,
     payment_start: date,
     events: Iterable[SevenBySevenCashEvent],
+    interest_holiday_dates: Iterable[date] = (),
 ) -> SevenBySevenAllocationResult:
     """Apply the protected Desktop 7x7 operational allocation rule.
 
     Contractual daily interest is fixed from original principal. For each cash
-    event, elapsed calendar days accrue first, any prior interest arrears carry
-    forward, cash settles interest before principal, and only the residual cash
-    may reduce principal. This is an operational contractual allocator, not an
-    accounting EIR allocator.
+    event, elapsed calendar days are evaluated first, any prior interest arrears
+    carry forward, cash settles interest before principal, and only the residual
+    cash may reduce principal. This is an operational contractual allocator, not
+    an accounting EIR allocator.
+
+    Management-approved 7x7 No Collection dates may be supplied through
+    ``interest_holiday_dates``. Those dates remain part of the elapsed calendar
+    gap but contribute zero new daily interest. Existing interest arrears remain
+    collectible on the holiday. The later full-voluntary-payment exception may
+    explicitly remove a date from the holiday set before calling this allocator.
 
     Multiple distinct receipt events may occur on the same calendar date. The
-    first event for that date accrues the elapsed daily interest; later same-day
+    first event for that date evaluates the elapsed period; later same-day
     receipts accrue zero additional days and continue settling the same day's
     remaining interest/principal. The caller must keep authoritative receipt
     order within a date. Event ids still must be unique so an idempotent retry is
@@ -121,6 +130,7 @@ def allocate_seven_by_seven_payments(
         daily_interest_per_1000=daily_rate,
     )
     rows = tuple(events)
+    holidays = frozenset(interest_holiday_dates)
     _validate_events(rows, payment_start=payment_start)
 
     remaining_principal = principal
@@ -143,6 +153,8 @@ def allocate_seven_by_seven_payments(
                     source_cash_amount=amount,
                     fixed_daily_interest=fixed_daily_interest,
                     gap_days=0,
+                    interest_days=0,
+                    interest_holiday_days=0,
                     opening_remaining_principal=opening_principal,
                     opening_interest_arrears=opening_arrears,
                     interest_due=opening_arrears,
@@ -157,9 +169,15 @@ def allocate_seven_by_seven_payments(
             )
             continue
 
-        elapsed_days = (event.collection_date - previous_date).days
-        gap_days = max(0, elapsed_days)
-        interest_due = money(fixed_daily_interest * gap_days + interest_arrears)
+        elapsed_days = max(0, (event.collection_date - previous_date).days)
+        interest_days = _interest_bearing_days(
+            previous_date=previous_date,
+            current_date=event.collection_date,
+            payment_start=payment_start,
+            holidays=holidays,
+        )
+        holiday_days = max(0, elapsed_days - interest_days)
+        interest_due = money(fixed_daily_interest * interest_days + interest_arrears)
         interest_paid = money(min(amount, interest_due))
         principal_paid = money(
             min(remaining_principal, max(ZERO, amount - interest_paid))
@@ -184,7 +202,9 @@ def allocate_seven_by_seven_payments(
                 collection_date=event.collection_date,
                 source_cash_amount=amount,
                 fixed_daily_interest=fixed_daily_interest,
-                gap_days=gap_days,
+                gap_days=elapsed_days,
+                interest_days=interest_days,
+                interest_holiday_days=holiday_days,
                 opening_remaining_principal=opening_principal,
                 opening_interest_arrears=opening_arrears,
                 interest_due=interest_due,
@@ -219,6 +239,24 @@ def allocate_seven_by_seven_payments(
         complete=allocator_complete,
         allocations=tuple(allocations),
     )
+
+
+def _interest_bearing_days(
+    *,
+    previous_date: date,
+    current_date: date,
+    payment_start: date,
+    holidays: frozenset[date],
+) -> int:
+    if current_date <= previous_date:
+        return 0
+    cursor = max(previous_date + timedelta(days=1), payment_start)
+    count = 0
+    while cursor <= current_date:
+        if cursor not in holidays:
+            count += 1
+        cursor += timedelta(days=1)
+    return count
 
 
 def _validate_events(

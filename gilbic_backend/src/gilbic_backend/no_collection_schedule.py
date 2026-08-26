@@ -39,12 +39,18 @@ def plan_no_collection_shift(
     blocked_dates: Iterable[date] = (),
     semi_monthly_days: tuple[int, int] = (15, 30),
 ) -> tuple[ScheduleShift, ...]:
-    """Move one unpaid due date and every later unpaid installment one cadence slot.
+    """Move the affected installment and every later row one cadence slot.
 
-    Signed contractual dates remain evidence only. This planner operates on the
-    current effective dates and refuses to move any installment that already has
-    a non-voided payment allocation, so historical payment timing is never
-    rewritten by a later Management declaration.
+    Signed contractual dates remain immutable evidence. This planner operates on
+    current effective dates. Management No Collection is a pre-collection-day
+    schedule decision, so an allocation already attached to an affected future
+    installment is treated as prepayment evidence (Advance) and moves with that
+    installment id instead of blocking the shift. The allocation itself is never
+    rewritten or detached.
+
+    A caller that attempts to declare No Collection after same-day collection has
+    started violates the Management pre-declaration contract and must be rejected
+    by the surrounding workflow/audit gate rather than reinterpreted here.
     """
 
     rows = tuple(
@@ -62,6 +68,16 @@ def plan_no_collection_shift(
             "The verified schedule has no installments to adjust."
         )
 
+    for row in rows:
+        if row.allocated_amount < Decimal("0.00"):
+            raise NoCollectionScheduleError(
+                "An installment allocation cannot be negative."
+            )
+        if row.allocated_amount > row.contractual_amount:
+            raise NoCollectionScheduleError(
+                "An installment is allocated beyond its contractual amount and requires Management reconciliation."
+            )
+
     target_indexes = [
         index
         for index, row in enumerate(rows)
@@ -77,15 +93,6 @@ def plan_no_collection_shift(
         )
 
     start = target_indexes[0]
-    affected = rows[start:]
-    paid = [row for row in affected if row.allocated_amount > Decimal("0.00")]
-    if paid:
-        first = paid[0]
-        raise NoCollectionScheduleError(
-            "No Collection cannot move a paid or partly paid installment. "
-            f"Installment {first.installment_number} already has payment allocation."
-        )
-
     frequency = payment_frequency.strip().lower()
     if frequency in {"balloon", "custom"}:
         raise NoCollectionScheduleError(
