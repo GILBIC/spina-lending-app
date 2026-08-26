@@ -28,16 +28,24 @@ class MultiReceiptSevenBySevenCollectionPostingBridge(
     cash without accruing daily interest twice.
     """
 
-    @staticmethod
     def _verify_seven_by_seven_date_available(
+        self,
         cursor: Any,
         *,
         loan_id: UUID,
         collection_date: date,
+        entry_type: CollectionEntryType,
     ) -> None:
-        # A date is not a transaction identity. Multiple distinct receipts may
-        # be real and must remain as separate audited cash/custody events.
-        return None
+        # A date is not a PAYMENT/ADVANCE transaction identity, so legitimate
+        # same-day cash receipts remain allowed. PASS is different: it is one
+        # day-level Unable-to-Pay decision and must still use the base guard so
+        # it cannot be added after another receipt or duplicated on the date.
+        return super()._verify_seven_by_seven_date_available(
+            cursor,
+            loan_id=loan_id,
+            collection_date=collection_date,
+            entry_type=entry_type,
+        )
 
     @staticmethod
     def _seven_by_seven_covered_dates(command: CollectionCommand) -> tuple[date, ...]:
