@@ -131,7 +131,7 @@ def replay_verified_seven_by_seven_financial_state(
     payment_start: date,
     through_date: date,
 ) -> SevenBySevenAdvanceFinancialReplay:
-    """Replay immediate cash plus matured verified prepayment as cash events.
+    """Replay immediate cash plus matured active prepayment as cash events.
 
     A verified Advance receipt is deliberately excluded on its receipt date.
     The same deferred basis may also represent the affected portion of a partial
@@ -139,9 +139,11 @@ def replay_verified_seven_by_seven_financial_state(
     receipt amount not attached to deferred future-row evidence is financially
     active immediately; the deferred portion later activates with its signed row.
 
-    Each signed future row becomes a synthetic operational cash event only on
-    that row's effective due date. Multiple partial prepayments attached to the
-    same signed row are aggregated into one due-date activation event.
+    Gross Advance allocations remain immutable historical evidence. If audited
+    Extra Principal shortening later classifies part of that Advance as Refund
+    Due, only ``loan_installment_active_advance.active_advance_allocated`` may
+    mature into a financial cash event. Removed operational tail rows never
+    activate historical Advance.
 
     Management No Collection dates remain zero-interest holidays unless immutable
     voluntary-completion evidence exists for that exact declaration and its source
@@ -187,24 +189,29 @@ def replay_verified_seven_by_seven_financial_state(
             installment.id as installment_id,
             installment.installment_number,
             installment.effective_due_date,
-            sum(allocation.amount_applied)::numeric(18,2) as amount_applied,
+            active_advance.active_advance_allocated as amount_applied,
             min(prepayment_transaction.accepted_at) as first_accepted_at
-        from lending.loan_installment_payment_allocations allocation
+        from lending.loan_contract_installments_operational installment
+        join lending.loan_installment_active_advance active_advance
+          on active_advance.installment_id = installment.id
+        join lending.loan_installment_payment_allocations allocation
+          on allocation.installment_id = installment.id
+         and allocation.allocation_basis = %s
         join lending.collection_transactions prepayment_transaction
           on prepayment_transaction.id = allocation.transaction_id
-        join lending.loan_contract_installments_operational installment
-          on installment.id = allocation.installment_id
         where prepayment_transaction.loan_id = %s
           and prepayment_transaction.is_voided = false
-          and allocation.allocation_basis = %s
           and installment.effective_due_date <= %s
+          and installment.removed_from_operational_schedule = false
+          and active_advance.active_advance_allocated > 0
         group by
             installment.id,
             installment.installment_number,
-            installment.effective_due_date
+            installment.effective_due_date,
+            active_advance.active_advance_allocated
         order by installment.effective_due_date, installment.installment_number
         """,
-        (loan_id, FUTURE_ADVANCE_BASIS, through_date),
+        (FUTURE_ADVANCE_BASIS, loan_id, through_date),
     )
     matured_rows = cursor.fetchall()
 
@@ -270,6 +277,9 @@ def replay_verified_seven_by_seven_financial_state(
                 amount_applied,
                 first_accepted_at,
             ) = row
+        active_amount = money(amount_applied)
+        if active_amount <= ZERO:
+            continue
         ordered.append(
             (
                 effective_due_date,
@@ -279,7 +289,7 @@ def replay_verified_seven_by_seven_financial_state(
                 SevenBySevenCashEvent(
                     event_id=f"advance-activation:{installment_id}",
                     collection_date=effective_due_date,
-                    amount=money(amount_applied),
+                    amount=active_amount,
                 ),
             )
         )
