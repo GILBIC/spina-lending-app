@@ -4,8 +4,10 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
 
+from gilbic_backend import management_no_collection_announcement
 from gilbic_backend.account_repository import AccountContext
 from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
 from gilbic_backend.auth_client import AuthSession
@@ -26,6 +28,19 @@ CLIENT_ID = UUID("33333333-3333-4333-8333-333333333333")
 LOAN_ID = UUID("44444444-4444-4444-8444-444444444444")
 SCHEDULE_ID = UUID("55555555-5555-4555-8555-555555555555")
 ADJUSTMENT_ID = UUID("66666666-6666-4666-8666-666666666666")
+
+
+def _fixed_business_date() -> date:
+    return date(2026, 8, 15)
+
+
+@pytest.fixture(autouse=True)
+def _freeze_business_date(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        management_no_collection_announcement,
+        "philippines_business_date",
+        _fixed_business_date,
+    )
 
 
 class FakeAuthClient:
