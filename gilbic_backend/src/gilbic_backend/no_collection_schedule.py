@@ -11,6 +11,10 @@ class NoCollectionScheduleError(ValueError):
     """Raised when a No Collection schedule shift cannot be planned safely."""
 
 
+class NoCollectionTargetAlreadySatisfied(NoCollectionScheduleError):
+    """Raised when the exact borrower installment for the NC date is already paid."""
+
+
 @dataclass(frozen=True, slots=True)
 class OperationalInstallment:
     installment_id: int
@@ -49,9 +53,9 @@ def plan_no_collection_shift(
     That means a valid partial payment already recorded before Management later
     declares No Collection remains valid evidence while the unpaid remainder of
     the same signed installment moves to its new operational due date. A fully
-    satisfied target is a borrower-eligibility decision for the surrounding
-    Management workflow: it must not create a borrower No Collection shift or
-    interest holiday merely because an area/date declaration exists.
+    satisfied target is not shift-eligible: the surrounding Management workflow
+    must skip that borrower (or otherwise surface an explicit reviewed result)
+    rather than creating a borrower No Collection shift or interest holiday.
     """
 
     rows = tuple(
@@ -94,6 +98,12 @@ def plan_no_collection_shift(
         )
 
     start = target_indexes[0]
+    target = rows[start]
+    if target.allocated_amount == target.contractual_amount:
+        raise NoCollectionTargetAlreadySatisfied(
+            "The borrower already fully completed the installment due on this No Collection date; no borrower shift or interest holiday may be created."
+        )
+
     frequency = payment_frequency.strip().lower()
     if frequency in {"balloon", "custom"}:
         raise NoCollectionScheduleError(
