@@ -17,10 +17,18 @@ class SevenBySevenExtraPrincipalError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class FutureInstallmentPrincipalState:
-    """Future signed-row state needed for Extra Principal tail recalculation.
+    """Current future operational row plus immutable signed-row evidence.
 
-    The signed row itself remains immutable. ``advance_allocated`` is existing
-    verified Advance already attached to this exact installment.
+    ``contractual_amount`` / ``principal_component`` / ``interest_component``
+    describe the *current operational* row before this Extra Principal action.
+    For a row that has never been shortened, the optional ``signed_*`` values
+    may be omitted and default to those same values. After a prior Extra
+    Principal action, callers pass the original immutable signed components in
+    ``signed_*`` while the current operational components remain reduced.
+
+    ``advance_allocated`` is only the Advance still active on this installment
+    after any previously-created Refund Due evidence. Historical receipt and
+    installment-allocation evidence remains immutable outside this planner.
     """
 
     installment_id: int
@@ -30,6 +38,9 @@ class FutureInstallmentPrincipalState:
     principal_component: Decimal
     interest_component: Decimal
     advance_allocated: Decimal = ZERO
+    signed_contractual_amount: Decimal | None = None
+    signed_principal_component: Decimal | None = None
+    signed_interest_component: Decimal | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +51,8 @@ class ExtraPrincipalInstallmentProjection:
     signed_contractual_amount: Decimal
     signed_principal_component: Decimal
     signed_interest_component: Decimal
+    prior_operational_principal_component: Decimal
+    prior_operational_amount: Decimal
     operational_principal_component: Decimal
     operational_amount: Decimal
     advance_allocated: Decimal
@@ -71,20 +84,25 @@ def plan_seven_by_seven_extra_principal_tail(
     principal_reduction: Decimal | int | str,
     future_installments: tuple[FutureInstallmentPrincipalState, ...],
 ) -> SevenBySevenExtraPrincipalPlan:
-    """Project borrower-directed 7x7 Extra Principal against the future tail.
+    """Project borrower-directed 7x7 Extra Principal against the current tail.
 
-    Extra Principal removes future *principal*, never unearned future interest.
-    Starting from the latest future signed row, principal is shortened from the
-    tail until the requested reduction is exhausted. A surviving boundary row
-    keeps its fixed daily interest and only its operational principal component
-    is reduced. Fully removed rows carry no future interest because principal
-    will already be zero before those dates.
+    Extra Principal removes future *principal*, never already-earned interest.
+    Starting from the latest current operational row, principal is shortened
+    from the tail until the requested reduction is exhausted. A surviving
+    boundary row keeps its fixed-original-principal daily interest and only its
+    operational principal component is reduced. Fully removed rows carry no
+    future interest because principal will already be zero before those dates.
 
-    Existing verified Advance preserves its original installment evidence.
-    The amount still needed by a surviving installment stays attached to that
-    same installment. Advance made unnecessary by a shortened boundary row or
-    a fully removed row becomes Unused Advance refund due; it is never moved to
-    another row or silently converted to Extra Principal.
+    Immutable signed components are carried into every projection separately
+    from prior/current operational components, so a later second Extra Principal
+    action shortens the already-shortened tail without rewriting or forgetting
+    the original signed schedule.
+
+    Existing active Advance stays attached up to the new operational row amount.
+    Any amount that is no longer needed becomes Unused Advance Refund Due. This
+    includes both fully removed rows and excess Advance on a shortened boundary
+    row. Refund Due is classification evidence only; it does not release cash or
+    transfer the amount to another loan.
     """
 
     reduction = money(principal_reduction)
@@ -136,22 +154,32 @@ def plan_seven_by_seven_extra_principal_tail(
         removed = resulting_principal == ZERO
         if removed:
             operational_amount = ZERO
+            active_interest = ZERO
             advance_retained = ZERO
             row_refund_due = row.advance_allocated
             removed_interest = money(removed_interest + row.interest_component)
         else:
-            operational_amount = money(row.interest_component + resulting_principal)
+            active_interest = row.interest_component
+            operational_amount = money(active_interest + resulting_principal)
             advance_retained = money(min(row.advance_allocated, operational_amount))
             row_refund_due = money(row.advance_allocated - advance_retained)
 
         refund_due = money(refund_due + row_refund_due)
+        if money(advance_retained + row_refund_due) != row.advance_allocated:
+            raise SevenBySevenExtraPrincipalError(
+                "Extra Principal Advance split does not reconcile to the active Advance evidence.",
+                code="seven_by_seven_extra_principal_reconciliation_failed",
+            )
+
         projections_by_id[row.installment_id] = ExtraPrincipalInstallmentProjection(
             installment_id=row.installment_id,
             installment_number=row.installment_number,
             effective_due_date=row.effective_due_date,
-            signed_contractual_amount=row.contractual_amount,
-            signed_principal_component=row.principal_component,
-            signed_interest_component=row.interest_component,
+            signed_contractual_amount=_signed_contractual_amount(row),
+            signed_principal_component=_signed_principal_component(row),
+            signed_interest_component=_signed_interest_component(row),
+            prior_operational_principal_component=row.principal_component,
+            prior_operational_amount=row.contractual_amount,
             operational_principal_component=resulting_principal,
             operational_amount=operational_amount,
             advance_allocated=row.advance_allocated,
@@ -190,29 +218,64 @@ def plan_seven_by_seven_extra_principal_tail(
 def _normalize_row(
     row: FutureInstallmentPrincipalState,
 ) -> FutureInstallmentPrincipalState:
-    contractual = money(row.contractual_amount)
-    principal = money(row.principal_component)
-    interest = money(row.interest_component)
+    operational_amount = money(row.contractual_amount)
+    operational_principal = money(row.principal_component)
+    operational_interest = money(row.interest_component)
     advance = money(row.advance_allocated)
+    signed_amount = money(
+        row.signed_contractual_amount
+        if row.signed_contractual_amount is not None
+        else operational_amount
+    )
+    signed_principal = money(
+        row.signed_principal_component
+        if row.signed_principal_component is not None
+        else operational_principal
+    )
+    signed_interest = money(
+        row.signed_interest_component
+        if row.signed_interest_component is not None
+        else operational_interest
+    )
 
     if row.installment_id <= 0 or row.installment_number <= 0:
         raise SevenBySevenExtraPrincipalError(
             "Future 7x7 installment identity is invalid.",
             code="seven_by_seven_extra_principal_installment_invalid",
         )
-    if principal <= ZERO or interest < ZERO or contractual <= ZERO:
+    if operational_principal <= ZERO or operational_interest < ZERO or operational_amount <= ZERO:
         raise SevenBySevenExtraPrincipalError(
-            "Future 7x7 installment components are invalid.",
+            "Future 7x7 operational installment components are invalid.",
             code="seven_by_seven_extra_principal_installment_invalid",
         )
-    if money(principal + interest) != contractual:
+    if money(operational_principal + operational_interest) != operational_amount:
         raise SevenBySevenExtraPrincipalError(
-            "Future 7x7 signed installment components do not reconcile to its contractual amount.",
+            "Future 7x7 operational installment components do not reconcile.",
             code="seven_by_seven_extra_principal_installment_invalid",
         )
-    if advance < ZERO or advance > contractual:
+    if signed_principal <= ZERO or signed_interest < ZERO or signed_amount <= ZERO:
         raise SevenBySevenExtraPrincipalError(
-            "Existing 7x7 Advance on a future installment is invalid.",
+            "Future 7x7 signed installment components are invalid.",
+            code="seven_by_seven_extra_principal_installment_invalid",
+        )
+    if money(signed_principal + signed_interest) != signed_amount:
+        raise SevenBySevenExtraPrincipalError(
+            "Future 7x7 signed installment components do not reconcile.",
+            code="seven_by_seven_extra_principal_installment_invalid",
+        )
+    if operational_principal > signed_principal or operational_amount > signed_amount:
+        raise SevenBySevenExtraPrincipalError(
+            "A future 7x7 operational row cannot exceed its immutable signed row.",
+            code="seven_by_seven_extra_principal_installment_invalid",
+        )
+    if operational_interest != signed_interest:
+        raise SevenBySevenExtraPrincipalError(
+            "A surviving future 7x7 row must keep its signed fixed daily interest.",
+            code="seven_by_seven_extra_principal_installment_invalid",
+        )
+    if advance < ZERO or advance > operational_amount:
+        raise SevenBySevenExtraPrincipalError(
+            "Active 7x7 Advance on a future installment is invalid.",
             code="seven_by_seven_extra_principal_advance_invalid",
         )
 
@@ -220,8 +283,35 @@ def _normalize_row(
         installment_id=row.installment_id,
         installment_number=row.installment_number,
         effective_due_date=row.effective_due_date,
-        contractual_amount=contractual,
-        principal_component=principal,
-        interest_component=interest,
+        contractual_amount=operational_amount,
+        principal_component=operational_principal,
+        interest_component=operational_interest,
         advance_allocated=advance,
+        signed_contractual_amount=signed_amount,
+        signed_principal_component=signed_principal,
+        signed_interest_component=signed_interest,
+    )
+
+
+def _signed_contractual_amount(row: FutureInstallmentPrincipalState) -> Decimal:
+    return money(
+        row.signed_contractual_amount
+        if row.signed_contractual_amount is not None
+        else row.contractual_amount
+    )
+
+
+def _signed_principal_component(row: FutureInstallmentPrincipalState) -> Decimal:
+    return money(
+        row.signed_principal_component
+        if row.signed_principal_component is not None
+        else row.principal_component
+    )
+
+
+def _signed_interest_component(row: FutureInstallmentPrincipalState) -> Decimal:
+    return money(
+        row.signed_interest_component
+        if row.signed_interest_component is not None
+        else row.interest_component
     )
