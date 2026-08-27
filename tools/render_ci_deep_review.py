@@ -7,8 +7,24 @@ _SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 _DEFAULT_ROOT = Path(r"C:\SPINA_CI_REPORTS")
 _LANES = ("code-quality", "security-compliance", "reliability-performance")
 
+
+def _configure_console_encoding() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if not callable(reconfigure):
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+        except (OSError, ValueError):
+            # Redirected or test-owned streams may not support reconfiguration.
+            # The renderer should still operate through the stream's existing
+            # encoding rather than failing before it can report the CI result.
+            continue
+
+
 def _load(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
+
 
 def _text(path: Path, heading: str) -> None:
     print(f"\n--- {heading} ---")
@@ -17,12 +33,14 @@ def _text(path: Path, heading: str) -> None:
         return
     print(path.read_text(encoding="utf-8", errors="replace").rstrip() or "[empty]")
 
+
 def _latest(root: Path) -> str:
     items = [p for p in root.iterdir() if p.is_dir() and _SHA_RE.fullmatch(p.name)]
     if not items:
         raise FileNotFoundError(f"no saved CI reports exist under {root}")
     items.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     return items[0].name.lower()
+
 
 def _commit(root: Path, value: str) -> str:
     value = value.strip().lower()
@@ -34,6 +52,7 @@ def _commit(root: Path, value: str) -> str:
         raise FileNotFoundError(f"no saved CI report exists for commit {value}")
     return value
 
+
 def _metadata(lane_dir: Path) -> None:
     p = lane_dir / "_metadata.json"
     if p.exists():
@@ -42,6 +61,7 @@ def _metadata(lane_dir: Path) -> None:
             print(f"metadata: workflow={m.get('workflow_name','?')} run_id={m.get('run_id','?')} persisted_at_utc={m.get('persisted_at_utc','?')}")
         except Exception as exc:
             print(f"metadata unreadable: {exc}")
+
 
 def _ruff(d: Path) -> None:
     print("\n--- Ruff findings ---")
@@ -62,6 +82,7 @@ def _ruff(d: Path) -> None:
         msg = str(x.get("message","")).replace("\n"," ")
         fix = " fix-available" if x.get("fix") else ""
         print(f"{i}. {x.get('filename','?')}:{row}:{col} [{x.get('code','?')}]{fix} {msg}")
+
 
 def _pyright(d: Path) -> None:
     print("\n--- Pyright diagnostics ---")
@@ -85,6 +106,7 @@ def _pyright(d: Path) -> None:
         msg=str(x.get("message","")).replace("\n"," ")
         print(f"{i}. {x.get('file','?')}:{line}:{char} [{x.get('severity','?')}] {msg}")
 
+
 def _compress(lines: Iterable[int]) -> str:
     vals=sorted({int(v) for v in lines})
     if not vals: return "-"
@@ -95,6 +117,7 @@ def _compress(lines: Iterable[int]) -> str:
         start=prev=v
     out.append(str(start) if start==prev else f"{start}-{prev}")
     return ",".join(out)
+
 
 def _coverage(d: Path) -> None:
     print("\n--- Coverage details ---")
@@ -120,6 +143,7 @@ def _coverage(d: Path) -> None:
         s=detail.get("summary") or {}
         print(f"{pct:6.2f}% {name} covered={s.get('covered_lines','?')}/{s.get('num_statements','?')} missing={_compress(detail.get('missing_lines') or [])}")
 
+
 def _bandit(d: Path) -> None:
     print("\n--- Bandit findings ---")
     p=d/"bandit.json"
@@ -140,6 +164,7 @@ def _bandit(d: Path) -> None:
         issue=str(x.get("issue_text","")).replace("\n"," ")
         print(f"{i}. {x.get('filename','?')}:{x.get('line_number','?')} [{x.get('test_id','?')}] severity={x.get('issue_severity','?')} confidence={x.get('issue_confidence','?')} {issue}")
 
+
 def _audit_vulns(data: Any):
     deps = data.get("dependencies") or data.get("packages") or [] if isinstance(data,dict) else data
     if not isinstance(deps,list): return
@@ -149,6 +174,7 @@ def _audit_vulns(data: Any):
         if not isinstance(vulns,list): continue
         for v in vulns:
             if isinstance(v,dict): yield str(dep.get("name","?")),str(dep.get("version","?")),v
+
 
 def _audit(d: Path) -> None:
     print("\n--- pip-audit vulnerabilities ---")
@@ -165,6 +191,7 @@ def _audit(d: Path) -> None:
         if len(desc)>500: desc=desc[:497]+"..."
         print(f"{i}. {name}=={version} id={v.get('id') or v.get('aliases') or '?'} fix_versions={v.get('fix_versions') or v.get('fixes') or []} {desc}".rstrip())
 
+
 def render(d: Path, lane: str) -> None:
     print(f"\n\n========== {lane.upper()} =========="); _metadata(d)
     if lane=="code-quality":
@@ -175,7 +202,9 @@ def render(d: Path, lane: str) -> None:
     else:
         _text(d/"pytest-durations.txt","Reliability / performance regression output")
 
+
 def main() -> int:
+    _configure_console_encoding()
     ap=argparse.ArgumentParser()
     ap.add_argument("--root",default=str(_DEFAULT_ROOT))
     ap.add_argument("--commit-sha",default="latest")
@@ -197,6 +226,7 @@ def main() -> int:
             continue
         found+=1; render(d,lane)
     return 0 if found else 1
+
 
 if __name__=="__main__":
     raise SystemExit(main())

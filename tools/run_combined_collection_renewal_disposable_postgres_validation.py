@@ -30,11 +30,21 @@ TARGET_TESTS = (
     / "tests"
     / "test_seven_by_seven_no_collection_voluntary_postgres.py",
 )
-# The current combined collection bridge reaches Past Due capture (0103),
-# protected future-row Advance allocation basis (0104), and immutable No
-# Collection voluntary-completion evidence (0105). The disposable schema must
-# match those current code dependencies before exercising production posting.
-BOOTSTRAP_THROUGH = 105
+# The combined collection bridge and its 7x7 readers now depend on the
+# operational Extra Principal/active-Advance evidence introduced by 0106 and
+# the DPD reader alignment introduced by 0107. The disposable schema must match
+# those current code dependencies before exercising production posting.
+BOOTSTRAP_THROUGH = 107
+REQUIRED_RELATIONS = (
+    "lending.combined_collection_events",
+    "lending.collector_loan_renewal_requests",
+    "lending.loan_installment_payment_allocations",
+    "lending.loan_schedule_adjustments",
+    "lending.seven_by_seven_extra_principal_adjustments",
+    "lending.loan_contract_installments_operational",
+    "lending.loan_installment_active_advance",
+    "accounting.loan_contract_dpd_assessment",
+)
 BASE_DATABASE_URL_ENV = "COMBINED_RENEWAL_DATABASE_URL"
 DISPOSABLE_DATABASE_PREFIX = "spina_combined_renewal_"
 
@@ -93,9 +103,45 @@ def _bootstrap_database(test_url: str) -> None:
     # Reuse the proven Stage 5D.17 migration replayer directly against this
     # workflow-owned database. Running the Stage 5D.17 CLI would create its own
     # nested disposable database and leave this database unbootstrapped.
-    disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
-    disposable._install_supabase_auth_prerequisite(test_url)
-    disposable._bootstrap_database(test_url)
+    previous_bootstrap_through = disposable.BOOTSTRAP_THROUGH
+    try:
+        disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
+        disposable._install_supabase_auth_prerequisite(test_url)
+        disposable._bootstrap_database(test_url)
+    finally:
+        disposable.BOOTSTRAP_THROUGH = previous_bootstrap_through
+
+
+def _assert_current_schema(test_url: str) -> None:
+    with psycopg.connect(test_url, autocommit=True) as connection:
+        for relation in REQUIRED_RELATIONS:
+            row = connection.execute("SELECT to_regclass(%s)", (relation,)).fetchone()
+            if row is None or row[0] is None:
+                raise RuntimeError(
+                    "Disposable combined Pay + renewal schema is stale; "
+                    f"required relation is missing after migration {BOOTSTRAP_THROUGH:04d}: "
+                    f"{relation}"
+                )
+
+        row = connection.execute(
+            "SELECT pg_get_viewdef(%s::regclass, true)",
+            ("accounting.loan_contract_dpd_assessment",),
+        ).fetchone()
+        definition = "" if row is None or row[0] is None else str(row[0]).lower()
+        required_reader_fragments = (
+            "loan_contract_installments_operational",
+            "loan_installment_active_advance",
+            "seven_by_seven_extra_principal_adjustments",
+        )
+        missing_fragments = [
+            fragment for fragment in required_reader_fragments if fragment not in definition
+        ]
+        if missing_fragments:
+            raise RuntimeError(
+                "Disposable combined Pay + renewal DPD reader is not aligned through "
+                f"migration {BOOTSTRAP_THROUGH:04d}; missing view dependencies: "
+                + ", ".join(missing_fragments)
+            )
 
 
 def main() -> int:
@@ -117,6 +163,7 @@ def main() -> int:
 
         print(f"Bootstrapping disposable database through migration {BOOTSTRAP_THROUGH:04d}...")
         _bootstrap_database(test_url)
+        _assert_current_schema(test_url)
 
         migration_env = _env(test_url)
         print("Re-running guarded 0100/0101 migrations to prove idempotency...")

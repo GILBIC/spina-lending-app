@@ -36,6 +36,8 @@ class _Cursor:
                     "accepted_at": datetime(2026, 8, 3, 1, tzinfo=timezone.utc),
                 },
             ]
+        if "join lending.loan_installment_active_advance active_advance" in self.query:
+            return []
         if "from lending.loan_installment_payment_allocations allocation" in self.query:
             return []
         if "from lending.loan_schedule_adjustments adjustment" in self.query:
