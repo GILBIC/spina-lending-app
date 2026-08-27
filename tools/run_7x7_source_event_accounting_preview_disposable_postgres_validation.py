@@ -15,12 +15,13 @@ import run_stage5d17_disposable_postgres_validation as disposable
 
 ROOT = Path(__file__).resolve().parents[1]
 TEST_DATABASE_PREFIX = "spina_7x7_source_preview_"
-BOOTSTRAP_THROUGH = 63
+BOOTSTRAP_THROUGH = 106
 TEST_ROOT = ROOT / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_seven_by_seven_mobile_collection_postgres.py",
     TEST_ROOT / "test_seven_by_seven_desktop_server_postgres_parity.py",
     TEST_ROOT / "test_7x7_source_event_accounting_preview_postgres.py",
+    TEST_ROOT / "test_seven_by_seven_extra_principal_persistence_postgres.py",
 )
 
 
@@ -33,8 +34,9 @@ def _run_tests(test_database_url: str) -> int:
     missing = [str(path) for path in INTEGRATION_TESTS if not path.is_file()]
     if missing:
         raise SystemExit(
-            "7x7 source-event / operational parity / mobile acceptance disposable "
-            "validation refused: required integration test file is missing: "
+            "7x7 source-event / operational parity / mobile acceptance / Extra Principal "
+            "persistence disposable validation refused: required integration test file is "
+            "missing: "
             + ", ".join(missing)
         )
     env = os.environ.copy()
@@ -62,13 +64,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
-            "through 0063, then prove the protected 7x7 source-event accounting preview, "
-            "Master #296 B.3 exact Desktop/server operational parity, and B.5 protected "
-            "mobile posting acceptance from real PostgreSQL rows. The dedicated 7x7 feature "
-            "flag is enabled only on disposable fixture loan types. Payment, exact covered "
-            "dates, unable-to-pay, official balance/receipt, exact retry, stale-route refresh, "
-            "overpayment rejection and balance-reconciliation fail-closed behavior are proven. "
-            "No live database or production loan-type flag is modified."
+            "through 0106, then prove the protected 7x7 source-event accounting preview, "
+            "Master #296 B.3 exact Desktop/server operational parity, B.5 protected mobile "
+            "posting acceptance, and the 7x7 Extra Principal operational amount / Refund Due "
+            "persistence foundation. The dedicated 7x7 feature flag is enabled only on "
+            "disposable fixture loan types. Payment, exact covered dates, unable-to-pay, "
+            "official balance/receipt, exact retry, stale-route refresh, overpayment rejection, "
+            "balance-reconciliation fail-closed behavior, signed-row immutability, repeated "
+            "Extra Principal operational shortening, and Advance conservation are proven. No "
+            "live database or production loan-type flag is modified."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -89,8 +93,9 @@ def main() -> int:
     configured_database = base_params["dbname"]
     if configured_database.startswith(TEST_DATABASE_PREFIX):
         raise SystemExit(
-            "7x7 source-event / operational parity / mobile acceptance validation refused: "
-            "configured database uses the reserved disposable prefix."
+            "7x7 source-event / operational parity / mobile acceptance / Extra Principal "
+            "persistence validation refused: configured database uses the reserved disposable "
+            "prefix."
         )
 
     admin_url = disposable._conninfo_for_database(base_params, "postgres")
@@ -98,8 +103,8 @@ def main() -> int:
         with psycopg.connect(admin_url, autocommit=True) as admin:
             dropped = disposable._drop_stale_disposable_databases(admin)
         print(
-            "7x7 source-event / operational parity / mobile acceptance janitor passed: "
-            f"dropped={dropped}."
+            "7x7 source-event / operational parity / mobile acceptance / Extra Principal "
+            f"persistence janitor passed: dropped={dropped}."
         )
         return 0
 
@@ -111,8 +116,9 @@ def main() -> int:
         with psycopg.connect(admin_url, autocommit=True) as admin:
             if disposable._database_exists(admin, test_database):
                 raise SystemExit(
-                    "7x7 source-event / operational parity / mobile acceptance validation "
-                    "refused: generated database already exists."
+                    "7x7 source-event / operational parity / mobile acceptance / Extra "
+                    "Principal persistence validation refused: generated database already "
+                    "exists."
                 )
             cleanup_required = True
             admin.execute(
@@ -126,25 +132,29 @@ def main() -> int:
         result = _run_tests(test_url)
         if result != 0:
             raise SystemExit(
-                "7x7 source-event / operational parity / mobile acceptance disposable "
-                f"PostgreSQL validation failed: integration tests exited with code {result}."
+                "7x7 source-event / operational parity / mobile acceptance / Extra Principal "
+                f"persistence disposable PostgreSQL validation failed: integration tests "
+                f"exited with code {result}."
             )
         print(
-            "7x7 source-event / operational parity / mobile acceptance disposable PostgreSQL "
-            "validation passed: protected collection UUID/date/type/amount rows retained exact "
-            "Desktop/server fixed-original-principal parity; disposable flagged 7x7 loans used "
-            "the canonical interest-first allocator for Payment and exact covered-date cash; "
-            "unable-to-pay stayed no-cash; receipt/balance and route revisions were exact; exact "
-            "retry created no duplicate; stale-route, overpayment and unreconciled-state cases "
-            "failed closed. Production 7x7 loan-type flags were not changed and no live write "
-            "path was used."
+            "7x7 source-event / operational parity / mobile acceptance / Extra Principal "
+            "persistence disposable PostgreSQL validation passed: protected collection "
+            "UUID/date/type/amount rows retained exact Desktop/server fixed-original-principal "
+            "parity; disposable flagged 7x7 loans used the canonical interest-first allocator "
+            "for Payment and exact covered-date cash; unable-to-pay stayed no-cash; "
+            "receipt/balance and route revisions were exact; exact retry created no duplicate; "
+            "stale-route, overpayment and unreconciled-state cases failed closed; migration "
+            "0106 preserved immutable signed installment values while repeated Extra Principal "
+            "updated only operational amount state and conserved Advance as retained amount plus "
+            "separate Refund Due evidence. Production 7x7 loan-type flags were not changed and "
+            "no live write path was used."
         )
         return 0
     except psycopg.Error as error:
         primary_error = error
         raise SystemExit(
-            "7x7 source-event / operational parity / mobile acceptance disposable PostgreSQL "
-            "validation failed: "
+            "7x7 source-event / operational parity / mobile acceptance / Extra Principal "
+            "persistence disposable PostgreSQL validation failed: "
             + str(error).split("CONTEXT:", 1)[0].strip()
         ) from error
     except BaseException as error:
@@ -157,8 +167,8 @@ def main() -> int:
                     disposable._drop_database(admin, test_database)
             except (psycopg.Error, SystemExit) as cleanup_error:
                 message = (
-                    "7x7 source-event / operational parity / mobile acceptance disposable "
-                    "PostgreSQL cleanup failed: "
+                    "7x7 source-event / operational parity / mobile acceptance / Extra "
+                    "Principal persistence disposable PostgreSQL cleanup failed: "
                     + str(cleanup_error).split("CONTEXT:", 1)[0].strip()
                 )
                 print(message, file=sys.stderr)
