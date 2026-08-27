@@ -24,6 +24,18 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+def _require_0106_schema() -> None:
+    assert DATABASE_URL is not None
+    with psycopg.connect(DATABASE_URL) as connection:
+        relation = connection.execute(
+            "select to_regclass('lending.seven_by_seven_extra_principal_adjustments')"
+        ).fetchone()[0]
+    if relation is None:
+        pytest.skip(
+            "Migration 0106 is not installed on this database; disposable Financial validation owns this schema test."
+        )
+
+
 def _insert_receipt(
     connection: psycopg.Connection,
     *,
@@ -405,6 +417,7 @@ def _record_adjustment(
 
 def test_repeated_extra_principal_preserves_signed_row_and_conserves_advance() -> None:
     assert DATABASE_URL is not None
+    _require_0106_schema()
     loan_id, client_id, collector_id, device_id, installment_id = _setup_case()
 
     with psycopg.connect(DATABASE_URL) as connection:
