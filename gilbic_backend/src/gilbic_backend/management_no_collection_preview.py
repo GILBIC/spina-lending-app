@@ -3,8 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
+from .management_no_collection_announcement import (
+    NoCollectionAnnouncementDateError,
+    validate_no_collection_announcement_date,
+)
 from .management_no_collection_query_repository import NoCollectionLoanState
-from .management_no_collection_repository import ManagementNoCollectionConflict
+from .management_no_collection_repository import (
+    ManagementNoCollectionConflict,
+    ManagementNoCollectionInvalid,
+)
 from .no_collection_schedule import (
     NoCollectionScheduleError,
     OperationalInstallment,
@@ -26,8 +33,17 @@ def preview_no_collection_shift(
     *,
     state: NoCollectionLoanState,
     no_collection_date: date,
+    business_date: date | None = None,
 ) -> NoCollectionPreview:
     """Build the exact server-side shift proposal without writing anything."""
+
+    try:
+        validate_no_collection_announcement_date(
+            no_collection_date=no_collection_date,
+            business_date=business_date,
+        )
+    except NoCollectionAnnouncementDateError as error:
+        raise ManagementNoCollectionInvalid(str(error)) from error
 
     blocked_dates = tuple(
         item.no_collection_date for item in state.active_no_collection

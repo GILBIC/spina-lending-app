@@ -4,11 +4,15 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
+from .management_no_collection_announcement import (
+    NoCollectionAnnouncementDateError,
+    validate_no_collection_announcement_date,
+)
 from .management_no_collection_preview import preview_no_collection_shift
 from .management_no_collection_query_repository import (
     NoCollectionLoanState,
@@ -26,6 +30,14 @@ from .management_no_collection_repository import (
 from .request_auth import authenticated_device_context
 
 
+def _future_no_collection_date(value: date) -> date:
+    try:
+        validate_no_collection_announcement_date(no_collection_date=value)
+    except NoCollectionAnnouncementDateError as error:
+        raise ValueError(str(error)) from error
+    return value
+
+
 class NoCollectionLoanBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -40,6 +52,10 @@ class NoCollectionPreviewBody(BaseModel):
     expected_operational_version: int = Field(ge=0)
     no_collection_date: date
 
+    _validate_no_collection_date = field_validator("no_collection_date")(
+        _future_no_collection_date
+    )
+
 
 class NoCollectionDeclarationBody(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -47,6 +63,10 @@ class NoCollectionDeclarationBody(BaseModel):
     no_collection_date: date
     reason: str = Field(min_length=1, max_length=500)
     loans: list[NoCollectionLoanBody] = Field(min_length=1, max_length=100)
+
+    _validate_no_collection_date = field_validator("no_collection_date")(
+        _future_no_collection_date
+    )
 
 
 class NoCollectionReversalBody(BaseModel):
