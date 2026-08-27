@@ -7,13 +7,13 @@ from uuid import UUID
 from spina_mobile_collections.contracts import CollectionCommand, CollectionEntryType
 from spina_mobile_collections.service import CollectionRejected
 
-from .seven_by_seven_advance_activation_posting import (
-    MaturingVerifiedAdvanceSevenBySevenCollectionPostingBridge,
+from .seven_by_seven_no_collection_voluntary_posting import (
+    NoCollectionVoluntarySevenBySevenCollectionPostingBridge,
 )
 
 
 class MultiReceiptSevenBySevenCollectionPostingBridge(
-    MaturingVerifiedAdvanceSevenBySevenCollectionPostingBridge
+    NoCollectionVoluntarySevenBySevenCollectionPostingBridge
 ):
     """Permit legitimate distinct 7x7 receipts on one client/date.
 
