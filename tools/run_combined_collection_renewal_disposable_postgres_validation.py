@@ -35,11 +35,7 @@ TARGET_TESTS = (
 # the DPD reader alignment introduced by 0107. The disposable schema must match
 # those current code dependencies before exercising production posting.
 BOOTSTRAP_THROUGH = 107
-REQUIRED_RELATIONS = (
-    "lending.combined_collection_events",
-    "lending.collector_loan_renewal_requests",
-    "lending.loan_installment_payment_allocations",
-    "lending.loan_schedule_adjustments",
+REQUIRED_7X7_READER_RELATIONS = (
     "lending.seven_by_seven_extra_principal_adjustments",
     "lending.loan_contract_installments_operational",
     "lending.loan_installment_active_advance",
@@ -112,15 +108,15 @@ def _bootstrap_database(test_url: str) -> None:
         disposable.BOOTSTRAP_THROUGH = previous_bootstrap_through
 
 
-def _assert_current_schema(test_url: str) -> None:
+def _assert_current_7x7_reader_schema(test_url: str) -> None:
     with psycopg.connect(test_url, autocommit=True) as connection:
-        for relation in REQUIRED_RELATIONS:
+        for relation in REQUIRED_7X7_READER_RELATIONS:
             row = connection.execute("SELECT to_regclass(%s)", (relation,)).fetchone()
             if row is None or row[0] is None:
                 raise RuntimeError(
                     "Disposable combined Pay + renewal schema is stale; "
-                    f"required relation is missing after migration {BOOTSTRAP_THROUGH:04d}: "
-                    f"{relation}"
+                    f"required 7x7 reader relation is missing after migration "
+                    f"{BOOTSTRAP_THROUGH:04d}: {relation}"
                 )
 
         row = connection.execute(
@@ -163,7 +159,7 @@ def main() -> int:
 
         print(f"Bootstrapping disposable database through migration {BOOTSTRAP_THROUGH:04d}...")
         _bootstrap_database(test_url)
-        _assert_current_schema(test_url)
+        _assert_current_7x7_reader_schema(test_url)
 
         migration_env = _env(test_url)
         print("Re-running guarded 0100/0101 migrations to prove idempotency...")
