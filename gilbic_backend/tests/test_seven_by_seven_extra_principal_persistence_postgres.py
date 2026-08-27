@@ -509,6 +509,7 @@ def test_repeated_extra_principal_preserves_signed_row_and_conserves_advance() -
         assert refund_total == Decimal("10.00")
         assert version == 2
 
+        connection.commit()
         with pytest.raises(psycopg.Error):
             connection.execute(
                 """
