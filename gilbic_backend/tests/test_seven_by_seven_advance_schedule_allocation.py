@@ -42,19 +42,21 @@ def _row(
     installment_id,
     installment_number,
     due_date,
-    contractual_amount="50.00",
+    operational_amount="50.00",
     principal_component="29.00",
     interest_component="21.00",
     allocated_amount="0.00",
+    removed=False,
 ):
     return (
         installment_id,
         installment_number,
         due_date,
-        Decimal(contractual_amount),
+        Decimal(operational_amount),
         Decimal(principal_component),
         Decimal(interest_component),
         Decimal(allocated_amount),
+        removed,
     )
 
 
