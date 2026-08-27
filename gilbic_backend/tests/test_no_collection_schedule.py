@@ -7,6 +7,7 @@ import pytest
 
 from gilbic_backend.no_collection_schedule import (
     NoCollectionScheduleError,
+    NoCollectionTargetAlreadySatisfied,
     OperationalInstallment,
     plan_no_collection_shift,
 )
@@ -182,6 +183,41 @@ def test_no_collection_moves_partly_prepaid_future_installment_without_reshaping
     assert shifts[1].installment_id == 2
     assert shifts[1].contractual_amount == Decimal("200.00")
     assert shifts[1].new_effective_due_date == date(2026, 8, 18)
+
+
+def test_no_collection_rejects_fully_satisfied_target_before_any_shift_is_created() -> None:
+    rows = (
+        _row(1, date(2026, 8, 16), allocated="200.00"),
+        _row(2, date(2026, 8, 17)),
+    )
+
+    with pytest.raises(
+        NoCollectionTargetAlreadySatisfied,
+        match="already fully completed",
+    ):
+        plan_no_collection_shift(
+            installments=rows,
+            no_collection_date=date(2026, 8, 16),
+            payment_frequency="daily",
+        )
+
+
+def test_no_collection_keeps_partial_target_attached_and_shifts_its_remainder() -> None:
+    rows = (
+        _row(1, date(2026, 8, 16), allocated="120.00"),
+        _row(2, date(2026, 8, 17)),
+    )
+
+    shifts = plan_no_collection_shift(
+        installments=rows,
+        no_collection_date=date(2026, 8, 16),
+        payment_frequency="daily",
+    )
+
+    assert shifts[0].installment_id == 1
+    assert shifts[0].contractual_amount == Decimal("200.00")
+    assert shifts[0].prior_effective_due_date == date(2026, 8, 16)
+    assert shifts[0].new_effective_due_date == date(2026, 8, 17)
 
 
 def test_no_collection_fails_closed_if_allocation_exceeds_contractual_row() -> None:
