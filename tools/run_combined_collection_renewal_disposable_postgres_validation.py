@@ -25,6 +25,10 @@ TARGET_TESTS = (
     / "gilbic_backend"
     / "tests"
     / "test_seven_by_seven_verified_advance_postgres.py",
+    ROOT
+    / "gilbic_backend"
+    / "tests"
+    / "test_seven_by_seven_no_collection_voluntary_postgres.py",
 )
 # The current combined collection bridge reaches Past Due capture (0103),
 # protected future-row Advance allocation basis (0104), and immutable No
@@ -120,7 +124,10 @@ def main() -> int:
         print("Re-running guarded migrations once more to prove idempotency...")
         _run([sys.executable, str(MIGRATION_RUNNER)], env=migration_env, timeout=300)
 
-        print("Running atomic combined Pay/renewal and verified 7x7 Advance PostgreSQL tests...")
+        print(
+            "Running atomic combined Pay/renewal, verified 7x7 Advance, and NC voluntary "
+            "PostgreSQL tests..."
+        )
         _run(
             [
                 sys.executable,
