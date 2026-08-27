@@ -43,19 +43,21 @@ def _row(
     installment_id,
     installment_number,
     due_date,
-    contractual_amount,
+    operational_amount,
     principal_component,
     interest_component,
     allocated_amount="0.00",
+    removed=False,
 ):
     return (
         installment_id,
         installment_number,
         due_date,
-        Decimal(contractual_amount),
+        Decimal(operational_amount),
         Decimal(principal_component),
         Decimal(interest_component),
         Decimal(allocated_amount),
+        removed,
     )
 
 
@@ -137,7 +139,7 @@ def test_verified_schedule_is_optional_only_for_legacy_transition_caller() -> No
         )
 
 
-def test_verified_7x7_row_components_must_reconcile_to_signed_amount() -> None:
+def test_verified_7x7_operational_row_components_must_reconcile() -> None:
     cursor = FakeCursor(
         schedule=(uuid4(), "daily"),
         rows=(
