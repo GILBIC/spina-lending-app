@@ -48,7 +48,11 @@ def _insert_receipt(
     amount: str,
     sequence: int,
     intent: str,
+    advance_date: date | None = None,
 ) -> UUID:
+    if entry_type == "advance" and advance_date is None:
+        raise AssertionError("Disposable Advance receipt requires its prepaid installment date.")
+    coverage_date = advance_date if entry_type == "advance" else None
     transaction_id = uuid4()
     accepted_at = datetime.combine(
         collection_date,
@@ -68,6 +72,8 @@ def _insert_receipt(
             collection_date,
             entry_type,
             amount,
+            advance_from,
+            advance_until,
             applied_amount,
             unallocated_amount,
             allocation_state,
@@ -84,7 +90,7 @@ def _insert_receipt(
             details
         ) values (
             %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-            %s, 0.00, 'fully_allocated', %s, %s, %s, '', %s,
+            %s, %s, %s, 0.00, 'fully_allocated', %s, %s, %s, '', %s,
             3000.00, 3000.00, 0, null, %s, %s
         )
         """,
@@ -99,6 +105,8 @@ def _insert_receipt(
             collection_date,
             entry_type,
             Decimal(amount),
+            coverage_date,
+            coverage_date,
             Decimal(amount),
             accepted_at,
             accepted_at,
@@ -197,9 +205,9 @@ def _setup_case() -> tuple[UUID, UUID, UUID, UUID, int]:
                 verified_by_user_id=collector_id,
                 confirmed=True,
             )
-        installment_id = connection.execute(
+        installment_id, installment_due_date = connection.execute(
             """
-            select id
+            select id, due_date
             from lending.loan_contract_installments
             where schedule_id = %s
               and principal_component = 29.00
@@ -208,7 +216,7 @@ def _setup_case() -> tuple[UUID, UUID, UUID, UUID, int]:
             limit 1
             """,
             (schedule_id,),
-        ).fetchone()[0]
+        ).fetchone()
         connection.execute(
             """
             insert into lending.loan_schedule_operational_state (
@@ -230,6 +238,7 @@ def _setup_case() -> tuple[UUID, UUID, UUID, UUID, int]:
             amount="35.00",
             sequence=1,
             intent="extra_as_advance",
+            advance_date=installment_due_date,
         )
         connection.execute(
             """
