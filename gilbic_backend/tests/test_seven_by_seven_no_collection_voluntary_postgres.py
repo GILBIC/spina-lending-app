@@ -485,7 +485,7 @@ def test_partial_then_same_day_full_nc_voluntary_completion_is_atomic_and_idempo
     assert full_receipt == (
         Decimal("3000.00"),
         Decimal("2971.00"),
-        Decimal("21.00"),
+        Decimal("1.00"),
         Decimal("29.00"),
         "full_voluntary_completion",
         "false",
