@@ -1,0 +1,125 @@
+from datetime import date, timedelta
+from decimal import Decimal
+
+import pytest
+
+from gilbic_backend.seven_by_seven_extra_principal import (
+    FutureInstallmentPrincipalState,
+    SevenBySevenExtraPrincipalError,
+    plan_seven_by_seven_extra_principal_tail,
+)
+
+
+def _row(
+    number: int,
+    *,
+    principal: str = "29.00",
+    interest: str = "21.00",
+    advance: str = "0.00",
+) -> FutureInstallmentPrincipalState:
+    principal_amount = Decimal(principal)
+    interest_amount = Decimal(interest)
+    return FutureInstallmentPrincipalState(
+        installment_id=100 + number,
+        installment_number=number,
+        effective_due_date=date(2026, 9, 1) + timedelta(days=number - 1),
+        contractual_amount=principal_amount + interest_amount,
+        principal_component=principal_amount,
+        interest_component=interest_amount,
+        advance_allocated=Decimal(advance),
+    )
+
+
+def test_extra_principal_shortens_7x7_from_tail_without_rewriting_signed_amounts() -> None:
+    plan = plan_seven_by_seven_extra_principal_tail(
+        principal_reduction=Decimal("40.00"),
+        future_installments=(_row(1), _row(2), _row(3)),
+    )
+
+    assert plan.prior_future_principal == Decimal("87.00")
+    assert plan.resulting_future_principal == Decimal("47.00")
+    assert plan.removed_future_interest == Decimal("21.00")
+    assert plan.removed_installment_ids == (103,)
+
+    first, boundary, removed = plan.installments
+    assert first.signed_contractual_amount == Decimal("50.00")
+    assert first.operational_amount == Decimal("50.00")
+    assert first.operational_principal_component == Decimal("29.00")
+
+    assert boundary.signed_contractual_amount == Decimal("50.00")
+    assert boundary.signed_principal_component == Decimal("29.00")
+    assert boundary.operational_principal_component == Decimal("18.00")
+    assert boundary.operational_amount == Decimal("39.00")
+    assert not boundary.removed_from_operational_schedule
+
+    assert removed.signed_contractual_amount == Decimal("50.00")
+    assert removed.operational_amount == Decimal("0.00")
+    assert removed.operational_principal_component == Decimal("0.00")
+    assert removed.removed_from_operational_schedule
+
+
+def test_advance_on_fully_removed_tail_row_becomes_refund_due() -> None:
+    plan = plan_seven_by_seven_extra_principal_tail(
+        principal_reduction=Decimal("29.00"),
+        future_installments=(_row(1), _row(2), _row(3, advance="25.00")),
+    )
+
+    assert plan.resulting_future_principal == Decimal("58.00")
+    assert plan.advance_refund_due == Decimal("25.00")
+    assert plan.removed_future_interest == Decimal("21.00")
+    assert plan.installments[-1].advance_refund_due == Decimal("25.00")
+    assert plan.installments[-1].removed_from_operational_schedule
+
+
+def test_surviving_boundary_row_keeps_its_fixed_daily_interest() -> None:
+    plan = plan_seven_by_seven_extra_principal_tail(
+        principal_reduction=Decimal("20.00"),
+        future_installments=(_row(1), _row(2), _row(3, advance="20.00")),
+    )
+
+    boundary = plan.installments[-1]
+    assert boundary.operational_principal_component == Decimal("9.00")
+    assert boundary.signed_interest_component == Decimal("21.00")
+    assert boundary.operational_amount == Decimal("30.00")
+    assert boundary.advance_allocated == Decimal("20.00")
+    assert boundary.advance_refund_due == Decimal("0.00")
+
+
+def test_boundary_row_with_excess_advance_fails_closed_for_management_review() -> None:
+    with pytest.raises(SevenBySevenExtraPrincipalError) as captured:
+        plan_seven_by_seven_extra_principal_tail(
+            principal_reduction=Decimal("20.00"),
+            future_installments=(_row(1), _row(2), _row(3, advance="35.00")),
+        )
+
+    assert (
+        captured.value.code
+        == "seven_by_seven_extra_principal_boundary_advance_review_required"
+    )
+
+
+def test_extra_principal_cannot_exceed_future_principal_tail() -> None:
+    with pytest.raises(SevenBySevenExtraPrincipalError) as captured:
+        plan_seven_by_seven_extra_principal_tail(
+            principal_reduction=Decimal("88.00"),
+            future_installments=(_row(1), _row(2), _row(3)),
+        )
+
+    assert captured.value.code == "seven_by_seven_extra_principal_exceeds_future_principal"
+
+
+def test_full_future_principal_reduction_removes_future_interest_and_refunds_advances() -> None:
+    plan = plan_seven_by_seven_extra_principal_tail(
+        principal_reduction=Decimal("87.00"),
+        future_installments=(
+            _row(1, advance="10.00"),
+            _row(2),
+            _row(3, advance="25.00"),
+        ),
+    )
+
+    assert plan.resulting_future_principal == Decimal("0.00")
+    assert plan.removed_future_interest == Decimal("63.00")
+    assert plan.advance_refund_due == Decimal("35.00")
+    assert plan.removed_installment_ids == (101, 102, 103)
+    assert all(row.operational_amount == Decimal("0.00") for row in plan.installments)
