@@ -21,6 +21,33 @@ jobs:
     timeout-minutes: 40
 
     steps:
+      - name: Install pinned MinGit for deterministic history scanning
+        shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '2.55.0.5'
+          $expectedSha256 = '56d7b226b7693196cfc71fef26568f536c4a021ab6c37ff2db4287bed908e96e'
+          $archive = Join-Path $env:RUNNER_TEMP "mingit-$version-windows-x64.zip"
+          $toolDir = Join-Path $env:RUNNER_TEMP "mingit-$version"
+          $url = "https://github.com/git-for-windows/git/releases/download/v2.55.0.windows.5/MinGit-$version-64-bit.zip"
+          if (Test-Path -LiteralPath $archive) { Remove-Item -LiteralPath $archive -Force }
+          if (Test-Path -LiteralPath $toolDir) { Remove-Item -LiteralPath $toolDir -Recurse -Force }
+          Invoke-WebRequest -Uri $url -OutFile $archive -UseBasicParsing
+          $actualSha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualSha256 -ne $expectedSha256) {
+            throw "MinGit archive checksum mismatch: expected $expectedSha256, got $actualSha256"
+          }
+          Expand-Archive -LiteralPath $archive -DestinationPath $toolDir -Force
+          $gitDir = Join-Path $toolDir 'cmd'
+          $gitExe = Join-Path $gitDir 'git.exe'
+          if (-not (Test-Path -LiteralPath $gitExe)) {
+            throw "Pinned MinGit executable was not found after extraction."
+          }
+          & $gitExe version
+          if ($LASTEXITCODE -ne 0) { throw "Pinned MinGit executable failed its version check." }
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value $gitDir
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "MINGIT_GIT_EXE=$gitExe"
+
       - name: Check out exact revision
         uses: actions/checkout@v4
         with:
@@ -104,20 +131,24 @@ jobs:
           $workspace = (Resolve-Path -LiteralPath $env:GITHUB_WORKSPACE).Path
           Set-Location -LiteralPath $workspace
 
-          $gitExe = (Get-Command git.exe -CommandType Application -ErrorAction Stop).Source
-          if (-not [System.IO.Path]::IsPathRooted($gitExe)) {
-            throw "Git must resolve to an absolute executable path, got: $gitExe"
+          $gitExe = $env:MINGIT_GIT_EXE
+          if (
+            [string]::IsNullOrWhiteSpace($gitExe) -or
+            -not [System.IO.Path]::IsPathRooted($gitExe) -or
+            -not (Test-Path -LiteralPath $gitExe)
+          ) {
+            throw "Pinned MinGit is unavailable to the Gitleaks history scan: $gitExe"
           }
           $gitDir = Split-Path -Parent $gitExe
           $safePathEntries = [System.Collections.Generic.List[string]]::new()
-          $safePathEntries.Add($gitDir)
+          $safePathEntries.Add($gitDir) | Out-Null
           foreach ($entry in ($env:PATH -split ';')) {
             if (
               -not [string]::IsNullOrWhiteSpace($entry) -and
               [System.IO.Path]::IsPathRooted($entry) -and
               -not $safePathEntries.Contains($entry)
             ) {
-              $safePathEntries.Add($entry)
+              $safePathEntries.Add($entry) | Out-Null
             }
           }
           $env:PATH = $safePathEntries -join ';'
