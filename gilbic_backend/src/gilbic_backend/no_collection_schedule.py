@@ -42,15 +42,16 @@ def plan_no_collection_shift(
     """Move the affected installment and every later row one cadence slot.
 
     Signed contractual dates remain immutable evidence. This planner operates on
-    current effective dates. Management No Collection is a pre-collection-day
-    schedule decision, so an allocation already attached to an affected future
-    installment is treated as prepayment evidence (Advance) and moves with that
-    installment id instead of blocking the shift. The allocation itself is never
-    rewritten or detached.
+    current effective dates. An allocation already attached to the target or a
+    later installment stays attached to that same immutable installment id when
+    the operational date moves; the allocation is never rewritten or detached.
 
-    A caller that attempts to declare No Collection after same-day collection has
-    started violates the Management pre-declaration contract and must be rejected
-    by the surrounding workflow/audit gate rather than reinterpreted here.
+    That means a valid partial payment already recorded before Management later
+    declares No Collection remains valid evidence while the unpaid remainder of
+    the same signed installment moves to its new operational due date. A fully
+    satisfied target is a borrower-eligibility decision for the surrounding
+    Management workflow: it must not create a borrower No Collection shift or
+    interest holiday merely because an area/date declaration exists.
     """
 
     rows = tuple(
