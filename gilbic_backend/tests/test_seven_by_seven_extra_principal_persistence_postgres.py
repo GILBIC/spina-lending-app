@@ -182,7 +182,7 @@ def _setup_case() -> tuple[UUID, UUID, UUID, UUID, int]:
             first_due_date=first_due_date,
         )
         with connection.cursor() as cursor:
-            registration = register_verified_contract_schedule(
+            schedule_id = register_verified_contract_schedule(
                 cursor,
                 loan_id=loan_id,
                 payment_frequency="daily",
@@ -197,7 +197,6 @@ def _setup_case() -> tuple[UUID, UUID, UUID, UUID, int]:
                 verified_by_user_id=collector_id,
                 confirmed=True,
             )
-        schedule_id = registration.schedule_id
         installment_id = connection.execute(
             """
             select id
