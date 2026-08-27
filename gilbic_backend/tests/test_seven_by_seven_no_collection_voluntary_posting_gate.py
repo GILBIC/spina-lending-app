@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from types import SimpleNamespace
 from typing import Any, cast
 from uuid import uuid4
 
@@ -19,6 +18,7 @@ from spina_mobile_collections.contracts import (
     CollectionCommand,
     CollectionEntryType,
     PaymentAllocationIntent,
+    PostedCollection,
 )
 from spina_mobile_collections.service import CollectionRejected
 
@@ -50,19 +50,6 @@ def _command(*, entry_type: CollectionEntryType) -> CollectionCommand:
     )
 
 
-class _CursorContext:
-    def __enter__(self) -> object:
-        return object()
-
-    def __exit__(self, *_args: object) -> None:
-        return None
-
-
-class _Connection:
-    def cursor(self, **_kwargs: object) -> _CursorContext:
-        return _CursorContext()
-
-
 def test_production_multi_receipt_chain_includes_no_collection_voluntary_gate() -> None:
     assert (
         MultiReceiptSevenBySevenCollectionPostingBridge.__mro__[1]
@@ -70,32 +57,33 @@ def test_production_multi_receipt_chain_includes_no_collection_voluntary_gate() 
     )
 
 
-def test_verified_no_collection_voluntary_payment_reaches_atomic_write_boundary(
+def test_verified_no_collection_voluntary_payment_enters_atomic_posting_path(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     bridge = NoCollectionVoluntarySevenBySevenCollectionPostingBridge()
+    command = _command(entry_type=CollectionEntryType.PAYMENT)
+    expected = PostedCollection(
+        server_transaction_id=str(uuid4()),
+        receipt_number="20970810-000001",
+        official_balance=Decimal("950.00"),
+        accepted_at=datetime(2097, 8, 10, 8, 1, tzinfo=timezone.utc),
+        route_revision="next-revision",
+        message="Payment recorded.",
+    )
     monkeypatch.setattr(
         bridge,
         "_requires_seven_by_seven_path",
         lambda _connection, *, command: True,
     )
     monkeypatch.setattr(
-        "gilbic_backend.seven_by_seven_no_collection_voluntary_posting."
-        "load_no_collection_voluntary_posting_context",
-        lambda _cursor, **_kwargs: SimpleNamespace(
-            plan=SimpleNamespace(status="past_due_only")
-        ),
+        bridge,
+        "_post_no_collection_voluntary",
+        lambda _connection, _actor, _command: expected,
     )
 
-    with pytest.raises(CollectionRejected) as caught:
-        bridge.post_collection(
-            cast(Any, _Connection()),
-            _actor(),
-            _command(entry_type=CollectionEntryType.PAYMENT),
-        )
+    posted = bridge.post_collection(cast(Any, object()), _actor(), command)
 
-    assert caught.value.code == "seven_by_seven_no_collection_voluntary_posting_required"
-    assert "past_due_only" in caught.value.message
+    assert posted is expected
 
 
 def test_no_collection_voluntary_intent_rejects_regular_loan(
