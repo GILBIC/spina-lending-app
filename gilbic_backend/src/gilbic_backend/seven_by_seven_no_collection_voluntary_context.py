@@ -28,6 +28,7 @@ class NoCollectionVoluntaryPostingContext:
     source_no_collection_adjustment_id: UUID
     operational_version: int
     affected_installment: NoCollectionAffectedInstallment
+    affected_deferred_prepaid_amount: Decimal
     past_due_obligations: tuple[NoCollectionPastDueObligation, ...]
     plan: NoCollectionVoluntaryPlan
 
@@ -46,6 +47,13 @@ def load_no_collection_voluntary_posting_context(
     for the receipt date, exactly one affected signed installment, all older
     Past Due capacity, and all existing non-voided allocation evidence before
     calling the pure voluntary-payment planner.
+
+    ``affected_deferred_prepaid_amount`` is deliberately narrower than the
+    affected installment's total ``prepaid_amount``. A payment recorded before a
+    later Management No Collection declaration may already have been financially
+    active on its receipt date, while protected future-Advance/prepayment evidence
+    must activate only when the signed row becomes financially effective. The
+    atomic posting path needs both values so it never counts prior cash twice.
 
     The caller must still perform receipt, schedule-restoration, completion
     evidence, and financial replay writes atomically in the same transaction.
@@ -135,7 +143,11 @@ def load_no_collection_voluntary_posting_context(
             installment.effective_due_date,
             coalesce(sum(allocation.amount_applied) filter (
                 where allocation_transaction.is_voided = false
-            ), 0)::numeric(18,2) as allocated_amount
+            ), 0)::numeric(18,2) as allocated_amount,
+            coalesce(sum(allocation.amount_applied) filter (
+                where allocation_transaction.is_voided = false
+                  and allocation.allocation_basis = 'future_advance_oldest_first'
+            ), 0)::numeric(18,2) as deferred_allocated_amount
         from lending.loan_schedule_adjustment_items item
         join lending.loan_contract_installments_operational installment
           on installment.id = item.installment_id
@@ -167,9 +179,14 @@ def load_no_collection_voluntary_posting_context(
 
     affected_contractual = money(affected_row["contractual_amount"])
     affected_allocated = money(affected_row["allocated_amount"])
+    affected_deferred = money(affected_row["deferred_allocated_amount"])
     if affected_allocated < Decimal("0.00") or affected_allocated > affected_contractual:
         raise SevenBySevenNoCollectionVoluntaryContextError(
             "The affected No Collection installment has inconsistent payment evidence."
+        )
+    if affected_deferred < Decimal("0.00") or affected_deferred > affected_allocated:
+        raise SevenBySevenNoCollectionVoluntaryContextError(
+            "The affected No Collection installment has inconsistent deferred prepayment evidence."
         )
     affected_installment = NoCollectionAffectedInstallment(
         installment_id=int(affected_row["installment_id"]),
@@ -240,6 +257,7 @@ def load_no_collection_voluntary_posting_context(
         source_no_collection_adjustment_id=source_adjustment_id,
         operational_version=operational_version,
         affected_installment=affected_installment,
+        affected_deferred_prepaid_amount=affected_deferred,
         past_due_obligations=tuple(past_due),
         plan=plan,
     )
