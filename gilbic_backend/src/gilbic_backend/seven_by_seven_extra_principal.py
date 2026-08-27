@@ -43,6 +43,7 @@ class ExtraPrincipalInstallmentProjection:
     operational_principal_component: Decimal
     operational_amount: Decimal
     advance_allocated: Decimal
+    advance_retained: Decimal
     advance_refund_due: Decimal
     removed_from_operational_schedule: bool
 
@@ -79,11 +80,11 @@ def plan_seven_by_seven_extra_principal_tail(
     is reduced. Fully removed rows carry no future interest because principal
     will already be zero before those dates.
 
-    Existing verified Advance stays attached to surviving immutable installment
-    identity. Advance on a fully removed row becomes Unused Advance refund due.
-    If a partially shortened boundary row already contains more Advance than its
-    new operational amount, this planner fails closed because the approved
-    product decisions do not yet define that partial-boundary refund split.
+    Existing verified Advance preserves its original installment evidence.
+    The amount still needed by a surviving installment stays attached to that
+    same installment. Advance made unnecessary by a shortened boundary row or
+    a fully removed row becomes Unused Advance refund due; it is never moved to
+    another row or silently converted to Extra Principal.
     """
 
     reduction = money(principal_reduction)
@@ -135,18 +136,15 @@ def plan_seven_by_seven_extra_principal_tail(
         removed = resulting_principal == ZERO
         if removed:
             operational_amount = ZERO
+            advance_retained = ZERO
             row_refund_due = row.advance_allocated
             removed_interest = money(removed_interest + row.interest_component)
-            refund_due = money(refund_due + row_refund_due)
         else:
             operational_amount = money(row.interest_component + resulting_principal)
-            row_refund_due = ZERO
-            if row.advance_allocated > operational_amount:
-                raise SevenBySevenExtraPrincipalError(
-                    "A shortened 7x7 boundary installment already has more Advance than its new operational amount. Management review is required before posting Extra Principal.",
-                    code="seven_by_seven_extra_principal_boundary_advance_review_required",
-                )
+            advance_retained = money(min(row.advance_allocated, operational_amount))
+            row_refund_due = money(row.advance_allocated - advance_retained)
 
+        refund_due = money(refund_due + row_refund_due)
         projections_by_id[row.installment_id] = ExtraPrincipalInstallmentProjection(
             installment_id=row.installment_id,
             installment_number=row.installment_number,
@@ -157,6 +155,7 @@ def plan_seven_by_seven_extra_principal_tail(
             operational_principal_component=resulting_principal,
             operational_amount=operational_amount,
             advance_allocated=row.advance_allocated,
+            advance_retained=advance_retained,
             advance_refund_due=row_refund_due,
             removed_from_operational_schedule=removed,
         )
