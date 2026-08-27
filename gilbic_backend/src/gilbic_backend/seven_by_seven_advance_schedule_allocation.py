@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from .seven_by_seven_schedule_allocation import (
+    FUTURE_ADVANCE_BASIS,
     ZERO,
     SevenBySevenInstallmentAllocationInstruction,
     SevenBySevenScheduleAllocationConflict,
@@ -21,7 +22,7 @@ class SevenBySevenAdvanceRequiresCurrentSchedule(SevenBySevenScheduleAllocationC
 
 
 class SevenBySevenAdvanceCapacityExceeded(SevenBySevenScheduleAllocationConflict):
-    """Raised when requested Advance is beyond remaining future signed rows."""
+    """Raised when requested Advance is beyond remaining future operational rows."""
 
     code = "seven_by_seven_advance_capacity_exceeded"
 
@@ -33,17 +34,13 @@ def plan_verified_seven_by_seven_advance(
     collection_date: date,
     transaction_amount: Decimal | int | str,
 ) -> tuple[SevenBySevenInstallmentAllocationInstruction, ...]:
-    """Plan 7x7 Advance against future unpaid verified signed rows only.
+    """Plan 7x7 Advance against current future operational row capacity only.
 
-    Advance is schedule-prepayment evidence. It is allowed only after every
-    unpaid row through the collection date is already satisfied. Future rows
-    are then selected chronologically, oldest first, without skipping. A
-    partial final future row is allowed, and prior Advance allocations are
-    included so later receipts continue from the current remaining capacity.
-
-    This planner deliberately does not change operational principal or earn
-    future interest. Those financial effects belong to each row's effective
-    due date and are a separate implementation concern.
+    Signed schedule rows and historical Advance allocations remain immutable.
+    Current capacity uses the operational amount after audited Extra Principal
+    shortening and counts only active Advance (gross verified Advance less any
+    amount already classified as Refund Due). Removed tail rows have zero current
+    capacity and can never receive a new Advance.
     """
 
     amount = money(transaction_amount)
@@ -88,28 +85,37 @@ def plan_verified_seven_by_seven_advance(
             installment.id,
             installment.installment_number,
             installment.effective_due_date,
-            installment.contractual_amount,
-            installment.principal_component,
-            installment.interest_component,
-            coalesce(sum(allocation.amount_applied) filter (
-                where allocation_transaction.is_voided = false
-            ), 0)::numeric(18,2) as allocated_amount
+            installment.operational_amount,
+            installment.operational_principal_component,
+            installment.operational_interest_component,
+            (
+                coalesce(sum(allocation.amount_applied) filter (
+                    where allocation_transaction.is_voided = false
+                      and allocation.allocation_basis <> %s
+                ), 0)
+                + coalesce(active_advance.active_advance_allocated, 0)
+            )::numeric(18,2) as allocated_amount,
+            installment.removed_from_operational_schedule
         from lending.loan_contract_installments_operational installment
         left join lending.loan_installment_payment_allocations allocation
           on allocation.installment_id = installment.id
         left join lending.collection_transactions allocation_transaction
           on allocation_transaction.id = allocation.transaction_id
+        left join lending.loan_installment_active_advance active_advance
+          on active_advance.installment_id = installment.id
         where installment.schedule_id = %s
         group by
             installment.id,
             installment.installment_number,
             installment.effective_due_date,
-            installment.contractual_amount,
-            installment.principal_component,
-            installment.interest_component
+            installment.operational_amount,
+            installment.operational_principal_component,
+            installment.operational_interest_component,
+            installment.removed_from_operational_schedule,
+            active_advance.active_advance_allocated
         order by installment.effective_due_date, installment.installment_number
         """,
-        (schedule_id,),
+        (FUTURE_ADVANCE_BASIS, schedule_id),
     )
     rows = cursor.fetchall()
     if not rows:
@@ -124,33 +130,41 @@ def plan_verified_seven_by_seven_advance(
             installment_id = int(row["id"])
             installment_number = int(row["installment_number"])
             effective_due_date = row["effective_due_date"]
-            contractual_amount = money(row["contractual_amount"])
-            principal_component = row["principal_component"]
-            interest_component = row["interest_component"]
+            operational_amount = money(row["operational_amount"])
+            principal_component = row["operational_principal_component"]
+            interest_component = row["operational_interest_component"]
             allocated_amount = money(row["allocated_amount"])
+            removed = bool(row["removed_from_operational_schedule"])
         else:
             installment_id = int(row[0])
             installment_number = int(row[1])
             effective_due_date = row[2]
-            contractual_amount = money(row[3])
+            operational_amount = money(row[3])
             principal_component = row[4]
             interest_component = row[5]
             allocated_amount = money(row[6])
+            removed = bool(row[7])
 
+        if removed:
+            if operational_amount != ZERO:
+                raise SevenBySevenScheduleAllocationConflict(
+                    "A removed 7x7 operational row still has Advance capacity. Management review is required."
+                )
+            continue
         if principal_component is None or interest_component is None:
             raise SevenBySevenScheduleAllocationConflict(
-                "The active 7x7 schedule is missing principal/interest row evidence."
+                "The active 7x7 schedule is missing operational principal/interest evidence."
             )
-        if money(principal_component) + money(interest_component) != contractual_amount:
+        if money(principal_component) + money(interest_component) != operational_amount:
             raise SevenBySevenScheduleAllocationConflict(
-                "A verified 7x7 schedule row does not reconcile its principal and interest components."
+                "A 7x7 operational row does not reconcile its principal and interest components."
             )
-        if allocated_amount > contractual_amount:
+        if allocated_amount > operational_amount:
             raise SevenBySevenScheduleAllocationConflict(
-                "A verified 7x7 schedule row is over-allocated. Management review is required."
+                "A 7x7 operational row is over-allocated after Advance/Refund Due reconciliation. Management review is required."
             )
 
-        remaining = money(contractual_amount - allocated_amount)
+        remaining = money(operational_amount - allocated_amount)
         if remaining <= ZERO:
             continue
         if effective_due_date <= collection_date:
@@ -173,7 +187,7 @@ def plan_verified_seven_by_seven_advance(
     future_capacity = money(sum((row[3] for row in future_rows), ZERO))
     if future_capacity <= ZERO:
         raise SevenBySevenAdvanceCapacityExceeded(
-            "This 7x7 schedule has no unpaid future capacity available for Advance."
+            "This 7x7 schedule has no unpaid future operational capacity available for Advance."
         )
     if amount > future_capacity:
         excess = money(amount - future_capacity)
@@ -201,7 +215,7 @@ def plan_verified_seven_by_seven_advance(
 
     if amount_left != ZERO:
         raise SevenBySevenScheduleAllocationConflict(
-            "The 7x7 Advance could not be fully allocated to future signed rows."
+            "The 7x7 Advance could not be fully allocated to future operational rows."
         )
     return tuple(instructions)
 
