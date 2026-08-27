@@ -67,6 +67,8 @@ def test_advance_on_fully_removed_tail_row_becomes_refund_due() -> None:
     assert plan.resulting_future_principal == Decimal("58.00")
     assert plan.advance_refund_due == Decimal("25.00")
     assert plan.removed_future_interest == Decimal("21.00")
+    assert plan.installments[-1].advance_allocated == Decimal("25.00")
+    assert plan.installments[-1].advance_retained == Decimal("0.00")
     assert plan.installments[-1].advance_refund_due == Decimal("25.00")
     assert plan.installments[-1].removed_from_operational_schedule
 
@@ -82,20 +84,23 @@ def test_surviving_boundary_row_keeps_its_fixed_daily_interest() -> None:
     assert boundary.signed_interest_component == Decimal("21.00")
     assert boundary.operational_amount == Decimal("30.00")
     assert boundary.advance_allocated == Decimal("20.00")
+    assert boundary.advance_retained == Decimal("20.00")
     assert boundary.advance_refund_due == Decimal("0.00")
 
 
-def test_boundary_row_with_excess_advance_fails_closed_for_management_review() -> None:
-    with pytest.raises(SevenBySevenExtraPrincipalError) as captured:
-        plan_seven_by_seven_extra_principal_tail(
-            principal_reduction=Decimal("20.00"),
-            future_installments=(_row(1), _row(2), _row(3, advance="35.00")),
-        )
-
-    assert (
-        captured.value.code
-        == "seven_by_seven_extra_principal_boundary_advance_review_required"
+def test_boundary_row_with_excess_advance_keeps_needed_amount_and_refunds_excess() -> None:
+    plan = plan_seven_by_seven_extra_principal_tail(
+        principal_reduction=Decimal("20.00"),
+        future_installments=(_row(1), _row(2), _row(3, advance="35.00")),
     )
+
+    boundary = plan.installments[-1]
+    assert boundary.operational_amount == Decimal("30.00")
+    assert boundary.advance_allocated == Decimal("35.00")
+    assert boundary.advance_retained == Decimal("30.00")
+    assert boundary.advance_refund_due == Decimal("5.00")
+    assert plan.advance_refund_due == Decimal("5.00")
+    assert boundary.advance_retained + boundary.advance_refund_due == boundary.advance_allocated
 
 
 def test_extra_principal_cannot_exceed_future_principal_tail() -> None:
@@ -123,3 +128,5 @@ def test_full_future_principal_reduction_removes_future_interest_and_refunds_adv
     assert plan.advance_refund_due == Decimal("35.00")
     assert plan.removed_installment_ids == (101, 102, 103)
     assert all(row.operational_amount == Decimal("0.00") for row in plan.installments)
+    assert all(row.advance_retained == Decimal("0.00") for row in plan.installments)
+    assert sum((row.advance_refund_due for row in plan.installments), Decimal("0.00")) == Decimal("35.00")
