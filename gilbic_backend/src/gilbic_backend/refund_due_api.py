@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Never
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -95,7 +96,7 @@ def _release_payload(record: RefundDueReleaseRecord) -> dict[str, object]:
     }
 
 
-def _raise_refund_error(error: RefundDueError) -> None:
+def _raise_refund_error(error: RefundDueError) -> Never:
     if isinstance(error, (RefundDueNotFound, RefundDueReleaseNotApproved)):
         status_code = 404
     elif isinstance(

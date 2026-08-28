@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Literal, cast
@@ -362,7 +363,7 @@ def _collection_void_from_payload(payload: Any) -> CollectionVoidRecord:
     )
 
 
-def _canonical_hash(payload: dict[str, object]) -> str:
+def _canonical_hash(payload: Mapping[str, object]) -> str:
     encoded = json.dumps(
         payload,
         sort_keys=True,

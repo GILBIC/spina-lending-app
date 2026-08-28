@@ -336,6 +336,10 @@ class PostgresCollectionVoidRepository:
                         ),
                     )
                     restored = cursor.fetchone()
+                    if restored is None:
+                        raise CollectionVoidConflict(
+                            "The prior collection state could not be reconstructed."
+                        )
 
                     restored_balance = self._money(transaction["previous_balance"])
                     restored_pass_count = int(restored["pass_count_before"])

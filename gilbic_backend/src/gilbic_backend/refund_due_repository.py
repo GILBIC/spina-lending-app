@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -802,7 +803,7 @@ def _release_from_payload(payload: Any) -> RefundDueReleaseRecord:
         ) from error
 
 
-def _canonical_hash(payload: dict[str, object]) -> str:
+def _canonical_hash(payload: Mapping[str, object]) -> str:
     encoded = json.dumps(
         payload,
         sort_keys=True,
@@ -814,7 +815,13 @@ def _canonical_hash(payload: dict[str, object]) -> str:
 
 def _positive_money(value: Decimal, label: str) -> Decimal:
     amount = Decimal(value)
-    if amount <= ZERO or amount.as_tuple().exponent < -2:
+    exponent = amount.as_tuple().exponent
+    if (
+        not amount.is_finite()
+        or not isinstance(exponent, int)
+        or amount <= ZERO
+        or exponent < -2
+    ):
         raise RefundDueInvalid(
             f"{label} must be positive money with at most two decimals."
         )

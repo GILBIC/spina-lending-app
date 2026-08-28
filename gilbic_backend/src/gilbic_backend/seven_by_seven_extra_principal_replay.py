@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -466,7 +466,7 @@ def _validate_events(events: tuple[ActiveExtraPrincipalEvent, ...]) -> None:
         )
 
 
-def _digest(payload: dict[str, object]) -> str:
+def _digest(payload: Mapping[str, object]) -> str:
     canonical = json.dumps(
         payload,
         sort_keys=True,

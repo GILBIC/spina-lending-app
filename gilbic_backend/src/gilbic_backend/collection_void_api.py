@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Never
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -77,7 +78,7 @@ def _void_payload(record: CollectionVoidRecord) -> dict[str, object]:
     }
 
 
-def _raise_void_error(error: CollectionVoidError) -> None:
+def _raise_void_error(error: CollectionVoidError) -> Never:
     if isinstance(error, CollectionVoidNotFound):
         status_code = 404
     elif isinstance(error, (CollectionVoidLocked, CollectionVoidConflict)):
