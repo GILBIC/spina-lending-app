@@ -200,7 +200,7 @@ stable for existing keys, even though Flutter also maps by key.
 | --- | --- | --- | --- | --- |
 | `portfolio.active_clients` | `count` | Distinct client IDs among loans whose normalized status is `active` | none | Loan Management |
 | `portfolio.active_loans` | `count` | Loans whose normalized status is `active` | none | Loan Management |
-| `portfolio.overdue_loans` | `count` | Active loans with due date before PostgreSQL `current_date` and authoritative remaining balance greater than zero | none | Past Due & Follow-up |
+| `portfolio.overdue_loans` | `count` | Active loans with due date before PostgreSQL `current_date` and authoritative remaining balance greater than zero | none | Loan Management |
 | `portfolio.outstanding_balance` | `amount` | Sum of authoritative remaining balance for active loans, falling back to principal only under the existing loan-state rule | none | Loan Management |
 | `collections.latest_day` | `count`, `amount`, optional `as_of_date` | Non-voided, non-PASS entries on the latest collection date; amount excludes PASS | none | Loan Operations |
 | `collections.unremitted` | `count`, `amount` | Non-voided, unlocked collection transactions not attached to a remittance; amount excludes PASS | none | Loan Operations |
@@ -306,6 +306,12 @@ Every known metric has one exact destination from the table above. A card tap
 reuses the same navigation function and tap-time permission check as the
 corresponding launcher. Money/date formatting is presentation-only and cannot
 change the underlying value.
+
+The repository currently has a protected Past Due reporting API but no dedicated
+Management Past Due mobile screen. Therefore the overdue metric opens the
+existing Loan Management screen, where active overdue loans are already visible.
+A dedicated Past Due Management screen remains a later cross-platform parity
+slice and is not invented inside this overview checkpoint.
 
 ### Refresh and stale-response protection
 
