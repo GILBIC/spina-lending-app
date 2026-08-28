@@ -9,7 +9,6 @@ from uuid import UUID
 from psycopg import Connection
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
-
 from spina_mobile_collections.contracts import (
     ActorContext,
     CollectionCommand,
@@ -25,7 +24,6 @@ from .contract_schedule_service import (
     allocate_collection_transaction,
 )
 from .cross_collector_posting import CrossCollectorCollectionPostingBridge
-
 
 CONTRACT_ALLOCATION_SETTING = "mobile_contract_schedule_allocation_enabled"
 
@@ -428,7 +426,7 @@ class ContractAwareCrossCollectorCollectionPostingBridge(
                 installment.id,
                 installment.effective_due_date,
                 installment.contractual_amount
-            order by installment.effective_due_date, installment.installment_number
+            order by installment.effective_due_date, installment.id
             """,
             (installment_ids,),
         )

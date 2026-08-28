@@ -283,9 +283,9 @@ class _SplitSheetState extends State<_SplitSheet> {
   @override
   Widget build(BuildContext context) {
     final client = widget.client;
-    final regular = _entered < client.regular ? _entered : client.regular;
-    final remainder = (_entered - regular).clamp(0.0, double.infinity).toDouble();
-    final seven = remainder < client.seven ? remainder : client.seven;
+    final seven = _entered < client.seven ? _entered : client.seven;
+    final remainder = (_entered - seven).clamp(0.0, double.infinity).toDouble();
+    final regular = remainder < client.regular ? remainder : client.regular;
 
     return SafeArea(
       child: Padding(
@@ -300,14 +300,19 @@ class _SplitSheetState extends State<_SplitSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(client.name, style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                client.name,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
               const SizedBox(height: 4),
               Text('${client.area} • expected ${_money(client.today)}'),
               const SizedBox(height: 12),
               TextField(
                 key: const Key('synthetic-client-payment-amount'),
                 controller: _controller,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Amount received from client',
                   prefixText: '₱ ',
@@ -324,11 +329,15 @@ class _SplitSheetState extends State<_SplitSheet> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
-              if (client.regular > 0)
-                _SplitRow(label: 'Regular', due: client.regular, amount: regular),
-              if (client.seven > 0) ...[
-                const SizedBox(height: 8),
+              if (client.seven > 0)
                 _SplitRow(label: '7x7', due: client.seven, amount: seven),
+              if (client.regular > 0) ...[
+                const SizedBox(height: 8),
+                _SplitRow(
+                  label: 'Regular',
+                  due: client.regular,
+                  amount: regular,
+                ),
               ],
               const SizedBox(height: 10),
               Text(
@@ -378,7 +387,9 @@ class _MasterFixture extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 5),
-              Text('Review everyone who is not complete before leaving the route.'),
+              Text(
+                'Review everyone who is not complete before leaving the route.',
+              ),
             ],
           ),
         ),
@@ -471,7 +482,10 @@ class _AreaOrderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Area arrangement', style: TextStyle(fontWeight: FontWeight.w900)),
+            Text(
+              'Area arrangement',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
             SizedBox(height: 5),
             Text('1  BALAYONG'),
             Text('2  CALAHAN'),
@@ -496,7 +510,10 @@ class _Columns extends StatelessWidget {
           Expanded(child: Text('CLIENT / STATUS')),
           SizedBox(width: 56, child: Text('REG', textAlign: TextAlign.center)),
           SizedBox(width: 46, child: Text('7x7', textAlign: TextAlign.center)),
-          SizedBox(width: 58, child: Text('TODAY', textAlign: TextAlign.center)),
+          SizedBox(
+            width: 58,
+            child: Text('TODAY', textAlign: TextAlign.center),
+          ),
         ],
       ),
     );

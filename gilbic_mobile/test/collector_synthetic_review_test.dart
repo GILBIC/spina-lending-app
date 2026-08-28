@@ -34,11 +34,32 @@ void main() {
 
       await tester.tap(find.byKey(const Key('synthetic-collect-bal-ana')));
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('synthetic-client-payment-amount')), findsOneWidget);
+      expect(
+        find.byKey(const Key('synthetic-client-payment-amount')),
+        findsOneWidget,
+      );
       expect(find.text('Automatic split preview'), findsOneWidget);
       expect(find.textContaining('Regular due ₱100.00'), findsOneWidget);
       expect(find.textContaining('7x7 due ₱50.00'), findsOneWidget);
       expect(find.textContaining('₱150.00'), findsWidgets);
+      expect(
+        tester.getTopLeft(find.text('7x7 due ₱50.00')).dy,
+        lessThan(tester.getTopLeft(find.text('Regular due ₱100.00')).dy),
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('synthetic-client-payment-amount')),
+        '30',
+      );
+      await tester.pump();
+      expect(find.text('₱30.00'), findsWidgets);
+      expect(find.text('₱0.00'), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('synthetic-client-payment-amount')),
+        '150',
+      );
+      await tester.pump();
 
       await tester.tap(find.byKey(const Key('synthetic-confirm-payment')));
       await tester.pumpAndSettle();

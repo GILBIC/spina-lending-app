@@ -51,15 +51,19 @@ class ApiConfig {
     defaultValue: '/api/mobile/v1/collector/delegated-area/available-scopes',
   );
 
-  static const String delegatedAreaIncomingRequestsPath = String.fromEnvironment(
-    'GILBIC_DELEGATED_AREA_INCOMING_REQUESTS_PATH',
-    defaultValue: '/api/mobile/v1/collector/delegated-area/requests/incoming',
-  );
+  static const String delegatedAreaIncomingRequestsPath =
+      String.fromEnvironment(
+        'GILBIC_DELEGATED_AREA_INCOMING_REQUESTS_PATH',
+        defaultValue:
+            '/api/mobile/v1/collector/delegated-area/requests/incoming',
+      );
 
-  static const String delegatedAreaOutgoingRequestsPath = String.fromEnvironment(
-    'GILBIC_DELEGATED_AREA_OUTGOING_REQUESTS_PATH',
-    defaultValue: '/api/mobile/v1/collector/delegated-area/requests/outgoing',
-  );
+  static const String delegatedAreaOutgoingRequestsPath =
+      String.fromEnvironment(
+        'GILBIC_DELEGATED_AREA_OUTGOING_REQUESTS_PATH',
+        defaultValue:
+            '/api/mobile/v1/collector/delegated-area/requests/outgoing',
+      );
 
   static const String delegatedAreaActiveGrantsPath = String.fromEnvironment(
     'GILBIC_DELEGATED_AREA_ACTIVE_GRANTS_PATH',
@@ -74,6 +78,11 @@ class ApiConfig {
   static const String combinedPaymentSubmissionPath = String.fromEnvironment(
     'GILBIC_COMBINED_PAYMENT_SUBMISSION_PATH',
     defaultValue: '/api/mobile/v1/collector/collections/combined',
+  );
+
+  static const String combinedPaymentPreviewPath = String.fromEnvironment(
+    'GILBIC_COMBINED_PAYMENT_PREVIEW_PATH',
+    defaultValue: '/api/mobile/v1/collector/collections/combined/preview',
   );
 
   static const String collectorRenewalsPath = String.fromEnvironment(
@@ -120,28 +129,27 @@ class ApiConfig {
   static Uri delegatedAreaRequestActionEndpoint(
     String requestId,
     String action,
-  ) =>
-      endpoint(
-        '/api/mobile/v1/collector/delegated-area/requests/'
-        '${Uri.encodeComponent(requestId)}/${Uri.encodeComponent(action)}',
-      );
+  ) => endpoint(
+    '/api/mobile/v1/collector/delegated-area/requests/'
+    '${Uri.encodeComponent(requestId)}/${Uri.encodeComponent(action)}',
+  );
 
   static Uri delegatedAreaGrantRevokeEndpoint(String grantId) => endpoint(
-        '/api/mobile/v1/collector/delegated-area/grants/'
-        '${Uri.encodeComponent(grantId)}/revoke',
-      );
+    '/api/mobile/v1/collector/delegated-area/grants/'
+    '${Uri.encodeComponent(grantId)}/revoke',
+  );
 
   static Uri get paymentSubmissionEndpoint => endpoint(paymentSubmissionPath);
 
   static Uri get combinedPaymentSubmissionEndpoint =>
       endpoint(combinedPaymentSubmissionPath);
 
+  static Uri get combinedPaymentPreviewEndpoint =>
+      endpoint(combinedPaymentPreviewPath);
+
   static Uri get collectorRenewalsEndpoint => endpoint(collectorRenewalsPath);
 
-  static Uri collectorRenewalActionEndpoint(
-    String requestId,
-    String action,
-  ) =>
+  static Uri collectorRenewalActionEndpoint(String requestId, String action) =>
       endpoint(
         '/api/mobile/v1/collector/renewals/'
         '${Uri.encodeComponent(requestId)}/${Uri.encodeComponent(action)}',
@@ -154,8 +162,8 @@ class ApiConfig {
       endpoint('/api/v1/management/client-registrations');
 
   static Uri managementClientCandidatesEndpoint(String query) => endpoint(
-        '/api/v1/management/client-link-candidates?q=${Uri.encodeQueryComponent(query)}',
-      );
+    '/api/v1/management/client-link-candidates?q=${Uri.encodeQueryComponent(query)}',
+  );
 
   static Uri managementApproveClientRegistrationEndpoint(String userId) =>
       endpoint('/api/v1/management/client-registrations/$userId/approve');

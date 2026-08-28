@@ -6,9 +6,13 @@ This document is the implementation contract for the Management-approved follow-
 
 ## Atomic Regular + 7x7 Pay
 
-When exactly one Regular loan and one protected 7x7 loan for the same client are both safely payable today, Daily Collection shows one `Pay` action for the combined amount.
+When exactly one Regular loan and one protected 7x7 loan for the same client are both safely payable today, Daily Collection shows one `Pay` action. The Collector enters the physical cash received once; the phone does not calculate or submit two leg amounts.
 
 The phone must send one combined request. It must never emulate combined Pay by sending two independent mobile requests.
+
+During the coordinated rollout, the server also accepts the prior exact one-tap body that carried two positive leg amounts. It sums those values only as the physical cash total, discards the client-proposed split, and recomputes the 7x7-first allocation from current server state. Short or excess legacy totals still fail closed because they do not carry the new review evidence or borrower extra direction.
+
+Rollout is backend-first. The new mobile flow must receive a successful, current `/combined/preview` before its save action becomes available; a missing, older, or invalid preview response leaves save disabled. This is the capability gate that prevents a new Android client from sending the one-total contract to an older server. During rollout and rollback, keep the new mobile release unavailable until the matching backend is healthy; do not roll the backend below this contract while that mobile release remains active.
 
 Server requirements:
 
@@ -16,12 +20,24 @@ Server requirements:
 - same authenticated Collector and registered device for both legs;
 - same client and collection date;
 - exactly two distinct loans: one Regular and one `seven_by_seven`;
-- each leg must carry its current route revision and exact amount;
+- each loan reference must carry its current route revision, while the request carries one cash total;
+- the server derives the complete collectible amount for each loan from current signed-schedule/operational evidence, with the existing server-daily fallback retained only for transitional loans that do not yet have a registered schedule;
+- an assigned-route authorization check runs before either loan's financial details are returned;
+- a registered Regular schedule is used only when the matching protected posting gate is active and reconciled; schedule-present-but-not-postable states fail closed, and Regular Advance/Principal Reduction are unavailable on daily-fallback loans;
+- ordinary cash clears all collectible 7x7 Past Due and Due Today first, then Regular;
+- the read-only `/combined/preview` response returns the proposed split and a hash of the exact server evidence;
+- an exact total may submit immediately; a short or excess amount must resubmit the reviewed allocation hash;
+- a partial Regular leg also requires the existing structured Past Due reason/promise evidence;
+- cash above both collectible obligations remains unapplied until the borrower explicitly chooses `7x7 Advance`, `7x7 Extra Principal`, `Regular Advance`, or `Regular Principal Reduction`;
+- even with a borrower choice, combined Pay rejects cash above the exact protected payoff or future-schedule capacity before save; it never accepts a reviewed split that would create unallocated cash;
 - both official posting bridges execute in one PostgreSQL transaction;
 - protected 7x7 allocation remains authoritative for the 7x7 leg;
 - if either leg conflicts or rejects, neither leg persists;
 - an uncertain retry reuses the same parent transaction key and returns the same official result;
-- success returns two official receipt numbers and refreshes the route.
+- the parent and every leg preserve received, applied, and unallocated cash evidence plus protected product metadata; no response may claim full allocation while any receipt remains unallocated;
+- exact scheduled success returns two official receipt numbers and refreshes the route.
+
+A short payment can legitimately produce only one official loan receipt when the cash is not enough to finish the 7x7 collectible obligation. An excess payment can produce a third receipt when the chosen protected 7x7 extra action must remain separate from the scheduled 7x7 receipt. Every resulting receipt remains under the one parent idempotency key and one database transaction.
 
 Ambiguous multiple-loan combinations that are not exactly one Regular plus one 7x7 must fail closed and must not be converted into multiple independent phone writes.
 

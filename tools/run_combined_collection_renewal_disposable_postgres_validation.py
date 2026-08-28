@@ -7,10 +7,8 @@ import uuid
 from pathlib import Path
 
 import psycopg
-from psycopg.conninfo import conninfo_to_dict, make_conninfo
-
 import run_stage5d17_disposable_postgres_validation as disposable
-
+from psycopg.conninfo import make_conninfo
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND_SRC = ROOT / "gilbic_backend" / "src"
@@ -32,9 +30,10 @@ TARGET_TESTS = (
 )
 # The combined collection bridge and its 7x7 readers now depend on the
 # operational Extra Principal/active-Advance evidence introduced by 0106 and
-# the DPD reader alignment introduced by 0107. The disposable schema must match
-# those current code dependencies before exercising production posting.
-BOOTSTRAP_THROUGH = 107
+# the DPD reader alignment introduced by 0107 and the auditable 7x7 Extra
+# Principal reversal/refund bridge completed by 0108. The disposable schema
+# must match those current code dependencies before exercising production posting.
+BOOTSTRAP_THROUGH = 108
 REQUIRED_7X7_READER_RELATIONS = (
     "lending.seven_by_seven_extra_principal_adjustments",
     "lending.loan_contract_installments_operational",
@@ -52,13 +51,7 @@ def _base_connection_params() -> dict[str, str]:
             f"{BASE_DATABASE_URL_ENV} is not configured; refusing to guess PostgreSQL credentials."
         )
 
-    params = conninfo_to_dict(database_url)
-    host = (params.get("host") or "").strip().lower()
-    if host not in {"127.0.0.1", "localhost", "::1"}:
-        raise SystemExit(
-            "Combined Pay + renewal disposable validation refused: PostgreSQL must be loopback-only."
-        )
-    return params
+    return disposable._safe_local_connection_params(database_url)
 
 
 def _database_url(base_params: dict[str, str], database_name: str) -> str:
@@ -130,7 +123,9 @@ def _assert_current_7x7_reader_schema(test_url: str) -> None:
             "seven_by_seven_extra_principal_adjustments",
         )
         missing_fragments = [
-            fragment for fragment in required_reader_fragments if fragment not in definition
+            fragment
+            for fragment in required_reader_fragments
+            if fragment not in definition
         ]
         if missing_fragments:
             raise RuntimeError(
@@ -157,7 +152,9 @@ def main() -> int:
             connection.execute(f'CREATE DATABASE "{database_name}"')
         created = True
 
-        print(f"Bootstrapping disposable database through migration {BOOTSTRAP_THROUGH:04d}...")
+        print(
+            f"Bootstrapping disposable database through migration {BOOTSTRAP_THROUGH:04d}..."
+        )
         _bootstrap_database(test_url)
         _assert_current_7x7_reader_schema(test_url)
 
@@ -192,7 +189,7 @@ def main() -> int:
                         (database_name,),
                     )
                     connection.execute(f'DROP DATABASE IF EXISTS "{database_name}"')
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001 - cleanup is best effort
                 print(f"Warning: failed to drop disposable database: {error}")
 
     print("Disposable combined Pay + renewal workflow validation passed.")

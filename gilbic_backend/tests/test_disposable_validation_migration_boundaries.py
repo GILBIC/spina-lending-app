@@ -16,6 +16,9 @@ CURRENT_7X7_READER_VALIDATORS = (
 )
 CURRENT_7X7_EXTRA_PRINCIPAL_BRIDGE_VALIDATORS = (
     ROOT / "tools" / "run_7x7_extra_principal_bridge_disposable_postgres_validation.py",
+    ROOT
+    / "tools"
+    / "run_combined_collection_renewal_disposable_postgres_validation.py",
 )
 CURRENT_REMITTANCE_REPOSITORY_VALIDATORS = (
     ROOT / "tools" / "run_0102_remittance_review_disposable_postgres_validation.py",
