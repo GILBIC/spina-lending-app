@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/management/management_dashboard_overview.dart';
+import 'package:gilbic_mobile/src/core/management/management_dashboard_overview_repository.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
@@ -25,13 +30,14 @@ import 'package:gilbic_mobile/src/features/notifications/activity_notifications_
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
 
-class ManagementDashboard extends StatelessWidget {
+class ManagementDashboard extends StatefulWidget {
   const ManagementDashboard({
     required this.session,
     required this.onSignOut,
     required this.paymentSubmissionRepository,
     required this.deviceIdentityProvider,
     required this.collectionDeviceSequence,
+    this.overviewRepository,
     super.key,
   });
 
@@ -40,6 +46,95 @@ class ManagementDashboard extends StatelessWidget {
   final PaymentSubmissionRepository paymentSubmissionRepository;
   final DeviceIdentityProvider deviceIdentityProvider;
   final CollectionDeviceSequence collectionDeviceSequence;
+  final ManagementDashboardOverviewRepository? overviewRepository;
+
+  @override
+  State<ManagementDashboard> createState() => _ManagementDashboardState();
+}
+
+class _ManagementDashboardState extends State<ManagementDashboard> {
+  late final ManagementDashboardOverviewRepository _overviewRepository;
+  ManagementDashboardOverview? _overview;
+  bool _loadingOverview = true;
+  String? _overviewError;
+  int? _overviewStatusCode;
+  String? _deviceId;
+  Future<String>? _deviceIdLoad;
+  int _requestGeneration = 0;
+
+  UserSession get session => widget.session;
+  Future<void> Function() get onSignOut => widget.onSignOut;
+  PaymentSubmissionRepository get paymentSubmissionRepository =>
+      widget.paymentSubmissionRepository;
+  DeviceIdentityProvider get deviceIdentityProvider =>
+      widget.deviceIdentityProvider;
+  CollectionDeviceSequence get collectionDeviceSequence =>
+      widget.collectionDeviceSequence;
+
+  @override
+  void initState() {
+    super.initState();
+    _overviewRepository =
+        widget.overviewRepository ??
+        SpinaManagementDashboardOverviewRepository();
+    unawaited(_loadOverview());
+  }
+
+  @override
+  void dispose() {
+    _requestGeneration += 1;
+    super.dispose();
+  }
+
+  Future<String> _loadDeviceIdOnce() {
+    final cached = _deviceId;
+    if (cached != null) return Future<String>.value(cached);
+    return _deviceIdLoad ??= _loadAndCacheDeviceId();
+  }
+
+  Future<String> _loadAndCacheDeviceId() async {
+    try {
+      final identity = await widget.deviceIdentityProvider.load();
+      _deviceId = identity.installationId;
+      return identity.installationId;
+    } finally {
+      _deviceIdLoad = null;
+    }
+  }
+
+  Future<void> _loadOverview({bool refresh = false}) async {
+    final generation = ++_requestGeneration;
+    setState(() {
+      _loadingOverview = true;
+      _overviewError = null;
+      _overviewStatusCode = null;
+    });
+    try {
+      final deviceId = await _loadDeviceIdOnce();
+      final overview = await _overviewRepository.loadOverview(
+        widget.session,
+        deviceId: deviceId,
+      );
+      if (!mounted || generation != _requestGeneration) return;
+      setState(() => _overview = overview);
+    } on Object catch (error) {
+      if (!mounted || generation != _requestGeneration) return;
+      setState(() {
+        _overviewError = error is SpinaApiException
+            ? error.message
+            : refresh
+            ? 'The live Management overview could not be refreshed.'
+            : 'The live Management overview could not be loaded.';
+        _overviewStatusCode = error is SpinaApiException
+            ? error.statusCode
+            : null;
+      });
+    } finally {
+      if (mounted && generation == _requestGeneration) {
+        setState(() => _loadingOverview = false);
+      }
+    }
+  }
 
   void _push(BuildContext context, Widget page) {
     Navigator.of(
@@ -157,6 +252,22 @@ class ManagementDashboard extends StatelessWidget {
     _push(context, page);
   }
 
+  void _openOverviewMetric(
+    BuildContext context,
+    ManagementDashboardMetricKey key,
+  ) {
+    final action = _metricActions[key];
+    if (action == null) return;
+    for (final section in _managementSections) {
+      for (final module in section.modules) {
+        if (module.action == action) {
+          _openModule(context, module);
+          return;
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final sections = _managementSections
@@ -176,21 +287,36 @@ class ManagementDashboard extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _ManagementWelcomeCard(session: session),
-              const SizedBox(height: 20),
-              for (var index = 0; index < sections.length; index++) ...[
-                _ManagementSectionCard(
-                  section: sections[index],
-                  onOpen: (module) => _openModule(context, module),
+        child: RefreshIndicator(
+          onRefresh: () => _loadOverview(refresh: true),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _ManagementWelcomeCard(session: session),
+                const SizedBox(height: 16),
+                _ManagementLiveOverview(
+                  overview: _overview,
+                  loading: _loadingOverview,
+                  error: _overviewError,
+                  statusCode: _overviewStatusCode,
+                  onRefresh: () => unawaited(_loadOverview(refresh: true)),
+                  onRetry: () => unawaited(_loadOverview()),
+                  onSignInAgain: () => unawaited(onSignOut()),
+                  onOpenMetric: (key) => _openOverviewMetric(context, key),
                 ),
-                if (index != sections.length - 1) const SizedBox(height: 16),
+                const SizedBox(height: 20),
+                for (var index = 0; index < sections.length; index++) ...[
+                  _ManagementSectionCard(
+                    section: sections[index],
+                    onOpen: (module) => _openModule(context, module),
+                  ),
+                  if (index != sections.length - 1) const SizedBox(height: 16),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -226,6 +352,470 @@ class _ManagementWelcomeCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ManagementLiveOverview extends StatelessWidget {
+  const _ManagementLiveOverview({
+    required this.overview,
+    required this.loading,
+    required this.error,
+    required this.statusCode,
+    required this.onRefresh,
+    required this.onRetry,
+    required this.onSignInAgain,
+    required this.onOpenMetric,
+  });
+
+  final ManagementDashboardOverview? overview;
+  final bool loading;
+  final String? error;
+  final int? statusCode;
+  final VoidCallback onRefresh;
+  final VoidCallback onRetry;
+  final VoidCallback onSignInAgain;
+  final ValueChanged<ManagementDashboardMetricKey> onOpenMetric;
+
+  @override
+  Widget build(BuildContext context) {
+    final snapshot = overview;
+    if (snapshot == null && error != null) {
+      return _ManagementOverviewInitialError(
+        error: error!,
+        statusCode: statusCode,
+        onRetry: onRetry,
+        onSignInAgain: onSignInAgain,
+      );
+    }
+    if (snapshot == null) {
+      return Card(
+        key: const Key('management-overview-loading'),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ManagementOverviewHeader(
+                onRefresh: onRefresh,
+                refreshing: loading,
+              ),
+              const SizedBox(height: 12),
+              const LinearProgressIndicator(),
+              const SizedBox(height: 12),
+              const Text('Loading current lending, cash, and review totals…'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final facts = _factMetricKeys
+        .map(snapshot.metric)
+        .whereType<ManagementDashboardMetric>()
+        .toList(growable: false);
+    final returnedAttention = _attentionMetricKeys
+        .map(snapshot.metric)
+        .whereType<ManagementDashboardMetric>()
+        .toList(growable: false);
+    final attention = returnedAttention
+        .where(_metricHasAttention)
+        .toList(growable: false);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _ManagementOverviewHeader(onRefresh: onRefresh, refreshing: loading),
+        if (loading) ...[
+          const SizedBox(height: 6),
+          const LinearProgressIndicator(
+            key: Key('management-overview-refreshing'),
+          ),
+        ],
+        const SizedBox(height: 4),
+        Text(
+          _updatedText(context, snapshot.generatedAt),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        if (error != null) ...[
+          const SizedBox(height: 10),
+          Material(
+            key: const Key('management-overview-refresh-error'),
+            color: Theme.of(context).colorScheme.errorContainer,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(
+                'Refresh failed. The last successful snapshot remains visible. '
+                '$error',
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 14),
+        Text(
+          'Today & portfolio',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        _ManagementOverviewMetricWrap(
+          key: const Key('management-overview-facts'),
+          metrics: facts,
+          onOpenMetric: onOpenMetric,
+        ),
+        const SizedBox(height: 16),
+        Text('Needs attention', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        if (attention.isEmpty)
+          Card(
+            key: const Key('management-overview-no-pending'),
+            margin: EdgeInsets.zero,
+            child: const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('No pending items in your authorized queues.'),
+            ),
+          )
+        else
+          _ManagementOverviewMetricWrap(
+            key: const Key('management-overview-attention'),
+            metrics: attention,
+            onOpenMetric: onOpenMetric,
+          ),
+      ],
+    );
+  }
+}
+
+class _ManagementOverviewHeader extends StatelessWidget {
+  const _ManagementOverviewHeader({
+    required this.onRefresh,
+    required this.refreshing,
+  });
+
+  final VoidCallback onRefresh;
+  final bool refreshing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Live Management overview',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+        ),
+        IconButton(
+          key: const Key('management-overview-refresh'),
+          tooltip: refreshing ? 'Refresh again' : 'Refresh live overview',
+          onPressed: onRefresh,
+          icon: const Icon(Icons.refresh),
+        ),
+      ],
+    );
+  }
+}
+
+class _ManagementOverviewInitialError extends StatelessWidget {
+  const _ManagementOverviewInitialError({
+    required this.error,
+    required this.statusCode,
+    required this.onRetry,
+    required this.onSignInAgain,
+  });
+
+  final String error;
+  final int? statusCode;
+  final VoidCallback onRetry;
+  final VoidCallback onSignInAgain;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = switch (statusCode) {
+      401 => 'Session expired',
+      403 => 'Live data access unavailable',
+      _ => 'Live overview unavailable',
+    };
+    final guidance = switch (statusCode) {
+      401 => 'Sign in again to load current Management data.',
+      403 =>
+        'Your current role, permission, or device approval does not allow '
+            'this live snapshot.',
+      _ => 'Retry when the live server is available.',
+    };
+
+    return Card(
+      key: const Key('management-overview-error'),
+      color: Theme.of(context).colorScheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text('$guidance $error'),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: statusCode == 401
+                  ? FilledButton.icon(
+                      key: const Key('management-overview-sign-in'),
+                      onPressed: onSignInAgain,
+                      icon: const Icon(Icons.login),
+                      label: const Text('Sign in again'),
+                    )
+                  : OutlinedButton.icon(
+                      key: const Key('management-overview-retry'),
+                      onPressed: onRetry,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ManagementOverviewMetricWrap extends StatelessWidget {
+  const _ManagementOverviewMetricWrap({
+    required super.key,
+    required this.metrics,
+    required this.onOpenMetric,
+  });
+
+  final List<ManagementDashboardMetric> metrics;
+  final ValueChanged<ManagementDashboardMetricKey> onOpenMetric;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 10.0;
+        final cardWidth = constraints.maxWidth >= 680
+            ? (constraints.maxWidth - spacing) / 2
+            : constraints.maxWidth;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final metric in metrics)
+              SizedBox(
+                width: cardWidth,
+                child: _ManagementOverviewMetricCard(
+                  metric: metric,
+                  onTap: () => onOpenMetric(metric.key),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ManagementOverviewMetricCard extends StatelessWidget {
+  const _ManagementOverviewMetricCard({
+    required this.metric,
+    required this.onTap,
+  });
+
+  final ManagementDashboardMetric metric;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = _metricContent(context, metric);
+    return Card(
+      key: Key('management-overview-metric-${metric.key.name}'),
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Semantics(
+        button: true,
+        label: '${content.$1}. Open ${_metricDestinationLabel(metric.key)}.',
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(_metricIcon(metric.key)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        content.$1,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      if (content.$2 != null) ...[
+                        const SizedBox(height: 4),
+                        Text(content.$2!),
+                      ],
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+const _factMetricKeys = <ManagementDashboardMetricKey>[
+  ManagementDashboardMetricKey.activeClients,
+  ManagementDashboardMetricKey.activeLoans,
+  ManagementDashboardMetricKey.overdueLoans,
+  ManagementDashboardMetricKey.outstandingBalance,
+  ManagementDashboardMetricKey.latestCollections,
+  ManagementDashboardMetricKey.unremittedCollections,
+];
+
+const _attentionMetricKeys = <ManagementDashboardMetricKey>[
+  ManagementDashboardMetricKey.assignedRemittances,
+  ManagementDashboardMetricKey.protectedRenewals,
+  ManagementDashboardMetricKey.staffRegistrations,
+  ManagementDashboardMetricKey.clientRegistrations,
+  ManagementDashboardMetricKey.collectorMobileDevices,
+  ManagementDashboardMetricKey.borrowerSupport,
+  ManagementDashboardMetricKey.unreadActivity,
+];
+
+bool _metricHasAttention(ManagementDashboardMetric metric) {
+  return (metric.count ?? 0) > 0 ||
+      (metric.amount != null && metric.amount != '0.00');
+}
+
+(String, String?) _metricContent(
+  BuildContext context,
+  ManagementDashboardMetric metric,
+) {
+  final count = metric.count ?? 0;
+  final amount = _formatMoney(metric.amount ?? '0.00');
+  return switch (metric.key) {
+    ManagementDashboardMetricKey.activeClients => (
+      '$count active clients',
+      null,
+    ),
+    ManagementDashboardMetricKey.activeLoans => ('$count active loans', null),
+    ManagementDashboardMetricKey.overdueLoans => ('$count overdue loans', null),
+    ManagementDashboardMetricKey.outstandingBalance => (
+      'PHP $amount outstanding',
+      null,
+    ),
+    ManagementDashboardMetricKey.latestCollections => (
+      'PHP $amount collected',
+      '$count entries${_asOfText(context, metric.asOfDate)}',
+    ),
+    ManagementDashboardMetricKey.unremittedCollections => (
+      'PHP $amount unremitted collector cash',
+      '$count collection entries',
+    ),
+    ManagementDashboardMetricKey.assignedRemittances => (
+      '$count assigned remittances',
+      'PHP $amount awaiting receipt',
+    ),
+    ManagementDashboardMetricKey.protectedRenewals => (
+      '$count renewal requests',
+      'Protected Management review',
+    ),
+    ManagementDashboardMetricKey.staffRegistrations => (
+      '$count staff registrations',
+      'Account approval queue',
+    ),
+    ManagementDashboardMetricKey.clientRegistrations => (
+      '$count client registrations',
+      'Portal access approval queue',
+    ),
+    ManagementDashboardMetricKey.collectorMobileDevices => (
+      '$count Collector mobile devices',
+      'Pending device approval',
+    ),
+    ManagementDashboardMetricKey.borrowerSupport => (
+      '$count client support requests',
+      'Open or awaiting resolution',
+    ),
+    ManagementDashboardMetricKey.unreadActivity => (
+      '$count unread activity updates',
+      'Payments, approvals, and custody events',
+    ),
+  };
+}
+
+String _updatedText(BuildContext context, DateTime generatedAt) {
+  final local = generatedAt.toLocal();
+  final date = MaterialLocalizations.of(context).formatMediumDate(local);
+  final time = TimeOfDay.fromDateTime(local).format(context);
+  return 'Updated $date at $time';
+}
+
+String _asOfText(BuildContext context, DateTime? asOfDate) {
+  if (asOfDate == null) return '';
+  final calendarDate = DateTime(asOfDate.year, asOfDate.month, asOfDate.day);
+  final date = MaterialLocalizations.of(context).formatMediumDate(calendarDate);
+  return ' • $date';
+}
+
+String _formatMoney(String value) {
+  final parts = value.split('.');
+  final integer = parts.first;
+  final grouped = StringBuffer();
+  for (var index = 0; index < integer.length; index++) {
+    if (index > 0 && (integer.length - index) % 3 == 0) {
+      grouped.write(',');
+    }
+    grouped.write(integer[index]);
+  }
+  return '${grouped.toString()}.${parts[1]}';
+}
+
+String _metricDestinationLabel(ManagementDashboardMetricKey key) {
+  return switch (key) {
+    ManagementDashboardMetricKey.activeClients ||
+    ManagementDashboardMetricKey.activeLoans ||
+    ManagementDashboardMetricKey.overdueLoans ||
+    ManagementDashboardMetricKey.outstandingBalance => 'Loan portfolio',
+    ManagementDashboardMetricKey.latestCollections ||
+    ManagementDashboardMetricKey.unremittedCollections =>
+      'Collection oversight',
+    ManagementDashboardMetricKey.assignedRemittances => 'Remittance requests',
+    ManagementDashboardMetricKey.protectedRenewals => 'Renewal requests',
+    ManagementDashboardMetricKey.staffRegistrations ||
+    ManagementDashboardMetricKey.collectorMobileDevices => 'Staff and devices',
+    ManagementDashboardMetricKey.clientRegistrations => 'Client registrations',
+    ManagementDashboardMetricKey.borrowerSupport => 'Client support',
+    ManagementDashboardMetricKey.unreadActivity => 'Alerts and activity',
+  };
+}
+
+IconData _metricIcon(ManagementDashboardMetricKey key) {
+  return switch (key) {
+    ManagementDashboardMetricKey.activeClients => Icons.groups_outlined,
+    ManagementDashboardMetricKey.activeLoans => Icons.account_balance_outlined,
+    ManagementDashboardMetricKey.overdueLoans => Icons.warning_amber_outlined,
+    ManagementDashboardMetricKey.outstandingBalance =>
+      Icons.account_balance_wallet_outlined,
+    ManagementDashboardMetricKey.latestCollections => Icons.payments_outlined,
+    ManagementDashboardMetricKey.unremittedCollections =>
+      Icons.inventory_2_outlined,
+    ManagementDashboardMetricKey.assignedRemittances =>
+      Icons.move_to_inbox_outlined,
+    ManagementDashboardMetricKey.protectedRenewals => Icons.autorenew,
+    ManagementDashboardMetricKey.staffRegistrations =>
+      Icons.person_add_alt_outlined,
+    ManagementDashboardMetricKey.clientRegistrations =>
+      Icons.how_to_reg_outlined,
+    ManagementDashboardMetricKey.collectorMobileDevices =>
+      Icons.phonelink_lock_outlined,
+    ManagementDashboardMetricKey.borrowerSupport => Icons.support_agent,
+    ManagementDashboardMetricKey.unreadActivity =>
+      Icons.notifications_active_outlined,
+  };
 }
 
 class _ManagementSectionCard extends StatelessWidget {
@@ -326,6 +916,28 @@ enum _ManagementAction {
 
   final String keyName;
 }
+
+const _metricActions = <ManagementDashboardMetricKey, _ManagementAction>{
+  ManagementDashboardMetricKey.activeClients: _ManagementAction.loans,
+  ManagementDashboardMetricKey.activeLoans: _ManagementAction.loans,
+  ManagementDashboardMetricKey.overdueLoans: _ManagementAction.loans,
+  ManagementDashboardMetricKey.outstandingBalance: _ManagementAction.loans,
+  ManagementDashboardMetricKey.latestCollections:
+      _ManagementAction.loanOperations,
+  ManagementDashboardMetricKey.unremittedCollections:
+      _ManagementAction.loanOperations,
+  ManagementDashboardMetricKey.assignedRemittances:
+      _ManagementAction.remittanceNotifications,
+  ManagementDashboardMetricKey.protectedRenewals: _ManagementAction.renewals,
+  ManagementDashboardMetricKey.staffRegistrations:
+      _ManagementAction.staffDevices,
+  ManagementDashboardMetricKey.clientRegistrations:
+      _ManagementAction.clientRegistrationApprovals,
+  ManagementDashboardMetricKey.collectorMobileDevices:
+      _ManagementAction.staffDevices,
+  ManagementDashboardMetricKey.borrowerSupport: _ManagementAction.support,
+  ManagementDashboardMetricKey.unreadActivity: _ManagementAction.alertsActivity,
+};
 
 class _ManagementModule {
   const _ManagementModule(

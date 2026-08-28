@@ -4,6 +4,8 @@ import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/management/management_dashboard_overview.dart';
+import 'package:gilbic_mobile/src/core/management/management_dashboard_overview_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
@@ -72,10 +74,7 @@ void main() {
         of: renewals,
         matching: find.byType(ListTile),
       );
-      expect(
-        find.byKey(const Key('management-staff-devices')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const Key('management-staff-devices')), findsOneWidget);
       expect(
         tester.widget<ListTile>(peopleLaunchers.first).key,
         const Key('management-staff-devices'),
@@ -294,8 +293,59 @@ EnhancedRoleDashboard _dashboard(UserSession session) {
       appVersionResolver: () async => '1.0.0+1',
     ),
     collectionDeviceSequence: MemoryCollectionDeviceSequence(),
+    managementDashboardOverviewRepository:
+        _CompletedManagementOverviewRepository(),
   );
 }
+
+class _CompletedManagementOverviewRepository
+    implements ManagementDashboardOverviewRepository {
+  @override
+  Future<ManagementDashboardOverview> loadOverview(
+    UserSession session, {
+    required String deviceId,
+  }) async {
+    return _architectureOverview;
+  }
+}
+
+final _architectureOverview = ManagementDashboardOverview(
+  generatedAt: DateTime.utc(2026, 8, 29, 4, 15, 30),
+  currency: 'PHP',
+  metrics: const <ManagementDashboardMetric>[
+    ManagementDashboardMetric(
+      key: ManagementDashboardMetricKey.activeClients,
+      count: 41,
+    ),
+    ManagementDashboardMetric(
+      key: ManagementDashboardMetricKey.activeLoans,
+      count: 48,
+    ),
+    ManagementDashboardMetric(
+      key: ManagementDashboardMetricKey.overdueLoans,
+      count: 7,
+    ),
+    ManagementDashboardMetric(
+      key: ManagementDashboardMetricKey.outstandingBalance,
+      amount: '987654.32',
+    ),
+    ManagementDashboardMetric(
+      key: ManagementDashboardMetricKey.latestCollections,
+      count: 32,
+      amount: '18450.00',
+    ),
+    ManagementDashboardMetric(
+      key: ManagementDashboardMetricKey.unremittedCollections,
+      count: 6,
+      amount: '3750.50',
+    ),
+    ManagementDashboardMetric(
+      key: ManagementDashboardMetricKey.unreadActivity,
+      count: 0,
+    ),
+  ],
+  ignoredMetricKeys: const <String>[],
+);
 
 const _managementSession = UserSession(
   userId: 'management-1',
