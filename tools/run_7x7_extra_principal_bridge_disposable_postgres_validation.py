@@ -22,7 +22,9 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_refund_due_postgres.py",
     TEST_ROOT / "test_seven_by_seven_extra_principal_reversal_requests_postgres.py",
     TEST_ROOT / "test_seven_by_seven_extra_principal_reversal_postgres.py",
+    TEST_ROOT / "test_seven_by_seven_extra_principal_concurrency_postgres.py",
     TEST_ROOT / "test_7x7_controlled_collection_reversal_postgres.py",
+    TEST_ROOT / "test_regular_collection_reversal_postgres.py",
 )
 
 

@@ -426,6 +426,24 @@ class PostgresRefundDueRepository:
                             )
                         return _release_from_payload(existing["result_payload"])
 
+                    approval_identity = cursor.execute(
+                        """
+                        select adjustment_id
+                        from lending.loan_unused_advance_refund_due_approvals
+                        where id = %s
+                        """,
+                        (request.approval_id,),
+                    ).fetchone()
+                    if approval_identity is None:
+                        raise RefundDueReleaseNotApproved(
+                            "The Refund Due approval was not found."
+                        )
+                    adjustment_id = approval_identity["adjustment_id"]
+
+                    # Reversal and physical release share this lock. Acquire it
+                    # before loading any release decision state so a waiter must
+                    # re-read is_reversed after the winning transaction commits.
+                    _advisory_lock(cursor, f"refund-due-adjustment:{adjustment_id}")
                     approval = cursor.execute(
                         """
                         select
@@ -448,8 +466,6 @@ class PostgresRefundDueRepository:
                         raise RefundDueReleaseNotApproved(
                             "The Refund Due approval was not found."
                         )
-                    adjustment_id = approval["adjustment_id"]
-                    _advisory_lock(cursor, f"refund-due-adjustment:{adjustment_id}")
                     if approval["is_reversed"]:
                         raise RefundDueReleaseNotApproved(
                             "The Refund Due approval is no longer active."
