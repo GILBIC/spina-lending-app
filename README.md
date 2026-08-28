@@ -6,6 +6,9 @@ SPINA is a lending and collection platform with a mature Python/Tkinter desktop 
 
 Start with the living architecture hub:
 
+- [Approved future platform direction](docs/architecture/platform-direction.md)
+- [Canonical domain glossary](CONTEXT.md)
+- [Clean role and shared-authority decision](docs/adr/0001-new-role-model-and-shared-server-authority.md)
 - [Whole-system map](docs/architecture/system-map.md)
 - [Progress and roadmap](docs/architecture/progress-map.md)
 - [Cross-layer debugging playbook](docs/architecture/debugging-playbook.md)
@@ -24,7 +27,7 @@ The repository also contains a generated static architecture map for the Desktop
 
 | Component | Location | Responsibility |
 |---|---|---|
-| SPINA Desktop | `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py`, `spina_app/` | Office operations, lending rules, Data Bank, clients, reports, routes, cash control, backups |
+| SPINA Desktop | `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py`, `spina_app/` | Current primary office application; it will evolve in place for Management and permission-based Employees rather than being replaced by an old copy |
 | Gilbic Mobile | `gilbic_mobile/` | Role-based Android/iOS experience, secure sessions/device identity, routes, collection entry |
 | Gilbic Backend | `gilbic_backend/` | FastAPI, Supabase authentication integration, authorization, device enforcement, routes, official collections |
 | Collection package | `spina_backend_mobile/` | Shared Payment/ADV/PASS contract and idempotent PostgreSQL boundary |
@@ -36,4 +39,7 @@ Open a GitHub issue using the **SPINA cross-layer bug report** template. It coll
 
 ## Current development direction
 
-The current critical path is documented in [progress-map.md](docs/architecture/progress-map.md). Status is based on merged code and open pull requests; an open draft is not counted as complete.
+The intended platform model is documented in
+[platform-direction.md](docs/architecture/platform-direction.md). Current status
+and release gates remain in GitHub Master Issue #296; an open Draft PR, planned
+surface, or placeholder screen is not implemented production behavior.

@@ -1,335 +1,241 @@
 # Whole-System Architecture Map
 
-**Scope:** SPINA Desktop, Gilbic Mobile, GitHub-first FastAPI, Supabase Auth, PostgreSQL, CI, and known legacy/external boundaries.
+**Scope:** current implementation and Management-approved future direction for
+SPINA Desktop, Gilbic Mobile, website surfaces, GitHub-first FastAPI, Supabase
+Auth, PostgreSQL, CI, and legacy/external boundaries.
 
-## Product at a glance
+Use [`platform-direction.md`](platform-direction.md) for intended product
+behavior. This map identifies what exists now and the target ownership boundary;
+it does not mark planned modules complete.
+
+## Current implementation
 
 ```mermaid
 flowchart TB
-    subgraph USERS[Users]
-        OWNER[Owner / Management]
-        OFFICE[Office Staff / Encoder]
-        COLLECTOR[Collector]
+    OFFICE[Office users] --> DESKTOP[Current SPINA Desktop\nPython + Tkinter]
+    COLLECTOR[Collector] --> MOBILE[Gilbic Mobile\nmaterial Collector flows]
+    OTHER[Client / Employee / Management] --> PLACEHOLDER[Mobile routes\nsome incomplete or placeholders]
+    DESKTOP -->|direct access today| OLDDB[(Existing PostgreSQL\nDesktop operational records)]
+    MOBILE -->|HTTPS JSON| API[gilbic_backend\nGitHub-first FastAPI]
+    API --> AUTH[Supabase Auth]
+    API --> CORE[(core roles, permissions, devices, audit)]
+    API --> LENDING[(lending records)]
+    API --> PACKAGE[spina_backend_mobile\ncollection contract]
+    LEGACY[Earlier Client / Staff portals] -. external; inventory only .-> UNKNOWN[Legacy backend/data]
+```
+
+Current facts:
+
+- Desktop is the current repository's mature office application. It still has
+  direct database paths and local `Admin`, `Encoder`, `Viewer`, `System` checks.
+- FastAPI, Supabase authentication, private authorization/device records, and
+  protected collection services exist, but do not yet cover every Desktop,
+  Mobile, or future Web workflow.
+- Flutter contains four role destinations and material Collector capability;
+  Client, Employee, and Management functionality is incomplete.
+- This repository contains no implemented public website or Client Web frontend
+  package at this snapshot.
+- Earlier portals/backends are not authoritative and may not be reconnected
+  before inventory and feature-by-feature migration approval.
+
+## Intended target
+
+```mermaid
+flowchart TB
+    subgraph PEOPLE[Canonical platform roles]
+        MGMT[Management]
+        EMP[Employee]
+        COLL[Collector]
         CLIENT[Client]
-        EMPLOYEE[Employee]
     end
 
-    subgraph SURFACES[User surfaces]
-        DESKTOP[SPINA Desktop\nPython + Tkinter]
-        MOBILE[Gilbic Mobile\nFlutter Android / iOS]
-        LEGACY[Earlier local web portals\nExternal / needs inventory]
+    subgraph SURFACES[Presentation surfaces]
+        DESK[Current SPINA Desktop evolved in place\nprimary office platform]
+        MOB[Gilbic Mobile\nrole-appropriate mobile workflows]
+        PUB[Public website]
+        CWEB[Secure Client Web Portal]
+        SWEB[Later selected Staff Web Portal]
     end
 
-    subgraph API[Server boundary]
-        FASTAPI[gilbic_backend\nFastAPI]
-        CONTRACT[spina_backend_mobile\nCollection contract + idempotency package]
+    subgraph AUTHORITY[Shared authority]
+        API[GitHub-first FastAPI\nauthorization + protected workflows]
+        AUTH[Supabase Auth\nidentity + sessions]
+        DB[(PostgreSQL\nofficial records)]
+        AUDIT[(Permanent audit evidence)]
     end
 
-    subgraph AUTH[Identity]
-        SUPAAUTH[Supabase Auth\nPasswords + sessions]
-    end
+    MGMT --> DESK
+    MGMT --> MOB
+    MGMT -. selected later .-> SWEB
+    EMP --> DESK
+    EMP --> MOB
+    EMP -. selected later .-> SWEB
+    COLL --> MOB
+    CLIENT --> MOB
+    CLIENT --> CWEB
+    CLIENT --> PUB
 
-    subgraph DATA[Authoritative data]
-        SPINADB[(PostgreSQL spina_db\nDesktop operational records)]
-        CORE[(core schema\nUsers, roles, permissions, devices, audit)]
-        LENDING[(lending schema\nClients, loans, routes, collection state)]
-        MOBILEDB[(mobile schema\nIdempotency and mobile support)]
-    end
-
-    subgraph LOCAL[Mobile local storage]
-        SECURE[Secure storage\nTokens + installation identity]
-        CACHE[(SQLCipher route snapshot\nRead-only offline copy)]
-    end
-
-    subgraph DELIVERY[Delivery and verification]
-        GITHUB[GitHub branches + pull requests]
-        CI[Owner-only self-hosted Windows CI\nPython, Flutter, architecture checks]
-    end
-
-    OWNER --> DESKTOP
-    OFFICE --> DESKTOP
-    COLLECTOR --> MOBILE
-    CLIENT --> MOBILE
-    EMPLOYEE --> MOBILE
-    OWNER --> MOBILE
-
-    MOBILE -->|HTTPS JSON| FASTAPI
-    FASTAPI --> SUPAAUTH
-    FASTAPI --> CORE
-    FASTAPI --> LENDING
-    FASTAPI --> MOBILEDB
-    FASTAPI --> CONTRACT
-
-    DESKTOP --> SPINADB
-    DESKTOP -. reconciliation / migration .-> LENDING
-
-    MOBILE --> SECURE
-    MOBILE --> CACHE
-
-    LEGACY -. migrate feature-by-feature .-> FASTAPI
-
-    GITHUB --> CI
-    CI --> GITHUB
+    DESK --> API
+    MOB --> API
+    CWEB --> API
+    SWEB --> API
+    PUB -->|application inquiry only| API
+    API --> AUTH
+    API --> DB
+    DB --> AUDIT
 ```
 
 ## Non-negotiable ownership rules
 
-| Concern | Authoritative owner | Never owned by |
+| Concern | Authoritative owner | Never authoritative |
 |---|---|---|
-| Password hashing and authentication session | Supabase Auth | Flutter UI, Tkinter UI, browser JavaScript |
-| Application role and permission | Private `core.*` tables through FastAPI | Supabase user metadata, client-provided role |
-| Device approval and revocation | `core.devices` through FastAPI | A bearer token by itself |
-| Collector area assignment | Server-side route assignment tables | Mobile-selected area |
-| Official balance and receipt | PostgreSQL transaction through FastAPI | Mobile calculation or cached route |
-| Regular and 7x7 business rules | Protected server/desktop calculation code and tests | Presentation widgets |
-| Offline route display | SQLCipher snapshot on the phone | Official current balance source |
-| Mobile retry identity | Original idempotency UUID plus device sequence | A newly generated UUID after uncertainty |
-| Desktop feature wiring | `spina_app/features/*` installers and final application shell | Reintroduced duplicate monkey-patch chains |
-| Progress status | Merged code, open PR state, and `progress-map.md` | Memory or an old local folder |
+| Identity and session | Supabase Auth | Tkinter, Flutter, browser metadata |
+| Role, permission, separation of duties | Private PostgreSQL records enforced by FastAPI | Client-provided role; legacy Desktop profile |
+| Approved device | Protected server device records | Bearer token alone; local installation claim |
+| Official balance, receipt, journal, financial position | Protected PostgreSQL transaction/read model through FastAPI | UI calculation, cache, typed dashboard total |
+| Collector access | Server assignment or explicit delegation | Collector-selected area or client |
+| Client access | Server ownership link to own records | User-supplied client identifier |
+| Employee access | Individually granted capability and resource scope | Broad Employee UI visibility |
+| Sensitive review/posting | Server maker-checker and permission policy | Same-actor self-approval |
+| Correction | Linked protected reversal and replacement evidence | Delete or overwrite of a posted record |
+| Future product direction | `platform-direction.md` plus approved GitHub amendments | Old local portal, screenshot, stale status note |
+| Current behavior | Merged code, migrations, and tests | Future-direction wording |
 
-## Repository component map
+## Product surface ownership
 
-### 1. SPINA Desktop
+### SPINA Desktop
 
-**Primary responsibility:** full office lending operations, mature financial rules, PostgreSQL-backed desktop workflows, reports, backups, and operational controls.
+The current Python/Tkinter project remains the Desktop foundation and will
+evolve in place. It is the target primary office surface for Management and
+permission-based Employees. Current feature ownership remains under the entry
+file and `spina_app/features`, `repositories`, `services`, `tabs`, and protected
+calculation modules listed in the generated architecture map.
 
-Key locations:
+The direct PostgreSQL and local-profile paths are transitional. Migrate one
+bounded domain at a time to FastAPI, with parity, reconciliation, negative
+authorization, UAT, and recovery evidence. Do not copy an old Desktop into this
+project and do not infer new access from `Admin`, `Encoder`, `Viewer`, or
+`System`.
 
-- `OFFICIAL_SPINA_APP_PostgreSQL_TEST_v33_stability_performance_fixed.py` — compatibility entry file and remaining shared runtime.
-- `spina_app/features/` — final idempotent feature installers and ownership boundaries.
-- `spina_app/repositories/` — database access by feature.
-- `spina_app/services/` — business transformations and financial rules.
-- `spina_app/tabs/` and presentation modules — Tkinter views.
-- `spina_app/calculation_rules.py` — protected Regular/7x7 calculation behavior.
-- `tools/test_architecture_map.py` and related wave tests — permanent architecture and regression protection.
+### Gilbic Mobile
 
-Major modularized feature owners:
+`gilbic_mobile/` owns mobile presentation, secure session/device identity,
+encrypted offline route snapshots, role navigation, and field entry. Collector
+is mobile-first and limited to assigned/delegated scope. Cached values are
+read-only copies, not official records. Client, Employee, and Management modules
+must be described as planned or partial until their backend-connected workflows
+and tests exist.
 
-| Feature | Main owner paths |
-|---|---|
-| Application startup | `spina_app/features/application_shell.py`, `spina_app/features/startup_runtime.py` |
-| Accounts and login | `spina_app/features/accounts.py`, `spina_app/services/accounts.py`, login/header presentation modules |
-| Side navigation | `spina_app/features/side_navigation.py` |
-| Dashboard | `spina_app/features/dashboard.py`, `spina_app/repositories/dashboard.py`, `spina_app/services/loan_cycles.py`, `spina_app/tabs/dashboard.py` |
-| Data Bank | `spina_app/features/data_bank.py`, `spina_app/repositories/data_bank.py`, `spina_app/services/data_bank.py`, Data Bank controller/presentation modules |
-| Cash Control | `spina_app/features/cash_control.py`, `spina_app/repositories/cash_control.py`, `spina_app/services/cash_control.py` |
-| Clients | `spina_app/features/clients.py`, Clients repository/service/controller/application modules |
-| Client Info Logs | `spina_app/features/client_info_logs.py`, repository/service/tab modules |
-| Reports | `spina_app/features/reports.py`, Reports repository/service/controller/engine/generation modules |
-| Collector Route | `spina_app/features/collector_route.py`, repository/service/controller/report/presentation modules |
-| Backup history | `spina_app/backup_history_presentation.py` plus desktop backup services |
+### GitHub-first FastAPI and shared package
 
-Use the generated [`feature-map.md`](feature-map.md), [`dependency-map.md`](dependency-map.md), and [`function-index.md`](function-index.md) for symbol-level desktop tracing.
+`gilbic_backend/` owns the canonical API, Supabase session verification,
+application authorization, device enforcement, protected commands, and official
+responses. `spina_backend_mobile/` supplies the shared collection contract and
+idempotent PostgreSQL boundary; it does not become a second public backend.
 
-### 2. Gilbic Mobile
+### Website surfaces
 
-**Location:** `gilbic_mobile/`
+No website frontend is currently implemented in this repository. The planned
+Phase 1 is a public company/inquiry website plus a separately secured Client Web
+Portal. A Staff Web Portal is a later, separately scoped set of selected remote
+workflows, not a full Desktop clone. Collector remains mobile-first.
 
-**Primary responsibility:** role-based mobile presentation, secure device identity, authenticated API calls, encrypted route cache, and collector-friendly collection entry.
+### Earlier portals and backend
 
-Current internal boundaries:
+Any earlier Client Portal, Staff Portal, or local backend is external until its
+source, deployment, endpoints, tables, users, data ownership, and security are
+inventoried. Useful behavior may be reimplemented behind `gilbic_backend`; its
+old authority and database must not be reconnected.
 
-- `lib/src/app.dart` — application composition and dependency wiring.
-- `lib/src/core/auth/` — session models, storage, and authentication repository.
-- `lib/src/core/device/` — persistent privacy-preserving installation identity.
-- `lib/src/core/collector/` — route models, remote repository, encrypted cache, and cache-backed loader.
-- `lib/src/core/payments/` — typed Payment/ADV/PASS contract, idempotency key, repository, and device sequence.
-- `lib/src/features/collector/` — route and collection-entry screens.
-- `lib/src/features/dashboard/` — role-specific navigation.
-- `test/` — authentication, device, cache, route, contract, and widget regressions.
-
-Mobile safety boundary:
-
-- No PostgreSQL or Supabase secret credential is stored in Flutter.
-- A cached route is visibly offline and is not authoritative.
-- Official balance and receipt values come from FastAPI.
-- All 7x7 mobile collection entry remains blocked until the dedicated allocator is verified.
-- Automatic offline payment retry remains disabled until the encrypted outbox is implemented.
-
-### 3. GitHub-first FastAPI backend
-
-**Location:** `gilbic_backend/`
-
-**Primary responsibility:** public API contract, Supabase session validation, application authorization, device enforcement, routes, management administration, and official collection transactions.
-
-Important paths:
-
-- `src/gilbic_backend/main.py` — application factory and router mounting.
-- `src/gilbic_backend/account_repository.py` — authoritative account/device lookup.
-- `src/gilbic_backend/collector_route_api.py` — collector route HTTP boundary.
-- `src/gilbic_backend/collector_route_repository.py` — assigned route and collection-state reads.
-- `src/gilbic_backend/collection_api.py` — collection HTTP boundary and request protection.
-- `src/gilbic_backend/collection_posting.py` — atomic posting bridge and official effects.
-- `sql/` — reproducible private-schema migrations.
-- `tests/` — API, repository, migration, atomicity, rollback, and concurrency tests.
-
-Health boundaries:
-
-```text
-GET /health/live   -> process is running
-GET /health/ready  -> required database connection is usable
-GET /api/v1/meta   -> API metadata
-```
-
-Canonical APIs use `/api/v1/...`; mobile compatibility aliases use `/api/mobile/v1/...`.
-
-### 4. Shared mobile collection package
-
-**Location:** `spina_backend_mobile/`
-
-**Primary responsibility:** reusable collection contract, validation, normalization, PostgreSQL idempotency behavior, and the transaction bridge boundary used by FastAPI.
-
-It exists to prevent the API layer from inventing a second version of SPINA collection rules.
-
-### 5. Supabase Auth and PostgreSQL
-
-Supabase Auth proves identity and owns password/session mechanics. PostgreSQL owns application authorization and official records.
-
-Private schemas introduced for Gilbic:
-
-| Schema | Responsibility |
-|---|---|
-| `core` | users, roles, permissions, user-role mapping, devices, audit logs |
-| `lending` | clients, loan types, loans, collector assignments, collection state, collection transactions |
-| `mobile` | mobile idempotency and support records |
-
-The mature SPINA Desktop operational data remains in the existing PostgreSQL database. Legacy loans must be reconciled into authoritative `lending.loan_collection_state` before the backend exposes them as mobile-write ready.
-
-### 6. Earlier local backend and portals
-
-Earlier Client Portal and Staff Portal work was developed against a local backend under paths such as `C:\SPINA_ONLINE\spina_backend`. That local code is not the current GitHub-first authority unless it has been migrated into this repository.
-
-Treat these surfaces as **external / needs inventory**:
-
-1. Identify whether they are still deployed or used.
-2. Record their repository or exact source path.
-3. List their endpoints and database tables.
-4. Migrate required behavior into `gilbic_backend` one feature at a time.
-5. Do not debug a production issue by editing both the old local backend and the GitHub-first backend simultaneously.
-
-## Critical runtime flows
-
-### Authentication and device registration
+## Authorization and account cutover
 
 ```mermaid
 sequenceDiagram
-    participant M as Gilbic Mobile
-    participant A as FastAPI
-    participant S as Supabase Auth
-    participant C as core schema
+    participant M as Management
+    participant I as Inventory and cutover service
+    participant A as FastAPI authorization
+    participant U as User
+    participant L as Legacy Desktop access
 
-    M->>A: Login + installation ID + app metadata
-    A->>S: Verify username/email and password
-    S-->>A: Auth user + access/refresh session
-    A->>C: Load/create Gilbic user and registered device
-    A->>C: Resolve role, permissions, status
-    A-->>M: Session + server-derived role/permissions
-    M->>M: Store session and installation identity securely
-
-    Note over M,A: Every protected request sends bearer token and X-Device-Id
-    A->>S: Validate bearer identity
-    A->>C: Require active account and matching active device
+    I->>I: Record legacy identity and actual duties
+    Note over I: Old profile is evidence only; it cannot derive grants
+    M->>A: Assign new canonical role, permissions, scopes, device policy
+    A->>U: Exercise permitted workflows
+    A-->>M: Positive and prohibited-access evidence
+    M->>I: Accept account cutover
+    I->>L: Disable this account's legacy login
+    I->>I: Preserve immutable cutover and recovery evidence
 ```
 
-### Collector route read and offline fallback
+## Employee accounting and Management reporting
 
 ```mermaid
 sequenceDiagram
-    participant M as Gilbic Mobile
-    participant A as FastAPI
-    participant L as lending schema
-    participant Q as SQLCipher cache
-
-    M->>A: GET assigned route with bearer + device ID
-    A->>L: Read collector areas, clients, loans, authoritative state
-    L-->>A: Route entries + revision + readiness fields
-    A-->>M: Online route
-    M->>Q: Save encrypted per-user snapshot
-
-    alt Server unavailable later
-        M->>Q: Read last snapshot
-        Q-->>M: Offline copy + synchronized timestamp
-        Note over M: Collection entry remains disabled
-    end
-```
-
-### Official Payment, ADV, or PASS
-
-```mermaid
-sequenceDiagram
-    participant U as Collector
-    participant M as Gilbic Mobile
+    participant E as Employee maker
     participant A as FastAPI
     participant P as PostgreSQL
+    participant M as Management reviewer
+    participant C as Authorized poster
 
-    U->>M: Confirm Payment / ADV / PASS
-    M->>M: Preserve UUID, device sequence, route revision
-    M->>A: POST collection with matching idempotency headers/body
-    A->>P: Lock idempotency key, device sequence, loan/date state
-    A->>P: Validate account, device, permission, assignment, revision, loan mode
-    A->>P: Write transaction + state + receipt + audit atomically
-    P-->>A: Official balance, receipt, accepted time
-    A-->>M: Accepted or duplicate replay result
-    M-->>U: Plain-language result and official values
-
-    alt Connection result uncertain
-        M->>M: Keep the exact same draft and identifiers
-        U->>M: Retry same entry
-        M->>A: Send identical request
-        A-->>M: Replay original result without duplicate payment
-    end
+    E->>A: Record source transaction + supporting evidence
+    A->>P: Validate scope, references, balanced double entry, period, idempotency
+    P-->>A: Prepared draft or explicit rejection
+    A-->>M: Sensitive review queue
+    M->>A: Review or request changes
+    A->>C: Approved item eligible for separate posting authority
+    C->>A: Post approved journal
+    A->>P: Write journal, subledger effects, custody, and permanent audit atomically
+    P-->>A: Derived financial position and reconciliation state
 ```
 
-### Desktop-to-mobile loan readiness
+Employees record and reconcile source events for assets, liabilities, and
+equity. Management sees totals and drill-downs derived from posted evidence,
+including the accounting equation, custody by bank/office/employee/collector,
+unremitted cash, receivables, obligations, property location/custodian/condition
+and depreciation, capital movements, retained earnings, profitability,
+discrepancies, and queues. Posted corrections use reversals; no dashboard total
+is a manual source field.
 
-```mermaid
-flowchart LR
-    D[SPINA Desktop loan and transaction state] --> R[Reconciliation process]
-    R --> S[lending.loan_collection_state]
-    S --> C{Calculation mode approved?}
-    C -->|Regular/direct balance safe| READY[Mobile collection enabled]
-    C -->|Unreconciled or unsupported| BLOCK[Visible on route, collection blocked]
-    C -->|7x7 allocator not verified| DESKTOP[Use SPINA Desktop]
-```
+## Collector collection boundary
+
+Official Payment, ADV, and PASS requests send the original idempotency identity,
+device sequence, and route revision to FastAPI. The server validates account,
+device, permission, assignment/delegation, loan rules, and current state, then
+writes transaction, official receipt, state, custody, and audit atomically. An
+uncertain retry reuses the same identifiers and must replay the same result.
+
+Offline route snapshots remain encrypted and visibly non-authoritative. Offline
+financial writes stay disabled unless a separate protected outbox design is
+approved and verified.
 
 ## Financial rule boundary
 
-Regular and 7x7 are not interchangeable calculation modes.
+Regular and 7x7 are distinct protected calculation modes. The presentation
+surface never invents an official balance, receipt, allocation, journal, or
+financial-position total. When a result disagrees, repair the authoritative
+calculation, source evidence, reconciliation, or migration and its tests—not a
+display label.
 
-- Regular loans may use direct remaining-balance reduction only when their server configuration explicitly allows it.
-- 7x7 daily interest remains fixed from the recorded/current principal for the loan cycle.
-- 7x7 payments allocate interest before principal.
-- A generic subtraction cannot replace the dedicated 7x7 allocator.
-- The phone never calculates an official balance or receipt.
+## CI and release boundary
 
-When a calculation disagrees, fix the protected calculation/reconciliation layer and its tests—not the UI label.
-
-## CI and release map
-
-```mermaid
-flowchart LR
-    B[agent/* branch] --> PR[Draft pull request]
-    PR --> CHECKS[Focused GitHub Actions]
-    CHECKS --> WIN[Self-hosted Windows X64 runner]
-    WIN --> PY[Python compile + pytest]
-    WIN --> FL[Flutter pub get + analyze + test]
-    WIN --> ARCH[Architecture regeneration / zero-diff checks]
-    PY --> REVIEW[Review + manual safe-data verification]
-    FL --> REVIEW
-    ARCH --> REVIEW
-    REVIEW --> MAIN[Merge to main]
-```
-
-A queued workflow often means the self-hosted Windows runner is offline, busy, or has not picked up the job. It does not automatically mean the code failed.
+Every change uses a focused branch and Draft PR, exact-head automated checks,
+financial/security tests appropriate to risk, and explicit review evidence.
+Master Issue #296 remains the release checklist. Documentation direction does
+not authorize merge, deployment, restart, protected database mutation, or
+production cutover.
 
 ## Change-impact checklist
 
 Before editing a component, answer:
 
-1. Which layer owns the behavior?
-2. Which record is authoritative?
-3. Which IDs connect the request across layers?
-4. Which business rule or security gate must remain unchanged?
-5. Which unit, integration, widget, migration, architecture, and manual tests protect it?
-6. Does the progress map need a status change?
-7. Is an earlier local portal/backend also affected, or should it remain untouched?
+1. Is the statement current behavior or future intention?
+2. Which server record and workflow own the result?
+3. Which role, narrow permission, resource scope, device state, and
+   separation-of-duty rule apply?
+4. Which source, custody, financial, reconciliation, and audit evidence must
+   remain linked?
+5. Which tests prove allowed and prohibited behavior?
+6. Is a data migration or account cutover involved, and what is its recovery
+   evidence?
+7. Does Master Issue #296, Notion project memory, or Create State need a status
+   update?
