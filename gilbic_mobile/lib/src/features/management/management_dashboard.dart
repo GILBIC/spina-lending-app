@@ -20,6 +20,7 @@ import 'package:gilbic_mobile/src/features/management/management_opening_balance
 import 'package:gilbic_mobile/src/features/management/management_opening_balance_workbook_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_staff_devices_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
@@ -99,6 +100,10 @@ class ManagementDashboard extends StatelessWidget {
         deviceSequence: collectionDeviceSequence,
       ),
       _ManagementAction.voidPayment => ManagementCollectionVoidPage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
+      _ManagementAction.staffDevices => ManagementStaffDevicesPage(
         session: session,
         deviceIdentityProvider: deviceIdentityProvider,
       ),
@@ -305,6 +310,7 @@ enum _ManagementAction {
   remittanceNotifications('remittance-notifications'),
   directPayment('management-direct-payment'),
   voidPayment('management-void-payment'),
+  staffDevices('management-staff-devices'),
   renewals('management-renewals'),
   support('management-support'),
   clientRegistrationApprovals('client-registration-approvals'),
@@ -328,6 +334,7 @@ class _ManagementModule {
     this.icon, {
     required this.action,
     this.requiredPermissions = const <String>[],
+    this.permissionMode = _PermissionMode.all,
   });
 
   final String title;
@@ -335,11 +342,17 @@ class _ManagementModule {
   final IconData icon;
   final _ManagementAction action;
   final List<String> requiredPermissions;
+  final _PermissionMode permissionMode;
 
   bool isAvailableFor(UserSession session) {
-    return requiredPermissions.every(session.hasPermission);
+    return switch (permissionMode) {
+      _PermissionMode.all => requiredPermissions.every(session.hasPermission),
+      _PermissionMode.any => requiredPermissions.any(session.hasPermission),
+    };
   }
 }
+
+enum _PermissionMode { all, any }
 
 class _ManagementSection {
   const _ManagementSection({
@@ -444,9 +457,17 @@ const _managementSections = <_ManagementSection>[
   ),
   _ManagementSection(
     keyName: 'management-section-renewals-support',
-    title: 'Renewals & support',
-    description: 'Handle borrower requests and client-account access reviews.',
+    title: 'People, access & requests',
+    description: 'Manage staff access, borrower requests, and support reviews.',
     modules: <_ManagementModule>[
+      _ManagementModule(
+        'Staff & devices',
+        'Invite staff, review access, and manage registered devices',
+        Icons.manage_accounts_outlined,
+        action: _ManagementAction.staffDevices,
+        requiredPermissions: <String>['account.manage', 'device.manage'],
+        permissionMode: _PermissionMode.any,
+      ),
       _ManagementModule(
         'Renewal requests',
         'Review recommendations, set terms, and control handover status',

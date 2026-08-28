@@ -24,6 +24,7 @@ import 'package:gilbic_mobile/src/features/management/management_opening_balance
 import 'package:gilbic_mobile/src/features/management/management_opening_balance_workbook_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_staff_devices_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
@@ -65,6 +66,20 @@ void main() {
       expect(renewals, findsOneWidget);
       expect(account, findsOneWidget);
       expect(accounting, findsOneWidget);
+      expect(find.text('People, access & requests'), findsOneWidget);
+
+      final peopleLaunchers = find.descendant(
+        of: renewals,
+        matching: find.byType(ListTile),
+      );
+      expect(
+        find.byKey(const Key('management-staff-devices')),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<ListTile>(peopleLaunchers.first).key,
+        const Key('management-staff-devices'),
+      );
 
       expect(
         find.descendant(
@@ -216,6 +231,7 @@ void main() {
         ('remittance-notifications', RemittanceNotificationsPage),
         ('management-direct-payment', OtherAreaCollectionPage),
         ('management-void-payment', ManagementCollectionVoidPage),
+        ('management-staff-devices', ManagementStaffDevicesPage),
         ('management-renewals', ManagementRenewalRequestsPage),
         ('management-support', ManagementSupportRequestsPage),
         ('client-registration-approvals', ClientRegistrationApprovalsPage),

@@ -96,6 +96,84 @@ void main() {
     expect(find.byKey(const Key('remittance-notifications')), findsNothing);
   });
 
+  for (final permission in <String>['account.manage', 'device.manage']) {
+    testWidgets('staff and devices is available with $permission alone',
+        (tester) async {
+      await _setLargeSurface(tester);
+      final session = UserSession(
+        userId: 'management-1',
+        username: 'management.one',
+        displayName: 'Management One',
+        role: AppRole.management,
+        rawRole: 'Management',
+        accessToken: 'management-token',
+        permissions: <String>['management.dashboard.view', permission],
+      );
+
+      await tester.pumpWidget(MaterialApp(home: _dashboard(session)));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('management-staff-devices')),
+        findsOneWidget,
+      );
+    });
+  }
+
+  testWidgets('staff and devices is hidden without either permission',
+      (tester) async {
+    await _setLargeSurface(tester);
+    const session = UserSession(
+      userId: 'management-1',
+      username: 'management.one',
+      displayName: 'Management One',
+      role: AppRole.management,
+      rawRole: 'Management',
+      accessToken: 'management-token',
+      permissions: <String>['management.dashboard.view'],
+    );
+
+    await tester.pumpWidget(MaterialApp(home: _dashboard(session)));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('management-staff-devices')), findsNothing);
+  });
+
+  testWidgets('staff and devices repeats its any-permission check at tap time',
+      (tester) async {
+    await _setLargeSurface(tester);
+    final permissions = <String>[
+      'management.dashboard.view',
+      'device.manage',
+    ];
+    final session = UserSession(
+      userId: 'management-1',
+      username: 'management.one',
+      displayName: 'Management One',
+      role: AppRole.management,
+      rawRole: 'Management',
+      accessToken: 'management-token',
+      permissions: permissions,
+    );
+
+    await tester.pumpWidget(MaterialApp(home: _dashboard(session)));
+    await tester.pumpAndSettle();
+
+    final launcher = find.byKey(const Key('management-staff-devices'));
+    expect(launcher, findsOneWidget);
+    permissions.remove('device.manage');
+    await tester.ensureVisible(launcher);
+    await tester.tap(launcher);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Your current server permissions do not allow Staff & devices.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('other-area work is hidden without delegated-area view permission',
       (tester) async {
     await _setLargeSurface(tester);
