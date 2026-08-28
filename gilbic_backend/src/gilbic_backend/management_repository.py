@@ -122,9 +122,63 @@ class PostgresManagementRepository:
         except errors.UniqueViolation as exc:
             raise AccountConflict("Username, email, or authentication identity is already in use.") from exc
 
-    def list_accounts(self, *, limit: int = 100, offset: int = 0) -> list[AccountAdminRecord]:
+    def list_accounts(
+        self,
+        *,
+        query: str | None = None,
+        role_code: str | None = None,
+        account_status: str | None = None,
+        staff_only: bool = False,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[AccountAdminRecord]:
         safe_limit = min(max(limit, 1), 200)
         safe_offset = max(offset, 0)
+        where_clauses: list[str] = []
+        parameters: list[object] = []
+        if query:
+            escaped_query = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            search_pattern = f"%{escaped_query}%"
+            where_clauses.append(
+                """
+                (
+                    u.username ilike %s escape '\\'
+                    or u.full_name ilike %s escape '\\'
+                    or coalesce(u.email, '') ilike %s escape '\\'
+                )
+                """
+            )
+            parameters.extend((search_pattern, search_pattern, search_pattern))
+        if role_code:
+            where_clauses.append(
+                """
+                exists (
+                    select 1
+                    from core.user_roles filtered_ur
+                    join core.roles filtered_r on filtered_r.id = filtered_ur.role_id
+                    where filtered_ur.user_id = u.id
+                      and filtered_r.code = %s
+                )
+                """
+            )
+            parameters.append(role_code)
+        if account_status:
+            where_clauses.append("u.status = %s")
+            parameters.append(account_status)
+        if staff_only:
+            where_clauses.append(
+                """
+                exists (
+                    select 1
+                    from core.user_roles staff_ur
+                    join core.roles staff_r on staff_r.id = staff_ur.role_id
+                    where staff_ur.user_id = u.id
+                      and staff_r.code in ('collector', 'employee', 'management')
+                )
+                """
+            )
+        where_sql = f"where {' and '.join(where_clauses)}" if where_clauses else ""
+        parameters.extend((safe_limit, safe_offset))
         with open_connection() as connection:
             with connection.cursor(row_factory=dict_row) as cursor:
                 cursor.execute(
@@ -147,11 +201,14 @@ class PostgresManagementRepository:
                     left join core.user_roles ur on ur.user_id = u.id
                     left join core.roles r on r.id = ur.role_id
                     left join core.devices d on d.user_id = u.id
+                    """
+                    + where_sql
+                    + """
                     group by u.id
-                    order by u.created_at desc, u.username
+                    order by u.created_at desc, u.username, u.id
                     limit %s offset %s
                     """,
-                    (safe_limit, safe_offset),
+                    parameters,
                 )
                 rows = cursor.fetchall()
         return [self._account_from_row(row) for row in rows]

@@ -13,6 +13,7 @@ from gilbic_backend.account_repository import (
 from gilbic_backend.auth_client import AuthSession
 from gilbic_backend.main import create_app
 from gilbic_backend.management_api import (
+    _account_payload,
     management_account_repository_dependency,
     management_auth_admin_dependency,
     management_auth_client_dependency,
@@ -133,11 +134,30 @@ class FakeManagementRepository:
         self.status_change: tuple[UUID, UUID, str] | None = None
         self.device_change: tuple[UUID, UUID, str] | None = None
         self.created_role: str | None = None
+        self.accounts = [account_record()]
+        self.list_account_calls: list[dict[str, object]] = []
 
-    def list_accounts(self, *, limit: int = 100, offset: int = 0):
-        assert limit == 100
-        assert offset == 0
-        return [account_record()]
+    def list_accounts(
+        self,
+        *,
+        query: str | None = None,
+        role_code: str | None = None,
+        account_status: str | None = None,
+        staff_only: bool = False,
+        limit: int = 100,
+        offset: int = 0,
+    ):
+        self.list_account_calls.append(
+            {
+                "query": query,
+                "role_code": role_code,
+                "account_status": account_status,
+                "staff_only": staff_only,
+                "limit": limit,
+                "offset": offset,
+            }
+        )
+        return list(self.accounts)
 
     def create_staff_profile(
         self,
@@ -220,27 +240,52 @@ def test_management_rejects_revoked_device_with_existing_token() -> None:
     assert response.json()["detail"] == "This device has been revoked."
 
 
-def test_management_permission_is_required() -> None:
+def test_list_accounts_rejects_callers_without_account_or_device_permission() -> None:
     client, accounts, _, _ = client_with_fakes()
     accounts.context = management_context(permissions=("management.dashboard.view",))
 
     response = client.get("/api/v1/management/accounts", headers=headers())
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "Management permission is required."
+    assert response.json()["detail"] == "This action is not permitted for your account."
 
 
-def test_management_can_list_accounts() -> None:
-    client, accounts, _, _ = client_with_fakes()
+def test_account_payload_omits_auth_user_id() -> None:
+    assert "auth_user_id" not in _account_payload(account_record())
 
-    response = client.get("/api/v1/management/accounts", headers=headers())
+
+def test_list_accounts_allows_device_managers_and_forwards_filters() -> None:
+    client, accounts, _, management = client_with_fakes()
+    accounts.context = management_context(permissions=("device.manage",))
+
+    response = client.get(
+        "/api/v1/management/accounts",
+        params={
+            "q": "  Ana  ",
+            "role": "collector",
+            "status": "active",
+            "staff_only": "true",
+            "limit": 25,
+            "offset": 50,
+        },
+        headers=headers(),
+    )
 
     assert response.status_code == 200
     item = response.json()["data"]["accounts"][0]
+    assert item.get("auth_user_id") is None
     assert item["username"] == "collector.one"
     assert item["roles"] == ["collector"]
     assert item["device_count"] == 1
     assert accounts.checked_device == INSTALLATION_ID
+    assert management.list_account_calls == [{
+        "query": "Ana",
+        "role_code": "collector",
+        "account_status": "active",
+        "staff_only": True,
+        "limit": 25,
+        "offset": 50,
+    }]
 
 
 def test_management_can_invite_collector_without_password() -> None:

@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .account_repository import (
     AccountConflict,
+    AccountContext,
     AccountNotFound,
     PostgresAccountRepository,
 )
@@ -129,10 +130,28 @@ def _management_actor(
     )
 
 
+def _management_actor_with_any_permission(
+    *,
+    authorization: str | None,
+    device_identifier: str | None,
+    permissions: tuple[str, ...],
+    auth: SupabaseAuthClient,
+    accounts: PostgresAccountRepository,
+) -> AccountContext:
+    actor = authenticated_device_context(
+        authorization=authorization,
+        device_identifier=device_identifier,
+        auth=auth,
+        accounts=accounts,
+    )
+    if not any(permission in actor.permissions for permission in permissions):
+        raise HTTPException(status_code=403, detail="This action is not permitted for your account.")
+    return actor
+
+
 def _account_payload(record: AccountAdminRecord) -> dict[str, object]:
     return {
         "id": str(record.id),
-        "auth_user_id": str(record.auth_user_id) if record.auth_user_id else None,
         "username": record.username,
         "email": record.email,
         "full_name": record.full_name,
@@ -205,20 +224,37 @@ def create_management_router() -> APIRouter:
     def list_accounts(
         authorization: str | None = Header(default=None, alias="Authorization"),
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
+        q: str | None = Query(default=None, max_length=200),
+        role_code: Literal["collector", "employee", "management"] | None = Query(
+            default=None,
+            alias="role",
+        ),
+        account_status: Literal["active", "inactive", "locked", "pending"] | None = Query(
+            default=None,
+            alias="status",
+        ),
+        staff_only: bool = Query(default=False),
         limit: int = Query(default=100, ge=1, le=200),
         offset: int = Query(default=0, ge=0),
         auth: SupabaseAuthClient = Depends(management_auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(management_account_repository_dependency),
         management: PostgresManagementRepository = Depends(management_repository_dependency),
     ) -> dict[str, object]:
-        _management_actor(
+        _management_actor_with_any_permission(
             authorization=authorization,
             device_identifier=x_device_id,
-            permission="account.manage",
+            permissions=("account.manage", "device.manage"),
             auth=auth,
             accounts=accounts,
         )
-        records = management.list_accounts(limit=limit, offset=offset)
+        records = management.list_accounts(
+            query=(q or "").strip() or None,
+            role_code=role_code,
+            account_status=account_status,
+            staff_only=staff_only,
+            limit=limit,
+            offset=offset,
+        )
         return {"success": True, "data": {"accounts": [_account_payload(item) for item in records]}}
 
     @router.get("/client-registrations")
