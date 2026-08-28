@@ -4,12 +4,14 @@ from collections.abc import Generator
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .account_repository import (
     AccountConflict,
     AccountDisabled,
     AccountNotFound,
+    DeviceApprovalRequired,
     DeviceRevoked,
     PostgresAccountRepository,
 )
@@ -224,7 +226,7 @@ def create_auth_router() -> APIRouter:
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
         settings: Settings = Depends(get_settings),
-    ) -> dict[str, object]:
+    ):
         _enforce_mobile_auth_version(
             http_request,
             platform=request.platform,
@@ -246,6 +248,14 @@ def create_auth_router() -> APIRouter:
             raise HTTPException(status_code=401, detail="Invalid username or password.") from exc
         except AccountDisabled as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except DeviceApprovalRequired as exc:
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "success": False,
+                    "error": {"code": exc.code, "message": str(exc)},
+                },
+            )
         except DeviceRevoked as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         except AccountConflict as exc:

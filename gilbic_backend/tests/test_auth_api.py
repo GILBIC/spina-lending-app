@@ -3,12 +3,14 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
 
 from gilbic_backend.account_repository import (
     AccountContext,
     AccountDisabled,
     AccountNotFound,
+    DeviceApprovalRequired,
     DeviceNotRegistered,
     DeviceRevoked,
 )
@@ -99,6 +101,7 @@ class FakeAccounts:
         self.checked_device: str | None = None
         self.device_error: Exception | None = None
         self.login_error: Exception | None = None
+        self.device_approval_required = False
         self.registration_claim: tuple[str, str | None] | None = None
 
     def username_exists(self, username: str) -> bool:
@@ -149,6 +152,15 @@ class FakeAccounts:
         assert auth_user_id == AUTH_USER_ID
         if self.login_error is not None:
             raise self.login_error
+        if (
+            self.device_approval_required
+            and device_identifier is not None
+            and "collector" in self.login_context.roles
+            and platform in {"android", "ios"}
+        ):
+            raise DeviceApprovalRequired(
+                "This Collector device is awaiting Management approval."
+            )
         self.registered_device = (device_identifier, platform, app_version)
         value = self.login_context
         return AccountContext(
@@ -303,6 +315,85 @@ def test_login_registers_device_when_mobile_sends_identity() -> None:
     assert response.status_code == 200
     assert response.json()["data"]["user"]["device_registered"] is True
     assert accounts.registered_device == ("install-123", "android", "0.3.0+3")
+
+
+def test_collector_mobile_login_returns_device_approval_required_without_tokens() -> None:
+    client, _, accounts = client_with_fakes()
+    accounts.device_approval_required = True
+
+    response = client.post(
+        "/api/mobile/v1/auth/login",
+        json={
+            "username": "collector.one",
+            "password": "correct-password",
+            "device_id": "collector-phone-b",
+            "platform": "android",
+            "app_version": "0.3.0+3",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "success": False,
+        "error": {
+            "code": "device_approval_required",
+            "message": "This Collector device is awaiting Management approval.",
+        },
+    }
+    assert "access_token" not in response.text
+    assert "refresh_token" not in response.text
+
+
+def test_revoked_device_login_retains_existing_denial() -> None:
+    client, _, accounts = client_with_fakes()
+    accounts.login_error = DeviceRevoked("This device has been revoked.")
+
+    response = client.post(
+        "/api/mobile/v1/auth/login",
+        json={
+            "username": "collector.one",
+            "password": "correct-password",
+            "device_id": "collector-phone-b",
+            "platform": "android",
+            "app_version": "0.3.0+3",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "This device has been revoked."}
+
+
+@pytest.mark.parametrize(
+    ("role", "platform"),
+    [
+        ("management", "android"),
+        ("employee", "ios"),
+        ("client", "android"),
+        ("collector", "web"),
+        ("collector", "desktop"),
+    ],
+)
+def test_device_approval_does_not_apply_to_other_roles_or_non_mobile_platforms(
+    role: str,
+    platform: str,
+) -> None:
+    client, _, accounts = client_with_fakes()
+    accounts.device_approval_required = True
+    accounts.login_context = context(role=role)
+
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": "collector.one",
+            "password": "correct-password",
+            "device_id": "staff-device",
+            "platform": platform,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["user"]["device_registered"] is True
+    assert accounts.registered_device == ("staff-device", platform, None)
 
 
 def test_unknown_username_returns_generic_credential_error() -> None:
