@@ -84,6 +84,33 @@ void main() {
     },
   );
 
+  testWidgets('blocks route exit while the invitation POST is in flight', (
+    tester,
+  ) async {
+    final result = Completer<ManagementStaffAccount>();
+    final repository = _InviteRepository(onInvite: () => result.future);
+    await _pumpInvite(tester, repository: repository);
+    await tester.pumpAndSettle();
+    await _fillForm(tester);
+
+    await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+    await tester.pump();
+    expect(repository.inviteCalls, 1);
+
+    await tester.pageBack();
+    await tester.pump();
+
+    expect(find.byType(ManagementStaffInvitePage), findsOneWidget);
+    expect(find.byKey(const Key('open-invite')), findsNothing);
+    expect(repository.inviteCalls, 1);
+
+    result.complete(_account);
+    await tester.pumpAndSettle();
+    expect(find.byType(ManagementStaffInvitePage), findsNothing);
+    expect(find.text('Created Ana West'), findsOneWidget);
+    expect(repository.inviteCalls, 1);
+  });
+
   testWidgets('uncertain result refreshes directory without automatic repost', (
     tester,
   ) async {

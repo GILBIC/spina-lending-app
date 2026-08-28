@@ -205,122 +205,130 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
   @override
   Widget build(BuildContext context) {
     final hasInvitePermission = widget.session.hasPermission('account.manage');
-    return Scaffold(
-      appBar: AppBar(title: const Text('Invite staff')),
-      body: SafeArea(
-        child: _permissionDenied
-            ? _InvitePermissionDeniedState(
-                message:
-                    _error ??
-                    'Your current server permissions no longer allow staff invitations.',
-                onRefresh: _refreshAfterPermissionDenied,
-                onBack: () => Navigator.of(context).maybePop(),
-              )
-            : hasInvitePermission
-            ? ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  const Text(
-                    'SPINA sends an invitation. Management never creates or '
-                    'views the staff member’s password.',
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    key: const Key('management-staff-full-name'),
-                    controller: _fullName,
-                    enabled: !_submitting && !_retryBlocked,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(labelText: 'Full name'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    key: const Key('management-staff-username'),
-                    controller: _username,
-                    enabled: !_submitting && !_retryBlocked,
-                    autocorrect: false,
-                    decoration: const InputDecoration(labelText: 'Username'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    key: const Key('management-staff-email'),
-                    controller: _email,
-                    enabled: !_submitting && !_retryBlocked,
-                    keyboardType: TextInputType.emailAddress,
-                    autocorrect: false,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    key: const Key('management-staff-invite-role'),
-                    initialValue: _role,
-                    decoration: const InputDecoration(labelText: 'Staff role'),
-                    items: const <DropdownMenuItem<String>>[
-                      DropdownMenuItem(
-                        value: 'collector',
-                        child: Text('Collector'),
+    return PopScope(
+      canPop: !_submitting,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Invite staff')),
+        body: SafeArea(
+          child: _permissionDenied
+              ? _InvitePermissionDeniedState(
+                  message:
+                      _error ??
+                      'Your current server permissions no longer allow staff invitations.',
+                  onRefresh: _refreshAfterPermissionDenied,
+                  onBack: () => Navigator.of(context).maybePop(),
+                )
+              : hasInvitePermission
+              ? ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    const Text(
+                      'SPINA sends an invitation. Management never creates or '
+                      'views the staff member’s password.',
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      key: const Key('management-staff-full-name'),
+                      controller: _fullName,
+                      enabled: !_submitting && !_retryBlocked,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(labelText: 'Full name'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      key: const Key('management-staff-username'),
+                      controller: _username,
+                      enabled: !_submitting && !_retryBlocked,
+                      autocorrect: false,
+                      decoration: const InputDecoration(labelText: 'Username'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      key: const Key('management-staff-email'),
+                      controller: _email,
+                      enabled: !_submitting && !_retryBlocked,
+                      keyboardType: TextInputType.emailAddress,
+                      autocorrect: false,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      key: const Key('management-staff-invite-role'),
+                      initialValue: _role,
+                      decoration: const InputDecoration(
+                        labelText: 'Staff role',
                       ),
-                      DropdownMenuItem(
-                        value: 'employee',
-                        child: Text('Employee'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'management',
-                        child: Text('Management'),
+                      items: const <DropdownMenuItem<String>>[
+                        DropdownMenuItem(
+                          value: 'collector',
+                          child: Text('Collector'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'employee',
+                          child: Text('Employee'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'management',
+                          child: Text('Management'),
+                        ),
+                      ],
+                      onChanged: _submitting || _retryBlocked
+                          ? null
+                          : (value) => setState(() => _role = value),
+                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 14),
+                      Text(
+                        _error!,
+                        key: const Key('management-staff-invite-error'),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ],
-                    onChanged: _submitting || _retryBlocked
-                        ? null
-                        : (value) => setState(() => _role = value),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 14),
-                    Text(
-                      _error!,
-                      key: const Key('management-staff-invite-error'),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
+                    const SizedBox(height: 18),
+                    FilledButton.icon(
+                      key: const Key('management-staff-invite-submit'),
+                      onPressed:
+                          _submitting || _retryBlocked || _deviceId == null
+                          ? null
+                          : _submit,
+                      icon: _submitting
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.send_outlined),
+                      label: Text(
+                        _submitting
+                            ? 'Sending invitation...'
+                            : 'Send invitation',
                       ),
                     ),
+                    if (_retryBlocked && !_permissionDenied) ...[
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        key: const Key('management-staff-invite-reconcile'),
+                        onPressed: _submitting ? null : _recheckUncertainResult,
+                        icon: const Icon(Icons.manage_search_outlined),
+                        label: const Text('Check staff list again'),
+                      ),
+                    ],
                   ],
-                  const SizedBox(height: 18),
-                  FilledButton.icon(
-                    key: const Key('management-staff-invite-submit'),
-                    onPressed: _submitting || _retryBlocked || _deviceId == null
-                        ? null
-                        : _submit,
-                    icon: _submitting
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.send_outlined),
-                    label: Text(
-                      _submitting ? 'Sending invitation...' : 'Send invitation',
+                )
+              : const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                      'Your current server permissions do not allow staff invitations.',
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  if (_retryBlocked && !_permissionDenied) ...[
-                    const SizedBox(height: 10),
-                    OutlinedButton.icon(
-                      key: const Key('management-staff-invite-reconcile'),
-                      onPressed: _submitting ? null : _recheckUncertainResult,
-                      icon: const Icon(Icons.manage_search_outlined),
-                      label: const Text('Check staff list again'),
-                    ),
-                  ],
-                ],
-              )
-            : const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'Your current server permissions do not allow staff invitations.',
-                    textAlign: TextAlign.center,
                   ),
                 ),
-              ),
+        ),
       ),
     );
   }
