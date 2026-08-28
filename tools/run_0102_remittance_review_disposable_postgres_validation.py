@@ -8,11 +8,9 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import psycopg
+import run_stage5d17_disposable_postgres_validation as disposable
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from psycopg.types.json import Jsonb
-
-import run_stage5d17_disposable_postgres_validation as disposable
-
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND_SRC = ROOT / "gilbic_backend" / "src"
@@ -24,6 +22,7 @@ TARGET_TEST = (
     / "test_remittance_review_rejection_postgres.py"
 )
 BOOTSTRAP_THROUGH = 101
+CURRENT_SCHEMA_THROUGH = 108
 BASE_DATABASE_URL_ENV = "REMIT_REVIEW_DATABASE_URL"
 DISPOSABLE_DATABASE_PREFIX = "spina_remit_review_"
 
@@ -82,6 +81,32 @@ def _bootstrap_database(test_url: str) -> None:
     disposable.BOOTSTRAP_THROUGH = BOOTSTRAP_THROUGH
     disposable._install_supabase_auth_prerequisite(test_url)
     disposable._bootstrap_database(test_url)
+
+
+def _advance_to_current_schema(test_url: str) -> None:
+    paths: list[Path] = []
+    for path in disposable.SQL_ROOT.glob("[0-9][0-9][0-9][0-9]_*.sql"):
+        try:
+            migration_number = int(path.name[:4])
+        except ValueError:
+            continue
+        if BOOTSTRAP_THROUGH + 1 < migration_number <= CURRENT_SCHEMA_THROUGH:
+            paths.append(path)
+
+    paths.sort(key=lambda item: item.name)
+    expected_numbers = set(range(BOOTSTRAP_THROUGH + 2, CURRENT_SCHEMA_THROUGH + 1))
+    actual_numbers = {int(path.name[:4]) for path in paths}
+    missing_numbers = sorted(expected_numbers - actual_numbers)
+    if missing_numbers:
+        missing_text = ", ".join(f"{number:04d}" for number in missing_numbers)
+        raise SystemExit(
+            "0102 disposable validation refused: current-schema migrations are "
+            f"incomplete after guarded 0102 installation: {missing_text}"
+        )
+
+    with psycopg.connect(test_url, autocommit=True) as connection:
+        for path in paths:
+            connection.execute(path.read_text(encoding="utf-8"))
 
 
 def _seed_preexisting_locked_handover(test_url: str):
@@ -352,6 +377,12 @@ def main() -> int:
                 "0102 disposable validation failed: idempotent retry changed historical evidence"
             )
 
+        print(
+            "Advancing disposable database through migration "
+            f"{CURRENT_SCHEMA_THROUGH:04d} for current remittance repository tests..."
+        )
+        _advance_to_current_schema(test_url)
+
         print("Running remittance review/rejection PostgreSQL behavior tests...")
         _run(
             [sys.executable, "-m", "pytest", "-q", str(TARGET_TEST)],
@@ -376,7 +407,8 @@ def main() -> int:
         "survived installation and retry unchanged; recipient review is required; acceptance "
         "records permanent review evidence; rejection preserves the frozen item snapshot and "
         "reason, unlocks only custody metadata, keeps financial fields immutable, and permits "
-        "the same official payment to be audibly linked through a corrected resubmission."
+        "the same official payment to be audibly linked through a corrected resubmission; "
+        f"current repository behavior ran on schema {CURRENT_SCHEMA_THROUGH:04d}."
     )
     return 0
 
