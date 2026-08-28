@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/management/management_administration.dart';
 import 'package:gilbic_mobile/src/core/management/management_administration_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+
+typedef InvitationReconciler =
+    Future<ManagementStaffAccount?> Function({
+      required String username,
+      required String email,
+    });
 
 class ManagementStaffInvitePage extends StatefulWidget {
   const ManagementStaffInvitePage({
@@ -10,13 +17,15 @@ class ManagementStaffInvitePage extends StatefulWidget {
     required this.repository,
     required this.deviceIdentityProvider,
     required this.onUncertainResult,
+    required this.onDirectoryRefresh,
     super.key,
   });
 
   final UserSession session;
   final ManagementAdministrationRepository repository;
   final DeviceIdentityProvider deviceIdentityProvider;
-  final Future<void> Function() onUncertainResult;
+  final InvitationReconciler onUncertainResult;
+  final Future<void> Function() onDirectoryRefresh;
 
   @override
   State<ManagementStaffInvitePage> createState() =>
@@ -33,6 +42,8 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
   bool _submitting = false;
   bool _retryBlocked = false;
   bool _permissionDenied = false;
+  String? _uncertainUsername;
+  String? _uncertainEmail;
 
   @override
   void initState() {
@@ -114,7 +125,7 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
         return;
       }
       if (_isUncertainInvitationError(error)) {
-        await _recoverUncertainResult();
+        await _recoverUncertainResult(username: username, email: email);
       } else {
         setState(() => _error = error.message);
         setState(() => _submitting = false);
@@ -123,19 +134,48 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
       if (!mounted) {
         return;
       }
-      await _recoverUncertainResult();
+      await _recoverUncertainResult(username: username, email: email);
     }
   }
 
-  Future<void> _recoverUncertainResult() async {
+  Future<void> _recoverUncertainResult({
+    required String username,
+    required String email,
+  }) async {
     setState(() {
       _retryBlocked = true;
+      _uncertainUsername = username;
+      _uncertainEmail = email;
       _error = 'Refresh the staff list before trying this invitation again.';
     });
+    await _recheckUncertainResult();
+  }
+
+  Future<void> _recheckUncertainResult() async {
+    final username = _uncertainUsername;
+    final email = _uncertainEmail;
+    if (username == null || email == null) {
+      return;
+    }
+    setState(() => _submitting = true);
     try {
-      await widget.onUncertainResult();
+      final account = await widget.onUncertainResult(
+        username: username,
+        email: email,
+      );
+      if (account == null) {
+        if (mounted) {
+          setState(() {
+            _submitting = false;
+            _retryBlocked = true;
+            _error =
+                'The invitation result is still unconfirmed. Check the staff list again before sending another invitation.';
+          });
+        }
+        return;
+      }
       if (mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(account);
       }
       return;
     } on Object {
@@ -151,7 +191,7 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
 
   Future<void> _refreshAfterPermissionDenied() async {
     try {
-      await widget.onUncertainResult();
+      await widget.onDirectoryRefresh();
       if (mounted) {
         Navigator.of(context).pop();
       }
@@ -188,7 +228,7 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
                   TextField(
                     key: const Key('management-staff-full-name'),
                     controller: _fullName,
-                    enabled: !_submitting,
+                    enabled: !_submitting && !_retryBlocked,
                     textCapitalization: TextCapitalization.words,
                     decoration: const InputDecoration(labelText: 'Full name'),
                   ),
@@ -196,7 +236,7 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
                   TextField(
                     key: const Key('management-staff-username'),
                     controller: _username,
-                    enabled: !_submitting,
+                    enabled: !_submitting && !_retryBlocked,
                     autocorrect: false,
                     decoration: const InputDecoration(labelText: 'Username'),
                   ),
@@ -204,7 +244,7 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
                   TextField(
                     key: const Key('management-staff-email'),
                     controller: _email,
-                    enabled: !_submitting,
+                    enabled: !_submitting && !_retryBlocked,
                     keyboardType: TextInputType.emailAddress,
                     autocorrect: false,
                     decoration: const InputDecoration(labelText: 'Email'),
@@ -228,7 +268,7 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
                         child: Text('Management'),
                       ),
                     ],
-                    onChanged: _submitting
+                    onChanged: _submitting || _retryBlocked
                         ? null
                         : (value) => setState(() => _role = value),
                   ),
@@ -261,6 +301,15 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
                       _submitting ? 'Sending invitation...' : 'Send invitation',
                     ),
                   ),
+                  if (_retryBlocked && !_permissionDenied) ...[
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      key: const Key('management-staff-invite-reconcile'),
+                      onPressed: _submitting ? null : _recheckUncertainResult,
+                      icon: const Icon(Icons.manage_search_outlined),
+                      label: const Text('Check staff list again'),
+                    ),
+                  ],
                 ],
               )
             : const Center(

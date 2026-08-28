@@ -92,14 +92,20 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
         _recordMissing = false;
       });
     } on SpinaApiException catch (error) {
+      final recordMissing = error.statusCode == 404;
+      final directoryRefreshed = recordMissing
+          ? await _refreshDirectoryAfterMissing()
+          : false;
       if (!mounted) {
         return;
       }
       setState(() {
         _loading = false;
         _permissionDenied = error.statusCode == 403;
-        _recordMissing = error.statusCode == 404;
-        _error = error.message;
+        _recordMissing = recordMissing;
+        _error = recordMissing
+            ? _missingRecordMessage(directoryRefreshed)
+            : error.message;
       });
     } on Object {
       if (mounted) {
@@ -119,6 +125,15 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   }
 
   Future<void> _retryInitialLoad() => _initialize();
+
+  Future<bool> _refreshDirectoryAfterMissing() async {
+    try {
+      await widget.onDirectoryRefresh();
+      return true;
+    } on Object {
+      return false;
+    }
+  }
 
   Future<bool> _reloadCurrent({required bool clearMessages}) async {
     if (clearMessages && mounted) {
@@ -152,11 +167,17 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
       });
       return true;
     } on SpinaApiException catch (error) {
+      final recordMissing = error.statusCode == 404;
+      final directoryRefreshed = recordMissing
+          ? await _refreshDirectoryAfterMissing()
+          : false;
       if (mounted) {
         setState(() {
           _permissionDenied = error.statusCode == 403;
-          _recordMissing = error.statusCode == 404;
-          _error = error.message;
+          _recordMissing = recordMissing;
+          _error = recordMissing
+              ? _missingRecordMessage(directoryRefreshed)
+              : error.message;
         });
       }
       return false;
@@ -339,15 +360,18 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
     } on SpinaApiException catch (error) {
       var recovered = true;
       if (error.statusCode == 404) {
-        try {
-          await widget.onDirectoryRefresh();
-        } on Object {
-          recovered = false;
-        }
+        recovered = await _refreshDirectoryAfterMissing();
       } else if (error.statusCode != 403) {
         recovered = await _reloadCurrent(clearMessages: false);
       }
       if (!mounted) {
+        return;
+      }
+      if (_recordMissing && error.statusCode != 404) {
+        setState(() {
+          _mutating = false;
+          _stateUncertain = false;
+        });
         return;
       }
       setState(() {
@@ -356,12 +380,19 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
         _permissionDenied = error.statusCode == 403;
         _recordMissing = error.statusCode == 404;
         _error = error.statusCode == 404
-            ? 'This staff record is no longer available. The directory was refreshed.'
+            ? _missingRecordMessage(recovered)
             : error.message;
       });
     } on Object {
       final recovered = await _reloadCurrent(clearMessages: false);
       if (!mounted) {
+        return;
+      }
+      if (_recordMissing) {
+        setState(() {
+          _mutating = false;
+          _stateUncertain = false;
+        });
         return;
       }
       setState(() {
@@ -532,7 +563,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
             const _PermissionExplanation(
               key: Key('management-staff-device-permission-explanation'),
               message:
-                  'Your current server permissions allow account administration, but not registered-phone visibility or changes.',
+                  'Your current server permissions allow account administration, but not registered-phone details or changes.',
             ),
           ],
           if (_canManageAccounts) ...[
@@ -730,6 +761,12 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
       ],
     );
   }
+}
+
+String _missingRecordMessage(bool directoryRefreshed) {
+  return directoryRefreshed
+      ? 'This staff record is no longer available. The directory was refreshed.'
+      : 'This staff record is no longer available. The staff list could not be refreshed.';
 }
 
 String _requestedDeviceStatus(String current) => switch (current) {

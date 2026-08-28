@@ -115,6 +115,34 @@ void main() {
     );
   });
 
+  testWidgets('initial missing record refreshes directory and locks detail', (
+    tester,
+  ) async {
+    var directoryRefreshes = 0;
+    final repository = _DetailRepository(
+      onLoadDevices: () async =>
+          throw const SpinaApiException('Missing.', statusCode: 404),
+    );
+    await _pumpDetail(
+      tester,
+      repository: repository,
+      session: _session(const <String>['device.manage']),
+      onDirectoryRefresh: () async => directoryRefreshes += 1,
+    );
+    await tester.pumpAndSettle();
+
+    expect(directoryRefreshes, 1);
+    expect(
+      find.byKey(const Key('management-staff-detail-not-found')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('directory was refreshed'), findsOneWidget);
+    expect(
+      find.byKey(const Key('management-staff-devices-section')),
+      findsNothing,
+    );
+  });
+
   testWidgets('never renders server identity fields or device hashes', (
     tester,
   ) async {
@@ -334,6 +362,37 @@ void main() {
     expect(repository.setRoleCalls, 1);
   });
 
+  testWidgets('manual recovery 404 refreshes directory and stays locked', (
+    tester,
+  ) async {
+    var directoryRefreshes = 0;
+    final repository = _DetailRepository(
+      onSetRole: (_, __) async => throw const SpinaApiException(
+        'Connection lost.',
+        code: 'network_unavailable',
+      ),
+    );
+    await _pumpDetail(
+      tester,
+      repository: repository,
+      session: _session(const <String>['account.manage']),
+      reloadAccount: () async =>
+          throw const SpinaApiException('Missing.', statusCode: 404),
+      onDirectoryRefresh: () async => directoryRefreshes += 1,
+    );
+    await tester.pumpAndSettle();
+
+    await _requestEmployeeRole(tester);
+    await tester.pumpAndSettle();
+
+    expect(directoryRefreshes, 1);
+    expect(
+      find.byKey(const Key('management-staff-detail-not-found')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('directory was refreshed'), findsOneWidget);
+  });
+
   testWidgets(
     'uncertain mutation remains locked until authoritative reload succeeds',
     (tester) async {
@@ -477,6 +536,33 @@ void main() {
     expect(
       find.byKey(const Key('management-staff-status-control')),
       findsNothing,
+    );
+  });
+
+  testWidgets('404 mutation reports when directory refresh fails', (
+    tester,
+  ) async {
+    final repository = _DetailRepository(
+      onSetRole: (_, __) async =>
+          throw const SpinaApiException('Missing.', statusCode: 404),
+    );
+    await _pumpDetail(
+      tester,
+      repository: repository,
+      session: _session(const <String>['account.manage']),
+      onDirectoryRefresh: () async => throw StateError('refresh failed'),
+    );
+    await tester.pumpAndSettle();
+    await _requestEmployeeRole(tester);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('staff list could not be refreshed'),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('management-staff-detail-not-found')),
+      findsOneWidget,
     );
   });
 
@@ -669,11 +755,13 @@ final class _DetailRepository implements ManagementAdministrationRepository {
   _DetailRepository({
     this.devices = const <ManagementDevice>[],
     this.onSetRole,
+    this.onLoadDevices,
   });
 
   List<ManagementDevice> devices;
   final Future<ManagementStaffAccount> Function(String role, int call)?
   onSetRole;
+  final Future<List<ManagementDevice>> Function()? onLoadDevices;
   int loadDeviceCalls = 0;
   int setRoleCalls = 0;
 
@@ -684,7 +772,7 @@ final class _DetailRepository implements ManagementAdministrationRepository {
     required String userId,
   }) async {
     loadDeviceCalls += 1;
-    return devices;
+    return onLoadDevices?.call() ?? devices;
   }
 
   @override

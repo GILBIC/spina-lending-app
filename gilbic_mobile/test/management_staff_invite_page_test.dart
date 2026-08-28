@@ -87,7 +87,7 @@ void main() {
   testWidgets('uncertain result refreshes directory without automatic repost', (
     tester,
   ) async {
-    final refresh = Completer<void>();
+    final refresh = Completer<ManagementStaffAccount?>();
     var refreshCalls = 0;
     final repository = _InviteRepository(
       onInvite: () async => throw const SpinaApiException(
@@ -98,7 +98,7 @@ void main() {
     await _pumpInvite(
       tester,
       repository: repository,
-      onUncertainResult: () {
+      onUncertainResult: ({required String username, required String email}) {
         refreshCalls += 1;
         return refresh.future;
       },
@@ -123,7 +123,7 @@ void main() {
       isNull,
     );
 
-    refresh.complete();
+    refresh.complete(_account);
     await tester.pumpAndSettle();
     expect(repository.inviteCalls, 1);
     expect(
@@ -145,7 +145,9 @@ void main() {
       await _pumpInvite(
         tester,
         repository: repository,
-        onUncertainResult: () async => throw StateError('refresh failed'),
+        onUncertainResult:
+            ({required String username, required String email}) async =>
+                throw StateError('refresh failed'),
       );
       await tester.pumpAndSettle();
       await _fillForm(tester);
@@ -171,10 +173,62 @@ void main() {
     },
   );
 
+  testWidgets(
+    'uncertain invitation stays blocked until exact account appears',
+    (tester) async {
+      var reconciliationCalls = 0;
+      final repository = _InviteRepository(
+        onInvite: () async => throw const SpinaApiException(
+          'Connection timed out.',
+          code: 'network_unavailable',
+        ),
+      );
+      await _pumpInvite(
+        tester,
+        repository: repository,
+        onUncertainResult:
+            ({required String username, required String email}) async {
+              reconciliationCalls += 1;
+              expect(username, 'ana.west');
+              expect(email, 'ana@example.com');
+              return reconciliationCalls == 1 ? null : _account;
+            },
+      );
+      await tester.pumpAndSettle();
+      await _fillForm(tester);
+
+      await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+      await tester.pumpAndSettle();
+
+      expect(reconciliationCalls, 1);
+      expect(
+        find.byKey(const Key('management-staff-invite-reconcile')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('management-staff-invite-submit')),
+            )
+            .onPressed,
+        isNull,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('management-staff-invite-reconcile')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(reconciliationCalls, 2);
+      expect(find.byKey(const Key('open-invite')), findsOneWidget);
+      expect(find.byType(ManagementStaffInvitePage), findsNothing);
+    },
+  );
+
   testWidgets('malformed invitation success requires authoritative refresh', (
     tester,
   ) async {
-    final refresh = Completer<void>();
+    final refresh = Completer<ManagementStaffAccount?>();
     var refreshCalls = 0;
     final repository = _InviteRepository(
       onInvite: () async => throw const SpinaApiException(
@@ -185,7 +239,7 @@ void main() {
     await _pumpInvite(
       tester,
       repository: repository,
-      onUncertainResult: () {
+      onUncertainResult: ({required String username, required String email}) {
         refreshCalls += 1;
         return refresh.future;
       },
@@ -210,7 +264,7 @@ void main() {
           .onPressed,
       isNull,
     );
-    refresh.complete();
+    refresh.complete(_account);
     await tester.pumpAndSettle();
     expect(
       find.byKey(const Key('management-staff-invite-submit')),
@@ -278,7 +332,8 @@ Future<void> _fillForm(WidgetTester tester) async {
 Future<void> _pumpInvite(
   WidgetTester tester, {
   required _InviteRepository repository,
-  Future<void> Function()? onUncertainResult,
+  InvitationReconciler? onUncertainResult,
+  Future<void> Function()? onDirectoryRefresh,
 }) async {
   final store = MemoryDeviceIdentityStore()..value = 'management-phone';
   await tester.pumpWidget(
@@ -290,7 +345,10 @@ Future<void> _pumpInvite(
           platformResolver: () => 'android',
           appVersionResolver: () async => '0.4.0+4',
         ),
-        onUncertainResult: onUncertainResult ?? () async {},
+        onUncertainResult:
+            onUncertainResult ??
+            ({required String username, required String email}) async => null,
+        onDirectoryRefresh: onDirectoryRefresh ?? () async {},
       ),
     ),
   );
@@ -303,11 +361,13 @@ class _InviteHost extends StatefulWidget {
     required this.repository,
     required this.deviceIdentityProvider,
     required this.onUncertainResult,
+    required this.onDirectoryRefresh,
   });
 
   final ManagementAdministrationRepository repository;
   final DeviceIdentityProvider deviceIdentityProvider;
-  final Future<void> Function() onUncertainResult;
+  final InvitationReconciler onUncertainResult;
+  final Future<void> Function() onDirectoryRefresh;
 
   @override
   State<_InviteHost> createState() => _InviteHostState();
@@ -324,6 +384,7 @@ class _InviteHostState extends State<_InviteHost> {
           repository: widget.repository,
           deviceIdentityProvider: widget.deviceIdentityProvider,
           onUncertainResult: widget.onUncertainResult,
+          onDirectoryRefresh: widget.onDirectoryRefresh,
         ),
       ),
     );

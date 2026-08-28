@@ -235,26 +235,43 @@ class _ManagementStaffDevicesPageState
           session: widget.session,
           repository: _repository,
           deviceIdentityProvider: widget.deviceIdentityProvider,
-          onUncertainResult: _recoverInvitation,
+          onUncertainResult: _reconcileInvitation,
+          onDirectoryRefresh: _refreshStrict,
         ),
       ),
     );
     if (!mounted || account == null) {
       return;
     }
-    setState(() {
-      _items.removeWhere((item) => item.id == account.id);
-      _items.insert(0, account);
-    });
+    await _load(reset: true);
   }
 
-  Future<void> _recoverInvitation() async {
-    _searchTimer?.cancel();
-    _searchController.clear();
-    _query = '';
-    _role = null;
-    _status = null;
-    await _refreshStrict();
+  Future<ManagementStaffAccount?> _reconcileInvitation({
+    required String username,
+    required String email,
+  }) async {
+    final deviceId = _deviceId;
+    if (deviceId == null) {
+      throw const SpinaApiException(
+        'This installation identity is unavailable.',
+        code: 'network_unavailable',
+      );
+    }
+    final normalizedUsername = username.trim().toLowerCase();
+    final normalizedEmail = email.trim().toLowerCase();
+    final page = await _repository.loadStaff(
+      widget.session,
+      deviceId: deviceId,
+      query: normalizedUsername,
+      limit: _pageSize,
+      offset: 0,
+    );
+    return page.items.where((item) {
+      final exactUsername = item.username.trim().toLowerCase();
+      final exactEmail = item.email?.trim().toLowerCase();
+      return exactUsername == normalizedUsername ||
+          (normalizedEmail.isNotEmpty && exactEmail == normalizedEmail);
+    }).firstOrNull;
   }
 
   Future<void> _openDetail(ManagementStaffAccount account) async {

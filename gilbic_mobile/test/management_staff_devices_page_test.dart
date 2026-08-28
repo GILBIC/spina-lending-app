@@ -422,10 +422,12 @@ void main() {
   );
 
   testWidgets(
-    'uncertain invitation returns to an unfiltered refreshed directory',
+    'uncertain invitation reconciles exactly and preserves directory filters',
     (tester) async {
       final repository = _FakeAdministrationRepository(
-        onLoad: (_) async => _page(<ManagementStaffAccount>[_ana]),
+        onLoad: (request) async => request.query == 'stale filter'
+            ? _page(const <ManagementStaffAccount>[])
+            : _page(<ManagementStaffAccount>[_ana]),
         onInvite: () async => throw const SpinaApiException(
           'Connection timed out.',
           code: 'network_unavailable',
@@ -463,13 +465,21 @@ void main() {
 
       expect(find.byType(ManagementStaffInvitePage), findsNothing);
       expect(repository.inviteCalls, 1);
-      expect(repository.loadCalls.last.query, isNull);
+      expect(
+        repository.loadCalls.map((call) => call.query),
+        contains('ana.west'),
+      );
+      expect(repository.loadCalls.last.query, 'stale filter');
       expect(
         tester
             .widget<TextField>(find.byKey(const Key('management-staff-search')))
             .controller
             ?.text,
-        isEmpty,
+        'stale filter',
+      );
+      expect(
+        find.byKey(const Key('management-staff-filtered-empty')),
+        findsOneWidget,
       );
     },
   );
