@@ -16,6 +16,7 @@ TEST_DATABASE_PREFIX = "spina_7x7_extra_principal_bridge_"
 BOOTSTRAP_THROUGH = 108
 TEST_ROOT = ROOT / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
+    TEST_ROOT / "test_seven_by_seven_mobile_collection_postgres.py",
     TEST_ROOT / "test_seven_by_seven_extra_principal_persistence_postgres.py",
     TEST_ROOT / "test_seven_by_seven_extra_principal_bridge_postgres.py",
 )

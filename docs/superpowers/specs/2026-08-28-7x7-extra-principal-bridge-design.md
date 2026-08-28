@@ -260,10 +260,12 @@ accounting readiness, notifications, route change, and idempotency row together.
 
 Operational principal replay and Advance/Refund Due replay are deliberately
 separate proofs. The operational amount overlay is reconstructed only from the
-signed rows plus active principal-reduction events. Active Advance and Refund Due
-are then reconciled from their own immutable allocation, classification,
-approval, release, and reversal histories. This preserves interleaved Advance
-receipts instead of incorrectly treating them as properties of a principal event.
+signed rows plus active, receipt-dated principal-reduction events. Each event may
+alter only rows whose effective date was future to that receipt; due/past rows
+remain untouched. Active Advance and Refund Due are then reconciled from their
+own immutable allocation, classification, approval, release, and reversal
+histories. This preserves interleaved Advance receipts instead of incorrectly
+treating them as properties of a principal event.
 
 ## API and Response Compatibility
 

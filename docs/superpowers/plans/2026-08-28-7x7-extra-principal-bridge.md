@@ -409,6 +409,7 @@ git commit -m "feat(db): add protected extra principal reversal evidence"
 **Files:**
 - Create: `gilbic_backend/src/gilbic_backend/seven_by_seven_extra_principal_posting.py`
 - Modify: `gilbic_backend/src/gilbic_backend/seven_by_seven_collection_posting.py`
+- Modify: `gilbic_backend/src/gilbic_backend/seven_by_seven_extra_principal_replay.py`
 - Modify: `gilbic_backend/src/gilbic_backend/voluntary_extra_collection_posting.py`
 - Test: `gilbic_backend/tests/test_seven_by_seven_extra_principal_posting.py`
 - Test: `gilbic_backend/tests/test_seven_by_seven_mobile_collection_postgres.py`
@@ -505,7 +506,7 @@ def post_seven_by_seven_extra_principal(
     return stored
 ```
 
-The body must load/lock the active registered signed schedule, operational state and rows, active Advance, and prior adjustments; prove current replay; prove both interest buckets are zero; run the existing planner; write 0106 rows/overlays/version; and reload/reconcile exact results. In `seven_by_seven_collection_posting.py`, branch only the modern intent and include it in receipt `details` before inserting the 0106 adjustment. In `voluntary_extra_collection_posting.py`, leave the legacy intent parseable but rejected for principal reduction.
+The body must load/lock the active registered signed schedule, operational state and rows, active Advance, and prior adjustments; prove current replay; prove both interest buckets are zero; run the existing planner; write 0106 rows/overlays/version; and reload/reconcile exact results. Replay includes the immutable source receipt date so an adjustment may change only rows future to that receipt. In `seven_by_seven_collection_posting.py`, branch only the modern intent and include it in receipt `details` before inserting the 0106 adjustment. In `voluntary_extra_collection_posting.py`, leave the legacy intent parseable but rejected for principal reduction and do not overwrite protected 7x7 result metadata with the Regular extra recorder.
 
 - [ ] **Step 4: Run focused and existing 7x7 PostgreSQL tests**
 

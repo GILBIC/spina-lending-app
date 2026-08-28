@@ -6,7 +6,6 @@ from typing import Any
 from psycopg import Connection
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
-
 from spina_mobile_collections.contracts import (
     ActorContext,
     CollectionCommand,
@@ -70,7 +69,11 @@ class VoluntaryExtraAwareCollectionPostingBridge(
             )
 
         posted = super().post_collection(connection, actor, command)
-        if command.entry_type is CollectionEntryType.PAYMENT:
+        if (
+            command.entry_type is CollectionEntryType.PAYMENT
+            and posted.result_metadata.get("allocation_type")
+            != "seven_by_seven_extra_principal"
+        ):
             self._record_payment_intent(
                 connection,
                 actor=actor,
@@ -385,10 +388,9 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                     transaction_id,
                 ),
             )
-            if (
-                principal_reduction_amount > Decimal("0.00")
-                or advance_extra_amount > Decimal("0.00")
-            ):
+            if principal_reduction_amount > Decimal(
+                "0.00"
+            ) or advance_extra_amount > Decimal("0.00"):
                 cursor.execute(
                     """
                     insert into core.audit_logs (
@@ -423,14 +425,18 @@ class VoluntaryExtraAwareCollectionPostingBridge(
                                     str(receipt["applied_amount"]) if receipt else None
                                 ),
                                 "unallocated_amount": (
-                                    str(receipt["unallocated_amount"]) if receipt else None
+                                    str(receipt["unallocated_amount"])
+                                    if receipt
+                                    else None
                                 ),
                                 "principal_reduction_amount": str(
                                     principal_reduction_amount
                                 ),
                                 "advance_extra_amount": str(advance_extra_amount),
                                 "allocation_state": (
-                                    str(receipt["allocation_state"]) if receipt else None
+                                    str(receipt["allocation_state"])
+                                    if receipt
+                                    else None
                                 ),
                                 "payment_allocation_intent": intent,
                                 "automatic_non_advance_principal_reduction": False,

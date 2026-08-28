@@ -40,12 +40,14 @@ def _event(
     *,
     reduction: str,
     version: int,
+    collection_date: date | None = None,
 ) -> ActiveExtraPrincipalEvent:
     return ActiveExtraPrincipalEvent(
         adjustment_id=adjustment_id,
         transaction_id=transaction_id,
         principal_reduction=Decimal(reduction),
         resulting_operational_version=version,
+        collection_date=collection_date,
     )
 
 
@@ -149,6 +151,7 @@ def test_replay_digests_are_stable_for_equivalent_input_order() -> None:
         "events": [
             {
                 "adjustment_id": str(FIRST_ADJUSTMENT_ID),
+                "collection_date": None,
                 "principal_reduction": "40.00",
                 "resulting_operational_version": 1,
                 "transaction_id": str(FIRST_TRANSACTION_ID),
@@ -222,6 +225,30 @@ def test_replay_digests_are_stable_for_equivalent_input_order() -> None:
 
     assert first.source_history_digest == literal_digest(expected_source)
     assert first.operational_state_digest == literal_digest(expected_operational)
+
+
+def test_dated_event_changes_only_rows_future_to_its_receipt() -> None:
+    result = replay_extra_principal_history(
+        signed_installments=(_signed_row(1), _signed_row(2), _signed_row(3)),
+        active_events=(
+            _event(
+                FIRST_ADJUSTMENT_ID,
+                FIRST_TRANSACTION_ID,
+                reduction="29.00",
+                version=1,
+                collection_date=date(2026, 9, 1),
+            ),
+        ),
+    )
+
+    due_today, future, removed = result.operational_rows
+    assert due_today.installment_id == 101
+    assert due_today.operational_amount == Decimal("50.00")
+    assert due_today.last_active_adjustment_id is None
+    assert future.operational_amount == Decimal("50.00")
+    assert removed.installment_id == 103
+    assert removed.removed is True
+    assert removed.last_active_adjustment_id == FIRST_ADJUSTMENT_ID
 
 
 def test_replay_rejects_duplicate_adjustment_identity() -> None:

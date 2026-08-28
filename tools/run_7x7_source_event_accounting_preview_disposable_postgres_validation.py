@@ -8,14 +8,12 @@ from pathlib import Path
 from uuid import uuid4
 
 import psycopg
-from psycopg import sql
-
 import run_stage5d17_disposable_postgres_validation as disposable
-
+from psycopg import sql
 
 ROOT = Path(__file__).resolve().parents[1]
 TEST_DATABASE_PREFIX = "spina_7x7_source_preview_"
-BOOTSTRAP_THROUGH = 107
+BOOTSTRAP_THROUGH = 108
 TEST_ROOT = ROOT / "gilbic_backend" / "tests"
 INTEGRATION_TESTS = (
     TEST_ROOT / "test_seven_by_seven_mobile_collection_postgres.py",
@@ -52,7 +50,13 @@ def _run_tests(test_database_url: str) -> int:
         python_paths.append(existing_python_path)
     env["PYTHONPATH"] = os.pathsep.join(python_paths)
     completed = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", *(str(path) for path in INTEGRATION_TESTS)],
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+            *(str(path) for path in INTEGRATION_TESTS),
+        ],
         env=env,
         check=False,
     )
@@ -63,7 +67,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA migrations "
-            "through 0107, then prove the protected 7x7 source-event accounting preview, "
+            "through 0108, then prove the protected 7x7 source-event accounting preview, "
             "Master #296 B.3 exact Desktop/server operational parity, B.5 protected mobile "
             "posting acceptance, the 7x7 Extra Principal operational amount / Refund Due "
             "persistence foundation, and operational-reader schema alignment. The dedicated "
@@ -71,7 +75,8 @@ def main() -> int:
             "covered dates, unable-to-pay, balance/receipt, exact retry, stale-route refresh, "
             "overpayment rejection, balance-reconciliation fail-closed behavior, signed-row "
             "immutability, repeated Extra Principal operational shortening, Advance conservation, "
-            "and migration 0107 DPD compatibility are proven. No live database or production "
+            "migration 0107 DPD compatibility, and the 0108 protected Extra Principal "
+            "forward bridge are proven. No live database or production "
             "loan-type flag is modified."
         )
     )
@@ -145,7 +150,9 @@ def main() -> int:
             "immutable signed installment values while repeated Extra Principal updated only "
             "operational amount state and conserved Advance as retained amount plus separate "
             "Refund Due evidence; migration 0107 compiled the operational-reader/DPD alignment "
-            "on the same disposable schema. Production 7x7 loan-type flags were not changed and "
+            "on the same disposable schema; migration 0108 kept Extra Principal receipt, "
+            "principal-only schedule effects, and retry metadata atomic. Production 7x7 "
+            "loan-type flags were not changed and "
             "no live write path was used."
         )
         return 0

@@ -8,11 +8,11 @@ from uuid import UUID, uuid4
 from psycopg import Connection
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
-
 from spina_mobile_collections.contracts import (
     ActorContext,
     CollectionCommand,
     CollectionEntryType,
+    PaymentAllocationIntent,
     PostedCollection,
 )
 from spina_mobile_collections.service import CollectionConflict, CollectionRejected
@@ -20,6 +20,11 @@ from spina_mobile_collections.service import CollectionConflict, CollectionRejec
 from .collection_posting import DIRECT_BALANCE_MODE
 from .per_loan_contract_collection import (
     PerLoanContractAwareCrossCollectorCollectionPostingBridge,
+)
+from .seven_by_seven_extra_principal_posting import (
+    ExtraPrincipalPostingRejected,
+    SevenBySevenExtraPrincipalPostingResult,
+    post_seven_by_seven_extra_principal,
 )
 from .seven_by_seven_operational_allocator import (
     SEVEN_BY_SEVEN_OPERATIONAL_POLICY,
@@ -33,7 +38,6 @@ from .seven_by_seven_schedule_allocation import (
     plan_verified_seven_by_seven_scheduled_payment,
     store_verified_seven_by_seven_scheduled_payment_allocations,
 )
-
 
 SEVEN_BY_SEVEN_MOBILE_SETTING = "mobile_seven_by_seven_enabled"
 ZERO = Decimal("0.00")
@@ -104,7 +108,10 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                 "Use SPINA desktop until Management enables the protected 7x7 path.",
                 code="seven_by_seven_mobile_disabled",
             )
-        if str(settings.get("mobile_balance_mode") or "").strip() != DIRECT_BALANCE_MODE:
+        if (
+            str(settings.get("mobile_balance_mode") or "").strip()
+            != DIRECT_BALANCE_MODE
+        ):
             raise CollectionRejected(
                 "The protected 7x7 mobile allocator is not enabled for this balance mode.",
                 code="seven_by_seven_mobile_not_ready",
@@ -122,7 +129,24 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
         loan_id = self._uuid(command.loan_id, "loan")
         client_id = self._uuid(command.client_id, "client")
         route_entry_id = self._uuid(command.route_entry_id, "route entry")
-        covered_dates = self._seven_by_seven_covered_dates(command)
+        is_extra_principal = (
+            command.payment_allocation_intent
+            is PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
+        )
+        if command.payment_allocation_intent is PaymentAllocationIntent.VOLUNTARY_EXTRA:
+            raise CollectionRejected(
+                "Legacy Voluntary Extra cannot authorize 7x7 Principal Reduction. "
+                "Choose Principal Reduction explicitly.",
+                code="seven_by_seven_extra_principal_intent_required",
+            )
+        if is_extra_principal and command.entry_type is not CollectionEntryType.PAYMENT:
+            raise CollectionRejected(
+                "7x7 Extra Principal requires a Payment receipt.",
+                code="seven_by_seven_extra_principal_payment_required",
+            )
+        covered_dates = (
+            () if is_extra_principal else self._seven_by_seven_covered_dates(command)
+        )
 
         if route_entry_id != loan_id:
             raise CollectionRejected(
@@ -248,6 +272,11 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
             official_balance = previous_balance
             loan_fully_paid = False
             schedule_instructions = ()
+            extra_principal_interest_before = ZERO
+            extra_principal_interest_today = ZERO
+            extra_principal_result: SevenBySevenExtraPrincipalPostingResult | None = (
+                None
+            )
             allocation_details: dict[str, object] = {
                 "seven_by_seven_policy": SEVEN_BY_SEVEN_OPERATIONAL_POLICY,
                 "seven_by_seven_mobile_feature": SEVEN_BY_SEVEN_MOBILE_SETTING,
@@ -277,28 +306,42 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                         "advance_integration_pending"
                     )
                 elif command.entry_type is CollectionEntryType.PAYMENT:
-                    try:
-                        schedule_instructions = (
-                            plan_verified_seven_by_seven_scheduled_payment(
-                                cursor,
-                                loan_id=loan_id,
-                                collection_date=command.collection_date,
-                                transaction_amount=amount,
-                            )
+                    if is_extra_principal:
+                        allocation_details.update(
+                            {
+                                "payment_allocation_intent": (
+                                    PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION.value
+                                ),
+                                "seven_by_seven_schedule_allocation_state": (
+                                    "extra_principal_operational_pending"
+                                ),
+                            }
                         )
-                    except SevenBySevenVerifiedScheduleNotFound:
-                        # Transitional compatibility for already-existing 7x7 loans
-                        # that predate verified schedule registration. Such loans are
-                        # not eligible to treat Collector View Schedule as authoritative.
-                        allocation_details["seven_by_seven_schedule_allocation_state"] = (
-                            "verified_schedule_required"
-                        )
-                    except SevenBySevenScheduleAllocationError as error:
-                        raise CollectionRejected(str(error), code=error.code) from error
                     else:
-                        allocation_details["seven_by_seven_schedule_allocation_state"] = (
-                            "verified_due_rows_planned"
-                        )
+                        try:
+                            schedule_instructions = (
+                                plan_verified_seven_by_seven_scheduled_payment(
+                                    cursor,
+                                    loan_id=loan_id,
+                                    collection_date=command.collection_date,
+                                    transaction_amount=amount,
+                                )
+                            )
+                        except SevenBySevenVerifiedScheduleNotFound:
+                            # Transitional compatibility for already-existing 7x7 loans
+                            # that predate verified schedule registration. Such loans are
+                            # not eligible to treat Collector View Schedule as authoritative.
+                            allocation_details[
+                                "seven_by_seven_schedule_allocation_state"
+                            ] = "verified_schedule_required"
+                        except SevenBySevenScheduleAllocationError as error:
+                            raise CollectionRejected(
+                                str(error), code=error.code
+                            ) from error
+                        else:
+                            allocation_details[
+                                "seven_by_seven_schedule_allocation_state"
+                            ] = "verified_due_rows_planned"
 
                 result, line = self._allocate_seven_by_seven_pending_event(
                     cursor,
@@ -318,6 +361,25 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                         "Refresh the route and enter the exact amount received.",
                         code="amount_exceeds_seven_by_seven_payoff",
                     )
+                if is_extra_principal:
+                    extra_principal_interest_before = self._money(
+                        line.opening_interest_arrears
+                    )
+                    extra_principal_interest_today = self._money(
+                        line.interest_due - line.opening_interest_arrears
+                    )
+                    if (
+                        line.interest_due != ZERO
+                        or line.interest_paid != ZERO
+                        or line.principal_paid != amount
+                    ):
+                        raise CollectionRejected(
+                            "Past Due Interest and Today Interest must be fully paid "
+                            "before 7x7 Extra Principal.",
+                            code=(
+                                "seven_by_seven_extra_principal_interest_outstanding"
+                            ),
+                        )
 
                 official_balance = result.closing_remaining_principal
                 loan_fully_paid = result.complete
@@ -334,22 +396,34 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                 allocation_details.update(
                     {
                         "seven_by_seven_payment_start": result.payment_start.isoformat(),
-                        "seven_by_seven_fixed_daily_interest": str(result.fixed_daily_interest),
+                        "seven_by_seven_fixed_daily_interest": str(
+                            result.fixed_daily_interest
+                        ),
                         "seven_by_seven_gap_days": line.gap_days,
-                        "seven_by_seven_opening_principal": str(line.opening_remaining_principal),
-                        "seven_by_seven_opening_interest_arrears": str(line.opening_interest_arrears),
+                        "seven_by_seven_opening_principal": str(
+                            line.opening_remaining_principal
+                        ),
+                        "seven_by_seven_opening_interest_arrears": str(
+                            line.opening_interest_arrears
+                        ),
                         "seven_by_seven_interest_due": str(line.interest_due),
                         "seven_by_seven_interest_paid": str(line.interest_paid),
                         "seven_by_seven_principal_paid": str(line.principal_paid),
-                        "seven_by_seven_closing_principal": str(line.closing_remaining_principal),
-                        "seven_by_seven_closing_interest_arrears": str(line.closing_interest_arrears),
+                        "seven_by_seven_closing_principal": str(
+                            line.closing_remaining_principal
+                        ),
+                        "seven_by_seven_closing_interest_arrears": str(
+                            line.closing_interest_arrears
+                        ),
                         "seven_by_seven_complete": result.complete,
                     }
                 )
 
             note_after = command.note.strip() or str(loan["note"] or "")
             next_version = int(loan["state_version"]) + 1
-            next_revision = self._route_revision(loan_id=loan_id, state_version=next_version)
+            next_revision = self._route_revision(
+                loan_id=loan_id, state_version=next_version
+            )
             accepted_at = datetime.now(timezone.utc)
             transaction_id = uuid4()
             receipt_number = self._next_receipt_number(
@@ -460,6 +534,26 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                 ),
             )
 
+            if is_extra_principal:
+                try:
+                    extra_principal_result = post_seven_by_seven_extra_principal(
+                        cursor,
+                        transaction_id=transaction_id,
+                        loan_id=loan_id,
+                        actor_user_id=collector_user_id,
+                        collection_date=command.collection_date,
+                        receipt_amount=amount,
+                        payment_allocation_intent=command.payment_allocation_intent,
+                        expected_route_revision=str(command.route_revision),
+                        past_due_interest=extra_principal_interest_before,
+                        today_interest=extra_principal_interest_today,
+                    )
+                except ExtraPrincipalPostingRejected as error:
+                    raise CollectionRejected(str(error), code=error.code) from error
+                allocation_details["seven_by_seven_schedule_allocation_state"] = (
+                    "extra_principal_operational_applied"
+                )
+
             if schedule_instructions:
                 store_verified_seven_by_seven_scheduled_payment_allocations(
                     cursor,
@@ -535,6 +629,11 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
             accepted_at=accepted_at,
             route_revision=next_revision,
             message=self._success_message(command.entry_type),
+            result_metadata=(
+                extra_principal_result.response_metadata()
+                if extra_principal_result is not None
+                else {}
+            ),
         )
 
     def _revalidate_seven_by_seven_mode(self, loan: dict[str, Any]) -> None:
@@ -545,15 +644,18 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                 code="seven_by_seven_mode_changed",
             )
         settings = loan["settings"] if isinstance(loan["settings"], dict) else {}
-        if not self._setting_enabled(settings.get("mobile_collections_enabled")) or not self._setting_enabled(
-            settings.get(SEVEN_BY_SEVEN_MOBILE_SETTING)
-        ):
+        if not self._setting_enabled(
+            settings.get("mobile_collections_enabled")
+        ) or not self._setting_enabled(settings.get(SEVEN_BY_SEVEN_MOBILE_SETTING)):
             raise CollectionConflict(
                 "7x7 mobile collection was disabled while this entry was being saved. "
                 "Refresh the route.",
                 code="seven_by_seven_mobile_disabled",
             )
-        if str(settings.get("mobile_balance_mode") or "").strip() != DIRECT_BALANCE_MODE:
+        if (
+            str(settings.get("mobile_balance_mode") or "").strip()
+            != DIRECT_BALANCE_MODE
+        ):
             raise CollectionConflict(
                 "The 7x7 mobile balance mode changed. Refresh the route.",
                 code="seven_by_seven_mobile_not_ready",
@@ -590,7 +692,10 @@ class SevenBySevenAwarePerLoanContractCollectionPostingBridge(
                 "Choose at least one exact covered date for this 7x7 payment.",
                 code="covered_date_required",
             )
-        if command.advance_from != covered_dates[0] or command.advance_until != covered_dates[-1]:
+        if (
+            command.advance_from != covered_dates[0]
+            or command.advance_until != covered_dates[-1]
+        ):
             raise CollectionRejected(
                 "The first and last 7x7 covered dates must match the exact selected dates.",
                 code="seven_by_seven_advance_bounds_mismatch",

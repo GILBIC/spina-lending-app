@@ -29,6 +29,7 @@ class ActiveExtraPrincipalEvent:
     transaction_id: UUID
     principal_reduction: Decimal
     resulting_operational_version: int
+    collection_date: date | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,6 +108,7 @@ def replay_extra_principal_history(
                     transaction_id=event.transaction_id,
                     principal_reduction=money(event.principal_reduction),
                     resulting_operational_version=event.resulting_operational_version,
+                    collection_date=event.collection_date,
                 )
                 for event in active_events
             ),
@@ -145,14 +147,20 @@ def replay_extra_principal_history(
     }
 
     for event in events:
-        if not current_rows:
+        eligible_rows = tuple(
+            row
+            for row in current_rows
+            if event.collection_date is None
+            or row.effective_due_date > event.collection_date
+        )
+        if not eligible_rows:
             raise _replay_conflict(
-                "An active Extra Principal event exists after the entire signed tail was removed."
+                "An active Extra Principal event has no eligible future signed tail."
             )
         try:
             plan = plan_seven_by_seven_extra_principal_tail(
                 principal_reduction=event.principal_reduction,
-                future_installments=current_rows,
+                future_installments=eligible_rows,
             )
         except SevenBySevenExtraPrincipalError as error:
             raise _replay_conflict(
@@ -160,8 +168,15 @@ def replay_extra_principal_history(
                 f"the signed 7x7 schedule: {error}"
             ) from error
 
+        projection_by_id = {
+            projection.installment_id: projection for projection in plan.installments
+        }
         next_rows: list[FutureInstallmentPrincipalState] = []
-        for projection in plan.installments:
+        for current in current_rows:
+            projection = projection_by_id.get(current.installment_id)
+            if projection is None:
+                next_rows.append(current)
+                continue
             final_by_id[projection.installment_id] = ReplayedExtraPrincipalInstallment(
                 installment_id=projection.installment_id,
                 installment_number=projection.installment_number,
@@ -205,6 +220,11 @@ def replay_extra_principal_history(
         "events": [
             {
                 "adjustment_id": str(event.adjustment_id),
+                "collection_date": (
+                    event.collection_date.isoformat()
+                    if event.collection_date is not None
+                    else None
+                ),
                 "principal_reduction": _money_text(event.principal_reduction),
                 "resulting_operational_version": (event.resulting_operational_version),
                 "transaction_id": str(event.transaction_id),
@@ -282,6 +302,13 @@ def _validate_events(events: tuple[ActiveExtraPrincipalEvent, ...]) -> None:
     ):
         raise _replay_conflict(
             "Active Extra Principal history contains an invalid version or reduction."
+        )
+    dated_events = tuple(
+        event.collection_date for event in events if event.collection_date is not None
+    )
+    if dated_events != tuple(sorted(dated_events)):
+        raise _replay_conflict(
+            "Active Extra Principal history contains non-chronological receipt dates."
         )
 
 
