@@ -270,11 +270,13 @@ class SpinaAuthRepository
     }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      final error = stringMap(payload['error']);
       throw SpinaApiException(
         response.statusCode == 401
             ? authenticationFailureMessage
             : apiErrorMessage(payload, statusCode: response.statusCode),
         statusCode: response.statusCode,
+        code: firstNonEmptyString(<Object?>[error['code'], payload['code']]),
       );
     }
 

@@ -336,6 +336,45 @@ void main() {
     );
   });
 
+  test('pending Collector device requires Management approval', () async {
+    final repository = SpinaAuthRepository(
+      client: MockClient((request) async {
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': false,
+            'error': <String, Object?>{
+              'code': 'device_approval_required',
+              'message':
+                  'This Collector device is awaiting Management approval.',
+            },
+          }),
+          403,
+        );
+      }),
+      loginUri: Uri.parse('https://spina.test/login'),
+      logoutUri: Uri.parse('https://spina.test/logout'),
+      deviceIdentityProvider: testDeviceIdentityProvider(),
+    );
+
+    await expectLater(
+      repository.signIn(username: 'collector', password: 'password123'),
+      throwsA(
+        isA<SpinaApiException>()
+            .having((error) => error.statusCode, 'statusCode', 403)
+            .having(
+              (error) => error.code,
+              'code',
+              'device_approval_required',
+            )
+            .having(
+              (error) => error.message,
+              'message',
+              'This Collector device is awaiting Management approval.',
+            ),
+      ),
+    );
+  });
+
   test('shows the server pending-approval message on forbidden login', () async {
     final repository = SpinaAuthRepository(
       client: MockClient((request) async {

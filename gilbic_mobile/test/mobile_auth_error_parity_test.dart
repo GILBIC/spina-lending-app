@@ -189,6 +189,42 @@ void main() {
       });
     });
 
+    testWidgets(
+        '$platformName pending Collector device stays signed out with approval message',
+        (tester) async {
+      await _runForPlatform(platform, () async {
+        final store = MemorySessionStore();
+        final repository = _ParityAuthRepository(
+          onSignIn: (_, __) async => throw const SpinaApiException(
+            'This Collector device is awaiting Management approval.',
+            statusCode: 403,
+            code: 'device_approval_required',
+          ),
+        );
+
+        await _pumpApp(tester, store: store, repository: repository);
+        await tester.enterText(
+          find.byKey(const Key('username-field')),
+          'collector.one',
+        );
+        await tester.enterText(
+          find.byKey(const Key('password-field')),
+          'secret',
+        );
+        await tester.tap(find.byKey(const Key('sign-in-button')));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('login-error')), findsOneWidget);
+        expect(
+          find.text(
+            'This Collector device is awaiting Management approval.',
+          ),
+          findsOneWidget,
+        );
+        expect(await store.read(), isNull);
+      });
+    });
+
     testWidgets('$platformName enforces server-required app update', (tester) async {
       await _runForPlatform(platform, () async {
         final store = MemorySessionStore();
