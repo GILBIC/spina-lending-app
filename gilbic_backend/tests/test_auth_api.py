@@ -447,6 +447,20 @@ def test_me_rejects_unregistered_device() -> None:
     )
 
 
+def test_me_rejects_pending_device_with_controlled_denial() -> None:
+    client, _, accounts = client_with_fakes()
+    accounts.device_error = DeviceApprovalRequired(
+        "This Collector device is awaiting Management approval."
+    )
+
+    response = client.get("/api/v1/auth/me", headers=device_headers())
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "detail": "This Collector device is awaiting Management approval."
+    }
+
+
 def test_me_rejects_revoked_device_with_existing_token() -> None:
     client, _, accounts = client_with_fakes()
     accounts.device_error = DeviceRevoked("This device has been revoked.")

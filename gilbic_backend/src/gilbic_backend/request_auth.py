@@ -8,6 +8,7 @@ from .account_repository import (
     AccountContext,
     AccountDisabled,
     AccountNotFound,
+    DeviceApprovalRequired,
     DeviceNotRegistered,
     DeviceRequired,
     DeviceRevoked,
@@ -44,7 +45,7 @@ def active_device_context(
         )
     except DeviceRequired as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except (DeviceNotRegistered, DeviceRevoked) as exc:
+    except (DeviceApprovalRequired, DeviceNotRegistered, DeviceRevoked) as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except AccountDisabled as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
