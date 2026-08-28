@@ -6,24 +6,28 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-import psycopg
-import pytest
-from psycopg.types.json import Jsonb
-from test_seven_by_seven_extra_principal_persistence_postgres import (
-    _record_adjustment,
-    _setup_case,
-)
-
 import gilbic_backend.collection_void_repository as void_repository_module
 import gilbic_backend.refund_due_repository as refund_repository_module
+import psycopg
+import pytest
 from gilbic_backend.collection_void_repository import (
     CollectionVoidRecord,
     PostgresCollectionVoidRepository,
 )
 from gilbic_backend.refund_due_repository import PostgresRefundDueRepository
+from gilbic_backend.seven_by_seven_extra_principal_posting import (
+    post_seven_by_seven_extra_principal,
+)
 from gilbic_backend.seven_by_seven_extra_principal_reversal import (
     ExtraPrincipalReversalIdempotencyMismatch,
     ExtraPrincipalReversalRequestResult,
+)
+from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
+from spina_mobile_collections.contracts import PaymentAllocationIntent
+from test_seven_by_seven_extra_principal_persistence_postgres import (
+    _insert_receipt,
+    _setup_case,
 )
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
@@ -55,9 +59,13 @@ def _require_0108_schema() -> None:
         )
 
 
-def _seed_extra_principal_case() -> tuple[UUID, UUID, UUID]:
+def _seed_extra_principal_case(
+    *, include_advance: bool = True
+) -> tuple[UUID, UUID, UUID]:
     assert DATABASE_URL is not None
-    loan_id, client_id, collector_id, device_id, installment_id = _setup_case()
+    loan_id, client_id, collector_id, device_id, _ = _setup_case(
+        include_advance=include_advance
+    )
     unique_area = f"Reversal-{uuid4().hex[:12]}"
     with psycopg.connect(DATABASE_URL) as connection:
         connection.execute(
@@ -72,38 +80,11 @@ def _seed_extra_principal_case() -> tuple[UUID, UUID, UUID]:
             """,
             (collector_id, unique_area),
         )
-        adjustment_id = _record_adjustment(
-            connection,
-            loan_id=loan_id,
-            client_id=client_id,
-            collector_id=collector_id,
-            device_id=device_id,
-            installment_id=installment_id,
-            sequence=2,
-            expected_version=0,
-            prior_future_principal="3000.00",
-            reduction="20.00",
-            prior_principal="29.00",
-            prior_amount="50.00",
-            new_principal="9.00",
-            new_amount="30.00",
-            advance_before="35.00",
-            advance_retained="30.00",
-            refund_due="5.00",
-        )
-        transaction_id = connection.execute(
-            """
-            select transaction_id
-            from lending.seven_by_seven_extra_principal_adjustments
-            where id = %s
-            """,
-            (adjustment_id,),
-        ).fetchone()[0]
         connection.execute(
             """
             insert into lending.loan_collection_state (
                 loan_id, remaining_balance, is_reconciled, state_version
-            ) values (%s, 3000.00, true, 1)
+            ) values (%s, 2967.00, true, 1)
             on conflict (loan_id) do update
             set remaining_balance = excluded.remaining_balance,
                 is_reconciled = true,
@@ -111,6 +92,42 @@ def _seed_extra_principal_case() -> tuple[UUID, UUID, UUID]:
             """,
             (loan_id,),
         )
+        transaction_id = _insert_receipt(
+            connection,
+            loan_id=loan_id,
+            client_id=client_id,
+            collector_id=collector_id,
+            device_id=device_id,
+            collection_date=datetime(2099, 1, 1, tzinfo=UTC).date(),
+            entry_type="payment",
+            amount="33.00",
+            sequence=2,
+            intent="extra_as_principal_reduction",
+        )
+        connection.execute(
+            """
+            update lending.collection_transactions
+            set official_balance = 2967.00
+            where id = %s
+            """,
+            (transaction_id,),
+        )
+        with connection.cursor(row_factory=dict_row) as cursor:
+            posting = post_seven_by_seven_extra_principal(
+                cursor,
+                transaction_id=transaction_id,
+                loan_id=loan_id,
+                actor_user_id=collector_id,
+                collection_date=datetime(2099, 1, 1, tzinfo=UTC).date(),
+                receipt_amount=Decimal("33.00"),
+                payment_allocation_intent=(
+                    PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
+                ),
+                expected_route_revision=f"loan:{loan_id}:v0",
+                past_due_interest=Decimal("0.00"),
+                today_interest=Decimal("0.00"),
+            )
+        adjustment_id = posting.adjustment_id
         connection.execute(
             """
             update lending.collection_transactions

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from hashlib import sha256
+from typing import Any
 from uuid import UUID
 
 from .seven_by_seven_extra_principal import (
@@ -97,7 +98,8 @@ def replay_extra_principal_history(
         )
     if len({row.installment_id for row in signed_rows}) != len(signed_rows):
         raise _replay_conflict(
-            "The immutable signed 7x7 schedule contains duplicate installment identities."
+            "The immutable signed 7x7 schedule contains duplicate installment "
+            "identities."
         )
 
     events = tuple(
@@ -281,6 +283,158 @@ def replay_extra_principal_history(
         source_history_digest=_digest(source_payload),
         operational_state_digest=_digest(operational_payload),
     )
+
+
+def replay_extra_principal_from_database(
+    cursor: Any,
+    *,
+    schedule_id: UUID,
+    excluded_adjustment_id: UUID | None = None,
+) -> ExtraPrincipalReplayResult:
+    """Rebuild one operational schedule from immutable database evidence."""
+
+    cursor.execute(
+        """
+        select
+            installment.id,
+            installment.installment_number,
+            installment.effective_due_date,
+            installment.contractual_amount,
+            installment.principal_component,
+            installment.interest_component
+        from lending.loan_contract_installments_operational installment
+        where installment.schedule_id = %s
+        order by
+            installment.effective_due_date,
+            installment.installment_number,
+            installment.id
+        """,
+        (schedule_id,),
+    )
+    signed_installments = tuple(
+        FutureInstallmentPrincipalState(
+            installment_id=int(row["id"]),
+            installment_number=int(row["installment_number"]),
+            effective_due_date=row["effective_due_date"],
+            contractual_amount=money(row["contractual_amount"]),
+            principal_component=money(row["principal_component"]),
+            interest_component=money(row["interest_component"]),
+            signed_contractual_amount=money(row["contractual_amount"]),
+            signed_principal_component=money(row["principal_component"]),
+            signed_interest_component=money(row["interest_component"]),
+        )
+        for row in cursor.fetchall()
+    )
+
+    cursor.execute(
+        """
+        select
+            adjustment.id,
+            adjustment.transaction_id,
+            adjustment.principal_reduction,
+            adjustment.resulting_operational_version,
+            transaction.collection_date
+        from lending.seven_by_seven_extra_principal_adjustments adjustment
+        join lending.collection_transactions transaction
+          on transaction.id = adjustment.transaction_id
+        left join lending.seven_by_seven_extra_principal_reversals reversal
+          on reversal.adjustment_id = adjustment.id
+        where adjustment.schedule_id = %s
+          and reversal.id is null
+          and (%s::uuid is null or adjustment.id <> %s::uuid)
+        order by adjustment.resulting_operational_version, adjustment.id
+        """,
+        (schedule_id, excluded_adjustment_id, excluded_adjustment_id),
+    )
+    active_events = tuple(
+        ActiveExtraPrincipalEvent(
+            adjustment_id=row["id"],
+            transaction_id=row["transaction_id"],
+            principal_reduction=money(row["principal_reduction"]),
+            resulting_operational_version=int(row["resulting_operational_version"]),
+            collection_date=row["collection_date"],
+        )
+        for row in cursor.fetchall()
+    )
+    return replay_extra_principal_history(
+        signed_installments=signed_installments,
+        active_events=active_events,
+    )
+
+
+def verify_persisted_extra_principal_replay(
+    cursor: Any,
+    *,
+    schedule_id: UUID,
+    expected_source_history_digest: str | None = None,
+    expected_operational_state_digest: str | None = None,
+) -> ExtraPrincipalReplayResult:
+    """Independently prove the persisted overlay equals immutable replay."""
+
+    replayed = replay_extra_principal_from_database(
+        cursor,
+        schedule_id=schedule_id,
+    )
+    if (
+        expected_source_history_digest is not None
+        and replayed.source_history_digest != expected_source_history_digest
+    ):
+        raise _replay_conflict(
+            "The reconstructed Extra Principal source-history digest does not match "
+            "the immutable reversal evidence."
+        )
+    if (
+        expected_operational_state_digest is not None
+        and replayed.operational_state_digest != expected_operational_state_digest
+    ):
+        raise _replay_conflict(
+            "The reconstructed Extra Principal operational-state digest does not "
+            "match the immutable reversal evidence."
+        )
+
+    cursor.execute(
+        """
+        select
+            installment.id,
+            installment.operational_amount,
+            installment.operational_principal_component,
+            installment.operational_interest_component,
+            installment.removed_from_operational_schedule,
+            installment.last_extra_principal_adjustment_id
+        from lending.loan_contract_installments_operational installment
+        where installment.schedule_id = %s
+        order by
+            installment.effective_due_date,
+            installment.installment_number,
+            installment.id
+        """,
+        (schedule_id,),
+    )
+    actual_by_id = {int(row["id"]): row for row in cursor.fetchall()}
+    if set(actual_by_id) != {
+        row.installment_id for row in replayed.operational_rows
+    }:
+        raise _replay_conflict(
+            "The persisted operational schedule does not contain the exact signed "
+            "installment identities."
+        )
+    for row in replayed.operational_rows:
+        actual = actual_by_id[row.installment_id]
+        if (
+            money(actual["operational_amount"]) != row.operational_amount
+            or money(actual["operational_principal_component"])
+            != row.operational_principal
+            or money(actual["operational_interest_component"])
+            != row.operational_interest
+            or bool(actual["removed_from_operational_schedule"]) != row.removed
+            or actual["last_extra_principal_adjustment_id"]
+            != row.last_active_adjustment_id
+        ):
+            raise _replay_conflict(
+                "The persisted operational schedule does not match immutable Extra "
+                "Principal history."
+            )
+    return replayed
 
 
 def _validate_events(events: tuple[ActiveExtraPrincipalEvent, ...]) -> None:

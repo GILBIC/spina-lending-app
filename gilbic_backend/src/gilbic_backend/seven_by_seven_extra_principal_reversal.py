@@ -14,6 +14,10 @@ from .collection_void_repository import (
     CollectionVoidInvalid,
     CollectionVoidRecord,
 )
+from .seven_by_seven_extra_principal_replay import (
+    SevenBySevenExtraPrincipalReplayError,
+    verify_persisted_extra_principal_replay,
+)
 
 ZERO = Decimal("0.00")
 
@@ -209,6 +213,38 @@ def store_completed_reversal_request(
         result_payload=payload,
         collection_void=collection_void,
     )
+
+
+def verify_completed_extra_principal_reversal(
+    cursor: Any,
+    *,
+    adjustment_id: UUID,
+) -> None:
+    row = cursor.execute(
+        """
+        select
+            reversal.schedule_id,
+            reversal.source_history_digest,
+            reversal.operational_state_digest
+        from lending.seven_by_seven_extra_principal_reversals reversal
+        where reversal.adjustment_id = %s
+        """,
+        (adjustment_id,),
+    ).fetchone()
+    if row is None:
+        raise CollectionVoidConflict(
+            "The Extra Principal void did not create immutable operational "
+            "reversal evidence."
+        )
+    try:
+        verify_persisted_extra_principal_replay(
+            cursor,
+            schedule_id=row["schedule_id"],
+            expected_source_history_digest=row["source_history_digest"],
+            expected_operational_state_digest=row["operational_state_digest"],
+        )
+    except SevenBySevenExtraPrincipalReplayError as error:
+        raise CollectionVoidConflict(str(error)) from error
 
 
 def _insert_request(

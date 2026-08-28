@@ -6,9 +6,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
+import gilbic_backend.collection_void_repository as void_repository_module
 import psycopg
 import pytest
-
+from gilbic_backend.collection_void_repository import (
+    CollectionVoidRecord,
+    PostgresCollectionVoidRepository,
+)
+from test_seven_by_seven_extra_principal_reversal_requests_postgres import (
+    _seed_extra_principal_case,
+    _test_connection,
+)
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -80,6 +88,197 @@ def _void_source(connection, transaction_id, actor_id, reason: str, voided_at) -
         """,
         (voided_at, actor_id, reason, transaction_id),
     )
+
+
+def _post_seeded_extra_principal_to_accounting(
+    connection,
+    *,
+    transaction_id,
+    actor_id,
+):
+    loan_id, client_id, posting_date = connection.execute(
+        """
+        select loan_id, client_id, collection_date
+        from lending.collection_transactions where id = %s
+        """,
+        (transaction_id,),
+    ).fetchone()
+    period_id = posting_helpers.draft_helpers.preview_helpers._open_period(
+        connection,
+        uuid4().hex[:10],
+        posting_date,
+        posting_date,
+    )
+    today = datetime.now(timezone.utc).date()
+    posting_helpers.draft_helpers.preview_helpers._open_period(
+        connection,
+        uuid4().hex[:10],
+        today,
+        today,
+    )
+    account_rows = connection.execute(
+        """
+        select id, system_key
+        from accounting.accounts
+        where system_key in ('cash_collector_custody', 'loans_receivable_7x7')
+        order by system_key
+        """,
+    ).fetchall()
+    accounts = {system_key: account_id for account_id, system_key in account_rows}
+    assert set(accounts) == {"cash_collector_custody", "loans_receivable_7x7"}
+
+    journal_entry_id = uuid4()
+    source_event_key = f"collection:{transaction_id}"
+    connection.execute(
+        """
+        insert into accounting.journal_entries (
+            id, fiscal_period_id, posting_date, description, status,
+            source_type, source_reference, source_event_key, created_by_user_id
+        ) values (
+            %s, %s, %s, 'Protected posted Extra Principal fixture', 'draft',
+            'seven_by_seven_collection', %s, %s, %s
+        )
+        """,
+        (
+            journal_entry_id,
+            period_id,
+            posting_date,
+            str(transaction_id),
+            source_event_key,
+            actor_id,
+        ),
+    )
+    with connection.cursor() as cursor:
+        cursor.executemany(
+            """
+            insert into accounting.journal_lines (
+                journal_entry_id, line_number, account_id, description,
+                debit, credit, client_id, loan_id
+            ) values (%s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                (
+                    journal_entry_id,
+                    1,
+                    accounts["cash_collector_custody"],
+                    "Extra Principal cash received",
+                    33,
+                    0,
+                    client_id,
+                    loan_id,
+                ),
+                (
+                    journal_entry_id,
+                    2,
+                    accounts["loans_receivable_7x7"],
+                    "Extra Principal reduction",
+                    0,
+                    33,
+                    client_id,
+                    loan_id,
+                ),
+            ),
+        )
+    preparation_id = uuid4()
+    connection.execute(
+        "select set_config('accounting.seven_by_seven_journal_prepare_allowed', 'on', true)"
+    )
+    connection.execute(
+        """
+        insert into accounting.seven_by_seven_journal_draft_preparations (
+            id, transaction_id, loan_id, client_id, journal_entry_id,
+            source_event_key, source_event_review_token, coordinate_digest,
+            draft_policy_version, posting_date, fiscal_period_id,
+            source_cash_amount, eir_interest_accrual,
+            accounting_eir_interest_received,
+            accounting_7x7_principal_received, coordinate_line_count,
+            total_debit, total_credit, prepared_by_user_id
+        ) values (
+            %s, %s, %s, %s, %s, %s, %s, %s,
+            'seven_by_seven_source_event_journal_draft_v1', %s, %s,
+            33.00, 0.00, 0.00, 33.00, 2, 33.00, 33.00, %s
+        )
+        """,
+        (
+            preparation_id,
+            transaction_id,
+            loan_id,
+            client_id,
+            journal_entry_id,
+            source_event_key,
+            "a" * 64,
+            "b" * 64,
+            posting_date,
+            period_id,
+            actor_id,
+        ),
+    )
+    connection.execute(
+        "select set_config('accounting.seven_by_seven_journal_post_allowed', 'on', true)"
+    )
+    entry_number = connection.execute(
+        "select accounting.post_journal_entry(%s, %s)",
+        (journal_entry_id, actor_id),
+    ).fetchone()[0]
+    posting_id = uuid4()
+    connection.execute(
+        "select set_config('accounting.seven_by_seven_journal_post_record_allowed', 'on', true)"
+    )
+    connection.execute(
+        """
+        insert into accounting.seven_by_seven_journal_postings (
+            id, preparation_id, transaction_id, loan_id, client_id,
+            journal_entry_id, source_event_key, source_event_review_token,
+            coordinate_digest, posting_review_token, draft_policy_version,
+            posting_policy_version, posting_date, fiscal_period_id,
+            source_cash_amount, eir_interest_accrual,
+            accounting_eir_interest_received,
+            accounting_7x7_principal_received, coordinate_line_count,
+            total_debit, total_credit, entry_number, posted_by_user_id
+        ) values (
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+            'seven_by_seven_source_event_journal_draft_v1',
+            'seven_by_seven_source_event_journal_posting_v1',
+            %s, %s, 33.00, 0.00, 0.00, 33.00, 2,
+            33.00, 33.00, %s, %s
+        )
+        """,
+        (
+            posting_id,
+            preparation_id,
+            transaction_id,
+            loan_id,
+            client_id,
+            journal_entry_id,
+            source_event_key,
+            "a" * 64,
+            "b" * 64,
+            "c" * 64,
+            posting_date,
+            period_id,
+            entry_number,
+            actor_id,
+        ),
+    )
+    connection.execute(
+        """
+        insert into accounting.seven_by_seven_journal_posting_lines (
+            posting_id, line_number, journal_component, account_id,
+            account_system_key, debit, credit, client_id, loan_id
+        )
+        select %s, line.line_number,
+               case line.line_number when 1 then 'cash_received'
+                    else 'principal_received' end,
+               line.account_id, account.system_key, line.debit, line.credit,
+               line.client_id, line.loan_id
+        from accounting.journal_lines line
+        join accounting.accounts account on account.id = line.account_id
+        where line.journal_entry_id = %s
+        order by line.line_number
+        """,
+        (posting_id, journal_entry_id),
+    )
+    return loan_id, posting_id, journal_entry_id
 
 
 def test_posted_7x7_void_posts_exact_swap_and_is_immutably_audited() -> None:
@@ -261,6 +460,80 @@ def test_posted_7x7_void_posts_exact_swap_and_is_immutably_audited() -> None:
                     )
         finally:
             connection.rollback()
+
+
+def test_posted_extra_principal_void_reconstructs_then_posts_exact_accounting_swap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert DATABASE_URL is not None
+    adjustment_id, transaction_id, actor_id = _seed_extra_principal_case(
+        include_advance=False
+    )
+
+    with psycopg.connect(DATABASE_URL) as connection:
+        loan_id, posting_id, original_journal_id = (
+            _post_seeded_extra_principal_to_accounting(
+                connection,
+                transaction_id=transaction_id,
+                actor_id=actor_id,
+            )
+        )
+
+    monkeypatch.setattr(void_repository_module, "open_connection", _test_connection)
+    voided = PostgresCollectionVoidRepository().void_unremitted(
+        actor_user_id=actor_id,
+        transaction_id=transaction_id,
+        reason="Reverse accounted Extra Principal receipt",
+        idempotency_key=uuid4(),
+    )
+    assert isinstance(voided, CollectionVoidRecord)
+
+    with psycopg.connect(DATABASE_URL) as connection:
+        reversal = connection.execute(
+            """
+            select reversal.id, reversal.original_journal_entry_id,
+                   reversal.reversal_journal_entry_id,
+                   operational_reversal.id
+            from accounting.seven_by_seven_journal_reversals reversal
+            join lending.seven_by_seven_extra_principal_reversals operational_reversal
+              on operational_reversal.collection_void_id = reversal.collection_void_id
+            where reversal.transaction_id = %s
+              and operational_reversal.adjustment_id = %s
+            """,
+            (transaction_id, adjustment_id),
+        ).fetchone()
+        assert reversal is not None
+        assert reversal[1] == original_journal_id
+
+        original_lines = connection.execute(
+            """
+            select line_number, account_id, debit, credit, client_id, loan_id
+            from accounting.seven_by_seven_journal_posting_lines
+            where posting_id = %s order by line_number
+            """,
+            (posting_id,),
+        ).fetchall()
+        reversal_lines = connection.execute(
+            """
+            select line_number, account_id, debit, credit, client_id, loan_id
+            from accounting.seven_by_seven_journal_reversal_lines
+            where reversal_id = %s order by line_number
+            """,
+            (reversal[0],),
+        ).fetchall()
+        assert reversal_lines == [
+            (line[0], line[1], line[3], line[2], line[4], line[5])
+            for line in original_lines
+        ]
+        assert all(line[5] == loan_id for line in reversal_lines)
+        assert connection.execute(
+            """
+            select count(*)
+            from lending.seven_by_seven_extra_principal_adjustments
+            where id = %s
+            """,
+            (adjustment_id,),
+        ).fetchone()[0] == 1
 
 
 def test_7x7_void_and_reversal_roll_back_atomically_when_audit_insert_fails() -> None:

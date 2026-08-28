@@ -69,11 +69,11 @@ def test_0108_installs_real_bridge_relations_views_and_guards() -> None:
             row[0]
             for row in connection.execute(
                 """
-                select table_name
+                select event_object_table as table_name
                 from information_schema.triggers
                 where trigger_schema = 'lending'
                   and action_statement like '%guard_7x7_bridge_append_only%'
-                group by table_name
+                group by event_object_table
                 """
             ).fetchall()
         }

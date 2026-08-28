@@ -54,3 +54,16 @@ def test_0108_protects_append_only_tables_with_transaction_local_sessions() -> N
     assert "'spina.refund_due_remittance_write'" in sql
     assert "result_payload jsonb not null" in sql
     assert sql.count("before insert or update or delete") >= 8
+
+
+def test_0108_installs_controlled_operational_reconstruction_before_accounting(
+) -> None:
+    sql = _migration_sql().lower()
+
+    assert "lending.replay_seven_by_seven_extra_principal" in sql
+    assert "lending.reverse_seven_by_seven_extra_principal_for_void" in sql
+    assert "spina.extra_principal_reconstruction_write" in sql
+    assert "accounting_01a_extra_principal_operational_reversal" in sql
+    assert "accounting_01b_extra_principal_operational_reversal_guard" in sql
+    assert "source_history_digest" in sql
+    assert "operational_state_digest" in sql

@@ -19,6 +19,10 @@ INTEGRATION_TESTS = (
     TEST_ROOT / "test_seven_by_seven_mobile_collection_postgres.py",
     TEST_ROOT / "test_seven_by_seven_extra_principal_persistence_postgres.py",
     TEST_ROOT / "test_seven_by_seven_extra_principal_bridge_postgres.py",
+    TEST_ROOT / "test_refund_due_postgres.py",
+    TEST_ROOT / "test_seven_by_seven_extra_principal_reversal_requests_postgres.py",
+    TEST_ROOT / "test_seven_by_seven_extra_principal_reversal_postgres.py",
+    TEST_ROOT / "test_7x7_controlled_collection_reversal_postgres.py",
 )
 
 
@@ -67,7 +71,8 @@ def main() -> int:
         description=(
             "Create a loopback-only disposable PostgreSQL database, replay SPINA "
             "migrations through 0108, execute the real 7x7 Extra Principal persistence "
-            "and bridge-schema tests, then drop the disposable database."
+            "bridge-schema, Refund Due, and controlled reversal tests, then drop "
+            "the disposable database."
         )
     )
     parser.add_argument("--env-file", action="append", type=Path, default=[])
@@ -128,9 +133,9 @@ def main() -> int:
         print(
             "7x7 Extra Principal bridge disposable PostgreSQL validation passed: "
             "migration 0108 compiled on the full schema; immutable adjustment evidence "
-            "still reconciled; reversal, itemized approval, physical-release evidence, "
-            "derived lifecycle views, and direct-write guards were installed. No live "
-            "database was modified."
+            "still reconciled; reversal reconstruction, itemized approval, physical-"
+            "release evidence, derived lifecycle views, and "
+            "direct-write guards were verified. No live database was modified."
         )
         return 0
     except psycopg.Error as error:

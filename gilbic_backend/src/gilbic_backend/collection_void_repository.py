@@ -486,6 +486,16 @@ class PostgresCollectionVoidRepository:
                             "The collection changed while it was being voided. Refresh and try again."
                         )
 
+                    if reversal_request is not None:
+                        from .seven_by_seven_extra_principal_reversal import (
+                            verify_completed_extra_principal_reversal,
+                        )
+
+                        verify_completed_extra_principal_reversal(
+                            cursor,
+                            adjustment_id=reversal_request.adjustment_id,
+                        )
+
                     cursor.execute(
                         """
                         update lending.loan_collection_state

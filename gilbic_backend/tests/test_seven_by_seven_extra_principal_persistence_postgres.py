@@ -7,15 +7,13 @@ from uuid import UUID, uuid4
 
 import psycopg
 import pytest
-from psycopg.types.json import Jsonb
-
 from gilbic_backend.contract_schedule_registration_service import (
     register_verified_contract_schedule,
 )
 from gilbic_backend.seven_by_seven_signed_schedule import (
     generate_signed_seven_by_seven_schedule,
 )
-
+from psycopg.types.json import Jsonb
 
 DATABASE_URL = os.getenv("GILBIC_TEST_DATABASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -124,7 +122,9 @@ def _insert_receipt(
     return transaction_id
 
 
-def _setup_case() -> tuple[UUID, UUID, UUID, UUID, int]:
+def _setup_case(
+    *, include_advance: bool = True
+) -> tuple[UUID, UUID, UUID, UUID, int]:
     assert DATABASE_URL is not None
     suffix = uuid4().hex[:10]
     collection_date = date(2099, 1, 1)
@@ -227,37 +227,38 @@ def _setup_case() -> tuple[UUID, UUID, UUID, UUID, int]:
             (schedule_id, collector_id),
         )
 
-        advance_transaction_id = _insert_receipt(
-            connection,
-            loan_id=loan_id,
-            client_id=client_id,
-            collector_id=collector_id,
-            device_id=device_id,
-            collection_date=collection_date,
-            entry_type="advance",
-            amount="35.00",
-            sequence=1,
-            intent="extra_as_advance",
-            advance_date=installment_due_date,
-        )
-        connection.execute(
-            """
-            insert into lending.loan_installment_payment_allocations (
-                installment_id,
-                transaction_id,
-                amount_applied,
-                allocation_basis,
-                allocation_reference,
-                created_by_user_id
-            ) values (%s, %s, 35.00, 'future_advance_oldest_first', %s, %s)
-            """,
-            (
-                installment_id,
-                advance_transaction_id,
-                f"0106-advance:{advance_transaction_id}",
-                collector_id,
-            ),
-        )
+        if include_advance:
+            advance_transaction_id = _insert_receipt(
+                connection,
+                loan_id=loan_id,
+                client_id=client_id,
+                collector_id=collector_id,
+                device_id=device_id,
+                collection_date=collection_date,
+                entry_type="advance",
+                amount="35.00",
+                sequence=1,
+                intent="extra_as_advance",
+                advance_date=installment_due_date,
+            )
+            connection.execute(
+                """
+                insert into lending.loan_installment_payment_allocations (
+                    installment_id,
+                    transaction_id,
+                    amount_applied,
+                    allocation_basis,
+                    allocation_reference,
+                    created_by_user_id
+                ) values (%s, %s, 35.00, 'future_advance_oldest_first', %s, %s)
+                """,
+                (
+                    installment_id,
+                    advance_transaction_id,
+                    f"0106-advance:{advance_transaction_id}",
+                    collector_id,
+                ),
+            )
 
     return loan_id, client_id, collector_id, device_id, installment_id
 
