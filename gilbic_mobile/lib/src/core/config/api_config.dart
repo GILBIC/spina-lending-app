@@ -161,6 +161,43 @@ class ApiConfig {
   static Uri get managementClientRegistrationsEndpoint =>
       endpoint('/api/v1/management/client-registrations');
 
+  static Uri managementStaffAccountsEndpoint({
+    String? query,
+    String? role,
+    String? status,
+    int limit = 50,
+    int offset = 0,
+  }) => endpoint('/api/v1/management/accounts').replace(
+    queryParameters: <String, String>{
+      'staff_only': 'true',
+      'limit': '$limit',
+      'offset': '$offset',
+      if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+      if (role != null) 'role': role,
+      if (status != null) 'status': status,
+    },
+  );
+
+  static Uri get managementInviteStaffEndpoint =>
+      endpoint('/api/v1/management/accounts/invite');
+
+  static Uri managementStaffRoleEndpoint(String userId) => endpoint(
+    '/api/v1/management/accounts/${Uri.encodeComponent(userId)}/role',
+  );
+
+  static Uri managementStaffStatusEndpoint(String userId) => endpoint(
+    '/api/v1/management/accounts/${Uri.encodeComponent(userId)}/status',
+  );
+
+  static Uri managementStaffDevicesEndpoint(String userId) => endpoint(
+    '/api/v1/management/accounts/${Uri.encodeComponent(userId)}/devices',
+  );
+
+  static Uri managementDeviceStatusEndpoint(String managedDeviceId) => endpoint(
+    '/api/v1/management/devices/'
+    '${Uri.encodeComponent(managedDeviceId)}/status',
+  );
+
   static Uri managementClientCandidatesEndpoint(String query) => endpoint(
     '/api/v1/management/client-link-candidates?q=${Uri.encodeQueryComponent(query)}',
   );
