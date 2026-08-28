@@ -16,6 +16,10 @@ STAFF_ROLE_CODES = frozenset({"collector", "employee", "management"})
 ACCOUNT_STATUS_CODES = frozenset({"active", "inactive", "locked"})
 DEVICE_STATUS_CODES = frozenset({"active", "revoked"})
 CLIENT_REGISTRATION_STATUS_CODES = frozenset({"pending", "approved", "rejected"})
+DEVICE_SELECT_SQL = """
+select id, user_id, platform, app_version, status, registered_at, last_seen_at
+from core.devices
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -562,20 +566,82 @@ class PostgresManagementRepository:
             with connection.transaction():
                 with connection.cursor(row_factory=dict_row) as cursor:
                     cursor.execute(
-                        """
-                        select id, user_id, platform, app_version, status,
-                               registered_at, last_seen_at
-                        from core.devices
-                        where id = %s
-                        for update
-                        """,
+                        "select user_id from core.devices where id = %s",
                         (device_id,),
                     )
-                    row = cursor.fetchone()
-                    if not row:
+                    identity = cursor.fetchone()
+                if not identity:
+                    raise AccountNotFound("Registered device was not found.")
+                self._lock_user(connection, identity["user_id"])
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        DEVICE_SELECT_SQL + " where id = %s for update",
+                        (device_id,),
+                    )
+                    selected = cursor.fetchone()
+                    if not selected:
                         raise AccountNotFound("Registered device was not found.")
-                    if actor_user_id == row["user_id"] and normalized_status == "revoked":
-                        raise AccountConflict("You cannot revoke your own current account's device.")
+                    cursor.execute(
+                        """
+                        select 1
+                        from core.user_roles ur
+                        join core.roles r on r.id = ur.role_id
+                        where ur.user_id = %s and r.code = 'collector'
+                        """,
+                        (selected["user_id"],),
+                    )
+                    is_collector = cursor.fetchone() is not None
+
+                if (
+                    actor_user_id == selected["user_id"]
+                    and normalized_status == "revoked"
+                ):
+                    raise AccountConflict("You cannot revoke your own current account's device.")
+                if normalized_status == selected["status"]:
+                    return self._device_from_row(selected)
+
+                displaced_devices = []
+                if (
+                    is_collector
+                    and normalized_status == "active"
+                    and selected["platform"] in {"android", "ios"}
+                ):
+                    with connection.cursor(row_factory=dict_row) as cursor:
+                        cursor.execute(
+                            DEVICE_SELECT_SQL
+                            + """
+                            where user_id = %s
+                              and id <> %s
+                              and platform in ('android', 'ios')
+                              and status = 'active'
+                            order by id
+                            for update
+                            """,
+                            (selected["user_id"], device_id),
+                        )
+                        displaced_devices = cursor.fetchall()
+
+                for displaced in displaced_devices:
+                    with connection.cursor() as cursor:
+                        cursor.execute(
+                            "update core.devices set status = 'revoked' where id = %s",
+                            (displaced["id"],),
+                        )
+                    self._audit(
+                        connection,
+                        actor_user_id=actor_user_id,
+                        action="device.replacement_auto_revoke",
+                        target_type="device",
+                        target_id=displaced["id"],
+                        details={
+                            "user_id": str(displaced["user_id"]),
+                            "platform": displaced["platform"],
+                            "previous_status": displaced["status"],
+                            "new_status": "revoked",
+                        },
+                    )
+
+                with connection.cursor() as cursor:
                     cursor.execute(
                         "update core.devices set status = %s where id = %s",
                         (normalized_status, device_id),
@@ -586,15 +652,16 @@ class PostgresManagementRepository:
                     action="device.status_change",
                     target_type="device",
                     target_id=device_id,
-                    details={"status": normalized_status, "user_id": str(row["user_id"])},
+                    details={
+                        "user_id": str(selected["user_id"]),
+                        "platform": selected["platform"],
+                        "previous_status": selected["status"],
+                        "new_status": normalized_status,
+                    },
                 )
                 with connection.cursor(row_factory=dict_row) as cursor:
                     cursor.execute(
-                        """
-                        select id, user_id, platform, app_version, status,
-                               registered_at, last_seen_at
-                        from core.devices where id = %s
-                        """,
+                        DEVICE_SELECT_SQL + " where id = %s",
                         (device_id,),
                     )
                     updated = cursor.fetchone()

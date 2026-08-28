@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
 
 from gilbic_backend.account_repository import (
@@ -62,10 +64,14 @@ def account_record(*, role: str = "collector", status: str = "pending") -> Accou
     )
 
 
-def device_record(*, status: str = "active") -> DeviceAdminRecord:
+def device_record(
+    *,
+    status: str = "active",
+    user_id: UUID = TARGET_USER_ID,
+) -> DeviceAdminRecord:
     return DeviceAdminRecord(
         id=DEVICE_ID,
-        user_id=TARGET_USER_ID,
+        user_id=user_id,
         platform="android",
         app_version="0.4.0+4",
         status=status,
@@ -136,6 +142,7 @@ class FakeManagementRepository:
         self.created_role: str | None = None
         self.accounts = [account_record()]
         self.list_account_calls: list[dict[str, object]] = []
+        self.selected_device = device_record()
 
     def list_accounts(
         self,
@@ -195,7 +202,11 @@ class FakeManagementRepository:
 
     def set_device_status(self, *, actor_user_id: UUID, device_id: UUID, device_status: str):
         self.device_change = (actor_user_id, device_id, device_status)
-        return device_record(status=device_status)
+        if actor_user_id == self.selected_device.user_id and device_status == "revoked":
+            raise AccountConflict("You cannot revoke your own current account's device.")
+        if device_status != self.selected_device.status:
+            self.selected_device = replace(self.selected_device, status=device_status)
+        return self.selected_device
 
 
 def client_with_fakes():
@@ -377,8 +388,8 @@ def test_management_cannot_lock_itself() -> None:
     assert response.status_code == 409
 
 
-def test_management_can_list_and_revoke_devices() -> None:
-    client, _, _, management = client_with_fakes()
+def test_management_can_list_devices() -> None:
+    client, _, _, _ = client_with_fakes()
 
     list_response = client.get(
         f"/api/v1/management/accounts/{TARGET_USER_ID}/devices",
@@ -387,11 +398,75 @@ def test_management_can_list_and_revoke_devices() -> None:
     assert list_response.status_code == 200
     assert list_response.json()["data"]["devices"][0]["platform"] == "android"
 
-    revoke_response = client.patch(
+
+@pytest.mark.parametrize(
+    ("previous_status", "requested_status"),
+    [
+        ("pending", "active"),
+        ("active", "revoked"),
+        ("revoked", "active"),
+    ],
+)
+def test_device_status_transitions_require_only_device_manage(
+    previous_status: str,
+    requested_status: str,
+) -> None:
+    client, accounts, _, management = client_with_fakes()
+    accounts.context = management_context(permissions=("device.manage",))
+    management.selected_device = device_record(status=previous_status)
+
+    response = client.patch(
+        f"/api/v1/management/devices/{DEVICE_ID}/status",
+        headers=headers(),
+        json={"status": requested_status},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["device"]["status"] == requested_status
+    assert management.device_change == (ACTOR_USER_ID, DEVICE_ID, requested_status)
+
+
+@pytest.mark.parametrize("status", ["active", "revoked"])
+def test_device_status_no_op_returns_selected_device(status: str) -> None:
+    client, _, _, management = client_with_fakes()
+    management.selected_device = device_record(status=status)
+
+    response = client.patch(
+        f"/api/v1/management/devices/{DEVICE_ID}/status",
+        headers=headers(),
+        json={"status": status},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["device"]["status"] == status
+    assert management.device_change == (ACTOR_USER_ID, DEVICE_ID, status)
+
+
+def test_device_status_rejects_account_manager_without_device_manage() -> None:
+    client, accounts, _, management = client_with_fakes()
+    accounts.context = management_context(permissions=("account.manage",))
+
+    response = client.patch(
         f"/api/v1/management/devices/{DEVICE_ID}/status",
         headers=headers(),
         json={"status": "revoked"},
     )
-    assert revoke_response.status_code == 200
-    assert revoke_response.json()["data"]["device"]["status"] == "revoked"
+
+    assert response.status_code == 403
+    assert management.device_change is None
+
+
+def test_management_cannot_revoke_own_device() -> None:
+    client, _, _, management = client_with_fakes()
+    management.selected_device = device_record(user_id=ACTOR_USER_ID)
+
+    response = client.patch(
+        f"/api/v1/management/devices/{DEVICE_ID}/status",
+        headers=headers(),
+        json={"status": "revoked"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "You cannot revoke your own current account's device."
+    assert management.selected_device.status == "active"
     assert management.device_change == (ACTOR_USER_ID, DEVICE_ID, "revoked")
