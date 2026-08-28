@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from enum import Enum
@@ -142,6 +142,7 @@ class PostedCollection:
     accepted_at: datetime
     route_revision: str | None = None
     message: str = "Payment saved."
+    result_metadata: dict[str, Any] = field(default_factory=dict)
 
     def response_payload(
         self,
@@ -149,7 +150,7 @@ class PostedCollection:
         idempotency_key: UUID,
         duplicate: bool,
     ) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "status": (
                 CollectionStatus.DUPLICATE.value
                 if duplicate
@@ -168,6 +169,9 @@ class PostedCollection:
                 else self.message
             ),
         }
+        if self.result_metadata:
+            payload["result"] = dict(self.result_metadata)
+        return payload
 
 
 @dataclass(frozen=True, slots=True)

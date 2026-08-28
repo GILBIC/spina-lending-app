@@ -119,7 +119,8 @@ class PostgresCollectionExecutor:
                 receipt_number,
                 official_balance,
                 accepted_at,
-                route_revision
+                route_revision,
+                result_payload
             FROM mobile.gilbic_collection_idempotency
             WHERE idempotency_key = %s
             FOR UPDATE
@@ -151,6 +152,13 @@ class PostgresCollectionExecutor:
                 code="idempotency_mismatch",
             )
 
+        result_payload = existing.get("result_payload")
+        result_metadata: dict[str, Any] = {}
+        if isinstance(result_payload, dict):
+            stored_result = result_payload.get("result")
+            if isinstance(stored_result, dict):
+                result_metadata = dict(stored_result)
+
         posted = PostedCollection(
             server_transaction_id=str(existing["server_transaction_id"]),
             receipt_number=str(existing["receipt_number"]),
@@ -158,7 +166,34 @@ class PostgresCollectionExecutor:
             accepted_at=existing["accepted_at"],
             route_revision=existing["route_revision"],
             message="Already recorded. No duplicate payment was created.",
+            result_metadata=result_metadata,
         )
+        if isinstance(result_payload, dict):
+            expected_identity = posted.response_payload(
+                idempotency_key=command.idempotency_key,
+                duplicate=False,
+            )
+            protected_keys = (
+                "client_transaction_id",
+                "transaction_id",
+                "receipt_number",
+                "official_balance",
+                "accepted_at",
+                "route_revision",
+            )
+            if any(
+                result_payload.get(key) != expected_identity[key]
+                for key in protected_keys
+            ):
+                return CollectionOutcome(
+                    status=CollectionStatus.CONFLICT,
+                    idempotency_key=command.idempotency_key,
+                    message=(
+                        "The stored collection result no longer matches its "
+                        "immutable receipt identity. Management review is required."
+                    ),
+                    code="idempotency_result_mismatch",
+                )
         return CollectionOutcome(
             status=CollectionStatus.DUPLICATE,
             idempotency_key=command.idempotency_key,
