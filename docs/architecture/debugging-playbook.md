@@ -269,7 +269,8 @@ Common distinctions:
 |---|---|
 | Correct password rejected | Supabase Auth request/config/account state |
 | Login succeeds but endpoint forbidden | private role/permission mapping |
-| Token still valid but device blocked | `core.devices` status; this is expected revocation behavior |
+| Collector login returns `HTTP 403` / `device_approval_required` | Verify `core.devices.status = 'pending'`, the Collector role, Android/iOS platform, and the `device_approval_required` response. Do not inspect or share a device identifier hash. |
+| Token still valid but device is revoked | Verify the server-side `core.devices` status is revoked; a valid bearer token does not override device revocation. Do not inspect or share a device identifier hash. |
 | Staff cannot self-register | expected; staff must be invited by Management |
 | Role appears different from Auth metadata | expected; Auth metadata is not authoritative |
 

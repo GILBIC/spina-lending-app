@@ -221,15 +221,28 @@ sequenceDiagram
     M->>A: Login + installation ID + app metadata
     A->>S: Verify username/email and password
     S-->>A: Auth user + access/refresh session
-    A->>C: Load/create Gilbic user and registered device
-    A->>C: Resolve role, permissions, status
-    A-->>M: Session + server-derived role/permissions
+    A->>C: Load Gilbic user, role, permissions, and device state
+    alt Collector Android/iOS unknown device
+        A->>C: Persist core.devices pending
+        A-->>M: HTTP 403 device_approval_required; no token response
+    else Approved active device
+        A-->>M: Session + server-derived role/permissions
+    end
     M->>M: Store session and installation identity securely
 
     Note over M,A: Every protected request sends bearer token and X-Device-Id
     A->>S: Validate bearer identity
     A->>C: Require active account and matching active device
 ```
+
+The protected Collector-device state transition is:
+
+```text
+Collector Android/iOS unknown device -> core.devices pending -> HTTP 403 device_approval_required -> no token response
+Management device.manage approval -> target-user lock -> selected device active -> other active Collector phones revoked -> audit in one transaction
+```
+
+Management account-directory reads require either `account.manage` or `device.manage`. Account and client-registration mutations retain `account.manage`; device status changes, including approval and revocation, retain `device.manage`. The administration API exposes neither a raw device identifier nor its hash; those values do not cross its boundary.
 
 ### Collector route read and offline fallback
 
