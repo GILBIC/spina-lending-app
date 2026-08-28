@@ -7,11 +7,10 @@
 ```mermaid
 flowchart TB
     subgraph USERS[Users]
-        OWNER[Owner / Management]
-        OFFICE[Office Staff / Encoder]
+        MANAGEMENT[Management]
+        EMPLOYEE[Employee]
         COLLECTOR[Collector]
         CLIENT[Client]
-        EMPLOYEE[Employee]
     end
 
     subgraph SURFACES[User surfaces]
@@ -46,12 +45,12 @@ flowchart TB
         CI[Owner-only self-hosted Windows CI\nPython, Flutter, architecture checks]
     end
 
-    OWNER --> DESKTOP
-    OFFICE --> DESKTOP
+    MANAGEMENT --> DESKTOP
+    MANAGEMENT --> MOBILE
+    EMPLOYEE --> DESKTOP
+    EMPLOYEE --> MOBILE
     COLLECTOR --> MOBILE
     CLIENT --> MOBILE
-    EMPLOYEE --> MOBILE
-    OWNER --> MOBILE
 
     MOBILE -->|HTTPS JSON| FASTAPI
     FASTAPI --> SUPAAUTH
@@ -72,15 +71,25 @@ flowchart TB
     CI --> GITHUB
 ```
 
+## Current vs intended
+
+| Area | Current implemented behavior | Intended platform direction |
+|---|---|---|
+| SPINA Desktop | Mature Python/Tkinter and local PostgreSQL office workflows remain operational, including legacy role labels and modules that have not yet moved behind the GitHub-first API. | The primary office platform for canonical Management and Employee work, reusing the same FastAPI contracts, server permissions, official records, maker-checker controls, and audit outcomes as mobile. This is a migration of the current project, not a copy or reconnection of an old portal/backend. |
+| Gilbic Mobile | Collector and Client flows plus incremental protected Management/Employee modules. Management now has a read-only live overview backed by one permission-filtered PostgreSQL snapshot and existing protected destinations. | Functional capability parity for appropriate Management and Employee workflows. Mobile layouts remain task-focused; they do not redefine roles, financial rules, approvals, or official results. Collector stays mobile-first. |
+| Management and Employee access | Coverage differs by current client and module. Legacy Desktop labels still exist in local workflows; server-backed surfaces use canonical roles and granular permissions. | Both clients recognize canonical Management and Employee roles. Accounting, HR/payroll, and client-relationship access remain separable; Management retains sensitive approvals and final authorization. Legacy labels are not the new role model. |
+| Website | Earlier Client/Staff portal implementations remain external or legacy until inventoried. | Phase 1 public site and secure Client Web Portal; a later, separately scoped Staff Web Portal for selected remote workflows. No second authoritative backend and no automatic duplication of the entire Desktop app. |
+| Office cash and growth planning | The live overview reports authoritative portfolio, collection, unremitted cash, queue, and activity aggregates only. | New Client Fund, renewal fund, and smart client capacity become separate server-authoritative modules for leaving manageable office cash, tracking it, and deciding when capacity supports another client. |
+
 ## Non-negotiable ownership rules
 
 | Concern | Authoritative owner | Never owned by |
 |---|---|---|
 | Password hashing and authentication session | Supabase Auth | Flutter UI, Tkinter UI, browser JavaScript |
-| Application role and permission | Private `core.*` tables through FastAPI | Supabase user metadata, client-provided role |
+| Application role and permission | Private `core.*` tables through FastAPI | Supabase user metadata, Flutter state, browser metadata, client-provided role, or legacy Desktop labels such as Admin/Encoder/Viewer/System |
 | Device approval and revocation | `core.devices` through FastAPI | A bearer token by itself |
 | Collector area assignment | Server-side route assignment tables | Mobile-selected area |
-| Official balance and receipt | PostgreSQL transaction through FastAPI | Mobile calculation or cached route |
+| Official financial records, balance, receipt, and approval result | PostgreSQL transactions and protected server rules through FastAPI | Flutter, browser, or Desktop presentation totals; cached routes; manually typed dashboard totals |
 | Regular and 7x7 business rules | Protected server/desktop calculation code and tests | Presentation widgets |
 | Offline route display | SQLCipher snapshot on the phone | Official current balance source |
 | Mobile retry identity | Original idempotency UUID plus device sequence | A newly generated UUID after uncertainty |
@@ -91,7 +100,9 @@ flowchart TB
 
 ### 1. SPINA Desktop
 
-**Primary responsibility:** full office lending operations, mature financial rules, PostgreSQL-backed desktop workflows, reports, backups, and operational controls.
+**Current responsibility:** mature office lending operations, financial rules, PostgreSQL-backed desktop workflows, reports, backups, and operational controls.
+
+**Intended responsibility:** the primary office surface for permission-separated Management and Employee lending, collection, cash custody, remittance, accounting, HR/payroll, client-relationship, reporting, approval, audit, backup, and administration work. New Desktop modules must belong to this current repository and converge on the GitHub-first FastAPI authority; they must not copy or reconnect an old portal as a second backend.
 
 Key locations:
 
@@ -125,7 +136,7 @@ Use the generated [`feature-map.md`](feature-map.md), [`dependency-map.md`](depe
 
 **Location:** `gilbic_mobile/`
 
-**Primary responsibility:** role-based mobile presentation, secure device identity, authenticated API calls, encrypted route cache, and collector-friendly collection entry.
+**Primary responsibility:** role-based Client, Collector, Employee, and Management presentation; secure device identity; authenticated API calls; encrypted route cache; collector-friendly collection entry; and incremental functional capability parity with Desktop through shared server contracts.
 
 Current internal boundaries:
 
@@ -134,8 +145,9 @@ Current internal boundaries:
 - `lib/src/core/device/` — persistent privacy-preserving installation identity.
 - `lib/src/core/collector/` — route models, remote repository, encrypted cache, and cache-backed loader.
 - `lib/src/core/payments/` — typed Payment/ADV/PASS contract, idempotency key, repository, and device sequence.
+- `lib/src/core/management/` — strict Management models/repositories, including the protected live-overview contract.
 - `lib/src/features/collector/` — route and collection-entry screens.
-- `lib/src/features/dashboard/` — role-specific navigation.
+- `lib/src/features/management/` and `lib/src/features/dashboard/` — protected Management workflows, live priorities, and role-specific navigation.
 - `test/` — authentication, device, cache, route, contract, and widget regressions.
 
 Mobile safety boundary:
@@ -143,6 +155,7 @@ Mobile safety boundary:
 - No PostgreSQL or Supabase secret credential is stored in Flutter.
 - A cached route is visibly offline and is not authoritative.
 - Official balance and receipt values come from FastAPI.
+- The live Management overview displays server aggregates only; it does not authorize a mutation or calculate New Client Fund, renewal fund, smart client capacity, balances, or receipts.
 - All 7x7 mobile collection entry remains blocked until the dedicated allocator is verified.
 - Automatic offline payment retry remains disabled until the encrypted outbox is implemented.
 
@@ -160,6 +173,7 @@ Important paths:
 - `src/gilbic_backend/collector_route_repository.py` — assigned route and collection-state reads.
 - `src/gilbic_backend/collection_api.py` — collection HTTP boundary and request protection.
 - `src/gilbic_backend/collection_posting.py` — atomic posting bridge and official effects.
+- `src/gilbic_backend/management_dashboard_overview_api.py` and `management_dashboard_overview_repository.py` — active-device/role/permission-protected, actor-scoped, one-statement Management snapshot.
 - `sql/` — reproducible private-schema migrations.
 - `tests/` — API, repository, migration, atomicity, rollback, and concurrency tests.
 
