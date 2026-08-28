@@ -4,7 +4,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass
-from threading import Barrier
+from threading import Barrier, Event
 from uuid import UUID, uuid4
 
 import gilbic_backend.management_repository as management_repository_module
@@ -374,6 +374,18 @@ class AuditFailureManagementRepository(PostgresManagementRepository):
         raise RuntimeError("forced audit failure")
 
 
+class PausingOwnerLockManagementRepository(PostgresManagementRepository):
+    def __init__(self, identity_read: Event, ownership_changed: Event) -> None:
+        self.identity_read = identity_read
+        self.ownership_changed = ownership_changed
+
+    def _lock_user(self, connection, user_id: UUID) -> None:
+        self.identity_read.set()
+        if not self.ownership_changed.wait(timeout=5):
+            raise TimeoutError("Timed out waiting for the ownership-change fixture.")
+        super()._lock_user(connection, user_id)
+
+
 def test_audit_failure_rolls_back_selected_and_displaced_statuses(
     device_case: DeviceAdministrationCase,
 ) -> None:
@@ -404,6 +416,78 @@ def test_audit_failure_rolls_back_selected_and_displaced_statuses(
         ]
     assert selected_status == "pending"
     assert displaced_statuses == ["active", "active"]
+
+
+def test_owner_change_before_device_lock_fails_closed_without_side_effects(
+    device_case: DeviceAdministrationCase,
+) -> None:
+    identity_read = Event()
+    ownership_changed = Event()
+    repository = PausingOwnerLockManagementRepository(
+        identity_read,
+        ownership_changed,
+    )
+
+    def change_status():
+        try:
+            return repository.set_device_status(
+                actor_user_id=device_case.actor_user_id,
+                device_id=device_case.pending_collector_device_id,
+                device_status="active",
+            )
+        except AccountConflict as error:
+            return error
+
+    assert DATABASE_URL is not None
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(change_status)
+        observed_identity_read = identity_read.wait(timeout=5)
+        if not observed_identity_read:
+            ownership_changed.set()
+        assert observed_identity_read
+        try:
+            with psycopg.connect(DATABASE_URL) as connection:
+                connection.execute(
+                    "update core.devices set user_id = %s where id = %s",
+                    (
+                        device_case.employee_user_id,
+                        device_case.pending_collector_device_id,
+                    ),
+                )
+        finally:
+            ownership_changed.set()
+        outcome = future.result()
+
+    with psycopg.connect(DATABASE_URL, row_factory=dict_row) as connection:
+        selected = connection.execute(
+            "select user_id, status from core.devices where id = %s",
+            (device_case.pending_collector_device_id,),
+        ).fetchone()
+        audit_count = connection.execute(
+            """
+            select count(*)
+            from core.audit_logs
+            where actor_user_id = %s and target_id = %s
+            """,
+            (
+                device_case.actor_user_id,
+                device_case.pending_collector_device_id,
+            ),
+        ).fetchone()[0]
+
+    assert {
+        "conflict": isinstance(outcome, AccountConflict),
+        "detail": str(outcome),
+        "owner_user_id": selected["user_id"],
+        "status": selected["status"],
+        "audit_count": audit_count,
+    } == {
+        "conflict": True,
+        "detail": "Registered device ownership changed during this operation.",
+        "owner_user_id": device_case.employee_user_id,
+        "status": "pending",
+        "audit_count": 0,
+    }
 
 
 def test_concurrent_collector_mobile_approvals_leave_at_most_one_active(

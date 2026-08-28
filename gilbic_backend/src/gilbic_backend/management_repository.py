@@ -581,6 +581,10 @@ class PostgresManagementRepository:
                     selected = cursor.fetchone()
                     if not selected:
                         raise AccountNotFound("Registered device was not found.")
+                    if selected["user_id"] != identity["user_id"]:
+                        raise AccountConflict(
+                            "Registered device ownership changed during this operation."
+                        )
                     cursor.execute(
                         """
                         select 1

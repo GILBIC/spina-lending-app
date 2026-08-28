@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
+import gilbic_backend.management_repository as management_repository_module
 import pytest
 from fastapi.testclient import TestClient
 
@@ -21,7 +23,11 @@ from gilbic_backend.management_api import (
     management_auth_client_dependency,
     management_repository_dependency,
 )
-from gilbic_backend.management_repository import AccountAdminRecord, DeviceAdminRecord
+from gilbic_backend.management_repository import (
+    AccountAdminRecord,
+    DeviceAdminRecord,
+    PostgresManagementRepository,
+)
 
 
 AUTH_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
@@ -29,6 +35,7 @@ ACTOR_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
 TARGET_USER_ID = UUID("33333333-3333-4333-8333-333333333333")
 TARGET_AUTH_ID = UUID("44444444-4444-4444-8444-444444444444")
 DEVICE_ID = UUID("55555555-5555-4555-8555-555555555555")
+REASSIGNED_USER_ID = UUID("66666666-6666-4666-8666-666666666666")
 INSTALLATION_ID = "gilbic-management-device"
 NOW = datetime(2026, 7, 31, 10, 0, tzinfo=UTC)
 
@@ -207,6 +214,68 @@ class FakeManagementRepository:
         if device_status != self.selected_device.status:
             self.selected_device = replace(self.selected_device, status=device_status)
         return self.selected_device
+
+
+class DeviceOwnerRaceCursor:
+    def __init__(self, connection: DeviceOwnerRaceConnection) -> None:
+        self.connection = connection
+        self.row = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        return None
+
+    def execute(self, query: str, parameters=()) -> None:
+        sql = " ".join(query.split())
+        if sql.startswith("select user_id from core.devices where id"):
+            self.row = {"user_id": TARGET_USER_ID}
+        elif sql.startswith("select id from core.users where id"):
+            self.row = (TARGET_USER_ID,)
+        elif sql.endswith("from core.devices where id = %s for update"):
+            self.row = self.connection.device_row()
+        elif sql.startswith("select 1 from core.user_roles"):
+            self.row = None
+        elif sql.startswith("update core.devices set status = %s"):
+            self.connection.status = parameters[0]
+            self.connection.mutation_count += 1
+            self.row = None
+        elif sql.startswith("insert into core.audit_logs"):
+            self.connection.audit_count += 1
+            self.row = None
+        elif sql.endswith("from core.devices where id = %s"):
+            self.row = self.connection.device_row()
+        else:
+            raise AssertionError(f"Unexpected repository SQL: {sql}")
+
+    def fetchone(self):
+        return self.row
+
+
+class DeviceOwnerRaceConnection:
+    def __init__(self) -> None:
+        self.status = "pending"
+        self.mutation_count = 0
+        self.audit_count = 0
+
+    @contextmanager
+    def transaction(self):
+        yield
+
+    def cursor(self, **kwargs) -> DeviceOwnerRaceCursor:
+        return DeviceOwnerRaceCursor(self)
+
+    def device_row(self) -> dict[str, object]:
+        return {
+            "id": DEVICE_ID,
+            "user_id": REASSIGNED_USER_ID,
+            "platform": "android",
+            "app_version": "0.4.0+4",
+            "status": self.status,
+            "registered_at": NOW,
+            "last_seen_at": NOW,
+        }
 
 
 def client_with_fakes():
@@ -470,3 +539,42 @@ def test_management_cannot_revoke_own_device() -> None:
     assert response.json()["detail"] == "You cannot revoke your own current account's device."
     assert management.selected_device.status == "active"
     assert management.device_change == (ACTOR_USER_ID, DEVICE_ID, "revoked")
+
+
+def test_repository_rejects_device_ownership_change_after_user_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = DeviceOwnerRaceConnection()
+
+    @contextmanager
+    def owner_race_connection():
+        yield connection
+
+    monkeypatch.setattr(
+        management_repository_module,
+        "open_connection",
+        owner_race_connection,
+    )
+
+    try:
+        outcome = PostgresManagementRepository().set_device_status(
+            actor_user_id=ACTOR_USER_ID,
+            device_id=DEVICE_ID,
+            device_status="active",
+        )
+    except AccountConflict as error:
+        outcome = error
+
+    assert {
+        "conflict": isinstance(outcome, AccountConflict),
+        "detail": str(outcome),
+        "status": connection.status,
+        "mutation_count": connection.mutation_count,
+        "audit_count": connection.audit_count,
+    } == {
+        "conflict": True,
+        "detail": "Registered device ownership changed during this operation.",
+        "status": "pending",
+        "mutation_count": 0,
+        "audit_count": 0,
+    }
