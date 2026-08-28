@@ -65,9 +65,12 @@ from .loan_renewal_execution_evidence_api import (
     create_loan_renewal_execution_evidence_router,
 )
 from .management_api import create_management_router
+from .management_dashboard_overview_api import (
+    create_management_dashboard_overview_router,
+)
 from .management_loan_api import create_management_loan_router
-from .management_operations_api import create_management_operations_router
 from .management_no_collection_api import create_management_no_collection_router
+from .management_operations_api import create_management_operations_router
 from .notification_api import create_notification_router
 from .opening_balance_journal_api import create_opening_balance_journal_router
 from .opening_balance_workbook_api import create_opening_balance_workbook_router
@@ -77,9 +80,9 @@ from .period_close_api import create_period_close_router
 from .posting_ready_evidence_review_api import (
     create_posting_ready_evidence_review_router,
 )
+from .refund_due_api import create_refund_due_router
 from .regular_journal_draft_api import create_regular_journal_draft_router
 from .regular_journal_posting_api import create_regular_journal_posting_router
-from .refund_due_api import create_refund_due_router
 from .remittance_accounting_api import create_remittance_accounting_router
 from .remittance_api import create_remittance_router
 from .remittance_photo_api import create_remittance_photo_router
@@ -137,6 +140,7 @@ def create_app() -> FastAPI:
     app.include_router(create_auth_router())
     app.include_router(create_account_router())
     app.include_router(create_management_router())
+    app.include_router(create_management_dashboard_overview_router())
     app.include_router(create_management_loan_router())
     app.include_router(create_management_operations_router())
     app.include_router(create_management_no_collection_router())
