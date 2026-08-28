@@ -46,6 +46,8 @@ class _ManagementStaffDevicesPageState
   bool _loading = true;
   bool _loadingMore = false;
   bool _permissionDenied = false;
+  bool _checkingUnresolvedInvitation = false;
+  ({String username, String email})? _unresolvedInvitation;
 
   bool get _hasFilters =>
       _query.trim().isNotEmpty || _role != null || _status != null;
@@ -243,6 +245,7 @@ class _ManagementStaffDevicesPageState
     if (!mounted || account == null) {
       return;
     }
+    setState(() => _unresolvedInvitation = null);
     await _load(reset: true);
   }
 
@@ -259,6 +262,14 @@ class _ManagementStaffDevicesPageState
     }
     final normalizedUsername = username.trim().toLowerCase();
     final normalizedEmail = email.trim().toLowerCase();
+    if (mounted) {
+      setState(
+        () => _unresolvedInvitation = (
+          username: normalizedUsername,
+          email: normalizedEmail,
+        ),
+      );
+    }
     final page = await _repository.loadStaff(
       widget.session,
       deviceId: deviceId,
@@ -266,12 +277,63 @@ class _ManagementStaffDevicesPageState
       limit: _pageSize,
       offset: 0,
     );
-    return page.items.where((item) {
+    final account = page.items.where((item) {
       final exactUsername = item.username.trim().toLowerCase();
       final exactEmail = item.email?.trim().toLowerCase();
-      return exactUsername == normalizedUsername ||
-          (normalizedEmail.isNotEmpty && exactEmail == normalizedEmail);
+      return exactUsername == normalizedUsername &&
+          normalizedEmail.isNotEmpty &&
+          exactEmail == normalizedEmail;
     }).firstOrNull;
+    if (account != null && mounted) {
+      setState(() => _unresolvedInvitation = null);
+    }
+    return account;
+  }
+
+  Future<void> _checkUnresolvedInvitation() async {
+    final unresolved = _unresolvedInvitation;
+    if (unresolved == null || _checkingUnresolvedInvitation) {
+      return;
+    }
+    setState(() => _checkingUnresolvedInvitation = true);
+    try {
+      final account = await _reconcileInvitation(
+        username: unresolved.username,
+        email: unresolved.email,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (account == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'The invitation result is still unconfirmed. A new invitation remains blocked.',
+            ),
+          ),
+        );
+        return;
+      }
+      await _load(reset: true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invitation account confirmed.')),
+        );
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        final message = error is SpinaApiException
+            ? error.message
+            : 'The invitation result could not be checked.';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _checkingUnresolvedInvitation = false);
+      }
+    }
   }
 
   Future<void> _openDetail(ManagementStaffAccount account) async {
@@ -330,12 +392,28 @@ class _ManagementStaffDevicesPageState
       appBar: AppBar(
         title: const Text('Staff & devices'),
         actions: [
-          if (widget.session.hasPermission('account.manage'))
+          if (widget.session.hasPermission('account.manage') &&
+              _unresolvedInvitation == null)
             IconButton(
               key: const Key('management-staff-invite'),
               tooltip: 'Invite staff',
               onPressed: _openInvite,
               icon: const Icon(Icons.person_add_alt_1_outlined),
+            ),
+          if (widget.session.hasPermission('account.manage') &&
+              _unresolvedInvitation != null)
+            IconButton(
+              key: const Key('management-staff-invite-reconcile-pending'),
+              tooltip: 'Check pending invitation',
+              onPressed: _checkingUnresolvedInvitation
+                  ? null
+                  : _checkUnresolvedInvitation,
+              icon: _checkingUnresolvedInvitation
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.manage_search_outlined),
             ),
         ],
       ),

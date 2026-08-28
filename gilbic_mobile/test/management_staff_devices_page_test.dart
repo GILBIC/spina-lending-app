@@ -464,6 +464,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(ManagementStaffInvitePage), findsNothing);
+      expect(find.byKey(const Key('management-staff-invite')), findsOneWidget);
+      expect(
+        find.byKey(const Key('management-staff-invite-reconcile-pending')),
+        findsNothing,
+      );
       expect(repository.inviteCalls, 1);
       expect(
         repository.loadCalls.map((call) => call.query),
@@ -483,6 +488,88 @@ void main() {
       );
     },
   );
+
+  testWidgets('uncertain invitation rejects a partial identifier match', (
+    tester,
+  ) async {
+    final conflictingAccount = ManagementStaffAccount(
+      id: _ana.id,
+      username: _ana.username,
+      email: 'different@example.com',
+      fullName: _ana.fullName,
+      status: _ana.status,
+      roles: _ana.roles,
+      deviceCount: _ana.deviceCount,
+      createdAt: _ana.createdAt,
+      updatedAt: _ana.updatedAt,
+    );
+    final repository = _FakeAdministrationRepository(
+      onLoad: (request) async => request.query == 'ana.west'
+          ? _page(<ManagementStaffAccount>[conflictingAccount])
+          : _page(<ManagementStaffAccount>[_ana]),
+      onInvite: () async => throw const SpinaApiException(
+        'Connection timed out.',
+        code: 'network_unavailable',
+      ),
+    );
+    await _pumpPage(tester, repository);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('management-staff-invite')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('management-staff-full-name')),
+      'Ana West',
+    );
+    await tester.enterText(
+      find.byKey(const Key('management-staff-username')),
+      'ana.west',
+    );
+    await tester.enterText(
+      find.byKey(const Key('management-staff-email')),
+      'ana@example.com',
+    );
+    await tester.tap(find.byKey(const Key('management-staff-invite-role')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Collector').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ManagementStaffInvitePage), findsOneWidget);
+    expect(
+      find.byKey(const Key('management-staff-invite-reconcile')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('result is still unconfirmed'), findsOneWidget);
+    expect(repository.inviteCalls, 1);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ManagementStaffInvitePage), findsNothing);
+    expect(find.byKey(const Key('management-staff-invite')), findsNothing);
+    expect(
+      find.byKey(const Key('management-staff-invite-reconcile-pending')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('management-staff-invite-reconcile-pending')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('management-staff-invite')), findsNothing);
+    expect(
+      find.byKey(const Key('management-staff-invite-reconcile-pending')),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('new invitation remains blocked'),
+      findsOneWidget,
+    );
+    expect(repository.inviteCalls, 1);
+  });
 
   testWidgets('opens the exact staff detail page from a directory card', (
     tester,
