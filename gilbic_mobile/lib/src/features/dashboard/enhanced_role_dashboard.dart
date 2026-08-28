@@ -8,10 +8,6 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_field_home_page.dart';
 import 'package:gilbic_mobile/src/features/dashboard/role_dashboard.dart';
-import 'package:gilbic_mobile/src/features/management/management_accounting_measurement_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_contract_collection_activation_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_ecl_outcome_review_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_opening_balance_workbook_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/notification_center_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
 
@@ -142,119 +138,19 @@ class EnhancedRoleDashboard extends StatelessWidget {
       collectionDeviceSequence: collectionDeviceSequence,
     );
 
+    // Management owns a purpose-grouped command surface. Its account,
+    // notification, offline-policy, and protected review destinations live
+    // inside that hierarchy so none of them appear as duplicate overlays.
+    if (session.role == AppRole.management) {
+      return dashboard;
+    }
+
     final layers = <Widget>[
       dashboard,
       _offlinePolicyButton(context),
       _notificationButton(context),
       _accountButton(context),
     ];
-
-    if (session.role == AppRole.management) {
-      final canActivateContractCollection =
-          session.hasPermission('lending.contract_collection.activate');
-      final canReviewEcl = session.hasPermission('accounting.ecl.review');
-      final canViewLoanMeasurement = session.hasPermission('accounting.view');
-      final canManageOpeningWorkbook =
-          session.hasPermission('accounting.cutover.manage');
-      final hasEnhancedAction = canActivateContractCollection ||
-          canReviewEcl ||
-          canViewLoanMeasurement ||
-          canManageOpeningWorkbook;
-
-      if (hasEnhancedAction) {
-        layers.add(
-          Positioned(
-            right: 18,
-            bottom: 18,
-            child: SafeArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (canActivateContractCollection) ...[
-                    FloatingActionButton.extended(
-                      key: const Key('management-contract-collection-activation'),
-                      heroTag: 'management-contract-collection-activation',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (context) =>
-                                ManagementContractCollectionActivationPage(
-                              session: session,
-                              deviceIdentityProvider: deviceIdentityProvider,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.verified_user_outlined),
-                      label: const Text('Contract Collection'),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                  if (canReviewEcl) ...[
-                    FloatingActionButton.extended(
-                      key: const Key('management-ecl-outcome-review'),
-                      heroTag: 'management-ecl-outcome-review',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (context) => ManagementEclOutcomeReviewPage(
-                              session: session,
-                              deviceIdentityProvider: deviceIdentityProvider,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.fact_check_outlined),
-                      label: const Text('Outcome Review'),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                  if (canViewLoanMeasurement) ...[
-                    FloatingActionButton.extended(
-                      key: const Key('management-accounting-measurement'),
-                      heroTag: 'management-accounting-measurement',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (context) =>
-                                ManagementAccountingMeasurementPage(
-                              session: session,
-                              deviceIdentityProvider: deviceIdentityProvider,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.calculate_outlined),
-                      label: const Text('Loan Measurement'),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                  if (canManageOpeningWorkbook)
-                    FloatingActionButton.extended(
-                      key: const Key('management-opening-balance-workbook'),
-                      heroTag: 'management-opening-balance-workbook',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (context) =>
-                                ManagementOpeningBalanceWorkbookPage(
-                              session: session,
-                              deviceIdentityProvider: deviceIdentityProvider,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.table_view_outlined),
-                      label: const Text('Opening Workbook'),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
-      }
-    }
 
     return Stack(children: layers);
   }
@@ -263,9 +159,10 @@ class EnhancedRoleDashboard extends StatelessWidget {
 bool _hasDashboardAccess(UserSession session) {
   return switch (session.role) {
     AppRole.client => session.hasPermission('loan.self.view'),
-    AppRole.collector => session.hasAllPermissions(
-        const <String>['route.view', 'collection.create'],
-      ),
+    AppRole.collector => session.hasAllPermissions(const <String>[
+      'route.view',
+      'collection.create',
+    ]),
     AppRole.employee => session.hasPermission('employee.portal.view'),
     AppRole.management => session.hasPermission('management.dashboard.view'),
   };

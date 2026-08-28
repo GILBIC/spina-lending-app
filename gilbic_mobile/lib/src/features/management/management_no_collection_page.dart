@@ -453,6 +453,7 @@ class _ManagementNoCollectionPageState
         const SizedBox(width: 8),
         FilledButton(
           key: const Key('search-no-collection-loans'),
+          style: FilledButton.styleFrom(minimumSize: const Size(0, 52)),
           onPressed: _searching ? null : _searchLoans,
           child: _searching
               ? const SizedBox(

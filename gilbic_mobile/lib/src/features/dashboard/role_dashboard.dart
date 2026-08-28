@@ -14,17 +14,7 @@ import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/delegated_area_access_page.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
-import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_financial_statements_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_general_journal_launcher_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_loan_operations_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_no_collection_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_loan_portfolio_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_opening_balance_journal_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
-import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_dashboard.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 
@@ -47,9 +37,9 @@ class RoleDashboard extends StatelessWidget {
   final CollectionDeviceSequence collectionDeviceSequence;
 
   void _push(BuildContext context, Widget page) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (context) => page),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (context) => page));
   }
 
   void _openModule(BuildContext context, _DashboardModule module) {
@@ -79,7 +69,8 @@ class RoleDashboard extends StatelessWidget {
       );
       return;
     }
-    if (session.role == AppRole.collector && action == 'delegated-area-access') {
+    if (session.role == AppRole.collector &&
+        action == 'delegated-area-access') {
       _push(
         context,
         DelegatedAreaAccessPage(
@@ -89,9 +80,7 @@ class RoleDashboard extends StatelessWidget {
       );
       return;
     }
-    if ((session.role == AppRole.collector && action == 'other-area-payment') ||
-        (session.role == AppRole.management &&
-            action == 'management-direct-payment')) {
+    if (session.role == AppRole.collector && action == 'other-area-payment') {
       _push(
         context,
         OtherAreaCollectionPage(
@@ -176,8 +165,7 @@ class RoleDashboard extends StatelessWidget {
     }
     if (action == 'remittance-notifications' &&
         (session.role == AppRole.collector ||
-            session.role == AppRole.employee ||
-            session.role == AppRole.management)) {
+            session.role == AppRole.employee)) {
       _push(
         context,
         RemittanceNotificationsPage(
@@ -187,135 +175,26 @@ class RoleDashboard extends StatelessWidget {
       );
       return;
     }
-    if (session.role == AppRole.management &&
-        action == 'client-registration-approvals') {
-      _push(
-        context,
-        ClientRegistrationApprovalsPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management &&
-        action == 'management-void-payment') {
-      _push(
-        context,
-        ManagementCollectionVoidPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management && action == 'management-loans') {
-      _push(
-        context,
-        ManagementLoanPortfolioPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management &&
-        action == 'management-loan-operations') {
-      _push(
-        context,
-        ManagementLoanOperationsPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management &&
-        action == 'management-no-collection') {
-      _push(
-        context,
-        ManagementNoCollectionPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management &&
-        action == 'management-financial-accounting') {
-      _push(
-        context,
-        ManagementFinancialAccountingPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management &&
-        action == 'management-financial-statements') {
-      _push(
-        context,
-        ManagementFinancialStatementsPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management &&
-        action == 'management-opening-balance-journal') {
-      _push(
-        context,
-        ManagementOpeningBalanceJournalPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management &&
-        action == 'management-general-journal') {
-      _push(
-        context,
-        ManagementGeneralJournalLauncherPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management && action == 'management-renewals') {
-      _push(
-        context,
-        ManagementRenewalRequestsPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.management && action == 'management-support') {
-      _push(
-        context,
-        ManagementSupportRequestsPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${module.title} is planned next.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('${module.title} is planned next.')));
   }
 
   @override
   Widget build(BuildContext context) {
-    final modules = _modulesFor(session.role)
-        .where((module) => module.isAvailableFor(session))
-        .toList(growable: false);
+    if (session.role == AppRole.management) {
+      return ManagementDashboard(
+        session: session,
+        onSignOut: onSignOut,
+        paymentSubmissionRepository: paymentSubmissionRepository,
+        deviceIdentityProvider: deviceIdentityProvider,
+        collectionDeviceSequence: collectionDeviceSequence,
+      );
+    }
+
+    final modules = _modulesFor(
+      session.role,
+    ).where((module) => module.isAvailableFor(session)).toList(growable: false);
     return Scaffold(
       appBar: AppBar(
         title: Text('${session.role.label} Dashboard'),
@@ -420,193 +299,121 @@ class _DashboardModule {
 List<_DashboardModule> _modulesFor(AppRole role) {
   return switch (role) {
     AppRole.client => const [
-        _DashboardModule('My Loans', 'Balances, schedules, and loan history',
-            Icons.account_balance_wallet,
-            action: 'my-loans'),
-        _DashboardModule('Payments', 'Timeline, receipts, and payment proofs',
-            Icons.receipt_long,
-            action: 'payments'),
-        _DashboardModule(
-          'Payment Updates',
-          'See who posted, remitted, and accepted your payment',
-          Icons.notifications_active,
-          action: 'payment-updates',
-        ),
-        _DashboardModule('Renewal', 'Submit and monitor renewal requests',
-            Icons.autorenew,
-            action: 'renewal'),
-        _DashboardModule('Support', 'Notices, corrections, and assistance',
-            Icons.support_agent,
-            action: 'support'),
-      ],
+      _DashboardModule(
+        'My Loans',
+        'Balances, schedules, and loan history',
+        Icons.account_balance_wallet,
+        action: 'my-loans',
+      ),
+      _DashboardModule(
+        'Payments',
+        'Timeline, receipts, and payment proofs',
+        Icons.receipt_long,
+        action: 'payments',
+      ),
+      _DashboardModule(
+        'Payment Updates',
+        'See who posted, remitted, and accepted your payment',
+        Icons.notifications_active,
+        action: 'payment-updates',
+      ),
+      _DashboardModule(
+        'Renewal',
+        'Submit and monitor renewal requests',
+        Icons.autorenew,
+        action: 'renewal',
+      ),
+      _DashboardModule(
+        'Support',
+        'Notices, corrections, and assistance',
+        Icons.support_agent,
+        action: 'support',
+      ),
+    ],
     AppRole.collector => const [
-        _DashboardModule(
-          'Daily Route',
-          'Compact online collection ledger',
-          Icons.route,
-          action: 'daily-route',
-          requiredPermissions: <String>['route.view'],
-        ),
-        _DashboardModule(
-          'Record Payment',
-          'Open the route and record assigned collections',
-          Icons.payments,
-          action: 'record-payment',
-          requiredPermissions: <String>['route.view', 'collection.create'],
-        ),
-        _DashboardModule(
-          'Temporary Area Access',
-          'Request, approve, review, or revoke Collector area access',
-          Icons.add_location_alt_outlined,
-          action: 'delegated-area-access',
-          requiredPermissions: <String>['delegated_area.view'],
-        ),
-        _DashboardModule(
-          'Other-Area Work',
-          "Today's clients inside currently approved temporary areas",
-          Icons.person_search,
-          action: 'other-area-payment',
-          requiredPermissions: <String>['delegated_area.view', 'collection.create'],
-        ),
-        _DashboardModule(
-          'Management Remittance',
-          'Submit regular route cash to authorized staff',
-          Icons.account_balance_outlined,
-          action: 'remittance',
-          requiredPermissions: <String>['remittance.create'],
-        ),
-        _DashboardModule(
-          'Assigned Collector Remittance',
-          'Send only other-area payments to their route owner',
-          Icons.compare_arrows,
-          action: 'assigned-collector-remittance',
-          requiredPermissions: <String>['remittance.create'],
-        ),
-        _DashboardModule(
-          'Payment Updates',
-          'See other-collector posts and cash-custody updates',
-          Icons.receipt_long,
-          action: 'payment-updates',
-        ),
-        _DashboardModule(
-          'Remittance Requests',
-          'Review and accept remittances sent to your assigned route',
-          Icons.notifications_active,
-          action: 'remittance-notifications',
-          requiredPermissions: <String>['remittance.view'],
-        ),
-      ],
+      _DashboardModule(
+        'Daily Route',
+        'Compact online collection ledger',
+        Icons.route,
+        action: 'daily-route',
+        requiredPermissions: <String>['route.view'],
+      ),
+      _DashboardModule(
+        'Record Payment',
+        'Open the route and record assigned collections',
+        Icons.payments,
+        action: 'record-payment',
+        requiredPermissions: <String>['route.view', 'collection.create'],
+      ),
+      _DashboardModule(
+        'Temporary Area Access',
+        'Request, approve, review, or revoke Collector area access',
+        Icons.add_location_alt_outlined,
+        action: 'delegated-area-access',
+        requiredPermissions: <String>['delegated_area.view'],
+      ),
+      _DashboardModule(
+        'Other-Area Work',
+        "Today's clients inside currently approved temporary areas",
+        Icons.person_search,
+        action: 'other-area-payment',
+        requiredPermissions: <String>[
+          'delegated_area.view',
+          'collection.create',
+        ],
+      ),
+      _DashboardModule(
+        'Management Remittance',
+        'Submit regular route cash to authorized staff',
+        Icons.account_balance_outlined,
+        action: 'remittance',
+        requiredPermissions: <String>['remittance.create'],
+      ),
+      _DashboardModule(
+        'Assigned Collector Remittance',
+        'Send only other-area payments to their route owner',
+        Icons.compare_arrows,
+        action: 'assigned-collector-remittance',
+        requiredPermissions: <String>['remittance.create'],
+      ),
+      _DashboardModule(
+        'Payment Updates',
+        'See other-collector posts and cash-custody updates',
+        Icons.receipt_long,
+        action: 'payment-updates',
+      ),
+      _DashboardModule(
+        'Remittance Requests',
+        'Review and accept remittances sent to your assigned route',
+        Icons.notifications_active,
+        action: 'remittance-notifications',
+        requiredPermissions: <String>['remittance.view'],
+      ),
+    ],
     AppRole.employee => const [
-        _DashboardModule('Attendance', 'Time records and attendance history',
-            Icons.schedule),
-        _DashboardModule('Payroll', 'Payslips and payroll summaries',
-            Icons.price_check),
-        _DashboardModule('Tasks', 'Assigned work and announcements',
-            Icons.task_alt),
-        _DashboardModule(
-          'Notifications',
-          'Accept assigned remittances after receiving the cash',
-          Icons.notifications_active,
-          action: 'remittance-notifications',
-          requiredPermissions: <String>['remittance.view'],
-        ),
-      ],
-    AppRole.management => const [
-        _DashboardModule(
-          'Loan Management',
-          'Portfolio, balances, due dates, and renewal processing status',
-          Icons.account_balance,
-          action: 'management-loans',
-        ),
-        _DashboardModule(
-          'Renewal Requests',
-          'Review client renewal requests for office processing',
-          Icons.autorenew,
-          action: 'management-renewals',
-          requiredPermissions: <String>['renewal.manage'],
-        ),
-        _DashboardModule(
-          'Client Support',
-          'Answer and resolve client assistance requests',
-          Icons.support_agent,
-          action: 'management-support',
-          requiredPermissions: <String>['support.manage'],
-        ),
-        _DashboardModule(
-          'Loan Operations',
-          'Monitor collections, remittances, corrections, and voids',
-          Icons.insights,
-          action: 'management-loan-operations',
-        ),
-        _DashboardModule(
-          'No Collection',
-          'Move one loan schedule to the next collection dates with audit',
-          Icons.event_busy_outlined,
-          action: 'management-no-collection',
-          requiredPermissions: <String>['lending.no_collection.manage'],
-        ),
-        _DashboardModule(
-          'Direct Payment Entry',
-          'Record a client payment made directly to Management',
-          Icons.point_of_sale,
-          action: 'management-direct-payment',
-          requiredPermissions: <String>['collection.create'],
-        ),
-        _DashboardModule(
-          'Void Incorrect Payment',
-          'Reverse an unlocked wrong payment with a permanent audit trail',
-          Icons.block,
-          action: 'management-void-payment',
-          requiredPermissions: <String>['collection.void.unremitted'],
-        ),
-        _DashboardModule(
-          'Notifications',
-          'Accept assigned remittances after receiving the cash',
-          Icons.notifications_active,
-          action: 'remittance-notifications',
-          requiredPermissions: <String>['remittance.view'],
-        ),
-        _DashboardModule(
-          'Client Portal Approvals',
-          'Approve registrations and link borrower records',
-          Icons.how_to_reg,
-          action: 'client-registration-approvals',
-          requiredPermissions: <String>['account.manage'],
-        ),
-        _DashboardModule(
-          'Financial Accounting',
-          'Accounting periods, chart of accounts, and loan policy controls',
-          Icons.calculate,
-          action: 'management-financial-accounting',
-          requiredPermissions: <String>['accounting.view'],
-        ),
-        _DashboardModule(
-          'Opening Balance Journal',
-          'Prepare one protected cutover journal draft; posting remains disabled',
-          Icons.lock_clock_outlined,
-          action: 'management-opening-balance-journal',
-          requiredPermissions: <String>['accounting.view'],
-        ),
-        _DashboardModule(
-          'General Journal',
-          'Manual journals, immutable posting, reversals, and Trial Balance',
-          Icons.menu_book_outlined,
-          action: 'management-general-journal',
-          requiredPermissions: <String>['accounting.view'],
-        ),
-        _DashboardModule(
-          'Financial Statements',
-          'Posted-ledger Profit or Loss and Financial Position',
-          Icons.assessment_outlined,
-          action: 'management-financial-statements',
-          requiredPermissions: <String>['accounting.view'],
-        ),
-        _DashboardModule('Billing & Taxation',
-            'Billing records and tax schedules', Icons.request_quote),
-        _DashboardModule('Risk & Compliance',
-            'KYC, alerts, incidents, and audit reviews', Icons.verified_user),
-        _DashboardModule('Administration',
-            'Users, roles, devices, and settings', Icons.admin_panel_settings),
-      ],
+      _DashboardModule(
+        'Attendance',
+        'Time records and attendance history',
+        Icons.schedule,
+      ),
+      _DashboardModule(
+        'Payroll',
+        'Payslips and payroll summaries',
+        Icons.price_check,
+      ),
+      _DashboardModule(
+        'Tasks',
+        'Assigned work and announcements',
+        Icons.task_alt,
+      ),
+      _DashboardModule(
+        'Notifications',
+        'Accept assigned remittances after receiving the cash',
+        Icons.notifications_active,
+        action: 'remittance-notifications',
+        requiredPermissions: <String>['remittance.view'],
+      ),
+    ],
+    AppRole.management => const <_DashboardModule>[],
   };
 }

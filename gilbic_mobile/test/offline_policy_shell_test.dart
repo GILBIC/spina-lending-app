@@ -48,8 +48,11 @@ void main() {
         return;
       }
 
-      expect(find.byKey(const Key('open-offline-policy')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('open-offline-policy')));
+      final policyLauncher = role == AppRole.management
+          ? find.byKey(const Key('management-offline-policy'))
+          : find.byKey(const Key('open-offline-policy'));
+      expect(policyLauncher, findsOneWidget);
+      await tester.tap(policyLauncher);
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('offline-policy-page')), findsOneWidget);
