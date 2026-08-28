@@ -1,0 +1,324 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:gilbic_mobile/src/core/auth/app_role.dart';
+import 'package:gilbic_mobile/src/core/auth/user_session.dart';
+import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/management/management_administration.dart';
+import 'package:gilbic_mobile/src/core/management/management_administration_repository.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/management_staff_invite_page.dart';
+
+void main() {
+  testWidgets(
+    'requires staff fields and never offers password or Client role',
+    (tester) async {
+      final repository = _InviteRepository();
+      await _pumpInvite(tester, repository: repository);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('management-staff-full-name')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('management-staff-username')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('management-staff-email')), findsOneWidget);
+      expect(
+        find.byKey(const Key('management-staff-invite-role')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Password'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('management-staff-invite-role')));
+      await tester.pumpAndSettle();
+      expect(find.text('Collector'), findsOneWidget);
+      expect(find.text('Employee'), findsOneWidget);
+      expect(find.text('Management'), findsOneWidget);
+      expect(find.text('Client'), findsNothing);
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Complete all staff invitation fields.'),
+        findsOneWidget,
+      );
+      expect(repository.inviteCalls, 0);
+    },
+  );
+
+  testWidgets(
+    'submits trimmed fields once and pops only after parsed success',
+    (tester) async {
+      final result = Completer<ManagementStaffAccount>();
+      final repository = _InviteRepository(onInvite: () => result.future);
+      await _pumpInvite(tester, repository: repository);
+      await tester.pumpAndSettle();
+      await _fillForm(tester);
+
+      await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+      await tester.pump();
+      expect(repository.inviteCalls, 1);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('management-staff-invite-submit')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(find.text('Invitation complete'), findsNothing);
+
+      result.complete(_account);
+      await tester.pumpAndSettle();
+      expect(find.text('Created Ana West'), findsOneWidget);
+      expect(repository.lastUsername, 'ana.west');
+      expect(repository.lastEmail, 'ana@example.com');
+      expect(repository.lastFullName, 'Ana West');
+      expect(repository.lastRole, 'collector');
+    },
+  );
+
+  testWidgets('uncertain result refreshes directory without automatic repost', (
+    tester,
+  ) async {
+    final refresh = Completer<void>();
+    var refreshCalls = 0;
+    final repository = _InviteRepository(
+      onInvite: () async => throw const SpinaApiException(
+        'Connection timed out.',
+        code: 'network_unavailable',
+      ),
+    );
+    await _pumpInvite(
+      tester,
+      repository: repository,
+      onUncertainResult: () {
+        refreshCalls += 1;
+        return refresh.future;
+      },
+    );
+    await tester.pumpAndSettle();
+    await _fillForm(tester);
+
+    await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+    await tester.pump();
+    expect(repository.inviteCalls, 1);
+    expect(refreshCalls, 1);
+    expect(
+      find.text('Refresh the staff list before trying this invitation again.'),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const Key('management-staff-invite-submit')),
+          )
+          .onPressed,
+      isNull,
+    );
+
+    refresh.complete();
+    await tester.pumpAndSettle();
+    expect(repository.inviteCalls, 1);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const Key('management-staff-invite-submit')),
+          )
+          .onPressed,
+      isNotNull,
+    );
+  });
+}
+
+Future<void> _fillForm(WidgetTester tester) async {
+  await tester.enterText(
+    find.byKey(const Key('management-staff-full-name')),
+    ' Ana West ',
+  );
+  await tester.enterText(
+    find.byKey(const Key('management-staff-username')),
+    ' ana.west ',
+  );
+  await tester.enterText(
+    find.byKey(const Key('management-staff-email')),
+    ' ANA@EXAMPLE.COM ',
+  );
+  await tester.tap(find.byKey(const Key('management-staff-invite-role')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Collector').last);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _pumpInvite(
+  WidgetTester tester, {
+  required _InviteRepository repository,
+  Future<void> Function()? onUncertainResult,
+}) async {
+  final store = MemoryDeviceIdentityStore()..value = 'management-phone';
+  await tester.pumpWidget(
+    MaterialApp(
+      home: _InviteHost(
+        repository: repository,
+        deviceIdentityProvider: DeviceIdentityProvider(
+          store: store,
+          platformResolver: () => 'android',
+          appVersionResolver: () async => '0.4.0+4',
+        ),
+        onUncertainResult: onUncertainResult ?? () async {},
+      ),
+    ),
+  );
+  await tester.tap(find.byKey(const Key('open-invite')));
+  await tester.pumpAndSettle();
+}
+
+class _InviteHost extends StatefulWidget {
+  const _InviteHost({
+    required this.repository,
+    required this.deviceIdentityProvider,
+    required this.onUncertainResult,
+  });
+
+  final ManagementAdministrationRepository repository;
+  final DeviceIdentityProvider deviceIdentityProvider;
+  final Future<void> Function() onUncertainResult;
+
+  @override
+  State<_InviteHost> createState() => _InviteHostState();
+}
+
+class _InviteHostState extends State<_InviteHost> {
+  String? _result;
+
+  Future<void> _open() async {
+    final account = await Navigator.of(context).push<ManagementStaffAccount>(
+      MaterialPageRoute<ManagementStaffAccount>(
+        builder: (_) => ManagementStaffInvitePage(
+          session: _session,
+          repository: widget.repository,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          onUncertainResult: widget.onUncertainResult,
+        ),
+      ),
+    );
+    if (mounted && account != null) {
+      setState(() => _result = 'Created ${account.fullName}');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          FilledButton(
+            key: const Key('open-invite'),
+            onPressed: _open,
+            child: const Text('Open'),
+          ),
+          if (_result != null) Text(_result!),
+        ],
+      ),
+    );
+  }
+}
+
+const _session = UserSession(
+  userId: '99999999-9999-4999-8999-999999999999',
+  username: 'manager.one',
+  displayName: 'Manager One',
+  role: AppRole.management,
+  rawRole: 'management',
+  accessToken: 'access-token',
+  permissions: <String>['account.manage'],
+);
+
+final _account = ManagementStaffAccount(
+  id: '11111111-1111-4111-8111-111111111111',
+  username: 'ana.west',
+  email: 'ana@example.com',
+  fullName: 'Ana West',
+  status: 'pending',
+  roles: const <String>['collector'],
+  deviceCount: 0,
+  createdAt: DateTime.utc(2026, 8, 29, 8),
+  updatedAt: DateTime.utc(2026, 8, 29, 8),
+);
+
+final class _InviteRepository implements ManagementAdministrationRepository {
+  _InviteRepository({this.onInvite});
+
+  final Future<ManagementStaffAccount> Function()? onInvite;
+  int inviteCalls = 0;
+  String? lastUsername;
+  String? lastEmail;
+  String? lastFullName;
+  String? lastRole;
+
+  @override
+  Future<ManagementStaffAccount> inviteStaff(
+    UserSession session, {
+    required String deviceId,
+    required String username,
+    required String email,
+    required String fullName,
+    required String role,
+  }) {
+    inviteCalls += 1;
+    lastUsername = username;
+    lastEmail = email;
+    lastFullName = fullName;
+    lastRole = role;
+    return onInvite?.call() ?? Future<ManagementStaffAccount>.value(_account);
+  }
+
+  @override
+  Future<List<ManagementDevice>> loadDevices(
+    UserSession session, {
+    required String deviceId,
+    required String userId,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<ManagementStaffPage> loadStaff(
+    UserSession session, {
+    required String deviceId,
+    String? query,
+    String? role,
+    String? status,
+    int limit = 50,
+    int offset = 0,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<ManagementStaffAccount> setAccountStatus(
+    UserSession session, {
+    required String deviceId,
+    required String userId,
+    required String status,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<ManagementDevice> setDeviceStatus(
+    UserSession session, {
+    required String deviceId,
+    required String userId,
+    required String managedDeviceId,
+    required String status,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<ManagementStaffAccount> setRole(
+    UserSession session, {
+    required String deviceId,
+    required String userId,
+    required String role,
+  }) => throw UnimplementedError();
+}

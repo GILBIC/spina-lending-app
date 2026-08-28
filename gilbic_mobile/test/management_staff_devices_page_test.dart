@@ -9,6 +9,8 @@ import 'package:gilbic_mobile/src/core/management/management_administration.dart
 import 'package:gilbic_mobile/src/core/management/management_administration_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/management/management_staff_devices_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_staff_detail_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_staff_invite_page.dart';
 
 void main() {
   testWidgets('shows initial loading then the authoritative staff directory', (
@@ -261,12 +263,47 @@ void main() {
     expect(find.byKey(const Key('management-staff-list')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('opens invite only with account management permission', (
+    tester,
+  ) async {
+    final repository = _FakeAdministrationRepository(
+      onLoad: (_) async => _page(<ManagementStaffAccount>[_ana]),
+    );
+    await _pumpPage(tester, repository);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('management-staff-invite')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('management-staff-invite')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ManagementStaffInvitePage), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await _pumpPage(tester, repository, session: _deviceOnlySession);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('management-staff-invite')), findsNothing);
+  });
+
+  testWidgets('opens the exact staff detail page from a directory card', (
+    tester,
+  ) async {
+    final repository = _FakeAdministrationRepository(
+      onLoad: (_) async => _page(<ManagementStaffAccount>[_ana]),
+    );
+    await _pumpPage(tester, repository);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('management-staff-open')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ManagementStaffDetailPage), findsOneWidget);
+  });
 }
 
 Future<void> _pumpPage(
   WidgetTester tester,
   ManagementAdministrationRepository repository, {
   TextScaler? textScaler,
+  UserSession session = _session,
 }) async {
   final store = MemoryDeviceIdentityStore()..value = 'management-phone';
   await tester.pumpWidget(
@@ -278,7 +315,7 @@ Future<void> _pumpPage(
               child: child!,
             ),
       home: ManagementStaffDevicesPage(
-        session: _session,
+        session: session,
         repository: repository,
         deviceIdentityProvider: DeviceIdentityProvider(
           store: store,
@@ -307,6 +344,16 @@ const _session = UserSession(
   rawRole: 'management',
   accessToken: 'access-token',
   permissions: <String>['account.manage', 'device.manage'],
+);
+
+const _deviceOnlySession = UserSession(
+  userId: '99999999-9999-4999-8999-999999999999',
+  username: 'manager.one',
+  displayName: 'Manager One',
+  role: AppRole.management,
+  rawRole: 'management',
+  accessToken: 'access-token',
+  permissions: <String>['device.manage'],
 );
 
 final _ana = ManagementStaffAccount(
@@ -410,7 +457,7 @@ final class _FakeAdministrationRepository
     UserSession session, {
     required String deviceId,
     required String userId,
-  }) => throw UnimplementedError();
+  }) async => const <ManagementDevice>[];
 
   @override
   Future<ManagementStaffAccount> setAccountStatus(

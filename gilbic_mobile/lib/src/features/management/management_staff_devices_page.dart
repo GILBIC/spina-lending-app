@@ -6,6 +6,8 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_administration.dart';
 import 'package:gilbic_mobile/src/core/management/management_administration_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/management_staff_detail_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_staff_invite_page.dart';
 
 class ManagementStaffDevicesPage extends StatefulWidget {
   const ManagementStaffDevicesPage({
@@ -201,10 +203,91 @@ class _ManagementStaffDevicesPageState
     unawaited(_load(reset: true));
   }
 
+  Future<void> _openInvite() async {
+    final account = await Navigator.of(context).push<ManagementStaffAccount>(
+      MaterialPageRoute<ManagementStaffAccount>(
+        builder: (_) => ManagementStaffInvitePage(
+          session: widget.session,
+          repository: _repository,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          onUncertainResult: _refresh,
+        ),
+      ),
+    );
+    if (!mounted || account == null) {
+      return;
+    }
+    setState(() {
+      _items.removeWhere((item) => item.id == account.id);
+      _items.insert(0, account);
+    });
+  }
+
+  Future<void> _openDetail(ManagementStaffAccount account) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ManagementStaffDetailPage(
+          session: widget.session,
+          account: account,
+          repository: _repository,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          reloadAccount: () => _reloadAccount(account),
+          onDirectoryRefresh: _refresh,
+        ),
+      ),
+    );
+  }
+
+  Future<ManagementStaffAccount> _reloadAccount(
+    ManagementStaffAccount account,
+  ) async {
+    final deviceId = _deviceId;
+    if (deviceId == null) {
+      throw const SpinaApiException(
+        'This installation identity is unavailable.',
+        code: 'network_unavailable',
+      );
+    }
+    final page = await _repository.loadStaff(
+      widget.session,
+      deviceId: deviceId,
+      query: account.username,
+      limit: _pageSize,
+      offset: 0,
+    );
+    final fresh = page.items.where((item) => item.id == account.id).firstOrNull;
+    if (fresh == null) {
+      throw const SpinaApiException(
+        'This staff record is no longer available.',
+        statusCode: 404,
+      );
+    }
+    if (mounted) {
+      setState(() {
+        final index = _items.indexWhere((item) => item.id == fresh.id);
+        if (index >= 0) {
+          _items[index] = fresh;
+        }
+      });
+    }
+    return fresh;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Staff & devices')),
+      appBar: AppBar(
+        title: const Text('Staff & devices'),
+        actions: [
+          if (widget.session.hasPermission('account.manage'))
+            IconButton(
+              key: const Key('management-staff-invite'),
+              tooltip: 'Invite staff',
+              onPressed: _openInvite,
+              icon: const Icon(Icons.person_add_alt_1_outlined),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -378,7 +461,13 @@ class _ManagementStaffDevicesPageState
               ),
             );
           }
-          return _StaffCard(account: _items[index]);
+          return _StaffCard(
+            key: index == 0
+                ? const Key('management-staff-open')
+                : Key('management-staff-open-$index'),
+            account: _items[index],
+            onTap: () => _openDetail(_items[index]),
+          );
         },
       ),
     );
@@ -386,9 +475,10 @@ class _ManagementStaffDevicesPageState
 }
 
 class _StaffCard extends StatelessWidget {
-  const _StaffCard({required this.account});
+  const _StaffCard({required this.account, required this.onTap, super.key});
 
   final ManagementStaffAccount account;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -398,36 +488,40 @@ class _StaffCard extends StatelessWidget {
         : '${account.deviceCount} devices';
     return Card(
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              account.fullName,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 3),
-            Text('@${account.username}'),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Chip(label: Text(role)),
-                Chip(label: Text(_label(account.status))),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.devices_outlined, size: 18),
-                    const SizedBox(width: 5),
-                    Text(devices),
-                  ],
-                ),
-              ],
-            ),
-          ],
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                account.fullName,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 3),
+              Text('@${account.username}'),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Chip(label: Text(role)),
+                  Chip(label: Text(_label(account.status))),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.devices_outlined, size: 18),
+                      const SizedBox(width: 5),
+                      Text(devices),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -510,4 +604,11 @@ String _label(String value) {
     return value;
   }
   return '${value[0].toUpperCase()}${value.substring(1)}';
+}
+
+extension on Iterable<ManagementStaffAccount> {
+  ManagementStaffAccount? get firstOrNull {
+    final iterator = this.iterator;
+    return iterator.moveNext() ? iterator.current : null;
+  }
 }
