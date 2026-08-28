@@ -73,6 +73,9 @@ class ManagementDashboardOverview {
       }
       metrics.add(_parseKnownMetric(key, metricMap));
     }
+    if (!_requiredBaselineMetricKeys.every(seenKeys.contains)) {
+      throw const FormatException('Missing required overview metric.');
+    }
 
     return ManagementDashboardOverview(
       generatedAt: generatedAt,
@@ -113,6 +116,16 @@ const _shapeByKey = <ManagementDashboardMetricKey, _MetricShape>{
   ManagementDashboardMetricKey.collectorMobileDevices: _MetricShape.count,
   ManagementDashboardMetricKey.borrowerSupport: _MetricShape.count,
   ManagementDashboardMetricKey.unreadActivity: _MetricShape.count,
+};
+
+const _requiredBaselineMetricKeys = <ManagementDashboardMetricKey>{
+  ManagementDashboardMetricKey.activeClients,
+  ManagementDashboardMetricKey.activeLoans,
+  ManagementDashboardMetricKey.overdueLoans,
+  ManagementDashboardMetricKey.outstandingBalance,
+  ManagementDashboardMetricKey.latestCollections,
+  ManagementDashboardMetricKey.unremittedCollections,
+  ManagementDashboardMetricKey.unreadActivity,
 };
 
 final _metricKeyByServerKey = <String, ManagementDashboardMetricKey>{

@@ -78,6 +78,15 @@ void main() {
       ).add(<String, Object?>{'key': 'portfolio.active_clients', 'count': 99});
       return payload;
     },
+    'missing required baseline metric': () {
+      final payload = _validPayload();
+      _metrics(payload).removeWhere(
+        (item) =>
+            item is Map<String, Object?> &&
+            item['key'] == 'portfolio.active_clients',
+      );
+      return payload;
+    },
     'negative count': () {
       final payload = _validPayload();
       _metric(payload, 'portfolio.active_clients')['count'] = -1;
