@@ -547,6 +547,94 @@ FROM gross
 LEFT JOIN active_refunds
   ON active_refunds.installment_id = gross.installment_id;
 
+-- Extra Principal remains an ordinary immutable collection source for the
+-- existing protected 7x7 accounting lifecycle. This view does not invent a new
+-- account, journal, or automatic posting rule. It proves the source identity,
+-- exposes whether current coordinates are available, and leaves preparation /
+-- posting as explicit Management actions.
+CREATE OR REPLACE VIEW accounting.seven_by_seven_extra_principal_accounting_readiness AS
+WITH coordinate_summary AS (
+    SELECT
+        coordinate.transaction_id,
+        count(*)::integer AS coordinate_line_count,
+        bool_and(coordinate.coordinate_preview_ready) AS all_coordinates_ready,
+        sum(coordinate.debit)::numeric(18,2) AS total_debit,
+        sum(coordinate.credit)::numeric(18,2) AS total_credit
+    FROM accounting.seven_by_seven_source_event_journal_coordinate_preview coordinate
+    GROUP BY coordinate.transaction_id
+)
+SELECT
+    adjustment.id AS adjustment_id,
+    adjustment.transaction_id,
+    adjustment.loan_id,
+    adjustment.schedule_id,
+    accounting.seven_by_seven_collection_source_event_key(
+        adjustment.transaction_id
+    ) AS source_event_key,
+    transaction.amount AS source_cash_amount,
+    adjustment.principal_reduction,
+    coalesce(
+        nullif(transaction.details ->> 'interest_contribution', ''),
+        transaction.details ->> 'seven_by_seven_interest_paid'
+    ) AS interest_contribution,
+    coalesce(
+        nullif(transaction.details ->> 'principal_extra_amount', ''),
+        transaction.details ->> 'seven_by_seven_principal_paid'
+    ) AS principal_contribution,
+    inventory.is_active_positive_cash_event,
+    inventory.active_positive_cash_events_on_date,
+    coalesce(coordinate.coordinate_line_count, 0) AS coordinate_line_count,
+    coalesce(coordinate.all_coordinates_ready, false) AS coordinates_ready,
+    coordinate.total_debit,
+    coordinate.total_credit,
+    prepared.id AS journal_preparation_id,
+    posted.id AS journal_posting_id,
+    (
+        inventory.transaction_id = adjustment.transaction_id
+        AND inventory.loan_id = adjustment.loan_id
+        AND inventory.source_event_key
+            = accounting.seven_by_seven_collection_source_event_key(
+                adjustment.transaction_id
+            )
+        AND inventory.is_active_positive_cash_event
+        AND transaction.entry_type = 'payment'
+        AND transaction.is_voided = false
+        AND transaction.amount = adjustment.principal_reduction
+        AND transaction.details ->> 'payment_allocation_intent'
+            = 'extra_as_principal_reduction'
+        AND coalesce(
+            nullif(transaction.details ->> 'interest_contribution', ''),
+            transaction.details ->> 'seven_by_seven_interest_paid'
+        ) = '0.00'
+        AND coalesce(
+            nullif(transaction.details ->> 'principal_extra_amount', ''),
+            transaction.details ->> 'seven_by_seven_principal_paid'
+        ) = to_char(adjustment.principal_reduction, 'FM999999999999990.00')
+    ) AS source_evidence_ready,
+    CASE
+        WHEN posted.id IS NOT NULL THEN 'posted'
+        WHEN prepared.id IS NOT NULL THEN 'prepared_not_posted'
+        WHEN coalesce(coordinate.coordinate_line_count, 0) > 0
+         AND coalesce(coordinate.all_coordinates_ready, false)
+         AND coordinate.total_debit = coordinate.total_credit
+            THEN 'ready_for_management_draft'
+        WHEN inventory.transaction_id IS NOT NULL
+            THEN 'management_accounting_review_required'
+        ELSE 'source_evidence_mismatch'
+    END AS accounting_status,
+    false AS automatic_source_posting
+FROM lending.seven_by_seven_extra_principal_adjustments adjustment
+JOIN lending.collection_transactions transaction
+  ON transaction.id = adjustment.transaction_id
+LEFT JOIN accounting.seven_by_seven_collection_source_inventory inventory
+  ON inventory.transaction_id = adjustment.transaction_id
+LEFT JOIN coordinate_summary coordinate
+  ON coordinate.transaction_id = adjustment.transaction_id
+LEFT JOIN accounting.seven_by_seven_journal_draft_preparations prepared
+  ON prepared.transaction_id = adjustment.transaction_id
+LEFT JOIN accounting.seven_by_seven_journal_postings posted
+  ON posted.transaction_id = adjustment.transaction_id;
+
 COMMENT ON TABLE lending.seven_by_seven_extra_principal_reversal_requests IS
     'Terminal immutable exact-retry evidence for completed or released-refund-blocked 7x7 Extra Principal reversal requests.';
 COMMENT ON TABLE lending.seven_by_seven_extra_principal_reversals IS
@@ -567,5 +655,7 @@ COMMENT ON VIEW lending.seven_by_seven_extra_principal_reversal_status IS
     'Derived active/reversed state and permanent blocked-attempt evidence for every 7x7 Extra Principal adjustment.';
 COMMENT ON VIEW lending.loan_installment_active_advance IS
     'Current installment-specific Advance: immutable gross verified Advance less Refund Due classifications from active Extra Principal adjustments only.';
+COMMENT ON VIEW accounting.seven_by_seven_extra_principal_accounting_readiness IS
+    'Read-only Extra Principal source identity and current protected 7x7 journal readiness. Accounting remains explicit Management preparation/posting and automatic source posting is always false.';
 
 COMMIT;

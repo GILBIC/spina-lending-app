@@ -44,7 +44,7 @@ def test_0108_installs_real_bridge_relations_views_and_guards() -> None:
                 """
                 select table_name
                 from information_schema.views
-                where table_schema = 'lending'
+                where table_schema in ('lending', 'accounting')
                   and table_name = any(%s::text[])
                 """,
                 (
@@ -52,6 +52,7 @@ def test_0108_installs_real_bridge_relations_views_and_guards() -> None:
                         "loan_unused_advance_refund_due_status",
                         "seven_by_seven_extra_principal_reversal_status",
                         "loan_installment_active_advance",
+                        "seven_by_seven_extra_principal_accounting_readiness",
                     ],
                 ),
             ).fetchall()
@@ -60,6 +61,7 @@ def test_0108_installs_real_bridge_relations_views_and_guards() -> None:
             "loan_unused_advance_refund_due_status",
             "seven_by_seven_extra_principal_reversal_status",
             "loan_installment_active_advance",
+            "seven_by_seven_extra_principal_accounting_readiness",
         }
 
         guarded_tables = {

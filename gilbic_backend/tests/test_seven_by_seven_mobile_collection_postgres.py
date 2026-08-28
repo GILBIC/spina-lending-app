@@ -14,6 +14,9 @@ from gilbic_backend.seven_by_seven_collection_posting import (
     SEVEN_BY_SEVEN_MOBILE_SETTING,
     SevenBySevenAwarePerLoanContractCollectionPostingBridge,
 )
+from gilbic_backend.seven_by_seven_extra_principal_reconciliation import (
+    ExtraPrincipalReconciliationError,
+)
 from gilbic_backend.seven_by_seven_signed_schedule import (
     generate_signed_seven_by_seven_schedule,
 )
@@ -582,6 +585,15 @@ def test_modern_extra_principal_posts_zero_interest_and_exact_immutable_effects(
             """,
             (UUID(extra.posted.result_metadata["adjustment_id"]),),
         ).fetchone()[0]
+        accounting_readiness = connection.execute(
+            """
+            select source_evidence_ready, accounting_status,
+                   automatic_source_posting
+            from accounting.seven_by_seven_extra_principal_accounting_readiness
+            where adjustment_id = %s
+            """,
+            (UUID(extra.posted.result_metadata["adjustment_id"]),),
+        ).fetchone()
 
     assert receipt == (
         "extra_as_principal_reduction",
@@ -593,6 +605,68 @@ def test_modern_extra_principal_posts_zero_interest_and_exact_immutable_effects(
         UUID(extra.posted.server_transaction_id),
     )
     assert signed_mismatch_count == 0
+    assert accounting_readiness == (
+        True,
+        "management_accounting_review_required",
+        False,
+    )
+
+
+def test_reconciliation_failure_rolls_back_receipt_and_every_extra_fragment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    case = _setup_case()
+    _register_verified_schedule(case)
+    scheduled = _submit(case, _command(case, amount="50.00"))
+    assert scheduled.status is CollectionStatus.ACCEPTED
+
+    def fail_reconciliation(*_args, **_kwargs):
+        raise ExtraPrincipalReconciliationError("injected persisted mismatch")
+
+    monkeypatch.setattr(
+        "gilbic_backend.seven_by_seven_extra_principal_posting.reconcile_persisted_extra_principal",
+        fail_reconciliation,
+    )
+    rejected = _submit(
+        case,
+        _command(
+            case,
+            amount="100.00",
+            device_sequence=2,
+            route_version=1,
+            payment_allocation_intent=(
+                PaymentAllocationIntent.EXTRA_AS_PRINCIPAL_REDUCTION
+            ),
+        ),
+    )
+
+    assert rejected.status is CollectionStatus.REJECTED
+    assert rejected.code == "seven_by_seven_extra_principal_reconciliation_failed"
+    with _connection_factory() as connection:
+        receipt_count = connection.execute(
+            "select count(*) from lending.collection_transactions where loan_id = %s",
+            (case.loan_id,),
+        ).fetchone()[0]
+        adjustment_count = connection.execute(
+            """
+            select count(*)
+            from lending.seven_by_seven_extra_principal_adjustments
+            where loan_id = %s
+            """,
+            (case.loan_id,),
+        ).fetchone()[0]
+        state = connection.execute(
+            """
+            select remaining_balance, state_version
+            from lending.loan_collection_state
+            where loan_id = %s
+            """,
+            (case.loan_id,),
+        ).fetchone()
+
+    assert receipt_count == 1
+    assert adjustment_count == 0
+    assert state == (Decimal("4985.00"), 1)
 
 
 def test_legacy_voluntary_extra_cannot_activate_7x7_principal_reduction() -> None:

@@ -288,6 +288,10 @@ treating them as properties of a principal event.
 - Extra Principal contributes zero interest and the approved amount to principal.
 - Existing protected 7x7 source-event accounting preview/draft/posting remains the
   only journal subsystem.
+- `accounting.seven_by_seven_extra_principal_accounting_readiness` independently
+  binds the adjustment to its exact collection source and current protected
+  coordinate/draft/posting status. A same-day ordering limitation is exposed as
+  Management review, not hidden or auto-resolved.
 - The bridge writes exact source evidence and readiness; it never posts a journal
   automatically.
 - Existing 0067/0068 reversal remains the only journal reversal path.

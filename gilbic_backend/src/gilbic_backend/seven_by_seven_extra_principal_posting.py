@@ -15,6 +15,10 @@ from .seven_by_seven_extra_principal import (
     SevenBySevenExtraPrincipalPlan,
     plan_seven_by_seven_extra_principal_tail,
 )
+from .seven_by_seven_extra_principal_reconciliation import (
+    ExtraPrincipalReconciliationError,
+    reconcile_persisted_extra_principal,
+)
 from .seven_by_seven_extra_principal_replay import (
     ActiveExtraPrincipalEvent,
     ExtraPrincipalReplayResult,
@@ -175,14 +179,42 @@ def post_seven_by_seven_extra_principal(
         operational_state_digest=replayed_after.operational_state_digest,
     )
 
+    try:
+        reconciled = reconcile_persisted_extra_principal(
+            cursor,
+            transaction_id=transaction_id,
+            adjustment_id=adjustment_id,
+        )
+    except ExtraPrincipalReconciliationError as error:
+        raise ExtraPrincipalPostingRejected(str(error), code=error.code) from error
+
+    retained_advance = money(
+        sum((item.advance_retained for item in plan.installments), ZERO)
+    )
+    if (
+        reconciled.cash_received != plan.principal_reduction
+        or reconciled.interest_contribution != ZERO
+        or reconciled.principal_contribution != plan.principal_reduction
+        or reconciled.adjustment_principal != plan.principal_reduction
+        or reconciled.future_principal != plan.resulting_future_principal
+        or reconciled.removed_future_interest != plan.removed_future_interest
+        or reconciled.retained_advance != retained_advance
+        or reconciled.refund_due != plan.advance_refund_due
+        or reconciled.operational_version != resulting_version
+        or reconciled.operational_state_digest
+        != replayed_after.operational_state_digest
+    ):
+        raise ExtraPrincipalPostingRejected(
+            "Persisted 7x7 Extra Principal results differ from the protected plan.",
+            code="seven_by_seven_extra_principal_reconciliation_failed",
+        )
+
     return SevenBySevenExtraPrincipalPostingResult(
         adjustment_id=adjustment_id,
         principal_reduction=plan.principal_reduction,
         resulting_future_principal=plan.resulting_future_principal,
         removed_future_interest=plan.removed_future_interest,
-        retained_advance=money(
-            sum((item.advance_retained for item in plan.installments), ZERO)
-        ),
+        retained_advance=retained_advance,
         refund_due=plan.advance_refund_due,
         resulting_operational_version=resulting_version,
         operational_state_digest=replayed_after.operational_state_digest,

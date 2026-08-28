@@ -34,6 +34,7 @@ def test_0108_defines_exact_reversal_and_refund_due_evidence() -> None:
         "lending.loan_unused_advance_refund_due_release_items",
         "lending.loan_unused_advance_refund_due_status",
         "lending.seven_by_seven_extra_principal_reversal_status",
+        "accounting.seven_by_seven_extra_principal_accounting_readiness",
     )
     for relation in required_relations:
         assert relation in sql
