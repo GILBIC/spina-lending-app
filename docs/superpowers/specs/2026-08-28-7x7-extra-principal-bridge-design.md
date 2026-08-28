@@ -190,6 +190,15 @@ session established by the collection-void trigger.
 - preserves `Unused Advance released`, `Cash returned to client`, and
   `Advance remaining` as separate values.
 
+`lending.collection_remittance_refund_due_release_items`
+
+- records each released cash amount as a separate negative custody line without
+  changing the original collection receipt or physical-release evidence;
+- allows one release to be carried across later remittances oldest-first when a
+  single remittance contains less cash than the release;
+- keeps rejected remittance snapshots immutable while returning their allocated
+  release amount to the next eligible remittance.
+
 Derived views expose classified, approved, released, outstanding, reversed, and
 reversal-blocking amounts without updating or deleting original rows. The active
 Advance view subtracts only active Refund Due classifications. A successful
@@ -301,6 +310,9 @@ treating them as properties of a principal event.
 - Approval does not change custody. A physical release is a separately itemized
   cash outflow and is included in the existing collector cash-accountability and
   remittance reconciliation calculations without altering the original receipt.
+  Pending release cash is allocated oldest-first only against unlocked standard
+  remittance cash; cross-area remittances remain gross obligations to their
+  selected assigned Collector or Management recipient.
 
 ## Failure Semantics
 

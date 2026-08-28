@@ -220,6 +220,7 @@ CREATE TABLE IF NOT EXISTS lending.loan_unused_advance_refund_due_approvals (
     authority_reference TEXT NOT NULL
         CHECK (btrim(authority_reference) <> ''),
     approved_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    result_payload JSONB NOT NULL,
     UNIQUE (id, adjustment_id)
 );
 
@@ -274,6 +275,7 @@ CREATE TABLE IF NOT EXISTS lending.loan_unused_advance_refund_due_releases (
     evidence_digest TEXT NOT NULL
         CHECK (evidence_digest ~ '^[0-9a-f]{64}$'),
     result_payload JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (id, approval_id)
 );
 
@@ -312,6 +314,29 @@ CREATE INDEX IF NOT EXISTS lending_refund_due_release_item_due_idx
         adjustment_id,
         installment_id,
         release_id
+    );
+
+CREATE TABLE IF NOT EXISTS lending.collection_remittance_refund_due_release_items (
+    remittance_id UUID NOT NULL
+        REFERENCES lending.collection_remittances(id) ON DELETE RESTRICT,
+    release_id UUID NOT NULL,
+    approval_id UUID NOT NULL,
+    client_id UUID NOT NULL REFERENCES lending.clients(id) ON DELETE RESTRICT,
+    loan_id UUID NOT NULL REFERENCES lending.loans(id) ON DELETE RESTRICT,
+    released_at TIMESTAMPTZ NOT NULL,
+    amount_released NUMERIC(18,2) NOT NULL CHECK (amount_released > 0),
+    release_snapshot JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (remittance_id, release_id),
+    FOREIGN KEY (release_id, approval_id)
+        REFERENCES lending.loan_unused_advance_refund_due_releases(id, approval_id)
+        ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS lending_remittance_refund_release_idx
+    ON lending.collection_remittance_refund_due_release_items(
+        release_id,
+        remittance_id
     );
 
 -- A successful reconstruction can legitimately restore an installment to its
@@ -404,6 +429,83 @@ ON lending.loan_unused_advance_refund_due_release_items
 FOR EACH ROW EXECUTE FUNCTION lending.guard_7x7_bridge_append_only(
     'spina.refund_due_release_write'
 );
+
+DROP TRIGGER IF EXISTS lending_remittance_refund_due_release_item_guard
+    ON lending.collection_remittance_refund_due_release_items;
+CREATE TRIGGER lending_remittance_refund_due_release_item_guard
+BEFORE INSERT OR UPDATE OR DELETE
+ON lending.collection_remittance_refund_due_release_items
+FOR EACH ROW EXECUTE FUNCTION lending.guard_7x7_bridge_append_only(
+    'spina.refund_due_remittance_write'
+);
+
+CREATE OR REPLACE FUNCTION lending.validate_refund_due_remittance_item()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    release_record record;
+    remittance_record record;
+    active_allocated NUMERIC(18,2);
+BEGIN
+    SELECT
+        release.approval_id,
+        release.client_id,
+        release.loan_id,
+        release.assigned_collector_user_id,
+        release.released_at,
+        release.released_amount
+    INTO release_record
+    FROM lending.loan_unused_advance_refund_due_releases release
+    WHERE release.id = NEW.release_id
+    FOR UPDATE;
+
+    SELECT remittance.collector_user_id, remittance.status
+    INTO remittance_record
+    FROM lending.collection_remittances remittance
+    WHERE remittance.id = NEW.remittance_id
+    FOR KEY SHARE;
+
+    IF NOT FOUND
+       OR release_record.approval_id IS NULL
+       OR release_record.approval_id <> NEW.approval_id
+       OR release_record.client_id <> NEW.client_id
+       OR release_record.loan_id <> NEW.loan_id
+       OR release_record.released_at <> NEW.released_at
+       OR release_record.assigned_collector_user_id
+          <> remittance_record.collector_user_id
+       OR remittance_record.status <> 'submitted' THEN
+        RAISE EXCEPTION
+            'Refund Due remittance line must preserve the exact release and Collector custody identity.';
+    END IF;
+
+    SELECT coalesce(sum(item.amount_released), 0)::numeric(18,2)
+    INTO active_allocated
+    FROM lending.collection_remittance_refund_due_release_items item
+    JOIN lending.collection_remittances remittance
+      ON remittance.id = item.remittance_id
+    WHERE item.release_id = NEW.release_id
+      AND NOT EXISTS (
+          SELECT 1
+          FROM lending.collection_remittance_rejections rejection
+          WHERE rejection.remittance_id = remittance.id
+      );
+
+    IF active_allocated + NEW.amount_released > release_record.released_amount THEN
+        RAISE EXCEPTION
+            'Refund Due remittance lines cannot exceed the immutable physical release.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS lending_remittance_refund_due_release_item_validate
+    ON lending.collection_remittance_refund_due_release_items;
+CREATE TRIGGER lending_remittance_refund_due_release_item_validate
+BEFORE INSERT
+ON lending.collection_remittance_refund_due_release_items
+FOR EACH ROW EXECUTE FUNCTION lending.validate_refund_due_remittance_item();
 
 CREATE OR REPLACE VIEW lending.seven_by_seven_extra_principal_reversal_status AS
 WITH blocked AS (
@@ -649,6 +751,8 @@ COMMENT ON TABLE lending.loan_unused_advance_refund_due_releases IS
     'Immutable physical cash-release header tied to prior approval, collector custody, and external evidence.';
 COMMENT ON TABLE lending.loan_unused_advance_refund_due_release_items IS
     'Immutable per-classification allocation of physically released Refund Due cash.';
+COMMENT ON TABLE lending.collection_remittance_refund_due_release_items IS
+    'Immutable, separately itemized cash-outflow evidence included in a Collector remittance without changing the original receipt or Refund Due release.';
 COMMENT ON VIEW lending.loan_unused_advance_refund_due_status IS
     'Derived Refund Due lifecycle by original classification: classified, approved, released, outstanding, reversed, and reversal-blocking amounts.';
 COMMENT ON VIEW lending.seven_by_seven_extra_principal_reversal_status IS

@@ -11,6 +11,7 @@ from psycopg.types.json import Jsonb
 from .database import open_connection
 from .remittance_repository import (
     PostgresRemittanceRepository,
+    RefundDueRemittanceItemRecord,
     RemittanceAlreadyReceived,
     RemittanceError,
     RemittanceItemRecord,
@@ -55,11 +56,23 @@ class RemittanceHistoryRecord:
     submitted_at: datetime
     received_at: datetime | None
     items: tuple[RemittanceItemRecord, ...]
+    refund_due_releases: tuple[RefundDueRemittanceItemRecord, ...] = ()
     reviewed_at: datetime | None = None
     reviewed_by_user_id: UUID | None = None
     rejected_at: datetime | None = None
     rejected_by_user_id: UUID | None = None
     rejection_reason: str = ""
+
+    @property
+    def refund_due_release_count(self) -> int:
+        return len(self.refund_due_releases)
+
+    @property
+    def refund_due_release_total(self) -> Decimal:
+        return sum(
+            (item.amount for item in self.refund_due_releases),
+            start=Decimal("0.00"),
+        )
 
 
 class PostgresReviewedRemittanceRepository(PostgresRemittanceRepository):
@@ -99,7 +112,17 @@ class PostgresReviewedRemittanceRepository(PostgresRemittanceRepository):
                 records: list[RemittanceHistoryRecord] = []
                 for row in rows:
                     items = self._remittance_items(cursor, row["id"])
-                    records.append(self._history_record_from_row(row, items))
+                    refund_due_releases = self._remittance_refund_due_releases(
+                        cursor,
+                        row["id"],
+                    )
+                    records.append(
+                        self._history_record_from_row(
+                            row,
+                            items,
+                            refund_due_releases,
+                        )
+                    )
         return tuple(records)
 
     def confirm_received(
@@ -174,12 +197,16 @@ class PostgresReviewedRemittanceRepository(PostgresRemittanceRepository):
                         ),
                     )
                     items = self._remittance_items(cursor, remittance_id)
+                    refund_due_releases = self._remittance_refund_due_releases(
+                        cursor,
+                        remittance_id,
+                    )
                     updated = dict(row)
                     updated["status"] = "received"
                     updated["received_at"] = received_at
                     updated["reviewed_at"] = received_at
                     updated["reviewed_by_user_id"] = recipient_user_id
-        return self._history_record_from_row(updated, items)
+        return self._history_record_from_row(updated, items, refund_due_releases)
 
     def reject(
         self,
@@ -297,13 +324,17 @@ class PostgresReviewedRemittanceRepository(PostgresRemittanceRepository):
                         ),
                     )
                     items = self._remittance_items(cursor, remittance_id)
+                    refund_due_releases = self._remittance_refund_due_releases(
+                        cursor,
+                        remittance_id,
+                    )
                     updated = dict(row)
                     updated["reviewed_at"] = rejected_at
                     updated["reviewed_by_user_id"] = recipient_user_id
                     updated["rejected_at"] = rejected_at
                     updated["rejected_by_user_id"] = recipient_user_id
                     updated["rejection_reason"] = normalized_reason
-        return self._history_record_from_row(updated, items)
+        return self._history_record_from_row(updated, items, refund_due_releases)
 
     @staticmethod
     def _require_review(review_acknowledged: bool) -> None:
@@ -373,6 +404,7 @@ class PostgresReviewedRemittanceRepository(PostgresRemittanceRepository):
     def _history_record_from_row(
         row,
         items: tuple[RemittanceItemRecord, ...],
+        refund_due_releases: tuple[RefundDueRemittanceItemRecord, ...] = (),
     ) -> RemittanceHistoryRecord:
         rejected_at = row.get("rejected_at")
         status = "rejected" if rejected_at is not None else str(row["status"])
@@ -395,6 +427,7 @@ class PostgresReviewedRemittanceRepository(PostgresRemittanceRepository):
             submitted_at=row["submitted_at"],
             received_at=row["received_at"],
             items=items,
+            refund_due_releases=refund_due_releases,
             reviewed_at=row.get("reviewed_at"),
             reviewed_by_user_id=row.get("reviewed_by_user_id"),
             rejected_at=rejected_at,

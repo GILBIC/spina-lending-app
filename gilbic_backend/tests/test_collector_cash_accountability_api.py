@@ -4,14 +4,15 @@ from contextlib import contextmanager
 from decimal import Decimal
 from uuid import UUID
 
+import gilbic_backend.collector_cash_accountability_api as cash_api
 from fastapi.testclient import TestClient
-
 from gilbic_backend.account_repository import AccountContext
-from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
+from gilbic_backend.auth_api import (
+    account_repository_dependency,
+    auth_client_dependency,
+)
 from gilbic_backend.auth_client import AuthSession
 from gilbic_backend.main import create_app
-import gilbic_backend.collector_cash_accountability_api as cash_api
-
 
 AUTH_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 COLLECTOR_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
@@ -66,6 +67,7 @@ class FakeCursor:
     def execute(self, query, params) -> None:
         assert "collection_transactions" in query
         assert "collection_remittances" in query
+        assert "loan_unused_advance_refund_due_releases" in query
         assert "other_by_collector" in query
         self.params = params
 
@@ -109,7 +111,9 @@ def fake_open_connection():
     yield FakeConnection()
 
 
-def test_cash_accountability_includes_unsubmitted_and_submitted_cash(monkeypatch) -> None:
+def test_cash_accountability_includes_unsubmitted_and_submitted_cash(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(cash_api, "open_connection", fake_open_connection)
     app = create_app()
     app.dependency_overrides[auth_client_dependency] = lambda: FakeAuthClient()

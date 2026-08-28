@@ -20,6 +20,7 @@ EVIDENCE_TABLES = (
     "loan_unused_advance_refund_due_approval_items",
     "loan_unused_advance_refund_due_releases",
     "loan_unused_advance_refund_due_release_items",
+    "collection_remittance_refund_due_release_items",
 )
 
 
@@ -109,9 +110,9 @@ def test_0108_installs_real_bridge_relations_views_and_guards() -> None:
             insert into lending.loan_unused_advance_refund_due_approvals (
                 idempotency_key, canonical_request_hash, adjustment_id,
                 loan_id, client_id, approved_amount, approved_by_user_id,
-                reason, authority_reference
+                reason, authority_reference, result_payload
             ) values (%s, %s, %s, %s, %s, 1.00, %s,
-                      'unauthorized', 'unauthorized')
+                      'unauthorized', 'unauthorized', '{}'::jsonb)
             """,
             6,
         ),

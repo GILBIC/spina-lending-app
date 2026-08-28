@@ -79,6 +79,7 @@ from .posting_ready_evidence_review_api import (
 )
 from .regular_journal_draft_api import create_regular_journal_draft_router
 from .regular_journal_posting_api import create_regular_journal_posting_router
+from .refund_due_api import create_refund_due_router
 from .remittance_accounting_api import create_remittance_accounting_router
 from .remittance_api import create_remittance_router
 from .remittance_photo_api import create_remittance_photo_router
@@ -201,6 +202,7 @@ def create_app() -> FastAPI:
     app.include_router(create_combined_collection_router())
     app.include_router(create_collection_correction_router())
     app.include_router(create_collection_void_router())
+    app.include_router(create_refund_due_router())
     app.include_router(create_remittance_router())
     app.include_router(create_cross_remittance_router())
     app.include_router(create_notification_router())

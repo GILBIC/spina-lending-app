@@ -5,19 +5,21 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi.testclient import TestClient
-
 from gilbic_backend.account_repository import AccountContext
-from gilbic_backend.auth_api import account_repository_dependency, auth_client_dependency
+from gilbic_backend.auth_api import (
+    account_repository_dependency,
+    auth_client_dependency,
+)
 from gilbic_backend.auth_client import AuthSession
 from gilbic_backend.main import create_app
 from gilbic_backend.remittance_api import remittance_repository_dependency
 from gilbic_backend.remittance_repository import (
+    RefundDueRemittanceItemRecord,
     RemittanceItemRecord,
-    RemittanceRecord,
     RemittanceRecipientRecord,
+    RemittanceRecord,
     RemittanceSummaryRecord,
 )
-
 
 AUTH_USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 COLLECTOR_USER_ID = UUID("22222222-2222-4222-8222-222222222222")
@@ -140,6 +142,59 @@ def _summary() -> RemittanceSummaryRecord:
         total_amount=Decimal("100.00"),
         items=(_item(),),
     )
+
+
+def _refund_release() -> RefundDueRemittanceItemRecord:
+    return RefundDueRemittanceItemRecord(
+        release_id=UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
+        approval_id=UUID("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
+        adjustment_id=UUID("cccccccc-cccc-4ccc-8ccc-cccccccccccc"),
+        client_id=CLIENT_ID,
+        client_name="Ana Client",
+        loan_id=LOAN_ID,
+        loan_type="7x7",
+        released_at=SUBMITTED_AT,
+        amount=Decimal("25.00"),
+        evidence_reference="SIGNED-RF-0001",
+        evidence_digest="d" * 64,
+    )
+
+
+def test_refund_due_physical_release_is_separate_negative_cash_line() -> None:
+    from gilbic_backend.remittance_repository import PostgresRemittanceRepository
+
+    summary = PostgresRemittanceRepository._summary(
+        collector_user_id=COLLECTOR_USER_ID,
+        collector_name="Collector One",
+        collection_date=COLLECTION_DATE,
+        items=(_item(),),
+        refund_due_releases=(_refund_release(),),
+    )
+
+    assert summary.total_amount == Decimal("75.00")
+    assert summary.refund_due_release_total == Decimal("25.00")
+    assert summary.refund_due_release_count == 1
+    assert summary.items[0].amount == Decimal("100.00")
+
+
+def test_refund_due_release_is_partially_carried_when_one_remittance_is_smaller() -> (
+    None
+):
+    from dataclasses import replace
+
+    from gilbic_backend.remittance_repository import PostgresRemittanceRepository
+
+    summary = PostgresRemittanceRepository._summary(
+        collector_user_id=COLLECTOR_USER_ID,
+        collector_name="Collector One",
+        collection_date=COLLECTION_DATE,
+        items=(_item(),),
+        refund_due_releases=(replace(_refund_release(), amount=Decimal("125.00")),),
+    )
+
+    assert summary.total_amount == Decimal("0.00")
+    assert summary.refund_due_release_total == Decimal("100.00")
+    assert summary.refund_due_releases[0].amount == Decimal("100.00")
 
 
 def _record(*, status: str, received_at: datetime | None) -> RemittanceRecord:

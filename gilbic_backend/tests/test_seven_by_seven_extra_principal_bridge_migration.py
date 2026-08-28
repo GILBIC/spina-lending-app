@@ -32,6 +32,7 @@ def test_0108_defines_exact_reversal_and_refund_due_evidence() -> None:
         "lending.loan_unused_advance_refund_due_approval_items",
         "lending.loan_unused_advance_refund_due_releases",
         "lending.loan_unused_advance_refund_due_release_items",
+        "lending.collection_remittance_refund_due_release_items",
         "lending.loan_unused_advance_refund_due_status",
         "lending.seven_by_seven_extra_principal_reversal_status",
         "accounting.seven_by_seven_extra_principal_accounting_readiness",
@@ -50,4 +51,6 @@ def test_0108_protects_append_only_tables_with_transaction_local_sessions() -> N
     assert "'spina.extra_principal_reversal_write'" in sql
     assert "'spina.refund_due_approval_write'" in sql
     assert "'spina.refund_due_release_write'" in sql
-    assert sql.count("before insert or update or delete") >= 7
+    assert "'spina.refund_due_remittance_write'" in sql
+    assert "result_payload jsonb not null" in sql
+    assert sql.count("before insert or update or delete") >= 8

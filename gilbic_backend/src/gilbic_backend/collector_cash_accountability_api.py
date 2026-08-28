@@ -11,7 +11,6 @@ from .auth_client import SupabaseAuthClient
 from .database import open_connection
 from .request_auth import authenticated_device_context
 
-
 ZERO = Decimal("0.00")
 
 
@@ -88,18 +87,87 @@ def create_collector_cash_accountability_router() -> APIRouter:
                               where rejection.remittance_id = remittance.id
                           )
                     ),
+                    ready_refund_releases as (
+                        select
+                            -greatest(
+                                release.released_amount - coalesce((
+                                    select sum(custody.amount_released)
+                                    from lending.collection_remittance_refund_due_release_items custody
+                                    join lending.collection_remittances remittance
+                                      on remittance.id = custody.remittance_id
+                                    where custody.release_id = release.id
+                                      and not exists (
+                                          select 1
+                                          from lending.collection_remittance_rejections rejection
+                                          where rejection.remittance_id = remittance.id
+                                      )
+                                ), 0),
+                                0
+                            ) as amount,
+                            actor.user_id as assigned_collector_user_id,
+                            false as is_other_area
+                        from lending.loan_unused_advance_refund_due_releases release
+                        cross join actor
+                        where release.assigned_collector_user_id = actor.user_id
+                          and release.released_amount > coalesce((
+                              select sum(custody.amount_released)
+                              from lending.collection_remittance_refund_due_release_items custody
+                              join lending.collection_remittances remittance
+                                on remittance.id = custody.remittance_id
+                              where custody.release_id = release.id
+                                and not exists (
+                                    select 1
+                                    from lending.collection_remittance_rejections rejection
+                                    where rejection.remittance_id = remittance.id
+                                )
+                          ), 0)
+                    ),
+                    awaiting_refund_releases as (
+                        select
+                            remittance.id as remittance_id,
+                            -custody.amount_released as amount,
+                            actor.user_id as assigned_collector_user_id,
+                            false as is_other_area
+                        from lending.collection_remittances remittance
+                        join lending.collection_remittance_refund_due_release_items custody
+                          on custody.remittance_id = remittance.id
+                        cross join actor
+                        where remittance.collector_user_id = actor.user_id
+                          and remittance.status = 'submitted'
+                          and not exists (
+                              select 1
+                              from lending.collection_remittance_rejections rejection
+                              where rejection.remittance_id = remittance.id
+                          )
+                    ),
+                    ready_cash as (
+                        select amount, assigned_collector_user_id, is_other_area
+                        from ready
+                        union all
+                        select amount, assigned_collector_user_id, is_other_area
+                        from ready_refund_releases
+                    ),
+                    awaiting_cash as (
+                        select remittance_id, amount,
+                               assigned_collector_user_id, is_other_area
+                        from awaiting
+                        union all
+                        select remittance_id, amount,
+                               assigned_collector_user_id, is_other_area
+                        from awaiting_refund_releases
+                    ),
                     all_cash as (
                         select
                             amount,
                             assigned_collector_user_id,
                             is_other_area
-                        from ready
+                        from ready_cash
                         union all
                         select
                             amount,
                             assigned_collector_user_id,
                             is_other_area
-                        from awaiting
+                        from awaiting_cash
                     ),
                     other_by_collector as (
                         select
@@ -119,14 +187,14 @@ def create_collector_cash_accountability_router() -> APIRouter:
                             user_account.username
                     )
                     select
-                        coalesce((select sum(amount) from ready), 0)::numeric(18,2)
+                        coalesce((select sum(amount) from ready_cash), 0)::numeric(18,2)
                             as ready_to_remit_amount,
                         coalesce((select count(*) from ready), 0)::integer
                             as ready_to_remit_count,
-                        coalesce((select sum(amount) from awaiting), 0)::numeric(18,2)
+                        coalesce((select sum(amount) from awaiting_cash), 0)::numeric(18,2)
                             as awaiting_acceptance_amount,
                         coalesce((
-                            select count(distinct remittance_id) from awaiting
+                            select count(distinct remittance_id) from awaiting_cash
                         ), 0)::integer as awaiting_acceptance_count,
                         coalesce((
                             select sum(amount) from all_cash where not is_other_area
@@ -175,9 +243,7 @@ def create_collector_cash_accountability_router() -> APIRouter:
                 "ready_to_remit_amount": _money(ready),
                 "ready_to_remit_count": int(row["ready_to_remit_count"] or 0),
                 "awaiting_acceptance_amount": _money(awaiting),
-                "awaiting_acceptance_count": int(
-                    row["awaiting_acceptance_count"] or 0
-                ),
+                "awaiting_acceptance_count": int(row["awaiting_acceptance_count"] or 0),
             },
         }
 

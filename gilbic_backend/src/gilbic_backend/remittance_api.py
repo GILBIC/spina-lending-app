@@ -11,6 +11,7 @@ from .account_repository import PostgresAccountRepository
 from .auth_api import account_repository_dependency, auth_client_dependency
 from .auth_client import SupabaseAuthClient
 from .remittance_repository import (
+    RefundDueRemittanceItemRecord,
     RemittanceAlreadyReceived,
     RemittanceEmpty,
     RemittanceError,
@@ -74,6 +75,25 @@ def _item_payload(item: RemittanceItemRecord) -> dict[str, object]:
     }
 
 
+def _refund_due_release_payload(
+    item: RefundDueRemittanceItemRecord,
+) -> dict[str, object]:
+    return {
+        "release_id": str(item.release_id),
+        "approval_id": str(item.approval_id),
+        "adjustment_id": str(item.adjustment_id),
+        "client_id": str(item.client_id),
+        "client_name": item.client_name,
+        "loan_id": str(item.loan_id),
+        "loan_type": item.loan_type,
+        "released_at": item.released_at.isoformat(),
+        "amount": _money(item.amount),
+        "evidence_reference": item.evidence_reference,
+        "evidence_digest": item.evidence_digest,
+        "cash_effect": "outflow",
+    }
+
+
 def _summary_payload(summary: RemittanceSummaryRecord) -> dict[str, object]:
     return {
         "collection_date": summary.collection_date.isoformat(),
@@ -86,6 +106,11 @@ def _summary_payload(summary: RemittanceSummaryRecord) -> dict[str, object]:
         "client_count": summary.client_count,
         "total_amount": _money(summary.total_amount),
         "items": [_item_payload(item) for item in summary.items],
+        "refund_due_release_count": summary.refund_due_release_count,
+        "refund_due_release_total": _money(summary.refund_due_release_total),
+        "refund_due_releases": [
+            _refund_due_release_payload(item) for item in summary.refund_due_releases
+        ],
     }
 
 
@@ -122,6 +147,11 @@ def _record_payload(record) -> dict[str, object]:
         ),
         "rejection_reason": getattr(record, "rejection_reason", ""),
         "items": [_item_payload(item) for item in record.items],
+        "refund_due_release_count": record.refund_due_release_count,
+        "refund_due_release_total": _money(record.refund_due_release_total),
+        "refund_due_releases": [
+            _refund_due_release_payload(item) for item in record.refund_due_releases
+        ],
     }
 
 
