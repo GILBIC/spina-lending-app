@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -96,13 +96,17 @@ def _post_seeded_extra_principal_to_accounting(
     transaction_id,
     actor_id,
 ):
-    loan_id, client_id, posting_date = connection.execute(
+    loan_id, client_id, source_date = connection.execute(
         """
         select loan_id, client_id, collection_date
         from lending.collection_transactions where id = %s
         """,
         (transaction_id,),
     ).fetchone()
+    # This fixture proves coexistence with a previously protected posting. Keep
+    # its synthetic posting period isolated from the older 2099 accounting
+    # scenarios in this module, which intentionally share one disposable DB.
+    posting_date = source_date + timedelta(days=365)
     period_id = posting_helpers.draft_helpers.preview_helpers._open_period(
         connection,
         uuid4().hex[:10],
