@@ -129,7 +129,7 @@ git commit -m "feat(collections): replay exact protected result metadata"
 
 **Interfaces:**
 - Consumes: `FutureInstallmentPrincipalState`, `SevenBySevenExtraPrincipalPlan`, and `plan_seven_by_seven_extra_principal_tail`.
-- Produces: `ActiveExtraPrincipalEvent`, `ExtraPrincipalReplayResult`, `require_extra_principal_interest_clear`, and `replay_extra_principal_history`.
+- Produces: `ActiveExtraPrincipalEvent`, `ReplayedExtraPrincipalInstallment`, `ExtraPrincipalReplayResult`, `require_extra_principal_interest_clear`, and `replay_extra_principal_history`. Operational principal replay is independent from the later immutable Advance/Refund Due reconciliation so interleaved Advance receipts remain separate source events.
 
 - [ ] **Step 1: Write failing eligibility and replay tests**
 
@@ -170,12 +170,25 @@ class ActiveExtraPrincipalEvent:
 
 
 @dataclass(frozen=True, slots=True)
+class ReplayedExtraPrincipalInstallment:
+    installment_id: int
+    installment_number: int
+    effective_due_date: date
+    signed_amount: Decimal
+    signed_principal: Decimal
+    signed_interest: Decimal
+    operational_amount: Decimal
+    operational_principal: Decimal
+    operational_interest: Decimal
+    removed: bool
+    last_active_adjustment_id: UUID | None
+
+
+@dataclass(frozen=True, slots=True)
 class ExtraPrincipalReplayResult:
-    operational_rows: tuple[ExtraPrincipalInstallmentProjection, ...]
+    operational_rows: tuple[ReplayedExtraPrincipalInstallment, ...]
     active_adjustment_ids: tuple[UUID, ...]
     future_principal: Decimal
-    removed_future_interest: Decimal
-    refund_due: Decimal
     source_history_digest: str
     operational_state_digest: str
 
@@ -194,8 +207,9 @@ def replay_extra_principal_history(
     active_events: Iterable[ActiveExtraPrincipalEvent],
 ) -> ExtraPrincipalReplayResult:
     # Sort signed rows and events deterministically, invoke the existing planner
-    # once per event, feed each projection into the next event, and hash canonical
-    # JSON containing UUID/date/Decimal values rendered as strings.
+    # once per event with Advance excluded from principal replay, feed each
+    # surviving projection into the next event, retain removed rows in the final
+    # output, and hash canonical JSON containing UUID/date/Decimal strings.
 ```
 
 The implementation must reject duplicate event identities, non-monotonic versions, unexplained row drift, reductions exceeding replayed future principal, and nondeterministic order.

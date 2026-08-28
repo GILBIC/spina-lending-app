@@ -251,6 +251,13 @@ accounting readiness, notifications, route change, and idempotency row together.
     read-only and compares its digest and every row with persisted operational
     state.
 
+Operational principal replay and Advance/Refund Due replay are deliberately
+separate proofs. The operational amount overlay is reconstructed only from the
+signed rows plus active principal-reduction events. Active Advance and Refund Due
+are then reconciled from their own immutable allocation, classification,
+approval, release, and reversal histories. This preserves interleaved Advance
+receipts instead of incorrectly treating them as properties of a principal event.
+
 ## API and Response Compatibility
 
 - Existing scheduled Payment, Advance, Pass, Regular, No Collection, Combined
@@ -329,4 +336,3 @@ After a relevant commit is pushed, create only a Draft PR to
 all five permanent CI lanes on the same exact head. Do not merge, mark Ready,
 deploy, restart a protected backend, or apply migration 0108 to protected/live
 data.
-

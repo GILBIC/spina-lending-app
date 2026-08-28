@@ -117,7 +117,9 @@ def plan_seven_by_seven_extra_principal_tail(
             code="seven_by_seven_extra_principal_no_future_rows",
         )
 
-    normalized = tuple(_normalize_row(row) for row in future_installments)
+    normalized = tuple(
+        normalize_future_installment_principal_state(row) for row in future_installments
+    )
     ordered = tuple(
         sorted(
             normalized,
@@ -215,7 +217,7 @@ def plan_seven_by_seven_extra_principal_tail(
     )
 
 
-def _normalize_row(
+def normalize_future_installment_principal_state(
     row: FutureInstallmentPrincipalState,
 ) -> FutureInstallmentPrincipalState:
     operational_amount = money(row.contractual_amount)

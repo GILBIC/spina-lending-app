@@ -1,0 +1,306 @@
+from __future__ import annotations
+
+import json
+from collections.abc import Iterable
+from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
+from hashlib import sha256
+from uuid import UUID
+
+from .seven_by_seven_extra_principal import (
+    FutureInstallmentPrincipalState,
+    SevenBySevenExtraPrincipalError,
+    normalize_future_installment_principal_state,
+    plan_seven_by_seven_extra_principal_tail,
+)
+from .seven_by_seven_operational_allocator import ZERO, money
+
+
+class SevenBySevenExtraPrincipalReplayError(ValueError):
+    def __init__(self, message: str, *, code: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+@dataclass(frozen=True, slots=True)
+class ActiveExtraPrincipalEvent:
+    adjustment_id: UUID
+    transaction_id: UUID
+    principal_reduction: Decimal
+    resulting_operational_version: int
+
+
+@dataclass(frozen=True, slots=True)
+class ReplayedExtraPrincipalInstallment:
+    installment_id: int
+    installment_number: int
+    effective_due_date: date
+    signed_amount: Decimal
+    signed_principal: Decimal
+    signed_interest: Decimal
+    operational_amount: Decimal
+    operational_principal: Decimal
+    operational_interest: Decimal
+    removed: bool
+    last_active_adjustment_id: UUID | None
+
+
+@dataclass(frozen=True, slots=True)
+class ExtraPrincipalReplayResult:
+    operational_rows: tuple[ReplayedExtraPrincipalInstallment, ...]
+    active_adjustment_ids: tuple[UUID, ...]
+    future_principal: Decimal
+    source_history_digest: str
+    operational_state_digest: str
+
+
+def require_extra_principal_interest_clear(
+    *,
+    past_due_interest: Decimal,
+    today_interest: Decimal,
+) -> None:
+    if money(past_due_interest) != ZERO or money(today_interest) != ZERO:
+        raise SevenBySevenExtraPrincipalReplayError(
+            "Past Due Interest and Today Interest must be fully paid before "
+            "7x7 Extra Principal.",
+            code="seven_by_seven_extra_principal_interest_outstanding",
+        )
+
+
+def replay_extra_principal_history(
+    *,
+    signed_installments: Iterable[FutureInstallmentPrincipalState],
+    active_events: Iterable[ActiveExtraPrincipalEvent],
+) -> ExtraPrincipalReplayResult:
+    try:
+        signed_rows = tuple(
+            sorted(
+                (
+                    normalize_future_installment_principal_state(row)
+                    for row in signed_installments
+                ),
+                key=lambda row: (
+                    row.effective_due_date,
+                    row.installment_number,
+                    row.installment_id,
+                ),
+            )
+        )
+    except SevenBySevenExtraPrincipalError as error:
+        raise _replay_conflict(str(error)) from error
+
+    if not signed_rows:
+        raise _replay_conflict(
+            "The immutable signed 7x7 schedule has no installments to replay."
+        )
+    if len({row.installment_id for row in signed_rows}) != len(signed_rows):
+        raise _replay_conflict(
+            "The immutable signed 7x7 schedule contains duplicate installment identities."
+        )
+
+    events = tuple(
+        sorted(
+            (
+                ActiveExtraPrincipalEvent(
+                    adjustment_id=event.adjustment_id,
+                    transaction_id=event.transaction_id,
+                    principal_reduction=money(event.principal_reduction),
+                    resulting_operational_version=event.resulting_operational_version,
+                )
+                for event in active_events
+            ),
+            key=lambda event: (
+                event.resulting_operational_version,
+                str(event.adjustment_id),
+            ),
+        )
+    )
+    _validate_events(events)
+
+    current_rows = signed_rows
+    final_by_id = {
+        row.installment_id: ReplayedExtraPrincipalInstallment(
+            installment_id=row.installment_id,
+            installment_number=row.installment_number,
+            effective_due_date=row.effective_due_date,
+            signed_amount=money(
+                row.signed_contractual_amount or row.contractual_amount
+            ),
+            signed_principal=money(
+                row.signed_principal_component or row.principal_component
+            ),
+            signed_interest=money(
+                row.signed_interest_component
+                if row.signed_interest_component is not None
+                else row.interest_component
+            ),
+            operational_amount=money(row.contractual_amount),
+            operational_principal=money(row.principal_component),
+            operational_interest=money(row.interest_component),
+            removed=False,
+            last_active_adjustment_id=None,
+        )
+        for row in signed_rows
+    }
+
+    for event in events:
+        if not current_rows:
+            raise _replay_conflict(
+                "An active Extra Principal event exists after the entire signed tail was removed."
+            )
+        try:
+            plan = plan_seven_by_seven_extra_principal_tail(
+                principal_reduction=event.principal_reduction,
+                future_installments=current_rows,
+            )
+        except SevenBySevenExtraPrincipalError as error:
+            raise _replay_conflict(
+                "Active Extra Principal history cannot be replayed safely against "
+                f"the signed 7x7 schedule: {error}"
+            ) from error
+
+        next_rows: list[FutureInstallmentPrincipalState] = []
+        for projection in plan.installments:
+            final_by_id[projection.installment_id] = ReplayedExtraPrincipalInstallment(
+                installment_id=projection.installment_id,
+                installment_number=projection.installment_number,
+                effective_due_date=projection.effective_due_date,
+                signed_amount=projection.signed_contractual_amount,
+                signed_principal=projection.signed_principal_component,
+                signed_interest=projection.signed_interest_component,
+                operational_amount=projection.operational_amount,
+                operational_principal=(projection.operational_principal_component),
+                operational_interest=(
+                    ZERO
+                    if projection.removed_from_operational_schedule
+                    else projection.signed_interest_component
+                ),
+                removed=projection.removed_from_operational_schedule,
+                last_active_adjustment_id=event.adjustment_id,
+            )
+            if projection.removed_from_operational_schedule:
+                continue
+            next_rows.append(
+                FutureInstallmentPrincipalState(
+                    installment_id=projection.installment_id,
+                    installment_number=projection.installment_number,
+                    effective_due_date=projection.effective_due_date,
+                    contractual_amount=projection.operational_amount,
+                    principal_component=(projection.operational_principal_component),
+                    interest_component=projection.signed_interest_component,
+                    advance_allocated=ZERO,
+                    signed_contractual_amount=(projection.signed_contractual_amount),
+                    signed_principal_component=(projection.signed_principal_component),
+                    signed_interest_component=projection.signed_interest_component,
+                )
+            )
+        current_rows = tuple(next_rows)
+
+    operational_rows = tuple(final_by_id[row.installment_id] for row in signed_rows)
+    future_principal = money(
+        sum((row.operational_principal for row in operational_rows), ZERO)
+    )
+    source_payload = {
+        "events": [
+            {
+                "adjustment_id": str(event.adjustment_id),
+                "principal_reduction": _money_text(event.principal_reduction),
+                "resulting_operational_version": (event.resulting_operational_version),
+                "transaction_id": str(event.transaction_id),
+            }
+            for event in events
+        ],
+        "signed_installments": [
+            {
+                "effective_due_date": row.effective_due_date.isoformat(),
+                "installment_id": row.installment_id,
+                "installment_number": row.installment_number,
+                "signed_amount": _money_text(
+                    row.signed_contractual_amount or row.contractual_amount
+                ),
+                "signed_interest": _money_text(
+                    row.signed_interest_component
+                    if row.signed_interest_component is not None
+                    else row.interest_component
+                ),
+                "signed_principal": _money_text(
+                    row.signed_principal_component or row.principal_component
+                ),
+            }
+            for row in signed_rows
+        ],
+    }
+    operational_payload = {
+        "active_adjustment_ids": [str(event.adjustment_id) for event in events],
+        "installments": [
+            {
+                "effective_due_date": row.effective_due_date.isoformat(),
+                "installment_id": row.installment_id,
+                "installment_number": row.installment_number,
+                "last_active_adjustment_id": (
+                    str(row.last_active_adjustment_id)
+                    if row.last_active_adjustment_id is not None
+                    else None
+                ),
+                "operational_amount": _money_text(row.operational_amount),
+                "operational_interest": _money_text(row.operational_interest),
+                "operational_principal": _money_text(row.operational_principal),
+                "removed": row.removed,
+                "signed_amount": _money_text(row.signed_amount),
+                "signed_interest": _money_text(row.signed_interest),
+                "signed_principal": _money_text(row.signed_principal),
+            }
+            for row in operational_rows
+        ],
+    }
+    return ExtraPrincipalReplayResult(
+        operational_rows=operational_rows,
+        active_adjustment_ids=tuple(event.adjustment_id for event in events),
+        future_principal=future_principal,
+        source_history_digest=_digest(source_payload),
+        operational_state_digest=_digest(operational_payload),
+    )
+
+
+def _validate_events(events: tuple[ActiveExtraPrincipalEvent, ...]) -> None:
+    if len({event.adjustment_id for event in events}) != len(events):
+        raise _replay_conflict(
+            "Active Extra Principal history contains a duplicate adjustment identity."
+        )
+    if len({event.transaction_id for event in events}) != len(events):
+        raise _replay_conflict(
+            "Active Extra Principal history contains a duplicate transaction identity."
+        )
+    if len({event.resulting_operational_version for event in events}) != len(events):
+        raise _replay_conflict(
+            "Active Extra Principal history contains a duplicate operational version."
+        )
+    if any(
+        event.resulting_operational_version <= 0 or event.principal_reduction <= ZERO
+        for event in events
+    ):
+        raise _replay_conflict(
+            "Active Extra Principal history contains an invalid version or reduction."
+        )
+
+
+def _digest(payload: dict[str, object]) -> str:
+    canonical = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    )
+    return sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _money_text(value: Decimal) -> str:
+    return format(money(value), ".2f")
+
+
+def _replay_conflict(message: str) -> SevenBySevenExtraPrincipalReplayError:
+    return SevenBySevenExtraPrincipalReplayError(
+        message,
+        code="seven_by_seven_extra_principal_replay_conflict",
+    )
