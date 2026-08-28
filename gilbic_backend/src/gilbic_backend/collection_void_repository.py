@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
-from decimal import Decimal, ROUND_HALF_UP
-from typing import Any
+from datetime import UTC, date, datetime
+from decimal import ROUND_HALF_UP, Decimal
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from .database import open_connection
+
+if TYPE_CHECKING:
+    from .seven_by_seven_extra_principal_reversal import (
+        ExtraPrincipalReversalRequestResult,
+    )
 
 
 MONEY = Decimal("0.01")
@@ -143,7 +148,8 @@ class PostgresCollectionVoidRepository:
         actor_user_id: UUID,
         transaction_id: UUID,
         reason: str,
-    ) -> CollectionVoidRecord:
+        idempotency_key: UUID | None = None,
+    ) -> CollectionVoidRecord | ExtraPrincipalReversalRequestResult:
         normalized_reason = " ".join(reason.split())
         if len(normalized_reason) < 3:
             raise CollectionVoidInvalid(
@@ -153,10 +159,37 @@ class PostgresCollectionVoidRepository:
         with open_connection() as connection:
             with connection.transaction():
                 with connection.cursor(row_factory=dict_row) as cursor:
-                    cursor.execute(
-                        "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
-                        (f"gilbic-management-collection-void:{transaction_id}",),
-                    )
+                    adjustment_row = cursor.execute(
+                        """
+                        select id
+                        from lending.seven_by_seven_extra_principal_adjustments
+                        where transaction_id = %s
+                        """,
+                        (transaction_id,),
+                    ).fetchone()
+                    reversal_request = None
+                    if adjustment_row is not None:
+                        from .seven_by_seven_extra_principal_reversal import (
+                            begin_extra_principal_reversal_request,
+                        )
+
+                        reversal_request, replay = (
+                            begin_extra_principal_reversal_request(
+                                cursor,
+                                idempotency_key=idempotency_key,
+                                actor_user_id=actor_user_id,
+                                transaction_id=transaction_id,
+                                adjustment_id=adjustment_row["id"],
+                                reason=normalized_reason,
+                            )
+                        )
+                        if replay is not None:
+                            return replay
+                    else:
+                        cursor.execute(
+                            "select pg_advisory_xact_lock(hashtextextended(%s, 0))",
+                            (f"gilbic-management-collection-void:{transaction_id}",),
+                        )
                     cursor.execute(
                         """
                         select
@@ -196,7 +229,10 @@ class PostgresCollectionVoidRepository:
                         raise CollectionVoidConflict(
                             "This collection receipt was already voided."
                         )
-                    if transaction["is_locked"] or transaction["remittance_id"] is not None:
+                    if (
+                        transaction["is_locked"]
+                        or transaction["remittance_id"] is not None
+                    ):
                         raise CollectionVoidLocked(
                             "This collection is already included in a remittance and cannot be voided."
                         )
@@ -207,12 +243,29 @@ class PostgresCollectionVoidRepository:
                         else {}
                     )
                     expected_state_version = details.get("state_version_after")
-                    if expected_state_version is None or int(expected_state_version) != int(
-                        transaction["state_version"]
-                    ):
+                    if expected_state_version is None or int(
+                        expected_state_version
+                    ) != int(transaction["state_version"]):
                         raise CollectionVoidConflict(
                             "The loan changed after this collection. Void only the latest loan entry."
                         )
+
+                    if reversal_request is not None:
+                        from .seven_by_seven_extra_principal_reversal import (
+                            lock_released_refund_amount,
+                            store_blocked_reversal_request,
+                        )
+
+                        released_refund_amount = lock_released_refund_amount(
+                            cursor,
+                            adjustment_id=reversal_request.adjustment_id,
+                        )
+                        if released_refund_amount > Decimal("0.00"):
+                            return store_blocked_reversal_request(
+                                cursor,
+                                request=reversal_request,
+                                released_refund_amount=released_refund_amount,
+                            )
 
                     cursor.execute(
                         """
@@ -289,7 +342,7 @@ class PostgresCollectionVoidRepository:
                     restored_advance_until = restored["advance_until_before"]
                     restored_last_payment_date = restored["last_payment_date_before"]
                     restored_note = str(restored["note_before"] or "")
-                    voided_at = datetime.now(timezone.utc)
+                    voided_at = datetime.now(UTC)
                     next_state_version = int(transaction["state_version"]) + 1
 
                     transaction_snapshot = self._snapshot(
@@ -297,7 +350,9 @@ class PostgresCollectionVoidRepository:
                         covered_dates=covered_dates,
                     )
                     state_before = {
-                        "remaining_balance": str(transaction["state_remaining_balance"]),
+                        "remaining_balance": str(
+                            transaction["state_remaining_balance"]
+                        ),
                         "pass_count": int(transaction["state_pass_count"]),
                         "last_payment_date": (
                             transaction["state_last_payment_date"].isoformat()
@@ -328,6 +383,25 @@ class PostgresCollectionVoidRepository:
                         "note": restored_note,
                         "state_version": next_state_version,
                     }
+                    prepared_void_record = CollectionVoidRecord(
+                        transaction_id=transaction_id,
+                        receipt_number=str(transaction["receipt_number"]),
+                        client_id=transaction["client_id"],
+                        client_code=str(transaction["client_code"]),
+                        client_name=str(transaction["client_name"]),
+                        loan_id=transaction["loan_id"],
+                        collector_user_id=transaction["collector_user_id"],
+                        collector_name=str(transaction["collector_name"]),
+                        collection_date=transaction["collection_date"],
+                        entry_type=str(transaction["entry_type"]),
+                        amount=self._money(transaction["amount"]),
+                        covered_dates=covered_dates,
+                        restored_balance=restored_balance,
+                        state_version=next_state_version,
+                        reason=normalized_reason,
+                        voided_at=voided_at,
+                    )
+                    collection_void_id = uuid4()
 
                     cursor.execute(
                         "delete from lending.collection_covered_dates where transaction_id = %s",
@@ -348,7 +422,7 @@ class PostgresCollectionVoidRepository:
                         ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """,
                         (
-                            uuid4(),
+                            collection_void_id,
                             transaction_id,
                             actor_user_id,
                             normalized_reason,
@@ -359,6 +433,18 @@ class PostgresCollectionVoidRepository:
                             voided_at,
                         ),
                     )
+
+                    if reversal_request is not None:
+                        from .seven_by_seven_extra_principal_reversal import (
+                            store_completed_reversal_request,
+                        )
+
+                        store_completed_reversal_request(
+                            cursor,
+                            request=reversal_request,
+                            collection_void_id=collection_void_id,
+                            collection_void=prepared_void_record,
+                        )
 
                     updated_details = dict(details)
                     updated_details.update(
@@ -509,24 +595,7 @@ class PostgresCollectionVoidRepository:
                             },
                         )
 
-        return CollectionVoidRecord(
-            transaction_id=transaction_id,
-            receipt_number=str(transaction["receipt_number"]),
-            client_id=transaction["client_id"],
-            client_code=str(transaction["client_code"]),
-            client_name=str(transaction["client_name"]),
-            loan_id=transaction["loan_id"],
-            collector_user_id=transaction["collector_user_id"],
-            collector_name=str(transaction["collector_name"]),
-            collection_date=transaction["collection_date"],
-            entry_type=str(transaction["entry_type"]),
-            amount=self._money(transaction["amount"]),
-            covered_dates=covered_dates,
-            restored_balance=restored_balance,
-            state_version=next_state_version,
-            reason=normalized_reason,
-            voided_at=voided_at,
-        )
+        return prepared_void_record
 
     @staticmethod
     def _money(value: Decimal | int | str) -> Decimal:
