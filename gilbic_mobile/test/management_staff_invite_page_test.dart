@@ -135,6 +135,44 @@ void main() {
       isNotNull,
     );
   });
+
+  testWidgets(
+    'failed uncertain-result refresh keeps invitation retry blocked',
+    (tester) async {
+      final repository = _InviteRepository(
+        onInvite: () async => throw const SpinaApiException(
+          'Connection timed out.',
+          code: 'network_unavailable',
+        ),
+      );
+      await _pumpInvite(
+        tester,
+        repository: repository,
+        onUncertainResult: () async => throw StateError('refresh failed'),
+      );
+      await tester.pumpAndSettle();
+      await _fillForm(tester);
+
+      await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+      await tester.pumpAndSettle();
+
+      expect(repository.inviteCalls, 1);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('management-staff-invite-submit')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(
+        find.text(
+          'Refresh the staff list before trying this invitation again.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 }
 
 Future<void> _fillForm(WidgetTester tester) async {

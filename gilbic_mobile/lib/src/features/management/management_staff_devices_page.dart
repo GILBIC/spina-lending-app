@@ -174,6 +174,7 @@ class _ManagementStaffDevicesPageState
 
   void _onSearchChanged(String value) {
     _query = value;
+    _requestGeneration += 1;
     _searchTimer?.cancel();
     _searchTimer = Timer(_searchDelay, () {
       if (mounted) {

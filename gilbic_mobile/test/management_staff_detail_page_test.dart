@@ -40,6 +40,16 @@ void main() {
         find.byKey(const Key('management-staff-devices-section')),
         testCase.$3 ? findsOneWidget : findsNothing,
       );
+      expect(
+        find.byKey(
+          const Key('management-staff-account-permission-explanation'),
+        ),
+        testCase.$2 || !testCase.$3 ? findsNothing : findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('management-staff-device-permission-explanation')),
+        testCase.$3 || !testCase.$2 ? findsNothing : findsOneWidget,
+      );
       expect(repository.loadDeviceCalls, testCase.$3 ? 1 : 0);
     });
   }
@@ -85,6 +95,24 @@ void main() {
     expect(find.text('device-hash-secret'), findsNothing);
     expect(find.text('Ana West'), findsWidgets);
     expect(find.text('Android'), findsOneWidget);
+  });
+
+  testWidgets('renders authoritative account and phone metadata', (
+    tester,
+  ) async {
+    await _pumpDetail(
+      tester,
+      repository: _DetailRepository(devices: <ManagementDevice>[_device]),
+      session: _session(const <String>['account.manage', 'device.manage']),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Registered devices: 1'), findsOneWidget);
+    expect(find.text('Created: 2026-08-28 08:00 UTC'), findsOneWidget);
+    expect(find.text('Updated: 2026-08-28 09:00 UTC'), findsOneWidget);
+    expect(find.text('App version: 0.4.0+4'), findsOneWidget);
+    expect(find.text('Registered: 2026-08-28 08:00 UTC'), findsOneWidget);
+    expect(find.text('Last seen: 2026-08-28 09:00 UTC'), findsOneWidget);
   });
 
   testWidgets('disables destructive changes to the acting account', (
@@ -141,6 +169,39 @@ void main() {
       isNull,
     );
   });
+
+  for (final status in <String>['pending', 'active', 'revoked']) {
+    testWidgets('disables $status phone mutation for the acting account', (
+      tester,
+    ) async {
+      final ownSession = UserSession(
+        userId: _account.id,
+        username: 'ana.west',
+        displayName: 'Ana West',
+        role: AppRole.management,
+        rawRole: 'management',
+        accessToken: 'access-token',
+        permissions: const <String>['device.manage'],
+      );
+      await _pumpDetail(
+        tester,
+        repository: _DetailRepository(
+          devices: <ManagementDevice>[_deviceWith(status: status)],
+        ),
+        session: ownSession,
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<ButtonStyleButton>(
+              find.byKey(const Key('management-device-action')),
+            )
+            .onPressed,
+        isNull,
+      );
+    });
+  }
 
   testWidgets('shows success only after mutation and authoritative reloads', (
     tester,
@@ -207,6 +268,93 @@ void main() {
     expect(find.byKey(const Key('management-staff-refresh')), findsOneWidget);
     expect(find.text('Collector'), findsWidgets);
     expect(repository.setRoleCalls, 1);
+  });
+
+  testWidgets(
+    'uncertain mutation remains locked until authoritative reload succeeds',
+    (tester) async {
+      final reload = Completer<ManagementStaffAccount>();
+      var reloads = 0;
+      final repository = _DetailRepository(
+        onSetRole: (_, __) async => throw const SpinaApiException(
+          'Connection lost.',
+          code: 'network_unavailable',
+        ),
+      );
+      await _pumpDetail(
+        tester,
+        repository: repository,
+        session: _session(const <String>['account.manage']),
+        reloadAccount: () {
+          reloads += 1;
+          return reload.future;
+        },
+      );
+      await tester.pumpAndSettle();
+
+      await _requestEmployeeRole(tester);
+      await tester.pump();
+      expect(reloads, 1);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('management-staff-role-save')),
+            )
+            .onPressed,
+        isNull,
+      );
+
+      reload.complete(_account);
+      await tester.pumpAndSettle();
+      await _selectDropdown(
+        tester,
+        const Key('management-staff-role-picker'),
+        'Employee',
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('management-staff-role-save')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      expect(repository.setRoleCalls, 1);
+    },
+  );
+
+  testWidgets('destructive account and phone actions use error styling', (
+    tester,
+  ) async {
+    await _pumpDetail(
+      tester,
+      repository: _DetailRepository(devices: <ManagementDevice>[_device]),
+      session: _session(const <String>['account.manage', 'device.manage']),
+    );
+    await tester.pumpAndSettle();
+    await _selectDropdown(
+      tester,
+      const Key('management-staff-status-picker'),
+      'Locked',
+    );
+    final colors = Theme.of(
+      tester.element(find.byType(ManagementStaffDetailPage)),
+    ).colorScheme;
+    final statusButton = tester.widget<FilledButton>(
+      find.byKey(const Key('management-staff-status-save')),
+    );
+    final deviceButton = tester.widget<ButtonStyleButton>(
+      find.byKey(const Key('management-device-action')),
+    );
+
+    expect(
+      statusButton.style?.backgroundColor?.resolve(<WidgetState>{}),
+      colors.error,
+    );
+    expect(
+      deviceButton.style?.foregroundColor?.resolve(<WidgetState>{}),
+      colors.error,
+    );
   });
 
   testWidgets('403 mutation denial offers refresh and back', (tester) async {
@@ -296,7 +444,9 @@ void main() {
       session: _session(const <String>['device.manage']),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('management-device-action')));
+    final deviceAction = find.byKey(const Key('management-device-action'));
+    await tester.ensureVisible(deviceAction);
+    await tester.tap(deviceAction);
     await tester.pumpAndSettle();
 
     expect(find.text('Ana West'), findsWidgets);
@@ -323,7 +473,9 @@ Future<void> _requestEmployeeRole(WidgetTester tester) async {
 }
 
 Future<void> _selectDropdown(WidgetTester tester, Key key, String label) async {
-  await tester.tap(find.byKey(key));
+  final dropdown = find.byKey(key);
+  await tester.ensureVisible(dropdown);
+  await tester.tap(dropdown);
   await tester.pumpAndSettle();
   await tester.tap(find.text(label).last);
   await tester.pumpAndSettle();
@@ -407,6 +559,15 @@ final _pendingDevice = ManagementDevice(
   status: 'pending',
   registeredAt: DateTime.utc(2026, 8, 28, 8),
   lastSeenAt: null,
+);
+
+ManagementDevice _deviceWith({required String status}) => ManagementDevice(
+  id: _device.id,
+  platform: _device.platform,
+  appVersion: _device.appVersion,
+  status: status,
+  registeredAt: _device.registeredAt,
+  lastSeenAt: _device.lastSeenAt,
 );
 
 final class _DetailRepository implements ManagementAdministrationRepository {

@@ -40,6 +40,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   String? _success;
   bool _loading = true;
   bool _mutating = false;
+  bool _stateUncertain = false;
   bool _permissionDenied = false;
 
   bool get _canManageAccounts => widget.session.hasPermission('account.manage');
@@ -106,7 +107,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
     await _reloadCurrent(clearMessages: clearMessages);
   }
 
-  Future<void> _reloadCurrent({required bool clearMessages}) async {
+  Future<bool> _reloadCurrent({required bool clearMessages}) async {
     if (clearMessages && mounted) {
       setState(() {
         _error = null;
@@ -125,15 +126,17 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
         );
       }
       if (!mounted) {
-        return;
+        return false;
       }
       setState(() {
         _account = fresh;
         _selectedRole = _firstRole(fresh);
         _selectedStatus = fresh.status;
         _devices = devices;
+        _stateUncertain = false;
         _permissionDenied = false;
       });
+      return true;
     } on SpinaApiException catch (error) {
       if (mounted) {
         setState(() {
@@ -141,6 +144,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
           _error = error.message;
         });
       }
+      return false;
     } on Object {
       if (mounted) {
         setState(
@@ -148,6 +152,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
               _error = 'The authoritative staff record could not be refreshed.',
         );
       }
+      return false;
     }
   }
 
@@ -162,6 +167,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
       requested: _label(requested),
       consequence:
           'Changing this role changes future access after the server approves it.',
+      destructive: true,
     );
     if (!confirmed) {
       return;
@@ -188,6 +194,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
       requested: _label(requested),
       consequence:
           'This changes whether the staff account can use protected SPINA access.',
+      destructive: requested == 'inactive' || requested == 'locked',
     );
     if (!confirmed) {
       return;
@@ -228,6 +235,9 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
       current: _label(device.status),
       requested: _label(requested),
       consequence: consequence,
+      destructive:
+          requested == 'revoked' ||
+          (device.status == 'pending' && _account.roles.contains('collector')),
     );
     if (!confirmed) {
       return;
@@ -248,6 +258,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
     required String current,
     required String requested,
     required String consequence,
+    required bool destructive,
   }) async {
     return await showDialog<bool>(
           context: context,
@@ -271,6 +282,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
               ),
               FilledButton(
                 key: const Key('management-action-confirm'),
+                style: destructive ? _destructiveFilledStyle(context) : null,
                 onPressed: () => Navigator.of(context).pop(true),
                 child: const Text('Confirm'),
               ),
@@ -315,28 +327,37 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
         _mutating = false;
       });
     } on SpinaApiException catch (error) {
+      var recovered = true;
       if (error.statusCode == 404) {
-        await widget.onDirectoryRefresh();
-      } else if (error.statusCode == 409) {
-        await _reloadCurrent(clearMessages: false);
+        try {
+          await widget.onDirectoryRefresh();
+        } on Object {
+          recovered = false;
+        }
+      } else if (error.statusCode != 403) {
+        recovered = await _reloadCurrent(clearMessages: false);
       }
       if (!mounted) {
         return;
       }
       setState(() {
         _mutating = false;
+        _stateUncertain = !recovered;
         _permissionDenied = error.statusCode == 403;
         _error = error.statusCode == 404
             ? 'This staff record is no longer available. The directory was refreshed.'
             : error.message;
       });
     } on Object {
-      if (mounted) {
-        setState(() {
-          _mutating = false;
-          _error = 'The change could not be confirmed by the server.';
-        });
+      final recovered = await _reloadCurrent(clearMessages: false);
+      if (!mounted) {
+        return;
       }
+      setState(() {
+        _mutating = false;
+        _stateUncertain = !recovered;
+        _error = 'The change could not be confirmed by the server.';
+      });
     }
   }
 
@@ -406,6 +427,12 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
                       Chip(label: Text(_label(_account.status))),
                     ],
                   ),
+                  const SizedBox(height: 10),
+                  Text('Registered devices: ${_account.deviceCount}'),
+                  const SizedBox(height: 3),
+                  Text('Created: ${_formatTimestamp(_account.createdAt)}'),
+                  const SizedBox(height: 3),
+                  Text('Updated: ${_formatTimestamp(_account.updatedAt)}'),
                 ],
               ),
             ),
@@ -443,6 +470,22 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
               ),
             ),
           ],
+          if (!_canManageAccounts && _canManageDevices) ...[
+            const SizedBox(height: 12),
+            const _PermissionExplanation(
+              key: Key('management-staff-account-permission-explanation'),
+              message:
+                  'Your current server permissions allow phone administration, but not role or account-status changes.',
+            ),
+          ],
+          if (!_canManageDevices && _canManageAccounts) ...[
+            const SizedBox(height: 12),
+            const _PermissionExplanation(
+              key: Key('management-staff-device-permission-explanation'),
+              message:
+                  'Your current server permissions allow account administration, but not registered-phone visibility or changes.',
+            ),
+          ],
           if (_canManageAccounts) ...[
             const SizedBox(height: 12),
             _roleControl(context),
@@ -462,6 +505,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
     final current = _firstRole(_account);
     final enabled =
         !_mutating &&
+        !_stateUncertain &&
         !_isOwnAccount &&
         _selectedRole != null &&
         _selectedRole != current;
@@ -485,13 +529,14 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
                     ),
                   )
                   .toList(growable: false),
-              onChanged: _mutating
+              onChanged: _mutating || _stateUncertain
                   ? null
                   : (value) => setState(() => _selectedRole = value),
             ),
             const SizedBox(height: 10),
             FilledButton(
               key: const Key('management-staff-role-save'),
+              style: _destructiveFilledStyle(context),
               onPressed: enabled ? _changeRole : null,
               child: const Text('Change role'),
             ),
@@ -507,6 +552,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
         _isOwnAccount && (requested == 'inactive' || requested == 'locked');
     final enabled =
         !_mutating &&
+        !_stateUncertain &&
         !selfDestructive &&
         requested != null &&
         requested != _account.status;
@@ -533,13 +579,16 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
                     ),
                   )
                   .toList(growable: false),
-              onChanged: _mutating
+              onChanged: _mutating || _stateUncertain
                   ? null
                   : (value) => setState(() => _selectedStatus = value),
             ),
             const SizedBox(height: 10),
             FilledButton(
               key: const Key('management-staff-status-save'),
+              style: requested == 'inactive' || requested == 'locked'
+                  ? _destructiveFilledStyle(context)
+                  : null,
               onPressed: enabled ? _changeStatus : null,
               child: const Text('Change account status'),
             ),
@@ -588,24 +637,60 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
       ('revoked', 'active') => 'Restore phone',
       _ => 'Keep current status',
     };
-    final selfRevocation =
-        _isOwnAccount && device.status == 'active' && requested == 'revoked';
-    final enabled = !_mutating && !selfRevocation && requested != device.status;
+    final enabled =
+        !_mutating &&
+        !_stateUncertain &&
+        !_isOwnAccount &&
+        requested != device.status;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(_label(device.platform)),
         const SizedBox(height: 3),
         Text('Status: ${_label(device.status)}'),
+        const SizedBox(height: 3),
+        Text('App version: ${device.appVersion ?? 'Not reported'}'),
+        const SizedBox(height: 3),
+        Text('Registered: ${_formatTimestamp(device.registeredAt)}'),
+        const SizedBox(height: 3),
+        Text(
+          'Last seen: ${device.lastSeenAt == null ? 'Not yet reported' : _formatTimestamp(device.lastSeenAt!)}',
+        ),
         const SizedBox(height: 8),
         OutlinedButton(
           key: index == 0
               ? const Key('management-device-action')
               : Key('management-device-action-$index'),
+          style: requested == 'revoked'
+              ? _destructiveOutlinedStyle(context)
+              : null,
           onPressed: enabled ? () => _changeDevice(device) : null,
           child: Text(actionLabel),
         ),
       ],
+    );
+  }
+}
+
+class _PermissionExplanation extends StatelessWidget {
+  const _PermissionExplanation({required this.message, super.key});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.info_outline),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message)),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -655,4 +740,28 @@ String _label(String value) {
 
 String? _firstRole(ManagementStaffAccount account) {
   return account.roles.isEmpty ? null : account.roles.first;
+}
+
+String _formatTimestamp(DateTime value) {
+  final utc = value.toUtc();
+  String twoDigits(int number) => number.toString().padLeft(2, '0');
+  return '${utc.year.toString().padLeft(4, '0')}-'
+      '${twoDigits(utc.month)}-${twoDigits(utc.day)} '
+      '${twoDigits(utc.hour)}:${twoDigits(utc.minute)} UTC';
+}
+
+ButtonStyle _destructiveFilledStyle(BuildContext context) {
+  final colors = Theme.of(context).colorScheme;
+  return FilledButton.styleFrom(
+    backgroundColor: colors.error,
+    foregroundColor: colors.onError,
+  );
+}
+
+ButtonStyle _destructiveOutlinedStyle(BuildContext context) {
+  final error = Theme.of(context).colorScheme.error;
+  return OutlinedButton.styleFrom(
+    foregroundColor: error,
+    side: BorderSide(color: error),
+  );
 }

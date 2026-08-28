@@ -31,6 +31,7 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
   String? _role;
   String? _error;
   bool _submitting = false;
+  bool _retryBlocked = false;
 
   @override
   void initState() {
@@ -64,7 +65,7 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
   }
 
   Future<void> _submit() async {
-    if (_submitting) {
+    if (_submitting || _retryBlocked) {
       return;
     }
     final deviceId = _deviceId;
@@ -104,13 +105,17 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
       }
       if (error.code == 'network_unavailable') {
         setState(() {
+          _retryBlocked = true;
           _error =
               'Refresh the staff list before trying this invitation again.';
         });
         try {
           await widget.onUncertainResult();
+          if (mounted) {
+            setState(() => _retryBlocked = false);
+          }
         } on Object {
-          // Keep the invitation blocked until this explicit refresh finishes.
+          // Keep retry blocked until Management returns to a refreshed list.
         }
       } else {
         setState(() => _error = error.message);
@@ -123,12 +128,16 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
         return;
       }
       setState(() {
+        _retryBlocked = true;
         _error = 'Refresh the staff list before trying this invitation again.';
       });
       try {
         await widget.onUncertainResult();
+        if (mounted) {
+          setState(() => _retryBlocked = false);
+        }
       } on Object {
-        // The displayed guidance remains authoritative when refresh also fails.
+        // Keep retry blocked until Management returns to a refreshed list.
       }
       if (mounted) {
         setState(() => _submitting = false);
@@ -211,7 +220,7 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
                   const SizedBox(height: 18),
                   FilledButton.icon(
                     key: const Key('management-staff-invite-submit'),
-                    onPressed: _submitting || _deviceId == null
+                    onPressed: _submitting || _retryBlocked || _deviceId == null
                         ? null
                         : _submit,
                     icon: _submitting

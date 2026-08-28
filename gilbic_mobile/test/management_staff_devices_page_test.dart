@@ -244,6 +244,48 @@ void main() {
     expect(find.text('Cara North'), findsNothing);
   });
 
+  testWidgets('invalidates an in-flight search as soon as the query changes', (
+    tester,
+  ) async {
+    final oldResponse = Completer<ManagementStaffPage>();
+    final newResponse = Completer<ManagementStaffPage>();
+    final repository = _FakeAdministrationRepository(
+      onLoad: (request) {
+        if (request.query == 'old') {
+          return oldResponse.future;
+        }
+        if (request.query == 'new') {
+          return newResponse.future;
+        }
+        return Future<ManagementStaffPage>.value(
+          _page(<ManagementStaffAccount>[_ana]),
+        );
+      },
+    );
+
+    await _pumpPage(tester, repository);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('management-staff-search')),
+      'old',
+    );
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(repository.loadCalls.last.query, 'old');
+
+    await tester.enterText(
+      find.byKey(const Key('management-staff-search')),
+      'new',
+    );
+    oldResponse.complete(_page(<ManagementStaffAccount>[_cara]));
+    await tester.pump();
+
+    expect(find.text('Cara North'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 350));
+    newResponse.complete(_page(<ManagementStaffAccount>[_ben]));
+    await tester.pumpAndSettle();
+    expect(find.text('Ben South'), findsOneWidget);
+  });
+
   testWidgets('fits a small phone with larger text without overflow', (
     tester,
   ) async {
