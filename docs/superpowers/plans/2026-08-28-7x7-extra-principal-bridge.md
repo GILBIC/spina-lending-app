@@ -232,11 +232,13 @@ git commit -m "feat(7x7): add deterministic extra principal replay"
 **Files:**
 - Create: `gilbic_backend/sql/0108_add_7x7_extra_principal_bridge.sql`
 - Create: `gilbic_backend/tests/test_seven_by_seven_extra_principal_bridge_migration.py`
+- Create: `gilbic_backend/tests/test_seven_by_seven_extra_principal_bridge_postgres.py`
+- Create: `tools/run_7x7_extra_principal_bridge_disposable_postgres_validation.py`
 - Modify: `gilbic_backend/tests/test_disposable_validation_migration_boundaries.py`
 
 **Interfaces:**
 - Consumes: migration 0106 tables/views and collection void/accounting reversal trigger order from migrations 0044, 0067, and 0068.
-- Produces: the five immutable evidence tables and derived status/active-Advance views defined by the spec.
+- Produces: seven immutable evidence tables and derived status/active-Advance views defined by the spec.
 
 - [ ] **Step 1: Write migration contract tests**
 
@@ -246,17 +248,18 @@ def test_0108_is_forward_only_and_does_not_rewrite_0106():
     assert "seven_by_seven_extra_principal_reversal_requests" in sql
     assert "seven_by_seven_extra_principal_reversal_items" in sql
     assert "loan_unused_advance_refund_due_approvals" in sql
+    assert "loan_unused_advance_refund_due_approval_items" in sql
     assert "loan_unused_advance_refund_due_releases" in sql
     assert "loan_unused_advance_refund_due_release_items" in sql
     assert "DROP TABLE" not in sql.upper()
     assert "UPDATE lending.seven_by_seven_extra_principal_adjustments" not in sql
 
-
-def test_0108_installs_reconstruction_before_accounting_reversal():
-    sql = MIGRATION.read_text(encoding="utf-8")
-    assert "accounting_01a_extra_principal_operational_reversal" in sql
-    assert "accounting_01b_extra_principal_operational_reversal_guard" in sql
 ```
+
+The real PostgreSQL test also introspects installed tables, views, guard
+triggers, and the nullable reconstruction identity. Collection-void trigger
+ordering is installed and tested with the controlled reversal in Task 8, not as
+an unimplemented placeholder in this schema-only task.
 
 - [ ] **Step 2: Run migration contract tests and confirm failure**
 
@@ -339,6 +342,20 @@ CREATE TABLE lending.loan_unused_advance_refund_due_approvals (
     approved_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE lending.loan_unused_advance_refund_due_approval_items (
+    approval_id UUID NOT NULL,
+    adjustment_id UUID NOT NULL,
+    installment_id BIGINT NOT NULL,
+    amount_approved NUMERIC(18,2) NOT NULL CHECK (amount_approved > 0),
+    PRIMARY KEY (approval_id, adjustment_id, installment_id),
+    FOREIGN KEY (approval_id, adjustment_id)
+        REFERENCES lending.loan_unused_advance_refund_due_approvals(id, adjustment_id)
+        ON DELETE RESTRICT,
+    FOREIGN KEY (adjustment_id, installment_id)
+        REFERENCES lending.loan_unused_advance_refund_dues(adjustment_id, installment_id)
+        ON DELETE RESTRICT
+);
+
 CREATE TABLE lending.loan_unused_advance_refund_due_releases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     idempotency_key UUID NOT NULL UNIQUE,
@@ -355,13 +372,19 @@ CREATE TABLE lending.loan_unused_advance_refund_due_releases (
 );
 
 CREATE TABLE lending.loan_unused_advance_refund_due_release_items (
-    release_id UUID NOT NULL REFERENCES lending.loan_unused_advance_refund_due_releases(id) ON DELETE RESTRICT,
+    release_id UUID NOT NULL,
+    approval_id UUID NOT NULL,
     adjustment_id UUID NOT NULL,
     installment_id BIGINT NOT NULL,
     amount_released NUMERIC(18,2) NOT NULL CHECK (amount_released > 0),
     PRIMARY KEY (release_id, adjustment_id, installment_id),
-    FOREIGN KEY (adjustment_id, installment_id)
-        REFERENCES lending.loan_unused_advance_refund_dues(adjustment_id, installment_id)
+    FOREIGN KEY (release_id, approval_id)
+        REFERENCES lending.loan_unused_advance_refund_due_releases(id, approval_id)
+        ON DELETE RESTRICT,
+    FOREIGN KEY (approval_id, adjustment_id, installment_id)
+        REFERENCES lending.loan_unused_advance_refund_due_approval_items(
+            approval_id, adjustment_id, installment_id
+        )
         ON DELETE RESTRICT
 );
 ```

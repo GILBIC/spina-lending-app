@@ -3,9 +3,9 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_7X7_OPERATIONAL_READER_MIGRATION = 107
+REQUIRED_7X7_EXTRA_PRINCIPAL_BRIDGE_MIGRATION = 108
 CURRENT_7X7_READER_VALIDATORS = (
     ROOT
     / "tools"
@@ -13,6 +13,9 @@ CURRENT_7X7_READER_VALIDATORS = (
     ROOT
     / "tools"
     / "run_combined_collection_renewal_disposable_postgres_validation.py",
+)
+CURRENT_7X7_EXTRA_PRINCIPAL_BRIDGE_VALIDATORS = (
+    ROOT / "tools" / "run_7x7_extra_principal_bridge_disposable_postgres_validation.py",
 )
 
 
@@ -48,4 +51,19 @@ def test_current_7x7_reader_validators_include_required_migrations() -> None:
     assert not stale, (
         "Current 7x7 reader validators must bootstrap through migration "
         f"{REQUIRED_7X7_OPERATIONAL_READER_MIGRATION:04d}: {stale}"
+    )
+
+
+def test_current_7x7_extra_principal_bridge_validators_include_required_migrations() -> (
+    None
+):
+    stale: dict[str, int] = {}
+    for path in CURRENT_7X7_EXTRA_PRINCIPAL_BRIDGE_VALIDATORS:
+        actual = _bootstrap_through(path)
+        if actual < REQUIRED_7X7_EXTRA_PRINCIPAL_BRIDGE_MIGRATION:
+            stale[path.relative_to(ROOT).as_posix()] = actual
+
+    assert not stale, (
+        "Current 7x7 Extra Principal bridge validators must bootstrap through migration "
+        f"{REQUIRED_7X7_EXTRA_PRINCIPAL_BRIDGE_MIGRATION:04d}: {stale}"
     )

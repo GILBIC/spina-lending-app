@@ -168,6 +168,12 @@ session established by the collection-void trigger.
   reason/reference, and approval timestamp;
 - approval never changes cash custody or the original classification.
 
+`lending.loan_unused_advance_refund_due_approval_items`
+
+- allocates each approval exactly across original 0106 Refund Due rows;
+- makes partial approval across multiple installments unambiguous;
+- provides the exact upper bound later release items must reference.
+
 `lending.loan_unused_advance_refund_due_releases`
 
 - exact-retry idempotency key and canonical request hash;
@@ -178,7 +184,8 @@ session established by the collection-void trigger.
 
 `lending.loan_unused_advance_refund_due_release_items`
 
-- allocates each release exactly to one or more original 0106 Refund Due rows;
+- allocates each release exactly to one or more previously approved 0106 Refund
+  Due rows;
 - ensures released totals cannot exceed classification totals;
 - preserves `Unused Advance released`, `Cash returned to client`, and
   `Advance remaining` as separate values.
