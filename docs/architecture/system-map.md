@@ -218,6 +218,7 @@ sequenceDiagram
     participant S as Supabase Auth
     participant C as core schema
 
+    M->>M: Read installation identity from secure storage
     M->>A: Login + installation ID + app metadata
     A->>S: Verify username/email and password
     S-->>A: Auth user + access/refresh session
@@ -227,8 +228,8 @@ sequenceDiagram
         A-->>M: HTTP 403 device_approval_required; no token response
     else Approved active device
         A-->>M: Session + server-derived role/permissions
+        M->>M: Store session securely
     end
-    M->>M: Store session and installation identity securely
 
     Note over M,A: Every protected request sends bearer token and X-Device-Id
     A->>S: Validate bearer identity
@@ -242,7 +243,7 @@ Collector Android/iOS unknown device -> core.devices pending -> HTTP 403 device_
 Management device.manage approval -> target-user lock -> selected device active -> other active Collector phones revoked -> audit in one transaction
 ```
 
-Management account-directory reads require either `account.manage` or `device.manage`. Account and client-registration mutations retain `account.manage`; device status changes, including approval and revocation, retain `device.manage`. The administration API exposes neither a raw device identifier nor its hash; those values do not cross its boundary.
+Management account-directory reads require either `account.manage` or `device.manage`. Account and client-registration mutations retain `account.manage`; device status changes, including approval and revocation, retain `device.manage`. Raw installation identity is sent as `X-Device-Id` for authentication and device matching, but raw identifiers and hashes are not returned in management administration payloads or exposed in UI, log, or audit details.
 
 ### Collector route read and offline fallback
 
