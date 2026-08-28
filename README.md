@@ -9,6 +9,8 @@ Start with the living architecture hub:
 - [Approved future platform direction](docs/architecture/platform-direction.md)
 - [Canonical domain glossary](CONTEXT.md)
 - [Clean role and shared-authority decision](docs/adr/0001-new-role-model-and-shared-server-authority.md)
+- [Office Working Fund decision](docs/adr/0002-one-office-working-fund-with-tracked-allocations.md)
+- [Office Working Fund and New Client Fund design](docs/superpowers/specs/2026-08-28-office-working-fund-and-new-client-fund-design.md)
 - [Whole-system map](docs/architecture/system-map.md)
 - [Progress and roadmap](docs/architecture/progress-map.md)
 - [Cross-layer debugging playbook](docs/architecture/debugging-playbook.md)

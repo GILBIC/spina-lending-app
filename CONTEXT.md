@@ -102,6 +102,62 @@ _Avoid:_ Manually entered dashboard total.
 Responsibility for cash or another asset while held by a bank, office, employee,
 collector, or other approved custodian.
 
+### Office Working Fund
+
+The single official pool of company cash assigned to approved office-controlled
+locations and custodians for routine operations.
+
+_Avoid:_ Separate physical New Client Fund; manually maintained available cash.
+
+### Cleared Office Cash
+
+Office Working Fund cash supported by accepted custody and reconciliation
+evidence before separate availability holds are deducted.
+
+### Minimum Operating Reserve
+
+The policy-protected portion of Cleared Office Cash that routine releases cannot
+consume.
+
+### Cash Reservation
+
+An expiring, auditable commitment of an exact amount from the Office Working
+Fund to one approved document version and purpose; it is not a cash movement or
+general-ledger journal.
+
+### Blocked Cash
+
+The portion of Cleared Office Cash made unavailable by a discrepancy, expired
+reconciliation window, hold, disputed evidence, or another protected
+restriction.
+
+### Spendable Office Cash
+
+The server-derived amount remaining after the Minimum Operating Reserve, active
+Cash Reservations, and Blocked Cash are deducted from Cleared Office Cash.
+
+_Avoid:_ Employee-entered available balance; forecast collection treated as cash.
+
+### New Client Fund
+
+The Management-facing allocation and capacity view of Spendable Office Cash for
+new-client releases; it is not a second physical pool, cash asset, or ledger
+account.
+
+### New Client Fund Capacity Guard
+
+The deterministic server decision that combines an approved applicant's exact
+cash requirement with liquidity, portfolio, and operating limits to return an
+explainable Green, Amber, or Red funding result.
+
+_Avoid:_ Credit score; autonomous loan approval; AI-created balance.
+
+### Delegated Cash Authority
+
+A versioned permission allowing a named person to prepare, hold, release, or
+reconcile cash only within approved purpose, location, amount, period, and
+separation-of-duty limits.
+
 ### Reconciliation
 
 The controlled comparison of authoritative records, source evidence, custody,

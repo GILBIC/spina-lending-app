@@ -94,6 +94,15 @@ The implementation program will need bounded subdomains for:
 - discrepancies, assignments, evidence, resolution, and permanent audit;
 - derived financial position and Management review queues.
 
+Office liquidity and release capacity are a bounded Phase 2 subproject. The
+approved design uses one real Office Working Fund, purpose-tagged Cash
+Reservations, a Management-facing New Client Fund allocation, and a
+deterministic New Client Fund Capacity Guard. It is specified in
+[`2026-08-28-office-working-fund-and-new-client-fund-design.md`](2026-08-28-office-working-fund-and-new-client-fund-design.md).
+New Client Fund never creates a second cash balance; its Green/Amber/Red result
+is derived from cleared custody, reserve, commitments, blocked cash, portfolio
+limits, and operating capacity. Credit approval remains a separate gate.
+
 ### Maker-checker state flow
 
 ```mermaid
@@ -193,7 +202,8 @@ The approved dependency sequence is:
 
 1. architecture approval and complete inventory;
 2. authorization, device, audit, and separation-of-duty foundation;
-3. authoritative data and accounting foundation;
+3. authoritative data and accounting foundation, including the Office Working
+   Fund and New Client Fund Capacity Guard subproject;
 4. bounded current-Desktop migration and account cutover;
 5. independently gated V1 surface lanes for Management, Employee, Collector,
    and Client mobile on Android first and then iOS, plus the Client Web Portal,

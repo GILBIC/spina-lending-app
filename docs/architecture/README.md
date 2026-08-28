@@ -11,6 +11,8 @@ This directory is the navigation center for understanding the whole lending plat
 | Understand the approved future platform and migration phases | [`platform-direction.md`](platform-direction.md) |
 | Use canonical people, accounting, and control terms | [`../../CONTEXT.md`](../../CONTEXT.md) |
 | Understand why legacy roles are not mapped | [`../adr/0001-new-role-model-and-shared-server-authority.md`](../adr/0001-new-role-model-and-shared-server-authority.md) |
+| Understand office cash, New Client Fund, and funding-capacity control | [`../superpowers/specs/2026-08-28-office-working-fund-and-new-client-fund-design.md`](../superpowers/specs/2026-08-28-office-working-fund-and-new-client-fund-design.md) |
+| Understand why funding purposes share one real cash pool | [`../adr/0002-one-office-working-fund-with-tracked-allocations.md`](../adr/0002-one-office-working-fund-with-tracked-allocations.md) |
 | Understand the whole platform | [`system-map.md`](system-map.md) |
 | See completed, current, blocked, and next work | [`progress-map.md`](progress-map.md) |
 | Diagnose an error by symptom and layer | [`debugging-playbook.md`](debugging-playbook.md) |

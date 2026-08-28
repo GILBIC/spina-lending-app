@@ -60,6 +60,7 @@ flowchart TB
     subgraph AUTHORITY[Shared authority]
         API[GitHub-first FastAPI\nauthorization + protected workflows]
         AUTH[Supabase Auth\nidentity + sessions]
+        FUND[Office Working Fund\ncustody + reservations + capacity]
         DB[(PostgreSQL\nofficial records)]
         AUDIT[(Permanent audit evidence)]
     end
@@ -81,6 +82,8 @@ flowchart TB
     SWEB --> API
     PUB -->|application inquiry only| API
     API --> AUTH
+    API --> FUND
+    FUND --> DB
     API --> DB
     DB --> AUDIT
 ```
@@ -93,6 +96,7 @@ flowchart TB
 | Role, permission, separation of duties | Private PostgreSQL records enforced by FastAPI | Client-provided role; legacy Desktop profile |
 | Approved device | Protected server device records | Bearer token alone; local installation claim |
 | Official balance, receipt, journal, financial position | Protected PostgreSQL transaction/read model through FastAPI | UI calculation, cache, typed dashboard total |
+| Spendable Office Cash and New Client Fund result | Protected custody, reconciliation, policy, reservation, and capacity records through FastAPI | Physical-purpose envelope, forecast receipt, editable Desktop total, AI output |
 | Collector access | Server assignment or explicit delegation | Collector-selected area or client |
 | Client access | Server ownership link to own records | User-supplied client identifier |
 | Employee access | Individually granted capability and resource scope | Broad Employee UI visibility |
@@ -196,6 +200,35 @@ and depreciation, capital movements, retained earnings, profitability,
 discrepancies, and queues. Posted corrections use reversals; no dashboard total
 is a manual source field.
 
+## Office Working Fund and New Client Fund boundary
+
+```mermaid
+flowchart LR
+    BANK[Bank / approved GCash] -->|protected custody transfer| OFFICE[Office Working Fund\ncleared by location + custodian]
+    SAFE[Safe / cashier / employee custody] --> OFFICE
+    COLLECTOR[Collector Cash Custody] -. accepted remittance only .-> OFFICE
+    OFFICE --> CALC[Spendable Office Cash\ncleared - reserve - reservations - blocked]
+    CALC --> NCF[New Client Fund\nallocation + capacity view]
+    CALC --> RENEWAL[Renewal net-release capacity]
+    NCF --> GUARD[Capacity Guard\nGreen / Amber / Red]
+    GUARD -->|atomic commitment| RESERVE[Purpose-tagged Cash Reservation]
+    RESERVE -->|protected actual release| DISBURSE[Existing disbursement / renewal evidence]
+```
+
+There is one underlying cash and custody ledger. New Client Fund and renewal
+capacity are purpose views and reservations against it, not additional money.
+The New Client Fund Capacity Guard runs only after lending approval and tests the
+exact proposed cash requirement against current headroom, forecast policy,
+portfolio limits, and Collector/route operating capacity. Green can reserve
+under valid delegated authority, Amber requires Management review, and Red
+blocks funding with reason codes. FastAPI owns the decision; PostgreSQL
+serializes reservations so concurrent approvals cannot overcommit cash.
+
+Reservation is memorandum evidence, not a journal. The actual release consumes
+the reservation and links protected disbursement, custody, accounting-source,
+and audit evidence. Unremitted Collector custody is unavailable until accepted,
+and forecast collections never satisfy the release-time cash test.
+
 ## Collector collection boundary
 
 Official Payment, ADV, and PASS requests send the original idempotency identity,
@@ -234,8 +267,10 @@ Before editing a component, answer:
    separation-of-duty rule apply?
 4. Which source, custody, financial, reconciliation, and audit evidence must
    remain linked?
-5. Which tests prove allowed and prohibited behavior?
-6. Is a data migration or account cutover involved, and what is its recovery
+5. Does the workflow affect cleared, reserved, blocked, or spendable office
+   cash, and can concurrent commands overcommit it?
+6. Which tests prove allowed and prohibited behavior?
+7. Is a data migration or account cutover involved, and what is its recovery
    evidence?
-7. Does Master Issue #296, Notion project memory, or Create State need a status
+8. Does Master Issue #296, Notion project memory, or Create State need a status
    update?

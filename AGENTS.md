@@ -30,6 +30,16 @@ are derived from posted evidence, never manually entered. Sensitive accounting
 uses maker-checker separation, server-validated double entry, explicit posting
 authority, and append-only reversals.
 
+For office cash, new-client funding, renewal funding, delegated release, or
+liquidity-capacity work, read
+`docs/superpowers/specs/2026-08-28-office-working-fund-and-new-client-fund-design.md`.
+Use one Office Working Fund reconciled by location and custodian. Treat New
+Client Fund as a tagged allocation and capacity view, not extra cash. Derive
+spendable cash from cleared custody, reserve, active reservations, and blocked
+cash; exclude unremitted Collector custody until accepted. The server-side New
+Client Fund Capacity Guard owns explainable Green/Amber/Red results and atomic
+reservations.
+
 Large implementation work requires a reviewed phase design and implementation
 plan. Keep pull requests Draft until separately authorized, and do not merge,
 deploy, restart a protected service, mutate protected/live data, or perform a

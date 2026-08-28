@@ -22,6 +22,7 @@ and tests remain the authority for current implemented behavior.
 | Mobile | Flutter has role routing and material Collector flows. Several Client, Employee, and Management destinations are incomplete or placeholders. | Client self-service, Collector field operations, selected Employee tools, and Management review/approval are delivered in controlled phases from the shared backend. |
 | Website | No public-site or Client Web frontend package is present in this repository. Earlier Client/Staff portals are external/legacy until inventoried. | Phase 1 delivers the public website and secure responsive Client Web Portal. A selected Staff Web Portal comes later under separately approved scope. |
 | Accounting | Protected accounting capabilities exist in slices, but a complete Employee preparation and financial-position workflow is not yet implemented across the platform. | Employees record and reconcile source transactions; the system validates double entry; Management reviews sensitive work; authorized users post; corrections use protected reversals and permanent audit evidence. |
+| Office cash and new-client capacity | Protected disbursement, renewal, custody, remittance, and accounting evidence exists in bounded slices, but there is no dedicated authoritative working-fund reservation or new-client funding-capacity module. | One Office Working Fund tracks real cash by location/custodian. New Client Fund is a virtual allocation and server-derived capacity view; atomic reservations and an explainable Capacity Guard prevent overcommitment. |
 
 ## Product surfaces
 
@@ -143,6 +144,39 @@ The mandatory maker-checker flow is:
 Sensitive workflows fail closed when evidence, approval, period state,
 reconciliation, or separation of duties is invalid.
 
+## Office Working Fund and New Client Fund
+
+SPINA uses one Office Working Fund for real company cash controlled by approved
+office locations and custodians. Bank, approved GCash, safe, cashier drawer, and
+employee custody remain individually visible and reconcilable. A transfer among
+them changes custody, not profit or loss. Unremitted Collector Cash Custody is
+excluded from cleared office availability until a protected handover or
+remittance is accepted and reconciled.
+
+New Client Fund is the Management-facing allocation and capacity view for
+new-client releases inside that one fund. It is not separate physical money, a
+second asset, or an editable dashboard total. Renewal net releases, new-client
+releases, authorized obligations, and transfers use purpose-tagged Cash
+Reservations against the same underlying cash.
+
+The server derives:
+
+`Spendable Office Cash = Cleared Office Cash - Minimum Operating Reserve - Active Cash Reservations - Blocked Cash`
+
+The New Client Fund Capacity Guard evaluates a credit-approved applicant's exact
+net cash requirement against this headroom, a conservative policy-horizon
+forecast, portfolio limits, and Collector/route operating capacity. It returns
+an explainable Green, Amber, or Red result. Green can reserve cash within valid
+delegation; Amber requires Management review; Red blocks funding and identifies
+the failed controls. Reservation is atomic so concurrent approvals cannot spend
+the same money. Credit approval remains separate, all limits are versioned
+Management policy, and AI cannot approve a client or override an official
+balance.
+
+The detailed current-versus-target contract, lifecycle, delegation, accounting,
+and test requirements are in
+[`2026-08-28-office-working-fund-and-new-client-fund-design.md`](../superpowers/specs/2026-08-28-office-working-fund-and-new-client-fund-design.md).
+
 ## Shared authority and security
 
 - The GitHub-first `gilbic_backend` FastAPI service is the shared application
@@ -179,8 +213,9 @@ FastAPI/PostgreSQL without deriving grants from legacy profiles.
 Inventory and reconcile Desktop data into protected server records. Add source
 transactions, journal preparation/review/posting/reversal, evidence, asset and
 custody registers, liabilities, equity movements, reconciliation, discrepancy,
-and derived financial-position contracts. Rehearse migration and recovery with
-non-production copies.
+derived financial-position contracts, the Office Working Fund, Cash
+Reservations, and the New Client Fund Capacity Guard. Rehearse migration and
+recovery with non-production copies.
 
 ### Phase 3 — current Desktop migration
 
