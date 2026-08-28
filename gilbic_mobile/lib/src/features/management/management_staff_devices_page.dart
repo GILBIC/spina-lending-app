@@ -88,10 +88,10 @@ class _ManagementStaffDevicesPageState
     }
   }
 
-  Future<void> _load({required bool reset}) async {
+  Future<bool> _load({required bool reset}) async {
     final deviceId = _deviceId;
     if (deviceId == null) {
-      return;
+      return false;
     }
     final generation = ++_requestGeneration;
     final offset = reset ? 0 : _nextOffset;
@@ -120,7 +120,7 @@ class _ManagementStaffDevicesPageState
         offset: offset,
       );
       if (!mounted || generation != _requestGeneration) {
-        return;
+        return false;
       }
       setState(() {
         if (reset) {
@@ -136,9 +136,10 @@ class _ManagementStaffDevicesPageState
         _loading = false;
         _loadingMore = false;
       });
+      return true;
     } on Object catch (error) {
       if (!mounted || generation != _requestGeneration) {
-        return;
+        return false;
       }
       final message = error is SpinaApiException
           ? error.message
@@ -148,7 +149,7 @@ class _ManagementStaffDevicesPageState
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(message)));
-        return;
+        return false;
       }
       setState(() {
         _loading = false;
@@ -157,6 +158,7 @@ class _ManagementStaffDevicesPageState
         _permissionDenied =
             error is SpinaApiException && error.statusCode == 403;
       });
+      return false;
     }
   }
 
@@ -167,9 +169,20 @@ class _ManagementStaffDevicesPageState
     return values.where((item) => ids.add(item.id)).toList(growable: false);
   }
 
-  Future<void> _refresh() {
+  Future<void> _refresh() async {
     _searchTimer?.cancel();
-    return _load(reset: true);
+    await _load(reset: true);
+  }
+
+  Future<void> _refreshStrict() async {
+    _searchTimer?.cancel();
+    final refreshed = await _load(reset: true);
+    if (!refreshed) {
+      throw const SpinaApiException(
+        'The authoritative staff directory could not be refreshed.',
+        code: 'network_unavailable',
+      );
+    }
   }
 
   void _onSearchChanged(String value) {
@@ -211,7 +224,7 @@ class _ManagementStaffDevicesPageState
           session: widget.session,
           repository: _repository,
           deviceIdentityProvider: widget.deviceIdentityProvider,
-          onUncertainResult: _refresh,
+          onUncertainResult: _refreshStrict,
         ),
       ),
     );
@@ -233,7 +246,7 @@ class _ManagementStaffDevicesPageState
           repository: _repository,
           deviceIdentityProvider: widget.deviceIdentityProvider,
           reloadAccount: () => _reloadAccount(account),
-          onDirectoryRefresh: _refresh,
+          onDirectoryRefresh: _refreshStrict,
         ),
       ),
     );

@@ -428,8 +428,10 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Text('Registered devices: ${_account.deviceCount}'),
-                  const SizedBox(height: 3),
+                  if (_canManageDevices) ...[
+                    Text('Registered devices: ${_account.deviceCount}'),
+                    const SizedBox(height: 3),
+                  ],
                   Text('Created: ${_formatTimestamp(_account.createdAt)}'),
                   const SizedBox(height: 3),
                   Text('Updated: ${_formatTimestamp(_account.updatedAt)}'),
@@ -517,6 +519,10 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text('Staff role', style: Theme.of(context).textTheme.titleMedium),
+            if (_isOwnAccount) ...[
+              const SizedBox(height: 6),
+              const Text('You cannot change your own management role.'),
+            ],
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
               key: const Key('management-staff-role-picker'),
@@ -567,6 +573,12 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
               'Account status',
               style: Theme.of(context).textTheme.titleMedium,
             ),
+            if (_isOwnAccount) ...[
+              const SizedBox(height: 6),
+              const Text(
+                'You cannot lock or disable your own management account.',
+              ),
+            ],
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
               key: const Key('management-staff-status-picker'),
@@ -610,6 +622,12 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
               'Registered phones',
               style: Theme.of(context).textTheme.titleMedium,
             ),
+            if (_isOwnAccount) ...[
+              const SizedBox(height: 6),
+              const Text(
+                'You cannot change phones for your own current account from this screen.',
+              ),
+            ],
             const SizedBox(height: 10),
             if (_devices.isEmpty)
               const Text('No registered phones returned by the server.')

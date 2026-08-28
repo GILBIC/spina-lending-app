@@ -50,6 +50,10 @@ void main() {
         find.byKey(const Key('management-staff-device-permission-explanation')),
         testCase.$3 || !testCase.$2 ? findsNothing : findsOneWidget,
       );
+      expect(
+        find.text('Registered devices: 1'),
+        testCase.$3 ? findsOneWidget : findsNothing,
+      );
       expect(repository.loadDeviceCalls, testCase.$3 ? 1 : 0);
     });
   }
@@ -167,6 +171,20 @@ void main() {
           )
           .onPressed,
       isNull,
+    );
+    expect(
+      find.text('You cannot change your own management role.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('You cannot lock or disable your own management account.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'You cannot change phones for your own current account from this screen.',
+      ),
+      findsOneWidget,
     );
   });
 

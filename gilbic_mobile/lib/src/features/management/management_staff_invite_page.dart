@@ -32,6 +32,7 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
   String? _error;
   bool _submitting = false;
   bool _retryBlocked = false;
+  bool _permissionDenied = false;
 
   @override
   void initState() {
@@ -103,55 +104,77 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
       if (!mounted) {
         return;
       }
-      if (error.code == 'network_unavailable') {
+      if (error.statusCode == 403) {
         setState(() {
+          _submitting = false;
           _retryBlocked = true;
-          _error =
-              'Refresh the staff list before trying this invitation again.';
+          _permissionDenied = true;
+          _error = error.message;
         });
-        try {
-          await widget.onUncertainResult();
-          if (mounted) {
-            setState(() => _retryBlocked = false);
-          }
-        } on Object {
-          // Keep retry blocked until Management returns to a refreshed list.
-        }
+        return;
+      }
+      if (_isUncertainInvitationError(error)) {
+        await _recoverUncertainResult();
       } else {
         setState(() => _error = error.message);
-      }
-      if (mounted) {
         setState(() => _submitting = false);
       }
     } on Object {
       if (!mounted) {
         return;
       }
+      await _recoverUncertainResult();
+    }
+  }
+
+  Future<void> _recoverUncertainResult() async {
+    setState(() {
+      _retryBlocked = true;
+      _error = 'Refresh the staff list before trying this invitation again.';
+    });
+    var refreshed = false;
+    try {
+      await widget.onUncertainResult();
+      refreshed = true;
+    } on Object {
+      // Keep retry blocked until Management returns to a refreshed list.
+    }
+    if (mounted) {
       setState(() {
-        _retryBlocked = true;
-        _error = 'Refresh the staff list before trying this invitation again.';
+        _submitting = false;
+        _retryBlocked = !refreshed;
       });
-      try {
-        await widget.onUncertainResult();
-        if (mounted) {
-          setState(() => _retryBlocked = false);
-        }
-      } on Object {
-        // Keep retry blocked until Management returns to a refreshed list.
-      }
+    }
+  }
+
+  Future<void> _refreshAfterPermissionDenied() async {
+    try {
+      await widget.onUncertainResult();
       if (mounted) {
-        setState(() => _submitting = false);
+        Navigator.of(context).pop();
+      }
+    } on Object {
+      if (mounted) {
+        setState(() => _error = 'The staff list could not be refreshed.');
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final canInvite = widget.session.hasPermission('account.manage');
+    final hasInvitePermission = widget.session.hasPermission('account.manage');
     return Scaffold(
       appBar: AppBar(title: const Text('Invite staff')),
       body: SafeArea(
-        child: canInvite
+        child: _permissionDenied
+            ? _InvitePermissionDeniedState(
+                message:
+                    _error ??
+                    'Your current server permissions no longer allow staff invitations.',
+                onRefresh: _refreshAfterPermissionDenied,
+                onBack: () => Navigator.of(context).maybePop(),
+              )
+            : hasInvitePermission
             ? ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -250,4 +273,59 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
       ),
     );
   }
+}
+
+class _InvitePermissionDeniedState extends StatelessWidget {
+  const _InvitePermissionDeniedState({
+    required this.message,
+    required this.onRefresh,
+    required this.onBack,
+  });
+
+  final String message;
+  final VoidCallback onRefresh;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      key: const Key('management-staff-invite-permission-denied'),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock_outline, size: 42),
+            const SizedBox(height: 12),
+            Text(
+              'Permission required',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              key: const Key('management-staff-invite-permission-refresh'),
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh staff list'),
+            ),
+            TextButton.icon(
+              key: const Key('management-staff-invite-permission-back'),
+              onPressed: onBack,
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Back'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+bool _isUncertainInvitationError(SpinaApiException error) {
+  return error.statusCode == null ||
+      error.statusCode! >= 500 ||
+      error.code == 'network_unavailable' ||
+      error.code == 'invalid_server_response';
 }

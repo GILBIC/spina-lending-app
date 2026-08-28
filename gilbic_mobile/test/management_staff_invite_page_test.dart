@@ -173,6 +173,85 @@ void main() {
       );
     },
   );
+
+  testWidgets('malformed invitation success requires authoritative refresh', (
+    tester,
+  ) async {
+    final refresh = Completer<void>();
+    var refreshCalls = 0;
+    final repository = _InviteRepository(
+      onInvite: () async => throw const SpinaApiException(
+        'The server returned an invalid response.',
+        code: 'invalid_server_response',
+      ),
+    );
+    await _pumpInvite(
+      tester,
+      repository: repository,
+      onUncertainResult: () {
+        refreshCalls += 1;
+        return refresh.future;
+      },
+    );
+    await tester.pumpAndSettle();
+    await _fillForm(tester);
+
+    await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+    await tester.pump();
+
+    expect(refreshCalls, 1);
+    expect(repository.inviteCalls, 1);
+    expect(
+      find.text('Refresh the staff list before trying this invitation again.'),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const Key('management-staff-invite-submit')),
+          )
+          .onPressed,
+      isNull,
+    );
+    refresh.complete();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+    'permission loss replaces invitation form with refresh and back',
+    (tester) async {
+      final repository = _InviteRepository(
+        onInvite: () async => throw const SpinaApiException(
+          'Permission denied.',
+          statusCode: 403,
+        ),
+      );
+      await _pumpInvite(tester, repository: repository);
+      await tester.pumpAndSettle();
+      await _fillForm(tester);
+
+      await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('management-staff-invite-permission-denied')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('management-staff-invite-permission-refresh')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('management-staff-invite-permission-back')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('management-staff-invite-submit')),
+        findsNothing,
+      );
+      expect(repository.inviteCalls, 1);
+    },
+  );
 }
 
 Future<void> _fillForm(WidgetTester tester) async {

@@ -326,6 +326,63 @@ void main() {
     expect(find.byKey(const Key('management-staff-invite')), findsNothing);
   });
 
+  testWidgets(
+    'failed production directory refresh keeps invite retry blocked',
+    (tester) async {
+      var loadAttempts = 0;
+      final repository = _FakeAdministrationRepository(
+        onLoad: (_) async {
+          loadAttempts += 1;
+          if (loadAttempts > 1) {
+            throw const SpinaApiException(
+              'The directory refresh failed.',
+              code: 'network_unavailable',
+            );
+          }
+          return _page(<ManagementStaffAccount>[_ana]);
+        },
+        onInvite: () async => throw const SpinaApiException(
+          'Connection timed out.',
+          code: 'network_unavailable',
+        ),
+      );
+      await _pumpPage(tester, repository);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('management-staff-invite')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('management-staff-full-name')),
+        'Ana West',
+      );
+      await tester.enterText(
+        find.byKey(const Key('management-staff-username')),
+        'ana.west',
+      );
+      await tester.enterText(
+        find.byKey(const Key('management-staff-email')),
+        'ana@example.com',
+      );
+      await tester.tap(find.byKey(const Key('management-staff-invite-role')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Collector').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+      await tester.pumpAndSettle();
+
+      expect(loadAttempts, 2);
+      expect(repository.inviteCalls, 1);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('management-staff-invite-submit')),
+            )
+            .onPressed,
+        isNull,
+      );
+    },
+  );
+
   testWidgets('opens the exact staff detail page from a directory card', (
     tester,
   ) async {
@@ -457,10 +514,12 @@ final class _LoadCall {
 
 final class _FakeAdministrationRepository
     implements ManagementAdministrationRepository {
-  _FakeAdministrationRepository({required this.onLoad});
+  _FakeAdministrationRepository({required this.onLoad, this.onInvite});
 
   final Future<ManagementStaffPage> Function(_LoadCall request) onLoad;
+  final Future<ManagementStaffAccount> Function()? onInvite;
   final List<_LoadCall> loadCalls = <_LoadCall>[];
+  int inviteCalls = 0;
 
   @override
   Future<ManagementStaffPage> loadStaff(
@@ -492,7 +551,10 @@ final class _FakeAdministrationRepository
     required String email,
     required String fullName,
     required String role,
-  }) => throw UnimplementedError();
+  }) {
+    inviteCalls += 1;
+    return onInvite?.call() ?? Future<ManagementStaffAccount>.value(_ana);
+  }
 
   @override
   Future<List<ManagementDevice>> loadDevices(
