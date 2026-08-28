@@ -50,10 +50,7 @@ void main() {
         find.byKey(const Key('management-staff-device-permission-explanation')),
         testCase.$3 || !testCase.$2 ? findsNothing : findsOneWidget,
       );
-      expect(
-        find.text('Registered devices: 1'),
-        testCase.$3 ? findsOneWidget : findsNothing,
-      );
+      expect(find.text('Registered devices: 1'), findsOneWidget);
       expect(repository.loadDeviceCalls, testCase.$3 ? 1 : 0);
     });
   }
@@ -79,6 +76,42 @@ void main() {
     expect(
       find.byKey(const Key('management-staff-devices-section')),
       findsNothing,
+    );
+  });
+
+  testWidgets('identity failure hides controls and retry restores detail', (
+    tester,
+  ) async {
+    final identityStore = _FlakyDeviceIdentityStore();
+    final repository = _DetailRepository();
+    await _pumpDetail(
+      tester,
+      repository: repository,
+      session: _session(const <String>['account.manage']),
+      deviceIdentityProvider: DeviceIdentityProvider(
+        store: identityStore,
+        platformResolver: () => 'android',
+        appVersionResolver: () async => '0.4.0+4',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('management-staff-detail-load-error')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('management-staff-role-control')),
+      findsNothing,
+    );
+
+    await tester.tap(find.byKey(const Key('management-staff-detail-retry')));
+    await tester.pumpAndSettle();
+
+    expect(identityStore.readAttempts, 2);
+    expect(
+      find.byKey(const Key('management-staff-role-control')),
+      findsOneWidget,
     );
   });
 
@@ -164,6 +197,19 @@ void main() {
           .onPressed,
       isNull,
     );
+    await _selectDropdown(
+      tester,
+      const Key('management-staff-status-picker'),
+      'Pending',
+    );
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const Key('management-staff-status-save')),
+          )
+          .onPressed,
+      isNull,
+    );
     expect(
       tester
           .widget<OutlinedButton>(
@@ -177,7 +223,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text('You cannot lock or disable your own management account.'),
+      find.text('You cannot change your own account away from Active.'),
       findsOneWidget,
     );
     expect(
@@ -420,6 +466,18 @@ void main() {
       find.textContaining('record is no longer available'),
       findsOneWidget,
     );
+    expect(
+      find.byKey(const Key('management-staff-detail-not-found')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('management-staff-role-control')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('management-staff-status-control')),
+      findsNothing,
+    );
   });
 
   testWidgets('409 conflict preserves explanation and reloads current state', (
@@ -505,6 +563,7 @@ Future<void> _pumpDetail(
   required UserSession session,
   Future<ManagementStaffAccount> Function()? reloadAccount,
   Future<void> Function()? onDirectoryRefresh,
+  DeviceIdentityProvider? deviceIdentityProvider,
 }) async {
   final store = MemoryDeviceIdentityStore()..value = 'management-phone';
   await tester.pumpWidget(
@@ -513,17 +572,35 @@ Future<void> _pumpDetail(
         session: session,
         account: _account,
         repository: repository,
-        deviceIdentityProvider: DeviceIdentityProvider(
-          store: store,
-          platformResolver: () => 'android',
-          appVersionResolver: () async => '0.4.0+4',
-        ),
+        deviceIdentityProvider:
+            deviceIdentityProvider ??
+            DeviceIdentityProvider(
+              store: store,
+              platformResolver: () => 'android',
+              appVersionResolver: () async => '0.4.0+4',
+            ),
         reloadAccount: reloadAccount ?? () async => _account,
         onDirectoryRefresh: onDirectoryRefresh ?? () async {},
       ),
     ),
   );
   await tester.pump();
+}
+
+final class _FlakyDeviceIdentityStore implements DeviceIdentityStore {
+  int readAttempts = 0;
+
+  @override
+  Future<String?> readInstallationId() async {
+    readAttempts += 1;
+    if (readAttempts == 1) {
+      throw StateError('Secure storage temporarily unavailable.');
+    }
+    return 'management-phone';
+  }
+
+  @override
+  Future<void> writeInstallationId(String value) async {}
 }
 
 UserSession _session(List<String> permissions) => UserSession(

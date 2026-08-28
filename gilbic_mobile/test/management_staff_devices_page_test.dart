@@ -63,6 +63,36 @@ void main() {
     expect(attempts, 2);
   });
 
+  testWidgets('retries installation identity before loading the directory', (
+    tester,
+  ) async {
+    final identityStore = _FlakyDeviceIdentityStore();
+    final repository = _FakeAdministrationRepository(
+      onLoad: (_) async => _page(<ManagementStaffAccount>[_ana]),
+    );
+
+    await _pumpPage(
+      tester,
+      repository,
+      deviceIdentityProvider: DeviceIdentityProvider(
+        store: identityStore,
+        platformResolver: () => 'android',
+        appVersionResolver: () async => '0.4.0+4',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('management-staff-error')), findsOneWidget);
+    expect(repository.loadCalls, isEmpty);
+
+    await tester.tap(find.byKey(const Key('management-staff-retry')));
+    await tester.pumpAndSettle();
+
+    expect(identityStore.readAttempts, 2);
+    expect(find.byKey(const Key('management-staff-list')), findsOneWidget);
+    expect(repository.loadCalls.single.deviceId, 'management-phone');
+  });
+
   testWidgets('permission denial offers refresh and back actions', (
     tester,
   ) async {
@@ -109,6 +139,14 @@ void main() {
     await _pumpPage(tester, repository);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('management-staff-empty')), findsOneWidget);
+    expect(
+      find.byKey(const Key('management-staff-empty-refresh')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('management-staff-empty-refresh')));
+    await tester.pumpAndSettle();
+    expect(repository.loadCalls, hasLength(2));
 
     await tester.enterText(
       find.byKey(const Key('management-staff-search')),
@@ -383,6 +421,59 @@ void main() {
     },
   );
 
+  testWidgets(
+    'uncertain invitation returns to an unfiltered refreshed directory',
+    (tester) async {
+      final repository = _FakeAdministrationRepository(
+        onLoad: (_) async => _page(<ManagementStaffAccount>[_ana]),
+        onInvite: () async => throw const SpinaApiException(
+          'Connection timed out.',
+          code: 'network_unavailable',
+        ),
+      );
+      await _pumpPage(tester, repository);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('management-staff-search')),
+        'stale filter',
+      );
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('management-staff-invite')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('management-staff-full-name')),
+        'Ana West',
+      );
+      await tester.enterText(
+        find.byKey(const Key('management-staff-username')),
+        'ana.west',
+      );
+      await tester.enterText(
+        find.byKey(const Key('management-staff-email')),
+        'ana@example.com',
+      );
+      await tester.tap(find.byKey(const Key('management-staff-invite-role')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Collector').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ManagementStaffInvitePage), findsNothing);
+      expect(repository.inviteCalls, 1);
+      expect(repository.loadCalls.last.query, isNull);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('management-staff-search')))
+            .controller
+            ?.text,
+        isEmpty,
+      );
+    },
+  );
+
   testWidgets('opens the exact staff detail page from a directory card', (
     tester,
   ) async {
@@ -403,6 +494,7 @@ Future<void> _pumpPage(
   ManagementAdministrationRepository repository, {
   TextScaler? textScaler,
   UserSession session = _session,
+  DeviceIdentityProvider? deviceIdentityProvider,
 }) async {
   final store = MemoryDeviceIdentityStore()..value = 'management-phone';
   await tester.pumpWidget(
@@ -416,15 +508,33 @@ Future<void> _pumpPage(
       home: ManagementStaffDevicesPage(
         session: session,
         repository: repository,
-        deviceIdentityProvider: DeviceIdentityProvider(
-          store: store,
-          platformResolver: () => 'android',
-          appVersionResolver: () async => '0.4.0+4',
-        ),
+        deviceIdentityProvider:
+            deviceIdentityProvider ??
+            DeviceIdentityProvider(
+              store: store,
+              platformResolver: () => 'android',
+              appVersionResolver: () async => '0.4.0+4',
+            ),
       ),
     ),
   );
   await tester.pump();
+}
+
+final class _FlakyDeviceIdentityStore implements DeviceIdentityStore {
+  int readAttempts = 0;
+
+  @override
+  Future<String?> readInstallationId() async {
+    readAttempts += 1;
+    if (readAttempts == 1) {
+      throw StateError('Secure storage temporarily unavailable.');
+    }
+    return 'management-phone';
+  }
+
+  @override
+  Future<void> writeInstallationId(String value) async {}
 }
 
 ManagementStaffPage _page(List<ManagementStaffAccount> items) {

@@ -132,17 +132,19 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
       _retryBlocked = true;
       _error = 'Refresh the staff list before trying this invitation again.';
     });
-    var refreshed = false;
     try {
       await widget.onUncertainResult();
-      refreshed = true;
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+      return;
     } on Object {
       // Keep retry blocked until Management returns to a refreshed list.
     }
     if (mounted) {
       setState(() {
         _submitting = false;
-        _retryBlocked = !refreshed;
+        _retryBlocked = true;
       });
     }
   }

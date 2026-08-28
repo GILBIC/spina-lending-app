@@ -67,6 +67,13 @@ class _ManagementStaffDevicesPageState
   }
 
   Future<void> _initialize() async {
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _permissionDenied = false;
+        _errorMessage = null;
+      });
+    }
     try {
       final identity = await widget.deviceIdentityProvider.load();
       if (!mounted) {
@@ -174,6 +181,10 @@ class _ManagementStaffDevicesPageState
     await _load(reset: true);
   }
 
+  Future<void> _retry() {
+    return _deviceId == null ? _initialize() : _refresh();
+  }
+
   Future<void> _refreshStrict() async {
     _searchTimer?.cancel();
     final refreshed = await _load(reset: true);
@@ -224,7 +235,7 @@ class _ManagementStaffDevicesPageState
           session: widget.session,
           repository: _repository,
           deviceIdentityProvider: widget.deviceIdentityProvider,
-          onUncertainResult: _refreshStrict,
+          onUncertainResult: _recoverInvitation,
         ),
       ),
     );
@@ -235,6 +246,15 @@ class _ManagementStaffDevicesPageState
       _items.removeWhere((item) => item.id == account.id);
       _items.insert(0, account);
     });
+  }
+
+  Future<void> _recoverInvitation() async {
+    _searchTimer?.cancel();
+    _searchController.clear();
+    _query = '';
+    _role = null;
+    _status = null;
+    await _refreshStrict();
   }
 
   Future<void> _openDetail(ManagementStaffAccount account) async {
@@ -425,7 +445,7 @@ class _ManagementStaffDevicesPageState
         message: _errorMessage!,
         action: FilledButton.icon(
           key: const Key('management-staff-retry'),
-          onPressed: _refresh,
+          onPressed: _retry,
           icon: const Icon(Icons.refresh),
           label: const Text('Retry'),
         ),
@@ -448,7 +468,12 @@ class _ManagementStaffDevicesPageState
                 onPressed: _clearFilters,
                 child: const Text('Clear filters'),
               )
-            : null,
+            : TextButton.icon(
+                key: const Key('management-staff-empty-refresh'),
+                onPressed: _refresh,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Refresh'),
+              ),
       );
     }
     return RefreshIndicator(

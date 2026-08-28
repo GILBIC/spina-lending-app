@@ -127,13 +127,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.inviteCalls, 1);
     expect(
-      tester
-          .widget<FilledButton>(
-            find.byKey(const Key('management-staff-invite-submit')),
-          )
-          .onPressed,
-      isNotNull,
+      find.byKey(const Key('management-staff-invite-submit')),
+      findsNothing,
     );
+    expect(find.byKey(const Key('open-invite')), findsOneWidget);
   });
 
   testWidgets(
@@ -215,6 +212,11 @@ void main() {
     );
     refresh.complete();
     await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('management-staff-invite-submit')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('open-invite')), findsOneWidget);
   });
 
   testWidgets(

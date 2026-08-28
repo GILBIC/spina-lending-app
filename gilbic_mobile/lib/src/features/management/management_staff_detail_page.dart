@@ -42,6 +42,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   bool _mutating = false;
   bool _stateUncertain = false;
   bool _permissionDenied = false;
+  bool _recordMissing = false;
 
   bool get _canManageAccounts => widget.session.hasPermission('account.manage');
   bool get _canManageDevices => widget.session.hasPermission('device.manage');
@@ -63,6 +64,14 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   }
 
   Future<void> _initialize() async {
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _permissionDenied = false;
+        _recordMissing = false;
+        _error = null;
+      });
+    }
     try {
       final identity = await widget.deviceIdentityProvider.load();
       var devices = const <ManagementDevice>[];
@@ -80,6 +89,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
         _deviceId = identity.installationId;
         _devices = devices;
         _loading = false;
+        _recordMissing = false;
       });
     } on SpinaApiException catch (error) {
       if (!mounted) {
@@ -88,6 +98,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
       setState(() {
         _loading = false;
         _permissionDenied = error.statusCode == 403;
+        _recordMissing = error.statusCode == 404;
         _error = error.message;
       });
     } on Object {
@@ -106,6 +117,8 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
     }
     await _reloadCurrent(clearMessages: clearMessages);
   }
+
+  Future<void> _retryInitialLoad() => _initialize();
 
   Future<bool> _reloadCurrent({required bool clearMessages}) async {
     if (clearMessages && mounted) {
@@ -135,12 +148,14 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
         _devices = devices;
         _stateUncertain = false;
         _permissionDenied = false;
+        _recordMissing = false;
       });
       return true;
     } on SpinaApiException catch (error) {
       if (mounted) {
         setState(() {
           _permissionDenied = error.statusCode == 403;
+          _recordMissing = error.statusCode == 404;
           _error = error.message;
         });
       }
@@ -211,12 +226,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   }
 
   Future<void> _changeDevice(ManagementDevice device) async {
-    final requested = switch (device.status) {
-      'pending' => 'active',
-      'active' => 'revoked',
-      'revoked' => 'active',
-      _ => device.status,
-    };
+    final requested = _requestedDeviceStatus(device.status);
     if (requested == device.status) {
       return;
     }
@@ -342,8 +352,9 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
       }
       setState(() {
         _mutating = false;
-        _stateUncertain = !recovered;
+        _stateUncertain = error.statusCode == 404 ? false : !recovered;
         _permissionDenied = error.statusCode == 403;
+        _recordMissing = error.statusCode == 404;
         _error = error.statusCode == 404
             ? 'This staff record is no longer available. The directory was refreshed.'
             : error.message;
@@ -395,6 +406,44 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
         ],
       );
     }
+    if (_recordMissing) {
+      return _DetailMessage(
+        key: const Key('management-staff-detail-not-found'),
+        title: 'Staff record unavailable',
+        message:
+            _error ??
+            'This staff record is no longer available. The directory was refreshed.',
+        actions: [
+          TextButton.icon(
+            key: const Key('management-staff-back'),
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Back to staff list'),
+          ),
+        ],
+      );
+    }
+    if (_deviceId == null) {
+      return _DetailMessage(
+        key: const Key('management-staff-detail-load-error'),
+        title: 'Staff record could not be loaded',
+        message: _error ?? 'This installation identity could not be loaded.',
+        actions: [
+          FilledButton.icon(
+            key: const Key('management-staff-detail-retry'),
+            onPressed: _retryInitialLoad,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+          ),
+          TextButton.icon(
+            key: const Key('management-staff-back'),
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Back'),
+          ),
+        ],
+      );
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -428,10 +477,8 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  if (_canManageDevices) ...[
-                    Text('Registered devices: ${_account.deviceCount}'),
-                    const SizedBox(height: 3),
-                  ],
+                  Text('Registered devices: ${_account.deviceCount}'),
+                  const SizedBox(height: 3),
                   Text('Created: ${_formatTimestamp(_account.createdAt)}'),
                   const SizedBox(height: 3),
                   Text('Updated: ${_formatTimestamp(_account.updatedAt)}'),
@@ -555,7 +602,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   Widget _statusControl(BuildContext context) {
     final requested = _selectedStatus;
     final selfDestructive =
-        _isOwnAccount && (requested == 'inactive' || requested == 'locked');
+        _isOwnAccount && requested != null && requested != 'active';
     final enabled =
         !_mutating &&
         !_stateUncertain &&
@@ -576,7 +623,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
             if (_isOwnAccount) ...[
               const SizedBox(height: 6),
               const Text(
-                'You cannot lock or disable your own management account.',
+                'You cannot change your own account away from Active.',
               ),
             ],
             const SizedBox(height: 10),
@@ -643,12 +690,7 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   }
 
   Widget _deviceTile(ManagementDevice device, int index) {
-    final requested = switch (device.status) {
-      'pending' => 'active',
-      'active' => 'revoked',
-      'revoked' => 'active',
-      _ => device.status,
-    };
+    final requested = _requestedDeviceStatus(device.status);
     final actionLabel = switch ((device.status, requested)) {
       ('pending', 'active') => 'Approve phone',
       ('active', 'revoked') => 'Revoke phone',
@@ -689,6 +731,13 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
     );
   }
 }
+
+String _requestedDeviceStatus(String current) => switch (current) {
+  'pending' => 'active',
+  'active' => 'revoked',
+  'revoked' => 'active',
+  _ => current,
+};
 
 class _PermissionExplanation extends StatelessWidget {
   const _PermissionExplanation({required this.message, super.key});
