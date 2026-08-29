@@ -81,7 +81,9 @@ void main() {
     expect(find.text('₱19,550.00'), findsWidgets);
     expect(find.text('Disabled'), findsWidgets);
 
-    final periods = find.byKey(const Key('financial-accounting-fiscal-periods'));
+    final periods = find.byKey(
+      const Key('financial-accounting-fiscal-periods'),
+    );
     await tester.scrollUntilVisible(
       periods,
       500,
@@ -94,7 +96,9 @@ void main() {
     expect(find.text('Send to review'), findsOneWidget);
     expect(find.byKey(const Key('create-accounting-period')), findsOneWidget);
 
-    final chart = find.byKey(const Key('financial-accounting-chart-of-accounts'));
+    final chart = find.byKey(
+      const Key('financial-accounting-chart-of-accounts'),
+    );
     await tester.scrollUntilVisible(
       chart,
       500,
@@ -119,10 +123,7 @@ void main() {
     expect(find.text('7x7'), findsOneWidget);
     expect(find.text('₱7.00 / ₱1,000'), findsOneWidget);
     expect(find.text('Disabled'), findsWidgets);
-    expect(
-      find.textContaining('Cash release = new principal'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Cash release = new principal'), findsOneWidget);
   });
 
   testWidgets('Management can move an open period to review', (tester) async {
@@ -147,6 +148,29 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(reviewButton);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('management-review-fiscal-period')),
+      findsOneWidget,
+    );
+    expect(find.text('Change period to Review'), findsWidgets);
+    expect(
+      find.text(
+        'The period will move to Management review and the server will apply '
+        'review-state restrictions. Posted journals remain unchanged.',
+      ),
+      findsOneWidget,
+    );
+    expect(repository.lastStatus, isNull);
+
+    await tester.tap(find.byKey(const Key('cancel-fiscal-period')));
+    await tester.pumpAndSettle();
+    expect(repository.lastStatus, isNull);
+
+    await tester.tap(reviewButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-fiscal-period')));
     await tester.pumpAndSettle();
 
     expect(repository.lastStatus, 'review');
@@ -181,16 +205,94 @@ void main() {
     await tester.tap(closeButton);
     await tester.pumpAndSettle();
 
-    expect(find.text('Close accounting period?'), findsOneWidget);
-    expect(find.byKey(const Key('confirm-close-accounting-period')), findsOneWidget);
+    expect(
+      find.byKey(const Key('management-review-fiscal-period')),
+      findsOneWidget,
+    );
+    expect(find.text('Change period to Closed'), findsWidgets);
     expect(repository.lastStatus, isNull);
 
-    await tester.tap(find.byKey(const Key('confirm-close-accounting-period')));
+    await tester.tap(find.byKey(const Key('cancel-fiscal-period')));
+    await tester.pumpAndSettle();
+    expect(repository.lastStatus, isNull);
+
+    await tester.tap(closeButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-fiscal-period')));
     await tester.pumpAndSettle();
 
     expect(repository.lastStatus, 'closed');
     expect(repository.lastConfirmClose, isTrue);
     expect(find.text('Closed'), findsWidgets);
+  });
+
+  testWidgets('Creating a fiscal period is reviewed before repository write', (
+    tester,
+  ) async {
+    final repository = _FakeAccountingRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final create = find.byKey(const Key('create-accounting-period'));
+    await tester.scrollUntilVisible(
+      create,
+      600,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(create);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('accounting-period-label')),
+      'Reviewed Test Period',
+    );
+    await tester.tap(find.byKey(const Key('save-accounting-period')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('management-review-fiscal-period')),
+      findsOneWidget,
+    );
+    expect(find.text('Create fiscal period'), findsWidgets);
+    expect(
+      find.text(
+        'A new open fiscal period will be created. This does not post a journal '
+        'or change any account balance.',
+      ),
+      findsOneWidget,
+    );
+    expect(repository.createdLabel, isNull);
+
+    await tester.tap(find.byKey(const Key('cancel-fiscal-period')));
+    await tester.pumpAndSettle();
+    expect(repository.createdLabel, isNull);
+
+    await tester.tap(create);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('accounting-period-label')),
+      'Reviewed Test Period',
+    );
+    await tester.tap(find.byKey(const Key('save-accounting-period')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-fiscal-period')));
+    await tester.pumpAndSettle();
+
+    expect(repository.createdLabel, 'Reviewed Test Period');
+    expect(repository.createdStartDate, isNotNull);
+    expect(repository.createdEndDate, isNotNull);
+    expect(
+      repository.createdEndDate!.isBefore(repository.createdStartDate!),
+      isFalse,
+    );
   });
 }
 
@@ -215,11 +317,14 @@ DeviceIdentityProvider _deviceIdentityProvider() {
 
 class _FakeAccountingRepository implements FinancialAccountingRepository {
   _FakeAccountingRepository({String initialStatus = 'open'})
-      : _status = initialStatus;
+    : _status = initialStatus;
 
   String? deviceId;
   String? lastStatus;
   bool? lastConfirmClose;
+  String? createdLabel;
+  DateTime? createdStartDate;
+  DateTime? createdEndDate;
   String _status;
 
   @override
@@ -427,6 +532,9 @@ class _FakeAccountingRepository implements FinancialAccountingRepository {
     required DateTime endDate,
   }) async {
     this.deviceId = deviceId;
+    createdLabel = label;
+    createdStartDate = startDate;
+    createdEndDate = endDate;
     return AccountingFiscalPeriod(
       periodId: 'created-period',
       label: label,

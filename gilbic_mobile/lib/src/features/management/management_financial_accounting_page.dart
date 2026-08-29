@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ManagementFinancialAccountingPage extends StatefulWidget {
   const ManagementFinancialAccountingPage({
@@ -76,6 +77,32 @@ class _ManagementFinancialAccountingPageState
     if (draft == null || !mounted) {
       return;
     }
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      ManagementReviewPresentation.validated(
+        surface: ManagementMutationSurface.fiscalPeriod,
+        recordLabel: 'New fiscal period',
+        recordValue:
+            '${draft.label} • ${_date(draft.startDate)} – ${_date(draft.endDate)}',
+        statusLabel: 'Will start Open for permitted journal work',
+        facts: <ManagementReviewFact>[
+          ManagementReviewFact(
+            label: 'Start date',
+            value: _date(draft.startDate),
+          ),
+          ManagementReviewFact(label: 'End date', value: _date(draft.endDate)),
+          const ManagementReviewFact(label: 'Journals', value: '0'),
+        ],
+        nextActionLabel: 'Create fiscal period',
+        consequence:
+            'A new open fiscal period will be created. This does not post a journal '
+            'or change any account balance.',
+        risk: ManagementReviewRisk.protectedFinancial,
+      ),
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
     await _runPeriodAction(() async {
       final identity = await widget.deviceIdentityProvider.load();
       await _repository.createFiscalPeriod(
@@ -97,34 +124,58 @@ class _ManagementFinancialAccountingPageState
     AccountingFiscalPeriod period,
     String targetStatus,
   ) async {
-    var confirmClose = false;
-    if (targetStatus == 'closed') {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Close accounting period?'),
-          content: Text(
-            '${period.label} will become permanently protected from ordinary changes. '
-            'A closed period cannot be reopened.',
+    final targetLabel = _statusLabel(targetStatus);
+    final consequence = switch (targetStatus) {
+      'review' =>
+        'The period will move to Management review and the server will apply '
+            'review-state restrictions. Posted journals remain unchanged.',
+      'closed' =>
+        'The period will close to new journal work. Existing posted journals '
+            'remain immutable and protected corrections still require reversal evidence.',
+      _ =>
+        'The period will return to Open. This changes only the period workflow '
+            'state and does not grant new posting authority.',
+    };
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      ManagementReviewPresentation.validated(
+        surface: ManagementMutationSurface.fiscalPeriod,
+        recordLabel: 'Fiscal period',
+        recordValue:
+            '${period.label} • ${_date(period.startDate)} – ${_date(period.endDate)}',
+        statusLabel:
+            plainManagementStatus(period.status, const <String, String>{
+              'open': 'Open for permitted journal work',
+              'review': 'Waiting for Management review',
+              'closed': 'Closed to new journal work',
+            }),
+        facts: <ManagementReviewFact>[
+          ManagementReviewFact(
+            label: 'Journals',
+            value: '${period.journalCount}',
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              key: const Key('confirm-close-accounting-period'),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Close period'),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true || !mounted) {
-        return;
-      }
-      confirmClose = true;
+          ManagementReviewFact(
+            label: 'Posted journals',
+            value: '${period.postedJournalCount}',
+          ),
+          ManagementReviewFact(
+            label: 'Draft journals',
+            value: '${period.draftJournalCount}',
+          ),
+          ManagementReviewFact(label: 'Next status', value: targetLabel),
+        ],
+        nextActionLabel: 'Change period to $targetLabel',
+        consequence: consequence,
+        risk: ManagementReviewRisk.protectedFinancial,
+        secondaryReferences: <ManagementReviewFact>[
+          ManagementReviewFact(label: 'Period ID', value: period.periodId),
+        ],
+      ),
+    );
+    if (!confirmed || !mounted) {
+      return;
     }
+    final confirmClose = targetStatus == 'closed';
 
     await _runPeriodAction(() async {
       final identity = await widget.deviceIdentityProvider.load();
@@ -157,9 +208,9 @@ class _ManagementFinancialAccountingPageState
       await _load();
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
       if (mounted) {
@@ -457,25 +508,23 @@ class _CutoverReadinessCard extends StatelessWidget {
             label: 'Source ready',
             value: '${summary.sourceReadyCount}',
           ),
-          _DetailRow(
-            label: 'Blocked',
-            value: '${summary.blockedCount}',
-          ),
-          _DetailRow(
-            label: 'Regular ready',
-            value: '$regularReady',
-          ),
+          _DetailRow(label: 'Blocked', value: '${summary.blockedCount}'),
+          _DetailRow(label: 'Regular ready', value: '$regularReady'),
           _DetailRow(
             label: '7x7 schedules',
             value: '${sevenBySeven.length} validated',
           ),
           _DetailRow(
             label: 'Opening balances',
-            value: summary.openingBalancesConfigured ? 'Configured' : 'Not configured',
+            value: summary.openingBalancesConfigured
+                ? 'Configured'
+                : 'Not configured',
           ),
           _DetailRow(
             label: 'Automatic posting',
-            value: summary.automaticSourcePostingEnabled ? 'Enabled' : 'Disabled',
+            value: summary.automaticSourcePostingEnabled
+                ? 'Enabled'
+                : 'Disabled',
           ),
           const SizedBox(height: 10),
           const Align(
@@ -591,7 +640,9 @@ class _OpeningBalanceWorksheetCard extends StatelessWidget {
           ),
           _DetailRow(
             label: 'P&L migration policy',
-            value: summary.profitLossMigrationPolicyRequired ? 'Required' : 'Set',
+            value: summary.profitLossMigrationPolicyRequired
+                ? 'Required'
+                : 'Set',
           ),
           _DetailRow(
             label: 'Worksheet balanced',
@@ -603,7 +654,9 @@ class _OpeningBalanceWorksheetCard extends StatelessWidget {
           ),
           _DetailRow(
             label: 'Opening posting',
-            value: summary.openingBalancePostingEnabled ? 'Enabled' : 'Disabled',
+            value: summary.openingBalancePostingEnabled
+                ? 'Enabled'
+                : 'Disabled',
           ),
           const SizedBox(height: 10),
           const Align(
@@ -682,8 +735,11 @@ class _FiscalPeriodsCard extends StatelessWidget {
   final bool canManage;
   final bool busy;
   final VoidCallback onCreate;
-  final Future<void> Function(AccountingFiscalPeriod period, String targetStatus)
-      onStatusChange;
+  final Future<void> Function(
+    AccountingFiscalPeriod period,
+    String targetStatus,
+  )
+  onStatusChange;
 
   @override
   Widget build(BuildContext context) {
@@ -695,7 +751,9 @@ class _FiscalPeriodsCard extends StatelessWidget {
         leading: const Icon(Icons.date_range_outlined),
         title: const Text('Fiscal Periods'),
         subtitle: Text(
-          periods.isEmpty ? 'No periods configured' : '${periods.length} configured',
+          periods.isEmpty
+              ? 'No periods configured'
+              : '${periods.length} configured',
         ),
         trailing: canManage
             ? IconButton(
@@ -717,9 +775,7 @@ class _FiscalPeriodsCard extends StatelessWidget {
           if (periods.isEmpty)
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text(
-                'No fiscal period has been created.',
-              ),
+              child: Text('No fiscal period has been created.'),
             )
           else
             for (final period in periods) ...[
@@ -748,8 +804,11 @@ class _FiscalPeriodRow extends StatelessWidget {
   final AccountingFiscalPeriod period;
   final bool canManage;
   final bool busy;
-  final Future<void> Function(AccountingFiscalPeriod period, String targetStatus)
-      onStatusChange;
+  final Future<void> Function(
+    AccountingFiscalPeriod period,
+    String targetStatus,
+  )
+  onStatusChange;
 
   @override
   Widget build(BuildContext context) {
@@ -806,9 +865,7 @@ class _FiscalPeriodRow extends StatelessWidget {
               if (period.status == 'review') ...[
                 OutlinedButton.icon(
                   key: Key('period-reopen-${period.periodId}'),
-                  onPressed: busy
-                      ? null
-                      : () => onStatusChange(period, 'open'),
+                  onPressed: busy ? null : () => onStatusChange(period, 'open'),
                   icon: const Icon(Icons.lock_open_outlined),
                   label: const Text('Reopen'),
                 ),
@@ -1033,7 +1090,9 @@ class _AccountRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Icon(
-          account.isActive ? Icons.check_circle_outline : Icons.pause_circle_outline,
+          account.isActive
+              ? Icons.check_circle_outline
+              : Icons.pause_circle_outline,
           size: 18,
         ),
       ],
@@ -1056,7 +1115,9 @@ class _PolicyCard extends StatelessWidget {
         initiallyExpanded: true,
         leading: Icon(isSevenBySeven ? Icons.grid_4x4 : Icons.calendar_month),
         title: Text(policy.name),
-        subtitle: Text('${policy.termDays} days • ${_mode(policy.calculationMode)}'),
+        subtitle: Text(
+          '${policy.termDays} days • ${_mode(policy.calculationMode)}',
+        ),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
           _DetailRow(label: 'Term', value: '${policy.termDays} days'),
