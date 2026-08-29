@@ -7,6 +7,7 @@ import 'package:gilbic_mobile/src/core/management/management_no_collection.dart'
 import 'package:gilbic_mobile/src/core/management/management_no_collection_preview.dart';
 import 'package:gilbic_mobile/src/core/management/management_no_collection_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ManagementNoCollectionPage extends StatefulWidget {
   const ManagementNoCollectionPage({
@@ -55,8 +56,7 @@ class _ManagementNoCollectionPageState
   void initState() {
     super.initState();
     _loanRepository = widget.loanRepository ?? SpinaManagementLoanRepository();
-    _repository =
-        widget.repository ?? SpinaManagementNoCollectionRepository();
+    _repository = widget.repository ?? SpinaManagementNoCollectionRepository();
     _deviceIdentityProvider =
         widget.deviceIdentityProvider ?? DeviceIdentityProvider();
   }
@@ -153,7 +153,9 @@ class _ManagementNoCollectionPageState
       }
     } on Object {
       if (mounted) {
-        setState(() => _error = 'The No Collection schedule could not be loaded.');
+        setState(
+          () => _error = 'The No Collection schedule could not be loaded.',
+        );
       }
     } finally {
       if (mounted) {
@@ -180,7 +182,9 @@ class _ManagementNoCollectionPageState
         .map((item) => item.effectiveDueDate)
         .toList(growable: false);
     if (dueDates.isEmpty) {
-      setState(() => _error = 'This loan has no unpaid date that can be shifted.');
+      setState(
+        () => _error = 'This loan has no unpaid date that can be shifted.',
+      );
       return;
     }
     final initial = _selectedDate ?? dueDates.first;
@@ -189,7 +193,8 @@ class _ManagementNoCollectionPageState
       initialDate: initial,
       firstDate: dueDates.first.subtract(const Duration(days: 365)),
       lastDate: dueDates.last.add(const Duration(days: 365)),
-      selectableDayPredicate: (day) => dueDates.any((due) => _sameDate(due, day)),
+      selectableDayPredicate: (day) =>
+          dueDates.any((due) => _sameDate(due, day)),
       helpText: 'Choose No Collection date',
     );
     if (selected == null || !mounted) {
@@ -236,7 +241,9 @@ class _ManagementNoCollectionPageState
       }
     } on Object {
       if (mounted) {
-        setState(() => _error = 'The No Collection preview could not be completed.');
+        setState(
+          () => _error = 'The No Collection preview could not be completed.',
+        );
       }
     } finally {
       if (mounted) {
@@ -258,7 +265,53 @@ class _ManagementNoCollectionPageState
       return;
     }
     if (preview.operationalVersion != state.operationalVersion) {
-      setState(() => _error = 'The preview is stale. Refresh and preview again.');
+      setState(
+        () => _error = 'The preview is stale. Refresh and preview again.',
+      );
+      return;
+    }
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      ManagementReviewPresentation.validated(
+        surface: ManagementMutationSurface.noCollection,
+        recordLabel: 'No Collection declaration',
+        recordValue: '${state.clientName} • ${state.loanNumber}',
+        statusLabel:
+            'Preview matches operational version ${state.operationalVersion}',
+        statusDetail:
+            'The server preview is authoritative for the reviewed date shift.',
+        facts: <ManagementReviewFact>[
+          ManagementReviewFact(
+            label: 'Schedule version',
+            value: '${state.scheduleVersion}',
+          ),
+          ManagementReviewFact(
+            label: 'Operational version',
+            value: '${state.operationalVersion}',
+          ),
+          ManagementReviewFact(
+            label: 'No Collection date',
+            value: _date(selectedDate),
+          ),
+          ManagementReviewFact(
+            label: 'Affected installments',
+            value: '${preview.shifts.length}',
+          ),
+          ManagementReviewFact(label: 'Management reason', value: reason),
+        ],
+        nextActionLabel: 'Save No Collection',
+        consequence:
+            'The server will record the No Collection date and shift the '
+            'reviewed unpaid installments while preserving the contractual '
+            'schedule and audit evidence.',
+        risk: ManagementReviewRisk.protectedFinancial,
+        secondaryReferences: <ManagementReviewFact>[
+          ManagementReviewFact(label: 'Loan ID', value: state.loanId),
+          ManagementReviewFact(label: 'Schedule ID', value: state.scheduleId),
+        ],
+      ),
+    );
+    if (!confirmed || !mounted) {
       return;
     }
 
@@ -309,46 +362,54 @@ class _ManagementNoCollectionPageState
     }
   }
 
-  Future<void> _reverse(ManagementNoCollectionActiveAdjustment adjustment) async {
+  Future<void> _reverse(
+    ManagementNoCollectionActiveAdjustment adjustment,
+  ) async {
     final state = _loanState;
     if (state == null || _saving) {
       return;
     }
-    final controller = TextEditingController();
     final reason = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Reverse No Collection'),
-        content: TextField(
-          key: const Key('no-collection-reversal-reason'),
-          controller: controller,
-          autofocus: true,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            labelText: 'Management reversal reason',
-            alignLabelWithHint: true,
+      builder: (dialogContext) => const _NoCollectionReversalReasonDialog(),
+    );
+    if (reason == null || !mounted) {
+      return;
+    }
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      ManagementReviewPresentation.validated(
+        surface: ManagementMutationSurface.noCollection,
+        recordLabel: 'No Collection reversal',
+        recordValue: '${state.clientName} • ${state.loanNumber}',
+        statusLabel:
+            'Active adjustment at operational version ${state.operationalVersion}',
+        facts: <ManagementReviewFact>[
+          ManagementReviewFact(
+            label: 'No Collection date',
+            value: _date(adjustment.noCollectionDate),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
+          ManagementReviewFact(
+            label: 'Original reason',
+            value: adjustment.reason,
           ),
-          FilledButton(
-            key: const Key('confirm-no-collection-reversal'),
-            onPressed: () {
-              final value = controller.text.trim();
-              if (value.isNotEmpty) {
-                Navigator.of(dialogContext).pop(value);
-              }
-            },
-            child: const Text('Reverse'),
+          ManagementReviewFact(label: 'Reversal reason', value: reason),
+        ],
+        nextActionLabel: 'Reverse No Collection',
+        consequence:
+            'The server will reverse this No Collection adjustment against the '
+            'current operational version and preserve both actions in audit history.',
+        risk: ManagementReviewRisk.protectedFinancial,
+        secondaryReferences: <ManagementReviewFact>[
+          ManagementReviewFact(
+            label: 'Adjustment ID',
+            value: adjustment.adjustmentId,
           ),
+          ManagementReviewFact(label: 'Loan ID', value: state.loanId),
         ],
       ),
     );
-    controller.dispose();
-    if (reason == null || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
 
@@ -384,7 +445,9 @@ class _ManagementNoCollectionPageState
       }
     } on Object {
       if (mounted) {
-        setState(() => _error = 'The No Collection reversal could not be saved.');
+        setState(
+          () => _error = 'The No Collection reversal could not be saved.',
+        );
       }
     } finally {
       if (mounted) {
@@ -500,8 +563,8 @@ class _ManagementNoCollectionPageState
                 Text(
                   state.clientName,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 3),
                 Text('${state.loanNumber} • ${state.loanType}'),
@@ -521,9 +584,9 @@ class _ManagementNoCollectionPageState
         const SizedBox(height: 10),
         Text(
           'Current schedule',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 6),
         _ScheduleTable(installments: state.installments),
@@ -531,21 +594,24 @@ class _ManagementNoCollectionPageState
           const SizedBox(height: 12),
           Text(
             'Active No Collection adjustments',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
           for (final adjustment in state.activeNoCollection)
             Card(
               child: ListTile(
-                title: Text('No Collection • ${_date(adjustment.noCollectionDate)}'),
+                title: Text(
+                  'No Collection • ${_date(adjustment.noCollectionDate)}',
+                ),
                 subtitle: Text(
                   '${adjustment.reason}\n'
                   '${adjustment.actorName} • version ${adjustment.resultingOperationalVersion}',
                 ),
                 isThreeLine: true,
                 trailing: TextButton(
+                  key: Key('reverse-no-collection-${adjustment.adjustmentId}'),
                   onPressed: _saving ? null : () => _reverse(adjustment),
                   child: const Text('Reverse'),
                 ),
@@ -620,6 +686,58 @@ class _ManagementNoCollectionPageState
   }
 }
 
+class _NoCollectionReversalReasonDialog extends StatefulWidget {
+  const _NoCollectionReversalReasonDialog();
+
+  @override
+  State<_NoCollectionReversalReasonDialog> createState() =>
+      _NoCollectionReversalReasonDialogState();
+}
+
+class _NoCollectionReversalReasonDialogState
+    extends State<_NoCollectionReversalReasonDialog> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Reverse No Collection'),
+      content: TextField(
+        key: const Key('no-collection-reversal-reason'),
+        controller: _controller,
+        autofocus: true,
+        maxLines: 3,
+        decoration: const InputDecoration(
+          labelText: 'Management reversal reason',
+          alignLabelWithHint: true,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: const Key('confirm-no-collection-reversal'),
+          onPressed: () {
+            final value = _controller.text.trim();
+            if (value.isNotEmpty) {
+              Navigator.of(context).pop(value);
+            }
+          },
+          child: const Text('Reverse'),
+        ),
+      ],
+    );
+  }
+}
+
 class _ScheduleTable extends StatelessWidget {
   const _ScheduleTable({required this.installments});
 
@@ -627,7 +745,9 @@ class _ScheduleTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visible = installments.where((item) => item.remainingAmount > 0).take(12);
+    final visible = installments
+        .where((item) => item.remainingAmount > 0)
+        .take(12);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(10),
@@ -647,7 +767,10 @@ class _ScheduleTable extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
                   children: [
-                    SizedBox(width: 38, child: Text('${item.installmentNumber}')),
+                    SizedBox(
+                      width: 38,
+                      child: Text('${item.installmentNumber}'),
+                    ),
                     Expanded(child: Text(_date(item.contractualDueDate))),
                     Expanded(
                       child: Text(
@@ -690,9 +813,9 @@ class _PreviewCard extends StatelessWidget {
           children: [
             Text(
               'Server preview • ${_date(preview.noCollectionDate)}',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
             Text(
               '${_frequencyLabel(preview.paymentFrequency)} • version ${preview.operationalVersion}',
@@ -704,7 +827,10 @@ class _PreviewCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
                   children: [
-                    SizedBox(width: 44, child: Text('#${shift.installmentNumber}')),
+                    SizedBox(
+                      width: 44,
+                      child: Text('#${shift.installmentNumber}'),
+                    ),
                     Expanded(
                       child: Text(
                         '${_date(shift.priorEffectiveDueDate)} → '
@@ -744,9 +870,9 @@ class _ResultCard extends StatelessWidget {
               result.adjustmentType == 'reversal'
                   ? 'Reversal saved'
                   : 'No Collection saved',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
             Text('Operational version ${result.resultingOperationalVersion}'),
             for (final shift in result.shifts)
@@ -786,7 +912,8 @@ class _Notice extends StatelessWidget {
   }
 }
 
-DateTime _dateOnly(DateTime value) => DateTime(value.year, value.month, value.day);
+DateTime _dateOnly(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
 
 bool _sameDate(DateTime first, DateTime second) =>
     first.year == second.year &&

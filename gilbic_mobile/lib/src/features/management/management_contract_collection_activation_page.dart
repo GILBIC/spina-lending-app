@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/contract_collection_activation.dart';
 import 'package:gilbic_mobile/src/core/management/contract_collection_activation_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ManagementContractCollectionActivationPage extends StatefulWidget {
   const ManagementContractCollectionActivationPage({
@@ -72,10 +73,7 @@ class _ManagementContractCollectionActivationPageState
     final draft = await showDialog<_ActivationDraft>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => _ActivationDialog(
-        loan: loan,
-        activate: activate,
-      ),
+      builder: (context) => _ActivationDialog(loan: loan, activate: activate),
     );
     if (draft == null) return;
 
@@ -110,9 +108,9 @@ class _ManagementContractCollectionActivationPageState
       await _load();
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
       if (mounted) {
@@ -328,8 +326,8 @@ class _LoanCard extends StatelessWidget {
           loan.activeForCurrentSchedule
               ? Icons.verified_outlined
               : loan.canActivate
-                  ? Icons.check_circle_outline
-                  : Icons.pending_actions_outlined,
+              ? Icons.check_circle_outline
+              : Icons.pending_actions_outlined,
         ),
         title: Text(loan.clientName),
         subtitle: Text(
@@ -416,10 +414,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      visualDensity: VisualDensity.compact,
-      label: Text(label),
-    );
+    return Chip(visualDensity: VisualDensity.compact, label: Text(label));
   }
 }
 
@@ -476,6 +471,48 @@ class _ActivationDialogState extends State<_ActivationDialog> {
   @override
   Widget build(BuildContext context) {
     final action = widget.activate ? 'Activate' : 'Deactivate';
+    final status = widget.loan.activeForCurrentSchedule
+        ? 'Active for the current verified schedule'
+        : widget.loan.isActive
+        ? 'Active for a different schedule and needs review'
+        : 'Not active for mobile collection';
+    final review = ManagementReviewPresentation.validated(
+      surface: ManagementMutationSurface.contractCollection,
+      recordLabel: 'Contract collection loan',
+      recordValue: '${widget.loan.clientName} • ${widget.loan.loanNumber}',
+      statusLabel: status,
+      statusDetail: widget.loan.loanStatus.isEmpty
+          ? null
+          : 'Loan status: ${widget.loan.loanStatus}',
+      facts: <ManagementReviewFact>[
+        ManagementReviewFact(
+          label: 'Remaining balance',
+          value: _money(widget.loan.remainingBalance),
+        ),
+        ManagementReviewFact(
+          label: 'Schedule',
+          value: widget.loan.scheduleId == null
+              ? 'No verified schedule'
+              : '${widget.loan.scheduleId} • version ${widget.loan.scheduleVersion}',
+        ),
+      ],
+      warnings: widget.loan.blockers
+          .map(
+            (message) => ManagementReviewWarning(
+              severity: ManagementReviewWarningSeverity.caution,
+              message: message,
+            ),
+          )
+          .toList(growable: false),
+      nextActionLabel: '$action contract collection',
+      consequence: widget.activate
+          ? 'Mobile collection will be available only for this verified current contract schedule.'
+          : 'Mobile collection will be blocked until a later Management reactivation.',
+      risk: ManagementReviewRisk.privileged,
+      secondaryReferences: <ManagementReviewFact>[
+        ManagementReviewFact(label: 'Loan ID', value: widget.loan.loanId),
+      ],
+    );
     return AlertDialog(
       title: Text('$action Contract Collection'),
       content: SingleChildScrollView(
@@ -483,13 +520,7 @@ class _ActivationDialogState extends State<_ActivationDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${widget.loan.clientName} • ${widget.loan.loanNumber}'),
-            const SizedBox(height: 8),
-            Text(
-              widget.activate
-                  ? 'This affects only this loan and its current verified contract schedule.'
-                  : 'Mobile collection will stay blocked for this loan until Management reactivates it.',
-            ),
+            ManagementReviewPanel(review: review, compact: true),
             const SizedBox(height: 12),
             TextField(
               key: const Key('contract-activation-note'),
@@ -526,9 +557,9 @@ class _ActivationDialogState extends State<_ActivationDialog> {
         FilledButton(
           key: const Key('confirm-contract-activation-action'),
           onPressed: _valid
-              ? () => Navigator.of(context).pop(
-                    _ActivationDraft(_controller.text.trim()),
-                  )
+              ? () => Navigator.of(
+                  context,
+                ).pop(_ActivationDraft(_controller.text.trim()))
               : null,
           child: Text(action),
         ),
@@ -555,10 +586,7 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: 12),
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            FilledButton(
-              onPressed: onRetry,
-              child: const Text('Retry'),
-            ),
+            FilledButton(onPressed: onRetry, child: const Text('Retry')),
           ],
         ),
       ),

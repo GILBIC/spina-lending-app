@@ -8,7 +8,9 @@ import 'package:gilbic_mobile/src/core/management/contract_collection_activation
 import 'package:gilbic_mobile/src/features/management/management_contract_collection_activation_page.dart';
 
 void main() {
-  testWidgets('Management sees ready and blocked contract loans', (tester) async {
+  testWidgets('Management sees ready and blocked contract loans', (
+    tester,
+  ) async {
     final repository = _FakeRepository();
 
     await tester.pumpWidget(
@@ -23,7 +25,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Contract Collection'), findsOneWidget);
-    expect(find.byKey(const Key('contract-collection-summary')), findsOneWidget);
+    expect(
+      find.byKey(const Key('contract-collection-summary')),
+      findsOneWidget,
+    );
     expect(find.text('Ready to activate'), findsWidgets);
     expect(find.text('Synthetic Ready Client'), findsOneWidget);
     expect(repository.deviceId, 'management-device');
@@ -48,7 +53,9 @@ void main() {
     );
   });
 
-  testWidgets('activation requires a note and explicit confirmation', (tester) async {
+  testWidgets('activation requires a note and explicit confirmation', (
+    tester,
+  ) async {
     final repository = _FakeRepository();
 
     await tester.pumpWidget(
@@ -70,15 +77,29 @@ void main() {
     await tester.tap(activate);
     await tester.pumpAndSettle();
 
-    final confirm = find.byKey(
-      const Key('confirm-contract-activation-action'),
+    expect(
+      find.byKey(const Key('management-review-contract-collection')),
+      findsOneWidget,
     );
+    expect(
+      find.text(
+        'Mobile collection will be available only for this verified current '
+        'contract schedule.',
+      ),
+      findsOneWidget,
+    );
+
+    final confirm = find.byKey(const Key('confirm-contract-activation-action'));
     expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
 
     await tester.enterText(
       find.byKey(const Key('contract-activation-note')),
       'Verified against synthetic signed-contract schedule.',
     );
+    await tester.ensureVisible(
+      find.byKey(const Key('contract-activation-confirm')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('contract-activation-confirm')));
     await tester.pump();
     expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);

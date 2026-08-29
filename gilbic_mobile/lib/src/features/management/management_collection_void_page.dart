@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/collection_void.dart';
 import 'package:gilbic_mobile/src/core/management/collection_void_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ManagementCollectionVoidPage extends StatefulWidget {
   const ManagementCollectionVoidPage({
@@ -105,7 +106,8 @@ class _ManagementCollectionVoidPageState
     } on Object {
       if (mounted) {
         setState(() {
-          _errorMessage = 'The receipt could not be loaded. Refresh and try again.';
+          _errorMessage =
+              'The receipt could not be loaded. Refresh and try again.';
         });
       }
     } finally {
@@ -129,20 +131,52 @@ class _ManagementCollectionVoidPageState
       return;
     }
 
+    final review = ManagementReviewPresentation.validated(
+      surface: ManagementMutationSurface.collectionVoid,
+      recordLabel: 'Official receipt',
+      recordValue: '${candidate.receiptNumber} • ${candidate.clientName}',
+      statusLabel: 'Eligible unlocked and unremitted collection',
+      statusDetail:
+          'The server returned this collection as eligible for a protected void.',
+      facts: <ManagementReviewFact>[
+        ManagementReviewFact(label: 'Amount', value: _money(candidate.amount)),
+        ManagementReviewFact(
+          label: 'Collector',
+          value: candidate.collectorName,
+        ),
+        ManagementReviewFact(
+          label: 'Collection date',
+          value: candidate.collectionDate == null
+              ? 'Not recorded by the server'
+              : _date(candidate.collectionDate!),
+        ),
+        ManagementReviewFact(
+          label: 'Current official balance',
+          value: _money(candidate.officialBalance),
+        ),
+      ],
+      nextActionLabel: 'Void collection',
+      consequence:
+          'The receipt will be voided, the official balance will be restored, '
+          'and permanent audit evidence will be retained.',
+      risk: ManagementReviewRisk.protectedFinancial,
+      secondaryReferences: <ManagementReviewFact>[
+        ManagementReviewFact(
+          label: 'Transaction ID',
+          value: candidate.transactionId,
+        ),
+      ],
+    );
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Void this collection?'),
-        content: Text(
-          'Receipt: ${candidate.receiptNumber}\n'
-          'Client: ${candidate.clientName}\n'
-          'Amount: ${_money(candidate.amount)}\n\n'
-          'The payment will be excluded from remittance and the balance will '
-          'return to ${_money(candidate.previousBalance)}. The original record '
-          'and your reason will remain permanently in the audit history.',
+        content: SingleChildScrollView(
+          child: ManagementReviewPanel(review: review, compact: true),
         ),
         actions: [
           TextButton(
+            key: const Key('cancel-collection-void'),
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
@@ -319,7 +353,8 @@ class _ManagementCollectionVoidPageState
                 decoration: const InputDecoration(
                   labelText: 'Required void reason',
                   hintText: 'Example: Payment posted to the wrong borrower',
-                  helperText: 'This reason is saved permanently in the audit log.',
+                  helperText:
+                      'This reason is saved permanently in the audit log.',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -356,8 +391,8 @@ class _CandidateCard extends StatelessWidget {
     final dateText = date == null
         ? ''
         : '${date.year.toString().padLeft(4, '0')}-'
-            '${date.month.toString().padLeft(2, '0')}-'
-            '${date.day.toString().padLeft(2, '0')}';
+              '${date.month.toString().padLeft(2, '0')}-'
+              '${date.day.toString().padLeft(2, '0')}';
     return Card(
       key: const Key('management-void-candidate'),
       child: Padding(
@@ -397,3 +432,9 @@ String _entryType(String value) {
 }
 
 String _money(double value) => '₱${value.toStringAsFixed(2)}';
+
+String _date(DateTime value) {
+  return '${value.year.toString().padLeft(4, '0')}-'
+      '${value.month.toString().padLeft(2, '0')}-'
+      '${value.day.toString().padLeft(2, '0')}';
+}

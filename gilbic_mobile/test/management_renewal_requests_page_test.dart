@@ -13,9 +13,17 @@ void main() {
     'Management records approved principal through workflow and keeps remote identity fail-closed',
     (tester) async {
       final repository = _FakeManagementRenewalWorkflowRepository();
+      await tester.binding.setSurfaceSize(const Size(360, 640));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
         MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(1.3)),
+            child: child!,
+          ),
           home: ManagementRenewalRequestsPage(
             session: _session,
             deviceIdentityProvider: _deviceIdentityProvider(),
@@ -26,18 +34,19 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Renewal Requests'), findsOneWidget);
-      expect(find.text('TEST CLIENT REGULAR'), findsOneWidget);
-      expect(find.text('Recommend'), findsOneWidget);
-      expect(find.text('₱6,000.00'), findsWidgets);
 
-      final termsButton =
-          find.byKey(const Key('review-renewal-terms-request-1'));
+      final termsButton = find.byKey(
+        const Key('review-renewal-terms-request-1'),
+      );
       await tester.dragUntilVisible(
         termsButton,
         find.byType(ListView),
         const Offset(0, -220),
       );
       await tester.pumpAndSettle();
+      expect(find.text('TEST CLIENT REGULAR'), findsOneWidget);
+      expect(find.text('Recommend'), findsOneWidget);
+      expect(find.text('₱6,000.00'), findsWidgets);
       await tester.tap(termsButton);
       await tester.pumpAndSettle();
 
@@ -58,6 +67,22 @@ void main() {
       await tester.tap(find.byKey(const Key('confirm-renewal-terms')));
       await tester.pumpAndSettle();
 
+      expect(
+        find.byKey(const Key('management-review-renewal-workflow')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'The approved terms will be saved for the renewal workflow only. '
+          'This does not release cash or activate a new loan.',
+        ),
+        findsOneWidget,
+      );
+      expect(repository.submittedDraft, isNull);
+
+      await tester.tap(find.byKey(const Key('confirm-renewal-workflow')));
+      await tester.pumpAndSettle();
+
       expect(repository.deviceId, 'management-device');
       expect(repository.submittedRequestId, 'request-1');
       expect(repository.submittedDraft?.decision, 'approved');
@@ -69,7 +94,10 @@ void main() {
       expect(repository.submittedDraft?.officeProcessingRequired, isTrue);
       expect(repository.submittedDraft?.signers, hasLength(1));
       expect(repository.submittedDraft?.signers.first.partyRole, 'borrower');
-      expect(repository.submittedDraft?.signers.first.userId, 'borrower-user-1');
+      expect(
+        repository.submittedDraft?.signers.first.userId,
+        'borrower-user-1',
+      );
       expect(
         repository.submittedDraft?.signers.first.governmentIdVerified,
         isFalse,
@@ -96,8 +124,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final termsButton =
-          find.byKey(const Key('review-renewal-terms-request-1'));
+      final termsButton = find.byKey(
+        const Key('review-renewal-terms-request-1'),
+      );
       await tester.dragUntilVisible(
         termsButton,
         find.byType(ListView),
@@ -107,10 +136,7 @@ void main() {
       await tester.tap(termsButton);
       await tester.pumpAndSettle();
 
-      expect(
-        find.byKey(const Key('renewal-override-reason')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const Key('renewal-override-reason')), findsOneWidget);
       await tester.tap(find.byKey(const Key('confirm-renewal-terms')));
       await tester.pumpAndSettle();
       expect(
@@ -126,6 +152,14 @@ void main() {
         'Management approved after documented capacity review',
       );
       await tester.tap(find.byKey(const Key('confirm-renewal-terms')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('management-review-renewal-workflow')),
+        findsOneWidget,
+      );
+      expect(repository.submittedDraft, isNull);
+      await tester.tap(find.byKey(const Key('confirm-renewal-workflow')));
       await tester.pumpAndSettle();
 
       expect(
@@ -173,10 +207,7 @@ class _FakeManagementRenewalWorkflowRepository
     this.deviceId = deviceId;
     return <ManagementRenewalWorkflowItem>[
       ManagementRenewalWorkflowItem(
-        request: _request(
-          status: status,
-          recommendation: recommendation,
-        ),
+        request: _request(status: status, recommendation: recommendation),
         borrowerUserId: 'borrower-user-1',
       ),
     ];
@@ -272,7 +303,9 @@ CollectorRenewalRequest _request({
     approvedPrincipal: approvedPrincipal,
     reviewNote: reviewNote,
     managementOverrideReason: overrideReason,
-    reviewedAt: approvedPrincipal == null ? null : DateTime.utc(2026, 8, 22, 11),
+    reviewedAt: approvedPrincipal == null
+        ? null
+        : DateTime.utc(2026, 8, 22, 11),
     clientDecision: null,
     clientDecidedAt: null,
     signerReadinessStatus: 'pending',

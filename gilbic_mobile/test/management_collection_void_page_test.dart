@@ -8,8 +8,9 @@ import 'package:gilbic_mobile/src/core/management/collection_void_repository.dar
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
 
 void main() {
-  testWidgets('Management can review and void an unlocked wrong payment',
-      (tester) async {
+  testWidgets('Management can review and void an unlocked wrong payment', (
+    tester,
+  ) async {
     final repository = _FakeCollectionVoidRepository();
 
     await tester.pumpWidget(
@@ -24,10 +25,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Void Incorrect Payment'), findsOneWidget);
-    expect(
-      find.text('Management-only audited correction'),
-      findsOneWidget,
-    );
+    expect(find.text('Management-only audited correction'), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const Key('management-void-receipt')),
@@ -62,7 +60,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Void this collection?'), findsOneWidget);
-    expect(find.textContaining('The original record'), findsOneWidget);
+    expect(
+      find.byKey(const Key('management-review-collection-void')),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'The receipt will be voided, the official balance will be restored, '
+        'and permanent audit evidence will be retained.',
+      ),
+      findsOneWidget,
+    );
+    expect(repository.transactionId, isNull);
+
+    await tester.tap(find.byKey(const Key('cancel-collection-void')));
+    await tester.pumpAndSettle();
+    expect(repository.transactionId, isNull);
+
+    await tester.tap(
+      find.byKey(const Key('submit-management-collection-void')),
+    );
+    await tester.pumpAndSettle();
 
     await tester.tap(
       find.byKey(const Key('confirm-management-collection-void')),

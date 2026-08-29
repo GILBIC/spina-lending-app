@@ -6,6 +6,7 @@ import 'package:gilbic_mobile/src/core/renewals/collector_renewal_workflow.dart'
 import 'package:gilbic_mobile/src/core/renewals/management_renewal_workflow.dart';
 import 'package:gilbic_mobile/src/core/renewals/management_renewal_workflow_repository.dart';
 import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
+import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ManagementRenewalRequestsPage extends StatefulWidget {
   const ManagementRenewalRequestsPage({
@@ -64,7 +65,8 @@ class _ManagementRenewalRequestsPageState
     } on Object {
       if (mounted) {
         setState(
-          () => _errorMessage = 'Management renewal workflow could not be loaded.',
+          () => _errorMessage =
+              'Management renewal workflow could not be loaded.',
         );
       }
     } finally {
@@ -78,6 +80,27 @@ class _ManagementRenewalRequestsPageState
       builder: (context) => _ManagementRenewalTermsDialog(item: item),
     );
     if (draft == null) return;
+    final confirmed = await _confirmRenewalAction(
+      item,
+      nextActionLabel: 'Record renewal terms',
+      consequence:
+          'The approved terms will be saved for the renewal workflow only. '
+          'This does not release cash or activate a new loan.',
+      facts: <ManagementReviewFact>[
+        ManagementReviewFact(label: 'Decision', value: draft.decision),
+        if (draft.approvedPrincipal != null)
+          ManagementReviewFact(
+            label: 'Approved principal',
+            value: _money(draft.approvedPrincipal!),
+          ),
+        if (draft.reviewNote.trim().isNotEmpty)
+          ManagementReviewFact(
+            label: 'Management note',
+            value: draft.reviewNote,
+          ),
+      ],
+    );
+    if (!confirmed || !mounted) return;
     await _runAction(
       item.request.requestId,
       successMessage: 'Management renewal terms recorded.',
@@ -96,6 +119,16 @@ class _ManagementRenewalRequestsPageState
       builder: (context) => _RejectRenewalDialog(request: item.request),
     );
     if (note == null) return;
+    final confirmed = await _confirmRenewalAction(
+      item,
+      nextActionLabel: 'Reject renewal request',
+      consequence:
+          'The renewal request will be rejected. The current loan remains the authoritative financial record.',
+      facts: <ManagementReviewFact>[
+        ManagementReviewFact(label: 'Management reason', value: note),
+      ],
+    );
+    if (!confirmed || !mounted) return;
     await _runAction(
       item.request.requestId,
       successMessage: 'Renewal request rejected.',
@@ -114,8 +147,22 @@ class _ManagementRenewalRequestsPageState
     );
   }
 
-  Future<void> _releaseToCollector(ManagementRenewalWorkflowItem item) {
-    return _runAction(
+  Future<void> _releaseToCollector(ManagementRenewalWorkflowItem item) async {
+    final confirmed = await _confirmRenewalAction(
+      item,
+      nextActionLabel: 'Record cash release to Collector',
+      consequence:
+          'The cash-custody handoff to the Collector will be recorded for field coordination. This does not activate the new loan.',
+      facts: <ManagementReviewFact>[
+        if (item.request.netReleaseAmount != null)
+          ManagementReviewFact(
+            label: 'Net cash release',
+            value: _money(item.request.netReleaseAmount!),
+          ),
+      ],
+    );
+    if (!confirmed || !mounted) return;
+    await _runAction(
       item.request.requestId,
       successMessage: 'Cash release to Collector recorded.',
       action: (deviceId) => _repository.releaseToCollector(
@@ -140,6 +187,22 @@ class _ManagementRenewalRequestsPageState
       'request_new_photo' => 'New handover photo requested.',
       _ => 'Renewal handover proof flagged for review.',
     };
+    final actionLabel = switch (decision) {
+      'approved' => 'Approve handover proof',
+      'request_new_photo' => 'Request a new handover photo',
+      _ => 'Flag handover proof for review',
+    };
+    final confirmed = await _confirmRenewalAction(
+      item,
+      nextActionLabel: actionLabel,
+      consequence:
+          'The proof decision and Management note will be recorded. It does not by itself activate the renewal loan.',
+      facts: <ManagementReviewFact>[
+        ManagementReviewFact(label: 'Proof decision', value: decision),
+        ManagementReviewFact(label: 'Management note', value: note),
+      ],
+    );
+    if (!confirmed || !mounted) return;
     await _runAction(
       item.request.requestId,
       successMessage: message,
@@ -153,14 +216,71 @@ class _ManagementRenewalRequestsPageState
     );
   }
 
-  Future<void> _activate(ManagementRenewalWorkflowItem item) {
-    return _runAction(
+  Future<void> _activate(ManagementRenewalWorkflowItem item) async {
+    final confirmed = await _confirmRenewalAction(
+      item,
+      nextActionLabel: 'Attempt renewal activation',
+      consequence:
+          'The protected backend activation checks will run. SPINA will refresh and show the authoritative result after the attempt.',
+    );
+    if (!confirmed || !mounted) return;
+    await _runAction(
       item.request.requestId,
       successMessage: 'Renewal activation check completed.',
       action: (deviceId) => _repository.activate(
         widget.session,
         deviceId: deviceId,
         requestId: item.request.requestId,
+      ),
+    );
+  }
+
+  Future<bool> _confirmRenewalAction(
+    ManagementRenewalWorkflowItem item, {
+    required String nextActionLabel,
+    required String consequence,
+    List<ManagementReviewFact> facts = const <ManagementReviewFact>[],
+  }) {
+    final request = item.request;
+    final warnings = <ManagementReviewWarning>[
+      if (request.collectorRecommendation == 'do_not_recommend')
+        const ManagementReviewWarning(
+          severity: ManagementReviewWarningSeverity.caution,
+          message:
+              'The permanently assigned Collector recorded Do Not Recommend. Review the documented Management override.',
+        ),
+    ];
+    return showManagementReviewConfirmation(
+      context,
+      ManagementReviewPresentation.validated(
+        surface: ManagementMutationSurface.renewalWorkflow,
+        recordLabel: 'Renewal request',
+        recordValue: '${request.clientName} • ${request.loanNumber}',
+        statusLabel:
+            plainManagementStatus(request.status, const <String, String>{
+              'pending': 'Pending Management decision',
+              'approved': 'Approved workflow in progress',
+              'rejected': 'Rejected',
+            }),
+        statusDetail: request.collectorComment,
+        facts: <ManagementReviewFact>[
+          ManagementReviewFact(
+            label: 'Requested amount',
+            value: _money(request.requestedAmount),
+          ),
+          ManagementReviewFact(
+            label: 'Remaining old balance',
+            value: _money(request.remainingBalance),
+          ),
+          ...facts,
+        ],
+        warnings: warnings,
+        nextActionLabel: nextActionLabel,
+        consequence: consequence,
+        risk: ManagementReviewRisk.privileged,
+        secondaryReferences: <ManagementReviewFact>[
+          ManagementReviewFact(label: 'Request ID', value: request.requestId),
+        ],
       ),
     );
   }
@@ -176,20 +296,22 @@ class _ManagementRenewalRequestsPageState
     try {
       await action(deviceId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(successMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(successMessage)));
       await _load();
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } on Object {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Renewal action could not be completed.')),
+          const SnackBar(
+            content: Text('Renewal action could not be completed.'),
+          ),
         );
       }
     } finally {
@@ -333,14 +455,17 @@ class _ManagementRenewalWorkflowCard extends StatelessWidget {
     final request = item.request;
     final scheme = Theme.of(context).colorScheme;
     final recommendation = request.collectorRecommendation;
-    final canRelease = request.approved &&
+    final canRelease =
+        request.approved &&
         request.clientDecision == 'accepted' &&
         !request.officeProcessingRequired &&
         request.cashReleasedToCollectorAt == null;
-    final canReviewProof = request.approved &&
+    final canReviewProof =
+        request.approved &&
         request.handoverProofStatus == 'under_review' &&
         request.cashGivenToClientAt != null;
-    final canTryActivation = request.approved &&
+    final canTryActivation =
+        request.approved &&
         request.activationStatus != 'active' &&
         request.handoverProofStatus == 'approved' &&
         request.clientCashConfirmedAt != null &&
@@ -353,26 +478,23 @@ class _ManagementRenewalWorkflowCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.autorenew),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        request.clientName,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Text('${request.clientCode} • ${request.area}'),
-                    ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final clientDetails = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      request.clientName,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text('${request.clientCode} • ${request.area}'),
+                  ],
+                );
+                final statusBadge = Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
                   ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: request.status == 'rejected'
                         ? scheme.errorContainer
@@ -380,13 +502,45 @@ class _ManagementRenewalWorkflowCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(request.displayStatus),
-                ),
-              ],
+                );
+                if (constraints.maxWidth < 420) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.autorenew),
+                          const SizedBox(width: 10),
+                          Expanded(child: clientDetails),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      statusBadge,
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.autorenew),
+                    const SizedBox(width: 10),
+                    Expanded(child: clientDetails),
+                    statusBadge,
+                  ],
+                );
+              },
             ),
             const Divider(height: 24),
-            _LabelValue('Loan', '${request.loanTypeName} • ${request.loanNumber}'),
+            _LabelValue(
+              'Loan',
+              '${request.loanTypeName} • ${request.loanNumber}',
+            ),
             _LabelValue('Current principal', _money(request.currentPrincipal)),
-            _LabelValue('Remaining old balance', _money(request.remainingBalance)),
+            _LabelValue(
+              'Remaining old balance',
+              _money(request.remainingBalance),
+            ),
             _LabelValue('Contractual total', _money(request.contractualTotal)),
             _LabelValue(
               'Paid toward contractual total',
@@ -476,8 +630,10 @@ class _ManagementRenewalWorkflowCard extends StatelessWidget {
                 ),
               if (request.signers.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text('Required signers',
-                    style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  'Required signers',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
                 const SizedBox(height: 4),
                 for (final signer in request.signers)
                   Padding(
@@ -559,8 +715,10 @@ class _ManagementRenewalWorkflowCard extends StatelessWidget {
             ],
             if (canReviewProof) ...[
               const SizedBox(height: 14),
-              Text('Handover proof review',
-                  style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                'Handover proof review',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -626,7 +784,8 @@ class _ManagementRenewalTermsDialogState
   late final TextEditingController _principalController;
   final TextEditingController _noteController = TextEditingController();
   final TextEditingController _overrideController = TextEditingController();
-  final TextEditingController _supportingNameController = TextEditingController();
+  final TextEditingController _supportingNameController =
+      TextEditingController();
   final TextEditingController _supportingUserIdController =
       TextEditingController();
   final List<ManagementRenewalSignerDraft> _supportingSigners = [];
@@ -739,10 +898,12 @@ class _ManagementRenewalTermsDialogState
               TextField(
                 key: const Key('renewal-approved-principal'),
                 controller: _principalController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration:
-                    const InputDecoration(labelText: 'Approved new principal'),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Approved new principal',
+                ),
               ),
               const SizedBox(height: 10),
               TextField(
@@ -750,8 +911,9 @@ class _ManagementRenewalTermsDialogState
                 controller: _noteController,
                 maxLength: 1000,
                 maxLines: 3,
-                decoration:
-                    const InputDecoration(labelText: 'Management note (optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Management note (optional)',
+                ),
               ),
               if (request.collectorRecommendation == 'do_not_recommend') ...[
                 const SizedBox(height: 8),
@@ -784,18 +946,23 @@ class _ManagementRenewalTermsDialogState
                 ),
               ),
               const SizedBox(height: 12),
-              Text('Required borrower signer',
-                  style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                'Required borrower signer',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               Text(
                 '${request.clientName} • ${widget.item.borrowerUserId == null ? 'no linked app account' : 'app account linked'}',
               ),
               const SizedBox(height: 14),
-              Text('Supporting party (optional)',
-                  style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                'Supporting party (optional)',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 key: const Key('renewal-supporting-role'),
                 initialValue: _supportingRole,
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'Party role'),
                 items: const [
                   DropdownMenuItem(
@@ -824,7 +991,8 @@ class _ManagementRenewalTermsDialogState
                 controller: _supportingUserIdController,
                 decoration: const InputDecoration(
                   labelText: 'Linked app user ID (optional)',
-                  helperText: 'Leave blank when the supporting party has no app.',
+                  helperText:
+                      'Leave blank when the supporting party has no app.',
                 ),
               ),
               const SizedBox(height: 8),
@@ -836,9 +1004,11 @@ class _ManagementRenewalTermsDialogState
               ),
               if (_supportingSigners.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                for (var index = 0;
-                    index < _supportingSigners.length;
-                    index += 1)
+                for (
+                  var index = 0;
+                  index < _supportingSigners.length;
+                  index += 1
+                )
                   ListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
@@ -848,9 +1018,8 @@ class _ManagementRenewalTermsDialogState
                     ),
                     trailing: IconButton(
                       tooltip: 'Remove',
-                      onPressed: () => setState(
-                        () => _supportingSigners.removeAt(index),
-                      ),
+                      onPressed: () =>
+                          setState(() => _supportingSigners.removeAt(index)),
                       icon: const Icon(Icons.remove_circle_outline),
                     ),
                   ),
