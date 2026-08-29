@@ -625,7 +625,10 @@ void main() {
       find.byKey(const Key('management-review-staff-access')),
       findsOneWidget,
     );
-    expect(find.text('Ana West'), findsWidgets);
+    expect(find.text('Registered phone'), findsOneWidget);
+    expect(find.text('Android • 0.4.0+4'), findsOneWidget);
+    expect(find.text('Staff account'), findsOneWidget);
+    expect(find.text('Ana West • @ana.west'), findsOneWidget);
     expect(find.text('Current: Pending'), findsOneWidget);
     expect(find.text('Requested: Active'), findsOneWidget);
     expect(
@@ -634,6 +637,57 @@ void main() {
       ),
       findsOneWidget,
     );
+    await tester.tap(find.byKey(const Key('cancel-staff-access')));
+    await tester.pumpAndSettle();
+    expect(repository.setDeviceStatusCalls, 0);
+
+    await tester.tap(deviceAction);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('management-action-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(repository.setDeviceStatusCalls, 1);
+    expect(repository.managedDeviceId, _pendingDevice.id);
+    expect(repository.deviceStatus, 'active');
+    expect(repository.mutationUserId, _account.id);
+    expect(repository.mutationDeviceId, 'management-phone');
+  });
+
+  testWidgets('account-status review cancellation makes no write', (
+    tester,
+  ) async {
+    final repository = _DetailRepository();
+    await _pumpDetail(
+      tester,
+      repository: repository,
+      session: _session(const <String>['account.manage']),
+    );
+    await tester.pumpAndSettle();
+
+    await _selectDropdown(
+      tester,
+      const Key('management-staff-status-picker'),
+      'Locked',
+    );
+    await tester.tap(find.byKey(const Key('management-staff-status-save')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Staff account status'), findsOneWidget);
+    expect(find.text('Current: Active'), findsOneWidget);
+    expect(find.text('Requested: Locked'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cancel-staff-access')));
+    await tester.pumpAndSettle();
+    expect(repository.setAccountStatusCalls, 0);
+
+    await tester.tap(find.byKey(const Key('management-staff-status-save')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('management-action-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(repository.setAccountStatusCalls, 1);
+    expect(repository.accountStatus, 'locked');
+    expect(repository.mutationUserId, _account.id);
+    expect(repository.mutationDeviceId, 'management-phone');
   });
 }
 
@@ -713,14 +767,14 @@ UserSession _session(List<String> permissions) => UserSession(
   permissions: permissions,
 );
 
-ManagementStaffAccount _accountWith({required String role}) =>
+ManagementStaffAccount _accountWith({String? role, String? status}) =>
     ManagementStaffAccount(
       id: _account.id,
       username: _account.username,
       email: _account.email,
       fullName: _account.fullName,
-      status: _account.status,
-      roles: <String>[role],
+      status: status ?? _account.status,
+      roles: <String>[role ?? _account.roles.first],
       deviceCount: _account.deviceCount,
       createdAt: _account.createdAt,
       updatedAt: _account.updatedAt,
@@ -778,6 +832,13 @@ final class _DetailRepository implements ManagementAdministrationRepository {
   final Future<List<ManagementDevice>> Function()? onLoadDevices;
   int loadDeviceCalls = 0;
   int setRoleCalls = 0;
+  int setAccountStatusCalls = 0;
+  int setDeviceStatusCalls = 0;
+  String? accountStatus;
+  String? deviceStatus;
+  String? managedDeviceId;
+  String? mutationUserId;
+  String? mutationDeviceId;
 
   @override
   Future<List<ManagementDevice>> loadDevices(
@@ -797,6 +858,8 @@ final class _DetailRepository implements ManagementAdministrationRepository {
     required String role,
   }) {
     setRoleCalls += 1;
+    mutationDeviceId = deviceId;
+    mutationUserId = userId;
     final callback = onSetRole;
     return callback == null
         ? Future<ManagementStaffAccount>.value(_accountWith(role: role))
@@ -809,7 +872,13 @@ final class _DetailRepository implements ManagementAdministrationRepository {
     required String deviceId,
     required String userId,
     required String status,
-  }) async => _account;
+  }) async {
+    setAccountStatusCalls += 1;
+    mutationDeviceId = deviceId;
+    mutationUserId = userId;
+    accountStatus = status;
+    return _accountWith(status: status);
+  }
 
   @override
   Future<ManagementDevice> setDeviceStatus(
@@ -818,14 +887,21 @@ final class _DetailRepository implements ManagementAdministrationRepository {
     required String userId,
     required String managedDeviceId,
     required String status,
-  }) async => ManagementDevice(
-    id: _device.id,
-    platform: _device.platform,
-    appVersion: _device.appVersion,
-    status: status,
-    registeredAt: _device.registeredAt,
-    lastSeenAt: _device.lastSeenAt,
-  );
+  }) async {
+    setDeviceStatusCalls += 1;
+    mutationDeviceId = deviceId;
+    mutationUserId = userId;
+    this.managedDeviceId = managedDeviceId;
+    deviceStatus = status;
+    return ManagementDevice(
+      id: managedDeviceId,
+      platform: _device.platform,
+      appVersion: _device.appVersion,
+      status: status,
+      registeredAt: _device.registeredAt,
+      lastSeenAt: _device.lastSeenAt,
+    );
+  }
 
   @override
   Future<ManagementStaffPage> loadStaff(

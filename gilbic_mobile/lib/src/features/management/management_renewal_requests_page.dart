@@ -87,7 +87,10 @@ class _ManagementRenewalRequestsPageState
           'The approved terms will be saved for the renewal workflow only. '
           'This does not release cash or activate a new loan.',
       facts: <ManagementReviewFact>[
-        ManagementReviewFact(label: 'Decision', value: draft.decision),
+        ManagementReviewFact(
+          label: 'Decision',
+          value: _termsDecisionLabel(draft.decision),
+        ),
         if (draft.approvedPrincipal != null)
           ManagementReviewFact(
             label: 'Approved principal',
@@ -150,10 +153,25 @@ class _ManagementRenewalRequestsPageState
   Future<void> _releaseToCollector(ManagementRenewalWorkflowItem item) async {
     final confirmed = await _confirmRenewalAction(
       item,
+      statusLabel: item.request.cashReleasedToCollectorAt == null
+          ? 'Cash has not been released to the Collector'
+          : 'Cash release is already recorded',
+      statusDetail:
+          'The server-authoritative cash-custody timeline controls this handoff.',
       nextActionLabel: 'Record cash release to Collector',
       consequence:
           'The cash-custody handoff to the Collector will be recorded for field coordination. This does not activate the new loan.',
       facts: <ManagementReviewFact>[
+        ManagementReviewFact(
+          label: 'Client decision',
+          value: _clientDecisionLabel(item.request.clientDecision),
+        ),
+        ManagementReviewFact(
+          label: 'Processing path',
+          value: item.request.officeProcessingRequired
+              ? 'Office processing required'
+              : 'Authorized Collector handoff',
+        ),
         if (item.request.netReleaseAmount != null)
           ManagementReviewFact(
             label: 'Net cash release',
@@ -194,11 +212,17 @@ class _ManagementRenewalRequestsPageState
     };
     final confirmed = await _confirmRenewalAction(
       item,
+      statusLabel: _handoverProofStatusLabel(item.request.handoverProofStatus),
+      statusDetail:
+          'Management is reviewing the submitted handover evidence and note.',
       nextActionLabel: actionLabel,
       consequence:
           'The proof decision and Management note will be recorded. It does not by itself activate the renewal loan.',
       facts: <ManagementReviewFact>[
-        ManagementReviewFact(label: 'Proof decision', value: decision),
+        ManagementReviewFact(
+          label: 'Proof decision',
+          value: _proofDecisionLabel(decision),
+        ),
         ManagementReviewFact(label: 'Management note', value: note),
       ],
     );
@@ -219,9 +243,28 @@ class _ManagementRenewalRequestsPageState
   Future<void> _activate(ManagementRenewalWorkflowItem item) async {
     final confirmed = await _confirmRenewalAction(
       item,
+      statusLabel: _activationStatusLabel(item.request.activationStatus),
+      statusDetail:
+          'The backend remains authoritative for every activation prerequisite.',
       nextActionLabel: 'Attempt renewal activation',
       consequence:
           'The protected backend activation checks will run. SPINA will refresh and show the authoritative result after the attempt.',
+      facts: <ManagementReviewFact>[
+        ManagementReviewFact(
+          label: 'Handover proof',
+          value: _handoverProofStatusLabel(item.request.handoverProofStatus),
+        ),
+        ManagementReviewFact(
+          label: 'Signer readiness',
+          value: _signerReadinessLabel(item.request.signerReadinessStatus),
+        ),
+        ManagementReviewFact(
+          label: 'Server readiness',
+          value: item.request.readyForActivation
+              ? 'Ready for protected activation checks'
+              : 'Additional server prerequisites remain',
+        ),
+      ],
     );
     if (!confirmed || !mounted) return;
     await _runAction(
@@ -239,6 +282,8 @@ class _ManagementRenewalRequestsPageState
     ManagementRenewalWorkflowItem item, {
     required String nextActionLabel,
     required String consequence,
+    String? statusLabel,
+    String? statusDetail,
     List<ManagementReviewFact> facts = const <ManagementReviewFact>[],
   }) {
     final request = item.request;
@@ -257,12 +302,13 @@ class _ManagementRenewalRequestsPageState
         recordLabel: 'Renewal request',
         recordValue: '${request.clientName} • ${request.loanNumber}',
         statusLabel:
+            statusLabel ??
             plainManagementStatus(request.status, const <String, String>{
               'pending': 'Pending Management decision',
               'approved': 'Approved workflow in progress',
               'rejected': 'Rejected',
             }),
-        statusDetail: request.collectorComment,
+        statusDetail: statusDetail ?? request.collectorComment,
         facts: <ManagementReviewFact>[
           ManagementReviewFact(
             label: 'Requested amount',
@@ -1275,6 +1321,51 @@ String _partyRoleLabel(String role) {
     _ => role.replaceAll('_', ' '),
   };
 }
+
+String _termsDecisionLabel(String decision) =>
+    plainManagementStatus(decision, const <String, String>{
+      'approved': 'Approve renewal terms',
+      'rejected': 'Reject renewal request',
+    });
+
+String _clientDecisionLabel(String? decision) =>
+    plainManagementStatus(decision, const <String, String>{
+      'accepted': 'Accepted by Client',
+      'declined': 'Declined by Client',
+      'pending': 'Waiting for Client decision',
+    });
+
+String _proofDecisionLabel(String decision) =>
+    plainManagementStatus(decision, const <String, String>{
+      'approved': 'Approve submitted handover proof',
+      'request_new_photo': 'Require a new handover photo',
+      'flag_for_review': 'Flag submitted proof for further review',
+    });
+
+String _handoverProofStatusLabel(String? status) =>
+    plainManagementStatus(status, const <String, String>{
+      'pending': 'No proof ready for Management review',
+      'not_submitted': 'No proof submitted',
+      'under_review': 'Submitted proof awaiting Management review',
+      'correction_required': 'New handover photo required',
+      'flagged': 'Proof flagged for further review',
+      'approved': 'Handover proof approved',
+    });
+
+String _activationStatusLabel(String? status) =>
+    plainManagementStatus(status, const <String, String>{
+      'pending': 'Renewal loan is not active',
+      'released_pending_management':
+          'Released renewal awaiting Management activation',
+      'active': 'Renewal loan is active',
+    });
+
+String _signerReadinessLabel(String? status) =>
+    plainManagementStatus(status, const <String, String>{
+      'pending': 'Signing requirements are pending',
+      'ready': 'Signing requirements are complete',
+      'complete': 'Signing requirements are complete',
+    });
 
 String _money(double value) {
   final fixed = value.toStringAsFixed(2);

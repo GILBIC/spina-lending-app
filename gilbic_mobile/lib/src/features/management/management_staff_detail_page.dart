@@ -200,8 +200,11 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
       return;
     }
     final confirmed = await _confirm(
-      current: _label(current),
-      requested: _label(requested),
+      recordLabel: 'Staff role',
+      recordValue: '${_account.fullName} • @${_account.username}',
+      current: _roleLabel(current),
+      requested: _roleLabel(requested),
+      nextActionLabel: 'Change staff role to ${_roleLabel(requested)}',
       consequence:
           'Changing this role changes future access after the server approves it.',
       destructive: true,
@@ -227,8 +230,12 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
       return;
     }
     final confirmed = await _confirm(
-      current: _label(current),
-      requested: _label(requested),
+      recordLabel: 'Staff account status',
+      recordValue: '${_account.fullName} • @${_account.username}',
+      current: _accountStatusLabel(current),
+      requested: _accountStatusLabel(requested),
+      nextActionLabel:
+          'Change account status to ${_accountStatusLabel(requested)}',
       consequence:
           'This changes whether the staff account can use protected SPINA access.',
       destructive: requested == 'inactive' || requested == 'locked',
@@ -263,13 +270,27 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
         'Restoring this phone allows protected requests again.',
       _ => 'The phone keeps its current status.',
     };
+    final appVersion = device.appVersion?.trim();
+    final versionLabel = appVersion == null || appVersion.isEmpty
+        ? 'Version not reported'
+        : appVersion;
     final confirmed = await _confirm(
-      current: _label(device.status),
-      requested: _label(requested),
+      recordLabel: 'Registered phone',
+      recordValue: '${_platformLabel(device.platform)} • $versionLabel',
+      current: _deviceStatusLabel(device.status),
+      requested: _deviceStatusLabel(requested),
+      nextActionLabel:
+          'Change phone status to ${_deviceStatusLabel(requested)}',
       consequence: consequence,
       destructive:
           requested == 'revoked' ||
           (device.status == 'pending' && _account.roles.contains('collector')),
+      secondaryReferences: <ManagementReviewFact>[
+        ManagementReviewFact(
+          label: 'Staff account',
+          value: '${_account.fullName} • @${_account.username}',
+        ),
+      ],
     );
     if (!confirmed) {
       return;
@@ -287,20 +308,26 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
   }
 
   Future<bool> _confirm({
+    required String recordLabel,
+    required String recordValue,
     required String current,
     required String requested,
+    required String nextActionLabel,
     required String consequence,
     required bool destructive,
+    List<ManagementReviewFact> secondaryReferences =
+        const <ManagementReviewFact>[],
   }) async {
     final review = ManagementReviewPresentation.validated(
       surface: ManagementMutationSurface.staffAccess,
-      recordLabel: 'Staff account or registered phone',
-      recordValue: '${_account.fullName} • @${_account.username}',
+      recordLabel: recordLabel,
+      recordValue: recordValue,
       statusLabel: 'Current: $current',
       statusDetail: 'Requested: $requested',
-      nextActionLabel: 'Change access to $requested',
+      nextActionLabel: nextActionLabel,
       consequence: consequence,
       risk: ManagementReviewRisk.privileged,
+      secondaryReferences: secondaryReferences,
     );
     return await showDialog<bool>(
           context: context,
@@ -840,10 +867,66 @@ class _DetailMessage extends StatelessWidget {
 }
 
 String _label(String value) {
-  if (value.isEmpty) {
-    return value;
+  final normalized = value.trim().toLowerCase();
+  return switch (normalized) {
+    'management' => 'Management',
+    'employee' => 'Employee',
+    'collector' => 'Collector',
+    'pending' => 'Pending',
+    'active' => 'Active',
+    'inactive' => 'Inactive',
+    'locked' => 'Locked',
+    'revoked' => 'Revoked',
+    'android' => 'Android',
+    'ios' => 'iOS',
+    'windows' => 'Windows',
+    'macos' => 'macOS',
+    'web' => 'Web',
+    _ => 'Value needs review',
+  };
+}
+
+String _roleLabel(String value) => _mappedLabel(value, const <String, String>{
+  'management': 'Management',
+  'employee': 'Employee',
+  'collector': 'Collector',
+}, 'Role needs review');
+
+String _accountStatusLabel(String value) =>
+    _mappedLabel(value, const <String, String>{
+      'pending': 'Pending',
+      'active': 'Active',
+      'inactive': 'Inactive',
+      'locked': 'Locked',
+      'revoked': 'Revoked',
+    }, 'Account status needs review');
+
+String _deviceStatusLabel(String value) =>
+    _mappedLabel(value, const <String, String>{
+      'pending': 'Pending',
+      'active': 'Active',
+      'revoked': 'Revoked',
+    }, 'Phone status needs review');
+
+String _platformLabel(String value) =>
+    _mappedLabel(value, const <String, String>{
+      'android': 'Android',
+      'ios': 'iOS',
+      'windows': 'Windows',
+      'macos': 'macOS',
+      'web': 'Web',
+    }, 'Platform needs review');
+
+String _mappedLabel(
+  String value,
+  Map<String, String> known,
+  String unknownLabel,
+) {
+  final normalized = value.trim().toLowerCase();
+  if (normalized.isEmpty) {
+    return 'Not provided by the server';
   }
-  return '${value[0].toUpperCase()}${value.substring(1)}';
+  return known[normalized] ?? unknownLabel;
 }
 
 String? _firstRole(ManagementStaffAccount account) {

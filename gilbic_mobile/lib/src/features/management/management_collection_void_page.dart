@@ -154,11 +154,17 @@ class _ManagementCollectionVoidPageState
           label: 'Current official balance',
           value: _money(candidate.officialBalance),
         ),
+        ManagementReviewFact(
+          label: 'Restored official balance',
+          value: _money(candidate.previousBalance),
+        ),
+        ManagementReviewFact(label: 'Void reason', value: reason),
       ],
       nextActionLabel: 'Void collection',
       consequence:
-          'The receipt will be voided, the official balance will be restored, '
-          'and permanent audit evidence will be retained.',
+          'The receipt will be voided and the official balance will be restored '
+          'to ${_money(candidate.previousBalance)}. Permanent audit evidence '
+          'and the reviewed reason will be retained.',
       risk: ManagementReviewRisk.protectedFinancial,
       secondaryReferences: <ManagementReviewFact>[
         ManagementReviewFact(

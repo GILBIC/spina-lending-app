@@ -168,6 +168,176 @@ void main() {
       );
     },
   );
+
+  testWidgets('renewal rejection review can cancel and sends exact reason', (
+    tester,
+  ) async {
+    final repository = _FakeManagementRenewalWorkflowRepository();
+    await _pumpWorkflow(tester, repository);
+    final action = find.byKey(const Key('reject-renewal-request-1'));
+    await _showAction(tester, action);
+
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('renewal-rejection-note')),
+      'Current capacity is not sufficient',
+    );
+    await tester.tap(find.byKey(const Key('confirm-renewal-rejection')));
+    await tester.pumpAndSettle();
+    expect(find.text('Pending Management decision'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cancel-renewal-workflow')));
+    await tester.pumpAndSettle();
+    expect(repository.submitTermsCalls, 0);
+
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('renewal-rejection-note')),
+      'Current capacity is not sufficient',
+    );
+    await tester.tap(find.byKey(const Key('confirm-renewal-rejection')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-renewal-workflow')));
+    await tester.pumpAndSettle();
+
+    expect(repository.submitTermsCalls, 1);
+    expect(repository.submittedRequestId, 'request-1');
+    expect(repository.submittedDraft?.decision, 'rejected');
+    expect(
+      repository.submittedDraft?.reviewNote,
+      'Current capacity is not sufficient',
+    );
+  });
+
+  testWidgets('cash-release review can cancel and sends exact request', (
+    tester,
+  ) async {
+    final repository = _FakeManagementRenewalWorkflowRepository(
+      workflowState: 'release',
+    );
+    await _pumpWorkflow(tester, repository);
+    final action = find.byKey(const Key('release-renewal-request-1'));
+    await _showAction(tester, action);
+
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Cash has not been released to the Collector'),
+      findsOneWidget,
+    );
+    expect(find.text('Client decision'), findsWidgets);
+    expect(find.text('Accepted by Client'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cancel-renewal-workflow')));
+    await tester.pumpAndSettle();
+    expect(repository.releaseCalls, 0);
+
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-renewal-workflow')));
+    await tester.pumpAndSettle();
+
+    expect(repository.releaseCalls, 1);
+    expect(repository.releasedRequestId, 'request-1');
+  });
+
+  testWidgets('proof review maps its decision and sends exact note', (
+    tester,
+  ) async {
+    final repository = _FakeManagementRenewalWorkflowRepository(
+      workflowState: 'proof',
+    );
+    await _pumpWorkflow(tester, repository);
+    final action = find.byKey(const Key('request-photo-request-1'));
+    await _showAction(tester, action);
+
+    Future<void> prepareReview() async {
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('renewal-proof-review-note')),
+        'Photo does not show the complete handover',
+      );
+      await tester.tap(find.byKey(const Key('confirm-renewal-proof-review')));
+      await tester.pumpAndSettle();
+    }
+
+    await prepareReview();
+    expect(find.text('Require a new handover photo'), findsOneWidget);
+    expect(find.text('request_new_photo'), findsNothing);
+    expect(
+      find.text('Submitted proof awaiting Management review'),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('cancel-renewal-workflow')));
+    await tester.pumpAndSettle();
+    expect(repository.proofCalls, 0);
+
+    await prepareReview();
+    await tester.tap(find.byKey(const Key('confirm-renewal-workflow')));
+    await tester.pumpAndSettle();
+
+    expect(repository.proofCalls, 1);
+    expect(repository.proofRequestId, 'request-1');
+    expect(repository.proofDecision, 'request_new_photo');
+    expect(repository.proofNote, 'Photo does not show the complete handover');
+  });
+
+  testWidgets('activation review can cancel and sends exact request', (
+    tester,
+  ) async {
+    final repository = _FakeManagementRenewalWorkflowRepository(
+      workflowState: 'activation',
+    );
+    await _pumpWorkflow(tester, repository);
+    final action = find.byKey(const Key('activate-renewal-request-1'));
+    await _showAction(tester, action);
+
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Released renewal awaiting Management activation'),
+      findsOneWidget,
+    );
+    expect(find.text('Handover proof approved'), findsWidgets);
+    expect(find.text('Signing requirements are complete'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cancel-renewal-workflow')));
+    await tester.pumpAndSettle();
+    expect(repository.activateCalls, 0);
+
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-renewal-workflow')));
+    await tester.pumpAndSettle();
+
+    expect(repository.activateCalls, 1);
+    expect(repository.activatedRequestId, 'request-1');
+  });
+}
+
+Future<void> _pumpWorkflow(
+  WidgetTester tester,
+  _FakeManagementRenewalWorkflowRepository repository,
+) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: ManagementRenewalRequestsPage(
+        session: _session,
+        deviceIdentityProvider: _deviceIdentityProvider(),
+        repository: repository,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _showAction(WidgetTester tester, Finder action) async {
+  await tester.dragUntilVisible(
+    action,
+    find.byType(ListView),
+    const Offset(0, -260),
+  );
+  await tester.pumpAndSettle();
 }
 
 const UserSession _session = UserSession(
@@ -191,12 +361,25 @@ DeviceIdentityProvider _deviceIdentityProvider() {
 
 class _FakeManagementRenewalWorkflowRepository
     implements ManagementRenewalWorkflowRepository {
-  _FakeManagementRenewalWorkflowRepository({this.recommendation = 'recommend'});
+  _FakeManagementRenewalWorkflowRepository({
+    this.recommendation = 'recommend',
+    this.workflowState = 'terms',
+  });
 
   final String recommendation;
+  final String workflowState;
   String? deviceId;
   String? submittedRequestId;
   ManagementRenewalTermsDraft? submittedDraft;
+  int submitTermsCalls = 0;
+  int releaseCalls = 0;
+  int proofCalls = 0;
+  int activateCalls = 0;
+  String? releasedRequestId;
+  String? proofRequestId;
+  String? proofDecision;
+  String? proofNote;
+  String? activatedRequestId;
 
   @override
   Future<List<ManagementRenewalWorkflowItem>> list(
@@ -207,11 +390,49 @@ class _FakeManagementRenewalWorkflowRepository
     this.deviceId = deviceId;
     return <ManagementRenewalWorkflowItem>[
       ManagementRenewalWorkflowItem(
-        request: _request(status: status, recommendation: recommendation),
+        request: _requestForState(status),
         borrowerUserId: 'borrower-user-1',
       ),
     ];
   }
+
+  CollectorRenewalRequest _requestForState(String status) =>
+      switch (workflowState) {
+        'release' => _request(
+          status: 'approved',
+          recommendation: recommendation,
+          approvedPrincipal: 6000,
+          clientDecision: 'accepted',
+          officeProcessingRequired: false,
+          netReleaseAmount: 3000,
+          amountLockedAt: DateTime.utc(2026, 8, 23, 8),
+        ),
+        'proof' => _request(
+          status: 'approved',
+          recommendation: recommendation,
+          approvedPrincipal: 6000,
+          clientDecision: 'accepted',
+          officeProcessingRequired: false,
+          netReleaseAmount: 3000,
+          cashGivenToClientAt: DateTime.utc(2026, 8, 23, 10),
+          handoverProofStatus: 'under_review',
+        ),
+        'activation' => _request(
+          status: 'approved',
+          recommendation: recommendation,
+          approvedPrincipal: 6000,
+          clientDecision: 'accepted',
+          officeProcessingRequired: false,
+          netReleaseAmount: 3000,
+          clientCashConfirmedAt: DateTime.utc(2026, 8, 23, 11),
+          signerReadinessStatus: 'ready',
+          handoverProofStatus: 'approved',
+          activationStatus: 'released_pending_management',
+          newLoanId: 'new-loan-1',
+          readyForActivation: true,
+        ),
+        _ => _request(status: status, recommendation: recommendation),
+      };
 
   @override
   Future<CollectorRenewalRequest> submitTerms(
@@ -221,6 +442,7 @@ class _FakeManagementRenewalWorkflowRepository
     required ManagementRenewalTermsDraft draft,
   }) async {
     this.deviceId = deviceId;
+    submitTermsCalls += 1;
     submittedRequestId = requestId;
     submittedDraft = draft;
     return _request(
@@ -239,6 +461,8 @@ class _FakeManagementRenewalWorkflowRepository
     required String requestId,
   }) async {
     this.deviceId = deviceId;
+    releaseCalls += 1;
+    releasedRequestId = requestId;
     return _request(status: 'approved', recommendation: recommendation);
   }
 
@@ -251,6 +475,10 @@ class _FakeManagementRenewalWorkflowRepository
     required String note,
   }) async {
     this.deviceId = deviceId;
+    proofCalls += 1;
+    proofRequestId = requestId;
+    proofDecision = decision;
+    proofNote = note;
     return _request(status: 'approved', recommendation: recommendation);
   }
 
@@ -261,6 +489,8 @@ class _FakeManagementRenewalWorkflowRepository
     required String requestId,
   }) async {
     this.deviceId = deviceId;
+    activateCalls += 1;
+    activatedRequestId = requestId;
     return _request(status: 'approved', recommendation: recommendation);
   }
 }
@@ -271,6 +501,17 @@ CollectorRenewalRequest _request({
   double? approvedPrincipal,
   String reviewNote = '',
   String overrideReason = '',
+  String? clientDecision,
+  String signerReadinessStatus = 'pending',
+  bool? officeProcessingRequired,
+  double? netReleaseAmount,
+  DateTime? amountLockedAt,
+  DateTime? cashGivenToClientAt,
+  DateTime? clientCashConfirmedAt,
+  String handoverProofStatus = 'pending',
+  String activationStatus = 'pending',
+  String? newLoanId,
+  bool readyForActivation = false,
 }) {
   return CollectorRenewalRequest(
     requestId: 'request-1',
@@ -306,21 +547,22 @@ CollectorRenewalRequest _request({
     reviewedAt: approvedPrincipal == null
         ? null
         : DateTime.utc(2026, 8, 22, 11),
-    clientDecision: null,
+    clientDecision: clientDecision,
     clientDecidedAt: null,
-    signerReadinessStatus: 'pending',
-    officeProcessingRequired: approvedPrincipal != null,
+    signerReadinessStatus: signerReadinessStatus,
+    officeProcessingRequired:
+        officeProcessingRequired ?? approvedPrincipal != null,
     signers: const <CollectorRenewalSigner>[],
     renewalOffsetAmount: null,
-    netReleaseAmount: null,
-    amountLockedAt: null,
+    netReleaseAmount: netReleaseAmount,
+    amountLockedAt: amountLockedAt,
     cashReleasedToCollectorAt: null,
     collectorCashReceivedAt: null,
-    cashGivenToClientAt: null,
-    clientCashConfirmedAt: null,
-    handoverProofStatus: 'pending',
-    activationStatus: 'pending',
-    newLoanId: null,
-    readyForActivation: false,
+    cashGivenToClientAt: cashGivenToClientAt,
+    clientCashConfirmedAt: clientCashConfirmedAt,
+    handoverProofStatus: handoverProofStatus,
+    activationStatus: activationStatus,
+    newLoanId: newLoanId,
+    readyForActivation: readyForActivation,
   );
 }

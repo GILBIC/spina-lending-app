@@ -66,11 +66,16 @@ void main() {
     );
     expect(
       find.text(
-        'The receipt will be voided, the official balance will be restored, '
-        'and permanent audit evidence will be retained.',
+        'The receipt will be voided and the official balance will be restored '
+        'to ₱4950.00. Permanent audit evidence and the reviewed reason will '
+        'be retained.',
       ),
       findsOneWidget,
     );
+    expect(find.text('Restored official balance'), findsOneWidget);
+    expect(find.text('₱4950.00'), findsOneWidget);
+    expect(find.text('Void reason'), findsOneWidget);
+    expect(find.text('Payment posted to the wrong borrower'), findsWidgets);
     expect(repository.transactionId, isNull);
 
     await tester.tap(find.byKey(const Key('cancel-collection-void')));

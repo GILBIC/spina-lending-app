@@ -250,7 +250,7 @@ class _ManagementEclOutcomeReviewPageState
             child: Padding(
               padding: EdgeInsets.all(14),
               child: Text(
-                'Stage 5E.4 records reviewed historical default/non-default outcomes only. Renewal, archive, deletion, cash totals and arrears are evidence to inspect, not automatic labels. Loss, recovery, PD, LGD, ECL amount, opening-balance values and General Ledger posting remain outside this stage.',
+                "This historical credit-outcome review records only Management's reviewed default/non-default outcomes. Renewal, archive, deletion, cash totals and arrears are evidence to inspect, not automatic labels. Loss, recovery, PD, LGD, ECL amount, opening-balance values and General Ledger posting remain outside this review.",
               ),
             ),
           ),
@@ -304,7 +304,7 @@ class _SummaryCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Stage 5E.4 Review Progress',
+                    'Historical credit-outcome review progress',
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ),
@@ -348,7 +348,7 @@ class _SummaryCard extends StatelessWidget {
                   : _money(summary.eclAmount!),
             ),
             _Row(
-              label: 'Ready to post',
+              label: 'Ready for evidence review',
               value: summary.readyToPost ? 'Yes' : 'No',
             ),
           ],

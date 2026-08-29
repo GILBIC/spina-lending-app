@@ -62,11 +62,15 @@ void main() {
       );
       expect(
         find.text(
-          'The balanced journal will be saved as an unposted draft. It will '
-          'not affect the General Ledger until separately reviewed and posted.',
+          'The entered journal will be sent as an unposted draft. The backend '
+          'will revalidate balance and posting rules; no General Ledger balance '
+          'changes until separate review and posting.',
         ),
         findsOneWidget,
       );
+      expect(find.text('New unposted draft'), findsOneWidget);
+      expect(find.text('Entered debit total'), findsOneWidget);
+      expect(find.text('Entered credit total'), findsOneWidget);
       await tester.tap(find.byKey(const Key('cancel-general-journal')));
       await tester.pumpAndSettle();
       expect(repository.createCalls, 0);

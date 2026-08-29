@@ -171,6 +171,36 @@ void main() {
     expect(find.text('If confirmed'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'confirmation dialog keeps both decisions reachable on a small phone',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(360, 640));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(1.3)),
+            child: child!,
+          ),
+          home: _ConfirmationHarness(review: _review()),
+        ),
+      );
+
+      await tester.tap(find.text('Open review'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('cancel-collection-void')), findsOneWidget);
+      expect(find.byKey(const Key('confirm-collection-void')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const Key('cancel-collection-void')));
+      await tester.pumpAndSettle();
+      expect(find.text('Result: cancelled'), findsOneWidget);
+    },
+  );
 }
 
 ManagementReviewPresentation _review({

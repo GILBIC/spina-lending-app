@@ -292,17 +292,21 @@ class _ManagementGeneralJournalPageState
           ? 'New manual journal'
           : 'Manual journal draft',
       recordValue: entry?.entryNumber ?? entry?.entryId ?? draft.description,
-      statusLabel: entry == null
-          ? 'New balanced draft — not posted'
-          : 'Draft — not posted',
+      statusLabel: entry == null ? 'New unposted draft' : 'Draft — not posted',
       statusDetail: draft.description,
       facts: <ManagementReviewFact>[
         ManagementReviewFact(
           label: 'Posting date',
           value: _date(draft.postingDate),
         ),
-        ManagementReviewFact(label: 'Total debit', value: _money(totalDebit)),
-        ManagementReviewFact(label: 'Total credit', value: _money(totalCredit)),
+        ManagementReviewFact(
+          label: 'Entered debit total',
+          value: _money(totalDebit),
+        ),
+        ManagementReviewFact(
+          label: 'Entered credit total',
+          value: _money(totalCredit),
+        ),
         ManagementReviewFact(
           label: 'Journal lines',
           value: '${draft.lines.length}',
@@ -312,8 +316,9 @@ class _ManagementGeneralJournalPageState
           ? 'Create manual journal draft'
           : 'Update manual journal draft',
       consequence:
-          'The balanced journal will be saved as an unposted draft. It will '
-          'not affect the General Ledger until separately reviewed and posted.',
+          'The entered journal will be sent as an unposted draft. The backend '
+          'will revalidate balance and posting rules; no General Ledger balance '
+          'changes until separate review and posting.',
       risk: ManagementReviewRisk.protectedFinancial,
       secondaryReferences: entry == null
           ? const <ManagementReviewFact>[]

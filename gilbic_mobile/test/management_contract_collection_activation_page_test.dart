@@ -113,6 +113,71 @@ void main() {
       'Verified against synthetic signed-contract schedule.',
     );
   });
+
+  testWidgets('deactivation can be cancelled and sends the exact accepted note', (
+    tester,
+  ) async {
+    final repository = _FakeRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementContractCollectionActivationPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final deactivate = find.byKey(
+      const Key('deactivate-contract-collection-active-loan'),
+    );
+    await tester.scrollUntilVisible(deactivate, 250);
+    await tester.pumpAndSettle();
+
+    await tester.tap(deactivate);
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Mobile collection will be blocked until a later Management reactivation.',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(repository.deactivateCalls, 0);
+
+    await tester.scrollUntilVisible(deactivate, 250);
+    await tester.pumpAndSettle();
+    await tester.tap(deactivate);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('contract-activation-note')),
+      'Temporary stop requested after route reconciliation.',
+    );
+    await tester.ensureVisible(
+      find.byKey(const Key('contract-activation-confirm')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('contract-activation-confirm')));
+    await tester.pump();
+    await tester.ensureVisible(
+      find.byKey(const Key('confirm-contract-activation-action')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('confirm-contract-activation-action')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.deactivateCalls, 1);
+    expect(repository.deactivatedLoanId, 'active-loan');
+    expect(
+      repository.deactivationNote,
+      'Temporary stop requested after route reconciliation.',
+    );
+  });
 }
 
 const _session = UserSession(
@@ -138,6 +203,9 @@ class _FakeRepository implements ContractCollectionActivationRepository {
   String? deviceId;
   String? activatedLoanId;
   String? activationNote;
+  int deactivateCalls = 0;
+  String? deactivatedLoanId;
+  String? deactivationNote;
 
   @override
   Future<ContractCollectionActivationData> load(
@@ -150,7 +218,11 @@ class _FakeRepository implements ContractCollectionActivationRepository {
       activeCount: 0,
       readyToActivateCount: 1,
       notice: 'One loan at a time. No automatic activation.',
-      loans: const <ContractCollectionActivationLoan>[_ready, _blocked],
+      loans: const <ContractCollectionActivationLoan>[
+        _ready,
+        _blocked,
+        _active,
+      ],
     );
   }
 
@@ -175,7 +247,10 @@ class _FakeRepository implements ContractCollectionActivationRepository {
     required String activationNote,
   }) async {
     this.deviceId = deviceId;
-    return _ready;
+    deactivateCalls += 1;
+    deactivatedLoanId = loanId;
+    deactivationNote = activationNote;
+    return _active;
   }
 }
 
@@ -244,4 +319,36 @@ const _blocked = ContractCollectionActivationLoan(
     'Signed-contract schedule has not been registered.',
     'Contract schedule/payment allocation is not DPD-ready (contract_schedule_required).',
   ],
+);
+
+const _active = ContractCollectionActivationLoan(
+  loanId: 'active-loan',
+  loanNumber: 'LN-ACTIVE',
+  clientName: 'Synthetic Active Client',
+  loanTypeName: 'Regular',
+  loanStatus: 'active',
+  remainingBalance: 180,
+  mobileCollectionsEnabled: true,
+  mobileBalanceMode: 'direct_remaining_balance',
+  scheduleId: 'schedule-active',
+  scheduleVersion: 2,
+  paymentFrequency: 'daily',
+  contractReference: 'SYNTH-SIGNED-002',
+  dpdDataStatus: 'ready',
+  contractualScheduleTotal: 270,
+  allocatedScheduleTotal: 90,
+  unpaidContractualAmount: 180,
+  scheduleVerified: true,
+  balanceReconciled: true,
+  accountingSafe: true,
+  activationEventId: 1,
+  activationAction: 'activate',
+  activationScheduleId: 'schedule-active',
+  activationNote: 'Verified current schedule.',
+  activationActedAt: null,
+  isActive: true,
+  activeForCurrentSchedule: true,
+  canActivate: false,
+  canDeactivate: true,
+  blockers: <String>[],
 );

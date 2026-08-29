@@ -26,6 +26,13 @@ void main() {
 
     expect(find.text('Historical Outcome Review'), findsOneWidget);
     expect(find.byKey(const Key('ecl-outcome-review-summary')), findsOneWidget);
+    expect(
+      find.text('Historical credit-outcome review progress'),
+      findsOneWidget,
+    );
+    expect(find.text('Ready for evidence review'), findsOneWidget);
+    expect(find.textContaining('Stage 5E.4'), findsNothing);
+    expect(find.text('Ready to post'), findsNothing);
     expect(find.text('992'), findsOneWidget);
     expect(find.text('919'), findsWidgets);
     expect(find.text('73'), findsOneWidget);
