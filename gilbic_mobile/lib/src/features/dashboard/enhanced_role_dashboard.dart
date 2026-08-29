@@ -150,10 +150,11 @@ class EnhancedRoleDashboard extends StatelessWidget {
           managementEmployeeActivityRepository,
     );
 
-    // Management owns a purpose-grouped command surface. Its account,
-    // notification, offline-policy, and protected review destinations live
-    // inside that hierarchy so none of them appear as duplicate overlays.
-    if (session.role == AppRole.management) {
+    // Management and Employee own purpose-grouped command surfaces. Account,
+    // notification, offline-policy, and protected destinations live inside
+    // those hierarchies so none appear as duplicate overlays.
+    if (session.role == AppRole.management ||
+        session.role == AppRole.employee) {
       return dashboard;
     }
 

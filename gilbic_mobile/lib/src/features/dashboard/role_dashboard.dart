@@ -16,6 +16,7 @@ import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/delegated_area_access_page.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
+import 'package:gilbic_mobile/src/features/employee/employee_dashboard.dart';
 import 'package:gilbic_mobile/src/features/management/management_dashboard.dart';
 import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
@@ -172,8 +173,7 @@ class RoleDashboard extends StatelessWidget {
       return;
     }
     if (action == 'remittance-notifications' &&
-        (session.role == AppRole.collector ||
-            session.role == AppRole.employee)) {
+        session.role == AppRole.collector) {
       _push(
         context,
         RemittanceNotificationsPage(
@@ -199,6 +199,13 @@ class RoleDashboard extends StatelessWidget {
         collectionDeviceSequence: collectionDeviceSequence,
         overviewRepository: managementDashboardOverviewRepository,
         employeeActivityRepository: managementEmployeeActivityRepository,
+      );
+    }
+    if (session.role == AppRole.employee) {
+      return EmployeeDashboard(
+        session: session,
+        onSignOut: onSignOut,
+        deviceIdentityProvider: deviceIdentityProvider,
       );
     }
 
@@ -400,30 +407,7 @@ List<_DashboardModule> _modulesFor(AppRole role) {
         requiredPermissions: <String>['remittance.view'],
       ),
     ],
-    AppRole.employee => const [
-      _DashboardModule(
-        'Attendance',
-        'Time records and attendance history',
-        Icons.schedule,
-      ),
-      _DashboardModule(
-        'Payroll',
-        'Payslips and payroll summaries',
-        Icons.price_check,
-      ),
-      _DashboardModule(
-        'Tasks',
-        'Assigned work and announcements',
-        Icons.task_alt,
-      ),
-      _DashboardModule(
-        'Notifications',
-        'Accept assigned remittances after receiving the cash',
-        Icons.notifications_active,
-        action: 'remittance-notifications',
-        requiredPermissions: <String>['remittance.view'],
-      ),
-    ],
+    AppRole.employee => const <_DashboardModule>[],
     AppRole.management => const <_DashboardModule>[],
   };
 }

@@ -12,52 +12,58 @@ import 'package:gilbic_mobile/src/features/dashboard/enhanced_role_dashboard.dar
 
 void main() {
   for (final role in AppRole.values) {
-    testWidgets('${role.label} offline policy shell follows the approved visibility rule', (
-      tester,
-    ) async {
-      await tester.binding.setSurfaceSize(const Size(900, 1400));
-      addTearDown(() async {
-        await tester.binding.setSurfaceSize(null);
-      });
+    testWidgets(
+      '${role.label} offline policy shell follows the approved visibility rule',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(900, 1400));
+        addTearDown(() async {
+          await tester.binding.setSurfaceSize(null);
+        });
 
-      final session = _sessionFor(role);
-      await tester.pumpWidget(
-        MaterialApp(
-          home: EnhancedRoleDashboard(
-            session: session,
-            onSignOut: () async {},
-            collectorRouteLoader: _UnusedRouteLoader(),
-            paymentSubmissionRepository: _UnusedPaymentRepository(),
-            deviceIdentityProvider: DeviceIdentityProvider(
-              store: MemoryDeviceIdentityStore(),
-              platformResolver: () => 'android',
-              appVersionResolver: () async => '1.0.0',
-              randomByteGenerator: (length) => List<int>.filled(length, 7),
+        final session = _sessionFor(role);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: EnhancedRoleDashboard(
+              session: session,
+              onSignOut: () async {},
+              collectorRouteLoader: _UnusedRouteLoader(),
+              paymentSubmissionRepository: _UnusedPaymentRepository(),
+              deviceIdentityProvider: DeviceIdentityProvider(
+                store: MemoryDeviceIdentityStore(),
+                platformResolver: () => 'android',
+                appVersionResolver: () async => '1.0.0',
+                randomByteGenerator: (length) => List<int>.filled(length, 7),
+              ),
+              collectionDeviceSequence: MemoryCollectionDeviceSequence(),
             ),
-            collectionDeviceSequence: MemoryCollectionDeviceSequence(),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      if (role == AppRole.collector) {
-        expect(find.byKey(const Key('collector-more-tab')), findsOneWidget);
-        await tester.tap(find.byKey(const Key('collector-more-tab')));
+        );
         await tester.pumpAndSettle();
-        expect(find.byKey(const Key('collector-more-offline')), findsNothing);
-        return;
-      }
 
-      final policyLauncher = role == AppRole.management
-          ? find.byKey(const Key('management-offline-policy'))
-          : find.byKey(const Key('open-offline-policy'));
-      expect(policyLauncher, findsOneWidget);
-      await tester.tap(policyLauncher);
-      await tester.pumpAndSettle();
+        if (role == AppRole.collector) {
+          expect(find.byKey(const Key('collector-more-tab')), findsOneWidget);
+          await tester.tap(find.byKey(const Key('collector-more-tab')));
+          await tester.pumpAndSettle();
+          expect(find.byKey(const Key('collector-more-offline')), findsNothing);
+          return;
+        }
 
-      expect(find.byKey(const Key('offline-policy-page')), findsOneWidget);
-      expect(find.text('${role.label} offline policy'), findsOneWidget);
-    });
+        final policyLauncher = switch (role) {
+          AppRole.management => find.byKey(
+            const Key('management-offline-policy'),
+          ),
+          AppRole.employee => find.byKey(const Key('employee-offline')),
+          AppRole.client => find.byKey(const Key('open-offline-policy')),
+          AppRole.collector => throw StateError('Collector returned above.'),
+        };
+        expect(policyLauncher, findsOneWidget);
+        await tester.tap(policyLauncher);
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('offline-policy-page')), findsOneWidget);
+        expect(find.text('${role.label} offline policy'), findsOneWidget);
+      },
+    );
   }
 
   testWidgets('permission-denied shell still exposes offline safety policy', (
@@ -92,7 +98,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('dashboard-permission-denied')), findsOneWidget);
+    expect(
+      find.byKey(const Key('dashboard-permission-denied')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('open-offline-policy')), findsOneWidget);
     await tester.tap(find.byKey(const Key('open-offline-policy')));
     await tester.pumpAndSettle();
