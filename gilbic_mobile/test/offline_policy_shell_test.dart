@@ -5,6 +5,8 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/loans/client_loan.dart';
+import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
@@ -35,6 +37,7 @@ void main() {
                 randomByteGenerator: (length) => List<int>.filled(length, 7),
               ),
               collectionDeviceSequence: MemoryCollectionDeviceSequence(),
+              clientLoanRepository: _EmptyClientLoanRepository(),
             ),
           ),
         );
@@ -152,5 +155,21 @@ class _UnusedPaymentRepository implements PaymentSubmissionRepository {
     PaymentSubmissionDraft draft,
   ) {
     throw StateError('Unexpected payment submission.');
+  }
+}
+
+class _EmptyClientLoanRepository implements ClientLoanRepository {
+  @override
+  Future<ClientLoanPortfolio> loadPortfolio(
+    UserSession session, {
+    required String deviceId,
+  }) async {
+    return ClientLoanPortfolio(
+      clientId: session.userId,
+      clientCode: 'CLIENT-EMPTY',
+      clientName: session.displayName,
+      clientStatus: 'active',
+      loans: const <ClientLoan>[],
+    );
   }
 }

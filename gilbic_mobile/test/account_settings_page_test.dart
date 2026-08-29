@@ -20,6 +20,16 @@ const _session = UserSession(
   permissions: <String>['route.view', 'collection.create'],
 );
 
+const _clientSession = UserSession(
+  userId: 'client-1',
+  username: 'ana.client',
+  displayName: 'Ana Client',
+  role: AppRole.client,
+  rawRole: 'Client',
+  accessToken: 'client-token',
+  permissions: <String>['loan.self.view'],
+);
+
 class _FakeAccountRepository implements AccountRepository {
   var revoked = false;
 
@@ -86,6 +96,28 @@ DeviceIdentityProvider _identity() {
 }
 
 void main() {
+  testWidgets('Client account explains personal access without permission jargon',
+      (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AccountSettingsPage(
+            session: _clientSession,
+            repository: _FakeAccountRepository(),
+            deviceIdentityProvider: _identity(),
+            onSignOut: () async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Your access'), findsOneWidget);
+      expect(
+        find.text('Only your own linked loan and account records'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('server permissions'), findsNothing);
+  });
+
   testWidgets('shows profile, current session, and privacy-safe device state',
       (tester) async {
     final repository = _FakeAccountRepository();

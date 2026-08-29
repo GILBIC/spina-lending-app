@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/account/account_repository.dart';
+import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
@@ -194,10 +195,16 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
               label: 'Session expires',
               value: _dateTime(widget.session.expiresAt),
             ),
-            _DetailRow(
-              label: 'Permission scope',
-              value: '${widget.session.permissions.length} server permissions',
-            ),
+            if (widget.session.role == AppRole.client)
+              const _DetailRow(
+                label: 'Your access',
+                value: 'Only your own linked loan and account records',
+              )
+            else
+              _DetailRow(
+                label: 'Permission scope',
+                value: '${widget.session.permissions.length} server permissions',
+              ),
             const SizedBox(height: 10),
             FilledButton.icon(
               key: const Key('account-sign-out'),

@@ -4,7 +4,6 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment.dart';
 import 'package:gilbic_mobile/src/core/payments/client_payment_repository.dart';
-import 'package:gilbic_mobile/src/features/client/client_gcash_payment_page.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 class ClientPaymentsPage extends StatefulWidget {
@@ -64,17 +63,6 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
         setState(() => _loading = false);
       }
     }
-  }
-
-  void _openGcash() {
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => ClientGcashPaymentPage(
-          session: widget.session,
-          deviceIdentityProvider: widget.deviceIdentityProvider,
-        ),
-      ),
-    );
   }
 
   @override
@@ -171,7 +159,7 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
           ),
           const SizedBox(height: 12),
           Container(
-            key: const Key('client-gcash-entry-card'),
+            key: const Key('client-gcash-placeholder'),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
@@ -201,19 +189,14 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Pay directly with GCash',
+                        'Direct GCash payment',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 4),
+                      const Text('Coming soon through Xendit'),
+                      const SizedBox(height: 5),
                       const Text(
-                        'Choose your active loan, review the amount, then continue to the connected GCash business checkout.',
-                      ),
-                      const SizedBox(height: 10),
-                      FilledButton.tonalIcon(
-                        key: const Key('open-client-gcash-payment'),
-                        onPressed: _openGcash,
-                        icon: const Icon(Icons.arrow_forward_rounded),
-                        label: const Text('Open GCash payment'),
+                        'This is a placeholder only. It cannot accept or post a payment yet.',
                       ),
                     ],
                   ),
@@ -244,6 +227,10 @@ class _ClientPaymentsPageState extends State<ClientPaymentsPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(timeline.proofMessage),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Sending or uploading an image does not post a payment. Only a SPINA-posted transaction with an official receipt changes your balance.',
+                        ),
                       ],
                     ),
                   ),

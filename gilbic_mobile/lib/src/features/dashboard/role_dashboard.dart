@@ -3,14 +3,12 @@ import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
 import 'package:gilbic_mobile/src/core/management/management_dashboard_overview_repository.dart';
 import 'package:gilbic_mobile/src/core/management/management_employee_activity_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
-import 'package:gilbic_mobile/src/features/client/client_loans_page.dart';
-import 'package:gilbic_mobile/src/features/client/client_payments_page.dart';
-import 'package:gilbic_mobile/src/features/client/client_renewal_page.dart';
-import 'package:gilbic_mobile/src/features/client/client_support_page.dart';
+import 'package:gilbic_mobile/src/features/client/client_dashboard.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_remittance_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_page.dart';
 import 'package:gilbic_mobile/src/features/collector/cross_collector_remittance_page.dart';
@@ -31,6 +29,7 @@ class RoleDashboard extends StatelessWidget {
     required this.collectionDeviceSequence,
     this.managementDashboardOverviewRepository,
     this.managementEmployeeActivityRepository,
+    this.clientLoanRepository,
     super.key,
   });
 
@@ -44,6 +43,7 @@ class RoleDashboard extends StatelessWidget {
   managementDashboardOverviewRepository;
   final ManagementEmployeeActivityRepository?
   managementEmployeeActivityRepository;
+  final ClientLoanRepository? clientLoanRepository;
 
   void _push(BuildContext context, Widget page) {
     Navigator.of(
@@ -122,46 +122,6 @@ class RoleDashboard extends StatelessWidget {
       );
       return;
     }
-    if (session.role == AppRole.client && action == 'my-loans') {
-      _push(
-        context,
-        ClientLoansPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.client && action == 'payments') {
-      _push(
-        context,
-        ClientPaymentsPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.client && action == 'renewal') {
-      _push(
-        context,
-        ClientRenewalPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
-    if (session.role == AppRole.client && action == 'support') {
-      _push(
-        context,
-        ClientSupportPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      );
-      return;
-    }
     if (action == 'payment-updates') {
       _push(
         context,
@@ -206,6 +166,14 @@ class RoleDashboard extends StatelessWidget {
         session: session,
         onSignOut: onSignOut,
         deviceIdentityProvider: deviceIdentityProvider,
+      );
+    }
+    if (session.role == AppRole.client) {
+      return ClientDashboard(
+        session: session,
+        onSignOut: onSignOut,
+        deviceIdentityProvider: deviceIdentityProvider,
+        loanRepository: clientLoanRepository,
       );
     }
 
@@ -315,38 +283,7 @@ class _DashboardModule {
 
 List<_DashboardModule> _modulesFor(AppRole role) {
   return switch (role) {
-    AppRole.client => const [
-      _DashboardModule(
-        'My Loans',
-        'Balances, schedules, and loan history',
-        Icons.account_balance_wallet,
-        action: 'my-loans',
-      ),
-      _DashboardModule(
-        'Payments',
-        'Timeline, receipts, and payment proofs',
-        Icons.receipt_long,
-        action: 'payments',
-      ),
-      _DashboardModule(
-        'Payment Updates',
-        'See who posted, remitted, and accepted your payment',
-        Icons.notifications_active,
-        action: 'payment-updates',
-      ),
-      _DashboardModule(
-        'Renewal',
-        'Submit and monitor renewal requests',
-        Icons.autorenew,
-        action: 'renewal',
-      ),
-      _DashboardModule(
-        'Support',
-        'Notices, corrections, and assistance',
-        Icons.support_agent,
-        action: 'support',
-      ),
-    ],
+    AppRole.client => const [],
     AppRole.collector => const [
       _DashboardModule(
         'Daily Route',

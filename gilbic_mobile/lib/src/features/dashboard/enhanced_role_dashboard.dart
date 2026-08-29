@@ -3,6 +3,7 @@ import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/loans/client_loan_repository.dart';
 import 'package:gilbic_mobile/src/core/management/management_dashboard_overview_repository.dart';
 import 'package:gilbic_mobile/src/core/management/management_employee_activity_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
@@ -23,6 +24,7 @@ class EnhancedRoleDashboard extends StatelessWidget {
     required this.collectionDeviceSequence,
     this.managementDashboardOverviewRepository,
     this.managementEmployeeActivityRepository,
+    this.clientLoanRepository,
     super.key,
   });
 
@@ -36,82 +38,7 @@ class EnhancedRoleDashboard extends StatelessWidget {
   managementDashboardOverviewRepository;
   final ManagementEmployeeActivityRepository?
   managementEmployeeActivityRepository;
-
-  void _openAccount(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => AccountSettingsPage(
-          session: session,
-          onSignOut: onSignOut,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      ),
-    );
-  }
-
-  void _openNotifications(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => NotificationCenterPage(
-          session: session,
-          deviceIdentityProvider: deviceIdentityProvider,
-        ),
-      ),
-    );
-  }
-
-  void _openOfflinePolicy(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => MobileOfflinePolicyPage(session: session),
-      ),
-    );
-  }
-
-  Widget _accountButton(BuildContext context) {
-    return Positioned(
-      right: 56,
-      top: 0,
-      child: SafeArea(
-        child: IconButton(
-          key: const Key('open-account-settings'),
-          tooltip: 'Profile & security',
-          onPressed: () => _openAccount(context),
-          icon: const Icon(Icons.account_circle_outlined),
-        ),
-      ),
-    );
-  }
-
-  Widget _notificationButton(BuildContext context) {
-    return Positioned(
-      right: 104,
-      top: 0,
-      child: SafeArea(
-        child: IconButton(
-          key: const Key('open-notification-center'),
-          tooltip: 'Notifications',
-          onPressed: () => _openNotifications(context),
-          icon: const Icon(Icons.notifications_outlined),
-        ),
-      ),
-    );
-  }
-
-  Widget _offlinePolicyButton(BuildContext context) {
-    return Positioned(
-      right: 152,
-      top: 0,
-      child: SafeArea(
-        child: IconButton(
-          key: const Key('open-offline-policy'),
-          tooltip: 'Offline & sync',
-          onPressed: () => _openOfflinePolicy(context),
-          icon: const Icon(Icons.cloud_off_outlined),
-        ),
-      ),
-    );
-  }
+  final ClientLoanRepository? clientLoanRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -148,24 +75,13 @@ class EnhancedRoleDashboard extends StatelessWidget {
           managementDashboardOverviewRepository,
       managementEmployeeActivityRepository:
           managementEmployeeActivityRepository,
+      clientLoanRepository: clientLoanRepository,
     );
 
-    // Management and Employee own purpose-grouped command surfaces. Account,
-    // notification, offline-policy, and protected destinations live inside
-    // those hierarchies so none appear as duplicate overlays.
-    if (session.role == AppRole.management ||
-        session.role == AppRole.employee) {
-      return dashboard;
-    }
-
-    final layers = <Widget>[
-      dashboard,
-      _offlinePolicyButton(context),
-      _notificationButton(context),
-      _accountButton(context),
-    ];
-
-    return Stack(children: layers);
+    // Management, Employee, and Client each own a purpose-grouped command
+    // surface. Account, notification, offline-policy, and protected
+    // destinations live inside those hierarchies without duplicate overlays.
+    return dashboard;
   }
 }
 
