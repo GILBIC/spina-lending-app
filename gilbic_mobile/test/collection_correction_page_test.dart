@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction_history_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction_repository.dart';
@@ -12,9 +13,75 @@ import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 void main() {
   testWidgets(
-      'shows allocation first and keeps covered dates plus audit history under details',
-      (tester) async {
-    final history = _FakeHistoryRepository();
+    'shows allocation first and keeps covered dates plus audit history under details',
+    (tester) async {
+      final history = _FakeHistoryRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SpinaTheme.light,
+          home: CollectionCorrectionPage(
+            session: _session,
+            entry: _entry,
+            collectionDate: DateTime(2026, 8, 2),
+            repository: _FakeCorrectionRepository(),
+            historyRepository: history,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Edit Collection'), findsOneWidget);
+      expect(find.text('Recorded by: Test Collector'), findsOneWidget);
+      expect(find.text('Allocation'), findsOneWidget);
+      expect(find.text('Exact covered dates'), findsNothing);
+      expect(
+        find.byKey(const Key('correction-add-covered-date')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('correction-covered-obligations-details')),
+        findsOneWidget,
+      );
+      expect(find.text('2026-08-04'), findsNothing);
+      expect(find.text('Reason: Wrong amount'), findsNothing);
+
+      await tester.tap(
+        find.byKey(const Key('correction-covered-obligations-details')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('• 2026-08-04'), findsOneWidget);
+      expect(
+        find.byKey(const Key('correction-audit-history-title')),
+        findsOneWidget,
+      );
+      expect(find.text('Version 1 · Test Collector'), findsOneWidget);
+      expect(find.text('Reason: Wrong amount'), findsOneWidget);
+      expect(find.text('Before: Advance · ₱120.00'), findsOneWidget);
+      expect(find.text('After: Advance · ₱100.00'), findsOneWidget);
+      expect(history.requestedTransactionId, 'transaction-1');
+      expect(history.requestedDeviceId, 'device-one');
+
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('correction-reason')),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('correction-reason')), findsOneWidget);
+      expect(
+        find.byKey(const Key('submit-collection-correction')),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('correction history failure gives safe retry guidance', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: SpinaTheme.light,
@@ -23,52 +90,66 @@ void main() {
           entry: _entry,
           collectionDate: DateTime(2026, 8, 2),
           repository: _FakeCorrectionRepository(),
-          historyRepository: history,
+          historyRepository: const _FailingHistoryRepository(),
           deviceIdentityProvider: _deviceIdentityProvider(),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-    expect(find.text('Edit Collection'), findsOneWidget);
-    expect(find.text('Recorded by: Test Collector'), findsOneWidget);
-    expect(find.text('Allocation'), findsOneWidget);
-    expect(find.text('Exact covered dates'), findsNothing);
-    expect(find.byKey(const Key('correction-add-covered-date')), findsNothing);
-    expect(
-      find.byKey(const Key('correction-covered-obligations-details')),
-      findsOneWidget,
-    );
-    expect(find.text('2026-08-04'), findsNothing);
-    expect(find.text('Reason: Wrong amount'), findsNothing);
-
     await tester.tap(
       find.byKey(const Key('correction-covered-obligations-details')),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('• 2026-08-04'), findsOneWidget);
     expect(
-      find.byKey(const Key('correction-audit-history-title')),
+      find.text(
+        'Gilbic could not load correction history. Check your connection, then tap Retry.',
+      ),
       findsOneWidget,
     );
-    expect(find.text('Version 1 · Test Collector'), findsOneWidget);
-    expect(find.text('Reason: Wrong amount'), findsOneWidget);
-    expect(find.text('Before: Advance · ₱120.00'), findsOneWidget);
-    expect(find.text('After: Advance · ₱100.00'), findsOneWidget);
-    expect(history.requestedTransactionId, 'transaction-1');
-    expect(history.requestedDeviceId, 'device-one');
+    expect(find.textContaining('10.0.2.2'), findsNothing);
+  });
 
-    await tester.scrollUntilVisible(
-      find.byKey(const Key('correction-reason')),
-      300,
-      scrollable: find.byType(Scrollable).first,
+  testWidgets('stale correction gives refresh and review guidance', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: SpinaTheme.light,
+        home: CollectionCorrectionPage(
+          session: _session,
+          entry: _entry,
+          collectionDate: DateTime(2026, 8, 2),
+          repository: const _FailingCorrectionRepository(),
+          deviceIdentityProvider: _deviceIdentityProvider(),
+        ),
+      ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('correction-reason')), findsOneWidget);
-    expect(find.byKey(const Key('submit-collection-correction')), findsOneWidget);
+    final reason = find.byKey(const Key('correction-reason'));
+    await tester.scrollUntilVisible(
+      reason,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(reason, 'Correct amount');
+    await tester.tap(find.byKey(const Key('submit-collection-correction')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-collection-correction')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'This route changed after you opened it. Refresh the route, review the client, then try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Internal route revision conflict.'), findsNothing);
   });
 }
 
@@ -100,10 +181,8 @@ final CollectorRouteEntry _entry = CollectorRouteEntry(
   canEditToday: true,
   todayAmount: 100,
   todayNote: 'Two selected dates',
-  todayCoveredDates: <DateTime>[
-    DateTime(2026, 8, 2),
-    DateTime(2026, 8, 4),
-  ],
+  routeRevision: 'route-revision-1',
+  todayCoveredDates: <DateTime>[DateTime(2026, 8, 2), DateTime(2026, 8, 4)],
 );
 
 DeviceIdentityProvider _deviceIdentityProvider() {
@@ -162,5 +241,36 @@ class _FakeHistoryRepository implements CollectionCorrectionHistoryRepository {
         editedAt: DateTime.utc(2026, 8, 25, 1, 30),
       ),
     ];
+  }
+}
+
+class _FailingHistoryRepository
+    implements CollectionCorrectionHistoryRepository {
+  const _FailingHistoryRepository();
+
+  @override
+  Future<List<CollectionCorrectionHistoryEntry>> list(
+    UserSession session, {
+    required String deviceId,
+    required String transactionId,
+  }) {
+    throw StateError('SocketException: connection refused at 10.0.2.2');
+  }
+}
+
+class _FailingCorrectionRepository implements CollectionCorrectionRepository {
+  const _FailingCorrectionRepository();
+
+  @override
+  Future<CollectionCorrectionResult> correct(
+    UserSession session, {
+    required String deviceId,
+    required CollectionCorrectionDraft draft,
+  }) {
+    throw const SpinaApiException(
+      'Internal route revision conflict.',
+      statusCode: 409,
+      code: 'route_revision_changed',
+    );
   }
 }

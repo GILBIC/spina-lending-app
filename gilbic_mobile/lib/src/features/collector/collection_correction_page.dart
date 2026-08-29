@@ -6,6 +6,7 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction_history_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_correction_repository.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
 
 class CollectionCorrectionPage extends StatefulWidget {
   const CollectionCorrectionPage({
@@ -51,9 +52,7 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
     super.initState();
     _collectionDate = _dateOnly(widget.collectionDate);
     _unableToPay = widget.entry.todayEntryType.trim().toLowerCase() == 'pass';
-    _coveredDates.addAll(
-      widget.entry.todayCoveredDates.map(_dateOnly).toSet(),
-    );
+    _coveredDates.addAll(widget.entry.todayCoveredDates.map(_dateOnly).toSet());
     if (!_unableToPay && _coveredDates.isEmpty) {
       _coveredDates.add(_collectionDate);
     }
@@ -120,7 +119,8 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
     });
     try {
       final identity = await widget.deviceIdentityProvider.load();
-      final repository = widget.historyRepository ??
+      final repository =
+          widget.historyRepository ??
           SpinaCollectionCorrectionHistoryRepository();
       final history = await repository.list(
         widget.session,
@@ -136,12 +136,20 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
       });
     } on SpinaApiException catch (error) {
       if (mounted) {
-        setState(() => _historyError = error.message);
+        setState(() {
+          _historyError = collectorFailureMessage(
+            error,
+            task: CollectorFailureTask.loadCorrectionHistory,
+          );
+        });
       }
-    } on Object {
+    } on Object catch (error) {
       if (mounted) {
         setState(() {
-          _historyError = 'Correction history could not be loaded.';
+          _historyError = collectorFailureMessage(
+            error,
+            task: CollectorFailureTask.loadCorrectionHistory,
+          );
         });
       }
     } finally {
@@ -249,13 +257,20 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
       }
     } on SpinaApiException catch (error) {
       if (mounted) {
-        setState(() => _errorMessage = error.message);
+        setState(() {
+          _errorMessage = collectorFailureMessage(
+            error,
+            task: CollectorFailureTask.correctCollection,
+          );
+        });
       }
-    } on Object {
+    } on Object catch (error) {
       if (mounted) {
         setState(() {
-          _errorMessage =
-              'The correction could not be saved. Refresh and try again.';
+          _errorMessage = collectorFailureMessage(
+            error,
+            task: CollectorFailureTask.correctCollection,
+          );
         });
       }
     } finally {
@@ -284,7 +299,9 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 4),
-                    Text('${widget.entry.loanType} • ${_date(_collectionDate)}'),
+                    Text(
+                      '${widget.entry.loanType} • ${_date(_collectionDate)}',
+                    ),
                     const Divider(height: 24),
                     Text('Recorded by: ${widget.entry.todayCollectorName}'),
                     Text(
@@ -321,7 +338,9 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
                 key: const Key('correction-amount'),
                 controller: _amountController,
                 enabled: !_submitting,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Corrected cash amount',
                   prefixText: '₱ ',
@@ -449,7 +468,8 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
               maxLines: 2,
               decoration: const InputDecoration(
                 labelText: 'Why are you correcting this? (required)',
-                helperText: 'This reason is saved permanently in the audit log.',
+                helperText:
+                    'This reason is saved permanently in the audit log.',
               ),
             ),
             if (_errorMessage != null) ...[
@@ -472,7 +492,9 @@ class _CollectionCorrectionPageState extends State<CollectionCorrectionPage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.save_outlined),
-              label: Text(_submitting ? 'Saving...' : 'Save audited correction'),
+              label: Text(
+                _submitting ? 'Saving...' : 'Save audited correction',
+              ),
             ),
           ],
         ),

@@ -6,7 +6,8 @@ import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 typedef CollectorEntryReason = String? Function(CollectorRouteEntry entry);
 typedef CollectorEntryAction = void Function(CollectorRouteEntry entry);
 typedef CollectorClientAction = void Function(CollectorRouteClientGroup client);
-typedef CollectorEntryDetailsBuilder = Widget Function(CollectorRouteEntry entry);
+typedef CollectorEntryDetailsBuilder =
+    Widget Function(CollectorRouteEntry entry);
 
 /// Production Collector area ledger using one client row with REG, 7x7 and TODAY.
 ///
@@ -94,9 +95,9 @@ class _ClientColumns extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-        );
+    final style = Theme.of(
+      context,
+    ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700);
     return Container(
       color: const Color(0xFFFFFAFC),
       padding: const EdgeInsets.fromLTRB(36, 5, 6, 5),
@@ -190,9 +191,7 @@ class _ClientRow extends StatelessWidget {
                               client.clientName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelLarge
+                              style: Theme.of(context).textTheme.labelLarge
                                   ?.copyWith(fontWeight: FontWeight.w900),
                             ),
                           ),
@@ -207,7 +206,9 @@ class _ClientRow extends StatelessWidget {
                         Wrap(
                           spacing: 4,
                           runSpacing: 3,
-                          children: [for (final chip in chips) _StatusChip(chip)],
+                          children: [
+                            for (final chip in chips) _StatusChip(chip),
+                          ],
                         ),
                       ],
                     ],
@@ -277,7 +278,8 @@ class _TodayAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entry = state.singleEntry ??
+    final entry =
+        state.singleEntry ??
         (client.loans.length == 1 ? client.loans.single : null);
     final key = entry != null
         ? Key('record-collection-${entry.id}')
@@ -285,7 +287,7 @@ class _TodayAction extends StatelessWidget {
 
     if (state.paying) {
       return SizedBox(
-        height: 42,
+        height: 48,
         child: FilledButton(
           key: key,
           onPressed: null,
@@ -301,7 +303,7 @@ class _TodayAction extends StatelessWidget {
 
     if (state.requiresAtomicCombinedPosting) {
       return SizedBox(
-        height: 42,
+        height: 48,
         child: FilledButton(
           key: key,
           onPressed: () => onRecordCombined(client),
@@ -326,7 +328,7 @@ class _TodayAction extends StatelessWidget {
     final label = state.label;
     final amount = state.actionAmount;
     return SizedBox(
-      height: 42,
+      height: 48,
       child: FilledButton(
         key: key,
         onPressed: enabled ? () => onRecord(direct) : null,
@@ -347,10 +349,10 @@ class _TodayAction extends StatelessWidget {
   }
 
   ButtonStyle _buttonStyle(BuildContext context) => FilledButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
-        minimumSize: const Size(68, 40),
-        textStyle: Theme.of(context).textTheme.labelMedium,
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+    minimumSize: const Size(68, 46),
+    textStyle: Theme.of(context).textTheme.labelMedium,
+  );
 }
 
 class _AmountCell extends StatelessWidget {
@@ -388,10 +390,10 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SpinaTheme.brandPinkDark,
-              fontSize: 9,
-              fontWeight: FontWeight.w900,
-            ),
+          color: SpinaTheme.brandPinkDark,
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }
@@ -409,16 +411,16 @@ class _ExpandedLoanHeader extends StatelessWidget {
         Expanded(
           child: Text(
             _loanLabel(entry.loanType),
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
         ),
         Text(
           'Balance ${_moneyShort(entry.balance)}',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
         ),
       ],
     );
@@ -440,9 +442,9 @@ class _CombinedPayNotice extends StatelessWidget {
       child: Text(
         'Regular + 7x7 are both due. One-tap Pay sends one atomic server request: both official payments save together or neither saves.',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: SpinaTheme.brandPinkDark,
-              fontWeight: FontWeight.w700,
-            ),
+          color: SpinaTheme.brandPinkDark,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -519,8 +521,12 @@ class _ClientActionState {
     }
 
     final preferred = _preferredStateEntry(client.loans);
-    final blocked = preferred == null ? null : directPayBlockedReasonFor(preferred);
-    final label = preferred == null ? 'Done' : _blockedLabel(preferred, blocked);
+    final blocked = preferred == null
+        ? null
+        : directPayBlockedReasonFor(preferred);
+    final label = preferred == null
+        ? 'Done'
+        : _blockedLabel(preferred, blocked);
     return _ClientActionState(
       payableEntries: const <CollectorRouteEntry>[],
       payableAmount: 0,
@@ -561,7 +567,8 @@ String _blockedLabel(CollectorRouteEntry entry, String? blockedReason) {
     }
     return 'Paid';
   }
-  if (blockedReason != null && blockedReason.toLowerCase().contains('offline')) {
+  if (blockedReason != null &&
+      blockedReason.toLowerCase().contains('offline')) {
     return 'Offline';
   }
   return 'Locked';
@@ -571,7 +578,8 @@ List<String> _statusChips(CollectorRouteClientGroup client) {
   final chips = <String>[];
   final loans = client.loans;
   final hasLacking = loans.any(
-    (entry) => entry.contractCollectionReady &&
+    (entry) =>
+        entry.contractCollectionReady &&
         entry.contractTodayScheduledAmount > 0 &&
         entry.contractTodayUnpaidAmount > 0 &&
         entry.processedToday,
@@ -580,13 +588,15 @@ List<String> _statusChips(CollectorRouteClientGroup client) {
     (entry) => entry.todayEntryType.trim().toLowerCase() == 'pass',
   );
   final hasAdvance = loans.any(
-    (entry) => entry.todayEntryType.trim().toLowerCase() == 'advance' ||
+    (entry) =>
+        entry.todayEntryType.trim().toLowerCase() == 'advance' ||
         entry.advanceUntil != null,
   );
   final allComplete = loans.isNotEmpty && loans.every(_todaySatisfied);
   final anyLocked = loans.any((entry) => entry.todayIsLocked);
   final desktop7x7 = loans.any(
-    (entry) => _isSevenBySeven(entry.loanType) && !entry.sevenBySevenMobileEnabled,
+    (entry) =>
+        _isSevenBySeven(entry.loanType) && !entry.sevenBySevenMobileEnabled,
   );
   final hasRenewalRequest = loans.any((entry) => entry.renewalRequested);
   final missed = loans.fold<int>(
@@ -637,7 +647,9 @@ double _scheduledToday(CollectorRouteEntry entry) {
 
 double _unpaidToday(CollectorRouteEntry entry) {
   if (entry.contractCollectionReady && entry.contractTodayScheduledAmount > 0) {
-    return entry.contractTodayUnpaidAmount > 0 ? entry.contractTodayUnpaidAmount : 0;
+    return entry.contractTodayUnpaidAmount > 0
+        ? entry.contractTodayUnpaidAmount
+        : 0;
   }
   return entry.processedToday ? 0 : entry.dailyAmount;
 }

@@ -32,8 +32,12 @@ void main() {
     );
     expect(button.onPressed, isNull);
     expect(
-      find.textContaining('Offline route copies are read-only'),
-      findsNothing,
+      find.byKey(const Key('collector-offline-read-only')),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('no payment is accepted or queued'),
+      findsOneWidget,
     );
 
     await tester.tap(find.byKey(const Key('route-client-client-1')));
@@ -527,6 +531,93 @@ void main() {
       expect(repository.submitCount, 0);
     },
   );
+
+  testWidgets(
+    'revoked-device route failure gives an action instead of raw text',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CollectorRoutePage(
+            session: _session,
+            loader: _FailingRouteLoader(
+              const SpinaApiException(
+                'This device has been revoked.',
+                statusCode: 403,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'This device is no longer approved. Ask Management to approve this device, then sign in again.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('This device has been revoked.'), findsNothing);
+      expect(find.text('Try again'), findsOneWidget);
+    },
+  );
+
+  testWidgets('stale payment tells the Collector to refresh and review', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CollectorRoutePage(
+          session: _session,
+          loader: _RouteLoader(isFromCache: false),
+          paymentRepository: _StaleRouteRepository(),
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('record-collection-entry-1')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'This route changed after you opened it. Refresh the route, review the client, then try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Internal route revision conflict.'), findsNothing);
+  });
+
+  testWidgets('daily route stays usable at 360x640 with 1.3 text scale', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
+          child: CollectorRoutePage(
+            session: _session,
+            loader: _RouteLoader(isFromCache: false),
+            paymentRepository: _RecordingRepository(),
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            deviceSequence: MemoryCollectionDeviceSequence(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('route-client-client-1')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('route-client-client-1')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('collection-details-entry-1')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _pumpCombinedSheet(WidgetTester tester) async {
@@ -616,6 +707,17 @@ class _RouteLoader implements CollectorRouteLoader {
   }
 }
 
+class _FailingRouteLoader implements CollectorRouteLoader {
+  const _FailingRouteLoader(this.error);
+
+  final Object error;
+
+  @override
+  Future<CollectorRouteLoadResult> loadToday(UserSession session) {
+    return Future<CollectorRouteLoadResult>.error(error);
+  }
+}
+
 class _RecordingRepository implements PaymentSubmissionRepository {
   final List<PaymentSubmissionDraft> drafts = <PaymentSubmissionDraft>[];
 
@@ -656,6 +758,20 @@ class _RetryRepository implements PaymentSubmissionRepository {
       message: 'Already recorded.',
       receiptNumber: 'R-2001',
       officialBalance: 4600,
+    );
+  }
+}
+
+class _StaleRouteRepository implements PaymentSubmissionRepository {
+  @override
+  Future<PaymentSubmissionResult> submit(
+    UserSession session,
+    PaymentSubmissionDraft draft,
+  ) {
+    throw const SpinaApiException(
+      'Internal route revision conflict.',
+      statusCode: 409,
+      code: 'route_revision_changed',
     );
   }
 }

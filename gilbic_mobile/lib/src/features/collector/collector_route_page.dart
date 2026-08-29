@@ -14,6 +14,7 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/collector/collection_correction_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_client_ledger.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
 import 'package:gilbic_mobile/src/features/collector/collector_route_header_cards.dart';
 
 class CollectorRoutePage extends StatefulWidget {
@@ -296,7 +297,10 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
           content: Text(
             uncertain
                 ? 'Payment result is not confirmed. Tap Retry to check the same payment.'
-                : error.message,
+                : collectorFailureMessage(
+                    error,
+                    task: CollectorFailureTask.recordCollection,
+                  ),
           ),
         ),
       );
@@ -419,7 +423,10 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
           content: Text(
             uncertain
                 ? 'Combined payment result is not confirmed. Tap Retry to check the same Regular + 7x7 payment.'
-                : error.message,
+                : collectorFailureMessage(
+                    error,
+                    task: CollectorFailureTask.recordCombinedCollection,
+                  ),
           ),
         ),
       );
@@ -574,7 +581,10 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
               const Icon(Icons.cloud_off, size: 48),
               const SizedBox(height: 12),
               Text(
-                error.toString(),
+                collectorFailureMessage(
+                  error,
+                  task: CollectorFailureTask.loadRoute,
+                ),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
@@ -613,7 +623,11 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
           CollectorAreaArrangementCard(
             areas: areaGroups.map((group) => group.area).toList(),
           ),
-          if (loaded.warning != null) ...[
+          if (loaded.isFromCache) ...[
+            const SizedBox(height: 8),
+            const _CollectorOfflineReadOnlyNotice(),
+          ],
+          if (loaded.warning != null && !loaded.isFromCache) ...[
             const SizedBox(height: 8),
             MaterialBanner(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -630,7 +644,12 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
             const SizedBox(height: 8),
             MaterialBanner(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              content: Text('The last refresh failed: $error'),
+              content: Text(
+                collectorFailureMessage(
+                  error,
+                  task: CollectorFailureTask.loadRoute,
+                ),
+              ),
               actions: [
                 TextButton(onPressed: _loadRoute, child: const Text('Retry')),
               ],
@@ -672,6 +691,50 @@ class _CollectorRoutePageState extends State<CollectorRoutePage> {
               const SizedBox(height: 8),
             ],
         ],
+      ),
+    );
+  }
+}
+
+class _CollectorOfflineReadOnlyNotice extends StatelessWidget {
+  const _CollectorOfflineReadOnlyNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      key: const Key('collector-offline-read-only'),
+      color: colors.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.cloud_off_outlined, color: colors.onSecondaryContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Offline copy — read-only',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: colors.onSecondaryContainer,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'You can review the saved route, but no payment is accepted or queued. Reconnect and refresh before collecting.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.onSecondaryContainer,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

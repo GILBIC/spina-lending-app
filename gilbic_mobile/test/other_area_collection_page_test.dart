@@ -37,7 +37,10 @@ void main() {
       expect(find.text('Assigned collector: Collector Two'), findsOneWidget);
       expect(find.textContaining('Taytay'), findsWidgets);
       expect(find.textContaining('Regular'), findsWidgets);
-      expect(find.byKey(const Key('record-other-area-loan-other')), findsOneWidget);
+      expect(
+        find.byKey(const Key('record-other-area-loan-other')),
+        findsOneWidget,
+      );
 
       await tester.tap(find.byKey(const Key('record-other-area-loan-other')));
       await tester.pumpAndSettle();
@@ -76,7 +79,9 @@ void main() {
       expect(repository.workLoads, 0);
       expect(find.text('Other Area Payment'), findsOneWidget);
       expect(
-        find.text('Search any active client outside your assigned route above.'),
+        find.text(
+          'Search any active client outside your assigned route above.',
+        ),
         findsOneWidget,
       );
 
@@ -90,34 +95,37 @@ void main() {
     },
   );
 
-  testWidgets('already processed cross-route work shows recorder and cannot post again',
-      (tester) async {
-    await _setLargeSurface(tester);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: OtherAreaCollectionPage(
-          session: _collectorSession,
-          paymentRepository: _PaymentRepository(),
-          deviceIdentityProvider: _deviceIdentityProvider(),
-          deviceSequence: MemoryCollectionDeviceSequence(),
-          repository: _OtherAreaRepository(processedToday: true),
+  testWidgets(
+    'already processed cross-route work shows recorder and cannot post again',
+    (tester) async {
+      await _setLargeSurface(tester);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: OtherAreaCollectionPage(
+            session: _collectorSession,
+            paymentRepository: _PaymentRepository(),
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            deviceSequence: MemoryCollectionDeviceSequence(),
+            repository: _OtherAreaRepository(processedToday: true),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Collected ₱200.00'), findsOneWidget);
-    expect(find.text('Recorded by: Collector Three'), findsOneWidget);
-    expect(find.text('Entry: Locked'), findsOneWidget);
-    final button = tester.widget<FilledButton>(
-      find.byKey(const Key('record-other-area-loan-other')),
-    );
-    expect(button.onPressed, isNull);
-    expect(find.text('Already recorded today'), findsOneWidget);
-  });
+      expect(find.text('Collected ₱200.00'), findsOneWidget);
+      expect(find.text('Recorded by: Collector Three'), findsOneWidget);
+      expect(find.text('Entry: Locked'), findsOneWidget);
+      final button = tester.widget<FilledButton>(
+        find.byKey(const Key('record-other-area-loan-other')),
+      );
+      expect(button.onPressed, isNull);
+      expect(find.text('Already recorded today'), findsOneWidget);
+    },
+  );
 
-  testWidgets('7x7 cross-route work remains fail-closed on the mobile path',
-      (tester) async {
+  testWidgets('7x7 cross-route work remains fail-closed on the mobile path', (
+    tester,
+  ) async {
     await _setLargeSurface(tester);
     await tester.pumpWidget(
       MaterialApp(
@@ -142,8 +150,9 @@ void main() {
     );
   });
 
-  testWidgets('Management direct payment keeps the distinct search workflow',
-      (tester) async {
+  testWidgets('Management direct payment keeps the distinct search workflow', (
+    tester,
+  ) async {
     await _setLargeSurface(tester);
     final repository = _OtherAreaRepository();
     await tester.pumpWidget(
@@ -167,6 +176,60 @@ void main() {
     expect(repository.queries, ['Bea']);
     expect(find.text('Direct Payment Entry'), findsOneWidget);
     expect(find.text('Bea Borrower'), findsOneWidget);
+  });
+
+  testWidgets('Collector other-area load failure gives a safe retry action', (
+    tester,
+  ) async {
+    await _setLargeSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OtherAreaCollectionPage(
+          session: _collectorSession,
+          paymentRepository: _PaymentRepository(),
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
+          repository: const _FailingOtherAreaRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Gilbic could not load other-area work. Check your connection, then tap Retry.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('10.0.2.2'), findsNothing);
+  });
+
+  testWidgets('Management search failure keeps direct-payment wording', (
+    tester,
+  ) async {
+    await _setLargeSurface(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OtherAreaCollectionPage(
+          session: _managementSession,
+          paymentRepository: _PaymentRepository(),
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          deviceSequence: MemoryCollectionDeviceSequence(),
+          repository: const _FailingOtherAreaRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('other-area-search')), 'Bea');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Clients could not be searched for direct payment entry.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('other-area work'), findsNothing);
   });
 }
 
@@ -206,7 +269,8 @@ Future<void> _setLargeSurface(WidgetTester tester) async {
 }
 
 DeviceIdentityProvider _deviceIdentityProvider() {
-  final store = MemoryDeviceIdentityStore()..value = 'android-release-candidate';
+  final store = MemoryDeviceIdentityStore()
+    ..value = 'android-release-candidate';
   return DeviceIdentityProvider(
     store: store,
     platformResolver: () => 'android',
@@ -236,7 +300,10 @@ class _OtherAreaRepository implements OtherAreaClientRepository {
   }
 
   @override
-  Future<List<OtherAreaClient>> search(UserSession session, String query) async {
+  Future<List<OtherAreaClient>> search(
+    UserSession session,
+    String query,
+  ) async {
     queries.add(query);
     return _clients();
   }
@@ -289,5 +356,23 @@ class _PaymentRepository implements PaymentSubmissionRepository {
       receiptNumber: 'GBC-RC-1',
       officialBalance: 4600,
     );
+  }
+}
+
+class _FailingOtherAreaRepository implements OtherAreaClientRepository {
+  const _FailingOtherAreaRepository();
+
+  @override
+  Future<List<OtherAreaClient>> listWork(
+    UserSession session,
+    DateTime workDate, {
+    String? assignedCollectorUserId,
+  }) {
+    throw StateError('SocketException: connection refused at 10.0.2.2');
+  }
+
+  @override
+  Future<List<OtherAreaClient>> search(UserSession session, String query) {
+    throw StateError('SocketException: connection refused at 10.0.2.2');
   }
 }

@@ -12,6 +12,7 @@ import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart'
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/core/time/spina_business_time.dart';
 import 'package:gilbic_mobile/src/features/collector/collection_entry_page.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_summary_page.dart';
 
 class OtherAreaCollectionPage extends StatefulWidget {
@@ -59,91 +60,102 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
       widget.session.hasPermission('delegated_area.view');
 
   List<String> get _areas {
-    final values = _results
-        .map((client) => client.entry.area.trim())
-        .where((value) => value.isNotEmpty)
-        .toSet()
-        .toList(growable: false)
-      ..sort((left, right) => left.toLowerCase().compareTo(right.toLowerCase()));
+    final values =
+        _results
+            .map((client) => client.entry.area.trim())
+            .where((value) => value.isNotEmpty)
+            .toSet()
+            .toList(growable: false)
+          ..sort(
+            (left, right) => left.toLowerCase().compareTo(right.toLowerCase()),
+          );
     return <String>[_allAreas, ...values];
   }
 
   List<String> get _loanTypes {
-    final values = _results
-        .map((client) => client.entry.loanType.trim())
-        .where((value) => value.isNotEmpty)
-        .toSet()
-        .toList(growable: false)
-      ..sort((left, right) => left.toLowerCase().compareTo(right.toLowerCase()));
+    final values =
+        _results
+            .map((client) => client.entry.loanType.trim())
+            .where((value) => value.isNotEmpty)
+            .toSet()
+            .toList(growable: false)
+          ..sort(
+            (left, right) => left.toLowerCase().compareTo(right.toLowerCase()),
+          );
     return <String>[_allLoans, ...values];
   }
 
   List<String> get _owners {
-    final values = _results
-        .map((client) => client.assignedCollectorName.trim())
-        .where((value) => value.isNotEmpty)
-        .toSet()
-        .toList(growable: false)
-      ..sort((left, right) => left.toLowerCase().compareTo(right.toLowerCase()));
+    final values =
+        _results
+            .map((client) => client.assignedCollectorName.trim())
+            .where((value) => value.isNotEmpty)
+            .toSet()
+            .toList(growable: false)
+          ..sort(
+            (left, right) => left.toLowerCase().compareTo(right.toLowerCase()),
+          );
     return <String>[_allCollectors, ...values];
   }
 
   List<OtherAreaClient> get _visibleResults {
     final query = _searchController.text.trim().toLowerCase();
-    final filtered = _results.where((client) {
-      final entry = client.entry;
-      if (_selectedArea != _allAreas && entry.area != _selectedArea) {
-        return false;
-      }
-      if (_selectedLoanType != _allLoans &&
-          entry.loanType != _selectedLoanType) {
-        return false;
-      }
-      if (!_isManagement &&
-          _selectedOwner != _allCollectors &&
-          client.assignedCollectorName != _selectedOwner) {
-        return false;
-      }
-      if (!_isManagement && !_showingSearchResults && query.isNotEmpty) {
-        final haystack = <String>[
-          entry.clientName,
-          client.clientCode,
-          client.phoneNumber,
-          entry.area,
-          entry.loanType,
-          client.assignedCollectorName,
-        ].join(' ').toLowerCase();
-        if (!haystack.contains(query)) {
-          return false;
-        }
-      }
-      return true;
-    }).toList(growable: false);
+    final filtered = _results
+        .where((client) {
+          final entry = client.entry;
+          if (_selectedArea != _allAreas && entry.area != _selectedArea) {
+            return false;
+          }
+          if (_selectedLoanType != _allLoans &&
+              entry.loanType != _selectedLoanType) {
+            return false;
+          }
+          if (!_isManagement &&
+              _selectedOwner != _allCollectors &&
+              client.assignedCollectorName != _selectedOwner) {
+            return false;
+          }
+          if (!_isManagement && !_showingSearchResults && query.isNotEmpty) {
+            final haystack = <String>[
+              entry.clientName,
+              client.clientCode,
+              client.phoneNumber,
+              entry.area,
+              entry.loanType,
+              client.assignedCollectorName,
+            ].join(' ').toLowerCase();
+            if (!haystack.contains(query)) {
+              return false;
+            }
+          }
+          return true;
+        })
+        .toList(growable: false);
 
     filtered.sort((left, right) {
       if (!_isManagement) {
-        final ownerOrder = left.assignedCollectorName
-            .toLowerCase()
-            .compareTo(right.assignedCollectorName.toLowerCase());
+        final ownerOrder = left.assignedCollectorName.toLowerCase().compareTo(
+          right.assignedCollectorName.toLowerCase(),
+        );
         if (ownerOrder != 0) {
           return ownerOrder;
         }
-        final areaOrder = left.entry.area
-            .toLowerCase()
-            .compareTo(right.entry.area.toLowerCase());
+        final areaOrder = left.entry.area.toLowerCase().compareTo(
+          right.entry.area.toLowerCase(),
+        );
         if (areaOrder != 0) {
           return areaOrder;
         }
       }
-      final nameOrder = left.entry.clientName
-          .toLowerCase()
-          .compareTo(right.entry.clientName.toLowerCase());
+      final nameOrder = left.entry.clientName.toLowerCase().compareTo(
+        right.entry.clientName.toLowerCase(),
+      );
       if (nameOrder != 0) {
         return nameOrder;
       }
-      return left.entry.loanType
-          .toLowerCase()
-          .compareTo(right.entry.loanType.toLowerCase());
+      return left.entry.loanType.toLowerCase().compareTo(
+        right.entry.loanType.toLowerCase(),
+      );
     });
     return filtered;
   }
@@ -155,7 +167,8 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
   void initState() {
     super.initState();
     _searchController = TextEditingController();
-    _repository = widget.repository ??
+    _repository =
+        widget.repository ??
         SpinaOtherAreaClientRepository(
           deviceIdentityProvider: widget.deviceIdentityProvider,
         );
@@ -246,34 +259,47 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
       _errorMessage = null;
     });
     try {
-      final results = await _repository.listWork(widget.session, DateTime.now());
+      final results = await _repository.listWork(
+        widget.session,
+        DateTime.now(),
+      );
       if (!mounted || generation != _loadGeneration) {
         return;
       }
       setState(() {
         _results = results;
         _hasLoaded = true;
-        _selectedArea = _areas.contains(_selectedArea) ? _selectedArea : _allAreas;
-        _selectedLoanType =
-            _loanTypes.contains(_selectedLoanType) ? _selectedLoanType : _allLoans;
-        _selectedOwner =
-            _owners.contains(_selectedOwner) ? _selectedOwner : _allCollectors;
+        _selectedArea = _areas.contains(_selectedArea)
+            ? _selectedArea
+            : _allAreas;
+        _selectedLoanType = _loanTypes.contains(_selectedLoanType)
+            ? _selectedLoanType
+            : _allLoans;
+        _selectedOwner = _owners.contains(_selectedOwner)
+            ? _selectedOwner
+            : _allCollectors;
       });
     } on SpinaApiException catch (error) {
       if (!mounted || generation != _loadGeneration) {
         return;
       }
       setState(() {
-        _errorMessage = error.message;
+        _errorMessage = collectorFailureMessage(
+          error,
+          task: CollectorFailureTask.loadOtherAreaWork,
+        );
         _hasLoaded = true;
         _results = const <OtherAreaClient>[];
       });
-    } on Object {
+    } on Object catch (error) {
       if (!mounted || generation != _loadGeneration) {
         return;
       }
       setState(() {
-        _errorMessage = 'Approved other-area work could not be loaded.';
+        _errorMessage = collectorFailureMessage(
+          error,
+          task: CollectorFailureTask.loadOtherAreaWork,
+        );
         _hasLoaded = true;
         _results = const <OtherAreaClient>[];
       });
@@ -319,19 +345,27 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
         return;
       }
       setState(() {
-        _errorMessage = error.message;
+        _errorMessage = _isManagement
+            ? 'Clients could not be searched for direct payment entry.'
+            : collectorFailureMessage(
+                error,
+                task: CollectorFailureTask.loadOtherAreaWork,
+              );
         _hasLoaded = true;
         _showingSearchResults = true;
         _results = const <OtherAreaClient>[];
       });
-    } on Object {
+    } on Object catch (error) {
       if (!mounted || generation != _loadGeneration) {
         return;
       }
       setState(() {
         _errorMessage = _isManagement
             ? 'Clients could not be searched for direct payment entry.'
-            : 'Other-route clients could not be searched.';
+            : collectorFailureMessage(
+                error,
+                task: CollectorFailureTask.loadOtherAreaWork,
+              );
         _hasLoaded = true;
         _showingSearchResults = true;
         _results = const <OtherAreaClient>[];
@@ -373,9 +407,9 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
   Future<void> _openPayment(OtherAreaClient client) async {
     final blocked = _blockedReason(client);
     if (blocked != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(blocked)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(blocked)));
       return;
     }
 
@@ -390,15 +424,15 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
         content: Text(
           _isManagement
               ? '${client.entry.clientName} is assigned to '
-                  '${client.assignedCollectorName}.\n\n'
-                  'Management will remain the recorder. The assigned collector and '
-                  'linked client will be notified. Collectors cannot edit this '
-                  'Management-recorded payment.'
+                    '${client.assignedCollectorName}.\n\n'
+                    'Management will remain the recorder. The assigned collector and '
+                    'linked client will be notified. Collectors cannot edit this '
+                    'Management-recorded payment.'
               : '${client.entry.clientName} is assigned to '
-                  '${client.assignedCollectorName}.\n\n'
-                  'You may collect this client even without a temporary route grant. '
-                  'Your name remains the original recorder and the assigned '
-                  'collector will see the official result on their Daily Route.',
+                    '${client.assignedCollectorName}.\n\n'
+                    'You may collect this client even without a temporary route grant. '
+                    'Your name remains the original recorder and the assigned '
+                    'collector will see the official result on their Daily Route.',
         ),
         actions: [
           TextButton(
@@ -453,7 +487,9 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isManagement ? 'Direct Payment Entry' : 'Other Area Payment'),
+        title: Text(
+          _isManagement ? 'Direct Payment Entry' : 'Other Area Payment',
+        ),
         actions: [
           if (!_isManagement && widget.session.hasPermission('remittance.view'))
             IconButton(
@@ -483,8 +519,8 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                     _isManagement
                         ? 'Search an active client who paid directly to Management. The assigned collector will see a read-only payment update.'
                         : _canViewConvenienceWork
-                            ? 'Approved convenience work is shown automatically. You may also search any active client outside your assigned route; the assigned Collector remains the route owner.'
-                            : 'Search any active client outside your assigned route. The assigned Collector remains the route owner and will see the official payment on their Daily Route.',
+                        ? 'Approved convenience work is shown automatically. You may also search any active client outside your assigned route; the assigned Collector remains the route owner.'
+                        : 'Search any active client outside your assigned route. The assigned Collector remains the route owner and will see the official payment on their Daily Route.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   if (!_isManagement) ...[
@@ -510,8 +546,8 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                       helperText: _isManagement
                           ? 'Results appear automatically after 2 characters.'
                           : _canViewConvenienceWork
-                              ? 'Type 2+ characters to search; clear to return to approved convenience work.'
-                              : 'Type at least 2 characters: name, code, phone, or area.',
+                          ? 'Type 2+ characters to search; clear to return to approved convenience work.'
+                          : 'Type at least 2 characters: name, code, phone, or area.',
                       prefixIcon: const Icon(Icons.person_search),
                       suffixIcon: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -531,7 +567,9 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   )
                                 : const Icon(Icons.search),
                           ),
@@ -571,7 +609,10 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                             .map(
                               (owner) => DropdownMenuItem<String>(
                                 value: owner,
-                                child: Text(owner, overflow: TextOverflow.ellipsis),
+                                child: Text(
+                                  owner,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             )
                             .toList(growable: false),
@@ -607,7 +648,9 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                                 )
                                 .toList(growable: false),
                             onChanged: (value) {
-                              setState(() => _selectedArea = value ?? _allAreas);
+                              setState(
+                                () => _selectedArea = value ?? _allAreas,
+                              );
                             },
                           ),
                         ),
@@ -620,7 +663,9 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                             isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Loan',
-                              prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                              prefixIcon: Icon(
+                                Icons.account_balance_wallet_outlined,
+                              ),
                             ),
                             items: _loanTypes
                                 .map(
@@ -671,14 +716,14 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
       );
     }
     if (_results.isEmpty) {
-      final searching = _searchController.text.trim().length >= 2 ||
-          _showingSearchResults;
+      final searching =
+          _searchController.text.trim().length >= 2 || _showingSearchResults;
       return RefreshIndicator(
         onRefresh: _isManagement || searching
             ? () => _searchClients(showValidation: false)
             : _canViewConvenienceWork
-                ? _loadWork
-                : () async {},
+            ? _loadWork
+            : () async {},
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
@@ -689,10 +734,10 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                 _isManagement
                     ? 'No active client matched the search.'
                     : searching
-                        ? 'No active other-route client matched the search.'
-                        : _canViewConvenienceWork
-                            ? 'No approved convenience work for today. You can still search any other-route client above.'
-                            : 'Search any active client outside your assigned route above.',
+                    ? 'No active other-route client matched the search.'
+                    : _canViewConvenienceWork
+                    ? 'No approved convenience work for today. You can still search any other-route client above.'
+                    : 'Search any active client outside your assigned route above.',
                 key: !_isManagement && !searching
                     ? const Key('other-area-empty-grant-state')
                     : null,
@@ -750,9 +795,11 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             Text(
-                              [client.clientCode, entry.area, entry.loanType]
-                                  .where((value) => value.isNotEmpty)
-                                  .join(' • '),
+                              [
+                                client.clientCode,
+                                entry.area,
+                                entry.loanType,
+                              ].where((value) => value.isNotEmpty).join(' • '),
                             ),
                           ],
                         ),
@@ -782,15 +829,16 @@ class _OtherAreaCollectionPageState extends State<OtherAreaCollectionPage> {
                     width: double.infinity,
                     child: FilledButton.icon(
                       key: Key('record-other-area-${entry.loanId}'),
-                      onPressed:
-                          blocked == null ? () => _openPayment(client) : null,
+                      onPressed: blocked == null
+                          ? () => _openPayment(client)
+                          : null,
                       icon: const Icon(Icons.payments_outlined),
                       label: Text(
                         entry.processedToday
                             ? 'Already recorded today'
                             : (_isManagement
-                                ? 'Record direct payment'
-                                : 'Record payment'),
+                                  ? 'Record direct payment'
+                                  : 'Record payment'),
                       ),
                     ),
                   ),

@@ -6,6 +6,7 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
+import 'package:gilbic_mobile/src/features/collector/collector_failure_guidance.dart';
 
 class CollectionEntryPage extends StatefulWidget {
   const CollectionEntryPage({
@@ -76,7 +77,8 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
   }
 
   bool get _showPastDueFollowup =>
-      _isUnableToPay || (!_isSevenBySeven && (_localPartialPayment || _forcePastDueFollowup));
+      _isUnableToPay ||
+      (!_isSevenBySeven && (_localPartialPayment || _forcePastDueFollowup));
 
   DateTime get _followupDate => _isUnableToPay ? _unableDate : _collectionDate;
 
@@ -185,8 +187,8 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
         _promiseAmountController.clear();
       } else if (_promiseAmountController.text.trim().isEmpty &&
           _estimatedPastDueRemainder > 0) {
-        _promiseAmountController.text =
-            _estimatedPastDueRemainder.toStringAsFixed(2);
+        _promiseAmountController.text = _estimatedPastDueRemainder
+            .toStringAsFixed(2);
       }
       _clearSubmissionState();
     });
@@ -230,7 +232,10 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     } on SpinaApiException catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = error.message;
+        _errorMessage = collectorFailureMessage(
+          error,
+          task: CollectorFailureTask.recordCollection,
+        );
         _result = null;
         if (error.code == 'extra_allocation_choice_required' ||
             error.code == 'past_due_reason_required') {
@@ -240,11 +245,13 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
           _forcePastDueFollowup = true;
         }
       });
-    } on Object {
+    } on Object catch (error) {
       if (!mounted) return;
       setState(() {
-        _errorMessage =
-            'The collection could not be completed. Retry the same entry.';
+        _errorMessage = collectorFailureMessage(
+          error,
+          task: CollectorFailureTask.recordCollection,
+        );
         _result = null;
       });
     } finally {
@@ -296,7 +303,8 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
     return PastDueFollowupDraft(
       reasonCode: _selectedReason!,
       note: _pastDueNoteController.text.trim(),
-      promisedPaymentDate: _selectedReason == PastDueReasonCode.promisedToPayLater
+      promisedPaymentDate:
+          _selectedReason == PastDueReasonCode.promisedToPayLater
           ? _promisedPaymentDate
           : null,
       promisedAmount: promised,
@@ -312,8 +320,9 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
       clientId: widget.entry.clientId,
       loanId: widget.entry.loanId,
       collectionDate: _followupDate,
-      entryType:
-          _isUnableToPay ? CollectionEntryType.pass : CollectionEntryType.payment,
+      entryType: _isUnableToPay
+          ? CollectionEntryType.pass
+          : CollectionEntryType.payment,
       amount: amount,
       // Transitional compatibility for non-contract legacy posting. Contract
       // allocation ignores this date for PAYMENT; Collectors no longer choose it.
@@ -376,8 +385,9 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                   key: const Key('collection-amount'),
                   controller: _amountController,
                   enabled: !_submitting,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: const InputDecoration(
                     labelText: 'Amount received',
                     prefixText: '₱ ',
@@ -441,8 +451,9 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                                 child: Text('Principal Reduction'),
                               ),
                             ],
-                            onChanged:
-                                _submitting ? null : _changeAllocationIntent,
+                            onChanged: _submitting
+                                ? null
+                                : _changeAllocationIntent,
                           ),
                         ],
                       ],
@@ -483,7 +494,8 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                           'Past Due reason',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        if (!_isUnableToPay && _estimatedPastDueRemainder > 0) ...[
+                        if (!_isUnableToPay &&
+                            _estimatedPastDueRemainder > 0) ...[
                           const SizedBox(height: 3),
                           Text(
                             'Remaining today: ${_money(_estimatedPastDueRemainder)}',
@@ -500,7 +512,9 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                                   reason !=
                                       PastDueReasonCode.promisedToPayLater)
                                 ChoiceChip(
-                                  key: Key('past-due-reason-${reason.apiValue}'),
+                                  key: Key(
+                                    'past-due-reason-${reason.apiValue}',
+                                  ),
                                   label: Text(reason.label),
                                   selected: _selectedReason == reason,
                                   onSelected: _submitting
@@ -516,7 +530,8 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                           enabled: !_submitting,
                           maxLines: 2,
                           decoration: InputDecoration(
-                            labelText: _selectedReason == PastDueReasonCode.other
+                            labelText:
+                                _selectedReason == PastDueReasonCode.other
                                 ? 'Short explanation (required)'
                                 : 'Past Due note (optional)',
                             alignLabelWithHint: true,
@@ -528,8 +543,9 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                           const SizedBox(height: 10),
                           OutlinedButton.icon(
                             key: const Key('promised-payment-date'),
-                            onPressed:
-                                _submitting ? null : _selectPromisedPaymentDate,
+                            onPressed: _submitting
+                                ? null
+                                : _selectPromisedPaymentDate,
                             icon: const Icon(Icons.event_outlined),
                             label: Text(
                               _promisedPaymentDate == null
@@ -589,10 +605,10 @@ class _CollectionEntryPageState extends State<CollectionEntryPage> {
                   _submitting
                       ? 'Saving...'
                       : _pendingDraft == null
-                          ? (_isUnableToPay
-                              ? 'Save unable-to-pay reason'
-                              : 'Save payment')
-                          : 'Retry same entry',
+                      ? (_isUnableToPay
+                            ? 'Save unable-to-pay reason'
+                            : 'Save payment')
+                      : 'Retry same entry',
                 ),
               ),
               if (_result?.isFinalSuccess == true) ...[
@@ -625,13 +641,16 @@ class _ClientSummary extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(entry.clientName,
-                style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              entry.clientName,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 2),
             Text(
-              [entry.area, entry.loanType]
-                  .where((value) => value.isNotEmpty)
-                  .join(' • '),
+              [
+                entry.area,
+                entry.loanType,
+              ].where((value) => value.isNotEmpty).join(' • '),
             ),
             const SizedBox(height: 7),
             Wrap(
@@ -677,10 +696,7 @@ class _SafetyNotice extends StatelessWidget {
 }
 
 class _ResultCard extends StatelessWidget {
-  const _ResultCard({
-    required this.result,
-    required this.successMessage,
-  });
+  const _ResultCard({required this.result, required this.successMessage});
 
   final PaymentSubmissionResult result;
   final String successMessage;
@@ -697,9 +713,9 @@ class _ResultCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(success
-                    ? Icons.check_circle_outline
-                    : Icons.warning_amber),
+                Icon(
+                  success ? Icons.check_circle_outline : Icons.warning_amber,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -715,8 +731,7 @@ class _ResultCard extends StatelessWidget {
             ],
             if (result.officialBalance != null)
               Text('Official balance: ${_money(result.officialBalance!)}'),
-            if (result.code != null && !success)
-              Text('Code: ${result.code}'),
+            if (result.code != null && !success) Text('Code: ${result.code}'),
           ],
         ),
       ),
