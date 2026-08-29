@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/client_registration_review.dart';
 import 'package:gilbic_mobile/src/core/management/client_registration_review_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ClientRegistrationApprovalsPage extends StatefulWidget {
   const ClientRegistrationApprovalsPage({
@@ -64,8 +65,7 @@ class _ClientRegistrationApprovalsPageState
     } on Object {
       if (mounted) {
         setState(
-          () => _errorMessage =
-              'Client registrations could not be loaded.',
+          () => _errorMessage = 'Client registrations could not be loaded.',
         );
       }
     } finally {
@@ -112,34 +112,34 @@ class _ClientRegistrationApprovalsPageState
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _errorMessage != null
-                ? _ErrorPanel(message: _errorMessage!, onRetry: _load)
-                : _registrations.isEmpty
-                    ? const _EmptyApprovals()
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _registrations.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (context, index) {
-                          final item = _registrations[index];
-                          return Card(
-                            child: ListTile(
-                              key: Key('client-registration-${item.userId}'),
-                              leading: const CircleAvatar(
-                                child: Icon(Icons.person_search),
-                              ),
-                              title: Text(item.fullName),
-                              subtitle: Text(
-                                'Claimed code: ${item.claimedClientCode}\n'
-                                'Username: ${item.username}'
-                                '${item.claimedPhoneNumber == null ? '' : '\nPhone: ${item.claimedPhoneNumber}'}',
-                              ),
-                              isThreeLine: true,
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () => _review(item),
-                            ),
-                          );
-                        },
+            ? _ErrorPanel(message: _errorMessage!, onRetry: _load)
+            : _registrations.isEmpty
+            ? const _EmptyApprovals()
+            : ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: _registrations.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final item = _registrations[index];
+                  return Card(
+                    child: ListTile(
+                      key: Key('client-registration-${item.userId}'),
+                      leading: const CircleAvatar(
+                        child: Icon(Icons.person_search),
                       ),
+                      title: Text(item.fullName),
+                      subtitle: Text(
+                        'Claimed code: ${item.claimedClientCode}\n'
+                        'Username: ${item.username}'
+                        '${item.claimedPhoneNumber == null ? '' : '\nPhone: ${item.claimedPhoneNumber}'}',
+                      ),
+                      isThreeLine: true,
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _review(item),
+                    ),
+                  );
+                },
+              ),
       ),
     );
   }
@@ -230,27 +230,21 @@ class _ClientRegistrationLinkPageState
       setState(() => _errorMessage = 'Select the borrower record to link.');
       return;
     }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Approve and link account?'),
-        content: Text(
-          '${widget.registration.fullName} will receive client portal access to:\n\n'
-          '${selected.fullName}\n${selected.clientCode}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Approve and link'),
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      _registrationReview(
+        nextAction: 'Approve and link this account',
+        consequence:
+            'This login will be linked to the selected existing client record; official financial records will not be edited.',
+        additionalFacts: <ManagementReviewFact>[
+          ManagementReviewFact(
+            label: 'Existing client',
+            value: '${selected.fullName} • ${selected.clientCode}',
           ),
         ],
       ),
     );
-    if (confirmed != true || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
 
@@ -289,41 +283,26 @@ class _ClientRegistrationLinkPageState
   }
 
   Future<void> _reject() async {
-    final reasonController = TextEditingController();
     final reason = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reject registration'),
-        content: TextField(
-          key: const Key('client-registration-rejection-reason'),
-          controller: reasonController,
-          autofocus: true,
-          minLines: 2,
-          maxLines: 4,
-          decoration: const InputDecoration(
-            labelText: 'Required reason',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final value = reasonController.text.trim();
-              if (value.length >= 3) {
-                Navigator.pop(context, value);
-              }
-            },
-            child: const Text('Reject'),
-          ),
+      builder: (context) => const _ClientRegistrationRejectionDialog(),
+    );
+    if (reason == null || !mounted) {
+      return;
+    }
+
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      _registrationReview(
+        nextAction: 'Reject this request',
+        consequence:
+            'This registration request will be rejected; official client and financial records will not be edited.',
+        additionalFacts: <ManagementReviewFact>[
+          ManagementReviewFact(label: 'Reason', value: reason),
         ],
       ),
     );
-    reasonController.dispose();
-    if (reason == null || !mounted) {
+    if (!confirmed || !mounted) {
       return;
     }
 
@@ -360,6 +339,32 @@ class _ClientRegistrationLinkPageState
     }
   }
 
+  ManagementReviewPresentation _registrationReview({
+    required String nextAction,
+    required String consequence,
+    List<ManagementReviewFact> additionalFacts = const <ManagementReviewFact>[],
+  }) {
+    final registration = widget.registration;
+    return ManagementReviewPresentation.validated(
+      surface: ManagementMutationSurface.clientRegistration,
+      recordLabel: 'Client registration request',
+      recordValue:
+          '${registration.fullName} • ${registration.claimedClientCode}',
+      statusLabel: plainManagementStatus(
+        registration.registrationStatus,
+        const <String, String>{'pending': 'Waiting for Management review'},
+      ),
+      statusDetail: 'Server status: ${registration.registrationStatus}',
+      facts: <ManagementReviewFact>[
+        ManagementReviewFact(label: 'Username', value: registration.username),
+        ...additionalFacts,
+      ],
+      nextActionLabel: nextAction,
+      consequence: consequence,
+      risk: ManagementReviewRisk.privileged,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final registration = widget.registration;
@@ -383,7 +388,9 @@ class _ClientRegistrationLinkPageState
                     Text('Username: ${registration.username}'),
                     if (registration.email != null)
                       Text('Email: ${registration.email}'),
-                    Text('Claimed client code: ${registration.claimedClientCode}'),
+                    Text(
+                      'Claimed client code: ${registration.claimedClientCode}',
+                    ),
                     if (registration.claimedPhoneNumber != null)
                       Text('Claimed phone: ${registration.claimedPhoneNumber}'),
                   ],
@@ -468,9 +475,7 @@ class _ClientRegistrationLinkPageState
               Text(
                 _errorMessage!,
                 key: const Key('client-approval-error'),
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -496,6 +501,58 @@ class _ClientRegistrationLinkPageState
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ClientRegistrationRejectionDialog extends StatefulWidget {
+  const _ClientRegistrationRejectionDialog();
+
+  @override
+  State<_ClientRegistrationRejectionDialog> createState() =>
+      _ClientRegistrationRejectionDialogState();
+}
+
+class _ClientRegistrationRejectionDialogState
+    extends State<_ClientRegistrationRejectionDialog> {
+  final TextEditingController _reason = TextEditingController();
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Reject registration'),
+      content: TextField(
+        key: const Key('client-registration-rejection-reason'),
+        controller: _reason,
+        autofocus: true,
+        minLines: 2,
+        maxLines: 4,
+        decoration: const InputDecoration(
+          labelText: 'Required reason',
+          border: OutlineInputBorder(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final value = _reason.text.trim();
+            if (value.length >= 3) {
+              Navigator.pop(context, value);
+            }
+          },
+          child: const Text('Reject'),
+        ),
+      ],
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_administration.dart';
 import 'package:gilbic_mobile/src/core/management/management_administration_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 typedef InvitationReconciler =
     Future<ManagementStaffAccount?> Function({
@@ -91,6 +92,19 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
         email.isEmpty ||
         role == null) {
       setState(() => _error = 'Complete all staff invitation fields.');
+      return;
+    }
+
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      _invitationReview(
+        fullName: fullName,
+        username: username,
+        email: email,
+        role: role,
+      ),
+    );
+    if (!confirmed || !mounted) {
       return;
     }
 
@@ -310,6 +324,22 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
                     ),
                     if (_retryBlocked && !_permissionDenied) ...[
                       const SizedBox(height: 10),
+                      ManagementReviewPanel(
+                        review: ManagementReviewPresentation.validated(
+                          surface: ManagementMutationSurface.staffInvitation,
+                          recordLabel: 'Staff invitation',
+                          recordValue:
+                              '${_uncertainUsername ?? 'Not provided by the server'} • ${_uncertainEmail ?? 'Not provided by the server'}',
+                          statusLabel: 'Server result is not yet confirmed',
+                          nextActionLabel: 'Check the server result',
+                          consequence:
+                              'SPINA will check the authoritative staff directory; it will not send a second invitation.',
+                          risk: ManagementReviewRisk.privileged,
+                          actionEnabled: !_submitting,
+                        ),
+                        compact: true,
+                      ),
+                      const SizedBox(height: 10),
                       OutlinedButton.icon(
                         key: const Key('management-staff-invite-reconcile'),
                         onPressed: _submitting ? null : _recheckUncertainResult,
@@ -332,6 +362,40 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
       ),
     );
   }
+}
+
+ManagementReviewPresentation _invitationReview({
+  required String fullName,
+  required String username,
+  required String email,
+  required String role,
+}) {
+  return ManagementReviewPresentation.validated(
+    surface: ManagementMutationSurface.staffInvitation,
+    recordLabel: 'Staff invitation',
+    recordValue: '$fullName • @$username',
+    statusLabel: 'Waiting for Management confirmation',
+    facts: <ManagementReviewFact>[
+      ManagementReviewFact(label: 'Email', value: email),
+      ManagementReviewFact(
+        label: 'Canonical role',
+        value: _inviteRoleLabel(role),
+      ),
+    ],
+    nextActionLabel: 'Send staff invitation',
+    consequence:
+        'A pending staff account will be created with the selected canonical role; access still depends on server status and device approval.',
+    risk: ManagementReviewRisk.privileged,
+  );
+}
+
+String _inviteRoleLabel(String role) {
+  return switch (role) {
+    'collector' => 'Collector',
+    'employee' => 'Employee',
+    'management' => 'Management',
+    _ => 'Status needs review',
+  };
 }
 
 class _InvitePermissionDeniedState extends StatelessWidget {

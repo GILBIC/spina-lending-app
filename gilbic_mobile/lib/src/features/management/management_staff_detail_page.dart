@@ -6,6 +6,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_administration.dart';
 import 'package:gilbic_mobile/src/core/management/management_administration_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ManagementStaffDetailPage extends StatefulWidget {
   const ManagementStaffDetailPage({
@@ -291,23 +292,26 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
     required String consequence,
     required bool destructive,
   }) async {
+    final review = ManagementReviewPresentation.validated(
+      surface: ManagementMutationSurface.staffAccess,
+      recordLabel: 'Staff account or registered phone',
+      recordValue: '${_account.fullName} • @${_account.username}',
+      statusLabel: 'Current: $current',
+      statusDetail: 'Requested: $requested',
+      nextActionLabel: 'Change access to $requested',
+      consequence: consequence,
+      risk: ManagementReviewRisk.privileged,
+    );
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: Text(_account.fullName),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Current: $current'),
-                const SizedBox(height: 6),
-                Text('Requested: $requested'),
-                const SizedBox(height: 12),
-                Text(consequence),
-              ],
+            content: SingleChildScrollView(
+              child: ManagementReviewPanel(review: review, compact: true),
             ),
             actions: [
               TextButton(
+                key: const Key('cancel-staff-access'),
                 onPressed: () => Navigator.of(context).pop(false),
                 child: const Text('Cancel'),
               ),

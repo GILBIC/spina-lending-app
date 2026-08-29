@@ -52,37 +52,54 @@ void main() {
     },
   );
 
-  testWidgets(
-    'submits trimmed fields once and pops only after parsed success',
-    (tester) async {
-      final result = Completer<ManagementStaffAccount>();
-      final repository = _InviteRepository(onInvite: () => result.future);
-      await _pumpInvite(tester, repository: repository);
-      await tester.pumpAndSettle();
-      await _fillForm(tester);
+  testWidgets('submits trimmed fields once and pops only after parsed success', (
+    tester,
+  ) async {
+    final result = Completer<ManagementStaffAccount>();
+    final repository = _InviteRepository(onInvite: () => result.future);
+    await _pumpInvite(tester, repository: repository);
+    await tester.pumpAndSettle();
+    await _fillForm(tester);
 
-      await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
-      await tester.pump();
-      expect(repository.inviteCalls, 1);
-      expect(
-        tester
-            .widget<FilledButton>(
-              find.byKey(const Key('management-staff-invite-submit')),
-            )
-            .onPressed,
-        isNull,
-      );
-      expect(find.text('Invitation complete'), findsNothing);
+    await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('management-review-staff-invitation')),
+      findsOneWidget,
+    );
+    expect(find.text('Waiting for Management confirmation'), findsOneWidget);
+    expect(
+      find.text(
+        'A pending staff account will be created with the selected canonical role; access still depends on server status and device approval.',
+      ),
+      findsOneWidget,
+    );
+    expect(repository.inviteCalls, 0);
+    await tester.tap(find.byKey(const Key('cancel-staff-invitation')));
+    await tester.pumpAndSettle();
+    expect(repository.inviteCalls, 0);
 
-      result.complete(_account);
-      await tester.pumpAndSettle();
-      expect(find.text('Created Ana West'), findsOneWidget);
-      expect(repository.lastUsername, 'ana.west');
-      expect(repository.lastEmail, 'ana@example.com');
-      expect(repository.lastFullName, 'Ana West');
-      expect(repository.lastRole, 'collector');
-    },
-  );
+    await _confirmInvitation(tester);
+    await tester.pump();
+    expect(repository.inviteCalls, 1);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const Key('management-staff-invite-submit')),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(find.text('Invitation complete'), findsNothing);
+
+    result.complete(_account);
+    await tester.pumpAndSettle();
+    expect(find.text('Created Ana West'), findsOneWidget);
+    expect(repository.lastUsername, 'ana.west');
+    expect(repository.lastEmail, 'ana@example.com');
+    expect(repository.lastFullName, 'Ana West');
+    expect(repository.lastRole, 'collector');
+  });
 
   testWidgets('blocks route exit while the invitation POST is in flight', (
     tester,
@@ -93,7 +110,7 @@ void main() {
     await tester.pumpAndSettle();
     await _fillForm(tester);
 
-    await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+    await _confirmInvitation(tester);
     await tester.pump();
     expect(repository.inviteCalls, 1);
 
@@ -133,7 +150,7 @@ void main() {
     await tester.pumpAndSettle();
     await _fillForm(tester);
 
-    await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+    await _confirmInvitation(tester);
     await tester.pump();
     expect(repository.inviteCalls, 1);
     expect(refreshCalls, 1);
@@ -179,7 +196,7 @@ void main() {
       await tester.pumpAndSettle();
       await _fillForm(tester);
 
-      await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+      await _confirmInvitation(tester);
       await tester.pumpAndSettle();
 
       expect(repository.inviteCalls, 1);
@@ -224,14 +241,19 @@ void main() {
       await tester.pumpAndSettle();
       await _fillForm(tester);
 
-      await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+      await _confirmInvitation(tester);
       await tester.pumpAndSettle();
 
       expect(reconciliationCalls, 1);
-      expect(
-        find.byKey(const Key('management-staff-invite-reconcile')),
-        findsOneWidget,
+      final reconcile = find.byKey(
+        const Key('management-staff-invite-reconcile'),
       );
+      await tester.scrollUntilVisible(
+        reconcile,
+        240,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(reconcile, findsOneWidget);
       expect(
         tester
             .widget<FilledButton>(
@@ -241,9 +263,7 @@ void main() {
         isNull,
       );
 
-      await tester.tap(
-        find.byKey(const Key('management-staff-invite-reconcile')),
-      );
+      await tester.tap(reconcile);
       await tester.pumpAndSettle();
 
       expect(reconciliationCalls, 2);
@@ -274,7 +294,7 @@ void main() {
     await tester.pumpAndSettle();
     await _fillForm(tester);
 
-    await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+    await _confirmInvitation(tester);
     await tester.pump();
 
     expect(refreshCalls, 1);
@@ -313,7 +333,7 @@ void main() {
       await tester.pumpAndSettle();
       await _fillForm(tester);
 
-      await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+      await _confirmInvitation(tester);
       await tester.pumpAndSettle();
 
       expect(
@@ -354,6 +374,16 @@ Future<void> _fillForm(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('Collector').last);
   await tester.pumpAndSettle();
+}
+
+Future<void> _confirmInvitation(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+  await tester.pumpAndSettle();
+  expect(
+    find.byKey(const Key('management-review-staff-invitation')),
+    findsOneWidget,
+  );
+  await tester.tap(find.byKey(const Key('confirm-staff-invitation')));
 }
 
 Future<void> _pumpInvite(

@@ -316,10 +316,20 @@ void main() {
     );
     await tester.tap(find.byKey(const Key('management-staff-role-save')));
     await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('management-review-staff-access')),
+      findsOneWidget,
+    );
     expect(find.text('Ana West'), findsWidgets);
     expect(find.text('Current: Collector'), findsOneWidget);
     expect(find.text('Requested: Employee'), findsOneWidget);
     expect(find.textContaining('future access'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('cancel-staff-access')));
+    await tester.pumpAndSettle();
+    expect(repository.setRoleCalls, 0);
+    await tester.tap(find.byKey(const Key('management-staff-role-save')));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('management-action-confirm')));
     await tester.pump();
@@ -611,6 +621,10 @@ void main() {
     await tester.tap(deviceAction);
     await tester.pumpAndSettle();
 
+    expect(
+      find.byKey(const Key('management-review-staff-access')),
+      findsOneWidget,
+    );
     expect(find.text('Ana West'), findsWidgets);
     expect(find.text('Current: Pending'), findsOneWidget);
     expect(find.text('Requested: Active'), findsOneWidget);
