@@ -1,4 +1,4 @@
-# Management Collector Daily Route and Remittance Review Design
+# Management Collector Route, Remittance, and Employee Activity Review Design
 
 **Date:** 2026-08-29
 
@@ -34,6 +34,12 @@ delivery slice. A complete installment-by-installment client schedule is not
 invented from current mobile fields and requires its own authoritative schedule
 read contract.
 
+Management also receives a separate, permission-scoped Employee Activity
+workspace under `People, access & requests`. It summarizes work employees have
+performed or prepared across authorized domains and links Management to the
+authoritative record and existing review flow. It is not an impersonation,
+surveillance, payroll-disclosure, or second audit system.
+
 ## Current Implemented Behavior and Intended Behavior
 
 ### Current implemented behavior
@@ -66,6 +72,14 @@ read contract.
 - There is no standalone persisted visit-result record for a client contact
   that produces neither a payment nor a PASS transaction. Absence of a
   financial entry therefore cannot be called a completed visit.
+- Employee work evidence is fragmented across domain records and
+  `core.audit_logs`. Journals, remittances, renewals, corrections, and other
+  records preserve actor, preparer, reviewer, or poster attribution where the
+  module supports it, but Management has no unified Employee Activity list or
+  per-employee work timeline.
+- The existing Management `Alerts & activity` surface is recipient-scoped
+  notification data. It is not a complete employee work ledger and must not be
+  presented as one.
 
 ### Intended behavior
 
@@ -90,6 +104,16 @@ read contract.
   current assignment table and presents it as historical fact.
 - A missing visit result remains `Not recorded`; Flutter and the server do not
   infer that the Collector visited, skipped, or failed the client.
+- Management opens `People, access & requests -> Employee activity` to see one
+  compact row per active Employee, derived only from domains that the current
+  Management user is authorized to review.
+- Selecting an Employee opens a chronological, server-derived timeline of
+  permitted Accounting, HR, Payroll, CRM/support, remittance/operations, and
+  administration evidence. Each item links to the authoritative record or its
+  protected review queue.
+- Employee Activity never lets Management impersonate the Employee, silently
+  modify an Employee draft, bypass maker-checker separation, or infer hidden
+  work from redacted counts.
 
 ## Binding Domain Distinctions
 
@@ -250,6 +274,98 @@ audit safeguards.
 
 No quick accept, swipe action, inline amount edit, or bulk decision is added.
 
+## Management Employee Activity Review
+
+### Navigation and compact employee rows
+
+Add one small `Employee activity` launcher under `People, access & requests`.
+The first page provides a Philippine business-date range, Employee search,
+closed domain/status filters, pull-to-refresh, and a visible server generation
+time. It renders one compact row per active canonical Employee account:
+
+```text
+Employee Name · Accounting                         [Awaiting review]  >
+Today 6 completed · 2 in progress · 1 awaiting Management
+Last activity 10:42 AM · 1 item needs attention
+```
+
+The row displays only facts visible under the current Management user's exact
+permissions:
+
+- Employee display name and active organizational/function labels already
+  authorized for staff administration;
+- visible completed, in-progress, awaiting-review, and needs-attention counts;
+- most recent visible activity time and domain;
+- one server-derived status and explanatory message.
+
+The backend returns no aggregate for a domain the Management user cannot
+access. Flutter does not render a zero, redacted count, placeholder, or hidden
+domain name because that would disclose the existence of protected work. This
+is operational review, not productivity scoring; the row never ranks
+employees, estimates effort, or makes disciplinary recommendations.
+
+### Employee timeline
+
+Selecting a row opens a chronological list of permitted evidence:
+
+```text
+Time | Domain | Action | Record/reference | Workflow state | Evidence | Review
+```
+
+Closed domain codes are `accounting`, `hr`, `payroll`, `crm_support`,
+`remittance_operations`, and `administration`. Each timeline item includes:
+
+- a stable server activity code and human-readable summary;
+- authenticated actor and, when distinct, maker, checker, poster, or current
+  assignee attribution;
+- authoritative record type, opaque record ID, and safe display reference;
+- business date, server timestamp, workflow state, and correction/reversal
+  state;
+- bounded evidence summary and an authorized link target;
+- whether the item is informational, awaiting Management review, completed,
+  or needs attention.
+
+The link opens the owning domain's existing detail or protected approval flow.
+The Employee Activity page never recreates the domain form or mutates its
+record. Where no authorized destination exists yet, the item remains read-only
+and explicitly says that detailed review is not currently available.
+
+### Maker-checker and privacy controls
+
+- The Employee remains the maker/preparer of work they recorded.
+- Management may approve, reject, return, post, or request correction only
+  through the owning module and only with that action's exact permission.
+- The activity-review permission does not imply posting, payroll approval,
+  remittance receipt, correction, reversal, user administration, or access to
+  unrestricted client/employee content.
+- A user cannot satisfy both maker and checker for the same protected workflow
+  when the owning module prohibits self-approval.
+- Corrections retain the original evidence and use the owning module's
+  amendment, reversal, or supersession rules.
+- Payroll amounts, medical/leave detail, disciplinary content, government IDs,
+  support-message bodies, and client documents require their existing or newly
+  approved exact domain permissions. Unauthorized domains and fields are
+  omitted server-side.
+- The system does not capture keystrokes, screenshots, background location,
+  time-on-screen, or other invasive surveillance signals.
+
+### Employee activity statuses
+
+The backend derives one closed status from visible, authoritative work only:
+
+- `no_activity` — no permitted activity exists in the selected range;
+- `in_progress` — visible drafts or assigned work remain in progress;
+- `awaiting_review` — at least one visible item awaits an authorized
+  Management decision;
+- `completed` — visible work exists and no visible item remains pending or in
+  exception;
+- `needs_attention` — a visible rejected, stale, unreconciled, failed, or
+  correction-required item needs review.
+
+`needs_attention` wins over `awaiting_review`, which wins over `in_progress`,
+which wins over `completed`. Status describes workflow state, not employee
+quality, attendance, compensation, or financial authorization.
+
 ## Daily Route Snapshot and Visit Evidence
 
 ### Why a snapshot is required
@@ -393,12 +509,50 @@ reconciliation exceptions, and linked remittance summaries. It does not return
 government IDs, passwords, auth metadata, unrestricted CRM notes, raw device
 identifiers, or unrelated client history.
 
+### Employee Activity API
+
+Add canonical Management routes with mobile aliases excluded from generated
+schema:
+
+- `GET /api/v1/management/employee-activity`
+- `GET /api/mobile/v1/management/employee-activity`
+- `GET /api/v1/management/employee-activity/{employee_user_id}`
+- `GET /api/mobile/v1/management/employee-activity/{employee_user_id}`
+
+List query parameters are `date_from`, `date_to`, optional `q`, optional closed
+`domain`, optional closed `status`, `limit`, and `offset`. The maximum date
+range is bounded by server policy. Detail uses the opaque Employee user UUID
+plus the same bounded date/domain filters; it does not accept an arbitrary
+role, permission, table, or SQL expression from the client.
+
+The list returns server generation time, effective date range, and compact
+Employee rows. The detail returns the selected row facts and a paginated
+timeline whose items contain `activity_code`, `domain`, `occurred_at`,
+`business_date`, safe record identity, workflow state, visible actor roles,
+bounded evidence, and an authorized navigation target. New activity codes are
+registered centrally; unknown codes fail closed in clients rather than being
+mislabelled.
+
+Counts, status, summaries, and timeline items are calculated only after domain
+authorization. A hidden domain contributes nothing to the response and cannot
+be inferred from totals. The APIs never return passwords, tokens, raw device
+identifiers, private authentication metadata, unrestricted HR/payroll/CRM
+content, or audit payload fields not approved for Management display.
+
 ## Authentication, Permissions, and Privacy
 
 Every route requires bearer authentication, active account, active approved
 device, canonical `management` role, and a new exact
 `collection.route.review` permission. Seed the permission for Management only.
 Do not grant it to Employee, Collector, or Client by default.
+
+Employee Activity additionally requires canonical `management` role and a new
+exact `employee.activity.review` permission. That permission authorizes only
+the normalized list/timeline shell. Each source item also requires the exact
+owning-domain view permission; links and protected actions require their
+existing action permissions. Seed `employee.activity.review` for Management
+only, but do not use it to grant all HR, Payroll, Accounting, CRM, remittance,
+or administration data automatically.
 
 Additional rules are:
 
@@ -408,8 +562,9 @@ Additional rules are:
   authority;
 - route review permission never grants payment creation, correction, void,
   route administration, account management, or unrestricted CRM access;
-- a future Employee assignment can receive `collection.route.review`
-  explicitly without receiving `remittance.receive`;
+- a future Employee route-review workflow requires its own separately approved
+  role/resource-scope contract; this Management endpoint is not opened merely
+  by granting an Employee the permission string;
 - the backend omits or denies protected detail; Flutter visibility is defense
   in depth only;
 - error responses never interpolate client names, balances, Collector IDs,
@@ -450,6 +605,31 @@ separate request and snapshot because it is explicitly refreshed before any
 remittance decision. The existing remittance mutation performs its own fresh
 server checks and never trusts row totals supplied by Flutter.
 
+### Employee Activity read model
+
+Create a focused, read-only Employee Activity module instead of expanding
+`core.audit_logs` into a business workflow engine. The read model normalizes
+approved evidence from two sources:
+
+1. owning-domain records that already preserve maker, actor, reviewer, poster,
+   assignee, status, and reversal/correction evidence; and
+2. `core.audit_logs` entries whose registered action code and safe detail
+   projection are explicitly approved for Management display.
+
+A central activity registry maps each stable activity code to its domain,
+source projection, timestamp semantics, safe summary builder, workflow status,
+required domain view permission, and optional navigation target. Unregistered
+audit actions and free-form payload fields are excluded. The read model does
+not copy all business data into a new authoritative ledger and does not treat
+an audit log string as proof of a business state that must be derived from the
+owning record.
+
+Employee population comes from active canonical Employee accounts, not legacy
+Desktop role names. A later organizational-assignment model may add team or
+department scope, but it must not silently infer reporting lines from activity
+history. List counts and the timeline use the same permission-filtered event
+projection and one coherent PostgreSQL statement snapshot per request.
+
 ## Failure and Stale-State Behavior
 
 - Initial load failure shows no totals and leaves other Management launchers
@@ -466,6 +646,17 @@ server checks and never trusts row totals supplied by Flutter.
   display, protected actions reject stale evidence and require refresh.
 - Historical dates without a snapshot display `No authoritative route
   snapshot` and never fall back to current assignments.
+- Employee Activity load failure shows no employee counts or timeline and
+  leaves other Management launchers usable.
+- An Employee with no visible activity is labelled `No permitted activity in
+  this range`; the UI does not imply the Employee performed no work.
+- A source item with a missing registered projection, malformed relationship,
+  or revoked domain permission is omitted or fails the affected response
+  according to server policy; Flutter never fabricates a summary.
+- A permission change takes effect on the next request. The app does not retain
+  protected activity in a persistent cross-session cache.
+- Opening a linked record refreshes through the owning module, whose current
+  permission and stale-state checks remain authoritative.
 
 ## Audit Rules
 
@@ -480,6 +671,13 @@ following actions remain auditable:
 - Management remittance review acknowledgement, acceptance, rejection,
   physical-count evidence, and custody transfer;
 - protected reconciliation/cash-over resolution.
+
+Opening Employee Activity does not create a false employee work event.
+Security telemetry may record that Management accessed a protected domain,
+subject to the platform's approved access-audit policy, but it is kept separate
+from the Employee's business activity timeline. Any approval, rejection,
+posting, return, amendment, reversal, payroll action, or remittance decision is
+audited by the owning module and retains both maker and checker attribution.
 
 No route, visit, transaction, custody, remittance, or audit history is
 hard-deleted merely because it was wrong, superseded, rejected, or corrected.
@@ -505,6 +703,13 @@ Prove:
 - rejected and submitted remittances retain custody correctly;
 - route, held, unremitted, submitted, received, and exception totals reconcile
   exactly with no double-counted covered dates or bundled receipts.
+- Employee Activity permission seed is additive and rerunnable;
+- the Employee Activity projection includes only registered source/action
+  codes, preserves actor/maker/checker identity, and derives business state
+  from the owning record rather than free-form audit text;
+- hidden domains contribute no rows, counts, timestamps, or status clues;
+- corrected, reversed, rejected, superseded, and posted work retains permanent
+  evidence without duplicate current-state counts.
 
 ### FastAPI tests
 
@@ -525,6 +730,21 @@ Prove:
 - response and error bodies contain no prohibited identity/device/auth data;
 - database errors return safe service-unavailable responses with no partial
   totals.
+- canonical and mobile Employee Activity aliases have identical contracts;
+- canonical Management role and exact `employee.activity.review` are both
+  required for the Employee Activity shell;
+- every activity item additionally requires its registered domain view
+  permission, and action permissions are never implied;
+- date range, Employee search, domain, status, limit, and offset filters are
+  bounded and parameterized;
+- list counts, row status, timeline items, and last-activity timestamps contain
+  visible-domain evidence only;
+- inactive/non-Employee targets, unknown activity codes, malformed source
+  relationships, and revoked permissions fail closed without protected data;
+- maker-checker attribution remains distinct and self-approval rules remain in
+  the owning workflow;
+- sensitive payroll, HR, CRM, authentication, and device fields are absent
+  without their exact authorization.
 
 ### Flutter tests
 
@@ -544,6 +764,18 @@ Prove:
 - stale responses cannot replace a newer date or filter;
 - unauthorized remittance detail and action controls are absent;
 - no mutation occurs from list/row expansion.
+- `Employee activity` appears only with the exact shell permission;
+- compact Employee rows render at 360 logical pixels with enlarged text and no
+  productivity score or hidden-domain placeholder;
+- row counts, statuses, timestamps, and timeline order are rendered from the
+  server without local recomputation;
+- domain/date/status/search filters reject stale responses and preserve server
+  scope;
+- an authorized timeline link opens the owning module, while an unauthorized
+  or unavailable destination remains read-only;
+- no employee record, draft, approval, or audit entry is mutated by opening a
+  row or timeline item;
+- protected Employee Activity data is not persisted across sessions.
 
 ### Acceptance review
 
@@ -561,11 +793,20 @@ include:
 - one accepted and one rejected remittance;
 - one correction or void requiring attention;
 - one active Collector with a missing/no-activity route.
+- one active Employee with visible work in each initially registered domain;
+- one Employee with no permitted activity in the selected range;
+- one maker-checker item awaiting Management and one completed posted item;
+- one rejected/corrected/reversed item that needs attention;
+- one Management identity that can see the Employee Activity shell but lacks
+  Payroll and HR domain access, proving no count or timestamp leakage;
+- one fully unauthorized Management identity and one Employee identity.
 
 Management emulator review must verify the compact row, route order, client
 detail, custody separation, and transition to full remittance review. It must
-not accept real money, write a live database, mark CA2 approved, merge the Draft
-PR, or deploy production.
+also verify Employee row/timeline filtering, owning-record navigation, and
+maker-checker separation without exposing a hidden domain. It must not accept
+real money, write a live database, mark CA2 approved, merge the Draft PR, or
+deploy production.
 
 ## Phased Implementation and Release Order
 
@@ -583,11 +824,20 @@ PR, or deploy production.
    route detail, and safe remittance navigation.
 6. **Desktop parity** — consume the same APIs/read model in the primary office
    platform using a denser table, without a second calculation path.
-7. **Client-row slice** — implement the separately approved compact client row
+7. **Employee Activity registry and permissions** — add the shell permission,
+   closed activity/domain codes, safe source projections, field allowlists, and
+   permission-filtered normalization tests without copying business authority.
+8. **Employee Activity read APIs** — add canonical/mobile list and timeline
+   contracts with compact Employee rows, visible-domain aggregation, stable
+   pagination/filtering, and owning-record navigation metadata.
+9. **Employee Activity mobile and Desktop parity** — add the small Management
+   launcher, compact rows, timeline filters, and safe record navigation using
+   the same API/read model on both platforms.
+10. **Client-row slice** — implement the separately approved compact client row
    using current authoritative detail/schedule-summary fields; add a full
    schedule action only after its schedule-read contract is separately
    approved and tested.
-8. **Acceptance and guarded rollout** — exact-head tests, Draft PR review,
+11. **Acceptance and guarded rollout** — exact-head tests, Draft PR review,
    disposable migration rehearsal, authenticated local emulator/Desktop
    review, then separately authorized production migration and release.
 
@@ -611,8 +861,28 @@ own.
 - Do not invent historical route snapshots or installment schedules.
 - Do not score Collector performance or automate disciplinary conclusions from
   missing outcomes.
+- Do not rank Employees, calculate productivity scores, or infer performance,
+  attendance, misconduct, or compensation from the activity timeline.
+- Do not capture keystrokes, screenshots, background location, time-on-screen,
+  or other surveillance signals.
+- Do not use `employee.activity.review` to bypass owning-domain permissions,
+  maker-checker separation, protected actions, or sensitive HR/payroll/CRM
+  field controls.
+- Do not copy every domain record into a second Employee Activity authority or
+  treat free-form audit text as the official business state.
+- Do not let Management impersonate an Employee or silently edit an Employee's
+  draft from the review workspace.
 - Do not change accounting posting, New Client Fund, renewal funding, ECL,
   payroll, or other unrelated platform modules in this delivery.
+
+## Approval Record
+
+The Collector daily-route/remittance row architecture, compact client-row
+direction, and permission-scoped Employee Activity architecture were approved
+in the project review on 2026-08-29. The approved Employee Activity direction
+is a separate Management workspace, uses authoritative domain/audit evidence,
+requires domain permissions, preserves maker-checker controls, and excludes
+impersonation and invasive surveillance.
 
 ## Approval Boundary
 
