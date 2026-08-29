@@ -6,6 +6,8 @@ import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_dashboard_overview.dart';
 import 'package:gilbic_mobile/src/core/management/management_dashboard_overview_repository.dart';
+import 'package:gilbic_mobile/src/core/management/management_employee_activity.dart';
+import 'package:gilbic_mobile/src/core/management/management_employee_activity_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
@@ -16,6 +18,8 @@ import 'package:gilbic_mobile/src/features/management/management_accounting_meas
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_contract_collection_activation_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_ecl_outcome_review_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_employee_activity_page.dart'
+    as employee_activity_feature;
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_statements_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_general_journal_launcher_page.dart';
@@ -122,6 +126,24 @@ void main() {
     },
   );
 
+  testWidgets('employee activity launcher requires its exact permission', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 1800));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: SpinaTheme.light,
+        home: _dashboard(_managementWithoutEmployeeActivityPermission),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('management-employee-activity')), findsNothing);
+    expect(find.text('People, access & requests'), findsOneWidget);
+  });
+
   testWidgets(
     'management home groups each priority workflow by its day-to-day purpose',
     (tester) async {
@@ -158,6 +180,13 @@ void main() {
       expect(account, findsOneWidget);
       expect(accounting, findsOneWidget);
       expect(find.text('People, access & requests'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: renewals,
+          matching: find.byKey(const Key('management-employee-activity')),
+        ),
+        findsOneWidget,
+      );
 
       final peopleGrid = find.descendant(
         of: renewals,
@@ -327,6 +356,10 @@ void main() {
         ('management-direct-payment', OtherAreaCollectionPage),
         ('management-void-payment', ManagementCollectionVoidPage),
         ('management-staff-devices', ManagementStaffDevicesPage),
+        (
+          'management-employee-activity',
+          employee_activity_feature.ManagementEmployeeActivityPage,
+        ),
         ('management-renewals', ManagementRenewalRequestsPage),
         ('management-support', ManagementSupportRequestsPage),
         ('client-registration-approvals', ClientRegistrationApprovalsPage),
@@ -391,6 +424,8 @@ EnhancedRoleDashboard _dashboard(UserSession session) {
     collectionDeviceSequence: MemoryCollectionDeviceSequence(),
     managementDashboardOverviewRepository:
         _CompletedManagementOverviewRepository(),
+    managementEmployeeActivityRepository:
+        _CompletedEmployeeActivityRepository(),
   );
 }
 
@@ -452,6 +487,7 @@ const _managementSession = UserSession(
   accessToken: 'management-token',
   permissions: <String>[
     'management.dashboard.view',
+    'employee.activity.review',
     'accounting.view',
     'accounting.ecl.review',
     'accounting.cutover.manage',
@@ -466,6 +502,60 @@ const _managementSession = UserSession(
     'support.manage',
   ],
 );
+
+const _managementWithoutEmployeeActivityPermission = UserSession(
+  userId: 'management-2',
+  username: 'management.two',
+  displayName: 'Management Two',
+  role: AppRole.management,
+  rawRole: 'Management',
+  accessToken: 'management-token',
+  permissions: <String>[
+    'management.dashboard.view',
+    'accounting.view',
+    'account.manage',
+    'device.manage',
+    'renewal.manage',
+    'support.manage',
+  ],
+);
+
+class _CompletedEmployeeActivityRepository
+    implements ManagementEmployeeActivityRepository {
+  @override
+  Future<ManagementEmployeeActivityPage> listEmployees(
+    UserSession session, {
+    required String deviceId,
+    required DateTime dateFrom,
+    required DateTime dateTo,
+    String? query,
+    ManagementEmployeeActivityDomain? domain,
+    ManagementEmployeeActivityStatus? status,
+    int limit = 50,
+    int offset = 0,
+  }) async => ManagementEmployeeActivityPage(
+    dateFrom: dateFrom,
+    dateTo: dateTo,
+    generatedAt: DateTime.utc(2026, 8, 29, 4, 15, 30),
+    availableDomains: const <ManagementEmployeeActivityDomain>[
+      ManagementEmployeeActivityDomain.accounting,
+    ],
+    totalCount: 0,
+    rows: const <ManagementEmployeeActivityRow>[],
+  );
+
+  @override
+  Future<ManagementEmployeeActivityTimeline> loadTimeline(
+    UserSession session, {
+    required String deviceId,
+    required String employeeUserId,
+    required DateTime dateFrom,
+    required DateTime dateTo,
+    ManagementEmployeeActivityDomain? domain,
+    int limit = 100,
+    int offset = 0,
+  }) async => throw StateError('Timeline is not expected.');
+}
 
 class _UnusedRouteLoader implements CollectorRouteLoader {
   @override

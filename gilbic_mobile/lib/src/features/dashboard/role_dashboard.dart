@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_dashboard_overview_repository.dart';
+import 'package:gilbic_mobile/src/core/management/management_employee_activity_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/client/client_loans_page.dart';
@@ -28,6 +29,7 @@ class RoleDashboard extends StatelessWidget {
     required this.deviceIdentityProvider,
     required this.collectionDeviceSequence,
     this.managementDashboardOverviewRepository,
+    this.managementEmployeeActivityRepository,
     super.key,
   });
 
@@ -39,6 +41,8 @@ class RoleDashboard extends StatelessWidget {
   final CollectionDeviceSequence collectionDeviceSequence;
   final ManagementDashboardOverviewRepository?
   managementDashboardOverviewRepository;
+  final ManagementEmployeeActivityRepository?
+  managementEmployeeActivityRepository;
 
   void _push(BuildContext context, Widget page) {
     Navigator.of(
@@ -194,6 +198,7 @@ class RoleDashboard extends StatelessWidget {
         deviceIdentityProvider: deviceIdentityProvider,
         collectionDeviceSequence: collectionDeviceSequence,
         overviewRepository: managementDashboardOverviewRepository,
+        employeeActivityRepository: managementEmployeeActivityRepository,
       );
     }
 

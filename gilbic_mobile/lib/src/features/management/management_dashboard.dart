@@ -5,6 +5,7 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_dashboard_overview.dart';
 import 'package:gilbic_mobile/src/core/management/management_dashboard_overview_repository.dart';
+import 'package:gilbic_mobile/src/core/management/management_employee_activity_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
@@ -15,6 +16,7 @@ import 'package:gilbic_mobile/src/features/management/management_accounting_meas
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_contract_collection_activation_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_ecl_outcome_review_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_employee_activity_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_statements_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_general_journal_launcher_page.dart';
@@ -38,6 +40,7 @@ class ManagementDashboard extends StatefulWidget {
     required this.deviceIdentityProvider,
     required this.collectionDeviceSequence,
     this.overviewRepository,
+    this.employeeActivityRepository,
     super.key,
   });
 
@@ -47,6 +50,7 @@ class ManagementDashboard extends StatefulWidget {
   final DeviceIdentityProvider deviceIdentityProvider;
   final CollectionDeviceSequence collectionDeviceSequence;
   final ManagementDashboardOverviewRepository? overviewRepository;
+  final ManagementEmployeeActivityRepository? employeeActivityRepository;
 
   @override
   State<ManagementDashboard> createState() => _ManagementDashboardState();
@@ -201,6 +205,11 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
       _ManagementAction.staffDevices => ManagementStaffDevicesPage(
         session: session,
         deviceIdentityProvider: deviceIdentityProvider,
+      ),
+      _ManagementAction.employeeActivity => ManagementEmployeeActivityPage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+        repository: widget.employeeActivityRepository,
       ),
       _ManagementAction.renewals => ManagementRenewalRequestsPage(
         session: session,
@@ -1127,6 +1136,7 @@ enum _ManagementAction {
   directPayment('management-direct-payment'),
   voidPayment('management-void-payment'),
   staffDevices('management-staff-devices'),
+  employeeActivity('management-employee-activity'),
   renewals('management-renewals'),
   support('management-support'),
   clientRegistrationApprovals('client-registration-approvals'),
@@ -1305,6 +1315,13 @@ const _managementSections = <_ManagementSection>[
         action: _ManagementAction.staffDevices,
         requiredPermissions: <String>['account.manage', 'device.manage'],
         permissionMode: _PermissionMode.any,
+      ),
+      _ManagementModule(
+        'Employee activity',
+        'Review authorized Employee work, approvals, and exceptions',
+        Icons.manage_search_outlined,
+        action: _ManagementAction.employeeActivity,
+        requiredPermissions: <String>['employee.activity.review'],
       ),
       _ManagementModule(
         'Renewal requests',
