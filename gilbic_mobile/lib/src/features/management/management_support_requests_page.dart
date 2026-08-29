@@ -4,6 +4,7 @@ import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/support/support_repository.dart';
 import 'package:gilbic_mobile/src/core/support/support_request.dart';
+import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ManagementSupportRequestsPage extends StatefulWidget {
   const ManagementSupportRequestsPage({
@@ -84,7 +85,58 @@ class _ManagementSupportRequestsPageState
         initialResponse: request.managementResponse,
       ),
     );
-    if (response == null || _deviceId == null) {
+    if (response == null || _deviceId == null || !mounted) {
+      return;
+    }
+    final (nextActionLabel, consequence) = switch (action) {
+      'resolved' => (
+        'Resolve support request',
+        'The request will be closed as resolved with this response in '
+            'communication history. Official financial records will not be edited.',
+      ),
+      'cancelled' => (
+        'Cancel support request',
+        'The request will be closed as cancelled. Official financial records '
+            'will not be edited.',
+      ),
+      _ => (
+        'Send support response',
+        'The response will be saved to the client communication history. '
+            'Official financial records will not be edited.',
+      ),
+    };
+    final confirmed = await showManagementReviewConfirmation(
+      context,
+      ManagementReviewPresentation.validated(
+        surface: ManagementMutationSurface.clientSupport,
+        recordLabel: 'Client support request',
+        recordValue: '${request.clientName} • ${request.clientCode}',
+        statusLabel:
+            plainManagementStatus(request.status, const <String, String>{
+              'open': 'Open and awaiting Management',
+              'answered': 'Answered and still open',
+              'resolved': 'Resolved and closed',
+              'cancelled': 'Cancelled and closed',
+            }),
+        facts: <ManagementReviewFact>[
+          ManagementReviewFact(label: 'Category', value: request.categoryLabel),
+          ManagementReviewFact(label: 'Subject', value: request.subject),
+          ManagementReviewFact(label: 'Response', value: response),
+          if (request.referenceText.trim().isNotEmpty)
+            ManagementReviewFact(
+              label: 'Client reference',
+              value: request.referenceText,
+            ),
+        ],
+        nextActionLabel: nextActionLabel,
+        consequence: consequence,
+        risk: ManagementReviewRisk.routine,
+        secondaryReferences: <ManagementReviewFact>[
+          ManagementReviewFact(label: 'Request ID', value: request.requestId),
+        ],
+      ),
+    );
+    if (!confirmed || !mounted) {
       return;
     }
     setState(() => _submitting = true);
@@ -101,19 +153,19 @@ class _ManagementSupportRequestsPageState
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            action == 'resolved'
-                ? 'Support request resolved.'
-                : 'Response sent to the client.',
-          ),
+          content: Text(switch (action) {
+            'resolved' => 'Support request resolved.',
+            'cancelled' => 'Support request cancelled.',
+            _ => 'Response sent to the client.',
+          }),
         ),
       );
       await _load();
     } on SpinaApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
@@ -168,7 +220,10 @@ class _ManagementSupportRequestsPageState
                   DropdownMenuItem(value: 'open', child: Text('Open')),
                   DropdownMenuItem(value: 'answered', child: Text('Answered')),
                   DropdownMenuItem(value: 'resolved', child: Text('Resolved')),
-                  DropdownMenuItem(value: 'cancelled', child: Text('Cancelled')),
+                  DropdownMenuItem(
+                    value: 'cancelled',
+                    child: Text('Cancelled'),
+                  ),
                 ],
                 onChanged: _loading || _submitting
                     ? null
@@ -219,6 +274,7 @@ class _ManagementSupportRequestsPageState
                     busy: _submitting,
                     onAnswer: () => _review(request, action: 'answered'),
                     onResolve: () => _review(request, action: 'resolved'),
+                    onCancel: () => _review(request, action: 'cancelled'),
                   ),
                   const SizedBox(height: 10),
                 ],
@@ -236,12 +292,14 @@ class _ManagementSupportCard extends StatelessWidget {
     required this.busy,
     required this.onAnswer,
     required this.onResolve,
+    required this.onCancel,
   });
 
   final SupportRequestItem request;
   final bool busy;
   final VoidCallback onAnswer;
   final VoidCallback onResolve;
+  final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -301,6 +359,7 @@ class _ManagementSupportCard extends StatelessWidget {
                   if (isOpen)
                     Expanded(
                       child: OutlinedButton.icon(
+                        key: Key('answer-support-${request.requestId}'),
                         onPressed: busy ? null : onAnswer,
                         icon: const Icon(Icons.reply),
                         label: const Text('Answer'),
@@ -309,12 +368,23 @@ class _ManagementSupportCard extends StatelessWidget {
                   if (isOpen) const SizedBox(width: 10),
                   Expanded(
                     child: FilledButton.icon(
+                      key: Key('resolve-support-${request.requestId}'),
                       onPressed: busy ? null : onResolve,
                       icon: const Icon(Icons.check_circle_outline),
                       label: const Text('Resolve'),
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  key: Key('cancel-support-${request.requestId}'),
+                  onPressed: busy ? null : onCancel,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text('Cancel request'),
+                ),
               ),
             ],
           ],
@@ -365,15 +435,26 @@ class _SupportResponseDialogState extends State<_SupportResponseDialog> {
   @override
   Widget build(BuildContext context) {
     final resolving = widget.action == 'resolved';
+    final cancelling = widget.action == 'cancelled';
     return AlertDialog(
-      title: Text(resolving ? 'Resolve support request' : 'Answer client'),
+      title: Text(
+        resolving
+            ? 'Resolve support request'
+            : cancelling
+            ? 'Cancel support request'
+            : 'Answer client',
+      ),
       content: TextField(
         key: const Key('management-support-response'),
         controller: _controller,
         maxLength: 2000,
         maxLines: 6,
         decoration: InputDecoration(
-          labelText: resolving ? 'Resolution' : 'Response to client',
+          labelText: resolving
+              ? 'Resolution'
+              : cancelling
+              ? 'Cancellation note'
+              : 'Response to client',
           alignLabelWithHint: true,
           errorText: _error,
         ),
@@ -386,7 +467,13 @@ class _SupportResponseDialogState extends State<_SupportResponseDialog> {
         FilledButton(
           key: const Key('submit-management-support-response'),
           onPressed: _submit,
-          child: Text(resolving ? 'Resolve' : 'Send response'),
+          child: Text(
+            resolving
+                ? 'Resolve'
+                : cancelling
+                ? 'Cancel request'
+                : 'Send response',
+          ),
         ),
       ],
     );

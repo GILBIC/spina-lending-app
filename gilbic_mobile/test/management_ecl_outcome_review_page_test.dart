@@ -61,6 +61,43 @@ void main() {
     await tester.tap(save);
     await tester.pumpAndSettle();
 
+    expect(
+      find.byKey(const Key('management-review-ecl-outcome-review')),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'A new immutable historical outcome-review version will be saved. '
+        'This does not calculate loss, recovery, PD, LGD or ECL and does not '
+        'post to the General Ledger.',
+      ),
+      findsOneWidget,
+    );
+    expect(repository.reviewedEpisodeId, isNull);
+
+    await tester.tap(find.byKey(const Key('cancel-ecl-outcome-review')));
+    await tester.pumpAndSettle();
+    expect(repository.reviewedEpisodeId, isNull);
+
+    await tester.tap(reviewButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Non-default'));
+    await tester.enterText(
+      find.byKey(const Key('ecl-evidence-reference')),
+      'Collection ledger Jan-Apr 2025',
+    );
+    await tester.enterText(
+      find.byKey(const Key('ecl-review-note')),
+      'Reviewed collections show the historical obligation was fully settled.',
+    );
+    await tester.pump();
+    final secondSave = find.byKey(const Key('save-ecl-outcome-review'));
+    expect(tester.widget<FilledButton>(secondSave).onPressed, isNotNull);
+    await tester.tap(secondSave);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-ecl-outcome-review')));
+    await tester.pumpAndSettle();
+
     expect(repository.reviewedEpisodeId, 101);
     expect(repository.defaultLabel, isFalse);
     expect(repository.evidenceBasis, 'source_document');
@@ -94,6 +131,16 @@ void main() {
     await tester.tap(blockedCard);
     await tester.pumpAndSettle();
 
+    expect(
+      find.byKey(const Key('management-review-ecl-outcome-review')),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel(
+        'Blocker: This reconstructed episode requires source review before outcome labeling.',
+      ),
+      findsOneWidget,
+    );
     expect(find.textContaining('requires source review'), findsOneWidget);
     expect(find.byKey(const Key('review-outcome-202')), findsNothing);
   });
@@ -235,7 +282,8 @@ final _sourceBlocked = EclOutcomeReviewEpisode(
   zeroPaymentObservationCount: 8,
   observedCollectionDays: 28,
   sourceQualityStatus: 'source_review_required',
-  sourceQualityNote: 'This reconstructed episode requires source review before outcome labeling.',
+  sourceQualityNote:
+      'This reconstructed episode requires source review before outcome labeling.',
   explicitDefaultLabel: null,
   reviewId: null,
   reviewVersion: null,
