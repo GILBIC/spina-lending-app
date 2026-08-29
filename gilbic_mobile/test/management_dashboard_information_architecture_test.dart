@@ -33,6 +33,95 @@ import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.da
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 void main() {
+  testWidgets('number boxes are the first dashboard cards below the header', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 1800));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: SpinaTheme.light,
+        home: _dashboard(_managementSession),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<Card>(find.byType(Card).first).key,
+      const Key('management-overview-metric-activeClients'),
+    );
+  });
+
+  testWidgets(
+    'management home presents live facts as two-column numbered KPI boxes',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(430, 1800));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SpinaTheme.light,
+          home: _dashboard(_managementSession),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('management-kpi-grid')), findsOneWidget);
+      expect(find.text('41'), findsOneWidget);
+      expect(find.text('Active clients'), findsOneWidget);
+
+      final activeClients = find.byKey(
+        const Key('management-overview-metric-activeClients'),
+      );
+      final activeLoans = find.byKey(
+        const Key('management-overview-metric-activeLoans'),
+      );
+      final clientRect = tester.getRect(activeClients);
+      final loanRect = tester.getRect(activeLoans);
+      expect((clientRect.top - loanRect.top).abs(), lessThan(1));
+      expect(loanRect.left, greaterThan(clientRect.left));
+      expect(clientRect.width, lessThan(210));
+      expect(clientRect.height, lessThanOrEqualTo(110));
+    },
+  );
+
+  testWidgets(
+    'management workflow launchers use a compact four-column icon menu',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(430, 1800));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SpinaTheme.light,
+          home: _dashboard(_managementSession),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(
+          const Key('management-module-grid-management-section-clients-loans'),
+        ),
+        findsOneWidget,
+      );
+      final loanShortcut = find.byKey(const Key('management-loans'));
+      final contractShortcut = find.byKey(
+        const Key('management-contract-collection-activation'),
+      );
+      final loanShortcutRect = tester.getRect(loanShortcut);
+      final contractShortcutRect = tester.getRect(contractShortcut);
+      expect(
+        (loanShortcutRect.top - contractShortcutRect.top).abs(),
+        lessThan(1),
+      );
+      expect(contractShortcutRect.left, greaterThan(loanShortcutRect.left));
+      expect(loanShortcutRect.width, lessThanOrEqualTo(96));
+      expect(loanShortcutRect.height, lessThanOrEqualTo(96));
+    },
+  );
+
   testWidgets(
     'management home groups each priority workflow by its day-to-day purpose',
     (tester) async {
@@ -70,14 +159,21 @@ void main() {
       expect(accounting, findsOneWidget);
       expect(find.text('People, access & requests'), findsOneWidget);
 
-      final peopleLaunchers = find.descendant(
+      final peopleGrid = find.descendant(
         of: renewals,
-        matching: find.byType(ListTile),
+        matching: find.byKey(
+          const Key(
+            'management-module-grid-management-section-renewals-support',
+          ),
+        ),
       );
-      expect(find.byKey(const Key('management-staff-devices')), findsOneWidget);
+      expect(peopleGrid, findsOneWidget);
+      final staffDevices = find.byKey(const Key('management-staff-devices'));
+      final renewalRequests = find.byKey(const Key('management-renewals'));
+      expect(staffDevices, findsOneWidget);
       expect(
-        tester.widget<ListTile>(peopleLaunchers.first).key,
-        const Key('management-staff-devices'),
+        tester.getTopLeft(staffDevices).dx,
+        lessThan(tester.getTopLeft(renewalRequests).dx),
       );
 
       expect(

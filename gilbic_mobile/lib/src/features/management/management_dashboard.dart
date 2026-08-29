@@ -331,24 +331,21 @@ class _ManagementWelcomeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome, ${session.displayName}',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Start with alerts and review queues, then move into lending, '
-              'cash custody, account settings, or accounting.',
-            ),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Welcome, ${session.displayName}',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Your live numbers and authorized Management tools.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ],
       ),
     );
   }
@@ -456,10 +453,13 @@ class _ManagementLiveOverview extends StatelessWidget {
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 8),
-        _ManagementOverviewMetricWrap(
+        KeyedSubtree(
           key: const Key('management-overview-facts'),
-          metrics: facts,
-          onOpenMetric: onOpenMetric,
+          child: _ManagementKpiGrid(
+            key: const Key('management-kpi-grid'),
+            metrics: facts,
+            onOpenMetric: onOpenMetric,
+          ),
         ),
         const SizedBox(height: 16),
         Text('Needs attention', style: Theme.of(context).textTheme.titleMedium),
@@ -474,7 +474,7 @@ class _ManagementLiveOverview extends StatelessWidget {
             ),
           )
         else
-          _ManagementOverviewMetricWrap(
+          _ManagementAttentionGrid(
             key: const Key('management-overview-attention'),
             metrics: attention,
             onOpenMetric: onOpenMetric,
@@ -577,8 +577,50 @@ class _ManagementOverviewInitialError extends StatelessWidget {
   }
 }
 
-class _ManagementOverviewMetricWrap extends StatelessWidget {
-  const _ManagementOverviewMetricWrap({
+class _ManagementAttentionGrid extends StatelessWidget {
+  const _ManagementAttentionGrid({
+    required super.key,
+    required this.metrics,
+    required this.onOpenMetric,
+  });
+
+  final List<ManagementDashboardMetric> metrics;
+  final ValueChanged<ManagementDashboardMetricKey> onOpenMetric;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 8.0;
+        final columnCount = constraints.maxWidth >= 900
+            ? 6
+            : constraints.maxWidth >= 600
+            ? 5
+            : 4;
+        final itemWidth =
+            (constraints.maxWidth - (spacing * (columnCount - 1))) /
+            columnCount;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final metric in metrics)
+              SizedBox(
+                width: itemWidth,
+                child: _ManagementAttentionCard(
+                  metric: metric,
+                  onTap: () => onOpenMetric(metric.key),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ManagementKpiGrid extends StatelessWidget {
+  const _ManagementKpiGrid({
     required super.key,
     required this.metrics,
     required this.onOpenMetric,
@@ -592,9 +634,10 @@ class _ManagementOverviewMetricWrap extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         const spacing = 10.0;
-        final cardWidth = constraints.maxWidth >= 680
-            ? (constraints.maxWidth - spacing) / 2
-            : constraints.maxWidth;
+        final columnCount = constraints.maxWidth >= 900 ? 3 : 2;
+        final cardWidth =
+            (constraints.maxWidth - (spacing * (columnCount - 1))) /
+            columnCount;
         return Wrap(
           spacing: spacing,
           runSpacing: spacing,
@@ -602,7 +645,7 @@ class _ManagementOverviewMetricWrap extends StatelessWidget {
             for (final metric in metrics)
               SizedBox(
                 width: cardWidth,
-                child: _ManagementOverviewMetricCard(
+                child: _ManagementKpiCard(
                   metric: metric,
                   onTap: () => onOpenMetric(metric.key),
                 ),
@@ -614,51 +657,137 @@ class _ManagementOverviewMetricWrap extends StatelessWidget {
   }
 }
 
-class _ManagementOverviewMetricCard extends StatelessWidget {
-  const _ManagementOverviewMetricCard({
-    required this.metric,
-    required this.onTap,
-  });
+class _ManagementKpiCard extends StatelessWidget {
+  const _ManagementKpiCard({required this.metric, required this.onTap});
 
   final ManagementDashboardMetric metric;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final content = _metricContent(context, metric);
-    return Card(
+    final content = _kpiContent(context, metric);
+    return SizedBox(
+      height: 104,
+      child: Card(
+        key: Key('management-overview-metric-${metric.key.name}'),
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: Semantics(
+          button: true,
+          label:
+              '${content.$1} ${content.$2}. '
+              'Open ${_metricDestinationLabel(metric.key)}.',
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      content.$1,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    content.$2,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  if (content.$3 != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      content.$3!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ManagementAttentionCard extends StatelessWidget {
+  const _ManagementAttentionCard({required this.metric, required this.onTap});
+
+  final ManagementDashboardMetric metric;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = _attentionContent(metric);
+    final colors = Theme.of(context).colorScheme;
+    return SizedBox(
       key: Key('management-overview-metric-${metric.key.name}'),
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
+      height: 92,
       child: Semantics(
         button: true,
-        label: '${content.$1}. Open ${_metricDestinationLabel(metric.key)}.',
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(_metricIcon(metric.key)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        content.$1,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      if (content.$2 != null) ...[
-                        const SizedBox(height: 4),
-                        Text(content.$2!),
+        label:
+            '${content.$1}. ${content.$2} '
+            'Open ${_metricDestinationLabel(metric.key)}.',
+        child: Tooltip(
+          message: content.$2,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: colors.primaryContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            _metricIcon(metric.key),
+                            size: 20,
+                            color: colors.onPrimaryContainer,
+                          ),
+                        ),
+                        Positioned(
+                          top: -7,
+                          right: -10,
+                          child: Badge(
+                            key: Key(
+                              'management-attention-badge-${metric.key.name}',
+                            ),
+                            label: Text(_attentionBadgeText(metric)),
+                          ),
+                        ),
                       ],
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      content.$1,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
                 ),
-                const Icon(Icons.chevron_right),
-              ],
+              ),
             ),
           ),
         ),
@@ -691,7 +820,49 @@ bool _metricHasAttention(ManagementDashboardMetric metric) {
       (metric.amount != null && metric.amount != '0.00');
 }
 
-(String, String?) _metricContent(
+(String, String) _attentionContent(ManagementDashboardMetric metric) {
+  final amount = _formatMoney(metric.amount ?? '0.00');
+  return switch (metric.key) {
+    ManagementDashboardMetricKey.assignedRemittances => (
+      'Remittances',
+      'PHP $amount awaiting receipt',
+    ),
+    ManagementDashboardMetricKey.protectedRenewals => (
+      'Renewal requests',
+      'Protected Management review',
+    ),
+    ManagementDashboardMetricKey.staffRegistrations => (
+      'Staff registrations',
+      'Account approval queue',
+    ),
+    ManagementDashboardMetricKey.clientRegistrations => (
+      'Client registrations',
+      'Portal access approval queue',
+    ),
+    ManagementDashboardMetricKey.collectorMobileDevices => (
+      'Collector devices',
+      'Pending device approval',
+    ),
+    ManagementDashboardMetricKey.borrowerSupport => (
+      'Client support',
+      'Open or awaiting resolution',
+    ),
+    ManagementDashboardMetricKey.unreadActivity => (
+      'Activity updates',
+      'Payments, approvals, and custody events',
+    ),
+    _ => (_metricDestinationLabel(metric.key), 'Open current details'),
+  };
+}
+
+String _attentionBadgeText(ManagementDashboardMetric metric) {
+  final count = metric.count ?? 0;
+  if (count > 99) return '99+';
+  if (count > 0) return '$count';
+  return '•';
+}
+
+(String, String, String?) _kpiContent(
   BuildContext context,
   ManagementDashboardMetric metric,
 ) {
@@ -699,51 +870,36 @@ bool _metricHasAttention(ManagementDashboardMetric metric) {
   final amount = _formatMoney(metric.amount ?? '0.00');
   return switch (metric.key) {
     ManagementDashboardMetricKey.activeClients => (
-      '$count active clients',
+      '$count',
+      'Active clients',
       null,
     ),
-    ManagementDashboardMetricKey.activeLoans => ('$count active loans', null),
-    ManagementDashboardMetricKey.overdueLoans => ('$count overdue loans', null),
+    ManagementDashboardMetricKey.activeLoans => (
+      '$count',
+      'Active loans',
+      null,
+    ),
+    ManagementDashboardMetricKey.overdueLoans => (
+      '$count',
+      'Overdue loans',
+      null,
+    ),
     ManagementDashboardMetricKey.outstandingBalance => (
-      'PHP $amount outstanding',
+      'PHP $amount',
+      'Outstanding',
       null,
     ),
     ManagementDashboardMetricKey.latestCollections => (
-      'PHP $amount collected',
+      'PHP $amount',
+      'Collected',
       '$count entries${_asOfText(context, metric.asOfDate)}',
     ),
     ManagementDashboardMetricKey.unremittedCollections => (
-      'PHP $amount unremitted collector cash',
+      'PHP $amount',
+      'Unremitted cash',
       '$count collection entries',
     ),
-    ManagementDashboardMetricKey.assignedRemittances => (
-      '$count assigned remittances',
-      'PHP $amount awaiting receipt',
-    ),
-    ManagementDashboardMetricKey.protectedRenewals => (
-      '$count renewal requests',
-      'Protected Management review',
-    ),
-    ManagementDashboardMetricKey.staffRegistrations => (
-      '$count staff registrations',
-      'Account approval queue',
-    ),
-    ManagementDashboardMetricKey.clientRegistrations => (
-      '$count client registrations',
-      'Portal access approval queue',
-    ),
-    ManagementDashboardMetricKey.collectorMobileDevices => (
-      '$count Collector mobile devices',
-      'Pending device approval',
-    ),
-    ManagementDashboardMetricKey.borrowerSupport => (
-      '$count client support requests',
-      'Open or awaiting resolution',
-    ),
-    ManagementDashboardMetricKey.unreadActivity => (
-      '$count unread activity updates',
-      'Payments, approvals, and custody events',
-    ),
+    _ => ('$count', _metricDestinationLabel(metric.key), null),
   };
 }
 
@@ -848,43 +1004,113 @@ class _ManagementSectionCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Card(
-          margin: EdgeInsets.zero,
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              for (var index = 0; index < section.modules.length; index++) ...[
-                _ManagementModuleTile(
-                  module: section.modules[index],
-                  onTap: () => onOpen(section.modules[index]),
-                ),
-                if (index != section.modules.length - 1)
-                  const Divider(height: 1),
-              ],
-            ],
-          ),
+        _ManagementModuleGrid(
+          key: Key('management-module-grid-${section.keyName}'),
+          modules: section.modules,
+          onOpen: onOpen,
         ),
       ],
     );
   }
 }
 
-class _ManagementModuleTile extends StatelessWidget {
-  const _ManagementModuleTile({required this.module, required this.onTap});
+class _ManagementModuleGrid extends StatelessWidget {
+  const _ManagementModuleGrid({
+    required super.key,
+    required this.modules,
+    required this.onOpen,
+  });
+
+  final List<_ManagementModule> modules;
+  final ValueChanged<_ManagementModule> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 8.0;
+        final columnCount = constraints.maxWidth >= 900
+            ? 6
+            : constraints.maxWidth >= 600
+            ? 5
+            : 4;
+        final itemWidth =
+            (constraints.maxWidth - (spacing * (columnCount - 1))) /
+            columnCount;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final module in modules)
+              SizedBox(
+                width: itemWidth,
+                child: _ManagementModuleShortcut(
+                  module: module,
+                  onTap: () => onOpen(module),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ManagementModuleShortcut extends StatelessWidget {
+  const _ManagementModuleShortcut({required this.module, required this.onTap});
 
   final _ManagementModule module;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
+    final colors = Theme.of(context).colorScheme;
+    return SizedBox(
       key: Key(module.action.keyName),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      leading: Icon(module.icon),
-      title: Text(module.title),
-      subtitle: Text(module.description),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: onTap,
+      height: 92,
+      child: Semantics(
+        button: true,
+        label: '${module.title}. ${module.description}',
+        child: Tooltip(
+          message: module.description,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: colors.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        module.icon,
+                        size: 20,
+                        color: colors.onPrimaryContainer,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      module.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -55,10 +55,19 @@ void main() {
       find.byKey(const Key('management-overview-attention')),
       findsOneWidget,
     );
-    expect(find.text('41 active clients'), findsOneWidget);
-    expect(find.text('7 overdue loans'), findsOneWidget);
-    expect(find.text('PHP 987,654.32 outstanding'), findsOneWidget);
-    expect(find.text('PHP 3,750.50 unremitted collector cash'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('management-overview-metric-activeClients')),
+        matching: find.text('41'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Active clients'), findsOneWidget);
+    expect(find.text('Overdue loans'), findsOneWidget);
+    expect(find.text('PHP 987,654.32'), findsOneWidget);
+    expect(find.text('Outstanding'), findsOneWidget);
+    expect(find.text('PHP 3,750.50'), findsOneWidget);
+    expect(find.text('Unremitted cash'), findsOneWidget);
     expect(
       find.byKey(const Key('management-overview-metric-protectedRenewals')),
       findsOneWidget,
@@ -68,6 +77,41 @@ void main() {
       findsNothing,
     );
     expect(find.textContaining('Updated '), findsOneWidget);
+  });
+
+  testWidgets('shows review queues as compact icon buttons with count badges', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 1800));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    await _pumpDashboard(
+      tester,
+      repository: _completedRepository(_completeOverview),
+    );
+    await tester.pumpAndSettle();
+
+    final badge = find.byKey(
+      const Key('management-attention-badge-protectedRenewals'),
+    );
+    expect(badge, findsOneWidget);
+    expect(
+      find.descendant(of: badge, matching: find.text('5')),
+      findsOneWidget,
+    );
+
+    final remittances = find.byKey(
+      const Key('management-overview-metric-assignedRemittances'),
+    );
+    final renewals = find.byKey(
+      const Key('management-overview-metric-protectedRenewals'),
+    );
+    final remittanceRect = tester.getRect(remittances);
+    final renewalRect = tester.getRect(renewals);
+    expect((remittanceRect.top - renewalRect.top).abs(), lessThan(1));
+    expect(renewalRect.left, greaterThan(remittanceRect.left));
+    expect(remittanceRect.width, lessThanOrEqualTo(96));
+    expect(remittanceRect.height, lessThanOrEqualTo(96));
   });
 
   testWidgets(
@@ -192,7 +236,13 @@ void main() {
     first.complete(_overview(activeClients: 41));
     second.complete(_overview(activeClients: 73));
     await tester.pumpAndSettle();
-    expect(find.text('73 active clients'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('management-overview-metric-activeClients')),
+        matching: find.text('73'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('late initial response cannot replace a newer refresh', (
@@ -216,8 +266,17 @@ void main() {
     first.complete(_overview(activeClients: 111));
     await tester.pumpAndSettle();
 
-    expect(find.text('222 active clients'), findsOneWidget);
-    expect(find.text('111 active clients'), findsNothing);
+    final activeClients = find.byKey(
+      const Key('management-overview-metric-activeClients'),
+    );
+    expect(
+      find.descendant(of: activeClients, matching: find.text('222')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: activeClients, matching: find.text('111')),
+      findsNothing,
+    );
   });
 
   testWidgets('failed refresh keeps the last snapshot and its timestamp', (
@@ -255,9 +314,7 @@ void main() {
     final repository = FakeManagementDashboardOverviewRepository(
       Queue.of(<Future<ManagementDashboardOverview>>[
         Future<ManagementDashboardOverview>.value(_completeOverview),
-        Future<ManagementDashboardOverview>.value(
-          _overview(activeClients: 73),
-        ),
+        Future<ManagementDashboardOverview>.value(_overview(activeClients: 73)),
       ]),
     );
 
