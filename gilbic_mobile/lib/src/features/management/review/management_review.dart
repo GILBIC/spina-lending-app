@@ -25,6 +25,117 @@ enum ManagementMutationSurface {
 }
 
 @immutable
+class ManagementMutationSurfaceEntry {
+  const ManagementMutationSurfaceEntry({
+    required this.surface,
+    required this.owner,
+    required this.actions,
+    required this.defaultRisk,
+  });
+
+  final ManagementMutationSurface surface;
+  final String owner;
+  final List<String> actions;
+  final ManagementReviewRisk defaultRisk;
+}
+
+const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.clientRegistration,
+    owner: 'ClientRegistrationApprovalsPage',
+    actions: <String>['approve and link', 'reject'],
+    defaultRisk: ManagementReviewRisk.privileged,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.renewalWorkflow,
+    owner: 'ManagementRenewalRequestsPage',
+    actions: <String>[
+      'record terms',
+      'reject',
+      'release to Collector',
+      'review proof',
+      'activate',
+    ],
+    defaultRisk: ManagementReviewRisk.privileged,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.staffInvitation,
+    owner: 'ManagementStaffInvitePage',
+    actions: <String>['invite', 'reconcile uncertain result'],
+    defaultRisk: ManagementReviewRisk.privileged,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.staffAccess,
+    owner: 'ManagementStaffDetailPage',
+    actions: <String>[
+      'change role',
+      'change account status',
+      'approve or revoke device',
+    ],
+    defaultRisk: ManagementReviewRisk.privileged,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.collectionVoid,
+    owner: 'ManagementCollectionVoidPage',
+    actions: <String>['void eligible collection'],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.contractCollection,
+    owner: 'ManagementContractCollectionActivationPage',
+    actions: <String>['activate', 'deactivate'],
+    defaultRisk: ManagementReviewRisk.privileged,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.noCollection,
+    owner: 'ManagementNoCollectionPage',
+    actions: <String>['declare', 'reverse'],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.clientSupport,
+    owner: 'ManagementSupportRequestsPage',
+    actions: <String>['answer', 'resolve', 'cancel'],
+    defaultRisk: ManagementReviewRisk.routine,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.eclOutcomeReview,
+    owner: 'ManagementEclOutcomeReviewPage',
+    actions: <String>['save historical outcome review'],
+    defaultRisk: ManagementReviewRisk.privileged,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.fiscalPeriod,
+    owner: 'ManagementFinancialAccountingPage',
+    actions: <String>['create period', 'change status'],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.generalJournal,
+    owner: 'ManagementGeneralJournalPage',
+    actions: <String>[
+      'create or edit draft',
+      'post',
+      'cancel',
+      'create reversal draft',
+    ],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.openingWorkbook,
+    owner: 'ManagementOpeningBalanceWorkbookPage',
+    actions: <String>['initialize', 'edit line or policy', 'change status'],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.openingJournal,
+    owner: 'ManagementOpeningBalanceJournalPage',
+    actions: <String>['prepare', 'post'],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+];
+
+@immutable
 class ManagementReviewFact {
   const ManagementReviewFact({required this.label, required this.value});
 
@@ -163,78 +274,83 @@ class ManagementReviewPanel extends StatelessWidget {
       ManagementReviewRisk.privileged => colorScheme.secondaryContainer,
       ManagementReviewRisk.protectedFinancial => colorScheme.errorContainer,
     };
-    return Card(
-      key: review.key,
-      color: background,
-      margin: compact ? EdgeInsets.zero : const EdgeInsets.all(12),
-      child: Padding(
-        padding: EdgeInsets.all(compact ? 12 : 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            _ReviewSection(
-              heading: 'Reviewing',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(review.recordLabel, style: theme.textTheme.labelLarge),
-                  const SizedBox(height: 2),
-                  Text(review.recordValue),
-                  if (review.facts.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 8),
-                    ...review.facts.map(_ReviewFactRow.new),
+    return Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: '${_riskLabel(review.risk)} Management review',
+      child: Card(
+        key: review.key,
+        color: background,
+        margin: compact ? EdgeInsets.zero : const EdgeInsets.all(12),
+        child: Padding(
+          padding: EdgeInsets.all(compact ? 12 : 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              _ReviewSection(
+                heading: 'Reviewing',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(review.recordLabel, style: theme.textTheme.labelLarge),
+                    const SizedBox(height: 2),
+                    Text(review.recordValue),
+                    if (review.facts.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 8),
+                      ...review.facts.map(_ReviewFactRow.new),
+                    ],
+                    if (review.secondaryReferences.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 8),
+                      SelectionArea(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: review.secondaryReferences
+                              .map(_ReviewFactRow.new)
+                              .toList(),
+                        ),
+                      ),
+                    ],
                   ],
-                  if (review.secondaryReferences.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 8),
-                    SelectionArea(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: review.secondaryReferences
-                            .map(_ReviewFactRow.new)
+                ),
+              ),
+              _ReviewSection(
+                heading: 'Current status',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(review.statusLabel),
+                    if (review.statusDetail != null) ...<Widget>[
+                      const SizedBox(height: 2),
+                      Text(
+                        review.statusDetail!,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              _ReviewSection(
+                heading: 'Check before continuing',
+                child: review.warnings.isEmpty
+                    ? const Text('No server warnings')
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: review.warnings
+                            .map((warning) => _WarningRow(warning: warning))
                             .toList(),
                       ),
-                    ),
-                  ],
-                ],
               ),
-            ),
-            _ReviewSection(
-              heading: 'Current status',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(review.statusLabel),
-                  if (review.statusDetail != null) ...<Widget>[
-                    const SizedBox(height: 2),
-                    Text(
-                      review.statusDetail!,
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ],
-                ],
+              _ReviewSection(
+                heading: 'Next action',
+                child: Text(review.nextActionLabel),
               ),
-            ),
-            _ReviewSection(
-              heading: 'Check before continuing',
-              child: review.warnings.isEmpty
-                  ? const Text('No server warnings')
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: review.warnings
-                          .map((warning) => _WarningRow(warning: warning))
-                          .toList(),
-                    ),
-            ),
-            _ReviewSection(
-              heading: 'Next action',
-              child: Text(review.nextActionLabel),
-            ),
-            _ReviewSection(
-              heading: 'If confirmed',
-              last: true,
-              child: Text(review.consequence),
-            ),
-          ],
+              _ReviewSection(
+                heading: 'If confirmed',
+                last: true,
+                child: Text(review.consequence),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -378,4 +494,12 @@ void _requireText(String value, String name) {
 String? _optionalText(String? value) {
   final normalized = value?.trim() ?? '';
   return normalized.isEmpty ? null : normalized;
+}
+
+String _riskLabel(ManagementReviewRisk risk) {
+  return switch (risk) {
+    ManagementReviewRisk.routine => 'Routine',
+    ManagementReviewRisk.privileged => 'Privileged',
+    ManagementReviewRisk.protectedFinancial => 'Protected financial',
+  };
 }
