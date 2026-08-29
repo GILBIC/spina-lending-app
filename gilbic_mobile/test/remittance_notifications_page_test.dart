@@ -29,7 +29,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Notifications (1)'), findsOneWidget);
+    expect(find.text('Remittance requests (1)'), findsOneWidget);
+    expect(find.byTooltip('Refresh remittance requests'), findsOneWidget);
     expect(find.textContaining('Collector One'), findsOneWidget);
     expect(find.textContaining('₱600.00'), findsOneWidget);
     expect(find.textContaining('Action required'), findsOneWidget);

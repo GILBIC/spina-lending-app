@@ -261,6 +261,7 @@ class _ManagementFinancialAccountingPageState
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
         children: [
           Card(
+            key: const Key('financial-accounting-management-guidance'),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Row(
@@ -268,7 +269,15 @@ class _ManagementFinancialAccountingPageState
                 children: [
                   const Icon(Icons.visibility_outlined),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(overview.notice)),
+                  const Expanded(
+                    child: Text(
+                      'Official amounts come from protected server records. '
+                      'Review balances, posting readiness, accounting periods, '
+                      'and loan controls below. Posting, period changes, and '
+                      'reversals still require Management confirmation and '
+                      'permanent audit evidence.',
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -492,7 +501,7 @@ class _CutoverReadinessCard extends StatelessWidget {
       key: const Key('financial-accounting-cutover-readiness'),
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
-        initiallyExpanded: true,
+        initiallyExpanded: false,
         leading: const Icon(Icons.fact_check_outlined),
         title: const Text('Accounting Cutover Readiness'),
         subtitle: Text(

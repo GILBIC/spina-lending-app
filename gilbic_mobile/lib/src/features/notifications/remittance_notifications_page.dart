@@ -146,12 +146,12 @@ class _RemittanceNotificationsPageState
       appBar: AppBar(
         title: Text(
           pendingCount > 0
-              ? 'Notifications ($pendingCount)'
-              : 'Notifications',
+              ? 'Remittance requests ($pendingCount)'
+              : 'Remittance requests',
         ),
         actions: [
           IconButton(
-            tooltip: 'Refresh notifications',
+            tooltip: 'Refresh remittance requests',
             onPressed: _loading ? null : _load,
             icon: const Icon(Icons.refresh),
           ),

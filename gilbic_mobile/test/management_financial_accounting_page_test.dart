@@ -8,6 +8,66 @@ import 'package:gilbic_mobile/src/core/management/financial_accounting_repositor
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
 
 void main() {
+  testWidgets('Management guidance hides obsolete backend stage labels', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: _FakeAccountingRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Stage 5B'), findsNothing);
+    expect(
+      find.byKey(const Key('financial-accounting-management-guidance')),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(
+        'Official amounts come from protected server records',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Detailed cutover loan evidence starts collapsed', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: _FakeAccountingRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final cutover = find.byKey(
+      const Key('financial-accounting-cutover-readiness'),
+    );
+    await tester.scrollUntilVisible(
+      cutover,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Accounting Cutover Readiness'), findsOneWidget);
+    expect(find.text('7x7 validated base contract schedule'), findsNothing);
+
+    await tester.tap(find.text('Accounting Cutover Readiness'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('7x7 validated base contract schedule'), findsOneWidget);
+  });
+
   testWidgets('Management sees accounting cutover readiness and worksheet', (
     tester,
   ) async {
@@ -54,6 +114,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Accounting Cutover Readiness'), findsOneWidget);
     expect(find.text('7 / 7 loan sources ready'), findsOneWidget);
+    await tester.tap(find.text('Accounting Cutover Readiness'));
+    await tester.pumpAndSettle();
     expect(find.text('Opening balances required'), findsOneWidget);
     expect(find.text('3 validated'), findsOneWidget);
     expect(find.text('7x7 validated base contract schedule'), findsOneWidget);
