@@ -43,6 +43,232 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Draft journal'), findsOneWidget);
   });
+
+  testWidgets(
+    'Manual journal creation is reviewed and cancellation makes no write',
+    (tester) async {
+      final repository = _FakeGeneralJournalRepository();
+      await _pumpCompactJournalPage(tester, repository);
+
+      await tester.tap(find.byKey(const Key('create-manual-journal')));
+      await tester.pumpAndSettle();
+      await _fillBalancedDraft(tester, description: 'Office cash capital');
+      await tester.tap(find.byKey(const Key('save-manual-journal')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('management-review-general-journal')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'The balanced journal will be saved as an unposted draft. It will '
+          'not affect the General Ledger until separately reviewed and posted.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('cancel-general-journal')));
+      await tester.pumpAndSettle();
+      expect(repository.createCalls, 0);
+
+      await tester.tap(find.byKey(const Key('create-manual-journal')));
+      await tester.pumpAndSettle();
+      await _fillBalancedDraft(tester, description: 'Office cash capital');
+      await tester.tap(find.byKey(const Key('save-manual-journal')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-general-journal')));
+      await tester.pumpAndSettle();
+
+      expect(repository.createCalls, 1);
+      expect(repository.createdDescription, 'Office cash capital');
+      expect(repository.createdLines, hasLength(2));
+      expect(repository.createdLines![0].accountCode, '1010');
+      expect(repository.createdLines![0].debit, 100);
+      expect(repository.createdLines![0].credit, 0);
+      expect(repository.createdLines![1].accountCode, '3000');
+      expect(repository.createdLines![1].debit, 0);
+      expect(repository.createdLines![1].credit, 100);
+      expect(repository.createdPostingDate, isNotNull);
+    },
+  );
+
+  testWidgets('Draft edit post and cancellation use separate reviews', (
+    tester,
+  ) async {
+    final repository = _FakeGeneralJournalRepository();
+    await _pumpCompactJournalPage(tester, repository);
+    await _expandEntry(tester, title: 'Draft journal');
+
+    final edit = find.byKey(const Key('edit-journal-entry-1'));
+    await _scrollToEntryAction(tester, edit);
+    await tester.tap(edit);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('journal-description')),
+      'Updated office cash capital',
+    );
+    await tester.tap(find.byKey(const Key('save-manual-journal')));
+    await tester.pumpAndSettle();
+    expect(repository.updateCalls, 0);
+    await tester.tap(find.byKey(const Key('confirm-general-journal')));
+    await tester.pumpAndSettle();
+    expect(repository.updateCalls, 1);
+    expect(repository.updatedEntryId, 'entry-1');
+    expect(repository.updatedDescription, 'Updated office cash capital');
+    expect(repository.updatedPostingDate, DateTime(2026, 8, 8));
+    expect(repository.updatedLines, hasLength(2));
+    expect(repository.updatedLines![0].accountCode, '1010');
+    expect(repository.updatedLines![0].debit, 100);
+    expect(repository.updatedLines![1].accountCode, '3000');
+    expect(repository.updatedLines![1].credit, 100);
+
+    final post = find.byKey(const Key('post-journal-entry-1'));
+    await _scrollToEntryAction(tester, post);
+    await tester.tap(post);
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'The journal will be posted immutably to the General Ledger. '
+        'Corrections require a separate reversal with permanent audit evidence.',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('cancel-general-journal')));
+    await tester.pumpAndSettle();
+    expect(repository.postCalls, 0);
+    await tester.tap(post);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-general-journal')));
+    await tester.pumpAndSettle();
+    expect(repository.postCalls, 1);
+    expect(repository.postedEntryId, 'entry-1');
+
+    final cancel = find.byKey(const Key('cancel-journal-entry-1'));
+    await _scrollToEntryAction(tester, cancel);
+    await tester.tap(cancel);
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'The draft will be cancelled while a permanent audit snapshot is '
+        'retained. No posted ledger balance will change.',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('confirm-general-journal')));
+    await tester.pumpAndSettle();
+    expect(repository.cancelCalls, 1);
+    expect(repository.cancelledEntryId, 'entry-1');
+  });
+
+  testWidgets('Posted journal reversal creates a separately reviewed draft', (
+    tester,
+  ) async {
+    final repository = _FakeGeneralJournalRepository(posted: true);
+    await _pumpCompactJournalPage(tester, repository);
+    await _expandEntry(tester, title: 'GJ-0001');
+
+    final reverse = find.byKey(const Key('reverse-journal-entry-1'));
+    await _scrollToEntryAction(tester, reverse);
+    await tester.tap(reverse);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('create-reversal-draft')));
+    await tester.pumpAndSettle();
+
+    expect(repository.reversalCalls, 0);
+    expect(
+      find.text(
+        'A separate unposted reversal draft will be created with debit and '
+        'credit lines swapped. It must be reviewed and posted separately.',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('confirm-general-journal')));
+    await tester.pumpAndSettle();
+    expect(repository.reversalCalls, 1);
+    expect(repository.reversalEntryId, 'entry-1');
+    expect(repository.reversalDescription, 'Reversal of GJ-0001');
+    expect(repository.reversalPostingDate, isNotNull);
+  });
+}
+
+Future<void> _pumpCompactJournalPage(
+  WidgetTester tester,
+  _FakeGeneralJournalRepository repository,
+) async {
+  await tester.binding.setSurfaceSize(const Size(360, 640));
+  addTearDown(() async => tester.binding.setSurfaceSize(null));
+  await tester.pumpWidget(
+    MaterialApp(
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: const TextScaler.linear(1.3)),
+        child: child!,
+      ),
+      home: ManagementGeneralJournalPage(
+        session: _session,
+        deviceIdentityProvider: _deviceIdentityProvider(),
+        accounts: _accounts,
+        periods: _periods,
+        repository: repository,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _fillBalancedDraft(
+  WidgetTester tester, {
+  required String description,
+}) async {
+  await tester.enterText(
+    find.byKey(const Key('journal-description')),
+    description,
+  );
+  final journalDialogScroll = find
+      .descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(SingleChildScrollView),
+      )
+      .first;
+
+  Future<void> selectAccount(int index, String label) async {
+    final account = find.byKey(Key('journal-line-$index-account'));
+    await tester.dragUntilVisible(
+      account,
+      journalDialogScroll,
+      const Offset(0, -180),
+    );
+    await tester.tap(account);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(label).last);
+    await tester.pumpAndSettle();
+  }
+
+  await selectAccount(0, '1010 • Cash - Office');
+  await tester.enterText(find.byKey(const Key('journal-line-0-debit')), '100');
+  await selectAccount(1, '3000 • Capital');
+  await tester.enterText(find.byKey(const Key('journal-line-1-credit')), '100');
+}
+
+Future<void> _expandEntry(WidgetTester tester, {required String title}) async {
+  final journalCard = find.byKey(const Key('journal-entry-1'));
+  await tester.scrollUntilVisible(
+    journalCard,
+    300,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.tap(find.text(title));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _scrollToEntryAction(WidgetTester tester, Finder action) async {
+  await tester.scrollUntilVisible(
+    action,
+    300,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
 }
 
 const UserSession _session = UserSession(
@@ -99,7 +325,64 @@ final _periods = <AccountingFiscalPeriod>[
 ];
 
 class _FakeGeneralJournalRepository implements GeneralJournalRepository {
+  _FakeGeneralJournalRepository({this.posted = false});
+
+  final bool posted;
   String? deviceId;
+  int createCalls = 0;
+  int updateCalls = 0;
+  int cancelCalls = 0;
+  int postCalls = 0;
+  int reversalCalls = 0;
+  DateTime? createdPostingDate;
+  String? createdDescription;
+  List<JournalLineDraft>? createdLines;
+  String? updatedEntryId;
+  DateTime? updatedPostingDate;
+  String? updatedDescription;
+  List<JournalLineDraft>? updatedLines;
+  String? cancelledEntryId;
+  String? postedEntryId;
+  String? reversalEntryId;
+  DateTime? reversalPostingDate;
+  String? reversalDescription;
+
+  AccountingJournalEntry get _entry => AccountingJournalEntry(
+    entryId: 'entry-1',
+    entryNumber: posted ? 'GJ-0001' : null,
+    periodId: 'period-1',
+    periodLabel: 'August 2026',
+    postingDate: DateTime(2026, 8, 8),
+    description: 'Test manual journal',
+    status: posted ? 'posted' : 'draft',
+    sourceType: 'manual',
+    sourceReference: null,
+    reversalOfEntryId: null,
+    createdByName: 'Management',
+    postedByName: posted ? 'Management' : null,
+    createdAt: DateTime(2026, 8, 8),
+    postedAt: posted ? DateTime(2026, 8, 8) : null,
+    totalDebit: 100,
+    totalCredit: 100,
+    lines: const <AccountingJournalLine>[
+      AccountingJournalLine(
+        lineNumber: 1,
+        accountCode: '1010',
+        accountName: 'Cash - Office',
+        description: '',
+        debit: 100,
+        credit: 0,
+      ),
+      AccountingJournalLine(
+        lineNumber: 2,
+        accountCode: '3000',
+        accountName: 'Capital',
+        description: '',
+        debit: 0,
+        credit: 100,
+      ),
+    ],
+  );
 
   @override
   Future<GeneralJournalSnapshot> loadJournals(
@@ -108,44 +391,7 @@ class _FakeGeneralJournalRepository implements GeneralJournalRepository {
   }) async {
     this.deviceId = deviceId;
     return GeneralJournalSnapshot(
-      entries: <AccountingJournalEntry>[
-        AccountingJournalEntry(
-          entryId: 'entry-1',
-          entryNumber: null,
-          periodId: 'period-1',
-          periodLabel: 'August 2026',
-          postingDate: DateTime(2026, 8, 8),
-          description: 'Test manual journal',
-          status: 'draft',
-          sourceType: 'manual',
-          sourceReference: null,
-          reversalOfEntryId: null,
-          createdByName: 'Management',
-          postedByName: null,
-          createdAt: DateTime(2026, 8, 8),
-          postedAt: null,
-          totalDebit: 100,
-          totalCredit: 100,
-          lines: const <AccountingJournalLine>[
-            AccountingJournalLine(
-              lineNumber: 1,
-              accountCode: '1010',
-              accountName: 'Cash - Office',
-              description: '',
-              debit: 100,
-              credit: 0,
-            ),
-            AccountingJournalLine(
-              lineNumber: 2,
-              accountCode: '3000',
-              accountName: 'Capital',
-              description: '',
-              debit: 0,
-              credit: 100,
-            ),
-          ],
-        ),
-      ],
+      entries: <AccountingJournalEntry>[_entry],
       canManage: true,
       automaticLoanPostingEnabled: false,
     );
@@ -195,8 +441,12 @@ class _FakeGeneralJournalRepository implements GeneralJournalRepository {
     required DateTime postingDate,
     required String description,
     required List<JournalLineDraft> lines,
-  }) {
-    throw UnimplementedError();
+  }) async {
+    createCalls += 1;
+    createdPostingDate = postingDate;
+    createdDescription = description;
+    createdLines = List<JournalLineDraft>.of(lines);
+    return _entry;
   }
 
   @override
@@ -207,8 +457,13 @@ class _FakeGeneralJournalRepository implements GeneralJournalRepository {
     required DateTime postingDate,
     required String description,
     required List<JournalLineDraft> lines,
-  }) {
-    throw UnimplementedError();
+  }) async {
+    updateCalls += 1;
+    updatedEntryId = entryId;
+    updatedPostingDate = postingDate;
+    updatedDescription = description;
+    updatedLines = List<JournalLineDraft>.of(lines);
+    return _entry;
   }
 
   @override
@@ -216,8 +471,9 @@ class _FakeGeneralJournalRepository implements GeneralJournalRepository {
     UserSession session, {
     required String deviceId,
     required String entryId,
-  }) {
-    throw UnimplementedError();
+  }) async {
+    cancelCalls += 1;
+    cancelledEntryId = entryId;
   }
 
   @override
@@ -225,8 +481,10 @@ class _FakeGeneralJournalRepository implements GeneralJournalRepository {
     UserSession session, {
     required String deviceId,
     required String entryId,
-  }) {
-    throw UnimplementedError();
+  }) async {
+    postCalls += 1;
+    postedEntryId = entryId;
+    return _entry;
   }
 
   @override
@@ -236,7 +494,11 @@ class _FakeGeneralJournalRepository implements GeneralJournalRepository {
     required String entryId,
     required DateTime postingDate,
     required String description,
-  }) {
-    throw UnimplementedError();
+  }) async {
+    reversalCalls += 1;
+    reversalEntryId = entryId;
+    reversalPostingDate = postingDate;
+    reversalDescription = description;
+    return _entry;
   }
 }

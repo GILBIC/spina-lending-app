@@ -29,7 +29,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Opening Balance Journal'), findsOneWidget);
-    expect(find.textContaining('Blocked: Opening Balance Workbook'), findsOneWidget);
+    expect(
+      find.textContaining('Blocked: Opening Balance Workbook'),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('management-review-opening-journal')),
+      findsOneWidget,
+    );
     final button = tester.widget<FilledButton>(
       find.byKey(const Key('prepare-opening-journal-draft')),
     );
@@ -61,7 +68,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final prepareButton = find.byKey(const Key('prepare-opening-journal-draft'));
+    final prepareButton = find.byKey(
+      const Key('prepare-opening-journal-draft'),
+    );
     await tester.scrollUntilVisible(
       prepareButton,
       300,
@@ -71,6 +80,12 @@ void main() {
 
     expect(
       find.textContaining('Reviewed workbook must balance exactly to the cent'),
+      findsWidgets,
+    );
+    expect(
+      find.bySemanticsLabel(
+        'Blocker: Reviewed workbook must balance exactly to the cent before journal preparation.',
+      ),
       findsOneWidget,
     );
     final button = tester.widget<FilledButton>(prepareButton);
@@ -78,72 +93,112 @@ void main() {
     expect(journalRepository.prepared, isFalse);
   });
 
-  testWidgets('Draft preparation and ledger posting require separate confirmations', (
-    tester,
-  ) async {
-    final workbookRepository = _FakeWorkbookRepository(status: 'review_ready');
-    final journalRepository = _FakeJournalRepository(
-      workbookStatus: 'review_ready',
-    );
+  testWidgets(
+    'Draft preparation and ledger posting require separate confirmations',
+    (tester) async {
+      final workbookRepository = _FakeWorkbookRepository(
+        status: 'review_ready',
+      );
+      final journalRepository = _FakeJournalRepository(
+        workbookStatus: 'review_ready',
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ManagementOpeningBalanceJournalPage(
-          session: _session,
-          deviceIdentityProvider: _deviceIdentityProvider(),
-          workbookRepository: workbookRepository,
-          journalRepository: journalRepository,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ManagementOpeningBalanceJournalPage(
+            session: _session,
+            deviceIdentityProvider: _deviceIdentityProvider(),
+            workbookRepository: workbookRepository,
+            journalRepository: journalRepository,
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    final prepareButton = find.byKey(const Key('prepare-opening-journal-draft'));
-    await tester.scrollUntilVisible(
-      prepareButton,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(prepareButton);
-    await tester.pumpAndSettle();
-    expect(find.text('Prepare opening journal draft?'), findsOneWidget);
-    expect(journalRepository.prepared, isFalse);
+      final prepareButton = find.byKey(
+        const Key('prepare-opening-journal-draft'),
+      );
+      await tester.scrollUntilVisible(
+        prepareButton,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(prepareButton);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('management-review-opening-journal')),
+        findsOneWidget,
+      );
+      expect(find.text('Prepare opening journal draft'), findsWidgets);
+      expect(
+        find.text(
+          'A separate protected opening journal draft will be prepared from the '
+          'reviewed workbook. Nothing will be posted to the General Ledger.',
+        ),
+        findsOneWidget,
+      );
+      expect(journalRepository.prepared, isFalse);
 
-    await tester.tap(find.byKey(const Key('confirm-opening-journal-draft')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('cancel-opening-journal')));
+      await tester.pumpAndSettle();
+      expect(journalRepository.prepared, isFalse);
 
-    expect(journalRepository.prepared, isTrue);
-    expect(journalRepository.posted, isFalse);
-    expect(find.text('Draft prepared'), findsOneWidget);
+      await tester.tap(prepareButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-opening-journal')));
+      await tester.pumpAndSettle();
 
-    final postButton = find.byKey(const Key('post-opening-journal'));
-    await tester.scrollUntilVisible(
-      postButton,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    final enabledPostButton = tester.widget<FilledButton>(postButton);
-    expect(enabledPostButton.onPressed, isNotNull);
+      expect(journalRepository.prepared, isTrue);
+      expect(journalRepository.posted, isFalse);
+      expect(find.text('Draft prepared'), findsOneWidget);
 
-    await tester.tap(postButton);
-    await tester.pumpAndSettle();
-    expect(find.text('Post opening balances to General Ledger?'), findsOneWidget);
-    expect(find.textContaining('Debit: ₱1,000.00'), findsOneWidget);
-    expect(find.textContaining('Credit: ₱1,000.00'), findsOneWidget);
-    expect(journalRepository.posted, isFalse);
+      final postButton = find.byKey(const Key('post-opening-journal'));
+      await tester.scrollUntilVisible(
+        postButton,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      final enabledPostButton = tester.widget<FilledButton>(postButton);
+      expect(enabledPostButton.onPressed, isNotNull);
 
-    await tester.tap(find.byKey(const Key('confirm-post-opening-journal')));
-    await tester.pumpAndSettle();
+      await tester.tap(postButton);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('management-review-opening-journal')),
+        findsOneWidget,
+      );
+      expect(find.text('Post opening balance journal'), findsWidgets);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('management-review-opening-journal')),
+          matching: find.text('₱1,000.00'),
+        ),
+        findsNWidgets(2),
+      );
+      expect(journalRepository.posted, isFalse);
 
-    expect(journalRepository.posted, isTrue);
-    expect(find.text('Posted'), findsWidgets);
-    expect(find.text('JE-202608-00000001'), findsOneWidget);
-    expect(find.text('Automatic source posting'), findsOneWidget);
-    expect(find.text('Disabled'), findsWidgets);
-    expect(find.textContaining('corrections require a controlled reversal'), findsWidgets);
-  });
+      await tester.tap(find.byKey(const Key('cancel-opening-journal')));
+      await tester.pumpAndSettle();
+      expect(journalRepository.posted, isFalse);
+
+      await tester.tap(postButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-opening-journal')));
+      await tester.pumpAndSettle();
+
+      expect(journalRepository.posted, isTrue);
+      expect(find.text('Posted'), findsWidgets);
+      expect(find.text('JE-202608-00000001'), findsOneWidget);
+      expect(find.text('Automatic source posting'), findsOneWidget);
+      expect(find.text('Disabled'), findsWidgets);
+      expect(
+        find.textContaining('corrections require a controlled reversal'),
+        findsWidgets,
+      );
+    },
+  );
 
   testWidgets('Posting gate stays blocked when server readiness is false', (
     tester,
@@ -153,7 +208,8 @@ void main() {
       workbookStatus: 'review_ready',
       initiallyPrepared: true,
       postingReady: false,
-      postingBlocker: 'Cutover accounting period must remain open before posting.',
+      postingBlocker:
+          'Cutover accounting period must remain open before posting.',
     );
 
     await tester.pumpWidget(
@@ -178,6 +234,12 @@ void main() {
 
     expect(
       find.textContaining('Cutover accounting period must remain open'),
+      findsWidgets,
+    );
+    expect(
+      find.bySemanticsLabel(
+        'Blocker: Cutover accounting period must remain open before posting.',
+      ),
       findsOneWidget,
     );
     expect(tester.widget<FilledButton>(postButton).onPressed, isNull);
@@ -308,22 +370,22 @@ class _FakeJournalRepository implements OpeningBalanceJournalRepository {
   }
 
   OpeningBalanceJournalDraftStatus _status() {
-    final prepareReady = !prepared &&
-        (preparationReady ?? workbookStatus == 'review_ready');
+    final prepareReady =
+        !prepared && (preparationReady ?? workbookStatus == 'review_ready');
     final prepareBlocker = prepared
         ? 'Protected opening-balance journal draft is already prepared.'
         : prepareReady
-            ? null
-            : preparationBlocker ??
-                'Opening Balance Workbook must be Review Ready before journal preparation.';
+        ? null
+        : preparationBlocker ??
+              'Opening Balance Workbook must be Review Ready before journal preparation.';
     final postReady = prepared && !posted && (postingReady ?? true);
     final postBlocker = posted
         ? 'Opening-balance journal is already posted.'
         : prepared && !postReady
-            ? postingBlocker ?? 'Protected posting requirements are not complete.'
-            : prepared
-                ? null
-                : 'Prepare the protected opening-balance journal draft before posting.';
+        ? postingBlocker ?? 'Protected posting requirements are not complete.'
+        : prepared
+        ? null
+        : 'Prepare the protected opening-balance journal draft before posting.';
     return OpeningBalanceJournalDraftStatus(
       workbookId: 'workbook-1',
       cutoverDate: DateTime(2026, 8, 8),
@@ -363,7 +425,9 @@ OpeningBalanceWorkbookData _workbook(String status) {
       verifiedLineCount: status == 'review_ready' ? 11 : 5,
       pendingLineCount: status == 'review_ready' ? 0 : 6,
       profitLossPolicyConfirmed: status == 'review_ready',
-      profitLossPolicyNote: status == 'review_ready' ? 'Approved cutover policy.' : null,
+      profitLossPolicyNote: status == 'review_ready'
+          ? 'Approved cutover policy.'
+          : null,
       totalDebit: status == 'review_ready' ? 1000 : 500,
       totalCredit: status == 'review_ready' ? 1000 : 400,
       balanceVariance: status == 'review_ready' ? 0 : 100,
