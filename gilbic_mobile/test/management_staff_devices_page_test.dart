@@ -407,6 +407,8 @@ void main() {
 
       await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-staff-invitation')));
+      await tester.pumpAndSettle();
 
       expect(loadAttempts, 2);
       expect(repository.inviteCalls, 1);
@@ -461,6 +463,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('confirm-staff-invitation')));
       await tester.pumpAndSettle();
 
       expect(find.byType(ManagementStaffInvitePage), findsNothing);
@@ -534,6 +538,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('management-staff-invite-submit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-staff-invitation')));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -500));
     await tester.pumpAndSettle();
 
     expect(find.byType(ManagementStaffInvitePage), findsOneWidget);
