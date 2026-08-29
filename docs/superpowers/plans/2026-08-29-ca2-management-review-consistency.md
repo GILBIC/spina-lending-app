@@ -28,7 +28,7 @@
 
 - Create `gilbic_mobile/lib/src/features/management/review/management_review.dart` for immutable display types, the 13-surface catalog, panel, and confirmation helper.
 - Create `gilbic_mobile/test/management_review_test.dart` for the shared contract, widgets, semantics, and responsive layout.
-- Create `gilbic_mobile/test/management_review_surface_inventory_test.dart` for catalog/source drift and read-only-page classification.
+- Create `gilbic_mobile/test/management_review_surface_inventory_test.dart` for exact catalog behavior and read-only-page classification; owning page tests provide the reachable-widget proof.
 - Modify the 13 owning Management pages listed in the approved spec.
 - Extend each existing focused page test. Create `client_registration_approvals_page_test.dart` and `management_no_collection_page_test.dart`, which do not exist at the starting commit.
 
@@ -199,11 +199,11 @@ expect(
 );
 ```
 
-Each entry includes `surface`, `sourcePath`, `actions`, and `defaultRisk`. In this task, read every catalog source and assert that it exists. Explicitly classify dashboard, portfolio, loan operations, accounting measurement, financial statements, General Journal launcher, and staff/device directory as read-only containers. Task 8 strengthens this guard after the pages have migrated by requiring each catalog source to reference its exact enum plus `ManagementReviewPanel` or `showManagementReviewConfirmation`.
+Each entry includes `surface`, `owner`, `actions`, and `defaultRisk`. Assert every enum value appears once, IDs are unique, owners/actions are nonblank, actions are nonempty, and every default risk is rendered by the real shared panel with accessible severity/action semantics. Explicitly classify dashboard, portfolio, loan operations, accounting measurement, financial statements, General Journal launcher, and staff/device directory as read-only containers. Do not read or grep Dart source files; Tasks 3-7 prove actual page behavior.
 
 Populate the catalog with these exact mappings:
 
-| Surface | Source path | Actions | Default risk |
+| Surface | Owning page | Actions | Default risk |
 | --- | --- | --- | --- |
 | `clientRegistration` | `lib/src/features/management/client_registration_approvals_page.dart` | approve/link; reject | privileged |
 | `renewalWorkflow` | `lib/src/features/management/management_renewal_requests_page.dart` | record terms; reject; release; review proof; activate | privileged |
@@ -225,7 +225,7 @@ Populate the catalog with these exact mappings:
 flutter test test/management_review_surface_inventory_test.dart
 ```
 
-First expected failure: catalog missing. After adding the exact 13 spec rows, rerun and expect PASS for exact IDs, source existence, unique ownership, actions, risks, and read-only classification. The later source-usage scan is a drift alarm, not authority.
+First expected failure: catalog missing. After adding the exact 13 spec rows, rerun and expect PASS for exact IDs, unique ownership, actions, risk presentation, and read-only classification. Actual owning-page review behavior remains red/green work in Tasks 3-7.
 
 - [ ] **Step 3: Commit the green catalog guard**
 
@@ -488,9 +488,10 @@ git commit -m "feat: standardize Management accounting reviews"
 
 - [ ] **Step 1: Close the inventory guard**
 
-First extend `management_review_surface_inventory_test.dart` so every catalog
-source must contain its exact `ManagementMutationSurface.<enumName>` reference
-and either `ManagementReviewPanel` or `showManagementReviewConfirmation`.
+Run the catalog test together with every owning-page behavior test. Each page
+test must drive the real page to its decision point and observe exactly one
+`management-review-<surface-id>` widget. The combined command is the inventory
+gate; do not replace it with source-text assertions.
 
 ```powershell
 flutter test test/management_review_surface_inventory_test.dart

@@ -364,21 +364,23 @@ Prove that:
 ### Inventory guard
 
 Add `management_review_surface_inventory_test.dart` with an exact expected set
-matching the table in this design. Each catalog entry includes its owning source
-file and actions. The test proves:
+matching the table in this design. Each catalog entry includes its owning page
+and actions. The catalog test plus the owning pages' focused widget tests prove:
 
 - all 13 stable surface IDs exist exactly once;
-- every catalog source exists;
-- every cataloged source references its surface identifier and shared review
-  component;
+- every catalog entry has a real owning-page widget test that drives the page to
+  the relevant decision and observes its surface identifier on the rendered
+  shared review component;
 - no current Management page containing a protected repository write from the
   audited inventory is absent;
 - read-only container/summary pages remain explicitly classified as read-only;
 - a newly added surface changes the expected set and therefore requires review.
 
-The structural scan is a drift alarm, not a substitute for widget behavior or
-backend authorization tests. Its mutation-call patterns are limited to the
-known repository idioms in this codebase and are documented in the test.
+The catalog is a drift alarm, not a substitute for widget behavior or backend
+authorization tests. The inventory gate runs the catalog test and all owning
+page behavior tests together. It must not grep Dart source for symbol names,
+because text presence would not prove that Management can reach or understand
+the review.
 
 ### Focused page tests
 
