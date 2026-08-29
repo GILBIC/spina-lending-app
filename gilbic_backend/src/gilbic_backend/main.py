@@ -68,6 +68,7 @@ from .management_api import create_management_router
 from .management_dashboard_overview_api import (
     create_management_dashboard_overview_router,
 )
+from .management_employee_activity_api import create_management_employee_activity_router
 from .management_loan_api import create_management_loan_router
 from .management_no_collection_api import create_management_no_collection_router
 from .management_operations_api import create_management_operations_router
@@ -141,6 +142,7 @@ def create_app() -> FastAPI:
     app.include_router(create_account_router())
     app.include_router(create_management_router())
     app.include_router(create_management_dashboard_overview_router())
+    app.include_router(create_management_employee_activity_router())
     app.include_router(create_management_loan_router())
     app.include_router(create_management_operations_router())
     app.include_router(create_management_no_collection_router())
