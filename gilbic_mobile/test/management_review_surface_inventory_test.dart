@@ -99,9 +99,21 @@ void main() {
           owner: 'ManagementInitialCapitalFundingPage',
           actions: <String>['record evidence', 'prepare', 'post'],
         ),
+        'tax-evidence': (
+          owner: 'ManagementTaxEvidencePage',
+          actions: <String>[
+            'record rule',
+            'record DST',
+            'record percentage allocation',
+          ],
+        ),
+        'tax-liability': (
+          owner: 'ManagementTaxLiabilityPage',
+          actions: <String>['prepare', 'post'],
+        ),
       };
 
-      expect(managementMutationSurfaceCatalog, hasLength(17));
+      expect(managementMutationSurfaceCatalog, hasLength(19));
       expect(
         managementMutationSurfaceCatalog.map((entry) => entry.surface).toSet(),
         ManagementMutationSurface.values.toSet(),

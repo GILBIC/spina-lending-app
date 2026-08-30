@@ -7,11 +7,14 @@ import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/initial_capital_funding_repository.dart';
 import 'package:gilbic_mobile/src/core/management/period_close_repository.dart';
+import 'package:gilbic_mobile/src/core/management/tax_evidence_repository.dart';
+import 'package:gilbic_mobile/src/core/management/tax_liability_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/management/management_ecl_allowance_posting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_ecl_a5_accounting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_initial_capital_funding_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_period_close_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_tax_accounting_page.dart';
 import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ManagementFinancialAccountingPage extends StatefulWidget {
@@ -23,6 +26,8 @@ class ManagementFinancialAccountingPage extends StatefulWidget {
     this.eclAllowanceRepository,
     this.eclA5Repository,
     this.initialCapitalRepository,
+    this.taxEvidenceRepository,
+    this.taxLiabilityRepository,
     super.key,
   });
 
@@ -33,6 +38,8 @@ class ManagementFinancialAccountingPage extends StatefulWidget {
   final EclAllowancePostingRepository? eclAllowanceRepository;
   final EclA5AccountingRepository? eclA5Repository;
   final InitialCapitalFundingRepository? initialCapitalRepository;
+  final TaxEvidenceRepository? taxEvidenceRepository;
+  final TaxLiabilityRepository? taxLiabilityRepository;
 
   @override
   State<ManagementFinancialAccountingPage> createState() =>
@@ -260,6 +267,20 @@ class _ManagementFinancialAccountingPageState
     if (mounted) await _load();
   }
 
+  Future<void> _openTaxAccounting() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementTaxAccountingPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          evidenceRepository: widget.taxEvidenceRepository,
+          liabilityRepository: widget.taxLiabilityRepository,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
   Future<void> _runPeriodAction(Future<void> Function() action) async {
     if (_periodActionInProgress) {
       return;
@@ -380,6 +401,19 @@ class _ManagementFinancialAccountingPageState
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: _periodActionInProgress ? null : _openFormalPeriodClose,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Card(
+            child: ListTile(
+              key: const Key('tax-accounting'),
+              leading: const Icon(Icons.receipt_long_outlined),
+              title: const Text('Tax Accounting'),
+              subtitle: const Text(
+                'Review retained tax evidence and use protected tax-liability preparation/posting.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _periodActionInProgress ? null : _openTaxAccounting,
             ),
           ),
           const SizedBox(height: 10),

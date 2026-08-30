@@ -297,6 +297,7 @@ def _require_confirmation(confirm: bool, action: str) -> None:
 def create_v1_tax_evidence_router() -> APIRouter:
     router = APIRouter(tags=["management financial accounting"])
 
+    @router.get("/api/mobile/v1/management/financial-accounting/tax")
     @router.get("/api/v1/management/financial-accounting/tax")
     def list_v1_tax_readiness(
         readiness: Literal["all", "ready", "blocked"] = Query(default="all"),
@@ -336,6 +337,12 @@ def create_v1_tax_evidence_router() -> APIRouter:
                     "dst_evidence_record": DST_PERMISSION in actor.permissions,
                     "percentage_evidence_record": PERCENTAGE_PERMISSION in actor.permissions,
                 },
+                "readiness": readiness,
+                "limit": limit,
+                "offset": offset,
+                "evidence_backed_tax_readiness_enabled": True,
+                "tax_posting_enabled": False,
+                "automatic_source_posting": False,
                 "notice": (
                     "A6.2 tax readiness is evidence-backed and Management-only. "
                     "PFRS/EIR interest is not substituted for the tax base; tax posting remains disabled in this slice."
@@ -343,6 +350,10 @@ def create_v1_tax_evidence_router() -> APIRouter:
             },
         }
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/rules",
+        status_code=status.HTTP_201_CREATED,
+    )
     @router.post(
         "/api/v1/management/financial-accounting/tax/rules",
         status_code=status.HTTP_201_CREATED,
@@ -393,6 +404,10 @@ def create_v1_tax_evidence_router() -> APIRouter:
         }
 
     @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/dst-evidence",
+        status_code=status.HTTP_201_CREATED,
+    )
+    @router.post(
         "/api/v1/management/financial-accounting/tax/dst-evidence",
         status_code=status.HTTP_201_CREATED,
     )
@@ -440,6 +455,10 @@ def create_v1_tax_evidence_router() -> APIRouter:
             },
         }
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/percentage-evidence",
+        status_code=status.HTTP_201_CREATED,
+    )
     @router.post(
         "/api/v1/management/financial-accounting/tax/percentage-evidence",
         status_code=status.HTTP_201_CREATED,

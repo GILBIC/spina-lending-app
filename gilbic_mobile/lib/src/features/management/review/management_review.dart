@@ -21,7 +21,9 @@ enum ManagementMutationSurface {
   periodClose('period-close'),
   eclAllowance('ecl-allowance'),
   eclA5('ecl-a5'),
-  initialCapital('initial-capital');
+  initialCapital('initial-capital'),
+  taxEvidence('tax-evidence'),
+  taxLiability('tax-liability');
 
   const ManagementMutationSurface(this.id);
 
@@ -164,6 +166,22 @@ const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
     surface: ManagementMutationSurface.initialCapital,
     owner: 'ManagementInitialCapitalFundingPage',
     actions: <String>['record evidence', 'prepare', 'post'],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.taxEvidence,
+    owner: 'ManagementTaxEvidencePage',
+    actions: <String>[
+      'record rule',
+      'record DST',
+      'record percentage allocation',
+    ],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.taxLiability,
+    owner: 'ManagementTaxLiabilityPage',
+    actions: <String>['prepare', 'post'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
 ];

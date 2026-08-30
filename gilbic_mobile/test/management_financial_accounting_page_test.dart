@@ -18,6 +18,7 @@ import 'package:gilbic_mobile/src/features/management/management_ecl_allowance_p
 import 'package:gilbic_mobile/src/features/management/management_ecl_a5_accounting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_initial_capital_funding_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_period_close_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_tax_accounting_page.dart';
 
 void main() {
   testWidgets('Management guidance hides obsolete backend stage labels', (
@@ -385,6 +386,36 @@ void main() {
     expect(find.byType(ManagementInitialCapitalFundingPage), findsOneWidget);
     expect(find.text('Initial Capital Funding'), findsOneWidget);
     expect(initialCapitalRepository.loadCalls, 1);
+  });
+
+  testWidgets('Tax Accounting launcher opens the protected tax workbench', (
+    tester,
+  ) async {
+    final repository = _FakeAccountingRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final launcher = find.byKey(const Key('tax-accounting'));
+    await tester.scrollUntilVisible(
+      launcher,
+      600,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(launcher);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ManagementTaxAccountingPage), findsOneWidget);
+    expect(find.text('Tax Accounting'), findsOneWidget);
+    expect(find.text('Tax evidence'), findsOneWidget);
+    expect(find.text('Tax liabilities'), findsOneWidget);
   });
 
   testWidgets('Creating a fiscal period is reviewed before repository write', (
