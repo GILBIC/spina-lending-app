@@ -64,6 +64,7 @@ from .loan_disbursement_journal_posting_api import (
 from .loan_renewal_execution_evidence_api import (
     create_loan_renewal_execution_evidence_router,
 )
+from .management_alerts_audit_api import create_management_alerts_audit_router
 from .management_api import create_management_router
 from .management_dashboard_overview_api import (
     create_management_dashboard_overview_router,
@@ -141,6 +142,7 @@ def create_app() -> FastAPI:
     app.include_router(create_auth_router())
     app.include_router(create_account_router())
     app.include_router(create_management_router())
+    app.include_router(create_management_alerts_audit_router())
     app.include_router(create_management_dashboard_overview_router())
     app.include_router(create_management_employee_activity_router())
     app.include_router(create_management_loan_router())

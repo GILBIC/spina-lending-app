@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/management/management_alerts_audit.dart';
+import 'package:gilbic_mobile/src/core/management/management_alerts_audit_repository.dart';
 import 'package:gilbic_mobile/src/core/management/management_dashboard_overview.dart';
 import 'package:gilbic_mobile/src/core/management/management_dashboard_overview_repository.dart';
 import 'package:gilbic_mobile/src/core/management/management_employee_activity_repository.dart';
@@ -12,6 +14,7 @@ import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.da
 import 'package:gilbic_mobile/src/features/account/account_settings_page.dart';
 import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.dart';
 import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_alerts_audit_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_accounting_measurement_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_contract_collection_activation_page.dart';
@@ -40,6 +43,7 @@ class ManagementDashboard extends StatefulWidget {
     required this.deviceIdentityProvider,
     required this.collectionDeviceSequence,
     this.overviewRepository,
+    this.alertsAuditRepository,
     this.employeeActivityRepository,
     super.key,
   });
@@ -50,6 +54,7 @@ class ManagementDashboard extends StatefulWidget {
   final DeviceIdentityProvider deviceIdentityProvider;
   final CollectionDeviceSequence collectionDeviceSequence;
   final ManagementDashboardOverviewRepository? overviewRepository;
+  final ManagementAlertsAuditRepository? alertsAuditRepository;
   final ManagementEmployeeActivityRepository? employeeActivityRepository;
 
   @override
@@ -146,6 +151,77 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
     ).push(MaterialPageRoute<void>(builder: (context) => page));
   }
 
+  void _openAlertsDestination(
+    BuildContext context,
+    ManagementAlertsAuditNavigation destination,
+  ) {
+    final isAvailable = switch (destination) {
+      ManagementAlertsAuditNavigation.paymentUpdates => true,
+      ManagementAlertsAuditNavigation.staffDevices =>
+        session.hasPermission('account.manage') ||
+            session.hasPermission('device.manage'),
+      ManagementAlertsAuditNavigation.clientRegistrations =>
+        session.hasPermission('account.manage'),
+      ManagementAlertsAuditNavigation.renewals => session.hasPermission(
+        'renewal.manage',
+      ),
+      ManagementAlertsAuditNavigation.support => session.hasPermission(
+        'support.manage',
+      ),
+      ManagementAlertsAuditNavigation.remittanceReview => session.hasPermission(
+        'remittance.view',
+      ),
+      ManagementAlertsAuditNavigation.financialAccounting =>
+        session.hasPermission('accounting.view'),
+    };
+    if (!isAvailable) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Your current permissions do not allow this Management view.',
+          ),
+        ),
+      );
+      return;
+    }
+    final page = switch (destination) {
+      ManagementAlertsAuditNavigation.paymentUpdates =>
+        ActivityNotificationsPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      ManagementAlertsAuditNavigation.staffDevices =>
+        ManagementStaffDevicesPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      ManagementAlertsAuditNavigation.clientRegistrations =>
+        ClientRegistrationApprovalsPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      ManagementAlertsAuditNavigation.renewals => ManagementRenewalRequestsPage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
+      ManagementAlertsAuditNavigation.support => ManagementSupportRequestsPage(
+        session: session,
+        deviceIdentityProvider: deviceIdentityProvider,
+      ),
+      ManagementAlertsAuditNavigation.remittanceReview =>
+        RemittanceNotificationsPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+      ManagementAlertsAuditNavigation.financialAccounting =>
+        ManagementFinancialAccountingPage(
+          session: session,
+          deviceIdentityProvider: deviceIdentityProvider,
+        ),
+    };
+    _push(context, page);
+  }
+
   void _openModule(BuildContext context, _ManagementModule module) {
     if (!module.isAvailableFor(session)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -159,9 +235,12 @@ class _ManagementDashboardState extends State<ManagementDashboard> {
     }
 
     final page = switch (module.action) {
-      _ManagementAction.alertsActivity => ActivityNotificationsPage(
+      _ManagementAction.alertsActivity => ManagementAlertsAuditPage(
         session: session,
         deviceIdentityProvider: deviceIdentityProvider,
+        repository: widget.alertsAuditRepository,
+        onOpenDestination: (destination) =>
+            _openAlertsDestination(context, destination),
       ),
       _ManagementAction.myAccountDevices => AccountSettingsPage(
         session: session,

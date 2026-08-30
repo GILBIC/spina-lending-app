@@ -12,13 +12,13 @@ import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
 import 'package:gilbic_mobile/src/core/payments/payment_submission_repository.dart';
 import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_alerts_audit_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_dashboard.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_operations_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_loan_portfolio_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_staff_devices_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
-import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
@@ -419,7 +419,7 @@ void main() {
         ManagementDashboardMetricKey.borrowerSupport,
         ManagementSupportRequestsPage,
       ),
-      (ManagementDashboardMetricKey.unreadActivity, ActivityNotificationsPage),
+      (ManagementDashboardMetricKey.unreadActivity, ManagementAlertsAuditPage),
     ];
 
     for (final destination in destinations) {

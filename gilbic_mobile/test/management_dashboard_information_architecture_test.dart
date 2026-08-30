@@ -6,6 +6,8 @@ import 'package:gilbic_mobile/src/core/collector/collector_route_loader.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/management_dashboard_overview.dart';
 import 'package:gilbic_mobile/src/core/management/management_dashboard_overview_repository.dart';
+import 'package:gilbic_mobile/src/core/management/management_alerts_audit.dart';
+import 'package:gilbic_mobile/src/core/management/management_alerts_audit_repository.dart';
 import 'package:gilbic_mobile/src/core/management/management_employee_activity.dart';
 import 'package:gilbic_mobile/src/core/management/management_employee_activity_repository.dart';
 import 'package:gilbic_mobile/src/core/payments/collection_device_sequence.dart';
@@ -15,6 +17,7 @@ import 'package:gilbic_mobile/src/features/collector/other_area_collection_page.
 import 'package:gilbic_mobile/src/features/dashboard/enhanced_role_dashboard.dart';
 import 'package:gilbic_mobile/src/features/management/client_registration_approvals_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_accounting_measurement_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_alerts_audit_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_collection_void_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_contract_collection_activation_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_ecl_outcome_review_page.dart';
@@ -31,7 +34,6 @@ import 'package:gilbic_mobile/src/features/management/management_opening_balance
 import 'package:gilbic_mobile/src/features/management/management_renewal_requests_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_support_requests_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_staff_devices_page.dart';
-import 'package:gilbic_mobile/src/features/notifications/activity_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
@@ -143,6 +145,42 @@ void main() {
     expect(find.byKey(const Key('management-employee-activity')), findsNothing);
     expect(find.text('People, access & requests'), findsOneWidget);
   });
+
+  testWidgets(
+    'alerts audit navigation rechecks the current session permission',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(430, 1800));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: SpinaTheme.light,
+          home: _dashboard(
+            _managementDashboardOnlySession,
+            alertsAuditRepository: _FinancialAlertsAuditRepository(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('management-alerts-activity')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ManagementAlertsAuditPage), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const Key('management-audit-financial:event-1')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ManagementFinancialAccountingPage), findsNothing);
+      expect(
+        find.text(
+          'Your current permissions do not allow this Management view.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets(
     'management home groups each priority workflow by its day-to-day purpose',
@@ -344,7 +382,7 @@ void main() {
       addTearDown(() async => tester.binding.setSurfaceSize(null));
 
       const destinations = <(String, Type)>[
-        ('management-alerts-activity', ActivityNotificationsPage),
+        ('management-alerts-activity', ManagementAlertsAuditPage),
         ('management-loans', ManagementLoanPortfolioPage),
         (
           'management-contract-collection-activation',
@@ -410,7 +448,10 @@ void main() {
   );
 }
 
-EnhancedRoleDashboard _dashboard(UserSession session) {
+EnhancedRoleDashboard _dashboard(
+  UserSession session, {
+  ManagementAlertsAuditRepository? alertsAuditRepository,
+}) {
   return EnhancedRoleDashboard(
     session: session,
     onSignOut: () async {},
@@ -424,8 +465,74 @@ EnhancedRoleDashboard _dashboard(UserSession session) {
     collectionDeviceSequence: MemoryCollectionDeviceSequence(),
     managementDashboardOverviewRepository:
         _CompletedManagementOverviewRepository(),
+    managementAlertsAuditRepository:
+        alertsAuditRepository ?? _CompletedManagementAlertsAuditRepository(),
     managementEmployeeActivityRepository:
         _CompletedEmployeeActivityRepository(),
+  );
+}
+
+class _CompletedManagementAlertsAuditRepository
+    implements ManagementAlertsAuditRepository {
+  @override
+  Future<ManagementAlertsAuditSnapshot> loadSnapshot(
+    UserSession session, {
+    required String deviceId,
+    int windowDays = 30,
+    int limit = 100,
+  }) async => ManagementAlertsAuditSnapshot(
+    generatedAt: DateTime.utc(2026, 8, 30, 3, 5),
+    windowDays: windowDays,
+    limit: limit,
+    visibleDomains: const <ManagementAlertsAuditDomain>[
+      ManagementAlertsAuditDomain.paymentUpdates,
+    ],
+    alerts: const <ManagementAlert>[],
+    events: const <ManagementAuditEvent>[],
+    eventTotalCount: 0,
+    notice: 'Read-only visibility.',
+  );
+}
+
+class _FinancialAlertsAuditRepository
+    implements ManagementAlertsAuditRepository {
+  @override
+  Future<ManagementAlertsAuditSnapshot> loadSnapshot(
+    UserSession session, {
+    required String deviceId,
+    int windowDays = 30,
+    int limit = 100,
+  }) async => ManagementAlertsAuditSnapshot(
+    generatedAt: DateTime.utc(2026, 8, 30, 3, 5),
+    windowDays: windowDays,
+    limit: limit,
+    visibleDomains: const <ManagementAlertsAuditDomain>[
+      ManagementAlertsAuditDomain.paymentUpdates,
+      ManagementAlertsAuditDomain.financial,
+    ],
+    alerts: const <ManagementAlert>[],
+    events: <ManagementAuditEvent>[
+      ManagementAuditEvent(
+        eventKey: 'financial:event-1',
+        domain: ManagementAlertsAuditDomain.financial,
+        action: ManagementAuditAction.financialPosted,
+        title: 'Protected journal posted',
+        severity: ManagementAlertsAuditSeverity.attention,
+        navigation: ManagementAlertsAuditNavigation.financialAccounting,
+        occurredAt: DateTime.utc(2026, 8, 30, 3),
+        businessDate: DateTime.utc(2026, 8, 30),
+        recordId: '44444444-4444-4444-8444-444444444444',
+        reference: 'GJ-2026-0001',
+        currentState: 'posted',
+        actorName: 'Accounting Manager',
+        checkerName: 'Accounting Manager',
+        sourceType: 'manual',
+        sourceLabel: 'Manual journal',
+        reason: null,
+      ),
+    ],
+    eventTotalCount: 1,
+    notice: 'Read-only visibility.',
   );
 }
 
@@ -518,6 +625,16 @@ const _managementWithoutEmployeeActivityPermission = UserSession(
     'renewal.manage',
     'support.manage',
   ],
+);
+
+const _managementDashboardOnlySession = UserSession(
+  userId: 'management-3',
+  username: 'management.three',
+  displayName: 'Management Three',
+  role: AppRole.management,
+  rawRole: 'Management',
+  accessToken: 'management-token',
+  permissions: <String>['management.dashboard.view'],
 );
 
 class _CompletedEmployeeActivityRepository
