@@ -3,11 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/management/ecl_allowance_posting.dart';
+import 'package:gilbic_mobile/src/core/management/ecl_allowance_posting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/period_close.dart';
 import 'package:gilbic_mobile/src/core/management/period_close_repository.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_ecl_allowance_posting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_period_close_page.dart';
 
 void main() {
@@ -279,6 +282,39 @@ void main() {
     expect(repository.lastStatus, isNull);
   });
 
+  testWidgets('Initial ECL launcher opens the protected server queue', (
+    tester,
+  ) async {
+    final repository = _FakeAccountingRepository();
+    final eclRepository = _FakeEclAllowancePostingRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+          eclAllowanceRepository: eclRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final launcher = find.byKey(const Key('initial-ecl-allowance'));
+    await tester.scrollUntilVisible(
+      launcher,
+      600,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(launcher);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ManagementEclAllowancePostingPage), findsOneWidget);
+    expect(find.text('Initial ECL Allowance'), findsOneWidget);
+    expect(eclRepository.loadCalls, 1);
+  });
+
   testWidgets('Creating a fiscal period is reviewed before repository write', (
     tester,
   ) async {
@@ -419,6 +455,66 @@ class _FakePeriodCloseRepository implements PeriodCloseRepository {
     required String confirmationToken,
   }) {
     throw UnsupportedError('No test period is ready to post.');
+  }
+}
+
+class _FakeEclAllowancePostingRepository
+    implements EclAllowancePostingRepository {
+  int loadCalls = 0;
+
+  @override
+  Future<EclAllowancePostingOverview> load(
+    UserSession session, {
+    required String deviceId,
+    String status = 'all',
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    loadCalls += 1;
+    return EclAllowancePostingOverview(
+      summary: const EclAllowancePostingSummary(
+        loanCount: 0,
+        measurementNotAuthoritativeCount: 0,
+        noAllowanceRequiredCount: 0,
+        preparationRequiredCount: 0,
+        postingReadyCount: 0,
+        postedCurrentCount: 0,
+        a5RemeasurementRequiredCount: 0,
+        postingAuditIncompleteCount: 0,
+        protectedAllowanceBalanceTotal: '0.00',
+        account1190PostingEnabled: true,
+        automaticSourcePosting: false,
+      ),
+      items: const <EclAllowancePostingItem>[],
+      permissions: const EclAllowancePostingPermissions(
+        prepare: false,
+        post: false,
+      ),
+      notice: 'No initial allowance actions are ready.',
+      filter: status,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  @override
+  Future<EclAllowanceActionReceipt> prepare(
+    UserSession session, {
+    required String deviceId,
+    required EclAllowancePostingItem item,
+    required String reviewToken,
+  }) {
+    throw UnsupportedError('No test item is ready to prepare.');
+  }
+
+  @override
+  Future<EclAllowanceActionReceipt> post(
+    UserSession session, {
+    required String deviceId,
+    required EclAllowancePostingItem item,
+    required String reviewToken,
+  }) {
+    throw UnsupportedError('No test item is ready to post.');
   }
 }
 

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/management/ecl_allowance_posting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/period_close_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/management_ecl_allowance_posting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_period_close_page.dart';
 import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
@@ -14,6 +16,7 @@ class ManagementFinancialAccountingPage extends StatefulWidget {
     required this.deviceIdentityProvider,
     this.repository,
     this.periodCloseRepository,
+    this.eclAllowanceRepository,
     super.key,
   });
 
@@ -21,6 +24,7 @@ class ManagementFinancialAccountingPage extends StatefulWidget {
   final DeviceIdentityProvider deviceIdentityProvider;
   final FinancialAccountingRepository? repository;
   final PeriodCloseRepository? periodCloseRepository;
+  final EclAllowancePostingRepository? eclAllowanceRepository;
 
   @override
   State<ManagementFinancialAccountingPage> createState() =>
@@ -209,6 +213,19 @@ class _ManagementFinancialAccountingPageState
     if (mounted) await _load();
   }
 
+  Future<void> _openInitialEclAllowance() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementEclAllowancePostingPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          repository: widget.eclAllowanceRepository,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
   Future<void> _runPeriodAction(Future<void> Function() action) async {
     if (_periodActionInProgress) {
       return;
@@ -329,6 +346,19 @@ class _ManagementFinancialAccountingPageState
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: _periodActionInProgress ? null : _openFormalPeriodClose,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Card(
+            child: ListTile(
+              key: const Key('initial-ecl-allowance'),
+              leading: const Icon(Icons.shield_outlined),
+              title: const Text('Initial ECL allowance'),
+              subtitle: const Text(
+                'Review exact authoritative ECL evidence, prepare the protected draft, and post only through the server workflow.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _periodActionInProgress ? null : _openInitialEclAllowance,
             ),
           ),
           const SizedBox(height: 16),
