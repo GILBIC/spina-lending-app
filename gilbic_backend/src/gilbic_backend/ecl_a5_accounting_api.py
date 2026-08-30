@@ -159,6 +159,28 @@ def _action_payload(item: EclA5Action) -> dict[str, object]:
             str(item.recovery_transaction_id) if item.recovery_transaction_id else None
         ),
         "recovery_amount": _money(item.recovery_amount),
+        "recovery_candidate_transaction_id": (
+            str(item.recovery_candidate_transaction_id)
+            if item.recovery_candidate_transaction_id
+            else None
+        ),
+        "recovery_candidate_amount": _money(item.recovery_candidate_amount),
+        "recovery_candidate_collection_date": (
+            item.recovery_candidate_collection_date.isoformat()
+            if item.recovery_candidate_collection_date
+            else None
+        ),
+        "posting_date": item.posting_date.isoformat() if item.posting_date else None,
+        "fiscal_period_id": str(item.fiscal_period_id) if item.fiscal_period_id else None,
+        "credit_loss_expense_account_id": (
+            str(item.credit_loss_expense_account_id)
+            if item.credit_loss_expense_account_id
+            else None
+        ),
+        "allowance_account_id": (
+            str(item.allowance_account_id) if item.allowance_account_id else None
+        ),
+        "cash_account_id": str(item.cash_account_id) if item.cash_account_id else None,
         "a5_status": item.a5_status,
         "protected_a5_accounting_enabled": item.protected_a5_accounting_enabled,
         "automatic_source_posting": item.automatic_source_posting,
@@ -210,6 +232,7 @@ def create_ecl_a5_accounting_router() -> APIRouter:
             "allowance_current",
             "writeoff_ready",
             "written_off",
+            "recovery_review_required",
             "post_writeoff_recovery_ready",
             "blocked",
         ] = Query(default="all"),

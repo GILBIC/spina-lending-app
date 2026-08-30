@@ -33,6 +33,35 @@ def test_a5_management_api_is_wired_and_permission_scoped() -> None:
     assert "actor.account_id" not in API
 
 
+def test_a5_mobile_queue_exposes_complete_server_derived_action_coordinates() -> None:
+    for field in (
+        '"recovery_candidate_transaction_id"',
+        '"recovery_candidate_amount"',
+        '"recovery_candidate_collection_date"',
+        '"posting_date"',
+        '"fiscal_period_id"',
+        '"credit_loss_expense_account_id"',
+        '"allowance_account_id"',
+        '"cash_account_id"',
+    ):
+        assert field in API
+    for authority in (
+        "transaction_row.accepted_at > writeoff.posted_at",
+        "NOT transaction_row.is_voided",
+        "transaction_row.entry_type IN ('payment', 'advance')",
+        "accounting.regular_journal_posting_entries",
+        "accounting.seven_by_seven_journal_postings",
+        "accounting.ecl_post_writeoff_recovery_review_provenance",
+        "accounting.ecl_post_writeoff_recoveries",
+        "recovery_review_required",
+        "accounting.fiscal_periods",
+        "credit_loss_expense",
+        "allowance_expected_credit_loss",
+        "cash_collector_custody",
+    ):
+        assert authority in REPOSITORY
+
+
 def test_a5_requests_are_strict_and_require_exact_confirmation() -> None:
     assert 'ConfigDict(extra="forbid")' in API
     for field in (
