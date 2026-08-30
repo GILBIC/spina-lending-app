@@ -16,7 +16,15 @@ def test_period_close_api_is_management_only_strict_and_wired() -> None:
     assert "actor.account_id" not in API
     assert "create_period_close_router" in MAIN
     assert "app.include_router(create_period_close_router())" in MAIN
-    assert "/api/mobile/" not in API
+
+
+def test_period_close_api_exposes_same_handlers_to_mobile() -> None:
+    for route in (
+        '"/api/mobile/v1/management/financial-accounting/period-close"',
+        '"/api/mobile/v1/management/financial-accounting/period-close/{fiscal_period_id}/prepare"',
+        '"/api/mobile/v1/management/financial-accounting/period-close/{fiscal_period_id}/post"',
+    ):
+        assert route in API
 
 
 def test_period_close_api_requires_action_permissions_and_explicit_confirmation() -> None:

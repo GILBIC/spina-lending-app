@@ -152,6 +152,10 @@ def create_period_close_router() -> APIRouter:
     router = APIRouter(tags=["management financial accounting"])
 
     @router.get("/api/v1/management/financial-accounting/period-close")
+    @router.get(
+        "/api/mobile/v1/management/financial-accounting/period-close",
+        include_in_schema=False,
+    )
     def list_period_close_items(
         close_status: Literal[
             "all",
@@ -198,6 +202,10 @@ def create_period_close_router() -> APIRouter:
     @router.post(
         "/api/v1/management/financial-accounting/period-close/{fiscal_period_id}/prepare"
     )
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/period-close/{fiscal_period_id}/prepare",
+        include_in_schema=False,
+    )
     def prepare_period_close(
         fiscal_period_id: UUID,
         body: PreparePeriodCloseRequest,
@@ -224,6 +232,10 @@ def create_period_close_router() -> APIRouter:
 
     @router.post(
         "/api/v1/management/financial-accounting/period-close/{fiscal_period_id}/post"
+    )
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/period-close/{fiscal_period_id}/post",
+        include_in_schema=False,
     )
     def post_period_close(
         fiscal_period_id: UUID,
