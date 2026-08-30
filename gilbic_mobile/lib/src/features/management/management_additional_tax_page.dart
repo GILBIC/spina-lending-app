@@ -68,8 +68,9 @@ class _ManagementAdditionalTaxPageState
     } on SpinaApiException catch (error) {
       if (mounted) setState(() => _error = error.message);
     } on Object {
-      if (mounted)
+      if (mounted) {
         setState(() => _error = 'Additional tax could not be loaded.');
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -121,8 +122,9 @@ class _ManagementAdditionalTaxPageState
     if (!_allowed(
       'evidence',
       'accounting.tax.additional_amendment_evidence.record',
-    ))
+    )) {
       return;
+    }
     final fields = await showDialog<_AmendmentFields>(
       context: context,
       builder: (_) => _AmendmentDialog(candidate: candidate),
@@ -150,8 +152,9 @@ class _ManagementAdditionalTaxPageState
             ManagementReviewFact(label: 'Basis', value: fields.basis),
           ],
         ) ||
-        !mounted)
+        !mounted) {
       return;
+    }
     await _run(candidate.taxLiabilityPostingId, () async {
       final device = await widget.deviceIdentityProvider.load();
       await _repository.recordAmendmentEvidence(
@@ -210,8 +213,9 @@ class _ManagementAdditionalTaxPageState
     if (!_allowed(
       'payment',
       'accounting.tax.additional_payment_evidence.record',
-    ))
+    )) {
       return;
+    }
     item.requirePayment();
     final fields = await showDialog<_PaymentFields>(
       context: context,
@@ -233,8 +237,9 @@ class _ManagementAdditionalTaxPageState
             ManagementReviewFact(label: 'Cash account', value: fields.cashKey),
           ],
         ) ||
-        !mounted)
+        !mounted) {
       return;
+    }
     await _run(item.amendmentEvidenceId, () async {
       final device = await widget.deviceIdentityProvider.load();
       await _repository.recordPayment(
@@ -320,8 +325,9 @@ class _ManagementAdditionalTaxPageState
             ),
           ],
         ) ||
-        !mounted)
+        !mounted) {
       return;
+    }
     await _run(item.amendmentEvidenceId, () async {
       final device = await widget.deviceIdentityProvider.load();
       await call(device.installationId);
@@ -346,8 +352,9 @@ class _ManagementAdditionalTaxPageState
         _message(error.message);
       }
     } on ArgumentError catch (error) {
-      if (mounted)
+      if (mounted) {
         _message(error.message ?? 'Exact protected fields are required.');
+      }
     } on Object {
       if (mounted) {
         setState(() => _writeStateUncertain = true);
@@ -383,10 +390,12 @@ class _ManagementAdditionalTaxPageState
 
   Widget _body() {
     final overview = _overview;
-    if (_loading && overview == null)
+    if (_loading && overview == null) {
       return const Center(child: CircularProgressIndicator());
-    if (overview == null)
+    }
+    if (overview == null) {
       return Center(child: Text(_error ?? 'Additional tax is unavailable.'));
+    }
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
