@@ -111,9 +111,22 @@ void main() {
           owner: 'ManagementTaxLiabilityPage',
           actions: <String>['prepare', 'post'],
         ),
+        'tax-settlement': (
+          owner: 'ManagementTaxSettlementPage',
+          actions: <String>[
+            'record return',
+            'record payment',
+            'prepare',
+            'post',
+          ],
+        ),
+        'tax-adjustment': (
+          owner: 'ManagementTaxAdjustmentPage',
+          actions: <String>['record evidence', 'prepare', 'post'],
+        ),
       };
 
-      expect(managementMutationSurfaceCatalog, hasLength(19));
+      expect(managementMutationSurfaceCatalog, hasLength(21));
       expect(
         managementMutationSurfaceCatalog.map((entry) => entry.surface).toSet(),
         ManagementMutationSurface.values.toSet(),

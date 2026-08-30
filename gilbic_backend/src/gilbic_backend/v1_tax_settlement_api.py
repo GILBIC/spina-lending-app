@@ -14,11 +14,11 @@ from .auth_client import SupabaseAuthClient
 from .request_auth import authenticated_device_context
 from .v1_tax_settlement_repository import (
     PostgresV1TaxSettlementRepository,
+    V1TaxReturnLiabilityCandidate,
     V1TaxSettlementBlocked,
     V1TaxSettlementError,
     V1TaxSettlementItem,
 )
-
 
 RETURN_PERMISSION = "accounting.tax.return_evidence.record"
 PAYMENT_PERMISSION = "accounting.tax.payment_evidence.record"
@@ -81,7 +81,9 @@ class RecordV1TaxPaymentRequest(StrictV1TaxSettlementRequest):
     @classmethod
     def exact_currency_cents(cls, value: Decimal) -> Decimal:
         if value != value.quantize(Decimal("0.01")):
-            raise ValueError("Tax payment amount must use exact currency-cent precision.")
+            raise ValueError(
+                "Tax payment amount must use exact currency-cent precision."
+            )
         return value
 
     @field_validator("payment_reference", "evidence_reference", "evidence_note")
@@ -112,7 +114,9 @@ class PostV1TaxSettlementRequest(StrictV1TaxSettlementRequest):
     @classmethod
     def exact_currency_cents(cls, value: Decimal) -> Decimal:
         if value != value.quantize(Decimal("0.01")):
-            raise ValueError("Expected tax payment amount must use exact currency-cent precision.")
+            raise ValueError(
+                "Expected tax payment amount must use exact currency-cent precision."
+            )
         return value
 
     @field_validator("expected_tax_payable_account_code", "expected_cash_account_code")
@@ -144,33 +148,72 @@ def _item_payload(item: V1TaxSettlementItem) -> dict[str, object]:
         "liability_count": item.liability_count,
         "current_exact_count": item.current_exact_count,
         "liability_total": format(item.liability_total, ".2f"),
-        "payment_evidence_id": str(item.payment_evidence_id) if item.payment_evidence_id else None,
+        "payment_evidence_id": str(item.payment_evidence_id)
+        if item.payment_evidence_id
+        else None,
         "payment_date": item.payment_date.isoformat() if item.payment_date else None,
-        "payment_amount": format(item.payment_amount, ".2f") if item.payment_amount is not None else None,
+        "payment_amount": format(item.payment_amount, ".2f")
+        if item.payment_amount is not None
+        else None,
         "cash_account_system_key": item.cash_account_system_key,
         "cash_account_code": item.cash_account_code,
         "cash_account_name": item.cash_account_name,
+        "tax_payable_account_code": item.tax_payable_account_code,
+        "tax_payable_account_name": item.tax_payable_account_name,
         "payment_reference": item.payment_reference,
         "payment_evidence_reference": item.payment_evidence_reference,
         "payment_evidence_digest": item.payment_evidence_digest,
-        "payment_recorded_by_user_id": str(item.payment_recorded_by_user_id) if item.payment_recorded_by_user_id else None,
-        "payment_recorded_at": item.payment_recorded_at.isoformat() if item.payment_recorded_at else None,
+        "payment_recorded_by_user_id": str(item.payment_recorded_by_user_id)
+        if item.payment_recorded_by_user_id
+        else None,
+        "payment_recorded_at": item.payment_recorded_at.isoformat()
+        if item.payment_recorded_at
+        else None,
         "preparation_id": str(item.preparation_id) if item.preparation_id else None,
-        "journal_entry_id": str(item.journal_entry_id) if item.journal_entry_id else None,
+        "journal_entry_id": str(item.journal_entry_id)
+        if item.journal_entry_id
+        else None,
         "journal_status": item.journal_status,
         "entry_number": item.entry_number,
-        "fiscal_period_id": str(item.fiscal_period_id) if item.fiscal_period_id else None,
-        "prepared_by_user_id": str(item.prepared_by_user_id) if item.prepared_by_user_id else None,
+        "fiscal_period_id": str(item.fiscal_period_id)
+        if item.fiscal_period_id
+        else None,
+        "prepared_by_user_id": str(item.prepared_by_user_id)
+        if item.prepared_by_user_id
+        else None,
         "prepared_at": item.prepared_at.isoformat() if item.prepared_at else None,
-        "settlement_posting_id": str(item.settlement_posting_id) if item.settlement_posting_id else None,
+        "settlement_posting_id": str(item.settlement_posting_id)
+        if item.settlement_posting_id
+        else None,
         "confirmation_digest": item.confirmation_digest,
-        "posted_by_user_id": str(item.posted_by_user_id) if item.posted_by_user_id else None,
+        "posted_by_user_id": str(item.posted_by_user_id)
+        if item.posted_by_user_id
+        else None,
         "posted_at": item.posted_at.isoformat() if item.posted_at else None,
         "settlement_status": item.settlement_status,
         "settlement_blocker": item.settlement_blocker,
         "tax_settlement_enabled": item.tax_settlement_enabled,
         "tax_adjustment_reversal_enabled": item.tax_adjustment_reversal_enabled,
         "automatic_source_posting": item.automatic_source_posting,
+    }
+
+
+def _return_liability_candidate_payload(
+    item: V1TaxReturnLiabilityCandidate,
+) -> dict[str, object]:
+    return {
+        "tax_type": item.tax_type,
+        "posting_id": str(item.posting_id),
+        "evidence_id": str(item.evidence_id),
+        "evidence_version": item.evidence_version,
+        "source_id": str(item.source_id),
+        "loan_id": str(item.loan_id),
+        "client_id": str(item.client_id),
+        "recognition_date": item.recognition_date.isoformat(),
+        "tax_due": format(item.tax_due, ".2f"),
+        "evidence_digest": item.evidence_digest,
+        "entry_number": item.entry_number,
+        "fiscal_period_id": str(item.fiscal_period_id),
     }
 
 
@@ -188,7 +231,13 @@ def _exception(error: V1TaxSettlementError) -> HTTPException:
     )
 
 
-def _actor(*, authorization: str | None, x_device_id: str | None, auth: SupabaseAuthClient, accounts: PostgresAccountRepository):
+def _actor(
+    *,
+    authorization: str | None,
+    x_device_id: str | None,
+    auth: SupabaseAuthClient,
+    accounts: PostgresAccountRepository,
+):
     actor = authenticated_device_context(
         authorization=authorization,
         device_identifier=x_device_id,
@@ -231,11 +280,19 @@ def _require_confirmation(confirm: bool, action: str) -> None:
 def create_v1_tax_settlement_router() -> APIRouter:
     router = APIRouter(tags=["management financial accounting"])
 
+    @router.get("/api/mobile/v1/management/financial-accounting/tax/settlements")
     @router.get("/api/v1/management/financial-accounting/tax/settlements")
     def list_v1_tax_settlements(
         settlement_status: Literal[
-            "all", "awaiting_payment", "ready", "prepared", "settled",
-            "adjustment_review", "adjustment_in_progress", "adjusted", "blocked"
+            "all",
+            "awaiting_payment",
+            "ready",
+            "prepared",
+            "settled",
+            "adjustment_review",
+            "adjustment_in_progress",
+            "adjusted",
+            "blocked",
         ] = Query(default="all"),
         limit: int = Query(default=100, ge=1, le=200),
         offset: int = Query(default=0, ge=0),
@@ -243,20 +300,45 @@ def create_v1_tax_settlement_router() -> APIRouter:
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        tax: PostgresV1TaxSettlementRepository = Depends(v1_tax_settlement_repository_dependency),
+        tax: PostgresV1TaxSettlementRepository = Depends(
+            v1_tax_settlement_repository_dependency
+        ),
     ) -> dict[str, object]:
-        actor = _actor(authorization=authorization, x_device_id=x_device_id, auth=auth, accounts=accounts)
+        actor = _actor(
+            authorization=authorization,
+            x_device_id=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
         return {
             "success": True,
             "data": {
                 "summary": _summary_payload(tax.summary()),
-                "items": [_item_payload(item) for item in tax.list_items(status=settlement_status, limit=limit, offset=offset)],
+                "items": [
+                    _item_payload(item)
+                    for item in tax.list_items(
+                        status=settlement_status, limit=limit, offset=offset
+                    )
+                ],
+                "return_liability_candidates": [
+                    _return_liability_candidate_payload(item)
+                    for item in tax.list_return_liability_candidates(
+                        limit=limit, offset=offset
+                    )
+                ],
                 "permissions": {
                     "return_evidence_record": RETURN_PERMISSION in actor.permissions,
                     "payment_evidence_record": PAYMENT_PERMISSION in actor.permissions,
-                    "settlement_prepare": SETTLEMENT_PREPARE_PERMISSION in actor.permissions,
+                    "settlement_prepare": SETTLEMENT_PREPARE_PERMISSION
+                    in actor.permissions,
                     "settlement_post": SETTLEMENT_POST_PERMISSION in actor.permissions,
                 },
+                "settlement_status": settlement_status,
+                "limit": limit,
+                "offset": offset,
+                "tax_settlement_enabled": True,
+                "tax_adjustment_reversal_enabled": True,
+                "automatic_source_posting": False,
                 "notice": (
                     "Tax settlement is return/payment-evidence backed and separate from tax expense recognition. "
                     "The protected journal is Dr 2100 Tax Payables / Cr the exact approved Cash - Office or Cash - Bank / GCash account. "
@@ -267,6 +349,10 @@ def create_v1_tax_settlement_router() -> APIRouter:
         }
 
     @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/settlements/returns",
+        status_code=status.HTTP_201_CREATED,
+    )
+    @router.post(
         "/api/v1/management/financial-accounting/tax/settlements/returns",
         status_code=status.HTTP_201_CREATED,
     )
@@ -276,9 +362,16 @@ def create_v1_tax_settlement_router() -> APIRouter:
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        tax: PostgresV1TaxSettlementRepository = Depends(v1_tax_settlement_repository_dependency),
+        tax: PostgresV1TaxSettlementRepository = Depends(
+            v1_tax_settlement_repository_dependency
+        ),
     ) -> dict[str, object]:
-        actor = _actor(authorization=authorization, x_device_id=x_device_id, auth=auth, accounts=accounts)
+        actor = _actor(
+            authorization=authorization,
+            x_device_id=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
         _require_permission(actor, RETURN_PERMISSION)
         try:
             return_id = tax.record_return_evidence(
@@ -301,6 +394,10 @@ def create_v1_tax_settlement_router() -> APIRouter:
         return {"success": True, "data": {"item": _item_payload(item)}}
 
     @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/settlements/returns/{tax_return_id}/payments",
+        status_code=status.HTTP_201_CREATED,
+    )
+    @router.post(
         "/api/v1/management/financial-accounting/tax/settlements/returns/{tax_return_id}/payments",
         status_code=status.HTTP_201_CREATED,
     )
@@ -311,9 +408,16 @@ def create_v1_tax_settlement_router() -> APIRouter:
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        tax: PostgresV1TaxSettlementRepository = Depends(v1_tax_settlement_repository_dependency),
+        tax: PostgresV1TaxSettlementRepository = Depends(
+            v1_tax_settlement_repository_dependency
+        ),
     ) -> dict[str, object]:
-        actor = _actor(authorization=authorization, x_device_id=x_device_id, auth=auth, accounts=accounts)
+        actor = _actor(
+            authorization=authorization,
+            x_device_id=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
         _require_permission(actor, PAYMENT_PERMISSION)
         try:
             tax.record_payment_evidence(
@@ -334,6 +438,9 @@ def create_v1_tax_settlement_router() -> APIRouter:
         return {"success": True, "data": {"item": _item_payload(item)}}
 
     @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/settlements/payments/{payment_evidence_id}/prepare"
+    )
+    @router.post(
         "/api/v1/management/financial-accounting/tax/settlements/payments/{payment_evidence_id}/prepare"
     )
     def prepare_v1_tax_settlement(
@@ -343,18 +450,32 @@ def create_v1_tax_settlement_router() -> APIRouter:
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        tax: PostgresV1TaxSettlementRepository = Depends(v1_tax_settlement_repository_dependency),
+        tax: PostgresV1TaxSettlementRepository = Depends(
+            v1_tax_settlement_repository_dependency
+        ),
     ) -> dict[str, object]:
-        actor = _actor(authorization=authorization, x_device_id=x_device_id, auth=auth, accounts=accounts)
+        actor = _actor(
+            authorization=authorization,
+            x_device_id=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
         _require_permission(actor, SETTLEMENT_PREPARE_PERMISSION)
-        _require_confirmation(body.confirm, "preparing the protected tax settlement journal")
+        _require_confirmation(
+            body.confirm, "preparing the protected tax settlement journal"
+        )
         try:
-            tax.prepare(payment_evidence_id=payment_evidence_id, actor_user_id=actor.user_id)
+            tax.prepare(
+                payment_evidence_id=payment_evidence_id, actor_user_id=actor.user_id
+            )
             item = tax.get_item_by_payment(payment_evidence_id)
         except V1TaxSettlementError as error:
             raise _exception(error) from error
         return {"success": True, "data": {"item": _item_payload(item)}}
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/settlements/payments/{payment_evidence_id}/post"
+    )
     @router.post(
         "/api/v1/management/financial-accounting/tax/settlements/payments/{payment_evidence_id}/post"
     )
@@ -365,9 +486,16 @@ def create_v1_tax_settlement_router() -> APIRouter:
         x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
         auth: SupabaseAuthClient = Depends(auth_client_dependency),
         accounts: PostgresAccountRepository = Depends(account_repository_dependency),
-        tax: PostgresV1TaxSettlementRepository = Depends(v1_tax_settlement_repository_dependency),
+        tax: PostgresV1TaxSettlementRepository = Depends(
+            v1_tax_settlement_repository_dependency
+        ),
     ) -> dict[str, object]:
-        actor = _actor(authorization=authorization, x_device_id=x_device_id, auth=auth, accounts=accounts)
+        actor = _actor(
+            authorization=authorization,
+            x_device_id=x_device_id,
+            auth=auth,
+            accounts=accounts,
+        )
         _require_permission(actor, SETTLEMENT_POST_PERMISSION)
         _require_confirmation(body.confirm, "posting the protected tax settlement")
         try:

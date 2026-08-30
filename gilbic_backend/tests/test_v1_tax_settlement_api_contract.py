@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 API = (ROOT / "src" / "gilbic_backend" / "v1_tax_settlement_api.py").read_text(
     encoding="utf-8"
@@ -18,7 +17,7 @@ def test_v1_tax_settlement_api_is_management_only_strict_and_wired() -> None:
     assert "actor.account_id" not in API
     assert "create_v1_tax_settlement_router" in MAIN
     assert "app.include_router(create_v1_tax_settlement_router())" in MAIN
-    assert "/api/mobile/" not in API
+    assert '"/api/mobile/v1/management/financial-accounting/tax/settlements"' in API
 
 
 def test_v1_tax_settlement_api_has_action_specific_permissions() -> None:
@@ -33,7 +32,9 @@ def test_v1_tax_settlement_api_has_action_specific_permissions() -> None:
     assert "_require_confirmation" in API
 
 
-def test_v1_tax_settlement_api_requires_return_composition_and_exact_full_payment() -> None:
+def test_v1_tax_settlement_api_requires_return_composition_and_exact_full_payment() -> (
+    None
+):
     for field in (
         "return_period_start",
         "return_period_end",
@@ -83,6 +84,13 @@ def test_v1_tax_settlement_repository_calls_only_protected_database_functions() 
         assert function in REPOSITORY
     assert "accounting.v1_tax_settlement_effective_queue" in REPOSITORY
     assert "accounting.v1_tax_settlement_effective_summary" in REPOSITORY
+    assert "accounting.v1_tax_liability_queue" in REPOSITORY
+    assert "accounting.v1_tax_return_liability_items" in REPOSITORY
+    assert "accounting_status = 'posted'" in REPOSITORY
+    assert "journal_status = 'posted'" in REPOSITORY
+    assert "NOT EXISTS" in REPOSITORY
+    assert "account.system_key = 'tax_payables'" in REPOSITORY
+    assert "account.system_key = 'tax_payable'" not in REPOSITORY
     assert "insert into accounting.journal_entries" not in REPOSITORY.lower()
     assert "accounting.post_journal_entry" not in REPOSITORY
 
@@ -101,3 +109,26 @@ def test_api_surfaces_adjustment_progress_and_keeps_auto_posting_off() -> None:
     assert "additional-tax amendments" in API.lower()
     assert "refund/credit realization" in API.lower()
     assert "automatic source posting remains disabled" in API.lower()
+
+
+def test_v1_tax_settlement_read_contract_exposes_server_derived_candidates_and_page_coordinates() -> (
+    None
+):
+    for field in (
+        '"return_liability_candidates"',
+        '"tax_type"',
+        '"posting_id"',
+        '"evidence_id"',
+        '"evidence_version"',
+        '"recognition_date"',
+        '"tax_due"',
+        '"evidence_digest"',
+        '"entry_number"',
+        '"fiscal_period_id"',
+        '"limit"',
+        '"offset"',
+    ):
+        assert field in API
+    assert "list_return_liability_candidates" in API
+    assert '"return_evidence_record"' in API
+    assert '"payment_evidence_record"' in API

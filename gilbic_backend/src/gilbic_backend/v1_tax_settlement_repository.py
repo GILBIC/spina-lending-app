@@ -10,7 +10,6 @@ from psycopg.rows import dict_row
 
 from .database import open_connection
 
-
 POLICY = "v1_tax_settlement_posting_v1"
 
 
@@ -20,6 +19,22 @@ class V1TaxSettlementError(RuntimeError):
 
 class V1TaxSettlementBlocked(V1TaxSettlementError):
     code = "v1_tax_settlement_blocked"
+
+
+@dataclass(frozen=True, slots=True)
+class V1TaxReturnLiabilityCandidate:
+    tax_type: str
+    posting_id: UUID
+    evidence_id: UUID
+    evidence_version: int
+    source_id: UUID
+    loan_id: UUID
+    client_id: UUID
+    recognition_date: date
+    tax_due: Decimal
+    evidence_digest: str
+    entry_number: str
+    fiscal_period_id: UUID
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +59,8 @@ class V1TaxSettlementItem:
     cash_account_system_key: str | None
     cash_account_code: str | None
     cash_account_name: str | None
+    tax_payable_account_code: str | None
+    tax_payable_account_name: str | None
     payment_reference: str | None
     payment_evidence_reference: str | None
     payment_evidence_digest: str | None
@@ -75,7 +92,12 @@ class PostgresV1TaxSettlementRepository:
         return_recorded_by_user_id, return_recorded_at, liability_count,
         current_exact_count, liability_total, payment_evidence_id, payment_date,
         payment_amount, cash_account_system_key, cash_account_code,
-        cash_account_name, payment_reference, payment_evidence_reference,
+        cash_account_name,
+        (SELECT account.code FROM accounting.accounts account
+         WHERE account.system_key = 'tax_payables') AS tax_payable_account_code,
+        (SELECT account.name FROM accounting.accounts account
+         WHERE account.system_key = 'tax_payables') AS tax_payable_account_name,
+        payment_reference, payment_evidence_reference,
         payment_evidence_digest, payment_recorded_by_user_id,
         payment_recorded_at, preparation_id, journal_entry_id, journal_status,
         entry_number, fiscal_period_id, prepared_by_user_id, prepared_at,
@@ -83,6 +105,43 @@ class PostgresV1TaxSettlementRepository:
         settlement_status, settlement_blocker, tax_settlement_enabled,
         tax_adjustment_reversal_enabled, automatic_source_posting
     """
+
+    _RETURN_CANDIDATE_COLUMNS = """
+        queue.tax_type, queue.posting_id, queue.evidence_id,
+        queue.evidence_version, queue.source_id, queue.loan_id, queue.client_id,
+        queue.recognition_date, queue.tax_due, queue.evidence_digest,
+        queue.entry_number, queue.fiscal_period_id
+    """
+
+    def list_return_liability_candidates(
+        self, *, limit: int = 100, offset: int = 0
+    ) -> tuple[V1TaxReturnLiabilityCandidate, ...]:
+        with open_connection() as connection:
+            with connection.cursor(row_factory=dict_row) as cursor:
+                cursor.execute(
+                    f"""
+                    SELECT {self._RETURN_CANDIDATE_COLUMNS}
+                    FROM accounting.v1_tax_liability_queue queue
+                    WHERE queue.accounting_status = 'posted'
+                      AND queue.posting_id IS NOT NULL
+                      AND queue.journal_status = 'posted'
+                      AND queue.entry_number IS NOT NULL
+                      AND queue.fiscal_period_id IS NOT NULL
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM accounting.v1_tax_return_liability_items item
+                          WHERE item.tax_liability_posting_id = queue.posting_id
+                      )
+                    ORDER BY queue.recognition_date, queue.tax_type,
+                             queue.posting_id
+                    LIMIT %s OFFSET %s
+                    """,
+                    (limit, offset),
+                )
+                return tuple(
+                    V1TaxReturnLiabilityCandidate(**dict(row))
+                    for row in cursor.fetchall()
+                )
 
     def list_items(
         self, *, status: str = "all", limit: int = 100, offset: int = 0
@@ -117,7 +176,9 @@ class PostgresV1TaxSettlementRepository:
                 )
                 row = cursor.fetchone()
                 if row is None:
-                    raise V1TaxSettlementBlocked("V1 tax return/settlement item was not found.")
+                    raise V1TaxSettlementBlocked(
+                        "V1 tax return/settlement item was not found."
+                    )
                 return V1TaxSettlementItem(**dict(row))
 
     def get_item_by_payment(self, payment_evidence_id: UUID) -> V1TaxSettlementItem:
@@ -133,7 +194,9 @@ class PostgresV1TaxSettlementRepository:
                 )
                 row = cursor.fetchone()
                 if row is None:
-                    raise V1TaxSettlementBlocked("V1 tax payment/settlement item was not found.")
+                    raise V1TaxSettlementBlocked(
+                        "V1 tax payment/settlement item was not found."
+                    )
                 return V1TaxSettlementItem(**dict(row))
 
     def summary(self) -> dict[str, object]:
@@ -144,7 +207,9 @@ class PostgresV1TaxSettlementRepository:
                 )
                 row = cursor.fetchone()
                 if row is None:
-                    raise V1TaxSettlementError("V1 tax settlement summary is unavailable.")
+                    raise V1TaxSettlementError(
+                        "V1 tax settlement summary is unavailable."
+                    )
                 return dict(row)
 
     def record_return_evidence(
@@ -219,9 +284,7 @@ class PostgresV1TaxSettlementRepository:
             ),
         )
 
-    def prepare(
-        self, *, payment_evidence_id: UUID, actor_user_id: UUID
-    ) -> UUID:
+    def prepare(self, *, payment_evidence_id: UUID, actor_user_id: UUID) -> UUID:
         return self._call_id(
             "SELECT accounting.prepare_v1_tax_settlement_journal(%s,%s) AS id",
             (payment_evidence_id, actor_user_id),

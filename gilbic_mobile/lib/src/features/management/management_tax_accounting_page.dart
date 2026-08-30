@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/tax_evidence_repository.dart';
+import 'package:gilbic_mobile/src/core/management/tax_adjustment_repository.dart';
 import 'package:gilbic_mobile/src/core/management/tax_liability_repository.dart';
+import 'package:gilbic_mobile/src/core/management/tax_settlement_repository.dart';
+import 'package:gilbic_mobile/src/features/management/management_tax_adjustment_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_tax_evidence_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_tax_liability_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_tax_settlement_page.dart';
 
 class ManagementTaxAccountingPage extends StatelessWidget {
   const ManagementTaxAccountingPage({
@@ -12,6 +16,8 @@ class ManagementTaxAccountingPage extends StatelessWidget {
     required this.deviceIdentityProvider,
     this.evidenceRepository,
     this.liabilityRepository,
+    this.settlementRepository,
+    this.adjustmentRepository,
     super.key,
   });
 
@@ -19,6 +25,8 @@ class ManagementTaxAccountingPage extends StatelessWidget {
   final DeviceIdentityProvider deviceIdentityProvider;
   final TaxEvidenceRepository? evidenceRepository;
   final TaxLiabilityRepository? liabilityRepository;
+  final TaxSettlementRepository? settlementRepository;
+  final TaxAdjustmentRepository? adjustmentRepository;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -78,11 +86,53 @@ class ManagementTaxAccountingPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
+          Card(
+            child: ListTile(
+              key: const Key('tax-settlement-workspace'),
+              leading: const Icon(Icons.receipt_long_outlined),
+              title: const Text('Tax returns & settlements'),
+              subtitle: const Text(
+                'Compose returns from exact posted liabilities, retain full-payment evidence, then prepare and post separately.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (context) => ManagementTaxSettlementPage(
+                    session: session,
+                    deviceIdentityProvider: deviceIdentityProvider,
+                    repository: settlementRepository,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Card(
+            child: ListTile(
+              key: const Key('tax-adjustment-workspace'),
+              leading: const Icon(Icons.rule_folder_outlined),
+              title: const Text('Tax corrections'),
+              subtitle: const Text(
+                'Use server-derived stale/current evidence pairs for protected reversals or Tax Recoverable corrections.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (context) => ManagementTaxAdjustmentPage(
+                    session: session,
+                    deviceIdentityProvider: deviceIdentityProvider,
+                    repository: adjustmentRepository,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           const Card(
             child: Padding(
               padding: EdgeInsets.all(14),
               child: Text(
-                'Tax returns/payments, settlements, corrections, amendments and Tax Recoverable realization remain separate protected workflows and are not performed on these screens.',
+                'Additional-tax amendments and Tax Recoverable refund/credit realization remain separate later protected workflows; automatic source posting remains disabled.',
               ),
             ),
           ),
