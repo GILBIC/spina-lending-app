@@ -6,11 +6,13 @@ import 'package:gilbic_mobile/src/core/management/tax_evidence_repository.dart';
 import 'package:gilbic_mobile/src/core/management/tax_adjustment_repository.dart';
 import 'package:gilbic_mobile/src/core/management/tax_liability_repository.dart';
 import 'package:gilbic_mobile/src/core/management/tax_settlement_repository.dart';
+import 'package:gilbic_mobile/src/core/management/tax_recoverable_repository.dart';
 import 'package:gilbic_mobile/src/features/management/management_tax_adjustment_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_additional_tax_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_tax_evidence_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_tax_liability_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_tax_settlement_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_tax_recoverable_page.dart';
 
 class ManagementTaxAccountingPage extends StatelessWidget {
   const ManagementTaxAccountingPage({
@@ -21,6 +23,7 @@ class ManagementTaxAccountingPage extends StatelessWidget {
     this.settlementRepository,
     this.adjustmentRepository,
     this.additionalTaxRepository,
+    this.taxRecoverableRepository,
     super.key,
   });
 
@@ -31,6 +34,7 @@ class ManagementTaxAccountingPage extends StatelessWidget {
   final TaxSettlementRepository? settlementRepository;
   final TaxAdjustmentRepository? adjustmentRepository;
   final AdditionalTaxRepository? additionalTaxRepository;
+  final TaxRecoverableRepository? taxRecoverableRepository;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -153,11 +157,23 @@ class ManagementTaxAccountingPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(14),
-              child: Text(
-                'Tax Recoverable refund/credit realization remains a separate later Mobile workflow; automatic source posting remains disabled.',
+          Card(
+            child: ListTile(
+              key: const Key('tax-recoverable-workspace'),
+              leading: const Icon(Icons.account_balance_wallet_outlined),
+              title: const Text('Tax Recoverable'),
+              subtitle: const Text(
+                'Realize one exact posted 1130 balance by protected cash refund or same-tax-type credit application.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (context) => ManagementTaxRecoverablePage(
+                    session: session,
+                    deviceIdentityProvider: deviceIdentityProvider,
+                    repository: taxRecoverableRepository,
+                  ),
+                ),
               ),
             ),
           ),

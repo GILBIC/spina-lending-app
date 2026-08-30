@@ -1,13 +1,13 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
-API = (
-    ROOT / "src" / "gilbic_backend" / "v1_tax_recoverable_refund_api.py"
-).read_text(encoding="utf-8")
+API = (ROOT / "src" / "gilbic_backend" / "v1_tax_recoverable_refund_api.py").read_text(
+    encoding="utf-8"
+)
 REPOSITORY = (
     ROOT / "src" / "gilbic_backend" / "v1_tax_recoverable_refund_repository.py"
 ).read_text(encoding="utf-8")
+COMPACT_REPOSITORY = " ".join(REPOSITORY.split())
 MAIN = (ROOT / "src" / "gilbic_backend" / "main.py").read_text(encoding="utf-8")
 
 
@@ -18,10 +18,15 @@ def test_recoverable_refund_api_is_management_only_strict_and_wired() -> None:
     assert "actor.account_id" not in API
     assert "create_v1_tax_recoverable_refund_router" in MAIN
     assert "app.include_router(create_v1_tax_recoverable_refund_router())" in MAIN
-    assert "/api/mobile/" not in API
+    assert (
+        '"/api/mobile/v1/management/financial-accounting/tax/recoverable-refunds"'
+        in API
+    )
 
 
-def test_recoverable_refund_api_uses_action_specific_permissions_and_confirmation() -> None:
+def test_recoverable_refund_api_uses_action_specific_permissions_and_confirmation() -> (
+    None
+):
     for permission in (
         'EVIDENCE_PERMISSION = "accounting.tax.recoverable_refund_evidence.record"',
         'REFUND_PREPARE_PERMISSION = "accounting.tax.recoverable_refund.prepare"',
@@ -32,7 +37,9 @@ def test_recoverable_refund_api_uses_action_specific_permissions_and_confirmatio
     assert "_require_confirmation" in API
 
 
-def test_recoverable_refund_api_exposes_exact_evidence_and_confirmed_coordinates_only() -> None:
+def test_recoverable_refund_api_exposes_exact_evidence_and_confirmed_coordinates_only() -> (
+    None
+):
     for route in (
         '"/api/v1/management/financial-accounting/tax/recoverable-refunds"',
         '"/api/v1/management/financial-accounting/tax/recoverable-refunds/evidence"',
@@ -40,6 +47,7 @@ def test_recoverable_refund_api_exposes_exact_evidence_and_confirmed_coordinates
         '"/api/v1/management/financial-accounting/tax/recoverable-refunds/{refund_evidence_id}/post"',
     ):
         assert route in API
+        assert route.replace("/api/v1/", "/api/mobile/v1/") in API
     for field in (
         "adjustment_posting_id",
         "refund_date",
@@ -57,10 +65,17 @@ def test_recoverable_refund_api_exposes_exact_evidence_and_confirmed_coordinates
         assert field in API
     assert 'Literal["1010", "1030"]' in API
     assert 'Literal["1130"]' in API
-    assert "refund_amount:" not in API.split("class RecordV1TaxRecoverableRefundEvidenceRequest", 1)[1].split("class PrepareV1TaxRecoverableRefundRequest", 1)[0]
+    assert (
+        "refund_amount:"
+        not in API.split("class RecordV1TaxRecoverableRefundEvidenceRequest", 1)[
+            1
+        ].split("class PrepareV1TaxRecoverableRefundRequest", 1)[0]
+    )
 
 
-def test_recoverable_refund_repository_calls_only_protected_database_functions() -> None:
+def test_recoverable_refund_repository_calls_only_protected_database_functions() -> (
+    None
+):
     for function in (
         "accounting.record_v1_tax_recoverable_refund_evidence",
         "accounting.prepare_v1_tax_recoverable_refund_journal",
@@ -73,9 +88,44 @@ def test_recoverable_refund_repository_calls_only_protected_database_functions()
     assert "accounting.post_journal_entry" not in REPOSITORY
 
 
-def test_api_keeps_credit_application_partial_realization_and_auto_posting_disabled() -> None:
+def test_recoverable_refund_read_contract_exposes_exact_server_candidates() -> None:
+    for token in (
+        "class V1TaxRecoverableRefundCandidate",
+        "list_refund_candidates",
+        '"refund_candidates"',
+        '"refund_status": refund_status',
+        '"limit": limit',
+        '"offset": offset',
+        '"tax_recoverable_refund_realization_enabled": True',
+        '"tax_recoverable_credit_application_enabled": True',
+        '"partial_tax_recoverable_realization_enabled": False',
+        '"automatic_source_posting": False',
+    ):
+        assert token in API or token in REPOSITORY
+
+
+def test_refund_candidates_are_read_only_exact_unreserved_recoverables() -> None:
+    for token in (
+        "adjustment.adjustment_status = 'posted_settled_tax_recoverable'",
+        "adjustment_posting.confirmed_adjustment_amount = adjustment.adjustment_amount",
+        "adjustment_journal.status = 'posted'",
+        "recoverable_account.code = '1130'",
+        "FROM accounting.v1_tax_recoverable_refund_evidence",
+        "FROM accounting.v1_tax_recoverable_credit_evidence",
+        "ORDER BY adjustment_posting.confirmed_posting_date",
+    ):
+        assert token in COMPACT_REPOSITORY
+    assert (
+        "INSERT "
+        not in REPOSITORY.split("def list_refund_candidates", 1)[1].split(
+            "def list_items", 1
+        )[0]
+    )
+
+
+def test_api_keeps_partial_realization_and_auto_posting_disabled() -> None:
     assert "tax-credit application" in API.lower()
-    assert "partial recoverable realization remain disabled" in API.lower()
+    assert "partial and mixed recoverable realization remain disabled" in API.lower()
     assert "automatic source posting remains disabled" in API.lower()
     assert "tax_recoverable_credit_application_enabled" in API
     assert "automatic_source_posting" in API

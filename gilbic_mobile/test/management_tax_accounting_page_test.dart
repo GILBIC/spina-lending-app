@@ -7,7 +7,7 @@ import 'package:gilbic_mobile/src/features/management/management_tax_accounting_
 
 void main() {
   testWidgets(
-    'tax accounting exposes settlement, correction and additional-tax rows',
+    'tax accounting exposes settlement, correction, additional and recoverable rows',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 844));
       addTearDown(() async => tester.binding.setSurfaceSize(null));
@@ -34,6 +34,15 @@ void main() {
       );
       expect(find.byKey(const Key('additional-tax-workspace')), findsOneWidget);
       expect(find.text('Additional tax'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('tax-recoverable-workspace')),
+        250,
+      );
+      expect(
+        find.byKey(const Key('tax-recoverable-workspace')),
+        findsOneWidget,
+      );
+      expect(find.text('Tax Recoverable'), findsOneWidget);
     },
   );
 }

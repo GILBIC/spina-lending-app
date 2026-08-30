@@ -135,9 +135,20 @@ void main() {
             'post settlement',
           ],
         ),
+        'tax-recoverable': (
+          owner: 'ManagementTaxRecoverablePage',
+          actions: <String>[
+            'record refund evidence',
+            'prepare refund',
+            'post refund',
+            'record credit evidence',
+            'prepare credit',
+            'post credit',
+          ],
+        ),
       };
 
-      expect(managementMutationSurfaceCatalog, hasLength(22));
+      expect(managementMutationSurfaceCatalog, hasLength(23));
       expect(
         managementMutationSurfaceCatalog.map((entry) => entry.surface).toSet(),
         ManagementMutationSurface.values.toSet(),

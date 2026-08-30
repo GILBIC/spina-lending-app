@@ -26,7 +26,8 @@ enum ManagementMutationSurface {
   taxLiability('tax-liability'),
   taxSettlement('tax-settlement'),
   taxAdjustment('tax-adjustment'),
-  additionalTax('additional-tax');
+  additionalTax('additional-tax'),
+  taxRecoverable('tax-recoverable');
 
   const ManagementMutationSurface(this.id);
 
@@ -209,6 +210,19 @@ const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
       'record payment evidence',
       'prepare settlement',
       'post settlement',
+    ],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.taxRecoverable,
+    owner: 'ManagementTaxRecoverablePage',
+    actions: <String>[
+      'record refund evidence',
+      'prepare refund',
+      'post refund',
+      'record credit evidence',
+      'prepare credit',
+      'post credit',
     ],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
