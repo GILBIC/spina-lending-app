@@ -82,9 +82,13 @@ void main() {
           owner: 'ManagementPeriodClosePage',
           actions: <String>['prepare', 'post'],
         ),
+        'ecl-allowance': (
+          owner: 'ManagementEclAllowancePostingPage',
+          actions: <String>['prepare', 'post'],
+        ),
       };
 
-      expect(managementMutationSurfaceCatalog, hasLength(14));
+      expect(managementMutationSurfaceCatalog, hasLength(15));
       expect(
         managementMutationSurfaceCatalog.map((entry) => entry.surface).toSet(),
         ManagementMutationSurface.values.toSet(),

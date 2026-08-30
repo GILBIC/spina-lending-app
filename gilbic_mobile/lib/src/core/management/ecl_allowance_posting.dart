@@ -253,8 +253,12 @@ class EclAllowancePostingItem {
       account1190PostingEnabled: _bool(payload, 'account_1190_posting_enabled'),
       automaticSourcePosting: _bool(payload, 'automatic_source_posting'),
     );
-    if (item.isPreparationRequired) item.requirePreparationCoordinates();
-    if (item.isPostingReady) item.requirePostingCoordinates();
+    try {
+      if (item.isPreparationRequired) item.requirePreparationCoordinates();
+      if (item.isPostingReady) item.requirePostingCoordinates();
+    } on ArgumentError {
+      throw _invalid('protected action coordinates');
+    }
     if (item.isPostedCurrent &&
         (item.postingId == null ||
             item.entryNumber == null ||

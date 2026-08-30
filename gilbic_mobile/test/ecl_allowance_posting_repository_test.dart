@@ -186,6 +186,52 @@ void main() {
     },
   );
 
+  test(
+    'rejects incomplete actionable server rows as safe API errors',
+    () async {
+      final incomplete = _queueItemPayload(status: 'preparation_required')
+        ..['posting_date'] = null;
+      final repository = SpinaEclAllowancePostingRepository(
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <String, Object?>{
+                'items': <Object?>[incomplete],
+                'summary': _summaryPayload,
+                'filter': 'all',
+                'limit': 100,
+                'offset': 0,
+                'prepare_permission': true,
+                'post_permission': true,
+                'notice': 'Exact A4 server queue.',
+              },
+            }),
+            200,
+            headers: const <String, String>{'content-type': 'application/json'},
+          ),
+        ),
+      );
+
+      await expectLater(
+        repository.load(_session, deviceId: 'management-device'),
+        throwsA(
+          isA<SpinaApiException>()
+              .having(
+                (error) => error.message,
+                'message',
+                contains('incomplete ECL allowance'),
+              )
+              .having(
+                (error) => error.code,
+                'code',
+                'invalid_ecl_allowance_payload',
+              ),
+        ),
+      );
+    },
+  );
+
   test('preserves safe FastAPI ECL allowance detail and code', () async {
     final repository = SpinaEclAllowancePostingRepository(
       client: MockClient(
