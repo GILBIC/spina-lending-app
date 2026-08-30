@@ -6,25 +6,30 @@ FastAPI remains the only boundary allowed to read or write official lending data
 
 ## Current milestone
 
-The Collector experience now includes:
+One Flutter codebase now provides separate Management, Employee, Collector,
+and Client experiences for Android and iOS. The shared SPINA design system keeps
+the approved pink-and-white identity while allowing platform-native navigation,
+safe-area, keyboard, and title behavior that does not change business rules.
 
-- Supabase Auth-backed login with backend-assigned roles and permissions
-- a permanent app-generated installation ID stored in secure storage
-- per-request active-device enforcement through `X-Device-Id`
-- an assigned daily route with server balances and route revisions
-- a SQLCipher-encrypted offline route snapshot
-- clear **Online route** and **Offline copy** labels
-- an online-only Payment / ADV / PASS entry form
-- confirmation before submission
-- one UUID idempotency key reused after an uncertain network result
-- a persistent per-device collection sequence
-- accepted, duplicate, conflict, and rejected server results
-- official receipt number and balance display from FastAPI
-- automatic route refresh after a successful entry
+Current role surfaces include:
+
+- Management operational overview, protected review queues, reports,
+  accounting launchers, people/access, notifications, and device administration
+  according to exact server permissions.
+- Employee workday, pay/request, office-function, update, account, and
+  permission-scoped remittance groupings. Functions without an authoritative
+  backend remain clearly marked unavailable.
+- Collector online route, Regular and parity-approved 7x7 collection, ADV/PASS,
+  corrections, other-area work, remittance/custody, official receipts, and a
+  SQLCipher-encrypted read-only offline route copy.
+- Client own-record loan status, balances, schedules/history, payments and
+  official receipts, renewal status, support, notifications, and account/device
+  security. Direct GCash payment is a non-interactive placeholder until the
+  protected Xendit integration is approved and connected.
 
 The encrypted payment outbox remains disabled. Offline route copies are
-read-only, and 7x7 collection remains blocked until the dedicated allocator is
-implemented and verified.
+read-only, and no financial write is queued or automatically submitted while
+offline.
 
 ## Prerequisites
 
@@ -76,7 +81,8 @@ never be placed in Flutter or committed to GitHub.
 2. Gilbic verifies the account has `collection.create` permission.
 3. The route entry must contain an active loan, route revision, and server
    approval for mobile collection.
-4. Offline route copies and 7x7 loans remain disabled.
+4. Offline route copies remain disabled for writes. Only loans explicitly
+   enabled by the protected server collection gate can be submitted.
 5. The collector selects Payment, ADV, or PASS and confirms the entry.
 6. Gilbic creates one UUID transaction key and reserves one device sequence.
 7. FastAPI validates the session, device, permission, area, client, loan,
@@ -102,8 +108,8 @@ a new transaction identity on the next submission.
   installation ID in collection transactions.
 - Cached routes remain read-only.
 - Unsupported loans remain visible but cannot be submitted from mobile.
-- 7x7 Payment, ADV, and PASS remain disabled in mobile until dedicated rules
-  are verified.
+- 7x7 Payment, ADV, and PASS use the same parity-proven server allocator and
+  remain subject to the protected server feature gate.
 - Automatic retry and offline collection synchronization remain disabled.
 
 ## Validation
@@ -121,8 +127,13 @@ exact pull-request head on the Windows self-hosted runner.
 
 ## Next milestone
 
-1. Build an encrypted offline collection outbox that preserves the original
-   transaction key, payload, and device sequence.
-2. Add explicit manual retry and conflict-resolution screens.
-3. Implement and verify the dedicated 7x7 allocator before enabling 7x7.
-4. Add collector end-of-day totals and cash accountability.
+Follow the frozen order in GitHub Master Issue #296:
+
+1. Finish CA6 iOS UI parity evidence on macOS/Xcode without redesigning the
+   shared Android role experience.
+2. Complete the remaining CB Management and Employee authoritative workflows.
+3. Run Collector, Client, cross-role, and cross-platform integrity acceptance.
+4. Produce production-signed Android/iOS builds only from the exact validated
+   release commit under the documented release and rollback procedures.
+
+An encrypted offline financial-write outbox remains V1.1+ scope.
