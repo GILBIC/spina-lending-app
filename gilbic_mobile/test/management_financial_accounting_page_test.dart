@@ -5,7 +5,10 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting_repository.dart';
+import 'package:gilbic_mobile/src/core/management/period_close.dart';
+import 'package:gilbic_mobile/src/core/management/period_close_repository.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_period_close_page.dart';
 
 void main() {
   testWidgets('Management guidance hides obsolete backend stage labels', (
@@ -237,14 +240,15 @@ void main() {
 
     expect(repository.lastStatus, 'review');
     expect(find.text('Review'), findsWidgets);
-    expect(find.text('Close period'), findsOneWidget);
+    expect(find.text('Close period'), findsNothing);
     expect(find.text('Reopen'), findsOneWidget);
   });
 
-  testWidgets('Closing a review period requires visible confirmation', (
+  testWidgets('Formal close launcher replaces rejected direct status close', (
     tester,
   ) async {
     final repository = _FakeAccountingRepository(initialStatus: 'review');
+    final periodCloseRepository = _FakePeriodCloseRepository();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -252,40 +256,27 @@ void main() {
           session: _session,
           deviceIdentityProvider: _deviceIdentityProvider(),
           repository: repository,
+          periodCloseRepository: periodCloseRepository,
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    final closeButton = find.byKey(const Key('period-close-period-aug-2026'));
+    expect(find.byKey(const Key('period-close-period-aug-2026')), findsNothing);
+    final formalClose = find.byKey(const Key('formal-period-close'));
     await tester.scrollUntilVisible(
-      closeButton,
+      formalClose,
       600,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
-    await tester.tap(closeButton);
+    await tester.tap(formalClose);
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const Key('management-review-fiscal-period')),
-      findsOneWidget,
-    );
-    expect(find.text('Change period to Closed'), findsWidgets);
+    expect(find.byType(ManagementPeriodClosePage), findsOneWidget);
+    expect(find.text('Formal Period Close'), findsOneWidget);
+    expect(periodCloseRepository.loadCalls, 1);
     expect(repository.lastStatus, isNull);
-
-    await tester.tap(find.byKey(const Key('cancel-fiscal-period')));
-    await tester.pumpAndSettle();
-    expect(repository.lastStatus, isNull);
-
-    await tester.tap(closeButton);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('confirm-fiscal-period')));
-    await tester.pumpAndSettle();
-
-    expect(repository.lastStatus, 'closed');
-    expect(repository.lastConfirmClose, isTrue);
-    expect(find.text('Closed'), findsWidgets);
   });
 
   testWidgets('Creating a fiscal period is reviewed before repository write', (
@@ -375,6 +366,60 @@ DeviceIdentityProvider _deviceIdentityProvider() {
     platformResolver: () => 'android',
     appVersionResolver: () async => '1.0.0',
   );
+}
+
+class _FakePeriodCloseRepository implements PeriodCloseRepository {
+  int loadCalls = 0;
+
+  @override
+  Future<PeriodCloseOverview> load(
+    UserSession session, {
+    required String deviceId,
+    String status = 'all',
+  }) async {
+    loadCalls += 1;
+    return const PeriodCloseOverview(
+      summary: PeriodCloseSummary(
+        periodCount: 0,
+        readyForReviewCount: 0,
+        readyToPrepareCount: 0,
+        preparedCount: 0,
+        protectedClosedCount: 0,
+        blockedCount: 0,
+        closedNetIncomeTotal: '0.00',
+        protectedPeriodCloseEnabled: true,
+        retainedEarningsCloseEnabled: true,
+        closedPeriodPostingProtectionEnabled: true,
+        periodReopenEnabled: false,
+        automaticSourcePosting: false,
+      ),
+      items: <PeriodCloseItem>[],
+      permissions: PeriodClosePermissions(
+        closePrepare: false,
+        closePost: false,
+      ),
+      notice: 'No formal close is ready.',
+    );
+  }
+
+  @override
+  Future<PeriodCloseItem> prepare(
+    UserSession session, {
+    required String deviceId,
+    required String fiscalPeriodId,
+  }) {
+    throw UnsupportedError('No test period is ready to prepare.');
+  }
+
+  @override
+  Future<PeriodCloseItem> post(
+    UserSession session, {
+    required String deviceId,
+    required PeriodCloseItem item,
+    required String confirmationToken,
+  }) {
+    throw UnsupportedError('No test period is ready to post.');
+  }
 }
 
 class _FakeAccountingRepository implements FinancialAccountingRepository {

@@ -3,7 +3,9 @@ import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting_repository.dart';
+import 'package:gilbic_mobile/src/core/management/period_close_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
+import 'package:gilbic_mobile/src/features/management/management_period_close_page.dart';
 import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
 class ManagementFinancialAccountingPage extends StatefulWidget {
@@ -11,12 +13,14 @@ class ManagementFinancialAccountingPage extends StatefulWidget {
     required this.session,
     required this.deviceIdentityProvider,
     this.repository,
+    this.periodCloseRepository,
     super.key,
   });
 
   final UserSession session;
   final DeviceIdentityProvider deviceIdentityProvider;
   final FinancialAccountingRepository? repository;
+  final PeriodCloseRepository? periodCloseRepository;
 
   @override
   State<ManagementFinancialAccountingPage> createState() =>
@@ -129,9 +133,6 @@ class _ManagementFinancialAccountingPageState
       'review' =>
         'The period will move to Management review and the server will apply '
             'review-state restrictions. Posted journals remain unchanged.',
-      'closed' =>
-        'The period will close to new journal work. Existing posted journals '
-            'remain immutable and protected corrections still require reversal evidence.',
       _ =>
         'The period will return to Open. This changes only the period workflow '
             'state and does not grant new posting authority.',
@@ -175,8 +176,6 @@ class _ManagementFinancialAccountingPageState
     if (!confirmed || !mounted) {
       return;
     }
-    final confirmClose = targetStatus == 'closed';
-
     await _runPeriodAction(() async {
       final identity = await widget.deviceIdentityProvider.load();
       await _repository.changeFiscalPeriodStatus(
@@ -184,7 +183,6 @@ class _ManagementFinancialAccountingPageState
         deviceId: identity.installationId,
         periodId: period.periodId,
         status: targetStatus,
-        confirmClose: confirmClose,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -196,6 +194,19 @@ class _ManagementFinancialAccountingPageState
         );
       }
     });
+  }
+
+  Future<void> _openFormalPeriodClose() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementPeriodClosePage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          repository: widget.periodCloseRepository,
+        ),
+      ),
+    );
+    if (mounted) await _load();
   }
 
   Future<void> _runPeriodAction(Future<void> Function() action) async {
@@ -307,6 +318,19 @@ class _ManagementFinancialAccountingPageState
           _CutoverReadinessCard(overview: overview),
           const SizedBox(height: 16),
           _OpeningBalanceWorksheetCard(overview: overview),
+          const SizedBox(height: 16),
+          Card(
+            child: ListTile(
+              key: const Key('formal-period-close'),
+              leading: const Icon(Icons.lock_clock_outlined),
+              title: const Text('Formal period close'),
+              subtitle: const Text(
+                'Prepare an exact retained-earnings snapshot, review its digest, then post through the protected server workflow.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _periodActionInProgress ? null : _openFormalPeriodClose,
+            ),
+          ),
           const SizedBox(height: 16),
           _FiscalPeriodsCard(
             periods: overview.fiscalPeriods,
@@ -777,7 +801,7 @@ class _FiscalPeriodsCard extends StatelessWidget {
           const Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Periods must not overlap. Open periods move to Review before closing. Closed periods are permanently protected from ordinary changes.',
+              'Periods must not overlap. Open periods move to Review before the separate protected close workflow. Closed periods are permanently protected from ordinary changes.',
             ),
           ),
           const SizedBox(height: 12),
@@ -877,14 +901,6 @@ class _FiscalPeriodRow extends StatelessWidget {
                   onPressed: busy ? null : () => onStatusChange(period, 'open'),
                   icon: const Icon(Icons.lock_open_outlined),
                   label: const Text('Reopen'),
-                ),
-                FilledButton.icon(
-                  key: Key('period-close-${period.periodId}'),
-                  onPressed: busy
-                      ? null
-                      : () => onStatusChange(period, 'closed'),
-                  icon: const Icon(Icons.lock_outline),
-                  label: const Text('Close period'),
                 ),
               ],
             ],
