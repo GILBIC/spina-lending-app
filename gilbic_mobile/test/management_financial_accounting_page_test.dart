@@ -481,6 +481,7 @@ class _FakeEclAllowancePostingRepository
         postedCurrentCount: 0,
         a5RemeasurementRequiredCount: 0,
         postingAuditIncompleteCount: 0,
+        preparationBlockedCount: 0,
         protectedAllowanceBalanceTotal: '0.00',
         account1190PostingEnabled: true,
         automaticSourcePosting: false,

@@ -419,6 +419,7 @@ class _SummaryCard extends StatelessWidget {
                 Text('Post: ${summary.postingReadyCount}'),
                 Text('Posted: ${summary.postedCurrentCount}'),
                 Text('A5 required: ${summary.a5RemeasurementRequiredCount}'),
+                Text('Blocked: ${summary.preparationBlockedCount}'),
               ],
             ),
           ],

@@ -36,7 +36,7 @@ class EclAllowancePostingOverview {
         post: _bool(payload, 'post_permission'),
       ),
       notice: _text(payload, 'notice'),
-      filter: _text(payload, 'filter'),
+      filter: _enumText(payload, 'filter', _queueFilters),
       limit: _nonNegativeInt(payload, 'limit'),
       offset: _nonNegativeInt(payload, 'offset'),
     );
@@ -53,6 +53,7 @@ class EclAllowancePostingSummary {
     required this.postedCurrentCount,
     required this.a5RemeasurementRequiredCount,
     required this.postingAuditIncompleteCount,
+    required this.preparationBlockedCount,
     required this.protectedAllowanceBalanceTotal,
     required this.account1190PostingEnabled,
     required this.automaticSourcePosting,
@@ -66,6 +67,7 @@ class EclAllowancePostingSummary {
   final int postedCurrentCount;
   final int a5RemeasurementRequiredCount;
   final int postingAuditIncompleteCount;
+  final int preparationBlockedCount;
   final String protectedAllowanceBalanceTotal;
   final bool account1190PostingEnabled;
   final bool automaticSourcePosting;
@@ -94,6 +96,10 @@ class EclAllowancePostingSummary {
       postingAuditIncompleteCount: _nonNegativeInt(
         payload,
         'posting_audit_incomplete_count',
+      ),
+      preparationBlockedCount: _nonNegativeInt(
+        payload,
+        'preparation_blocked_count',
       ),
       protectedAllowanceBalanceTotal: _money(
         payload,
@@ -346,6 +352,18 @@ const _allowanceStatuses = <String>{
   'a5_remeasurement_required',
   'posting_audit_incomplete',
   'preparation_blocked',
+};
+
+const _queueFilters = <String>{
+  'all',
+  'measurement_not_authoritative',
+  'no_allowance_required',
+  'preparation_required',
+  'posting_ready',
+  'posted_current',
+  'a5_remeasurement_required',
+  'posting_audit_incomplete',
+  'ready',
 };
 
 final _uuidPattern = RegExp(

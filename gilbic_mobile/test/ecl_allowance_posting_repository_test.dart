@@ -61,6 +61,7 @@ void main() {
       expect(item.priorAllowanceBalance, '0.00');
       expect(item.preparationDigest, _preparationDigest);
       expect(overview.summary.postingReadyCount, 1);
+      expect(overview.summary.preparationBlockedCount, 0);
       expect(overview.permissions.post, isTrue);
     },
   );
@@ -232,6 +233,41 @@ void main() {
     },
   );
 
+  test('rejects an unsupported server queue filter', () async {
+    final repository = SpinaEclAllowancePostingRepository(
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'data': <String, Object?>{
+              'items': <Object?>[],
+              'summary': _summaryPayload,
+              'filter': 'invented_filter',
+              'limit': 100,
+              'offset': 0,
+              'prepare_permission': true,
+              'post_permission': true,
+              'notice': 'Exact A4 server queue.',
+            },
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        ),
+      ),
+    );
+
+    await expectLater(
+      repository.load(_session, deviceId: 'management-device'),
+      throwsA(
+        isA<SpinaApiException>().having(
+          (error) => error.code,
+          'code',
+          'invalid_ecl_allowance_payload',
+        ),
+      ),
+    );
+  });
+
   test('preserves safe FastAPI ECL allowance detail and code', () async {
     final repository = SpinaEclAllowancePostingRepository(
       client: MockClient(
@@ -334,6 +370,7 @@ const _summaryPayload = <String, Object>{
   'posted_current_count': 0,
   'a5_remeasurement_required_count': 0,
   'posting_audit_incomplete_count': 0,
+  'preparation_blocked_count': 0,
   'protected_allowance_balance_total': '0.00',
   'account_1190_posting_enabled': true,
   'automatic_source_posting': false,

@@ -22,6 +22,7 @@ void main() {
     await _pump(tester, repository, session: _prepareOnlySession);
 
     expect(find.byKey(const Key('ecl-allowance-summary')), findsOneWidget);
+    expect(find.text('Blocked: 1'), findsOneWidget);
     expect(
       find.text('Preparation blocked — verify open period and accounts'),
       findsOneWidget,
@@ -315,6 +316,7 @@ const _summary = EclAllowancePostingSummary(
   postedCurrentCount: 0,
   a5RemeasurementRequiredCount: 0,
   postingAuditIncompleteCount: 0,
+  preparationBlockedCount: 1,
   protectedAllowanceBalanceTotal: '0.00',
   account1190PostingEnabled: true,
   automaticSourcePosting: false,
