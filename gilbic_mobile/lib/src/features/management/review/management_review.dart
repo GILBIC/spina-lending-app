@@ -20,7 +20,8 @@ enum ManagementMutationSurface {
   openingJournal('opening-journal'),
   periodClose('period-close'),
   eclAllowance('ecl-allowance'),
-  eclA5('ecl-a5');
+  eclA5('ecl-a5'),
+  initialCapital('initial-capital');
 
   const ManagementMutationSurface(this.id);
 
@@ -157,6 +158,12 @@ const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
       'review recovery evidence',
       'post recovery',
     ],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.initialCapital,
+    owner: 'ManagementInitialCapitalFundingPage',
+    actions: <String>['record evidence', 'prepare', 'post'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
 ];

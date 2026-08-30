@@ -31,9 +31,48 @@ def test_initial_capital_api_exposes_no_automatic_or_synthetic_opening_balance_p
     assert "/api/v1/management/financial-accounting/initial-capital-funding" in API
     assert "synthetic opening balance" in API
     assert "never posts automatically" in API
-    assert "/api/mobile/" not in API
     assert "create_initial_capital_funding_router" in MAIN
     assert "app.include_router(create_initial_capital_funding_router())" in MAIN
+
+
+def test_initial_capital_api_reuses_the_same_handlers_for_mobile() -> None:
+    assert (
+        '"/api/mobile/v1/management/financial-accounting/initial-capital-funding"'
+        in API
+    )
+    assert (
+        '"/api/mobile/v1/management/financial-accounting/initial-capital-funding/evidence"'
+        in API
+    )
+    assert (
+        '"/api/mobile/v1/management/financial-accounting/initial-capital-funding/{evidence_id}/prepare"'
+        in API
+    )
+    assert (
+        '"/api/mobile/v1/management/financial-accounting/initial-capital-funding/{evidence_id}/post"'
+        in API
+    )
+
+
+def test_initial_capital_mobile_read_model_is_server_derived_and_fail_closed() -> None:
+    for field in (
+        '"summary"',
+        '"cash_accounts"',
+        '"permissions"',
+        '"limit"',
+        '"offset"',
+        '"protected_initial_capital_funding_enabled"',
+        '"synthetic_opening_balance_required"',
+        '"automatic_source_posting"',
+    ):
+        assert field in API
+    assert "accounting.list_summary()" in API
+    assert "accounting.list_eligible_cash_accounts()" in API
+    assert "_cash_account_payload" in API
+    assert "InitialCapitalFundingSummary" in REPOSITORY
+    assert "EligibleInitialCapitalCashAccount" in REPOSITORY
+    assert "accounting.initial_capital_funding_queue" in REPOSITORY
+    assert "system_key IN ('cash_office', 'cash_bank_gcash')" in REPOSITORY
 
 
 def test_initial_capital_repository_calls_only_protected_database_functions() -> None:

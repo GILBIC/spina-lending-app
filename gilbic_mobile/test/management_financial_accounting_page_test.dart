@@ -9,11 +9,14 @@ import 'package:gilbic_mobile/src/core/management/ecl_allowance_posting.dart';
 import 'package:gilbic_mobile/src/core/management/ecl_allowance_posting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting_repository.dart';
+import 'package:gilbic_mobile/src/core/management/initial_capital_funding.dart';
+import 'package:gilbic_mobile/src/core/management/initial_capital_funding_repository.dart';
 import 'package:gilbic_mobile/src/core/management/period_close.dart';
 import 'package:gilbic_mobile/src/core/management/period_close_repository.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_ecl_allowance_posting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_ecl_a5_accounting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_initial_capital_funding_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_period_close_page.dart';
 
 void main() {
@@ -351,6 +354,39 @@ void main() {
     expect(a5Repository.loadCalls, 1);
   });
 
+  testWidgets('Initial capital launcher opens the protected funding queue', (
+    tester,
+  ) async {
+    final repository = _FakeAccountingRepository();
+    final initialCapitalRepository = _FakeInitialCapitalFundingRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+          initialCapitalRepository: initialCapitalRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final launcher = find.byKey(const Key('initial-capital-funding'));
+    await tester.scrollUntilVisible(
+      launcher,
+      600,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(launcher);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ManagementInitialCapitalFundingPage), findsOneWidget);
+    expect(find.text('Initial Capital Funding'), findsOneWidget);
+    expect(initialCapitalRepository.loadCalls, 1);
+  });
+
   testWidgets('Creating a fiscal period is reviewed before repository write', (
     tester,
   ) async {
@@ -630,6 +666,68 @@ class _FakeEclA5AccountingRepository implements EclA5AccountingRepository {
     required EclA5ActionItem item,
     required String reviewToken,
   }) => throw UnsupportedError('No test item is ready.');
+}
+
+class _FakeInitialCapitalFundingRepository
+    implements InitialCapitalFundingRepository {
+  int loadCalls = 0;
+
+  @override
+  Future<InitialCapitalFundingOverview> load(
+    UserSession session, {
+    required String deviceId,
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    loadCalls += 1;
+    return InitialCapitalFundingOverview(
+      items: const <InitialCapitalFundingItem>[],
+      summary: const InitialCapitalFundingSummary(
+        evidenceCount: 0,
+        evidenceReadyCount: 0,
+        preparedNotPostedCount: 0,
+        postedCount: 0,
+        blockedNoOpenPeriodCount: 0,
+        totalAmount: '0.00',
+        postedAmount: '0.00',
+      ),
+      cashAccounts: const <InitialCapitalCashAccount>[],
+      permissions: const InitialCapitalFundingPermissions(
+        evidenceRecord: false,
+        prepare: false,
+        post: false,
+      ),
+      limit: limit,
+      offset: offset,
+      protectedInitialCapitalFundingEnabled: true,
+      syntheticOpeningBalanceRequired: false,
+      automaticSourcePosting: false,
+      notice: 'Exact retained funding evidence is required.',
+    );
+  }
+
+  @override
+  Future<InitialCapitalFundingItem> recordEvidence(
+    UserSession session, {
+    required String deviceId,
+    required InitialCapitalEvidenceDraft draft,
+    required String idempotencyKey,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<InitialCapitalFundingItem> prepare(
+    UserSession session, {
+    required String deviceId,
+    required InitialCapitalFundingItem item,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<InitialCapitalFundingItem> post(
+    UserSession session, {
+    required String deviceId,
+    required InitialCapitalFundingItem item,
+    required String confirmationToken,
+  }) => throw UnimplementedError();
 }
 
 class _FakeAccountingRepository implements FinancialAccountingRepository {

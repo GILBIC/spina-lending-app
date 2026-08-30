@@ -95,9 +95,13 @@ void main() {
             'post recovery',
           ],
         ),
+        'initial-capital': (
+          owner: 'ManagementInitialCapitalFundingPage',
+          actions: <String>['record evidence', 'prepare', 'post'],
+        ),
       };
 
-      expect(managementMutationSurfaceCatalog, hasLength(16));
+      expect(managementMutationSurfaceCatalog, hasLength(17));
       expect(
         managementMutationSurfaceCatalog.map((entry) => entry.surface).toSet(),
         ManagementMutationSurface.values.toSet(),

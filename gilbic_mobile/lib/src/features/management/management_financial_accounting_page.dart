@@ -5,10 +5,12 @@ import 'package:gilbic_mobile/src/core/management/ecl_a5_accounting_repository.d
 import 'package:gilbic_mobile/src/core/management/ecl_allowance_posting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting_repository.dart';
+import 'package:gilbic_mobile/src/core/management/initial_capital_funding_repository.dart';
 import 'package:gilbic_mobile/src/core/management/period_close_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/management/management_ecl_allowance_posting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_ecl_a5_accounting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_initial_capital_funding_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_period_close_page.dart';
 import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
@@ -20,6 +22,7 @@ class ManagementFinancialAccountingPage extends StatefulWidget {
     this.periodCloseRepository,
     this.eclAllowanceRepository,
     this.eclA5Repository,
+    this.initialCapitalRepository,
     super.key,
   });
 
@@ -29,6 +32,7 @@ class ManagementFinancialAccountingPage extends StatefulWidget {
   final PeriodCloseRepository? periodCloseRepository;
   final EclAllowancePostingRepository? eclAllowanceRepository;
   final EclA5AccountingRepository? eclA5Repository;
+  final InitialCapitalFundingRepository? initialCapitalRepository;
 
   @override
   State<ManagementFinancialAccountingPage> createState() =>
@@ -243,6 +247,19 @@ class _ManagementFinancialAccountingPageState
     if (mounted) await _load();
   }
 
+  Future<void> _openInitialCapitalFunding() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementInitialCapitalFundingPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          repository: widget.initialCapitalRepository,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
   Future<void> _runPeriodAction(Future<void> Function() action) async {
     if (_periodActionInProgress) {
       return;
@@ -363,6 +380,21 @@ class _ManagementFinancialAccountingPageState
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: _periodActionInProgress ? null : _openFormalPeriodClose,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Card(
+            child: ListTile(
+              key: const Key('initial-capital-funding'),
+              leading: const Icon(Icons.savings_outlined),
+              title: const Text('Initial capital funding'),
+              subtitle: const Text(
+                'Record retained funding evidence, prepare the protected journal, and post only after exact Management review.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _periodActionInProgress
+                  ? null
+                  : _openInitialCapitalFunding,
             ),
           ),
           const SizedBox(height: 10),
