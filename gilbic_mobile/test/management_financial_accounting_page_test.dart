@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/management/ecl_a5_accounting.dart';
+import 'package:gilbic_mobile/src/core/management/ecl_a5_accounting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/ecl_allowance_posting.dart';
 import 'package:gilbic_mobile/src/core/management/ecl_allowance_posting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
@@ -11,6 +13,7 @@ import 'package:gilbic_mobile/src/core/management/period_close.dart';
 import 'package:gilbic_mobile/src/core/management/period_close_repository.dart';
 import 'package:gilbic_mobile/src/features/management/management_financial_accounting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_ecl_allowance_posting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_ecl_a5_accounting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_period_close_page.dart';
 
 void main() {
@@ -315,6 +318,39 @@ void main() {
     expect(eclRepository.loadCalls, 1);
   });
 
+  testWidgets('ECL adjustments launcher opens the protected A5 queue', (
+    tester,
+  ) async {
+    final repository = _FakeAccountingRepository();
+    final a5Repository = _FakeEclA5AccountingRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ManagementFinancialAccountingPage(
+          session: _session,
+          deviceIdentityProvider: _deviceIdentityProvider(),
+          repository: repository,
+          eclA5Repository: a5Repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final launcher = find.byKey(const Key('ecl-adjustments'));
+    await tester.scrollUntilVisible(
+      launcher,
+      600,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(launcher);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ManagementEclA5AccountingPage), findsOneWidget);
+    expect(find.text('ECL Adjustments'), findsOneWidget);
+    expect(a5Repository.loadCalls, 1);
+  });
+
   testWidgets('Creating a fiscal period is reviewed before repository write', (
     tester,
   ) async {
@@ -517,6 +553,83 @@ class _FakeEclAllowancePostingRepository
   }) {
     throw UnsupportedError('No test item is ready to post.');
   }
+}
+
+class _FakeEclA5AccountingRepository implements EclA5AccountingRepository {
+  int loadCalls = 0;
+
+  @override
+  Future<EclA5Overview> load(
+    UserSession session, {
+    required String deviceId,
+    String status = 'all',
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    loadCalls += 1;
+    return EclA5Overview(
+      summary: const EclA5Summary(
+        loanCount: 0,
+        remeasurementRequiredCount: 0,
+        allowanceCurrentCount: 0,
+        writeoffReadyCount: 0,
+        writtenOffCount: 0,
+        recoveryReviewRequiredCount: 0,
+        recoveryReadyCount: 0,
+        blockedCount: 0,
+        remeasurementPostingCount: 0,
+        writeoffPostingCount: 0,
+        postWriteoffRecoveryCount: 0,
+        protectedA5AccountingEnabled: true,
+        automaticSourcePosting: false,
+      ),
+      items: const <EclA5ActionItem>[],
+      permissions: const EclA5Permissions(
+        remeasurementPost: false,
+        writeoffPost: false,
+        recoveryReview: false,
+        recoveryPost: false,
+      ),
+      notice: 'No protected A5 actions are ready.',
+      filter: status,
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  @override
+  Future<EclA5ActionReceipt> postRemeasurement(
+    UserSession session, {
+    required String deviceId,
+    required EclA5ActionItem item,
+    required String reviewToken,
+  }) => throw UnsupportedError('No test item is ready.');
+
+  @override
+  Future<EclA5ActionReceipt> postFullWriteoff(
+    UserSession session, {
+    required String deviceId,
+    required EclA5ActionItem item,
+    required String reviewToken,
+  }) => throw UnsupportedError('No test item is ready.');
+
+  @override
+  Future<EclA5ActionReceipt> reviewRecovery(
+    UserSession session, {
+    required String deviceId,
+    required EclA5ActionItem item,
+    required String reviewToken,
+    required String evidenceReference,
+    required String reviewNote,
+  }) => throw UnsupportedError('No test item is ready.');
+
+  @override
+  Future<EclA5ActionReceipt> postRecovery(
+    UserSession session, {
+    required String deviceId,
+    required EclA5ActionItem item,
+    required String reviewToken,
+  }) => throw UnsupportedError('No test item is ready.');
 }
 
 class _FakeAccountingRepository implements FinancialAccountingRepository {

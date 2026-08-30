@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/management/ecl_a5_accounting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/ecl_allowance_posting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting.dart';
 import 'package:gilbic_mobile/src/core/management/financial_accounting_repository.dart';
 import 'package:gilbic_mobile/src/core/management/period_close_repository.dart';
 import 'package:gilbic_mobile/src/core/network/spina_api.dart';
 import 'package:gilbic_mobile/src/features/management/management_ecl_allowance_posting_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_ecl_a5_accounting_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_period_close_page.dart';
 import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
 
@@ -17,6 +19,7 @@ class ManagementFinancialAccountingPage extends StatefulWidget {
     this.repository,
     this.periodCloseRepository,
     this.eclAllowanceRepository,
+    this.eclA5Repository,
     super.key,
   });
 
@@ -25,6 +28,7 @@ class ManagementFinancialAccountingPage extends StatefulWidget {
   final FinancialAccountingRepository? repository;
   final PeriodCloseRepository? periodCloseRepository;
   final EclAllowancePostingRepository? eclAllowanceRepository;
+  final EclA5AccountingRepository? eclA5Repository;
 
   @override
   State<ManagementFinancialAccountingPage> createState() =>
@@ -226,6 +230,19 @@ class _ManagementFinancialAccountingPageState
     if (mounted) await _load();
   }
 
+  Future<void> _openEclAdjustments() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ManagementEclA5AccountingPage(
+          session: widget.session,
+          deviceIdentityProvider: widget.deviceIdentityProvider,
+          repository: widget.eclA5Repository,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
   Future<void> _runPeriodAction(Future<void> Function() action) async {
     if (_periodActionInProgress) {
       return;
@@ -359,6 +376,19 @@ class _ManagementFinancialAccountingPageState
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: _periodActionInProgress ? null : _openInitialEclAllowance,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Card(
+            child: ListTile(
+              key: const Key('ecl-adjustments'),
+              leading: const Icon(Icons.tune_outlined),
+              title: const Text('ECL adjustments'),
+              subtitle: const Text(
+                'Review and confirm protected remeasurement, full write-off, and post-write-off recovery actions from exact server evidence.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _periodActionInProgress ? null : _openEclAdjustments,
             ),
           ),
           const SizedBox(height: 16),

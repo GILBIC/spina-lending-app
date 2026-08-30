@@ -86,9 +86,18 @@ void main() {
           owner: 'ManagementEclAllowancePostingPage',
           actions: <String>['prepare', 'post'],
         ),
+        'ecl-a5': (
+          owner: 'ManagementEclA5AccountingPage',
+          actions: <String>[
+            'post remeasurement',
+            'post full write-off',
+            'review recovery evidence',
+            'post recovery',
+          ],
+        ),
       };
 
-      expect(managementMutationSurfaceCatalog, hasLength(15));
+      expect(managementMutationSurfaceCatalog, hasLength(16));
       expect(
         managementMutationSurfaceCatalog.map((entry) => entry.surface).toSet(),
         ManagementMutationSurface.values.toSet(),

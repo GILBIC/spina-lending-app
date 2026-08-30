@@ -19,7 +19,8 @@ enum ManagementMutationSurface {
   openingWorkbook('opening-workbook'),
   openingJournal('opening-journal'),
   periodClose('period-close'),
-  eclAllowance('ecl-allowance');
+  eclAllowance('ecl-allowance'),
+  eclA5('ecl-a5');
 
   const ManagementMutationSurface(this.id);
 
@@ -145,6 +146,17 @@ const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
     surface: ManagementMutationSurface.eclAllowance,
     owner: 'ManagementEclAllowancePostingPage',
     actions: <String>['prepare', 'post'],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.eclA5,
+    owner: 'ManagementEclA5AccountingPage',
+    actions: <String>[
+      'post remeasurement',
+      'post full write-off',
+      'review recovery evidence',
+      'post recovery',
+    ],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
 ];
