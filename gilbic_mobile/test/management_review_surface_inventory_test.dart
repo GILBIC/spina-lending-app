@@ -78,9 +78,13 @@ void main() {
           owner: 'ManagementOpeningBalanceJournalPage',
           actions: <String>['prepare', 'post'],
         ),
+        'period-close': (
+          owner: 'ManagementPeriodClosePage',
+          actions: <String>['prepare', 'post'],
+        ),
       };
 
-      expect(managementMutationSurfaceCatalog, hasLength(13));
+      expect(managementMutationSurfaceCatalog, hasLength(14));
       expect(
         managementMutationSurfaceCatalog.map((entry) => entry.surface).toSet(),
         ManagementMutationSurface.values.toSet(),

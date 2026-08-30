@@ -17,7 +17,8 @@ enum ManagementMutationSurface {
   fiscalPeriod('fiscal-period'),
   generalJournal('general-journal'),
   openingWorkbook('opening-workbook'),
-  openingJournal('opening-journal');
+  openingJournal('opening-journal'),
+  periodClose('period-close');
 
   const ManagementMutationSurface(this.id);
 
@@ -130,6 +131,12 @@ const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
   ManagementMutationSurfaceEntry(
     surface: ManagementMutationSurface.openingJournal,
     owner: 'ManagementOpeningBalanceJournalPage',
+    actions: <String>['prepare', 'post'],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.periodClose,
+    owner: 'ManagementPeriodClosePage',
     actions: <String>['prepare', 'post'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
