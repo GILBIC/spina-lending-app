@@ -16,10 +16,10 @@ from .request_auth import authenticated_device_context
 from .v1_tax_additional_amendment_repository import (
     PostgresV1TaxAdditionalAmendmentRepository,
     V1TaxAdditionalAmendmentBlocked,
+    V1TaxAdditionalAmendmentCandidate,
     V1TaxAdditionalAmendmentError,
     V1TaxAdditionalAmendmentItem,
 )
-
 
 AMENDMENT_EVIDENCE_PERMISSION = "accounting.tax.additional_amendment_evidence.record"
 AMENDMENT_PREPARE_PERMISSION = "accounting.tax.additional_amendment.prepare"
@@ -183,6 +183,40 @@ def _item_payload(item: V1TaxAdditionalAmendmentItem) -> dict[str, object]:
     return _serialize(asdict(item))
 
 
+def _candidate_payload(
+    item: V1TaxAdditionalAmendmentCandidate,
+) -> dict[str, object]:
+    return _serialize(
+        {
+            "tax_type": item.tax_type,
+            "tax_return_id": item.tax_return_id,
+            "tax_liability_posting_id": item.tax_liability_posting_id,
+            "original_evidence_id": item.original_evidence_id,
+            "original_evidence_version": item.original_evidence_version,
+            "replacement_evidence_id": item.replacement_evidence_id,
+            "replacement_evidence_version": item.replacement_evidence_version,
+            "source_id": item.source_id,
+            "loan_id": item.loan_id,
+            "client_id": item.client_id,
+            "original_declared_tax_due": item.original_declared_tax_due,
+            "revised_declared_tax_due": item.revised_declared_tax_due,
+            "original_item_tax_due": item.original_item_tax_due,
+            "replacement_item_tax_due": item.replacement_item_tax_due,
+            "additional_tax_due": item.additional_tax_due,
+            "payment_basis": item.payment_basis,
+            "payment_required_amount": item.payment_required_amount,
+            "filing_date": item.filing_date,
+            "recognition_date": item.recognition_date,
+            "original_evidence_digest": item.original_evidence_digest,
+            "replacement_evidence_digest": item.replacement_evidence_digest,
+            "original_fiscal_period_id": item.original_fiscal_period_id,
+            "original_fiscal_period_start": item.original_fiscal_period_start,
+            "original_fiscal_period_end": item.original_fiscal_period_end,
+            "original_settlement_posting_id": item.original_settlement_posting_id,
+        }
+    )
+
+
 def _summary_payload(summary: dict[str, object]) -> dict[str, object]:
     return _serialize(summary)
 
@@ -243,6 +277,7 @@ def _require_confirmation(confirm: bool, action: str) -> None:
 def create_v1_tax_additional_amendment_router() -> APIRouter:
     router = APIRouter(tags=["management financial accounting"])
 
+    @router.get("/api/mobile/v1/management/financial-accounting/tax/additional-amendments")
     @router.get("/api/v1/management/financial-accounting/tax/additional-amendments")
     def list_v1_tax_additional_amendments(
         amendment_status: Literal[
@@ -282,6 +317,12 @@ def create_v1_tax_additional_amendment_router() -> APIRouter:
                         status=amendment_status, limit=limit, offset=offset
                     )
                 ],
+                "amendment_candidates": [
+                    _candidate_payload(item)
+                    for item in tax.list_amendment_candidates(
+                        limit=limit, offset=offset
+                    )
+                ],
                 "permissions": {
                     "amendment_evidence_record": AMENDMENT_EVIDENCE_PERMISSION in actor.permissions,
                     "additional_liability_prepare": AMENDMENT_PREPARE_PERMISSION in actor.permissions,
@@ -290,6 +331,13 @@ def create_v1_tax_additional_amendment_router() -> APIRouter:
                     "additional_settlement_prepare": SETTLEMENT_PREPARE_PERMISSION in actor.permissions,
                     "additional_settlement_post": SETTLEMENT_POST_PERMISSION in actor.permissions,
                 },
+                "amendment_status": amendment_status,
+                "limit": limit,
+                "offset": offset,
+                "tax_additional_amendment_enabled": True,
+                "tax_additional_settlement_enabled": True,
+                "tax_refund_credit_realization_enabled": False,
+                "automatic_source_posting": False,
                 "notice": (
                     "This V1 path handles one evidence-backed upward correction for an exact filed return: "
                     "the additional liability is Dr the original dedicated tax expense / Cr 2100 Tax Payables, "
@@ -301,6 +349,10 @@ def create_v1_tax_additional_amendment_router() -> APIRouter:
             },
         }
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/additional-amendments/evidence",
+        status_code=status.HTTP_201_CREATED,
+    )
     @router.post(
         "/api/v1/management/financial-accounting/tax/additional-amendments/evidence",
         status_code=status.HTTP_201_CREATED,
@@ -343,6 +395,9 @@ def create_v1_tax_additional_amendment_router() -> APIRouter:
         return {"success": True, "data": {"item": _item_payload(item)}}
 
     @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/additional-amendments/{amendment_evidence_id}/prepare-liability"
+    )
+    @router.post(
         "/api/v1/management/financial-accounting/tax/additional-amendments/{amendment_evidence_id}/prepare-liability"
     )
     def prepare_v1_tax_additional_liability(
@@ -374,6 +429,9 @@ def create_v1_tax_additional_amendment_router() -> APIRouter:
             raise _exception(error) from error
         return {"success": True, "data": {"item": _item_payload(item)}}
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/additional-amendments/{amendment_evidence_id}/post-liability"
+    )
     @router.post(
         "/api/v1/management/financial-accounting/tax/additional-amendments/{amendment_evidence_id}/post-liability"
     )
@@ -418,6 +476,10 @@ def create_v1_tax_additional_amendment_router() -> APIRouter:
         return {"success": True, "data": {"item": _item_payload(item)}}
 
     @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/additional-amendments/{amendment_evidence_id}/payment-evidence",
+        status_code=status.HTTP_201_CREATED,
+    )
+    @router.post(
         "/api/v1/management/financial-accounting/tax/additional-amendments/{amendment_evidence_id}/payment-evidence",
         status_code=status.HTTP_201_CREATED,
     )
@@ -458,6 +520,9 @@ def create_v1_tax_additional_amendment_router() -> APIRouter:
         return {"success": True, "data": {"item": _item_payload(item)}}
 
     @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/additional-amendments/{amendment_evidence_id}/prepare-settlement"
+    )
+    @router.post(
         "/api/v1/management/financial-accounting/tax/additional-amendments/{amendment_evidence_id}/prepare-settlement"
     )
     def prepare_v1_tax_additional_settlement(
@@ -494,6 +559,9 @@ def create_v1_tax_additional_amendment_router() -> APIRouter:
             raise _exception(error) from error
         return {"success": True, "data": {"item": _item_payload(item)}}
 
+    @router.post(
+        "/api/mobile/v1/management/financial-accounting/tax/additional-amendments/{amendment_evidence_id}/post-settlement"
+    )
     @router.post(
         "/api/v1/management/financial-accounting/tax/additional-amendments/{amendment_evidence_id}/post-settlement"
     )

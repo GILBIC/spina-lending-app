@@ -25,7 +25,8 @@ enum ManagementMutationSurface {
   taxEvidence('tax-evidence'),
   taxLiability('tax-liability'),
   taxSettlement('tax-settlement'),
-  taxAdjustment('tax-adjustment');
+  taxAdjustment('tax-adjustment'),
+  additionalTax('additional-tax');
 
   const ManagementMutationSurface(this.id);
 
@@ -196,6 +197,19 @@ const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
     surface: ManagementMutationSurface.taxAdjustment,
     owner: 'ManagementTaxAdjustmentPage',
     actions: <String>['record evidence', 'prepare', 'post'],
+    defaultRisk: ManagementReviewRisk.protectedFinancial,
+  ),
+  ManagementMutationSurfaceEntry(
+    surface: ManagementMutationSurface.additionalTax,
+    owner: 'ManagementAdditionalTaxPage',
+    actions: <String>[
+      'record amendment evidence',
+      'prepare liability',
+      'post liability',
+      'record payment evidence',
+      'prepare settlement',
+      'post settlement',
+    ],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
 ];

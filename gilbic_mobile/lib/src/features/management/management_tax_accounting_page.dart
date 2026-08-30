@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:gilbic_mobile/src/core/auth/user_session.dart';
 import 'package:gilbic_mobile/src/core/device/device_identity.dart';
+import 'package:gilbic_mobile/src/core/management/additional_tax_repository.dart';
 import 'package:gilbic_mobile/src/core/management/tax_evidence_repository.dart';
 import 'package:gilbic_mobile/src/core/management/tax_adjustment_repository.dart';
 import 'package:gilbic_mobile/src/core/management/tax_liability_repository.dart';
 import 'package:gilbic_mobile/src/core/management/tax_settlement_repository.dart';
 import 'package:gilbic_mobile/src/features/management/management_tax_adjustment_page.dart';
+import 'package:gilbic_mobile/src/features/management/management_additional_tax_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_tax_evidence_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_tax_liability_page.dart';
 import 'package:gilbic_mobile/src/features/management/management_tax_settlement_page.dart';
@@ -18,6 +20,7 @@ class ManagementTaxAccountingPage extends StatelessWidget {
     this.liabilityRepository,
     this.settlementRepository,
     this.adjustmentRepository,
+    this.additionalTaxRepository,
     super.key,
   });
 
@@ -27,6 +30,7 @@ class ManagementTaxAccountingPage extends StatelessWidget {
   final TaxLiabilityRepository? liabilityRepository;
   final TaxSettlementRepository? settlementRepository;
   final TaxAdjustmentRepository? adjustmentRepository;
+  final AdditionalTaxRepository? additionalTaxRepository;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -128,11 +132,32 @@ class ManagementTaxAccountingPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
+          Card(
+            child: ListTile(
+              key: const Key('additional-tax-workspace'),
+              leading: const Icon(Icons.trending_up),
+              title: const Text('Additional tax'),
+              subtitle: const Text(
+                'Retain upward-amendment evidence, post the additional liability, then settle the exact required payment.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (context) => ManagementAdditionalTaxPage(
+                    session: session,
+                    deviceIdentityProvider: deviceIdentityProvider,
+                    repository: additionalTaxRepository,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           const Card(
             child: Padding(
               padding: EdgeInsets.all(14),
               child: Text(
-                'Additional-tax amendments and Tax Recoverable refund/credit realization remain separate later protected workflows; automatic source posting remains disabled.',
+                'Tax Recoverable refund/credit realization remains a separate later Mobile workflow; automatic source posting remains disabled.',
               ),
             ),
           ),

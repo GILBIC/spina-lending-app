@@ -124,9 +124,20 @@ void main() {
           owner: 'ManagementTaxAdjustmentPage',
           actions: <String>['record evidence', 'prepare', 'post'],
         ),
+        'additional-tax': (
+          owner: 'ManagementAdditionalTaxPage',
+          actions: <String>[
+            'record amendment evidence',
+            'prepare liability',
+            'post liability',
+            'record payment evidence',
+            'prepare settlement',
+            'post settlement',
+          ],
+        ),
       };
 
-      expect(managementMutationSurfaceCatalog, hasLength(21));
+      expect(managementMutationSurfaceCatalog, hasLength(22));
       expect(
         managementMutationSurfaceCatalog.map((entry) => entry.surface).toSet(),
         ManagementMutationSurface.values.toSet(),
