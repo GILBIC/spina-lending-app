@@ -85,7 +85,7 @@ class _ManagementEclAllowancePostingPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.eclAllowance,
+        binding: ManagementMutationBinding.eclAllowance,
         recordLabel: 'Loan',
         recordValue: '${item.loanNumber} • ${item.loanTypeName}',
         statusLabel: _statusLabel(item.allowancePostingStatus),
@@ -135,7 +135,6 @@ class _ManagementEclAllowancePostingPageState
         nextActionLabel: 'Prepare allowance draft',
         consequence:
             'The backend will freeze an exact protected draft for separate posting review. No General Ledger balance changes yet.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;
@@ -174,7 +173,7 @@ class _ManagementEclAllowancePostingPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.eclAllowance,
+        binding: ManagementMutationBinding.eclAllowance,
         recordLabel: 'Prepared allowance journal',
         recordValue: '${item.loanNumber} • ${item.sourceEventKey}',
         statusLabel: _statusLabel(item.allowancePostingStatus),
@@ -221,7 +220,6 @@ class _ManagementEclAllowancePostingPageState
         nextActionLabel: 'Post initial allowance',
         consequence:
             'The backend will immutably post the initial ECL allowance to the protected General Ledger and permanently audit this confirmation.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;

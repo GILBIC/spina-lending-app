@@ -85,7 +85,7 @@ class _ManagementEclA5AccountingPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.eclA5,
+        binding: ManagementMutationBinding.eclA5,
         recordLabel: 'Loan',
         recordValue: item.loanNumber,
         statusLabel: _statusLabel(item.a5Status),
@@ -128,7 +128,6 @@ class _ManagementEclA5AccountingPageState
         nextActionLabel: 'Post ECL remeasurement',
         consequence:
             'The backend will post the exact allowance increase, decrease, or reversal and permanently audit this Management confirmation.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;
@@ -154,7 +153,7 @@ class _ManagementEclA5AccountingPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.eclA5,
+        binding: ManagementMutationBinding.eclA5,
         recordLabel: 'Loan',
         recordValue: item.loanNumber,
         statusLabel: _statusLabel(item.a5Status),
@@ -200,7 +199,6 @@ class _ManagementEclA5AccountingPageState
         nextActionLabel: 'Post full write-off',
         consequence:
             'The backend will immutably use the fully covering ECL allowance to derecognize the exact gross carrying amount and audit the result.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;
@@ -231,7 +229,7 @@ class _ManagementEclA5AccountingPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.eclA5,
+        binding: ManagementMutationBinding.eclA5,
         recordLabel: 'Protected later cash',
         recordValue: item.loanNumber,
         statusLabel: _statusLabel(item.a5Status),
@@ -266,7 +264,6 @@ class _ManagementEclA5AccountingPageState
         nextActionLabel: 'Record recovery evidence',
         consequence:
             'The backend will bind this exact protected later cash transaction to retained Management evidence for separate recovery posting review.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;
@@ -294,7 +291,7 @@ class _ManagementEclA5AccountingPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.eclA5,
+        binding: ManagementMutationBinding.eclA5,
         recordLabel: 'Reviewed recovery',
         recordValue: item.loanNumber,
         statusLabel: _statusLabel(item.a5Status),
@@ -332,7 +329,6 @@ class _ManagementEclA5AccountingPageState
         nextActionLabel: 'Post cash recovery',
         consequence:
             'The backend will immutably post the exact reviewed cash recovery and permanently audit this Management confirmation.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;

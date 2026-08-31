@@ -154,7 +154,7 @@ class _ManagementGeneralJournalPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.generalJournal,
+        binding: ManagementMutationBinding.generalJournal,
         recordLabel: 'Journal draft',
         recordValue: entry.entryNumber ?? entry.entryId,
         statusLabel: 'Draft — not posted',
@@ -164,7 +164,6 @@ class _ManagementGeneralJournalPageState
         consequence:
             'The journal will be posted immutably to the General Ledger. '
             'Corrections require a separate reversal with permanent audit evidence.',
-        risk: ManagementReviewRisk.protectedFinancial,
         secondaryReferences: <ManagementReviewFact>[
           ManagementReviewFact(label: 'Entry ID', value: entry.entryId),
         ],
@@ -188,7 +187,7 @@ class _ManagementGeneralJournalPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.generalJournal,
+        binding: ManagementMutationBinding.generalJournal,
         recordLabel: 'Journal draft',
         recordValue: entry.entryNumber ?? entry.entryId,
         statusLabel: 'Draft — not posted',
@@ -198,7 +197,6 @@ class _ManagementGeneralJournalPageState
         consequence:
             'The draft will be cancelled while a permanent audit snapshot is '
             'retained. No posted ledger balance will change.',
-        risk: ManagementReviewRisk.protectedFinancial,
         secondaryReferences: <ManagementReviewFact>[
           ManagementReviewFact(label: 'Entry ID', value: entry.entryId),
         ],
@@ -229,7 +227,7 @@ class _ManagementGeneralJournalPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.generalJournal,
+        binding: ManagementMutationBinding.generalJournal,
         recordLabel: 'Posted journal',
         recordValue: entry.entryNumber ?? entry.entryId,
         statusLabel: 'Posted — immutable',
@@ -249,7 +247,6 @@ class _ManagementGeneralJournalPageState
         consequence:
             'A separate unposted reversal draft will be created with debit and '
             'credit lines swapped. It must be reviewed and posted separately.',
-        risk: ManagementReviewRisk.protectedFinancial,
         secondaryReferences: <ManagementReviewFact>[
           ManagementReviewFact(
             label: 'Original entry ID',
@@ -287,7 +284,7 @@ class _ManagementGeneralJournalPageState
       (total, line) => total + line.credit,
     );
     return ManagementReviewPresentation.validated(
-      surface: ManagementMutationSurface.generalJournal,
+      binding: ManagementMutationBinding.generalJournal,
       recordLabel: entry == null
           ? 'New manual journal'
           : 'Manual journal draft',
@@ -319,7 +316,6 @@ class _ManagementGeneralJournalPageState
           'The entered journal will be sent as an unposted draft. The backend '
           'will revalidate balance and posting rules; no General Ledger balance '
           'changes until separate review and posting.',
-      risk: ManagementReviewRisk.protectedFinancial,
       secondaryReferences: entry == null
           ? const <ManagementReviewFact>[]
           : <ManagementReviewFact>[

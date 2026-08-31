@@ -298,7 +298,7 @@ class _ManagementRenewalRequestsPageState
     return showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.renewalWorkflow,
+        binding: ManagementMutationBinding.renewalWorkflow,
         recordLabel: 'Renewal request',
         recordValue: '${request.clientName} • ${request.loanNumber}',
         statusLabel:
@@ -323,7 +323,6 @@ class _ManagementRenewalRequestsPageState
         warnings: warnings,
         nextActionLabel: nextActionLabel,
         consequence: consequence,
-        risk: ManagementReviewRisk.privileged,
         secondaryReferences: <ManagementReviewFact>[
           ManagementReviewFact(label: 'Request ID', value: request.requestId),
         ],

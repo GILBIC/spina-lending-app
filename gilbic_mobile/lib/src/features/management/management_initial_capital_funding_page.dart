@@ -99,7 +99,7 @@ class _ManagementInitialCapitalFundingPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.initialCapital,
+        binding: ManagementMutationBinding.initialCapital,
         recordLabel: 'Retained funding evidence',
         recordValue: draft.evidenceReference,
         statusLabel: 'Ready to record immutable evidence',
@@ -135,7 +135,6 @@ class _ManagementInitialCapitalFundingPageState
         nextActionLabel: 'Record funding evidence',
         consequence:
             'The backend will immutably retain this evidence for a separate protected preparation and posting review.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;
@@ -169,7 +168,7 @@ class _ManagementInitialCapitalFundingPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.initialCapital,
+        binding: ManagementMutationBinding.initialCapital,
         recordLabel: 'Initial-capital evidence',
         recordValue: item.evidenceReference,
         statusLabel: 'Evidence ready for protected draft preparation',
@@ -202,7 +201,6 @@ class _ManagementInitialCapitalFundingPageState
         nextActionLabel: 'Prepare capital journal',
         consequence:
             'The backend will create an exact two-line draft for separate posting confirmation.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;
@@ -224,7 +222,7 @@ class _ManagementInitialCapitalFundingPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.initialCapital,
+        binding: ManagementMutationBinding.initialCapital,
         recordLabel: 'Prepared initial-capital journal',
         recordValue: item.evidenceReference,
         statusLabel: 'Prepared — exact posting confirmation required',
@@ -264,7 +262,6 @@ class _ManagementInitialCapitalFundingPageState
         nextActionLabel: 'Post initial capital',
         consequence:
             'The backend will immutably post Debit selected cash account and Credit Capital 3000 with permanent audit evidence.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;

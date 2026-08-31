@@ -108,7 +108,7 @@ class _ManagementSupportRequestsPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.clientSupport,
+        binding: ManagementMutationBinding.clientSupport,
         recordLabel: 'Client support request',
         recordValue: '${request.clientName} • ${request.clientCode}',
         statusLabel:
@@ -130,7 +130,6 @@ class _ManagementSupportRequestsPageState
         ],
         nextActionLabel: nextActionLabel,
         consequence: consequence,
-        risk: ManagementReviewRisk.routine,
         secondaryReferences: <ManagementReviewFact>[
           ManagementReviewFact(label: 'Request ID', value: request.requestId),
         ],

@@ -477,7 +477,7 @@ class _ActivationDialogState extends State<_ActivationDialog> {
         ? 'Active for a different schedule and needs review'
         : 'Not active for mobile collection';
     final review = ManagementReviewPresentation.validated(
-      surface: ManagementMutationSurface.contractCollection,
+      binding: ManagementMutationBinding.contractCollection,
       recordLabel: 'Contract collection loan',
       recordValue: '${widget.loan.clientName} • ${widget.loan.loanNumber}',
       statusLabel: status,
@@ -508,7 +508,6 @@ class _ActivationDialogState extends State<_ActivationDialog> {
       consequence: widget.activate
           ? 'Mobile collection will be available only for this verified current contract schedule.'
           : 'Mobile collection will be blocked until a later Management reactivation.',
-      risk: ManagementReviewRisk.privileged,
       secondaryReferences: <ManagementReviewFact>[
         ManagementReviewFact(label: 'Loan ID', value: widget.loan.loanId),
       ],

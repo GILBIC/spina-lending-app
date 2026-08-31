@@ -346,7 +346,7 @@ class _ClientRegistrationLinkPageState
   }) {
     final registration = widget.registration;
     return ManagementReviewPresentation.validated(
-      surface: ManagementMutationSurface.clientRegistration,
+      binding: ManagementMutationBinding.clientRegistration,
       recordLabel: 'Client registration request',
       recordValue:
           '${registration.fullName} • ${registration.claimedClientCode}',
@@ -361,7 +361,6 @@ class _ClientRegistrationLinkPageState
       ],
       nextActionLabel: nextAction,
       consequence: consequence,
-      risk: ManagementReviewRisk.privileged,
     );
   }
 

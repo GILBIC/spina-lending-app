@@ -103,7 +103,7 @@ class _ManagementTaxAdjustmentPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.taxAdjustment,
+        binding: ManagementMutationBinding.taxAdjustment,
         recordLabel: 'Tax correction candidate',
         recordValue: candidate.taxLiabilityPostingId,
         statusLabel: 'Server-derived exact stale/current evidence pair',
@@ -153,7 +153,6 @@ class _ManagementTaxAdjustmentPageState
         nextActionLabel: 'Record correction evidence',
         consequence:
             'Records immutable correction evidence only; no adjustment journal is posted.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;
@@ -242,7 +241,7 @@ class _ManagementTaxAdjustmentPageState
   }) => showManagementReviewConfirmation(
     context,
     ManagementReviewPresentation.validated(
-      surface: ManagementMutationSurface.taxAdjustment,
+      binding: ManagementMutationBinding.taxAdjustment,
       recordLabel: 'Tax correction evidence',
       recordValue: item.adjustmentEvidenceId,
       statusLabel: status,
@@ -296,7 +295,6 @@ class _ManagementTaxAdjustmentPageState
       ],
       nextActionLabel: next,
       consequence: consequence,
-      risk: ManagementReviewRisk.protectedFinancial,
     ),
   );
 

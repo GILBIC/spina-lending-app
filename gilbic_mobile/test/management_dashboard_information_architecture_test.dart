@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/core/auth/app_role.dart';
@@ -37,6 +38,37 @@ import 'package:gilbic_mobile/src/features/management/management_staff_devices_p
 import 'package:gilbic_mobile/src/features/notifications/remittance_notifications_page.dart';
 import 'package:gilbic_mobile/src/features/offline/mobile_offline_policy_page.dart';
 import 'package:gilbic_mobile/src/theme/spina_theme.dart';
+
+const _managementDestinations = <(String, Type)>[
+  ('management-alerts-activity', ManagementAlertsAuditPage),
+  ('management-loans', ManagementLoanPortfolioPage),
+  (
+    'management-contract-collection-activation',
+    ManagementContractCollectionActivationPage,
+  ),
+  ('management-no-collection', ManagementNoCollectionPage),
+  ('management-loan-operations', ManagementLoanOperationsPage),
+  ('remittance-notifications', RemittanceNotificationsPage),
+  ('management-direct-payment', OtherAreaCollectionPage),
+  ('management-void-payment', ManagementCollectionVoidPage),
+  ('management-staff-devices', ManagementStaffDevicesPage),
+  (
+    'management-employee-activity',
+    employee_activity_feature.ManagementEmployeeActivityPage,
+  ),
+  ('management-renewals', ManagementRenewalRequestsPage),
+  ('management-support', ManagementSupportRequestsPage),
+  ('client-registration-approvals', ClientRegistrationApprovalsPage),
+  ('management-my-account-devices', AccountSettingsPage),
+  ('management-offline-policy', MobileOfflinePolicyPage),
+  ('management-financial-accounting', ManagementFinancialAccountingPage),
+  ('management-ecl-outcome-review', ManagementEclOutcomeReviewPage),
+  ('management-accounting-measurement', ManagementAccountingMeasurementPage),
+  ('management-opening-balance-workbook', ManagementOpeningBalanceWorkbookPage),
+  ('management-opening-balance-journal', ManagementOpeningBalanceJournalPage),
+  ('management-general-journal', ManagementGeneralJournalLauncherPage),
+  ('management-financial-statements', ManagementFinancialStatementsPage),
+];
 
 void main() {
   testWidgets('number boxes are the first dashboard cards below the header', (
@@ -381,47 +413,7 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(1100, 2400));
       addTearDown(() async => tester.binding.setSurfaceSize(null));
 
-      const destinations = <(String, Type)>[
-        ('management-alerts-activity', ManagementAlertsAuditPage),
-        ('management-loans', ManagementLoanPortfolioPage),
-        (
-          'management-contract-collection-activation',
-          ManagementContractCollectionActivationPage,
-        ),
-        ('management-no-collection', ManagementNoCollectionPage),
-        ('management-loan-operations', ManagementLoanOperationsPage),
-        ('remittance-notifications', RemittanceNotificationsPage),
-        ('management-direct-payment', OtherAreaCollectionPage),
-        ('management-void-payment', ManagementCollectionVoidPage),
-        ('management-staff-devices', ManagementStaffDevicesPage),
-        (
-          'management-employee-activity',
-          employee_activity_feature.ManagementEmployeeActivityPage,
-        ),
-        ('management-renewals', ManagementRenewalRequestsPage),
-        ('management-support', ManagementSupportRequestsPage),
-        ('client-registration-approvals', ClientRegistrationApprovalsPage),
-        ('management-my-account-devices', AccountSettingsPage),
-        ('management-offline-policy', MobileOfflinePolicyPage),
-        ('management-financial-accounting', ManagementFinancialAccountingPage),
-        ('management-ecl-outcome-review', ManagementEclOutcomeReviewPage),
-        (
-          'management-accounting-measurement',
-          ManagementAccountingMeasurementPage,
-        ),
-        (
-          'management-opening-balance-workbook',
-          ManagementOpeningBalanceWorkbookPage,
-        ),
-        (
-          'management-opening-balance-journal',
-          ManagementOpeningBalanceJournalPage,
-        ),
-        ('management-general-journal', ManagementGeneralJournalLauncherPage),
-        ('management-financial-statements', ManagementFinancialStatementsPage),
-      ];
-
-      for (final destination in destinations) {
+      for (final destination in _managementDestinations) {
         await tester.pumpWidget(
           MaterialApp(
             theme: SpinaTheme.light,
@@ -446,11 +438,94 @@ void main() {
       }
     },
   );
+
+  testWidgets(
+    'Management command surface and dashboard denial match Android and iOS',
+    (tester) async {
+      final previousPlatform = debugDefaultTargetPlatformOverride;
+      await tester.binding.setSurfaceSize(const Size(1100, 2400));
+      addTearDown(() async {
+        debugDefaultTargetPlatformOverride = previousPlatform;
+        await tester.binding.setSurfaceSize(null);
+      });
+      try {
+        for (final platform in <TargetPlatform>[
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+        ]) {
+          debugDefaultTargetPlatformOverride = platform;
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: SpinaTheme.light,
+              home: _dashboard(_managementSession, targetPlatform: platform),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final title = find.text('Management');
+          expect(title, findsOneWidget, reason: platform.name);
+          expect(
+            Theme.of(tester.element(title)).platform,
+            platform,
+            reason: platform.name,
+          );
+          for (final destination in _managementDestinations) {
+            expect(
+              find.byKey(Key(destination.$1)),
+              findsOneWidget,
+              reason: '${platform.name}:${destination.$1}',
+            );
+          }
+          expect(
+            find.byKey(const Key('dashboard-permission-denied')),
+            findsNothing,
+            reason: platform.name,
+          );
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: SpinaTheme.light,
+              home: _dashboard(
+                _managementWithoutDashboardPermission,
+                targetPlatform: platform,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(
+            find.byKey(const Key('dashboard-permission-denied')),
+            findsOneWidget,
+            reason: platform.name,
+          );
+          expect(
+            find.byKey(const Key('management-section-review')),
+            findsNothing,
+            reason: platform.name,
+          );
+          for (final destination in _managementDestinations) {
+            expect(
+              find.byKey(Key(destination.$1)),
+              findsNothing,
+              reason: '${platform.name}:denied:${destination.$1}',
+            );
+          }
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        }
+      } finally {
+        debugDefaultTargetPlatformOverride = previousPlatform;
+      }
+    },
+  );
 }
 
 EnhancedRoleDashboard _dashboard(
   UserSession session, {
   ManagementAlertsAuditRepository? alertsAuditRepository,
+  TargetPlatform targetPlatform = TargetPlatform.android,
 }) {
   return EnhancedRoleDashboard(
     session: session,
@@ -459,7 +534,7 @@ EnhancedRoleDashboard _dashboard(
     paymentSubmissionRepository: SpinaPaymentSubmissionRepository(),
     deviceIdentityProvider: DeviceIdentityProvider(
       store: MemoryDeviceIdentityStore(),
-      platformResolver: () => 'android',
+      platformResolver: () => targetPlatform.name,
       appVersionResolver: () async => '1.0.0+1',
     ),
     collectionDeviceSequence: MemoryCollectionDeviceSequence(),
@@ -635,6 +710,16 @@ const _managementDashboardOnlySession = UserSession(
   rawRole: 'Management',
   accessToken: 'management-token',
   permissions: <String>['management.dashboard.view'],
+);
+
+const _managementWithoutDashboardPermission = UserSession(
+  userId: 'management-4',
+  username: 'management.four',
+  displayName: 'Management Four',
+  role: AppRole.management,
+  rawRole: 'Management',
+  accessToken: 'management-token',
+  permissions: <String>['accounting.view', 'account.manage'],
 );
 
 class _CompletedEmployeeActivityRepository

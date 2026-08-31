@@ -84,7 +84,7 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.periodClose,
+        binding: ManagementMutationBinding.periodClose,
         recordLabel: 'Fiscal period',
         recordValue: item.label,
         statusLabel: _statusLabel(item.closeStatus),
@@ -108,7 +108,6 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
         nextActionLabel: 'Prepare protected close',
         consequence:
             'The server will create an immutable preparation snapshot. No retained-earnings journal is posted and the period is not closed yet.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;
@@ -140,7 +139,7 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.periodClose,
+        binding: ManagementMutationBinding.periodClose,
         recordLabel: 'Fiscal period',
         recordValue: item.label,
         statusLabel: _statusLabel(item.closeStatus),
@@ -183,7 +182,6 @@ class _ManagementPeriodClosePageState extends State<ManagementPeriodClosePage> {
         nextActionLabel: 'Post retained earnings & close',
         consequence:
             'The server will immutably post the retained-earnings close, close the fiscal period, and permanently audit this confirmation.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;

@@ -34,29 +34,14 @@ enum ManagementMutationSurface {
   final String id;
 }
 
-@immutable
-class ManagementMutationSurfaceEntry {
-  const ManagementMutationSurfaceEntry({
-    required this.surface,
-    required this.owner,
-    required this.actions,
-    required this.defaultRisk,
-  });
-
-  final ManagementMutationSurface surface;
-  final String owner;
-  final List<String> actions;
-  final ManagementReviewRisk defaultRisk;
-}
-
-const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
-  ManagementMutationSurfaceEntry(
+enum ManagementMutationBinding {
+  clientRegistration(
     surface: ManagementMutationSurface.clientRegistration,
     owner: 'ClientRegistrationApprovalsPage',
     actions: <String>['approve and link', 'reject'],
     defaultRisk: ManagementReviewRisk.privileged,
   ),
-  ManagementMutationSurfaceEntry(
+  renewalWorkflow(
     surface: ManagementMutationSurface.renewalWorkflow,
     owner: 'ManagementRenewalRequestsPage',
     actions: <String>[
@@ -68,13 +53,13 @@ const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
     ],
     defaultRisk: ManagementReviewRisk.privileged,
   ),
-  ManagementMutationSurfaceEntry(
+  staffInvitation(
     surface: ManagementMutationSurface.staffInvitation,
     owner: 'ManagementStaffInvitePage',
     actions: <String>['invite', 'reconcile uncertain result'],
     defaultRisk: ManagementReviewRisk.privileged,
   ),
-  ManagementMutationSurfaceEntry(
+  staffAccess(
     surface: ManagementMutationSurface.staffAccess,
     owner: 'ManagementStaffDetailPage',
     actions: <String>[
@@ -84,43 +69,43 @@ const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
     ],
     defaultRisk: ManagementReviewRisk.privileged,
   ),
-  ManagementMutationSurfaceEntry(
+  collectionVoid(
     surface: ManagementMutationSurface.collectionVoid,
     owner: 'ManagementCollectionVoidPage',
     actions: <String>['void eligible collection'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  contractCollection(
     surface: ManagementMutationSurface.contractCollection,
     owner: 'ManagementContractCollectionActivationPage',
     actions: <String>['activate', 'deactivate'],
     defaultRisk: ManagementReviewRisk.privileged,
   ),
-  ManagementMutationSurfaceEntry(
+  noCollection(
     surface: ManagementMutationSurface.noCollection,
     owner: 'ManagementNoCollectionPage',
     actions: <String>['declare', 'reverse'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  clientSupport(
     surface: ManagementMutationSurface.clientSupport,
     owner: 'ManagementSupportRequestsPage',
     actions: <String>['answer', 'resolve', 'cancel'],
     defaultRisk: ManagementReviewRisk.routine,
   ),
-  ManagementMutationSurfaceEntry(
+  eclOutcomeReview(
     surface: ManagementMutationSurface.eclOutcomeReview,
     owner: 'ManagementEclOutcomeReviewPage',
     actions: <String>['save historical outcome review'],
     defaultRisk: ManagementReviewRisk.privileged,
   ),
-  ManagementMutationSurfaceEntry(
+  fiscalPeriod(
     surface: ManagementMutationSurface.fiscalPeriod,
     owner: 'ManagementFinancialAccountingPage',
     actions: <String>['create period', 'change status'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  generalJournal(
     surface: ManagementMutationSurface.generalJournal,
     owner: 'ManagementGeneralJournalPage',
     actions: <String>[
@@ -131,31 +116,31 @@ const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
     ],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  openingWorkbook(
     surface: ManagementMutationSurface.openingWorkbook,
     owner: 'ManagementOpeningBalanceWorkbookPage',
     actions: <String>['initialize', 'edit line or policy', 'change status'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  openingJournal(
     surface: ManagementMutationSurface.openingJournal,
     owner: 'ManagementOpeningBalanceJournalPage',
     actions: <String>['prepare', 'post'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  periodClose(
     surface: ManagementMutationSurface.periodClose,
     owner: 'ManagementPeriodClosePage',
     actions: <String>['prepare', 'post'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  eclAllowance(
     surface: ManagementMutationSurface.eclAllowance,
     owner: 'ManagementEclAllowancePostingPage',
     actions: <String>['prepare', 'post'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  eclA5(
     surface: ManagementMutationSurface.eclA5,
     owner: 'ManagementEclA5AccountingPage',
     actions: <String>[
@@ -166,13 +151,13 @@ const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
     ],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  initialCapital(
     surface: ManagementMutationSurface.initialCapital,
     owner: 'ManagementInitialCapitalFundingPage',
     actions: <String>['record evidence', 'prepare', 'post'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  taxEvidence(
     surface: ManagementMutationSurface.taxEvidence,
     owner: 'ManagementTaxEvidencePage',
     actions: <String>[
@@ -182,25 +167,25 @@ const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
     ],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  taxLiability(
     surface: ManagementMutationSurface.taxLiability,
     owner: 'ManagementTaxLiabilityPage',
     actions: <String>['prepare', 'post'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  taxSettlement(
     surface: ManagementMutationSurface.taxSettlement,
     owner: 'ManagementTaxSettlementPage',
     actions: <String>['record return', 'record payment', 'prepare', 'post'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  taxAdjustment(
     surface: ManagementMutationSurface.taxAdjustment,
     owner: 'ManagementTaxAdjustmentPage',
     actions: <String>['record evidence', 'prepare', 'post'],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  additionalTax(
     surface: ManagementMutationSurface.additionalTax,
     owner: 'ManagementAdditionalTaxPage',
     actions: <String>[
@@ -213,7 +198,7 @@ const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
     ],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
   ),
-  ManagementMutationSurfaceEntry(
+  taxRecoverable(
     surface: ManagementMutationSurface.taxRecoverable,
     owner: 'ManagementTaxRecoverablePage',
     actions: <String>[
@@ -225,8 +210,22 @@ const managementMutationSurfaceCatalog = <ManagementMutationSurfaceEntry>[
       'post credit',
     ],
     defaultRisk: ManagementReviewRisk.protectedFinancial,
-  ),
-];
+  );
+
+  const ManagementMutationBinding({
+    required this.surface,
+    required this.owner,
+    required this.actions,
+    required this.defaultRisk,
+  });
+
+  final ManagementMutationSurface surface;
+  final String owner;
+  final List<String> actions;
+  final ManagementReviewRisk defaultRisk;
+}
+
+const managementMutationSurfaceCatalog = ManagementMutationBinding.values;
 
 @immutable
 class ManagementReviewFact {
@@ -250,7 +249,7 @@ class ManagementReviewWarning {
 @immutable
 class ManagementReviewPresentation {
   const ManagementReviewPresentation._({
-    required this.surface,
+    required this.binding,
     required this.recordLabel,
     required this.recordValue,
     required this.statusLabel,
@@ -265,7 +264,7 @@ class ManagementReviewPresentation {
   });
 
   factory ManagementReviewPresentation.validated({
-    required ManagementMutationSurface surface,
+    required ManagementMutationBinding binding,
     required String recordLabel,
     required String recordValue,
     required String statusLabel,
@@ -274,7 +273,6 @@ class ManagementReviewPresentation {
     List<ManagementReviewWarning> warnings = const <ManagementReviewWarning>[],
     required String nextActionLabel,
     required String consequence,
-    required ManagementReviewRisk risk,
     List<ManagementReviewFact> secondaryReferences =
         const <ManagementReviewFact>[],
     bool actionEnabled = true,
@@ -305,7 +303,7 @@ class ManagementReviewPresentation {
       );
     }
     return ManagementReviewPresentation._(
-      surface: surface,
+      binding: binding,
       recordLabel: recordLabel.trim(),
       recordValue: recordValue.trim(),
       statusLabel: statusLabel.trim(),
@@ -314,7 +312,7 @@ class ManagementReviewPresentation {
       warnings: List<ManagementReviewWarning>.unmodifiable(warnings),
       nextActionLabel: nextActionLabel.trim(),
       consequence: consequence.trim(),
-      risk: risk,
+      risk: binding.defaultRisk,
       secondaryReferences: List<ManagementReviewFact>.unmodifiable(
         secondaryReferences,
       ),
@@ -322,7 +320,8 @@ class ManagementReviewPresentation {
     );
   }
 
-  final ManagementMutationSurface surface;
+  final ManagementMutationBinding binding;
+  ManagementMutationSurface get surface => binding.surface;
   final String recordLabel;
   final String recordValue;
   final String statusLabel;

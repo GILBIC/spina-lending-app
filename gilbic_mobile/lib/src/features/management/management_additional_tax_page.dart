@@ -100,7 +100,7 @@ class _ManagementAdditionalTaxPageState
   }) => showManagementReviewConfirmation(
     context,
     ManagementReviewPresentation.validated(
-      surface: ManagementMutationSurface.additionalTax,
+      binding: ManagementMutationBinding.additionalTax,
       recordLabel: 'Protected additional-tax workflow',
       recordValue: record,
       statusLabel: status,
@@ -114,7 +114,6 @@ class _ManagementAdditionalTaxPageState
       ],
       nextActionLabel: next,
       consequence: consequence,
-      risk: ManagementReviewRisk.protectedFinancial,
     ),
   );
 

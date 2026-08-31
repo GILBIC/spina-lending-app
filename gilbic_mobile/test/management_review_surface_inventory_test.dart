@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gilbic_mobile/src/features/management/review/management_review.dart';
+import 'package:gilbic_mobile/src/theme/spina_theme.dart';
 
 void main() {
   test(
@@ -188,6 +190,23 @@ void main() {
     expect(mutationOwners.intersection(readOnlyOwners), isEmpty);
   });
 
+  test('typed production bindings are complete and one-to-one', () {
+    expect(
+      managementMutationSurfaceCatalog,
+      orderedEquals(ManagementMutationBinding.values),
+    );
+    expect(
+      managementMutationSurfaceCatalog.map((entry) => entry.name),
+      orderedEquals(
+        managementMutationSurfaceCatalog.map((entry) => entry.surface.name),
+      ),
+    );
+    expect(
+      managementMutationSurfaceCatalog.map((entry) => entry.owner).toSet(),
+      hasLength(managementMutationSurfaceCatalog.length),
+    );
+  });
+
   for (final risk in ManagementReviewRisk.values) {
     testWidgets(
       '${risk.name} review exposes its risk to assistive technology',
@@ -196,13 +215,12 @@ void main() {
           (candidate) => candidate.defaultRisk == risk,
         );
         final review = ManagementReviewPresentation.validated(
-          surface: entry.surface,
+          binding: entry,
           recordLabel: 'Test record',
           recordValue: 'Record 1',
           statusLabel: 'Waiting for Management review',
           nextActionLabel: 'Review action',
           consequence: 'The server record will move to its reviewed state.',
-          risk: risk,
         );
 
         await tester.pumpWidget(
@@ -218,6 +236,67 @@ void main() {
         expect(find.byKey(review.key), findsOneWidget);
       },
     );
+  }
+
+  for (final platform in <TargetPlatform>[
+    TargetPlatform.android,
+    TargetPlatform.iOS,
+  ]) {
+    testWidgets('the catalogued review contract renders on ${platform.name}', (
+      tester,
+    ) async {
+      final previousPlatform = debugDefaultTargetPlatformOverride;
+      debugDefaultTargetPlatformOverride = platform;
+      await tester.binding.setSurfaceSize(const Size(430, 800));
+      addTearDown(() async {
+        debugDefaultTargetPlatformOverride = previousPlatform;
+        await tester.binding.setSurfaceSize(null);
+      });
+      final reviews = managementMutationSurfaceCatalog
+          .map(
+            (entry) => ManagementReviewPresentation.validated(
+              binding: entry,
+              recordLabel: 'Protected record',
+              recordValue: entry.surface.id,
+              statusLabel: 'Waiting for Management review',
+              nextActionLabel: 'Confirm ${entry.actions.first}',
+              consequence:
+                  'The shared backend will validate and audit this action.',
+            ),
+          )
+          .toList(growable: false);
+
+      try {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: SpinaTheme.light,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: Column(
+                  children: reviews
+                      .map((review) => ManagementReviewPanel(review: review))
+                      .toList(growable: false),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        for (final review in reviews) {
+          expect(
+            find.byKey(review.key),
+            findsOneWidget,
+            reason: '${platform.name}:${review.surface.id}',
+          );
+        }
+        expect(
+          Theme.of(tester.element(find.byKey(reviews.first.key))).platform,
+          platform,
+        );
+      } finally {
+        debugDefaultTargetPlatformOverride = previousPlatform;
+      }
+    });
   }
 }
 

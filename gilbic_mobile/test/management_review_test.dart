@@ -214,7 +214,7 @@ ManagementReviewPresentation _review({
   bool actionEnabled = true,
 }) {
   return ManagementReviewPresentation.validated(
-    surface: ManagementMutationSurface.collectionVoid,
+    binding: ManagementMutationBinding.collectionVoid,
     recordLabel: 'Official receipt',
     recordValue: recordValue,
     statusLabel: 'Eligible for protected correction',
@@ -226,7 +226,6 @@ ManagementReviewPresentation _review({
     nextActionLabel: 'Void this collection',
     consequence:
         'The receipt will be voided, the client balance will be restored, and permanent audit evidence will remain.',
-    risk: ManagementReviewRisk.protectedFinancial,
     secondaryReferences: const <ManagementReviewFact>[
       ManagementReviewFact(label: 'Transaction reference', value: 'txn-42'),
     ],

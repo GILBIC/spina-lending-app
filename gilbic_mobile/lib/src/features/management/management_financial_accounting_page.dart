@@ -103,7 +103,7 @@ class _ManagementFinancialAccountingPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.fiscalPeriod,
+        binding: ManagementMutationBinding.fiscalPeriod,
         recordLabel: 'New fiscal period',
         recordValue:
             '${draft.label} • ${_date(draft.startDate)} – ${_date(draft.endDate)}',
@@ -120,7 +120,6 @@ class _ManagementFinancialAccountingPageState
         consequence:
             'A new open fiscal period will be created. This does not post a journal '
             'or change any account balance.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) {
@@ -159,7 +158,7 @@ class _ManagementFinancialAccountingPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.fiscalPeriod,
+        binding: ManagementMutationBinding.fiscalPeriod,
         recordLabel: 'Fiscal period',
         recordValue:
             '${period.label} • ${_date(period.startDate)} – ${_date(period.endDate)}',
@@ -186,7 +185,6 @@ class _ManagementFinancialAccountingPageState
         ],
         nextActionLabel: 'Change period to $targetLabel',
         consequence: consequence,
-        risk: ManagementReviewRisk.protectedFinancial,
         secondaryReferences: <ManagementReviewFact>[
           ManagementReviewFact(label: 'Period ID', value: period.periodId),
         ],

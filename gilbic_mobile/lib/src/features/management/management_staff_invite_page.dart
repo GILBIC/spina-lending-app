@@ -326,7 +326,7 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
                       const SizedBox(height: 10),
                       ManagementReviewPanel(
                         review: ManagementReviewPresentation.validated(
-                          surface: ManagementMutationSurface.staffInvitation,
+                          binding: ManagementMutationBinding.staffInvitation,
                           recordLabel: 'Staff invitation',
                           recordValue:
                               '${_uncertainUsername ?? 'Not provided by the server'} • ${_uncertainEmail ?? 'Not provided by the server'}',
@@ -334,7 +334,6 @@ class _ManagementStaffInvitePageState extends State<ManagementStaffInvitePage> {
                           nextActionLabel: 'Check the server result',
                           consequence:
                               'SPINA will check the authoritative staff directory; it will not send a second invitation.',
-                          risk: ManagementReviewRisk.privileged,
                           actionEnabled: !_submitting,
                         ),
                         compact: true,
@@ -371,7 +370,7 @@ ManagementReviewPresentation _invitationReview({
   required String role,
 }) {
   return ManagementReviewPresentation.validated(
-    surface: ManagementMutationSurface.staffInvitation,
+    binding: ManagementMutationBinding.staffInvitation,
     recordLabel: 'Staff invitation',
     recordValue: '$fullName • @$username',
     statusLabel: 'Waiting for Management confirmation',
@@ -385,7 +384,6 @@ ManagementReviewPresentation _invitationReview({
     nextActionLabel: 'Send staff invitation',
     consequence:
         'A pending staff account will be created with the selected canonical role; access still depends on server status and device approval.',
-    risk: ManagementReviewRisk.privileged,
   );
 }
 

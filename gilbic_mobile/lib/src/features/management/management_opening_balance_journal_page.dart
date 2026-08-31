@@ -441,7 +441,7 @@ ManagementReviewPresentation _openingJournalReview(
       : journal.postingBlocker ??
             'Protected opening-balance posting requirements are not complete.';
   return ManagementReviewPresentation.validated(
-    surface: ManagementMutationSurface.openingJournal,
+    binding: ManagementMutationBinding.openingJournal,
     recordLabel: preparing
         ? 'Opening balance workbook'
         : 'Opening balance journal draft',
@@ -493,7 +493,6 @@ ManagementReviewPresentation _openingJournalReview(
               'reviewed workbook. Nothing will be posted to the General Ledger.'
         : 'The opening balance journal will be posted immutably to the General '
               'Ledger. Corrections require protected reversal evidence.',
-    risk: ManagementReviewRisk.protectedFinancial,
     actionEnabled: actionEnabled,
   );
 }

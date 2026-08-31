@@ -132,7 +132,7 @@ class _ManagementCollectionVoidPageState
     }
 
     final review = ManagementReviewPresentation.validated(
-      surface: ManagementMutationSurface.collectionVoid,
+      binding: ManagementMutationBinding.collectionVoid,
       recordLabel: 'Official receipt',
       recordValue: '${candidate.receiptNumber} • ${candidate.clientName}',
       statusLabel: 'Eligible unlocked and unremitted collection',
@@ -165,7 +165,6 @@ class _ManagementCollectionVoidPageState
           'The receipt will be voided and the official balance will be restored '
           'to ${_money(candidate.previousBalance)}. Permanent audit evidence '
           'and the reviewed reason will be retained.',
-      risk: ManagementReviewRisk.protectedFinancial,
       secondaryReferences: <ManagementReviewFact>[
         ManagementReviewFact(
           label: 'Transaction ID',

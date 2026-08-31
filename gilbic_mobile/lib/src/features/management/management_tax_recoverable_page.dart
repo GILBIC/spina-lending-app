@@ -112,7 +112,7 @@ class _ManagementTaxRecoverablePageState
   }) => showManagementReviewConfirmation(
     context,
     ManagementReviewPresentation.validated(
-      surface: ManagementMutationSurface.taxRecoverable,
+      binding: ManagementMutationBinding.taxRecoverable,
       recordLabel: 'Protected Tax Recoverable workflow',
       recordValue: record,
       statusLabel: status,
@@ -126,7 +126,6 @@ class _ManagementTaxRecoverablePageState
       ],
       nextActionLabel: next,
       consequence: consequence,
-      risk: ManagementReviewRisk.protectedFinancial,
     ),
   );
 

@@ -273,7 +273,7 @@ class _ManagementNoCollectionPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.noCollection,
+        binding: ManagementMutationBinding.noCollection,
         recordLabel: 'No Collection declaration',
         recordValue: '${state.clientName} • ${state.loanNumber}',
         statusLabel:
@@ -304,7 +304,6 @@ class _ManagementNoCollectionPageState
             'The server will record the No Collection date and shift the '
             'reviewed unpaid installments while preserving the contractual '
             'schedule and audit evidence.',
-        risk: ManagementReviewRisk.protectedFinancial,
         secondaryReferences: <ManagementReviewFact>[
           ManagementReviewFact(label: 'Loan ID', value: state.loanId),
           ManagementReviewFact(label: 'Schedule ID', value: state.scheduleId),
@@ -379,7 +378,7 @@ class _ManagementNoCollectionPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.noCollection,
+        binding: ManagementMutationBinding.noCollection,
         recordLabel: 'No Collection reversal',
         recordValue: '${state.clientName} • ${state.loanNumber}',
         statusLabel:
@@ -399,7 +398,6 @@ class _ManagementNoCollectionPageState
         consequence:
             'The server will reverse this No Collection adjustment against the '
             'current operational version and preserve both actions in audit history.',
-        risk: ManagementReviewRisk.protectedFinancial,
         secondaryReferences: <ManagementReviewFact>[
           ManagementReviewFact(
             label: 'Adjustment ID',

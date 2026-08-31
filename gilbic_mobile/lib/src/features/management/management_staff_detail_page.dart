@@ -319,14 +319,13 @@ class _ManagementStaffDetailPageState extends State<ManagementStaffDetailPage> {
         const <ManagementReviewFact>[],
   }) async {
     final review = ManagementReviewPresentation.validated(
-      surface: ManagementMutationSurface.staffAccess,
+      binding: ManagementMutationBinding.staffAccess,
       recordLabel: recordLabel,
       recordValue: recordValue,
       statusLabel: 'Current: $current',
       statusDetail: 'Requested: $requested',
       nextActionLabel: nextActionLabel,
       consequence: consequence,
-      risk: ManagementReviewRisk.privileged,
       secondaryReferences: secondaryReferences,
     );
     return await showDialog<bool>(

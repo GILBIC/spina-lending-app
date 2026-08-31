@@ -126,7 +126,7 @@ class _ManagementTaxSettlementPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.taxSettlement,
+        binding: ManagementMutationBinding.taxSettlement,
         recordLabel: 'Tax return composition',
         recordValue: '${candidates.length} exact posted liabilities',
         statusLabel: 'Server-derived liabilities selected',
@@ -163,7 +163,6 @@ class _ManagementTaxSettlementPageState
         nextActionLabel: 'Record return evidence',
         consequence:
             'Records retained return evidence only; no settlement journal is posted.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;
@@ -310,7 +309,7 @@ class _ManagementTaxSettlementPageState
   }) => showManagementReviewConfirmation(
     context,
     ManagementReviewPresentation.validated(
-      surface: ManagementMutationSurface.taxSettlement,
+      binding: ManagementMutationBinding.taxSettlement,
       recordLabel: 'Tax return',
       recordValue: item.taxReturnId,
       statusLabel: status,
@@ -346,7 +345,6 @@ class _ManagementTaxSettlementPageState
       ],
       nextActionLabel: next,
       consequence: consequence,
-      risk: ManagementReviewRisk.protectedFinancial,
     ),
   );
 

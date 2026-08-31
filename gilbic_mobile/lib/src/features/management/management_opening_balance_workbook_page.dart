@@ -88,7 +88,7 @@ class _ManagementOpeningBalanceWorkbookPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.openingWorkbook,
+        binding: ManagementMutationBinding.openingWorkbook,
         recordLabel: 'Opening balance workbook',
         recordValue: 'Cutover date ${_date(selected)}',
         statusLabel: 'Not initialized; source references are read-only',
@@ -106,7 +106,6 @@ class _ManagementOpeningBalanceWorkbookPageState
         consequence:
             'The workbook will snapshot approved source references for the selected '
             'cutover date. It will not create or post a journal.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) {
@@ -143,7 +142,7 @@ class _ManagementOpeningBalanceWorkbookPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.openingWorkbook,
+        binding: ManagementMutationBinding.openingWorkbook,
         recordLabel: 'Opening workbook line',
         recordValue: '${line.accountCode} • ${line.accountName}',
         statusLabel: plainManagementStatus(
@@ -175,7 +174,6 @@ class _ManagementOpeningBalanceWorkbookPageState
         consequence:
             'The workbook line and its evidence status will be saved. No opening '
             'balance or General Ledger entry will be posted.',
-        risk: ManagementReviewRisk.protectedFinancial,
         secondaryReferences: <ManagementReviewFact>[
           ManagementReviewFact(label: 'Workbook ID', value: workbookId),
         ],
@@ -218,7 +216,7 @@ class _ManagementOpeningBalanceWorkbookPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.openingWorkbook,
+        binding: ManagementMutationBinding.openingWorkbook,
         recordLabel: 'Opening workbook policy',
         recordValue: 'Profit and loss migration policy',
         statusLabel: workbook.summary.profitLossPolicyConfirmed
@@ -236,7 +234,6 @@ class _ManagementOpeningBalanceWorkbookPageState
         consequence:
             'The workbook policy evidence will be saved. No opening balance or '
             'General Ledger entry will be posted.',
-        risk: ManagementReviewRisk.protectedFinancial,
         secondaryReferences: <ManagementReviewFact>[
           ManagementReviewFact(label: 'Workbook ID', value: workbookId),
         ],
@@ -269,7 +266,7 @@ class _ManagementOpeningBalanceWorkbookPageState
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.openingWorkbook,
+        binding: ManagementMutationBinding.openingWorkbook,
         recordLabel: 'Opening balance workbook',
         recordValue: '${_date(workbook.summary.cutoverDate!)} • $workbookId',
         statusLabel: plainManagementStatus(
@@ -296,7 +293,6 @@ class _ManagementOpeningBalanceWorkbookPageState
                   'Journal preparation and posting remain separate protected actions.'
             : 'Only the workbook workflow state will return to Draft. No journal '
                   'will be prepared or posted.',
-        risk: ManagementReviewRisk.protectedFinancial,
         secondaryReferences: <ManagementReviewFact>[
           ManagementReviewFact(label: 'Workbook ID', value: workbookId),
         ],

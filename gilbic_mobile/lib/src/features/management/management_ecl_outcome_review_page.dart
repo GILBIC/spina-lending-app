@@ -776,7 +776,7 @@ ManagementReviewPresentation _eclReviewPresentation(
     },
   );
   return ManagementReviewPresentation.validated(
-    surface: ManagementMutationSurface.eclOutcomeReview,
+    binding: ManagementMutationBinding.eclOutcomeReview,
     recordLabel: 'Historical outcome episode',
     recordValue:
         '${_loanType(episode.loanType)} • Episode ${episode.episodeSequence}',
@@ -822,7 +822,6 @@ ManagementReviewPresentation _eclReviewPresentation(
         : 'A new immutable historical outcome-review version will be saved. '
               'This does not calculate loss, recovery, PD, LGD or ECL and does not '
               'post to the General Ledger.',
-    risk: ManagementReviewRisk.privileged,
     secondaryReferences: <ManagementReviewFact>[
       ManagementReviewFact(label: 'Episode key', value: episode.episodeKey),
     ],

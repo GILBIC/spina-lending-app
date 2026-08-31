@@ -151,7 +151,7 @@ class _ManagementTaxLiabilityPageState
   }) => showManagementReviewConfirmation(
     context,
     ManagementReviewPresentation.validated(
-      surface: ManagementMutationSurface.taxLiability,
+      binding: ManagementMutationBinding.taxLiability,
       recordLabel: 'Tax evidence',
       recordValue: item.evidenceId,
       statusLabel: status,
@@ -196,7 +196,6 @@ class _ManagementTaxLiabilityPageState
       ],
       nextActionLabel: next,
       consequence: consequence,
-      risk: ManagementReviewRisk.protectedFinancial,
     ),
   );
 

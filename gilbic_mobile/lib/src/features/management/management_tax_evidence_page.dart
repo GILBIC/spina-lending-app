@@ -96,7 +96,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.taxEvidence,
+        binding: ManagementMutationBinding.taxEvidence,
         recordLabel: 'Tax rule evidence',
         recordValue: draft.ruleKey,
         statusLabel: 'Ready to record immutable retained rule evidence',
@@ -129,7 +129,6 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
         nextActionLabel: 'Record tax rule evidence',
         consequence:
             'The backend will retain an immutable rule version. This action does not post tax or a journal.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;
@@ -180,7 +179,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.taxEvidence,
+        binding: ManagementMutationBinding.taxEvidence,
         recordLabel: 'DST source',
         recordValue: source.loanId,
         statusLabel: 'Ready to record exact retained DST evidence',
@@ -219,7 +218,6 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
         nextActionLabel: 'Record DST evidence',
         consequence:
             'The backend will retain exact source evidence. Liability preparation remains a separate protected action.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;
@@ -272,7 +270,7 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
     final confirmed = await showManagementReviewConfirmation(
       context,
       ManagementReviewPresentation.validated(
-        surface: ManagementMutationSurface.taxEvidence,
+        binding: ManagementMutationBinding.taxEvidence,
         recordLabel: 'Protected cash transaction',
         recordValue: source.transactionId,
         statusLabel: 'Exact allocation reconciled and ready to record',
@@ -318,7 +316,6 @@ class _ManagementTaxEvidencePageState extends State<ManagementTaxEvidencePage> {
         nextActionLabel: 'Record percentage evidence',
         consequence:
             'The backend will immutably retain the reconciled allocation. This does not post a tax liability.',
-        risk: ManagementReviewRisk.protectedFinancial,
       ),
     );
     if (!confirmed || !mounted) return;
