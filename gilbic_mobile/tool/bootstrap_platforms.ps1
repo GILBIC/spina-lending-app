@@ -53,10 +53,16 @@ function Add-SqlCipherAndroidRules {
 try {
     flutter --version
     flutter create `
-        --platforms=android,ios `
+        --platforms=android,ios,web,windows `
         --org $Organization `
         --project-name gilbic_mobile `
         .
+
+    $GeneratedSampleTest = Join-Path $ProjectRoot "test/widget_test.dart"
+    if (Test-Path -LiteralPath $GeneratedSampleTest) {
+        Remove-Item -LiteralPath $GeneratedSampleTest -Force
+    }
+
     Add-SqlCipherAndroidRules
     flutter pub get
     flutter analyze
