@@ -1,0 +1,48 @@
+name: SPINA MVP Fast Feedback
+
+on:
+  pull_request:
+    paths:
+      - "gilbic_mobile/**"
+      - ".github/workflows/spina-mvp-fast-feedback.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spina-mvp-fast-feedback-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  route-cache-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Install Flutter stable from the official repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Resolve Flutter dependencies
+        working-directory: gilbic_mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter config --no-analytics
+          flutter --version
+          flutter pub get
+
+      - name: Run route-cache policy test
+        working-directory: gilbic_mobile
+        shell: bash
+        run: flutter test test/collector_route_cache_policy_test.dart
