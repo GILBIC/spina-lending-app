@@ -42,10 +42,13 @@ jobs:
           flutter --version
           flutter pub get
 
-      - name: Run route-cache policy and factory tests
+      - name: Run cross-platform cache and app-composition tests
         working-directory: gilbic_mobile
         shell: bash
         run: |
           flutter test \
             test/collector_route_cache_policy_test.dart \
-            test/collector_route_cache_factory_test.dart
+            test/collector_route_cache_factory_test.dart \
+            test/collector_route_cache_test.dart \
+            test/collector_route_loader_test.dart \
+            test/app_default_route_cache_test.dart
