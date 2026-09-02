@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "gilbic_mobile/**"
+      - "gilbic_backend/tests/test_cross_platform_bootstrap_contract.py"
       - ".github/workflows/spina-mvp-fast-feedback.yml"
   workflow_dispatch:
 
@@ -25,6 +26,14 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+
+      - name: Prove four-platform bootstrap contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check "pytest>=8,<9"
+          python -m pytest -q \
+            gilbic_backend/tests/test_cross_platform_bootstrap_contract.py
 
       - name: Install Flutter stable from the official repository
         shell: bash
