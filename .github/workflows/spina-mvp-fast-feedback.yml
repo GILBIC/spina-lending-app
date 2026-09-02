@@ -18,7 +18,7 @@ concurrency:
 jobs:
   route-cache-policy:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Check out exact revision
@@ -61,3 +61,18 @@ jobs:
             test/collector_route_cache_test.dart \
             test/collector_route_loader_test.dart \
             test/app_default_route_cache_test.dart
+
+      - name: Generate and compile the Web client
+        working-directory: gilbic_mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter create \
+            --platforms=web \
+            --org com.gilbic \
+            --project-name gilbic_mobile \
+            .
+          rm -f test/widget_test.dart
+          flutter build web --debug \
+            --dart-define=GILBIC_API_URL=https://mvp-api.invalid
+          test -f build/web/index.html
