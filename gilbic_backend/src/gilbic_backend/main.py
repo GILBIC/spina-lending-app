@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from . import __version__
@@ -115,9 +116,28 @@ from .v1_tax_recoverable_refund_api import create_v1_tax_recoverable_refund_rout
 from .v1_tax_settlement_api import create_v1_tax_settlement_router
 
 
+_PORTAL_ALLOWED_HEADERS = [
+    "Authorization",
+    "Content-Type",
+    "Idempotency-Key",
+    "X-App-Platform",
+    "X-App-Version",
+    "X-Client-Transaction-Id",
+    "X-Device-Id",
+    "X-Gilbic-Contract-Version",
+]
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.app_name, version=__version__)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origin_list,
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=_PORTAL_ALLOWED_HEADERS,
+    )
 
     @app.get("/health/live")
     def liveness() -> dict[str, str]:
