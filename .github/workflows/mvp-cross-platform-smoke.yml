@@ -1,0 +1,73 @@
+name: SPINA Cross-Platform MVP Smoke
+
+on:
+  push:
+    branches:
+      - mvp/cross-platform-four-role
+  pull_request:
+    paths:
+      - "api/**"
+      - "spina_portal/**"
+      - "spina_pc/**"
+      - "tests/test_vercel_entrypoint.py"
+      - "tests/test_platform_bootstrap_contract.py"
+      - "requirements.txt"
+      - "vercel.json"
+      - "package.json"
+      - ".github/workflows/mvp-cross-platform-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spina-mvp-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            gilbic_backend/pyproject.toml
+            spina_backend_mobile/pyproject.toml
+            requirements.txt
+      - name: Install backend packages
+        run: |
+          python -m pip install --disable-pip-version-check --upgrade pip
+          python -m pip install -e ./spina_backend_mobile -e './gilbic_backend[test]'
+      - name: Run deployable API contract
+        env:
+          PYTHONPATH: gilbic_backend/src:spina_backend_mobile/src:.
+        run: python -m pytest -q tests/test_vercel_entrypoint.py
+
+  portal-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run portal contracts when present
+        shell: bash
+        run: |
+          shopt -s nullglob
+          tests=(spina_portal/tests/*.test.mjs)
+          if [ ${#tests[@]} -eq 0 ]; then
+            echo "No portal tests yet."
+            exit 0
+          fi
+          node --test "${tests[@]}"
