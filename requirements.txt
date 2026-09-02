@@ -1,1 +1,2 @@
+./spina_backend_mobile
 ./gilbic_backend
