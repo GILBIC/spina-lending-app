@@ -3,8 +3,11 @@ name: SPINA MVP Fast Feedback
 on:
   pull_request:
     paths:
+      - "app.py"
+      - "requirements.txt"
+      - "gilbic_backend/**"
+      - "spina_backend_mobile/**"
       - "gilbic_mobile/**"
-      - "gilbic_backend/tests/test_cross_platform_bootstrap_contract.py"
       - ".github/workflows/spina-mvp-fast-feedback.yml"
   workflow_dispatch:
 
@@ -16,7 +19,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  route-cache-policy:
+  backend-entrypoint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Install backend test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check \
+            -e ./spina_backend_mobile \
+            -e './gilbic_backend[test]'
+
+      - name: Run MVP backend contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pytest -q \
+            gilbic_backend/tests/test_cross_platform_bootstrap_contract.py \
+            gilbic_backend/tests/test_vercel_entrypoint.py
+
+  flutter-web:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -26,14 +56,6 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-
-      - name: Prove four-platform bootstrap contract
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pip install --disable-pip-version-check "pytest>=8,<9"
-          python -m pytest -q \
-            gilbic_backend/tests/test_cross_platform_bootstrap_contract.py
 
       - name: Install Flutter stable from the official repository
         shell: bash
