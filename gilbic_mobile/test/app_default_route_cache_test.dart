@@ -10,15 +10,16 @@ void main() {
   ) async {
     final previousPlatform = debugDefaultTargetPlatformOverride;
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-    addTearDown(() {
+
+    try {
+      await tester.pumpWidget(
+        GilbicApp(sessionStore: MemorySessionStore()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('sign-in-button')), findsOneWidget);
+    } finally {
       debugDefaultTargetPlatformOverride = previousPlatform;
-    });
-
-    await tester.pumpWidget(
-      GilbicApp(sessionStore: MemorySessionStore()),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('sign-in-button')), findsOneWidget);
+    }
   });
 }
