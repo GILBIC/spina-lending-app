@@ -60,7 +60,7 @@ export function staffInviteMarkup(session = {}) {
   </details>`;
 }
 
-export function submitStaffInvitation(api, input) {
+export async function submitStaffInvitation(api, input) {
   if (api == null || typeof api.request !== 'function') {
     throw new TypeError('A Spina API client is required.');
   }
