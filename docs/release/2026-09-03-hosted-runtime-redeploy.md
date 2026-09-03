@@ -11,4 +11,4 @@ Verification gate:
 - Client, Employee, Collector, and Management authentication is verified;
 - no secret values are committed to GitHub.
 
-Latest redeploy trigger: 2026-09-03 11:00 Asia/Manila.
+Verification redeploy triggered after Management saved `POSTGRES_URL` for the active Vercel environments.
