@@ -55,6 +55,23 @@ def _database_url_source() -> str:
     return "default"
 
 
+def _available_database_environment_names() -> tuple[str, ...]:
+    """Return relevant configured variable names without exposing values."""
+
+    return tuple(
+        sorted(
+            name
+            for name, value in os.environ.items()
+            if value.strip()
+            and (
+                "POSTGRES_URL" in name
+                or name.endswith("DATABASE_URL")
+                or name.endswith("DB_URL")
+            )
+        )
+    )
+
+
 def _database_failure_reason(error: BaseException) -> str:
     text = str(error).lower()
     if isinstance(error, ValueError) or "invalid connection option" in text:
@@ -118,8 +135,9 @@ def database_ready(settings: Settings | None = None) -> bool:
                 return cursor.fetchone() == (1,)
     except (psycopg.Error, ValueError) as error:
         _LOGGER.warning(
-            "Database readiness unavailable: source=%s reason=%s error=%s sqlstate=%s",
+            "Database readiness unavailable: source=%s available=%s reason=%s error=%s sqlstate=%s",
             _database_url_source(),
+            ",".join(_available_database_environment_names()) or "none",
             _database_failure_reason(error),
             type(error).__name__,
             getattr(error, "sqlstate", None) or "none",
