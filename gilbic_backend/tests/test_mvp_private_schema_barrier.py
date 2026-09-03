@@ -52,11 +52,25 @@ def test_migration_handles_optional_supabase_roles_without_owner_changes() -> No
 def test_default_privileges_prevent_future_public_table_sequence_and_function_access() -> None:
     sql = _normalized_sql()
 
-    for object_type in ("tables", "sequences", "functions"):
+    # Tables and sequences have no built-in PUBLIC privilege, so their private
+    # schema defaults are sufficient.
+    for object_type in ("tables", "sequences"):
         assert (
             f"alter default privileges in schema %i revoke all privileges on {object_type}"
             in sql
         )
+
+    # PostgreSQL globally grants EXECUTE on new functions/routines to PUBLIC.
+    # A per-schema REVOKE cannot subtract a global default, so this command must
+    # be global for objects created by the migration owner.
+    assert "alter default privileges revoke execute on functions from public;" in sql
+
+    # Keep per-schema function revocation for any explicit role grants and for
+    # current private-schema objects.
+    assert (
+        "alter default privileges in schema %i revoke all privileges on functions"
+        in sql
+    )
     assert "from public" in sql
     assert "from %i" in sql
 
