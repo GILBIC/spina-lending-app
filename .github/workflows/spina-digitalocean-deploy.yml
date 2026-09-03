@@ -16,7 +16,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: spina-digitalocean-production
+  group: spina-digitalocean-production-v2
   cancel-in-progress: true
 
 jobs:
