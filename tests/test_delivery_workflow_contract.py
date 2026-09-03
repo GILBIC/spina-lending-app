@@ -34,3 +34,25 @@ def test_android_delivery_is_not_a_debug_build() -> None:
 
     assert "flutter build apk --release" in source
     assert "flutter build apk --debug" not in source
+
+
+def test_android_delivery_uses_an_isolated_generated_host() -> None:
+    source = WORKFLOW.read_text(encoding="utf-8")
+
+    assert 'HOST="$RUNNER_TEMP/spina-android-host"' in source
+    assert (
+        'flutter create --platforms=android --org ph.spina '
+        '--project-name gilbic_mobile "$HOST"'
+    ) in source
+    assert (
+        "flutter create --platforms=android --org ph.spina "
+        "--project-name gilbic_mobile ."
+    ) not in source
+    assert 'cp -R "$GITHUB_WORKSPACE/gilbic_mobile/lib" "$HOST/lib"' in source
+    assert (
+        'cp "$GITHUB_WORKSPACE/gilbic_mobile/pubspec.yaml" '
+        '"$HOST/pubspec.yaml"'
+    ) in source
+    assert source.index("Validate Spina Flutter source") < source.index(
+        "Generate isolated Android host"
+    )
