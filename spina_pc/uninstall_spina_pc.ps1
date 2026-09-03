@@ -2,7 +2,7 @@
 param()
 
 $ErrorActionPreference = "Stop"
-$ShortcutName = "SPINA Lending.lnk"
+$ShortcutName = "Spina.lnk"
 $OwnedShortcuts = @(
     (Join-Path ([Environment]::GetFolderPath("Desktop")) $ShortcutName),
     (Join-Path ([Environment]::GetFolderPath("StartMenu")) "Programs\$ShortcutName")
@@ -18,8 +18,8 @@ foreach ($ShortcutPath in $OwnedShortcuts) {
 }
 
 if ($Removed -eq 0) {
-    Write-Host "No SPINA-owned shortcut was found."
+    Write-Host "No Spina shortcut was found."
 }
 else {
-    Write-Host "SPINA PC app-mode shortcuts removed. Browser profile and SPINA server data were left unchanged."
+    Write-Host "Spina shortcuts removed. Browser profile and server data were left unchanged."
 }
