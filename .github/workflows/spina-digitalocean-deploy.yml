@@ -1,0 +1,234 @@
+name: Spina DigitalOcean Production Deploy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  id-token: write
+
+concurrency:
+  group: spina-digitalocean-production-v2
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Deploy exact revision
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SECRET_BROKER_URL: https://lnixxnckhitbzqtjvked.supabase.co/functions/v1/spina-github-deploy-secrets
+        run: |
+          set -Eeuo pipefail
+          trap 'rm -f /tmp/spina-do-key /tmp/spina-do-key.pub /tmp/spina-target.json /tmp/spina-oidc.json /tmp/spina-secrets.json /tmp/spina.env /tmp/spina-release.tar.gz /tmp/spina-live.json /tmp/spina-ready.json /tmp/spina-root.html /tmp/spina-known-hosts /tmp/spina-deployment-comment.md' EXIT
+
+          put_branch_file() {
+            local path="$1"
+            local source_file="$2"
+            local message="$3"
+            local encoded existing_sha
+            encoded="$(base64 -w0 < "$source_file")"
+            existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=${GITHUB_REF_NAME}" --jq .sha 2>/dev/null || true)"
+            if [[ -n "$existing_sha" ]]; then
+              gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+                -f message="$message" \
+                -f content="$encoded" \
+                -f branch="$GITHUB_REF_NAME" \
+                -f sha="$existing_sha" >/dev/null
+            else
+              gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+                -f message="$message" \
+                -f content="$encoded" \
+                -f branch="$GITHUB_REF_NAME" >/dev/null
+            fi
+          }
+
+          ssh-keygen -t ed25519 -N '' -C "spina-digitalocean-run-${GITHUB_RUN_ID}" -f /tmp/spina-do-key
+          chmod 600 /tmp/spina-do-key
+          put_branch_file \
+            ".deploy/digitalocean-public-key.txt" \
+            "/tmp/spina-do-key.pub" \
+            "ops: publish ephemeral DigitalOcean public key for run ${GITHUB_RUN_ID}"
+
+          echo "Waiting for the DigitalOcean target rendezvous."
+          target_ready=false
+          for _ in $(seq 1 240); do
+            if encoded_target="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.deploy/digitalocean-target.json?ref=${GITHUB_REF_NAME}" --jq .content 2>/dev/null)"; then
+              printf '%s' "$encoded_target" | tr -d '\n' | base64 -d > /tmp/spina-target.json
+              if python ops/digitalocean/workflow_helper.py validate-target \
+                --target /tmp/spina-target.json \
+                --expected-run-id "$GITHUB_RUN_ID"; then
+                target_ready=true
+                break
+              fi
+            fi
+            sleep 5
+          done
+          [[ "$target_ready" == true ]] || { echo "DigitalOcean target rendezvous timed out." >&2; exit 1; }
+
+          DROPLET_ID="$(jq -er '.droplet_id' /tmp/spina-target.json)"
+          HOST="$(jq -er '.host' /tmp/spina-target.json)"
+          HOSTNAME="$(jq -er '.hostname' /tmp/spina-target.json)"
+
+          curl --fail --silent --show-error \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=spina-digitalocean-deploy" \
+            > /tmp/spina-oidc.json
+          OIDC_TOKEN="$(jq -er '.value' /tmp/spina-oidc.json)"
+          echo "::add-mask::$OIDC_TOKEN"
+
+          curl --fail --silent --show-error --retry 3 \
+            -H "Authorization: Bearer $OIDC_TOKEN" \
+            "$SECRET_BROKER_URL" \
+            > /tmp/spina-secrets.json
+
+          for field in database_url database_pooler_url supabase_url supabase_publishable_key supabase_secret_key; do
+            value="$(jq -er --arg field "$field" '.[$field]' /tmp/spina-secrets.json)"
+            echo "::add-mask::$value"
+          done
+
+          python ops/digitalocean/workflow_helper.py write-env \
+            --secrets /tmp/spina-secrets.json \
+            --target /tmp/spina-target.json \
+            --output /tmp/spina.env
+
+          python tools/test_digitalocean_deployment_contract.py
+          bash -n ops/digitalocean/bootstrap.sh
+          npm install --ignore-scripts
+          npm run build
+
+          tar -czf /tmp/spina-release.tar.gz \
+            dist \
+            gilbic_backend \
+            spina_backend_mobile \
+            requirements.txt \
+            ops/digitalocean/bootstrap.sh
+
+          : > /tmp/spina-known-hosts
+          ssh_ready=false
+          for _ in $(seq 1 120); do
+            if ssh-keyscan -T 5 -H "$HOST" > /tmp/spina-known-hosts 2>/dev/null && [[ -s /tmp/spina-known-hosts ]]; then
+              ssh_ready=true
+              break
+            fi
+            sleep 5
+          done
+          [[ "$ssh_ready" == true ]] || { echo "SSH did not become ready." >&2; exit 1; }
+
+          SSH_OPTIONS=(
+            -i /tmp/spina-do-key
+            -o BatchMode=yes
+            -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes
+            -o UserKnownHostsFile=/tmp/spina-known-hosts
+            -o ConnectTimeout=15
+            -o ConnectionAttempts=3
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=4
+          )
+
+          ssh_with_retry() {
+            local attempt
+            for attempt in $(seq 1 8); do
+              if ssh "${SSH_OPTIONS[@]}" root@"$HOST" "$@"; then
+                return 0
+              fi
+              sleep $((attempt * 3))
+            done
+            return 1
+          }
+
+          scp_with_retry() {
+            local source="$1"
+            local destination="$2"
+            local attempt
+            for attempt in $(seq 1 8); do
+              if scp "${SSH_OPTIONS[@]}" "$source" root@"$HOST":"$destination"; then
+                return 0
+              fi
+              sleep $((attempt * 3))
+            done
+            return 1
+          }
+
+          start_remote_bootstrap() {
+            ssh_with_retry "install -d -m 0700 /var/lib/spina; rm -f /var/lib/spina-bootstrap.exit /var/log/spina-bootstrap.log; (nohup bash /tmp/spina-bootstrap.sh '$GITHUB_SHA' '$HOSTNAME' > /var/log/spina-bootstrap.log 2>&1 < /dev/null; printf '%s\\n' \$? > /var/lib/spina-bootstrap.exit) >/dev/null 2>&1 &"
+          }
+
+          poll_remote_bootstrap() {
+            local status
+            local attempt
+            for attempt in $(seq 1 180); do
+              status="$(ssh "${SSH_OPTIONS[@]}" root@"$HOST" "cat /var/lib/spina-bootstrap.exit 2>/dev/null || true" 2>/dev/null | tr -d '\r\n' || true)"
+              if [[ "$status" == "0" ]]; then
+                return 0
+              fi
+              if [[ "$status" =~ ^[1-9][0-9]*$ ]]; then
+                ssh_with_retry "tail -n 200 /var/log/spina-bootstrap.log >&2 || true; journalctl -u spina-api --no-pager -n 100 >&2 || true" || true
+                return 1
+              fi
+              sleep 10
+            done
+            ssh_with_retry "tail -n 200 /var/log/spina-bootstrap.log >&2 || true; journalctl -u spina-api --no-pager -n 100 >&2 || true" || true
+            return 1
+          }
+
+          scp_with_retry /tmp/spina-release.tar.gz /tmp/spina-release.tar.gz
+          scp_with_retry /tmp/spina.env /tmp/spina.env
+          scp_with_retry ops/digitalocean/bootstrap.sh /tmp/spina-bootstrap.sh
+          start_remote_bootstrap
+          poll_remote_bootstrap
+
+          public_ready=false
+          for _ in $(seq 1 120); do
+            if curl --fail --silent --show-error --max-time 15 "https://$HOSTNAME/health/live" > /tmp/spina-live.json \
+              && curl --fail --silent --show-error --max-time 15 "https://$HOSTNAME/health/ready" > /tmp/spina-ready.json \
+              && curl --fail --silent --show-error --max-time 15 "https://$HOSTNAME/" > /tmp/spina-root.html \
+              && jq -e '.status == "ok"' /tmp/spina-live.json >/dev/null \
+              && jq -e '.status == "ready" and .database == "ok"' /tmp/spina-ready.json >/dev/null \
+              && grep -q '<title>Spina</title>' /tmp/spina-root.html; then
+              public_ready=true
+              break
+            fi
+            sleep 5
+          done
+          [[ "$public_ready" == true ]] || { echo "Public HTTPS verification failed." >&2; exit 1; }
+
+          KEY_COMMENT="spina-digitalocean-run-${GITHUB_RUN_ID}"
+          ssh_with_retry "set -Eeuo pipefail; temporary=\$(mktemp); grep -vF -- '$KEY_COMMENT' /root/.ssh/authorized_keys > \"\$temporary\" || true; test -s \"\$temporary\"; install -m 0600 -o root -g root \"\$temporary\" /root/.ssh/authorized_keys; rm -f \"\$temporary\"; ! grep -F -- '$KEY_COMMENT' /root/.ssh/authorized_keys"
+
+          python ops/digitalocean/workflow_helper.py write-evidence \
+            --target /tmp/spina-target.json \
+            --output /tmp/spina-deployment-evidence.json \
+            --git-sha "$GITHUB_SHA"
+          python ops/digitalocean/workflow_helper.py write-comment \
+            --target /tmp/spina-target.json \
+            --output /tmp/spina-deployment-comment.md \
+            --git-sha "$GITHUB_SHA"
+          gh issue comment 296 --repo "$GITHUB_REPOSITORY" --body-file /tmp/spina-deployment-comment.md
+
+      - name: Upload non-secret deployment evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spina-digitalocean-deployment-${{ github.sha }}
+          path: /tmp/spina-deployment-evidence.json
+          if-no-files-found: ignore
+          retention-days: 30
