@@ -18,13 +18,25 @@ HOSTNAME="$2"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y --no-install-recommends \
+  apt-transport-https \
   ca-certificates \
-  caddy \
   curl \
+  debian-archive-keyring \
+  debian-keyring \
+  gnupg \
   python3 \
   python3-pip \
   python3-venv \
   ufw
+
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+  | gpg --dearmor --yes -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+  > /etc/apt/sources.list.d/caddy-stable.list
+chmod o+r /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+chmod o+r /etc/apt/sources.list.d/caddy-stable.list
+apt-get update -y
+apt-get install -y --no-install-recommends caddy
 
 if ! swapon --show --noheadings | grep -q .; then
   if [[ ! -f /swapfile ]]; then
@@ -149,7 +161,7 @@ systemctl reload caddy
 for _ in $(seq 1 60); do
   if curl --fail --silent --show-error http://127.0.0.1:8000/health/live >/tmp/spina-live.json \
     && curl --fail --silent --show-error http://127.0.0.1:8000/health/ready >/tmp/spina-ready.json \
-    && grep -q '"database":"ok"' /tmp/spina-ready.json; then
+    && grep -Eq '"database"[[:space:]]*:[[:space:]]*"ok"' /tmp/spina-ready.json; then
     printf 'SPINA_DEPLOY_OK sha=%s host=%s\n' "$SHA" "$HOSTNAME"
     exit 0
   fi

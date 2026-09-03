@@ -43,7 +43,7 @@ jobs:
           SECRET_BROKER_URL: https://lnixxnckhitbzqtjvked.supabase.co/functions/v1/spina-github-deploy-secrets
         run: |
           set -Eeuo pipefail
-          trap 'rm -f /tmp/spina-do-key /tmp/spina-do-key.pub /tmp/spina-target.json /tmp/spina-oidc.json /tmp/spina-secrets.json /tmp/spina.env /tmp/spina-release.tar.gz /tmp/spina-live.json /tmp/spina-ready.json /tmp/spina-root.html /tmp/spina-known-hosts' EXIT
+          trap 'rm -f /tmp/spina-do-key /tmp/spina-do-key.pub /tmp/spina-target.json /tmp/spina-oidc.json /tmp/spina-secrets.json /tmp/spina.env /tmp/spina-release.tar.gz /tmp/spina-live.json /tmp/spina-ready.json /tmp/spina-root.html /tmp/spina-known-hosts /tmp/spina-deployment-comment.md' EXIT
 
           put_branch_file() {
             local path="$1"
@@ -79,27 +79,9 @@ jobs:
             encoded_target="$(gh api "repos/${GITHUB_REPOSITORY}/contents/.deploy/digitalocean-target.json?ref=${GITHUB_REF_NAME}" --jq .content 2>/dev/null || true)"
             if [[ -n "$encoded_target" ]]; then
               printf '%s' "$encoded_target" | tr -d '\n' | base64 -d > /tmp/spina-target.json
-              if python - <<'PY'
-                import ipaddress
-                import json
-                import re
-
-                with open('/tmp/spina-target.json', encoding='utf-8') as handle:
-                    target = json.load(handle)
-
-                if not isinstance(target.get('droplet_id'), int) or target['droplet_id'] <= 0:
-                    raise SystemExit(1)
-                ip = ipaddress.ip_address(str(target.get('host', '')))
-                if ip.version != 4 or not ip.is_global:
-                    raise SystemExit(1)
-                hostname = str(target.get('hostname', ''))
-                if not re.fullmatch(r'spina\.(?:\d{1,3}-){3}\d{1,3}\.sslip\.io', hostname):
-                    raise SystemExit(1)
-                expected = 'spina.' + str(ip).replace('.', '-') + '.sslip.io'
-                if hostname != expected:
-                    raise SystemExit(1)
-                PY
-              then
+              if python ops/digitalocean/workflow_helper.py validate-target \
+                --target /tmp/spina-target.json \
+                --expected-run-id "$GITHUB_RUN_ID"; then
                 target_ready=true
                 break
               fi
@@ -124,39 +106,15 @@ jobs:
             "$SECRET_BROKER_URL" \
             > /tmp/spina-secrets.json
 
-          DATABASE_URL="$(jq -er '.database_url' /tmp/spina-secrets.json)"
-          SUPABASE_URL="$(jq -er '.supabase_url' /tmp/spina-secrets.json)"
-          SUPABASE_PUBLISHABLE_KEY="$(jq -er '.supabase_publishable_key' /tmp/spina-secrets.json)"
-          SUPABASE_SECRET_KEY="$(jq -er '.supabase_secret_key' /tmp/spina-secrets.json)"
-          for value in "$DATABASE_URL" "$SUPABASE_URL" "$SUPABASE_PUBLISHABLE_KEY" "$SUPABASE_SECRET_KEY"; do
+          for field in database_url supabase_url supabase_publishable_key supabase_secret_key; do
+            value="$(jq -er --arg field "$field" '.[$field]' /tmp/spina-secrets.json)"
             echo "::add-mask::$value"
           done
 
-          export DATABASE_URL SUPABASE_URL SUPABASE_PUBLISHABLE_KEY SUPABASE_SECRET_KEY HOSTNAME
-          python - <<'PY'
-            import os
-            from pathlib import Path
-
-            def quote(value: str) -> str:
-                return '"' + value.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n') + '"'
-
-            values = {
-                'GILBIC_APP_NAME': 'Spina API',
-                'GILBIC_ENVIRONMENT': 'production',
-                'GILBIC_DATABASE_URL': os.environ['DATABASE_URL'],
-                'GILBIC_SUPABASE_URL': os.environ['SUPABASE_URL'],
-                'GILBIC_SUPABASE_PUBLISHABLE_KEY': os.environ['SUPABASE_PUBLISHABLE_KEY'],
-                'GILBIC_SUPABASE_SECRET_KEY': os.environ['SUPABASE_SECRET_KEY'],
-                'GILBIC_CORS_ORIGINS': f"https://{os.environ['HOSTNAME']}",
-                'GILBIC_STAFF_INVITE_REDIRECT_URL': f"https://{os.environ['HOSTNAME']}/",
-                'GILBIC_GCASH_MODE': 'disabled',
-            }
-            Path('/tmp/spina.env').write_text(
-                ''.join(f'{key}={quote(value)}\n' for key, value in values.items()),
-                encoding='utf-8',
-            )
-            PY
-          chmod 600 /tmp/spina.env
+          python ops/digitalocean/workflow_helper.py write-env \
+            --secrets /tmp/spina-secrets.json \
+            --target /tmp/spina-target.json \
+            --output /tmp/spina.env
 
           python tools/test_digitalocean_deployment_contract.py
           bash -n ops/digitalocean/bootstrap.sh
@@ -210,42 +168,14 @@ jobs:
           done
           [[ "$public_ready" == true ]] || { echo "Public HTTPS verification failed." >&2; exit 1; }
 
-          python - <<PY
-            import json
-            from pathlib import Path
-
-            Path('/tmp/spina-deployment-evidence.json').write_text(
-                json.dumps(
-                    {
-                        'git_sha': '${GITHUB_SHA}',
-                        'droplet_id': int('${DROPLET_ID}'),
-                        'host': '${HOST}',
-                        'hostname': '${HOSTNAME}',
-                        'url': 'https://${HOSTNAME}',
-                        'liveness': 'ok',
-                        'readiness': 'ready',
-                        'database': 'ok',
-                    },
-                    indent=2,
-                ) + '\n',
-                encoding='utf-8',
-            )
-            PY
-
-          cat > /tmp/spina-deployment-comment.md <<EOF
-            ## DigitalOcean deployment completed
-
-            - Exact Git SHA: \`${GITHUB_SHA}\`
-            - Droplet ID: \`${DROPLET_ID}\`
-            - Region: \`sgp1\`
-            - Public URL: https://${HOSTNAME}
-            - Liveness: \`200 / ok\`
-            - Readiness: \`200 / database: ok\`
-            - Runtime: one loopback-only Uvicorn worker behind Caddy HTTPS
-            - Database/Auth: existing Supabase authority
-
-            No credential, database URL, or SSH private key is included in this evidence.
-            EOF
+          python ops/digitalocean/workflow_helper.py write-evidence \
+            --target /tmp/spina-target.json \
+            --output /tmp/spina-deployment-evidence.json \
+            --git-sha "$GITHUB_SHA"
+          python ops/digitalocean/workflow_helper.py write-comment \
+            --target /tmp/spina-target.json \
+            --output /tmp/spina-deployment-comment.md \
+            --git-sha "$GITHUB_SHA"
           gh issue comment 296 --repo "$GITHUB_REPOSITORY" --body-file /tmp/spina-deployment-comment.md
 
       - name: Upload non-secret deployment evidence
