@@ -1,0 +1,65 @@
+name: Spina DigitalOcean Public Health Probe
+
+on:
+  push:
+    branches:
+      - ops/digitalocean-production
+    paths:
+      - .github/workflows/spina-digitalocean-health-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: spina-digitalocean-public-health-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: ops/digitalocean-production
+          fetch-depth: 1
+
+      - name: Poll public Spina HTTPS endpoints
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          rm -f .deploy/health-success.txt .deploy/health-failure.txt
+          ready=false
+          for _ in $(seq 1 120); do
+            if curl --fail --silent --show-error --max-time 15 \
+                 https://spina.165-22-53-117.sslip.io/health/live > /tmp/live.json \
+              && curl --fail --silent --show-error --max-time 15 \
+                 https://spina.165-22-53-117.sslip.io/health/ready > /tmp/ready.json \
+              && curl --fail --silent --show-error --max-time 15 \
+                 https://spina.165-22-53-117.sslip.io/ > /tmp/root.html \
+              && jq -e '.status == "ok"' /tmp/live.json >/dev/null \
+              && jq -e '.status == "ready" and .database == "ok"' /tmp/ready.json >/dev/null \
+              && grep -q '<title>Spina</title>' /tmp/root.html; then
+              ready=true
+              break
+            fi
+            sleep 10
+          done
+
+          mkdir -p .deploy
+          if [[ "$ready" == true ]]; then
+            printf 'spina-digitalocean-health-ok\n' > .deploy/health-success.txt
+            git rm -f --ignore-unmatch .deploy/health-failure.txt
+          else
+            printf 'spina-digitalocean-health-failed\n' > .deploy/health-failure.txt
+            git rm -f --ignore-unmatch .deploy/health-success.txt
+          fi
+
+          git config user.name GILBIC
+          git config user.email gilbicsanjose@gmail.com
+          git add .deploy/health-success.txt .deploy/health-failure.txt 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "ops: record DigitalOcean public health result"
+          git push origin HEAD:ops/digitalocean-production
+          [[ "$ready" == true ]]
